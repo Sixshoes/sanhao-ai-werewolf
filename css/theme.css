@@ -1,0 +1,747 @@
+/* 三好AI狼人殺 — 「雲起茶席・精裝獨立桌遊」語意色彩、宣紙漆木質感、字體與日夜轉場（零 !important） */
+
+:root {
+  --font-display: 'Noto Serif TC', 'Songti TC', 'STSong', 'BiauKai', Georgia, serif;
+  --font-body: 'Noto Sans TC', 'PingFang TC', 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* 暮色／開局：烏木黑漆 × 溫潤茶金 × 朱砂印泥 */
+  --bg-deep: #120f0c;
+  --text-main: #efe7d8;
+  --text-sub: #c6b9a6;
+  --text-muted: #938574;
+
+  --surface-header: rgba(20, 16, 13, 0.92);
+  --border-header: rgba(206, 170, 108, 0.22);
+  --surface-card: rgba(26, 21, 17, 0.94);
+  --surface-elevated: rgba(24, 19, 15, 0.95);
+  --surface-sub: rgba(18, 14, 11, 0.84);
+  --surface-control: rgba(22, 18, 14, 0.96);
+  --surface-popover: rgba(23, 18, 14, 0.96);
+  --surface-timeline: rgba(15, 12, 9, 0.65);
+  --surface-btn: rgba(36, 29, 23, 0.86);
+  --surface-btn-hover: rgba(48, 39, 30, 0.96);
+  --surface-input: rgba(15, 12, 9, 0.92);
+
+  --border-card: rgba(206, 170, 108, 0.22);
+  --border-subtle: rgba(206, 170, 108, 0.14);
+  --border-accent: rgba(212, 169, 98, 0.48);
+  --border-popover: rgba(206, 170, 108, 0.42);
+  --border-inner-highlight: rgba(250, 232, 194, 0.14);
+  --surface-recessed: rgba(14, 11, 8, 0.72);
+  --kbd-bg: rgba(34, 27, 21, 0.92);
+  --kbd-border: rgba(212, 166, 87, 0.36);
+  --kbd-text: #dfd2be;
+
+  --accent-gold: #d4a657;
+  --accent-gold-soft: rgba(212, 166, 87, 0.14);
+  --accent-cinnabar: #b43a2e;
+  --accent-cinnabar-hover: #c94639;
+  --accent-celadon: #3c8b6e;
+  --accent-celadon-soft: rgba(60, 139, 110, 0.16);
+  --accent-indigo: #6482a8;
+  --accent-plum: #9271a8;
+
+  --shadow-card: 0 14px 36px rgba(0, 0, 0, 0.48);
+  --shadow-focal: 0 22px 50px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(242, 214, 162, 0.12);
+  --surface-panel-grad: linear-gradient(168deg, rgba(35, 27, 20, 0.96) 0%, rgba(21, 17, 13, 0.97) 58%, rgba(15, 12, 9, 0.98) 100%);
+  --gold-foil-grad: linear-gradient(135deg, #f9e6b8 0%, #d4a657 50%, #a47228 100%);
+  --frame-ornament: rgba(232, 192, 120, 0.56);
+  --card-sheen: rgba(255, 240, 200, 0.14);
+  --card-heart-bg: linear-gradient(155deg, rgba(56, 40, 22, 0.92) 0%, rgba(28, 22, 16, 0.96) 100%);
+  --card-words-bg: linear-gradient(155deg, rgba(22, 46, 38, 0.9) 0%, rgba(18, 25, 22, 0.96) 100%);
+  --card-deeds-bg: linear-gradient(155deg, rgba(28, 38, 56, 0.9) 0%, rgba(19, 23, 30, 0.96) 100%);
+  --card-evidence-bg: linear-gradient(140deg, rgba(138, 66, 18, 0.58) 0%, rgba(58, 36, 18, 0.92) 55%, rgba(28, 21, 16, 0.96) 100%);
+  --portrait-glow: rgba(212, 166, 87, 0.44);
+  --cinnabar-grad: linear-gradient(180deg, #c94638 0%, #a32e22 100%);
+  --brass-grad: linear-gradient(180deg, #e0b15d 0%, #b58333 100%);
+  --sky-dot-bg: #d4a657;
+  --sky-dot-glow: rgba(212, 166, 87, 0.65);
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+}
+
+/* 深夜：靛墨星夜 × 銀金微光 */
+body.theme-night {
+  --bg-deep: #0e1018;
+  --surface-header: rgba(14, 16, 24, 0.94);
+  --border-header: rgba(169, 158, 198, 0.24);
+  --surface-card: rgba(21, 22, 32, 0.95);
+  --surface-elevated: rgba(19, 20, 30, 0.96);
+  --surface-sub: rgba(14, 15, 23, 0.86);
+  --surface-control: rgba(18, 19, 29, 0.97);
+  --surface-popover: rgba(19, 20, 31, 0.97);
+  --surface-btn: rgba(30, 32, 46, 0.88);
+  --surface-btn-hover: rgba(42, 44, 62, 0.96);
+  --surface-input: rgba(13, 14, 22, 0.94);
+  --border-card: rgba(169, 158, 198, 0.24);
+  --border-subtle: rgba(169, 158, 198, 0.14);
+  --border-accent: rgba(196, 179, 226, 0.44);
+  --shadow-focal: 0 24px 52px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(210, 199, 238, 0.1);
+  --surface-panel-grad: linear-gradient(168deg, rgba(28, 29, 44, 0.96) 0%, rgba(18, 19, 30, 0.97) 60%, rgba(12, 13, 21, 0.98) 100%);
+  --gold-foil-grad: linear-gradient(135deg, #f3e8ff 0%, #cdb8ec 50%, #8f77b8 100%);
+  --frame-ornament: rgba(196, 179, 226, 0.5);
+  --card-sheen: rgba(224, 214, 248, 0.14);
+  --card-heart-bg: linear-gradient(155deg, rgba(46, 36, 30, 0.92) 0%, rgba(22, 22, 34, 0.96) 100%);
+  --card-words-bg: linear-gradient(155deg, rgba(20, 42, 42, 0.92) 0%, rgba(18, 20, 32, 0.96) 100%);
+  --card-deeds-bg: linear-gradient(155deg, rgba(28, 34, 60, 0.92) 0%, rgba(17, 19, 30, 0.96) 100%);
+  --card-evidence-bg: linear-gradient(140deg, rgba(118, 60, 26, 0.56) 0%, rgba(44, 30, 40, 0.94) 55%, rgba(20, 20, 32, 0.97) 100%);
+  --portrait-glow: rgba(184, 167, 224, 0.42);
+  --border-inner-highlight: rgba(210, 199, 238, 0.12);
+  --surface-recessed: rgba(10, 12, 20, 0.78);
+  --kbd-bg: rgba(26, 28, 42, 0.92);
+  --kbd-border: rgba(184, 167, 224, 0.36);
+  --kbd-text: #d7d2ea;
+  --sky-dot-bg: #b8a7e0;
+  --sky-dot-glow: rgba(184, 167, 224, 0.72);
+}
+
+/* 白晝：手抄宣紙 × 松煙古墨 × 紅瓦朱砂 */
+body.theme-day {
+  --bg-deep: #ede4d3;
+  --text-main: #251e18;
+  --text-sub: #4b3f33;
+  --text-muted: #766756;
+
+  --surface-header: rgba(248, 242, 230, 0.94);
+  --border-header: rgba(140, 104, 60, 0.24);
+  --surface-card: rgba(251, 247, 238, 0.96);
+  --surface-elevated: rgba(253, 250, 243, 0.97);
+  --surface-sub: rgba(240, 231, 214, 0.82);
+  --surface-control: rgba(247, 240, 227, 0.97);
+  --surface-popover: rgba(252, 248, 240, 0.98);
+  --surface-timeline: rgba(242, 234, 218, 0.7);
+  --surface-btn: rgba(242, 234, 220, 0.92);
+  --surface-btn-hover: rgba(233, 222, 203, 0.98);
+  --surface-input: rgba(255, 252, 246, 0.96);
+
+  --border-card: rgba(140, 104, 60, 0.26);
+  --border-subtle: rgba(140, 104, 60, 0.16);
+  --border-accent: rgba(158, 106, 38, 0.48);
+  --border-popover: rgba(140, 104, 60, 0.42);
+  --border-inner-highlight: rgba(255, 255, 255, 0.78);
+  --surface-recessed: rgba(235, 224, 202, 0.85);
+  --kbd-bg: rgba(250, 244, 232, 0.95);
+  --kbd-border: rgba(154, 104, 35, 0.38);
+  --kbd-text: #5b4328;
+
+  --accent-gold: #9a6823;
+  --accent-gold-soft: rgba(154, 104, 35, 0.12);
+  --accent-cinnabar: #a63226;
+  --accent-cinnabar-hover: #bc3d30;
+  --accent-celadon: #246a50;
+  --accent-celadon-soft: rgba(36, 106, 80, 0.12);
+  --accent-indigo: #395c84;
+  --accent-plum: #6c4d84;
+
+  --shadow-card: 0 10px 28px rgba(72, 48, 20, 0.12);
+  --shadow-focal: 0 16px 36px rgba(72, 48, 20, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  --surface-panel-grad: linear-gradient(168deg, rgba(254, 251, 244, 0.98) 0%, rgba(248, 241, 227, 0.97) 65%, rgba(240, 230, 210, 0.98) 100%);
+  --gold-foil-grad: linear-gradient(135deg, #d8a956 0%, #a56e23 55%, #7c4d11 100%);
+  --frame-ornament: rgba(158, 106, 38, 0.52);
+  --card-sheen: rgba(255, 255, 255, 0.58);
+  --card-heart-bg: linear-gradient(155deg, rgba(252, 242, 218, 0.96) 0%, rgba(244, 230, 200, 0.96) 100%);
+  --card-words-bg: linear-gradient(155deg, rgba(232, 245, 238, 0.96) 0%, rgba(219, 238, 228, 0.96) 100%);
+  --card-deeds-bg: linear-gradient(155deg, rgba(232, 239, 248, 0.96) 0%, rgba(220, 230, 243, 0.96) 100%);
+  --card-evidence-bg: linear-gradient(140deg, rgba(253, 238, 198, 0.98) 0%, rgba(245, 222, 174, 0.96) 100%);
+  --portrait-glow: rgba(168, 107, 32, 0.3);
+  --cinnabar-grad: linear-gradient(180deg, #be3b2e 0%, #992a20 100%);
+  --brass-grad: linear-gradient(180deg, #ddb05c 0%, #b88130 100%);
+  --sky-dot-bg: #a86b20;
+  --sky-dot-glow: rgba(168, 107, 32, 0.52);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.8s cubic-bezier(0.22, 1, 0.36, 1), color 0.55s ease;
+}
+
+.font-serif-craft,
+header h1,
+#bannerHeadline,
+#curtainTitle,
+#gameOverHeadline,
+.modal-title-serif {
+  font-family: var(--font-display);
+}
+
+.math-font {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+
+header,
+main section>div,
+#controlDeck,
+#phaseBanner,
+#chatTimeline,
+#seatButtonStrip {
+  transition: background-color 0.7s ease, border-color 0.6s ease, box-shadow 0.7s ease, color 0.45s ease;
+}
+
+/* ===== PAPER-GRAIN & ATMOSPHERIC MOUNTAIN BACKDROP ===== */
+#worldSkyBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  transition: opacity 0.85s ease, background 0.9s ease;
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(188, 134, 68, 0.18) 0%, transparent 56%),
+    radial-gradient(circle at 82% 85%, rgba(132, 54, 42, 0.1) 0%, transparent 44%),
+    linear-gradient(180deg, #191410 0%, #110e0b 58%, #0b0907 100%);
+}
+
+#worldSkyBackdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+body.theme-night #worldSkyBackdrop {
+  background:
+    radial-gradient(circle at 80% 10%, rgba(164, 152, 206, 0.16) 0%, transparent 32%),
+    radial-gradient(ellipse at 50% 0%, #191b2c 0%, #0d0e16 58%, #07080d 100%);
+  box-shadow: inset 0 0 120px rgba(4, 5, 10, 0.88);
+}
+
+body.theme-day #worldSkyBackdrop {
+  background:
+    radial-gradient(circle at 84% 6%, rgba(234, 198, 132, 0.36) 0%, transparent 42%),
+    linear-gradient(180deg, #efe7d8 0%, #e7dcc8 52%, #dfd1b8 100%);
+  box-shadow: inset 0 0 80px rgba(138, 102, 59, 0.14);
+}
+
+body.theme-day #worldSkyBackdrop::after {
+  opacity: 0.065;
+}
+
+/* ===== UNIFIED LACQUER / XUAN-PAPER SURFACE OVERRIDES (ZERO TAILWIND BLUE-SLATE) ===== */
+body.craft-ui header {
+  background-color: var(--surface-header);
+  border-bottom: 1px solid var(--border-header);
+  backdrop-filter: blur(12px);
+}
+
+body.craft-ui.theme-day header {
+  box-shadow: 0 2px 16px rgba(82, 56, 24, 0.08);
+}
+
+body.craft-ui header h1 {
+  color: var(--text-main);
+  letter-spacing: 0.08em;
+}
+
+/* Warm lacquer / Xuan-paper cards everywhere (including dynamic modals) */
+body.craft-ui #phaseBanner,
+body.craft-ui #mainStageShell,
+body.craft-ui #canvasCard,
+body.craft-ui .folio-panel,
+body.craft-ui .craft-modal-box {
+  background-color: var(--surface-card);
+  border-color: var(--border-card);
+  box-shadow: var(--shadow-card);
+}
+
+body.craft-ui #mainStageShell #canvasCard {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+body.craft-ui #canvasContainer {
+  background-color: #110e0b;
+}
+
+body.craft-ui.theme-day #canvasContainer {
+  background-color: #e6dac4;
+}
+
+/* Override cold Tailwind slate colors inside main & modals to warm ink/lacquer or Xuan paper */
+body.craft-ui main .bg-slate-950,
+body.craft-ui main .bg-slate-950\/90,
+body.craft-ui main .bg-slate-950\/80,
+body.craft-ui main .bg-slate-950\/75,
+body.craft-ui main .bg-slate-950\/70,
+body.craft-ui .craft-modal-box .bg-slate-950,
+body.craft-ui .craft-modal-box .bg-slate-950\/85,
+body.craft-ui .craft-modal-box .bg-slate-950\/80,
+body.craft-ui .craft-modal-box .bg-slate-950\/75,
+body.craft-ui .craft-modal-box .bg-slate-950\/70,
+body.craft-ui .craft-modal-box .bg-slate-950\/60,
+body.craft-ui .craft-modal-box .bg-slate-950\/50 {
+  background-color: var(--surface-sub);
+  border-color: var(--border-subtle);
+}
+
+body.craft-ui main .bg-slate-900,
+body.craft-ui main .bg-slate-900\/95,
+body.craft-ui main .bg-slate-900\/90,
+body.craft-ui main .bg-slate-900\/85,
+body.craft-ui main .bg-slate-900\/75,
+body.craft-ui main .bg-slate-900\/60,
+body.craft-ui main .bg-slate-800,
+body.craft-ui main .bg-slate-800\/90,
+body.craft-ui main .bg-slate-800\/80,
+body.craft-ui main .bg-slate-800\/70,
+body.craft-ui .craft-modal-box .bg-slate-900,
+body.craft-ui .craft-modal-box .bg-slate-900\/90,
+body.craft-ui .craft-modal-box .bg-slate-900\/75,
+body.craft-ui .craft-modal-box .bg-slate-900\/60,
+body.craft-ui .craft-modal-box .bg-slate-800,
+body.craft-ui .craft-modal-box .bg-slate-800\/90,
+body.craft-ui .craft-modal-box .bg-slate-800\/80 {
+  background-color: var(--surface-btn);
+  border-color: var(--border-card);
+  color: var(--text-main);
+}
+
+body.craft-ui main .border-slate-800,
+body.craft-ui main .border-slate-800\/90,
+body.craft-ui main .border-slate-800\/80,
+body.craft-ui main .border-slate-700,
+body.craft-ui main .border-slate-700\/80,
+body.craft-ui main .border-slate-700\/70,
+body.craft-ui .craft-modal-box .border-slate-800,
+body.craft-ui .craft-modal-box .border-slate-800\/80,
+body.craft-ui .craft-modal-box .border-slate-700 {
+  border-color: var(--border-card);
+}
+
+body.craft-ui main select,
+body.craft-ui main input[type="text"],
+body.craft-ui main textarea,
+body.craft-ui .craft-modal-box select,
+body.craft-ui .craft-modal-box input[type="text"],
+body.craft-ui .craft-modal-box input[type="password"] {
+  background-color: var(--surface-input);
+  border-color: var(--border-card);
+  color: var(--text-main);
+}
+
+/* Text hierarchy tuned for warm lacquer & Xuan paper */
+body.craft-ui header .text-slate-400,
+body.craft-ui main .text-slate-400,
+body.craft-ui .craft-modal-box .text-slate-400 {
+  color: var(--text-muted);
+}
+
+body.craft-ui main .text-white,
+body.craft-ui main .text-slate-100,
+body.craft-ui main .text-slate-200,
+body.craft-ui .craft-modal-box .text-white,
+body.craft-ui .craft-modal-box .text-slate-100,
+body.craft-ui .craft-modal-box .text-slate-200 {
+  color: var(--text-main);
+}
+
+body.craft-ui main .text-slate-300,
+body.craft-ui .craft-modal-box .text-slate-300 {
+  color: var(--text-sub);
+}
+
+/* Muted classical tea-gold, celadon, cinnabar, indigo tones in Daylight Xuan Paper */
+body.craft-ui.theme-day header .text-amber-300,
+body.craft-ui.theme-day main .text-amber-100,
+body.craft-ui.theme-day main .text-amber-200,
+body.craft-ui.theme-day main .text-amber-300,
+body.craft-ui.theme-day main .text-amber-400,
+body.craft-ui.theme-day .craft-modal-box .text-amber-200,
+body.craft-ui.theme-day .craft-modal-box .text-amber-300 {
+  color: #8c5a18;
+}
+
+body.craft-ui.theme-day main .text-emerald-100,
+body.craft-ui.theme-day main .text-emerald-200,
+body.craft-ui.theme-day main .text-emerald-300,
+body.craft-ui.theme-day .craft-modal-box .text-emerald-200,
+body.craft-ui.theme-day .craft-modal-box .text-emerald-300 {
+  color: #1f6148;
+}
+
+body.craft-ui.theme-day main .text-rose-100,
+body.craft-ui.theme-day main .text-rose-200,
+body.craft-ui.theme-day main .text-rose-300,
+body.craft-ui.theme-day main .text-rose-400,
+body.craft-ui.theme-day .craft-modal-box .text-rose-200,
+body.craft-ui.theme-day .craft-modal-box .text-rose-300 {
+  color: #9e2d24;
+}
+
+body.craft-ui.theme-day main .text-sky-100,
+body.craft-ui.theme-day main .text-sky-200,
+body.craft-ui.theme-day main .text-sky-300,
+body.craft-ui.theme-day .craft-modal-box .text-sky-200,
+body.craft-ui.theme-day .craft-modal-box .text-sky-300 {
+  color: #2c527a;
+}
+
+body.craft-ui.theme-day main .text-purple-100,
+body.craft-ui.theme-day main .text-purple-200,
+body.craft-ui.theme-day main .text-purple-300,
+body.craft-ui.theme-day .craft-modal-box .text-purple-200 {
+  color: #5e4275;
+}
+
+body.craft-ui.theme-day main .text-indigo-100,
+body.craft-ui.theme-day main .text-indigo-200,
+body.craft-ui.theme-day .craft-modal-box .text-indigo-100,
+body.craft-ui.theme-day .craft-modal-box .text-indigo-200,
+body.craft-ui.theme-day .craft-modal-box .text-indigo-300 {
+  color: #354b7a;
+}
+
+/* Muted paper-tint washes in Daylight */
+body.craft-ui.theme-day main .bg-amber-500\/10,
+body.craft-ui.theme-day main .bg-amber-500\/15,
+body.craft-ui.theme-day main .bg-amber-500\/20,
+body.craft-ui.theme-day main .bg-amber-950\/30,
+body.craft-ui.theme-day .craft-modal-box .bg-amber-500\/10,
+body.craft-ui.theme-day .craft-modal-box .bg-amber-500\/15,
+body.craft-ui.theme-day .craft-modal-box .bg-amber-500\/20 {
+  background-color: rgba(178, 128, 52, 0.13);
+  border-color: rgba(158, 108, 38, 0.36);
+}
+
+body.craft-ui.theme-day main .bg-emerald-500\/15,
+body.craft-ui.theme-day main .bg-emerald-500\/18,
+body.craft-ui.theme-day main .bg-emerald-500\/20,
+body.craft-ui.theme-day main .bg-emerald-500\/25,
+body.craft-ui.theme-day main .bg-emerald-950\/50,
+body.craft-ui.theme-day .craft-modal-box .bg-emerald-500\/15,
+body.craft-ui.theme-day .craft-modal-box .bg-emerald-500\/20 {
+  background-color: rgba(36, 106, 80, 0.11);
+  border-color: rgba(36, 106, 80, 0.34);
+}
+
+body.craft-ui.theme-day main .bg-rose-500\/15,
+body.craft-ui.theme-day main .bg-rose-500\/20,
+body.craft-ui.theme-day main .bg-rose-500\/25,
+body.craft-ui.theme-day .craft-modal-box .bg-rose-500\/10,
+body.craft-ui.theme-day .craft-modal-box .bg-rose-500\/15,
+body.craft-ui.theme-day .craft-modal-box .bg-rose-500\/20 {
+  background-color: rgba(166, 50, 38, 0.1);
+  border-color: rgba(166, 50, 38, 0.34);
+}
+
+body.craft-ui.theme-day main .bg-sky-500\/15,
+body.craft-ui.theme-day main .bg-sky-500\/18,
+body.craft-ui.theme-day main .bg-sky-500\/20,
+body.craft-ui.theme-day .craft-modal-box .bg-sky-500\/20 {
+  background-color: rgba(44, 82, 122, 0.1);
+  border-color: rgba(44, 82, 122, 0.32);
+}
+
+body.craft-ui.theme-day main .bg-purple-500\/20,
+body.craft-ui.theme-day main .bg-purple-500\/25,
+body.craft-ui.theme-day main .bg-purple-950\/50,
+body.craft-ui.theme-day .craft-modal-box .bg-indigo-500\/15 {
+  background-color: rgba(94, 66, 117, 0.1);
+  border-color: rgba(94, 66, 117, 0.32);
+}
+
+body.craft-ui #chatTimeline {
+  background-color: var(--surface-timeline);
+}
+
+/* Keep solid selected pills high-contrast */
+body.craft-ui #seatButtonStrip button.seat-is-selected {
+  background-color: var(--accent-cinnabar);
+  border-color: rgba(242, 212, 156, 0.65);
+  color: #fbf5ea;
+}
+
+/* ===== LITERARY CHAPTER TRANSITION CURTAIN ===== */
+#dayNightCurtain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.32s ease;
+}
+
+#dayNightCurtain.active {
+  animation: curtainFlash 1.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+#dayNightCurtain.mode-night {
+  background: radial-gradient(circle at 50% 42%, #1e2030 0%, #0d0e15 62%, #06070b 100%);
+  color: #efe7d8;
+}
+
+#dayNightCurtain.mode-day {
+  background: radial-gradient(circle at 50% 42%, #faf3e4 0%, #eadac0 56%, #d9c39e 100%);
+  color: #2b2118;
+}
+
+.curtain-rule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  opacity: 0.78;
+}
+
+.curtain-rule::before,
+.curtain-rule::after {
+  content: "";
+  width: 36px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+@keyframes curtainFlash {
+  0% {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+
+  20% {
+    opacity: 0.98;
+    transform: scale(1);
+  }
+
+  74% {
+    opacity: 0.96;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+}
+
+@keyframes iconRise {
+  0% {
+    transform: translateY(14px) scale(0.92);
+    opacity: 0;
+  }
+
+  28% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  78% {
+    transform: translateY(-2px) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-8px) scale(0.98);
+    opacity: 0;
+  }
+}
+
+#dayNightCurtain.active .curtain-inner {
+  animation: iconRise 1.2s ease-out forwards;
+}
+
+.curtain-orb {
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  border: 1px solid rgba(212, 166, 87, 0.45);
+  transition: all 0.4s ease;
+}
+
+#dayNightCurtain.active .curtain-orb {
+  animation: curtainOrbPulse 1.5s ease-in-out infinite alternate;
+  box-shadow: 0 0 28px rgba(212, 166, 87, 0.45), inset 0 0 14px rgba(254, 240, 138, 0.28);
+}
+
+@keyframes curtainOrbPulse {
+  0% { transform: scale(0.96); box-shadow: 0 0 20px rgba(212, 166, 87, 0.35), inset 0 0 10px rgba(254, 240, 138, 0.18); }
+  100% { transform: scale(1.06); box-shadow: 0 0 38px rgba(245, 194, 102, 0.65), inset 0 0 18px rgba(254, 240, 138, 0.42); }
+}
+
+#dayNightCurtain.mode-night .curtain-orb {
+  background: transparent;
+  box-shadow: inset -14px -5px 0 2px #d8cfb8, 0 0 28px rgba(184, 167, 224, 0.32);
+}
+
+#dayNightCurtain.mode-day .curtain-orb {
+  background: radial-gradient(circle, #fffaf0 0%, #e4b867 62%, #b87c2a 100%);
+  box-shadow: 0 0 38px rgba(184, 124, 42, 0.45), 0 0 0 7px rgba(255, 250, 240, 0.38);
+}
+
+.sky-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--sky-dot-bg);
+  box-shadow: 0 0 8px var(--sky-dot-glow);
+}
+
+/* Accessible focus-visible antique gold ring */
+body.craft-ui button:focus-visible,
+body.craft-ui input:focus-visible,
+body.craft-ui textarea:focus-visible,
+body.craft-ui select:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
+/* Full Daylight Xuan-Paper Parity for v5.0 / v6.0 Strips, Cards & Seat Bar */
+body.craft-ui.theme-day .wind-vane-strip {
+  background: rgba(246, 236, 214, 0.94);
+  border-color: rgba(154, 104, 35, 0.42);
+  color: #5c3d14;
+}
+
+body.craft-ui.theme-day .play-card-btn.card-evidence {
+  background: var(--card-evidence-bg);
+  border-color: rgba(168, 107, 32, 0.58);
+  border-top-color: #b4731e;
+  border-left-color: #b4731e;
+  color: #3f280c;
+  box-shadow: 0 6px 16px rgba(154, 104, 35, 0.18), inset 0 1px 0 rgba(255, 252, 242, 0.85);
+}
+
+body.craft-ui.theme-day .fourg-card {
+  background: var(--surface-panel-grad);
+  box-shadow: 0 8px 18px rgba(72, 48, 20, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+body.craft-ui.theme-day .fourg-card:hover:not(:disabled) {
+  box-shadow: 0 14px 26px rgba(72, 48, 20, 0.22), 0 0 14px rgba(154, 104, 35, 0.18);
+}
+
+body.craft-ui.theme-day .play-card-stamp.stamp-evidence {
+  background: rgba(180, 115, 30, 0.14);
+  color: #6e4408;
+  border-color: rgba(168, 107, 32, 0.52);
+}
+
+body.craft-ui.theme-day .spectator-guess-bar,
+body.craft-ui.theme-day .gameover-guess-box {
+  background: rgba(248, 241, 226, 0.96);
+  border-color: rgba(154, 104, 35, 0.42);
+  color: #2c2219;
+}
+
+body.craft-ui.theme-day .spec-role-slot {
+  background: rgba(239, 229, 210, 0.92);
+  border-color: rgba(140, 104, 60, 0.34);
+  color: #4b3f33;
+}
+
+body.craft-ui.theme-day .spec-role-slot.is-filled {
+  background: rgba(36, 106, 80, 0.12);
+  border-color: rgba(36, 106, 80, 0.48);
+  color: #1f5f46;
+}
+
+body.craft-ui.theme-day .spec-role-slot.is-active-slot {
+  background: rgba(180, 115, 30, 0.18);
+  border-color: #a86b20;
+  color: #6b4108;
+  box-shadow: 0 0 8px rgba(168, 107, 32, 0.2);
+}
+
+body.craft-ui.theme-day .spec-seat-chip {
+  background: rgba(252, 247, 237, 0.95);
+  border-color: rgba(140, 104, 60, 0.32);
+  color: #3a2e22;
+}
+
+body.craft-ui.theme-day .spec-seat-chip.is-picked-wolf {
+  background: rgba(166, 50, 38, 0.15);
+  border-color: #a63226;
+  color: #7d1d14;
+}
+
+body.craft-ui.theme-day .spec-seat-chip.is-picked-god {
+  background: rgba(180, 115, 30, 0.18);
+  border-color: #9a6823;
+  color: #6b4108;
+}
+
+body.craft-ui.theme-day .wolf-tactic-btn {
+  background: rgba(244, 235, 218, 0.94);
+  border-color: rgba(140, 104, 60, 0.34);
+  color: #4b3f33;
+}
+
+body.craft-ui.theme-day .wolf-tactic-btn.is-active {
+  background: rgba(166, 50, 38, 0.16);
+  border-color: #a63226;
+  color: #821d14;
+  box-shadow: 0 2px 8px rgba(166, 50, 38, 0.18);
+}
+
+body.craft-ui.theme-day .clue-token.clue-contradiction {
+  color: #6e4408;
+  background: rgba(180, 115, 30, 0.16);
+  border-bottom: 1.5px dashed #9a6823;
+}
+
+body.craft-ui.theme-day #vrmLoadPill {
+  background: rgba(251, 246, 236, 0.92);
+  border-color: rgba(154, 104, 35, 0.45);
+  color: #6e4408;
+  box-shadow: 0 6px 18px rgba(72, 48, 20, 0.16);
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn {
+  background: rgba(246, 238, 223, 0.94);
+  border-color: rgba(140, 104, 60, 0.34);
+  color: #30251b;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn:hover:not(:disabled) {
+  background: rgba(238, 226, 205, 0.98);
+  border-color: rgba(154, 104, 35, 0.62);
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-speaking {
+  background: rgba(180, 115, 30, 0.16);
+  border-color: #9a6823;
+  color: #5b3808;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-mark-wolf {
+  background: rgba(166, 50, 38, 0.12);
+  border-color: rgba(166, 50, 38, 0.48);
+  color: #821d14;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-mark-good {
+  background: rgba(36, 106, 80, 0.12);
+  border-color: rgba(36, 106, 80, 0.48);
+  color: #1a543d;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected {
+  background: var(--accent-cinnabar);
+  border-color: rgba(250, 232, 194, 0.72);
+  color: #fbf5ea;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-dead {
+  background: rgba(226, 217, 200, 0.55);
+  border-color: rgba(140, 104, 60, 0.2);
+  color: #8c7e6e;
+}

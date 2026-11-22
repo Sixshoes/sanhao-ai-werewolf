@@ -1,0 +1,5 @@
+.DS_Store
+.venv/
+.tts_cache/
+__pycache__/
+*.pyc
