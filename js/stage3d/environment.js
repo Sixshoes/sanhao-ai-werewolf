@@ -294,31 +294,51 @@ function createSculptedMountainRing(innerR, outerR, maxHeight, mat, seedShift) {
 
 function buildMountainPineTree(x, y, z, scaleMul) {
   const g = new THREE.Group();
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x452d1d, roughness: 0.88, metalness: 0.04 });
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0x264b36, roughness: 0.82, metalness: 0.04 });
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x422a1b, roughness: 0.90, metalness: 0.03 });
+  const deepLeafMat = new THREE.MeshStandardMaterial({ color: 0x1d3b2b, roughness: 0.86, metalness: 0.03 });
   const needleTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createPineNeedleTexture === "function")
     ? stage3dTextures.createPineNeedleTexture()
     : null;
-  const fanMat = needleTex
+  const fanMatShade = needleTex
     ? new THREE.MeshStandardMaterial({
         map: needleTex,
-        color: 0x9fe0b6,
-        alphaTest: 0.25,
+        color: 0x5c9472,
+        alphaTest: 0.28,
         transparent: true,
-        roughness: 0.78,
+        roughness: 0.82,
         side: THREE.DoubleSide
       })
-    : leafMat;
+    : deepLeafMat;
+  const fanMatSun = needleTex
+    ? new THREE.MeshStandardMaterial({
+        map: needleTex,
+        color: 0x8bc99b,
+        alphaTest: 0.28,
+        transparent: true,
+        roughness: 0.76,
+        side: THREE.DoubleSide
+      })
+    : deepLeafMat;
 
   if (typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function") {
     const curve = new THREE.QuadraticBezierCurve3(
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0.45, 1.5, 0.2),
-      new THREE.Vector3(-0.15, 3.1, -0.1)
+      new THREE.Vector3(0.42, 1.48, 0.18),
+      new THREE.Vector3(-0.14, 3.12, -0.08)
     );
-    const trunk = new THREE.Mesh(new THREE.TubeGeometry(curve, 10, 0.16, 7, false), trunkMat);
+    const trunk = new THREE.Mesh(new THREE.TubeGeometry(curve, 11, 0.155, 7, false), trunkMat);
     trunk.castShadow = true;
     g.add(trunk);
+
+    // Gnarled bonsai-style lateral limbs connecting trunk to pine clouds
+    [
+      [new THREE.Vector3(0.24, 1.62, 0.10), new THREE.Vector3(0.56, 1.88, 0.24), new THREE.Vector3(0.76, 1.98, 0.30)],
+      [new THREE.Vector3(0.08, 2.22, 0.02), new THREE.Vector3(-0.32, 2.40, -0.16), new THREE.Vector3(-0.62, 2.48, -0.26)]
+    ].forEach(function (pts) {
+      const bCurve = new THREE.QuadraticBezierCurve3(pts[0], pts[1], pts[2]);
+      const limb = new THREE.Mesh(new THREE.TubeGeometry(bCurve, 6, 0.055, 5, false), trunkMat);
+      g.add(limb);
+    });
   } else {
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.20, 3.0, 8), trunkMat);
     trunk.position.y = 1.5;
@@ -326,26 +346,37 @@ function buildMountainPineTree(x, y, z, scaleMul) {
   }
 
   const canopy = new THREE.Group();
-  const fanGeo = new THREE.PlaneGeometry(1.55, 1.15);
+  const fanGeo = new THREE.PlaneGeometry(1.52, 1.08);
   [
-    [0.58, 2.02, 0.26, 1.05],
-    [-0.48, 2.52, -0.22, 0.96],
-    [0.10, 3.08, 0.05, 1.16]
+    [0.68, 2.02, 0.28, 1.02],
+    [-0.56, 2.52, -0.24, 0.94],
+    [0.10, 3.10, 0.04, 1.12],
+    [-0.14, 2.82, 0.44, 0.78]
   ].forEach(function (c, ti) {
-    // Inner volume cushion + radial airy pine-needle clusters for authentic mountain silhouette!
-    const core = new THREE.Mesh(new THREE.SphereGeometry(c[3] * 0.68, 10, 7), leafMat);
-    core.scale.set(1.22, 0.36, 1.10);
-    core.position.set(c[0], c[1], c[2]);
+    // Low-profile dark-emerald pine bough core (tapered flat pagoda silhouette instead of round sphere)
+    const core = new THREE.Mesh(new THREE.ConeGeometry(c[3] * 0.66, c[3] * 0.36, 7), deepLeafMat);
+    core.scale.set(1.16, 0.85, 0.98);
+    core.position.set(c[0], c[1] + 0.02, c[2]);
+    core.rotation.y = ti * 0.95;
     core.castShadow = true;
     canopy.add(core);
     if (needleTex) {
+      // Lower shaded pine fronds (5 radial) + upper sunlit crown fronds (4 offset)
       for (let fi = 0; fi < 5; fi++) {
-        const fa = (fi / 5) * Math.PI * 2 + ti * 0.7;
-        const fan = new THREE.Mesh(fanGeo, fanMat);
-        fan.position.set(c[0] + Math.cos(fa) * c[3] * 0.56, c[1] + 0.08 + (fi % 2) * 0.12, c[2] + Math.sin(fa) * c[3] * 0.56);
-        fan.rotation.set(-0.55, fa, 0.12 * (fi % 2 ? 1 : -1));
-        fan.scale.setScalar(c[3] * 0.85);
+        const fa = (fi / 5) * Math.PI * 2 + ti * 0.65;
+        const fan = new THREE.Mesh(fanGeo, fanMatShade);
+        fan.position.set(c[0] + Math.cos(fa) * c[3] * 0.54, c[1] - 0.02 + (fi % 2) * 0.06, c[2] + Math.sin(fa) * c[3] * 0.54);
+        fan.rotation.set(-0.62, fa, 0.14 * (fi % 2 ? 1 : -1));
+        fan.scale.setScalar(c[3] * 0.86);
         canopy.add(fan);
+      }
+      for (let ui = 0; ui < 4; ui++) {
+        const ua = (ui / 4) * Math.PI * 2 + ti * 0.9 + 0.4;
+        const uFan = new THREE.Mesh(fanGeo, fanMatSun);
+        uFan.position.set(c[0] + Math.cos(ua) * c[3] * 0.30, c[1] + 0.14 + (ui % 2) * 0.07, c[2] + Math.sin(ua) * c[3] * 0.30);
+        uFan.rotation.set(-0.42, ua, -0.10 * (ui % 2 ? 1 : -1));
+        uFan.scale.setScalar(c[3] * 0.72);
+        canopy.add(uFan);
       }
     }
   });
@@ -1906,7 +1937,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
 
     env.spotCone.position.set(env.currentSpotPos.x, 9.6, env.currentSpotPos.z);
     env.spotCone.material.color.setHex(spotColorHex);
-    env.spotCone.material.opacity += ((f.daylight ? 0.11 : 0.20) - env.spotCone.material.opacity) * 0.12;
+    env.spotCone.material.opacity += ((f.daylight ? 0.045 : 0.18) - env.spotCone.material.opacity) * 0.12;
   } else {
     env.speakerSpot.intensity += (0 - env.speakerSpot.intensity) * 0.1;
     env.spotCone.material.opacity += (0 - env.spotCone.material.opacity) * 0.1;

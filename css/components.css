@@ -863,6 +863,19 @@ body.screen-gameover #focalCenterCard {
   }
 }
 
+.turn-strip-row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  padding-bottom: 1px;
+}
+
+.turn-strip-row::-webkit-scrollbar {
+  display: none;
+}
+
 .turn-chip {
   font-size: 10px;
   font-weight: 700;
@@ -873,6 +886,7 @@ body.screen-gameover #focalCenterCard {
   color: var(--text-muted);
   transition: all 0.2s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .turn-chip.is-done {

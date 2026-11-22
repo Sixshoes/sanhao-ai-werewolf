@@ -133,14 +133,17 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
   try {
     const fetchOpts = {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": state.geminiApiKey
+      },
       body: JSON.stringify({
         contents: [{ parts: [{ text: promptText }] }],
         generationConfig: genCfg
       })
     };
     if (controller) fetchOpts.signal = controller.signal;
-    const res = await fetch(endpoint + "?key=" + encodeURIComponent(state.geminiApiKey), fetchOpts);
+    const res = await fetch(endpoint, fetchOpts);
     if (timer) clearTimeout(timer);
     if (!res.ok) return { ok: false, status: res.status, text: null };
     const data = await res.json();
@@ -156,6 +159,13 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
   }
 }
 
+function notifyGeminiIssueOnce(issueKey, msg, tone) {
+  if (typeof state === "undefined" || typeof showToast !== "function") return;
+  if (state._lastGeminiWarnKey === issueKey) return;
+  state._lastGeminiWarnKey = issueKey;
+  showToast(msg, tone || "warn");
+}
+
 async function callGeminiText(promptText, opts) {
   if (state.localLlmModel) {
     const loc = await callLocalOllamaOnce(state.localLlmModel, promptText, 40000, opts);
@@ -165,14 +175,34 @@ async function callGeminiText(promptText, opts) {
   const primary = state.geminiModel || "gemini-3.8-flash";
   const isHeavy = primary.indexOf("pro") !== -1 || primary.indexOf("argon") !== -1;
   const first = await callGeminiModelOnce(primary, promptText, isHeavy ? 20000 : 12000, opts);
-  if (first.ok && first.text) return first.text;
+  if (first.ok && first.text) {
+    state._lastGeminiWarnKey = null;
+    return first.text;
+  }
+  // Abort redundant retries immediately on invalid key (401/403) unless it's a tier-restricted flagship model
+  if ((first.status === 401 || first.status === 403) && primary.indexOf("gemini-4") !== 0) {
+    notifyGeminiIssueOnce("auth:" + primary + ":" + first.status, "⚠️ Gemini API Key 無效或無權限（HTTP " + first.status + "），暫改由內建 AI 推理", "warn");
+    return null;
+  }
   if (primary !== "gemini-3.8-flash") {
     const fb38 = await callGeminiModelOnce("gemini-3.8-flash", promptText, 12000, opts);
-    if (fb38.ok && fb38.text) return fb38.text;
+    if (fb38.ok && fb38.text) {
+      if (primary.indexOf("gemini-4") === 0 && (first.status === 403 || first.status === 429 || first.status === 404)) {
+        notifyGeminiIssueOnce("downgrade:" + primary, "ℹ️ Gemini 4 Argon 需付費額度，已自動降級至 Gemini 3.8 Flash", "emerald");
+      }
+      return fb38.text;
+    }
+    if (fb38.status === 401 || fb38.status === 403) {
+      notifyGeminiIssueOnce("auth:38:" + fb38.status, "⚠️ Gemini API Key 無效或無權限（HTTP " + fb38.status + "），暫改由內建 AI 推理", "warn");
+      return null;
+    }
   }
   if (primary !== "gemini-2.5-flash") {
     const fb25 = await callGeminiModelOnce("gemini-2.5-flash", promptText, 9000, opts);
     if (fb25.ok && fb25.text) return fb25.text;
+  }
+  if (first.status === 429) {
+    notifyGeminiIssueOnce("quota:" + primary, "⚠️ Gemini API 額度暫滿（HTTP 429），本回合自動由內建 AI 接手", "warn");
   }
   return null;
 }

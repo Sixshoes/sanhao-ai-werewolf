@@ -1,21 +1,21 @@
-# 三好AI狼人殺（林美山書院・雲起茶席 3D 實景競賽版 v4.5）
+# 三好AI狼人殺（林美山書院・雲起茶席 3D 實景競賽版 v5.2）
 
-結合 **「存好心、說好話、做好事」三好理念** 與 **「四給（給信心、給歡喜、給希望、給方便）」** 策略卡牌的快節奏互動反霸凌推理桌遊，內建 **Three.js 實景光影 3D 紅瓦白牆書院茶席（Poly Haven CC0 PBR 真實木紋石板 × 360° 山海天穹 × 遠方龜山島與蘭陽萬家燈火 × 電影級 8 角色立繪）**、**五段式 Web Audio 動態配樂**、**100% 免費神經多角色語音**、**三段 AI 推理難度**、**警長 1.5 票模式** 與 **生涯成就／上帝視角戰報匯出**，**100% 盲審匿名合規** 且 **支援純靜態零成本免費雲端部署（\$0 零花費）**。
+結合 **「存好心、說好話、做好事」三好理念** 與 **「四給（給信心、給歡喜、給希望、給方便）」** 策略卡牌的快節奏互動反霸凌推理桌遊，內建 **Three.js WebGL2 4x MSAA 實景光影 3D 紅瓦白牆書院茶席（10 位 100% CC0 動漫 `.vrm` 角色＋即時 Cel Shading × Poly Haven CC0 PBR 真實木紋石板 × 360° 黃昏／白晝／星夜山海天穹 × 琉璃雙層三好蓮花 × 遠方龜山島與蘭陽萬家燈火 × 畫廊級厚塗立繪）**、**五段式 Web Audio 動態配樂**、**100% 免費神經多角色語音**、**Gemini 3.8/4 ＋ 本機免費 Ollama ＋ 內建多代理三層推理引擎**、**警長 1.5 票環狀連續發言** 與 **生涯成就／上帝視角戰報匯出**，**100% 盲審匿名合規** 且 **支援純靜態零成本免費雲端部署（\$0 零花費）**。
 
 ---
 
 ## 快速啟動與免費雲端部署
 
 ### 方式一：2 分鐘免費部署公開 HTTPS 網址（評審測試推薦，\$0 零花費）
-專案已內建自動導向入口 **`index.html`**，且所有前端程式、3D 引擎、樣式表、8 張人物立繪、2 張 360° 天穹與 6 張 Poly Haven CC0 PBR 貼圖皆已完整離線打包：
-- **Netlify Drop（最快）**：前往 `https://app.netlify.com/drop`，直接將本專案資料夾（排除 `.venv/` 與 `.tts_cache/`）拖曳上傳，30 秒即可獲得免費公開 HTTPS 體驗網址。
-- **GitHub Pages**：推送至 GitHub 公開儲存庫後，在 `Settings → Pages` 選擇 `main` 分支根目錄，即可取得永久免費公開網址。
-- 雲端純靜態版會自動載入真實 PBR 材質與 360° 天穹，並自動無縫切換瀏覽器自然語音＋療癒原音配樂！
+專案已內建自動導向入口 **`index.html`** 與靜態 3D 角色清單 **`assets/models/manifest.json`**，所有前端程式、3D 引擎、10 位輕量化 CC0 `.vrm` 角色（瘦身至 ~33 MB）、10 張厚塗立繪、3 張 360° 天穹與 6 張 Poly Haven CC0 PBR 貼圖皆已完整離線打包：
+- **GitHub Pages**：推送至 GitHub 公開儲存庫後，在 `Settings → Pages` 選擇 `main` 分支根目錄，即可取得永久免費公開網址並**自動載入全部 10 位 3D VRM 角色**。
+- **Netlify Drop**：前往 `https://app.netlify.com/drop`，直接將本專案資料夾（排除 `.venv/` 與 `.tts_cache/`）拖曳上傳，30 秒即可獲得免費公開 HTTPS 體驗網址。
+- 雲端純靜態版會自動透過 `manifest.json` 載入全部 CC0 VRM 角色、PBR 材質與 360° 天穹，並自動無縫切換瀏覽器自然語音＋療癒原音配樂！
 
-### 方式二：macOS 本機一鍵啟動（完整免費神經台灣腔語音，\$0 零花費）
-直接雙擊專案內的 **`啟動三好狼人殺.command`**（或在終端機執行 `python3 server.py`），即會自動開啟本地免費神經配音伺服器並於瀏覽器前往：**http://localhost:8788/ai.html**
-- 自動啟用 **免費微軟神經台灣／華語多角色配音員**（支援「🇹🇼 100% 純台灣腔」與「🎭 多元 9 聲線」一鍵切換、開機常用語預暖與 `.tts_cache/` 磁碟快取）。
-- 自動載入 **Poly Haven CC0 實景 PBR 貼圖＋360° 山海天穹＋IBL 真實環境倒影**、**音訊長度與打字機對拍**、**3D 空間左右耳定位** 與 **即時音訊振幅驅動 3D 角色嘴型同步**。
+### 方式二：macOS 本機一鍵啟動（完整免費神經台灣腔語音＋本機 Ollama 支援，\$0 零花費）
+直接雙擊專案內的 **`啟動三好狼人殺.command`**（或在終端機執行 `python3 server.py`），即會啟動本機免費神經配音與 Ollama 代理伺服器（預設僅監聽本機 `127.0.0.1:8788` 安全迴路，如需區網分享可加 `--lan`）並開啟：**http://localhost:8788/ai.html**
+- 自動啟用 **免費微軟神經台灣／華語多角色配音員**（支援「動漫 8 聲線」與「純台灣腔」一鍵切換、開機常用語預暖與有上限 LRU 管理的 `.tts_cache/` 磁碟快取）。
+- 自動偵測本機 **Ollama** 模型（免 API Key 免費離線 LLM），亦可選配填入 Google AI Studio 金鑰啟用 **Gemini 3.8 Flash / 4 Argon**（全程以 `x-goog-api-key` 標頭安全傳遞）。
 
 ### 方式三：直接離線雙擊開啟
 直接雙擊 `ai.html` 即可在 **完全斷網環境** 下秒開遊玩（含本地離線版 `css/tailwind-local.css`、`js/vendor/three.min.js` 3D 舞台、8 張本地電影級角色立繪與本機系統柔聲語音）。
@@ -66,34 +66,36 @@
 │   ├── 作品說明書_初稿.md       # 官方 8 大章節完整初稿（匿名合規、可直接貼入 Word 排版）
 │   └── 三分鐘Demo影片腳本.md    # 0:00–3:00 逐秒分鏡、口播稿與免費 AI 旁白生成指令
 ├── assets/
-│   ├── portraits/              # 8 位統一畫風電影級寫實人物立繪（384×384 本地離線）
-│   ├── sky/                    # 360° 實景日夜山城全景天穹
+│   ├── models/                 # 10 位 100% CC0 動漫 .vrm 角色（瘦身 ~33MB）＋靜態 manifest.json
+│   ├── portraits/              # 10 張書院厚塗立繪（含玩家男女與清茗主持，384×384 離線）
+│   ├── portraits_vrm/          # 10 張 3D 建模風格備選頭像（一鍵切換）
+│   ├── sky/                    # 360° 實景黃昏／白晝／星夜山海全景天穹
 │   └── textures/               # Poly Haven CC0 真實照片掃描胡桃木／石板 PBR 貼圖
 ├── css/
 │   ├── tailwind-local.css      # 本地預編譯離線版 Tailwind CSS
 │   ├── theme.css               # 語意 CSS 變數、天空背景、日夜主題與轉場布幕（0 !important）
 │   └── components.css          # 舞台元件、鏡頭暗角、立繪呼吸光暈與 3D／行動版 RWD（0 !important）
 ├── js/
-│   ├── vendor/three.min.js     # 本地離線版 Three.js r128
+│   ├── vendor/                 # 本地離線版 Three.js r128、GLTFLoader 與 PostFX
 │   ├── data/constants.js       # 典雅角色定義、AI 策略劇本、書院夥伴人設與三好詞典
-│   ├── core/                   # 全域 state、偏好存取、生涯戰績、8 枚成就與戰報匯出
+│   ├── core/                   # 全域 state、多代理編排器 orchestrator、生涯戰績與戰報匯出
 │   ├── audio/                  # 五樂章配樂、Web Audio 廣播人聲處理鏈與多角色語音
 │   ├── canvas/                 # 向量角色立繪與 2D 舞台分層渲染
-│   ├── stage3d/                # Three.js 實景 3D 書院茶席（CC0 PBR、IBL、龜山島、蘭陽燈火）
+│   ├── stage3d/                # Three.js 實景 3D 書院茶席（CC0 VRM、Cel Shader、PostFX、IBL）
 │   ├── ui/                     # 視覺特效、聚光燈、放射偵探選單、HUD、面板與彈窗
-│   ├── ai/                     # Gemini 選配串接與三階段啟發式推理引擎
+│   ├── ai/                     # Gemini 3.8/4 ＋ Ollama 串接與三階段啟發式推理引擎
 │   ├── game/                   # 開局、夜晚、直心共鳴、遺言、白天發言、三好轉譯與 PK 公投
 │   ├── events/                 # 舞台／音訊／遊戲／彈窗事件綁定
 │   └── main.js                 # 應用程式啟動入口
-└── tests/smoke.mjs             # 一鍵自動化回歸測試（含盲審防呆、素材與全流程 E2E）
+└── tests/                      # 4 層自動化驗證（run_all.mjs / smoke.mjs / fuzz.mjs / test_server.py）
 ```
 
 ---
 
 ## 自動化驗證
 
-修改任何模組後可執行：
+修改任何模組後可執行完整 4 層回歸測試：
 ```bash
-node tests/smoke.mjs
+node tests/run_all.mjs
 ```
-會自動檢查全站資源 1-to-1 對應、全部立繪／360° 天穹／Poly Haven CC0 貼圖完整度、盲審去識別化與零暗黑詞彙合規、離線零 CDN、CSS 括號平衡與零 `!important`、DOM ID 全覆蓋、XSS 逃逸防護、全部 JS 語法與 2D/3D/AI/三好四給端到端測試。
+會依序執行：全站靜態資產與 3 CSS + 45 JS 完整性檢查（含靜態 `manifest.json`、盲審零暗黑詞彙、0 `!important`、API Key Header 安全驗證）、全流程 2D/3D/AI/三好四給 E2E 回歸測試（`tests/smoke.mjs`）、Python 伺服器安全與快取單元測試（`tests/test_server.py`），以及 60 局多角色亂數壓力與不變量測試（`tests/fuzz.mjs`）。

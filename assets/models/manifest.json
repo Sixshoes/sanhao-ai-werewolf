@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "hasHeroGlb": true,
+  "heroModel": "assets/models/qingming.vrm",
+  "hasPavilionGlb": false,
+  "pavilionModel": null,
+  "seatModels": {
+    "player": "assets/models/player.vrm",
+    "player_male": "assets/models/player_male.vrm",
+    "xiaocheng": "assets/models/xiaocheng.vrm",
+    "nuannuan": "assets/models/nuannuan.vrm",
+    "asong": "assets/models/asong.vrm",
+    "xinger": "assets/models/xinger.vrm",
+    "xiaoyun": "assets/models/xiaoyun.vrm",
+    "azhu": "assets/models/azhu.vrm",
+    "chenchen": "assets/models/chenchen.vrm"
+  }
+}

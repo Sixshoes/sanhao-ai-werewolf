@@ -198,11 +198,12 @@ const stage3dAnime = {
       uVrmRimStrength: { value: isFace ? 0.14 : (isHair ? 0.28 : 0.22) },
       uVrmShadowTint: { value: shadowTint },
       uVrmShadowLift: { value: isFace ? 0.64 : 0.44 },
-      uVrmWarmBounce: { value: isFace ? 0.11 : 0.14 }
+      uVrmWarmBounce: { value: isFace ? 0.11 : 0.14 },
+      uVrmClothHarm: { value: (isFace || isHair) ? 0.0 : 1.0 }
     };
 
     celMat.customProgramCacheKey = function () {
-      return "sanhao_vrm_cel_v1";
+      return "sanhao_vrm_cel_v2";
     };
     celMat.onBeforeCompile = function (shader) {
       if (!shader || !shader.fragmentShader) return;
@@ -211,6 +212,7 @@ const stage3dAnime = {
       shader.uniforms.uVrmShadowTint = uniforms.uVrmShadowTint;
       shader.uniforms.uVrmShadowLift = uniforms.uVrmShadowLift;
       shader.uniforms.uVrmWarmBounce = uniforms.uVrmWarmBounce;
+      shader.uniforms.uVrmClothHarm = uniforms.uVrmClothHarm;
 
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <common>",
@@ -220,7 +222,8 @@ const stage3dAnime = {
           "uniform float uVrmRimStrength;",
           "uniform vec3 uVrmShadowTint;",
           "uniform float uVrmShadowLift;",
-          "uniform float uVrmWarmBounce;"
+          "uniform float uVrmWarmBounce;",
+          "uniform float uVrmClothHarm;"
         ].join("\n")
       );
       shader.fragmentShader = shader.fragmentShader.replace(
@@ -234,7 +237,13 @@ const stage3dAnime = {
           "float vrmUnder = clamp( -vrmN.y * 0.55 + 0.45, 0.0, 1.0 );",
           "vec3 vrmCandleBounce = diffuseColor.rgb * vec3( 1.0, 0.78, 0.48 ) * uVrmWarmBounce * vrmUnder;",
           "vec3 vrmMinFloor = diffuseColor.rgb * uVrmShadowTint * uVrmShadowLift;",
-          "outgoingLight = min( max( outgoingLight * 0.80, vrmMinFloor ) + vrmRim + vrmCandleBounce, vec3( 1.12 ) );",
+          "vec3 vrmOut = min( max( outgoingLight * 0.80, vrmMinFloor ) + vrmRim + vrmCandleBounce, vec3( 1.12 ) );",
+          "if ( uVrmClothHarm > 0.5 ) {",
+          "  float vrmLum = dot( vrmOut, vec3( 0.299, 0.587, 0.114 ) );",
+          "  vrmOut = mix( vrmOut, vec3( vrmLum ), 0.11 );",
+          "  vrmOut = mix( vrmOut, vrmOut * vec3( 1.04, 0.99, 0.92 ), 0.35 );",
+          "}",
+          "outgoingLight = vrmOut;",
           "gl_FragColor = vec4( outgoingLight, diffuseColor.a );"
         ].join("\n")
       );

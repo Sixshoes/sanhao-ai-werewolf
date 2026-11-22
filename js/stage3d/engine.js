@@ -762,42 +762,73 @@ const stage3d = {
     });
   },
 
+  getDefaultStaticAvatarManifest: function () {
+    return {
+      ok: true,
+      hasHeroGlb: true,
+      heroModel: "assets/models/qingming.vrm",
+      hasPavilionGlb: false,
+      pavilionModel: null,
+      seatModels: {
+        player: "assets/models/player.vrm",
+        player_male: "assets/models/player_male.vrm",
+        xiaocheng: "assets/models/xiaocheng.vrm",
+        nuannuan: "assets/models/nuannuan.vrm",
+        asong: "assets/models/asong.vrm",
+        xinger: "assets/models/xinger.vrm",
+        xiaoyun: "assets/models/xiaoyun.vrm",
+        azhu: "assets/models/azhu.vrm",
+        chenchen: "assets/models/chenchen.vrm"
+      }
+    };
+  },
+
   checkAutoAvatars: function () {
     if (typeof window === "undefined" || !window.location) return;
     const proto = window.location.protocol;
     if (proto !== "http:" && proto !== "https:") return;
     if (typeof fetch !== "function" || typeof THREE.GLTFLoader !== "function") return;
     const self = this;
-    fetch("/api/assets/status")
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (info) {
-        if (!info) return;
-        const startSeats = function () {
-          if (info.seatModels) {
-            self.avatarManifest = info.seatModels;
-            if (typeof getStageSeatListFor3D === "function") {
-              self.syncSeatAvatars(getStageSeatListFor3D());
-            }
+    const applyManifest = function (info) {
+      if (!info) return;
+      const startSeats = function () {
+        if (info.seatModels) {
+          self.avatarManifest = info.seatModels;
+          if (typeof getStageSeatListFor3D === "function") {
+            self.syncSeatAvatars(getStageSeatListFor3D());
           }
-        };
-        const loader = new THREE.GLTFLoader();
-        if (info.pavilionModel) {
-          loader.load(info.pavilionModel, function (pvGltf) {
-            self.attachCustomPavilionGlb(pvGltf, info.pavilionModel.split("/").pop(), true);
-          }, undefined, function () {});
         }
-        const heroUrl = info.heroModel || (info.hasHeroGlb ? "assets/models/qingming.glb" : null);
-        if (heroUrl && self.hero) {
-          loader.load(heroUrl, function (gltf) {
-            self.attachNormalizedHeroGlb(gltf, heroUrl.split("/").pop(), true, false);
-            setTimeout(startSeats, 120);
-          }, undefined, function () {
-            startSeats();
-          });
-        } else {
+      };
+      const loader = new THREE.GLTFLoader();
+      if (info.pavilionModel) {
+        loader.load(info.pavilionModel, function (pvGltf) {
+          self.attachCustomPavilionGlb(pvGltf, info.pavilionModel.split("/").pop(), true);
+        }, undefined, function () {});
+      }
+      const heroUrl = info.heroModel || (info.hasHeroGlb ? "assets/models/qingming.glb" : null);
+      if (heroUrl && self.hero) {
+        loader.load(heroUrl, function (gltf) {
+          self.attachNormalizedHeroGlb(gltf, heroUrl.split("/").pop(), true, false);
+          setTimeout(startSeats, 120);
+        }, undefined, function () {
           startSeats();
-        }
-      })
+        });
+      } else {
+        startSeats();
+      }
+    };
+    const loadStaticFallback = function () {
+      return fetch("assets/models/manifest.json")
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .catch(function () { return null; })
+        .then(function (staticInfo) {
+          return staticInfo || self.getDefaultStaticAvatarManifest();
+        });
+    };
+    fetch("/api/assets/status")
+      .then(function (r) { return r && r.ok ? r.json() : loadStaticFallback(); })
+      .catch(function () { return loadStaticFallback(); })
+      .then(applyManifest)
       .catch(function () { });
   },
 
@@ -1409,13 +1440,13 @@ function draw3DOverlayHud(ctx, f, coords) {
       topBorder = "rgba(212, 166, 87, 0.72)";
       topFg = "#e8c884";
       prio = 3;
-    } else if (inMatch) {
+    } else if (inMatch && isSheriff) {
       isSubtleNameplate = true;
       topTag = sheriffPrefix + "0" + s.id + " " + (s.id === getPlayerId() ? "你" : s.name);
-      topBg = "rgba(18, 14, 11, 0.62)";
-      topBorder = isSheriff ? "rgba(245, 196, 81, 0.65)" : "rgba(212, 166, 87, 0.24)";
-      topFg = isSheriff ? "#fde68a" : "#e2d9c8";
-      prio = isSheriff ? 2 : 0;
+      topBg = "rgba(18, 14, 11, 0.72)";
+      topBorder = "rgba(245, 196, 81, 0.75)";
+      topFg = "#fde68a";
+      prio = 2;
     }
 
     if (topTag) {

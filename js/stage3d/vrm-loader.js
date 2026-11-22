@@ -21,15 +21,15 @@ const SEAT_MODEL_SLUGS = {
 };
 
 const VRM_IDLE_ARCHETYPES = {
-  "你": { breathFreq: 1.95, breathAmp: 0.016, spineLean: 0.01, headRollAmp: 0.020, headTiltBias: 0.0, idleHappy: 0.08, idleFun: 0.04, rDrop: 1.16, rFwd: 0.20, rBend: 0.78, lDrop: 1.16, lFwd: 0.20, lBend: 0.78, armSwayAmp: 0.022 },
-  "小澄": { breathFreq: 1.85, breathAmp: 0.014, spineLean: 0.035, headRollAmp: 0.016, headTiltBias: 0.025, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.12, rFwd: 0.26, rBend: 0.92, lDrop: 1.18, lFwd: 0.16, lBend: 0.76, armSwayAmp: 0.012 },
-  "暖暖": { breathFreq: 2.15, breathAmp: 0.020, spineLean: 0.01, headRollAmp: 0.040, headTiltBias: -0.02, idleHappy: 0.24, idleFun: 0.14, rDrop: 1.14, rFwd: 0.24, rBend: 0.88, lDrop: 1.14, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.030 },
-  "阿松": { breathFreq: 1.35, breathAmp: 0.018, spineLean: -0.015, headRollAmp: 0.012, headTiltBias: 0.0, idleHappy: 0.06, idleFun: 0.0, rDrop: 1.20, rFwd: 0.15, rBend: 0.70, lDrop: 1.20, lFwd: 0.15, lBend: 0.70, armSwayAmp: 0.012 },
-  "星兒": { breathFreq: 2.85, breathAmp: 0.024, spineLean: 0.02, headRollAmp: 0.055, headTiltBias: 0.03, idleHappy: 0.16, idleFun: 0.26, rDrop: 1.12, rFwd: 0.26, rBend: 0.94, lDrop: 1.16, lFwd: 0.18, lBend: 0.78, armSwayAmp: 0.040 },
-  "小雲": { breathFreq: 1.75, breathAmp: 0.016, spineLean: 0.02, headRollAmp: 0.032, headTiltBias: -0.035, idleHappy: 0.10, idleFun: 0.08, rDrop: 1.14, rFwd: 0.24, rBend: 0.90, lDrop: 1.18, lFwd: 0.18, lBend: 0.82, armSwayAmp: 0.022 },
-  "阿竹": { breathFreq: 1.60, breathAmp: 0.014, spineLean: 0.015, headRollAmp: 0.018, headTiltBias: 0.015, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.16, rFwd: 0.22, rBend: 0.90, lDrop: 1.16, lFwd: 0.20, lBend: 0.86, armSwayAmp: 0.016 },
-  "晨晨": { breathFreq: 2.35, breathAmp: 0.020, spineLean: 0.0, headRollAmp: 0.028, headTiltBias: 0.0, idleHappy: 0.12, idleFun: 0.10, rDrop: 1.16, rFwd: 0.20, rBend: 0.74, lDrop: 1.16, lFwd: 0.20, lBend: 0.74, armSwayAmp: 0.028 },
-  default: { breathFreq: 2.05, breathAmp: 0.016, spineLean: 0.01, headRollAmp: 0.025, headTiltBias: 0.0, idleHappy: 0.05, idleFun: 0.0, rDrop: 1.16, rFwd: 0.20, rBend: 0.78, lDrop: 1.16, lFwd: 0.20, lBend: 0.78, armSwayAmp: 0.020 }
+  "你": { breathFreq: 1.95, breathAmp: 0.016, spineLean: 0.01, headRollAmp: 0.020, headTiltBias: 0.0, idleHappy: 0.08, idleFun: 0.04, rDrop: 1.20, rFwd: 0.16, rBend: 0.64, lDrop: 1.20, lFwd: 0.16, lBend: 0.64, armSwayAmp: 0.018 },
+  "小澄": { breathFreq: 1.85, breathAmp: 0.014, spineLean: 0.03, headRollAmp: 0.016, headTiltBias: 0.025, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.18, rFwd: 0.20, rBend: 0.74, lDrop: 1.21, lFwd: 0.14, lBend: 0.62, armSwayAmp: 0.010 },
+  "暖暖": { breathFreq: 2.15, breathAmp: 0.020, spineLean: 0.01, headRollAmp: 0.040, headTiltBias: -0.02, idleHappy: 0.24, idleFun: 0.14, rDrop: 1.19, rFwd: 0.18, rBend: 0.70, lDrop: 1.19, lFwd: 0.18, lBend: 0.70, armSwayAmp: 0.024 },
+  "阿松": { breathFreq: 1.35, breathAmp: 0.018, spineLean: -0.015, headRollAmp: 0.012, headTiltBias: 0.0, idleHappy: 0.06, idleFun: 0.0, rDrop: 1.22, rFwd: 0.13, rBend: 0.58, lDrop: 1.22, lFwd: 0.13, lBend: 0.58, armSwayAmp: 0.010 },
+  "星兒": { breathFreq: 2.85, breathAmp: 0.024, spineLean: 0.02, headRollAmp: 0.055, headTiltBias: 0.03, idleHappy: 0.16, idleFun: 0.26, rDrop: 1.18, rFwd: 0.20, rBend: 0.76, lDrop: 1.20, lFwd: 0.15, lBend: 0.64, armSwayAmp: 0.032 },
+  "小雲": { breathFreq: 1.75, breathAmp: 0.016, spineLean: 0.02, headRollAmp: 0.032, headTiltBias: -0.035, idleHappy: 0.10, idleFun: 0.08, rDrop: 1.19, rFwd: 0.19, rBend: 0.72, lDrop: 1.21, lFwd: 0.15, lBend: 0.66, armSwayAmp: 0.018 },
+  "阿竹": { breathFreq: 1.60, breathAmp: 0.014, spineLean: 0.015, headRollAmp: 0.018, headTiltBias: 0.015, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.20, rFwd: 0.17, rBend: 0.70, lDrop: 1.20, lFwd: 0.16, lBend: 0.68, armSwayAmp: 0.014 },
+  "晨晨": { breathFreq: 2.35, breathAmp: 0.020, spineLean: 0.0, headRollAmp: 0.028, headTiltBias: 0.0, idleHappy: 0.12, idleFun: 0.10, rDrop: 1.20, rFwd: 0.16, rBend: 0.62, lDrop: 1.20, lFwd: 0.16, lBend: 0.62, armSwayAmp: 0.022 },
+  default: { breathFreq: 2.05, breathAmp: 0.016, spineLean: 0.01, headRollAmp: 0.025, headTiltBias: 0.0, idleHappy: 0.05, idleFun: 0.0, rDrop: 1.20, rFwd: 0.16, rBend: 0.64, lDrop: 1.20, lFwd: 0.16, lBend: 0.64, armSwayAmp: 0.016 }
 };
 
 const stage3dVrm = {

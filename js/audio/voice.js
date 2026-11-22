@@ -503,16 +503,19 @@ const voice = {
     if (this.studioCache[cacheKey]) {
       return this.playBufferedStudioAudio(seq, this.studioCache[cacheKey], onDone);
     }
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent";
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent";
     const controller = new AbortController();
     const timer = setTimeout(function () { controller.abort(); }, 7500);
     try {
       const styledText = mood === "panic"
         ? ("用稍微緊張急促的台灣口語說：" + cleanText)
         : cleanText;
-      const res = await fetch(endpoint + "?key=" + encodeURIComponent(state.geminiApiKey), {
+      const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": state.geminiApiKey
+        },
         signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: styledText }] }],

@@ -228,6 +228,36 @@ class ServerTestCase(unittest.TestCase):
             self.assertTrue(res_obj.get("ok"))
             self.assertEqual(res_obj.get("text"), '{"text":"您好"}')
 
+    def test_cross_origin_post_blocked_and_cache_prune(self):
+        st_bad, _, _ = dispatch_handler(
+            "POST",
+            "/api/tts",
+            body=b'{"text":"hi"}',
+            headers={"Origin": "https://evil.example"},
+        )
+        self.assertEqual(st_bad, 403)
+
+        st_ok_origin, _, _ = dispatch_handler(
+            "POST",
+            "/api/local-llm",
+            body=b"{}",
+            headers={"Origin": "http://localhost:8788"},
+        )
+        self.assertEqual(st_ok_origin, 400)  # Origin allowed; fails JSON validation as expected
+
+        import tempfile
+        import os as _os
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            for idx in range(5):
+                fp = td_path / f"sample_{idx}.mp3"
+                fp.write_bytes(b"0" * 512)
+                _os.utime(fp, (1000 + idx * 10, 1000 + idx * 10))
+            removed = server.prune_tts_cache(cache_dir=td_path, max_files=3, max_bytes=1024 * 1024)
+            self.assertEqual(removed, 2)
+            remaining = sorted(p.name for p in td_path.glob("*.mp3"))
+            self.assertEqual(remaining, ["sample_2.mp3", "sample_3.mp3", "sample_4.mp3"])
+
 
 if __name__ == "__main__":
     unittest.main()

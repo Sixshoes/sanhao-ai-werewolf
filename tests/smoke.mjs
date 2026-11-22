@@ -53,12 +53,11 @@ const requiredAssets = [
   "assets/textures/stone_diff.jpg",
   "assets/textures/stone_nor.jpg",
   "assets/textures/stone_rough.jpg",
+  "assets/sky/sanctuary_dusk.jpg",
+  "assets/portraits/qingming.jpg",
+  "assets/portraits/player_female.jpg",
+  "assets/models/manifest.json",
   "assets/models/qingming_sheet.jpg",
-  "assets/models/qingming_front.png",
-  "assets/models/qingming_side.png",
-  "assets/models/qingming_back.png",
-  "assets/models/qingming_face.png",
-  "assets/models/qingming_robe.png",
   "assets/portraits_vrm/qingming.jpg",
   "assets/portraits_vrm/player.jpg",
   "assets/portraits_vrm/player_male.jpg",
@@ -3331,6 +3330,39 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     if (!v) {
       throw new Error("VISUAL-UPGRADE-P0-P1-P2 check failed for " + k + ": " + JSON.stringify(visRes));
     }
+  }
+}
+
+// STATIC-VRM-FALLBACK & SECURITY CHECK (P0-1 / P0-4 / P1-2)
+{
+  const manifestPath = path.join(ROOT, "assets/models/manifest.json");
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error("Missing static fallback manifest: assets/models/manifest.json");
+  }
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  if (!manifest.heroModel || !fs.existsSync(path.join(ROOT, manifest.heroModel))) {
+    throw new Error("Static manifest heroModel missing on disk: " + manifest.heroModel);
+  }
+  for (const slug of ["player", "player_male", "xiaocheng", "nuannuan", "asong", "xinger", "xiaoyun", "azhu", "chenchen"]) {
+    const rel = manifest.seatModels && manifest.seatModels[slug];
+    if (!rel || !fs.existsSync(path.join(ROOT, rel))) {
+      throw new Error("Static manifest seat model missing on disk for " + slug + ": " + rel);
+    }
+  }
+  const geminiSrc = fs.readFileSync(path.join(ROOT, "js/ai/gemini.js"), "utf8");
+  const voiceSrc = fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8");
+  if (geminiSrc.includes("?key=") || voiceSrc.includes("?key=")) {
+    throw new Error("Gemini API key must be passed via x-goog-api-key header, not URL query string");
+  }
+  if (!voiceSrc.includes("gemini-3.8-flash-tts")) {
+    throw new Error("Voice TTS endpoint should target gemini-3.8-flash-tts");
+  }
+  const staticManifestOk = vm.runInContext(`(() => {
+    const m = stage3d.getDefaultStaticAvatarManifest();
+    return Boolean(m && m.ok && m.heroModel === "assets/models/qingming.vrm" && m.seatModels && Object.keys(m.seatModels).length === 9);
+  })()`, ctx);
+  if (!staticManifestOk) {
+    throw new Error("stage3d.getDefaultStaticAvatarManifest() failed validation");
   }
 }
 

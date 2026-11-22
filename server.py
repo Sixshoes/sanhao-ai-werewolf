@@ -75,8 +75,54 @@ except ImportError:
     HAS_EDGE_TTS = False
 
 PORT = int(os.environ.get("PORT", "8788"))
+BIND_HOST = os.environ.get("BIND_HOST", "127.0.0.1").strip() or "127.0.0.1"
 CACHE_DIR = ROOT_DIR / ".tts_cache"
 CACHE_DIR.mkdir(exist_ok=True)
+TTS_CACHE_MAX_FILES = int(os.environ.get("TTS_CACHE_MAX_FILES", "1200"))
+TTS_CACHE_MAX_BYTES = int(os.environ.get("TTS_CACHE_MAX_BYTES", str(100 * 1024 * 1024)))
+_TTS_CACHE_PRUNE_LOCK = threading.Lock()
+_TTS_WRITE_COUNTER = 0
+
+
+def prune_tts_cache(cache_dir=None, max_files=None, max_bytes=None):
+    """Enforce bounded LRU size/count limits on .tts_cache so disk usage never grows unbounded."""
+    target_dir = Path(cache_dir) if cache_dir is not None else CACHE_DIR
+    lim_files = TTS_CACHE_MAX_FILES if max_files is None else int(max_files)
+    lim_bytes = TTS_CACHE_MAX_BYTES if max_bytes is None else int(max_bytes)
+    if not target_dir.exists():
+        return 0
+    removed = 0
+    with _TTS_CACHE_PRUNE_LOCK:
+        entries = []
+        total_bytes = 0
+        try:
+            for p in target_dir.iterdir():
+                if not p.is_file() or p.suffix != ".mp3" or ".tmp." in p.name:
+                    continue
+                try:
+                    st = p.stat()
+                    entries.append((st.st_mtime, st.st_size, p))
+                    total_bytes += st.st_size
+                except OSError:
+                    continue
+        except OSError:
+            return 0
+        if len(entries) <= lim_files and total_bytes <= lim_bytes:
+            return 0
+        # Sort oldest first and evict until comfortably within both limits
+        entries.sort(key=lambda item: item[0])
+        cur_count = len(entries)
+        for _mtime, sz, p in entries:
+            if cur_count <= lim_files and total_bytes <= lim_bytes:
+                break
+            try:
+                p.unlink()
+                cur_count -= 1
+                total_bytes -= sz
+                removed += 1
+            except OSError:
+                continue
+    return removed
 
 # 動漫角色適配自然配音（推薦預設：8 位高表現力神經配音員精準對應角色外型與年齡感，零機械變聲）
 VOICE_PROFILES_ANIME = {
@@ -356,8 +402,29 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             return
         self.send_json(200, {"ok": True, "model": model, "text": out_text})
 
+    def is_allowed_api_origin(self):
+        origin = (self.headers.get("Origin") or "").strip()
+        if not origin or origin == "null":
+            return True
+        try:
+            parsed = urllib.parse.urlparse(origin)
+            ohost = (parsed.hostname or "").lower()
+        except Exception:
+            return False
+        if ohost in ("localhost", "127.0.0.1", "::1"):
+            return True
+        req_host = (self.headers.get("Host") or "").strip()
+        if req_host:
+            host_only = req_host.split(":", 1)[0].strip("[]").lower()
+            if ohost and ohost == host_only:
+                return True
+        return False
+
     def do_POST(self):
         route = self.path.split("?")[0]
+        if not self.is_allowed_api_origin():
+            self.send_json(403, {"ok": False, "error": "Forbidden cross-origin API request"})
+            return
         if route == "/api/local-llm":
             self.handle_post_local_llm()
             return
@@ -413,6 +480,10 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
                             asyncio.run(synthesize_edge_mp3(text, voice_name, rate_str, pitch_str, tmp_path))
                             if tmp_path.exists() and tmp_path.stat().st_size >= 128:
                                 tmp_path.replace(mp3_path)
+                                global _TTS_WRITE_COUNTER
+                                _TTS_WRITE_COUNTER += 1
+                                if _TTS_WRITE_COUNTER % 20 == 0:
+                                    threading.Thread(target=prune_tts_cache, daemon=True).start()
                             elif not mp3_path.exists() or mp3_path.stat().st_size < 128:
                                 self.send_json(502, {"ok": False, "error": "Empty synthesis output"})
                                 return
@@ -482,13 +553,20 @@ def prewarm_common_lines():
 
 
 if __name__ == "__main__":
-    try:
-        httpd = DualStackServer(("::", PORT), SanhaoHandler)
-    except Exception:
-        httpd = ThreadingHTTPServer(("127.0.0.1", PORT), SanhaoHandler)
+    bind_host = "::" if "--lan" in sys.argv else BIND_HOST
+    if ":" in bind_host:
+        try:
+            httpd = DualStackServer((bind_host, PORT), SanhaoHandler)
+        except Exception:
+            bind_host = "127.0.0.1"
+            httpd = ThreadingHTTPServer((bind_host, PORT), SanhaoHandler)
+    else:
+        httpd = ThreadingHTTPServer((bind_host, PORT), SanhaoHandler)
     httpd.daemon_threads = True
+    prune_tts_cache()
     status = "已啟用免費微軟神經多角色語音 (edge-tts)" if HAS_EDGE_TTS else "未安裝 edge-tts（自動退回瀏覽器本機語音）"
-    print(f"[三好AI狼人殺] 伺服器啟動：http://localhost:{PORT}/ai.html | {status}", flush=True)
+    scope_note = "區網開放" if bind_host in ("::", "0.0.0.0") else "僅本機 127.0.0.1"
+    print(f"[三好AI狼人殺] 伺服器啟動：http://localhost:{PORT}/ai.html（{scope_note}） | {status}", flush=True)
     if HAS_EDGE_TTS:
         threading.Thread(target=prewarm_common_lines, daemon=True).start()
     httpd.serve_forever()
