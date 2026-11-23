@@ -3892,4 +3892,64 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v9.0 (Zero-Leak Anti-Cheat Blind-View AI + 12p Table + 6-Chapter Tutorial + Seated POV + User Feedback + v8.0 UX/RWD) E2E smoke test PASSED!");
+// v9.1 UI CONVERGENCE & LIVE "WHAT CAN I DO" TOOLKIT CHECK
+{
+  const convRes = vm.runInContext(`(() => {
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectRuleDepth").value = "full";
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = state.match.seats.find(s => s.id !== getPlayerId() && s.alive).id;
+    updateAllUI();
+    const stripShown = !el("liveToolkitStrip").classList.contains("hidden") && el("liveToolkitStrip").innerHTML.includes("心虛1") && el("liveToolkitStrip").innerHTML.includes("四給4");
+    const microLabelClear = el("btnMicroInspect").textContent.includes("看心虛");
+    const fourGHeadInit = el("fourGDeckHeader").textContent.includes("四給錦囊") && el("fourGDeckHeader").textContent.includes("4/4");
+
+    // Hovering a Four-Givings card shows plain-language explanation in #fourGDeckHeader
+    el("btn4GConfidence").dispatchEvent({ type: "pointerenter" });
+    const fourGHoverExplains = el("fourGDeckHeader").classList.contains("is-previewing") && el("fourGDeckHeader").textContent.includes("擋 1 票");
+    el("btn4GConfidence").dispatchEvent({ type: "pointerleave" });
+    const fourGHoverRestores = !el("fourGDeckHeader").classList.contains("is-previewing") && el("fourGDeckHeader").textContent.includes("4/4");
+
+    // Opening "❓ 能做什麼" shows live "現在這一步" + "你目前手上的道具與按鈕"
+    openRoleGuidePopover("role");
+    const guideHasLiveTools = !el("roleGuidePopover").classList.contains("hidden") &&
+      el("roleGuideBody").innerHTML.includes("現在這一步") &&
+      el("roleGuideBody").innerHTML.includes("看心虛") &&
+      el("roleGuideBody").innerHTML.includes("奉暖茶") &&
+      el("roleGuideBody").innerHTML.includes("四給錦囊");
+    closeRoleGuidePopover();
+
+    // DAY_PLAYER_TURN shows plain step hint + compact Four-Givings fan
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    updateAllUI();
+    const stepHintOk = el("playerTurnStepHint").textContent.includes("二選一發言");
+    const compactFanOk = el("cornerFourGDeck").classList.contains("is-compact-fan");
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      stripShown,
+      microLabelClear,
+      fourGHeadInit,
+      fourGHoverExplains,
+      fourGHoverRestores,
+      guideHasLiveTools,
+      stepHintOk,
+      compactFanOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(convRes)) {
+    if (!v) {
+      throw new Error("v9.1 UI-CONVERGENCE check failed for " + k + ": " + JSON.stringify(convRes));
+    }
+  }
+}
+
+console.log("[OK] Full v9.1 (UI Convergence & Live Toolkit + Zero-Leak Anti-Cheat + 12p Table + 6-Chapter Tutorial + Seated POV + User Feedback) E2E smoke test PASSED!");

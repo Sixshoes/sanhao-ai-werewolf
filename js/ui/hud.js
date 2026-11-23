@@ -415,6 +415,78 @@ function getThreeGoodGuidanceSummary(isWolfPlayer) {
   };
 }
 
+function buildLiveAvailableTools(p, phase) {
+  const classicMode = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
+  const isAlive = Boolean(p && p.alive);
+  const isDayToolPhase = (phase === "DAY_SPEECH" || phase === "DAY_PLAYER_TURN" || phase === "DAY_VOTE");
+  const mMax = typeof getMicroInspectMaxToday === "function" ? getMicroInspectMaxToday() : 1;
+  const mUsed = (state.match && state.match.microInspectCountToday) || 0;
+  const mRem = classicMode ? 0 : Math.max(0, mMax - mUsed);
+  const teaRem = classicMode ? 0 : ((state.match && state.match.teaServedDay === state.match.day) ? 0 : 1);
+  const used4G = (state.match && state.match.fourGivingsUsed) || {};
+  const fgRem = ["confidence", "joy", "hope", "convenience"].filter(function (k) { return !used4G[k]; }).length;
+  const fgReadyNow = Boolean(typeof canUseFourGNow === "function" ? canUseFourGNow() : false);
+  const isWolf = Boolean(p && p.role === "wolf");
+
+  const items = [];
+  if (!classicMode) {
+    items.push({
+      key: "micro",
+      shortPill: "🔍 心虛" + mRem,
+      name: "🔍 看心虛（觀微察色）",
+      remain: mRem,
+      canUseNow: Boolean(isAlive && isDayToolPhase && mRem > 0),
+      statusText: !isAlive ? "觀戰停用" : (mRem <= 0 ? "今日已用完" : (isDayToolPhase ? ("可用 " + mRem + " 次") : "白天可用")),
+      desc: "點發言列「🔍 看心虛」或點任意座位，揭露對方此刻緊張值判斷真假。"
+    });
+    items.push({
+      key: "tea",
+      shortPill: "🍵 暖茶" + teaRem,
+      name: "🍵 奉暖茶拉好感（做好事）",
+      remain: teaRem,
+      canUseNow: Boolean(isAlive && isDayToolPhase && teaRem > 0),
+      statusText: !isAlive ? "觀戰停用" : (teaRem <= 0 ? "今日已奉茶" : (isDayToolPhase ? "可用 1 次" : "白天可用")),
+      desc: "點任意角色頭像→按「🍵 奉暖茶」，降低對方對你的懷疑並點亮「做好事」瓣。"
+    });
+  }
+  const unused4GNames = [];
+  if (!used4G.confidence) unused4GNames.push("給信心(擋1票)");
+  if (!used4G.joy) unused4GNames.push("給歡喜(查2人緊張)");
+  if (!used4G.hope) unused4GNames.push("給希望(2選1藏狼)");
+  if (!used4G.convenience) unused4GNames.push("給方便(連線歸票)");
+  items.push({
+    key: "fourg",
+    shortPill: "✨ 四給" + fgRem,
+    name: "✨ 四給錦囊（右下角 4 張主動卡）",
+    remain: fgRem,
+    canUseNow: Boolean(isAlive && fgReadyNow && fgRem > 0),
+    statusText: !isAlive ? "觀戰可看票型" : (fgRem <= 0 ? "本局已全用" : (fgReadyNow ? ("此刻可用 " + fgRem + " 張") : "白天發言/投票可用")),
+    desc: unused4GNames.length > 0
+      ? ("尚未出牌：" + unused4GNames.join("、") + "。" + (isWolf ? "（狼人也可打牌偽裝累積信任！）" : ""))
+      : "四張錦囊已全部圓滿施展！"
+  });
+  return { classicMode: classicMode, isAlive: isAlive, isDayToolPhase: isDayToolPhase, mRem: mRem, teaRem: teaRem, fgRem: fgRem, fgReadyNow: fgReadyNow, items: items };
+}
+
+function renderLiveToolkitStrip(p) {
+  const strip = el("liveToolkitStrip");
+  if (!strip) return;
+  if (!state.match || !state.match.started || state.match.phase === "GAME_OVER" || !p || !p.alive || state.hidePlayerRole) {
+    strip.classList.add("hidden");
+    strip.innerHTML = "";
+    return;
+  }
+  const tk = buildLiveAvailableTools(p, state.match.phase);
+  const pills = [];
+  if (!tk.classicMode) {
+    pills.push('<span class="toolkit-pill ' + (tk.mRem > 0 && tk.isDayToolPhase ? "is-ready" : (tk.mRem > 0 ? "is-standby" : "is-spent")) + '">🔍 心虛' + tk.mRem + "</span>");
+    pills.push('<span class="toolkit-pill ' + (tk.teaRem > 0 && tk.isDayToolPhase ? "is-ready" : (tk.teaRem > 0 ? "is-standby" : "is-spent")) + '">🍵 暖茶' + tk.teaRem + "</span>");
+  }
+  pills.push('<span class="toolkit-pill ' + (tk.fgRem > 0 && tk.fgReadyNow ? "is-ready" : (tk.fgRem > 0 ? "is-standby" : "is-spent")) + '">✨ 四給' + tk.fgRem + "</span>");
+  strip.innerHTML = '<span class="toolkit-lead">可用</span>' + pills.join("");
+  strip.classList.remove("hidden");
+}
+
 function openRoleGuidePopover(mode) {
   const pop = el("roleGuidePopover");
   const titleEl = el("roleGuideTitle");
@@ -472,16 +544,32 @@ function openRoleGuidePopover(mode) {
       '<div class="role-guide-reward">' + escapeHtml(rewardText) + "</div>" +
       '<div class="text-[10.5px] text-amber-200/90 pt-0.5">' + escapeHtml(synText) + "</div>";
   } else {
-    if (titleEl) titleEl.textContent = guide.icon + " " + rDef.name + "・職能玩法指南";
+    if (titleEl) titleEl.textContent = guide.icon + " " + rDef.name + "・此刻能做什麼";
     if (badgeEl) {
       badgeEl.textContent = guide.shortRole;
       badgeEl.className = "text-[10px] px-1.5 py-0.5 rounded shrink-0 border " + (isWolf ? "bg-rose-500/25 text-rose-200 border-rose-400/45" : "bg-emerald-500/20 text-emerald-200 border-emerald-400/40");
     }
+    const nowHint = getLiveRoleActionHint(p, effKey, state.match.phase);
+    const tk = buildLiveAvailableTools(p, state.match.phase);
+    const toolsHtml = tk.items.map(function (it) {
+      const stCls = it.canUseNow ? "is-ready" : "is-muted";
+      return '<div class="guide-tool-item ' + stCls + '">' +
+        '<div class="flex items-center justify-between gap-1.5">' +
+          '<span class="font-bold text-amber-100">' + escapeHtml(it.name) + "</span>" +
+          '<span class="guide-tool-status ' + stCls + '">' + escapeHtml(it.statusText) + "</span>" +
+        "</div>" +
+        '<div class="text-[10px] opacity-85 mt-0.5">' + escapeHtml(it.desc) + "</div>" +
+      "</div>";
+    }).join("");
     bodyEl.innerHTML =
-      '<div class="role-guide-row"><span class="font-bold text-amber-200">🎯 勝利目標：</span>' + escapeHtml(guide.winCond) + "</div>" +
-      '<div class="role-guide-row"><span class="font-bold text-indigo-300">🌙 夜晚可做：</span>' + escapeHtml(guide.nightAction) + "</div>" +
-      '<div class="role-guide-row"><span class="font-bold text-emerald-300">☀️ 白天可做：</span>' + escapeHtml(guide.dayAction) + "</div>" +
-      '<div class="role-guide-reward"><span class="font-bold">🌸 三好四給心法：</span>' + escapeHtml(guide.threeGoodTip) + "</div>";
+      '<div class="guide-now-box"><div class="text-[10px] font-bold text-amber-300/90">⚡ 現在這一步</div><div class="font-bold text-amber-50 mt-0.5">' + escapeHtml(nowHint) + "</div></div>" +
+      '<div class="space-y-1"><div class="text-[10px] font-bold text-slate-300">🎒 你目前手上的道具與按鈕</div>' + toolsHtml + "</div>" +
+      '<div class="pt-1 border-t border-slate-700/60 space-y-1">' +
+        '<div class="role-guide-row"><span class="font-bold text-amber-200">🎯 勝利目標：</span>' + escapeHtml(guide.winCond) + "</div>" +
+        '<div class="role-guide-row"><span class="font-bold text-indigo-300">🌙 夜晚職能：</span>' + escapeHtml(guide.nightAction) + "</div>" +
+        '<div class="role-guide-row"><span class="font-bold text-emerald-300">☀️ 白天職能：</span>' + escapeHtml(guide.dayAction) + "</div>" +
+        '<div class="role-guide-reward"><span class="font-bold">🌸 三好心法：</span>' + escapeHtml(guide.threeGoodTip) + "</div>" +
+      "</div>";
   }
   pop.classList.remove("hidden");
 }
@@ -509,6 +597,7 @@ function renderPlayerRoleCard() {
     if (actHint) actHint.textContent = "";
     if (tgLine) tgLine.textContent = "";
     if (misLine) misLine.classList.add("hidden");
+    renderLiveToolkitStrip(null);
     return;
   }
 
@@ -524,6 +613,7 @@ function renderPlayerRoleCard() {
     if (actHint) actHint.textContent = "";
     if (tgLine) tgLine.textContent = "";
     if (misLine) misLine.classList.add("hidden");
+    renderLiveToolkitStrip(null);
     return;
   }
 
@@ -563,6 +653,7 @@ function renderPlayerRoleCard() {
   if (actHint) {
     actHint.textContent = getLiveRoleActionHint(p, effKey, state.match.phase);
   }
+  renderLiveToolkitStrip(p);
   if (tgLine) {
     const tgSum = getThreeGoodGuidanceSummary(p.role === "wolf");
     tgLine.textContent = tgSum.text;
@@ -595,9 +686,26 @@ function renderFourGBlessings() {
 
   const deck = el("cornerFourGDeck");
   const synHint = el("fourGSynergyHint");
+  const deckHead = el("fourGDeckHeader");
   const synReady = Boolean(allow && !state.match.fourGSynergyTriggered && usedCount === 1 && remain > 0);
   if (deck) deck.classList.toggle("is-synergy-ready", synReady);
   if (synHint) synHint.classList.toggle("hidden", !synReady);
+  const defaultHeadText = remain > 0
+    ? ("✨ 四給錦囊 · 剩 " + remain + "/4（移上查看・點卡即用）")
+    : "✨ 四給錦囊 · 本局已全施展";
+  if (deckHead) {
+    deckHead.setAttribute("data-default-text", defaultHeadText);
+    if (!deckHead.classList.contains("is-previewing")) {
+      deckHead.textContent = defaultHeadText;
+    }
+  }
+
+  const shortExplain = {
+    confidence: isWolf ? "給信心：幫好人隱密擋 1 票來博取好感！" : "給信心：替選定夥伴隱密擋 1 票（不洩漏陣營）！",
+    joy: "給歡喜：全場笑場破冰，點出 2 位最緊張的人！",
+    hope: "給希望：金色雙光柱鎖定 2 人，其中必藏 1 狼！",
+    convenience: "給方便：點亮全場關係線，號召搖擺票集中檢視！"
+  };
 
   const goodTips = {
     confidence: "【給信心・做好事】替選定夥伴隱密擋 1 票，好夥伴還會暗中信任並跟投（開票前不洩漏陣營）！",
@@ -622,16 +730,18 @@ function renderFourGBlessings() {
     const btnEl = el(it.btn);
     btnEl.disabled = it.key === "convenience" ? !state.match.started : (isUsed || !allow);
     btnEl.title = isWolf ? wolfTips[it.key] : goodTips[it.key];
+    btnEl.setAttribute("data-fg-explain", isUsed ? ("已使用（本局每張限 1 次）") : shortExplain[it.key]);
+    btnEl.classList.toggle("is-spent", Boolean(isUsed));
     const defSub = {
-      confidence: isWolf ? "拉信任·擋票" : "做好事·擋1票",
-      joy: "說好話·破冰",
-      hope: "存好心·雙光",
-      convenience: "做好事·歸票"
+      confidence: isWolf ? "假保擋1票" : "替人擋1票",
+      joy: "查2人緊張",
+      hope: "2選1必藏狼",
+      convenience: "連線助歸票"
     };
     if (!pAlive && state.match.started) {
       el(it.tag).textContent = it.key === "convenience" ? "看票型" : "觀戰中";
     } else {
-      el(it.tag).textContent = isUsed ? "已圓滿" : (allow ? defSub[it.key] : "待白天");
+      el(it.tag).textContent = isUsed ? "已使用" : (allow ? defSub[it.key] : "待白天");
     }
   });
 }

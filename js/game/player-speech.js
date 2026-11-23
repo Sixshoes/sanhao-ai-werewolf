@@ -725,6 +725,11 @@ function preparePlayerSpeechPanel() {
   if (el("playerTurnHeading")) {
     el("playerTurnHeading").textContent = inPk ? "⚔️ 平票 PK 陳詞" : "輪到你陳詞";
   }
+  if (el("playerTurnStepHint")) {
+    el("playerTurnStepHint").textContent = player.role === "wolf"
+      ? "👉 狼人發言：① 點下方「偽裝話術卡」秒出牌，或 ② 先點好人甩鍋／假保再按「送出陳詞」"
+      : "👉 二選一發言：① 點下方「預設發言卡」秒出牌，或 ② 先點座號圈好人／狼坑再按「送出陳詞」";
+  }
   const tHintEl = el("playerSpeechTargetLabel");
   if (tHintEl) {
     tHintEl.textContent = "🎯 針對：" + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name;

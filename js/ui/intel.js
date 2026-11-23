@@ -276,7 +276,7 @@ function renderSeatIntelPopover() {
   }
   if (bPoke) {
     bPoke.disabled = false;
-    bPoke.textContent = state.match.started ? "📋 票型小抄" : "👋 打個招呼";
+    bPoke.textContent = state.match.started ? "📋 看全場票型" : "👋 打個招呼";
   }
   if (bMicro) {
     const classicMode = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
@@ -291,8 +291,9 @@ function renderSeatIntelPopover() {
       const validPh = state.match.phase === "DAY_SPEECH" || state.match.phase === "DAY_PLAYER_TURN" || state.match.phase === "DAY_VOTE";
       bMicro.disabled = !state.match.started || !s.alive || !(pSelf && pSelf.alive) || !validPh || rem <= 0 || alreadyDone;
       bMicro.textContent = alreadyDone
-        ? "🔍 已觀微"
-        : ("🔍 觀微 (" + rem + "/" + mMax + ")");
+        ? "🔍 已看心虛"
+        : ("🔍 看心虛 (" + rem + "/" + mMax + ")");
+      bMicro.title = "偵測對方此刻心虛緊張度，判斷發言是否說謊（每日限用 " + mMax + " 次）";
     }
   }
   const bTea = el("btnIntelServeTea");
@@ -305,6 +306,7 @@ function renderSeatIntelPopover() {
       const usedTodayT = (state.match && state.match.teaServedDay === state.match.day);
       bTea.disabled = !state.match.started || !s.alive || !(pSelfT && pSelfT.alive) || !validPhT || usedTodayT;
       bTea.textContent = usedTodayT ? "🍵 已奉茶 (0/1)" : "🍵 奉暖茶 (1/1)";
+      bTea.title = "請對方喝暖茶：大幅降低他對你的懷疑度，並點亮三好「做好事」蓮花瓣（每日 1 次）";
     }
   }
   const bQuick = el("btnIntelQuickAct");

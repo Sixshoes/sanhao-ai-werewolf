@@ -218,7 +218,10 @@ const indieFlow = {
     if (el("inGameTopHud")) el("inGameTopHud").classList.toggle("hidden", isTitle);
     if (el("cornerRoleTile")) el("cornerRoleTile").classList.toggle("hidden", isTitle || isGameOver);
     if ((isTitle || isGameOver) && typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
-    if (el("cornerFourGDeck")) el("cornerFourGDeck").classList.toggle("hidden", isTitle || isGameOver || !fourGUsable);
+    if (el("cornerFourGDeck")) {
+      el("cornerFourGDeck").classList.toggle("hidden", isTitle || isGameOver || !fourGUsable);
+      el("cornerFourGDeck").classList.toggle("is-compact-fan", p === "DAY_PLAYER_TURN");
+    }
     if (el("seatButtonStrip")) el("seatButtonStrip").classList.toggle("hidden", !showSeatBar);
     if (!isTitle) this.openSetupDrawer(false);
 

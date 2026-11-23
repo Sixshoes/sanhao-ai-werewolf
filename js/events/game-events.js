@@ -985,8 +985,39 @@ function bindNightVoteAndFourGEvents() {
   el("btn4GHope").addEventListener("click", useFourGHope);
   el("btn4GConvenience").addEventListener("click", useFourGConvenience);
 
+  // Live plain-language hover/focus preview on Four-Givings cards so players never have to guess what a card does!
+  ["btn4GConfidence", "btn4GJoy", "btn4GHope", "btn4GConvenience"].forEach(function (bid) {
+    const b = el(bid);
+    if (!b) return;
+    const showPreview = function () {
+      const head = el("fourGDeckHeader");
+      if (!head) return;
+      const exp = b.getAttribute("data-fg-explain") || b.title || "";
+      if (exp) {
+        head.textContent = exp;
+        head.classList.add("is-previewing");
+      }
+    };
+    const clearPreview = function () {
+      const head = el("fourGDeckHeader");
+      if (!head) return;
+      head.classList.remove("is-previewing");
+      head.textContent = head.getAttribute("data-default-text") || "✨ 四給錦囊（點卡即用）";
+    };
+    b.addEventListener("pointerenter", showPreview);
+    b.addEventListener("focus", showPreview);
+    b.addEventListener("pointerleave", clearPreview);
+    b.addEventListener("blur", clearPreview);
+  });
+
   if (el("btnRoleGuide")) {
     el("btnRoleGuide").addEventListener("click", function () {
+      sound.unlock();
+      if (typeof openRoleGuidePopover === "function") openRoleGuidePopover("role");
+    });
+  }
+  if (el("liveToolkitStrip")) {
+    el("liveToolkitStrip").addEventListener("click", function () {
       sound.unlock();
       if (typeof openRoleGuidePopover === "function") openRoleGuidePopover("role");
     });

@@ -406,7 +406,7 @@ function renderStepperPanel(p) {
         curMark === "wolf" ? "cta-cinnabar" : "cta-ink"
       );
     }
-    if (el("btnPinCurrentSpeaker")) el("btnPinCurrentSpeaker").textContent = "📌 記筆記";
+    if (el("btnPinCurrentSpeaker")) el("btnPinCurrentSpeaker").textContent = "📌 記重點";
     const mTxt = el("tableMomentumText");
     if (mTxt) {
       const pSus = Math.round(activeSpeaker.suspicionMap[getPlayerId()] || 50);
@@ -433,7 +433,10 @@ function renderStepperPanel(p) {
         const doneAlready = Boolean(state.match && state.match.microInspectedSeats && state.match.microInspectedSeats[dKey]);
         const canInspect = Boolean(pSelf && pSelf.alive && activeSpeaker.alive && mRem > 0 && !doneAlready);
         microBtn.disabled = !canInspect;
-        microBtn.textContent = doneAlready ? "🔍 已觀微" : ("🔍 觀微(" + mRem + ")");
+        microBtn.textContent = doneAlready ? "🔍 已看心虛" : ("🔍 看心虛(" + mRem + ")");
+        microBtn.title = doneAlready
+          ? "今天已查看過這位發言者的心虛緊張度"
+          : (mRem > 0 ? "查看這位發言者此刻的心虛緊張值（每日限用 " + mMax + " 次）" : "今日看心虛次數已用完，明天刷新");
       }
     }
   }

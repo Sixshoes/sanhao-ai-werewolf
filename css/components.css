@@ -3978,3 +3978,239 @@ body.craft-ui.theme-day .fb-result-card {
   background: rgba(209, 244, 228, 0.72);
   border-color: rgba(36, 106, 80, 0.42);
 }
+
+/* ===== v9.1 UI CONVERGENCE & LIVE "WHAT CAN I DO" TOOLKIT (ZERO !important) ===== */
+.live-toolkit-strip {
+  margin-top: 4px;
+  padding: 3px 5px;
+  width: 100%;
+  border-radius: 6px;
+  border: 1px dashed rgba(212, 166, 87, 0.34);
+  background: rgba(15, 19, 30, 0.48);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.live-toolkit-strip.hidden {
+  display: none;
+}
+
+.live-toolkit-strip:hover {
+  border-color: rgba(245, 196, 81, 0.72);
+  background: rgba(30, 24, 16, 0.76);
+}
+
+.toolkit-lead {
+  font-size: 9px;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin-right: 1px;
+}
+
+.toolkit-pill {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 999px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.toolkit-pill.is-ready {
+  background: rgba(16, 185, 129, 0.2);
+  color: #a7f3d0;
+  border: 1px solid rgba(52, 211, 153, 0.48);
+}
+
+.toolkit-pill.is-standby {
+  background: rgba(212, 166, 87, 0.15);
+  color: #fde68a;
+  border: 1px solid rgba(212, 166, 87, 0.36);
+}
+
+.toolkit-pill.is-spent {
+  background: rgba(51, 65, 85, 0.38);
+  color: #64748b;
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  text-decoration: line-through;
+}
+
+.guide-now-box {
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(212, 166, 87, 0.16);
+  border: 1px solid rgba(245, 196, 81, 0.48);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.guide-tool-item {
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.66);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.guide-tool-item.is-ready {
+  border-color: rgba(52, 211, 153, 0.45);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.guide-tool-item.is-muted {
+  opacity: 0.78;
+}
+
+.guide-tool-status {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.guide-tool-status.is-ready {
+  background: rgba(16, 185, 129, 0.25);
+  color: #a7f3d0;
+}
+
+.guide-tool-status.is-muted {
+  background: rgba(51, 65, 85, 0.55);
+  color: #94a3b8;
+}
+
+.fourg-deck-head {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  max-width: 265px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fde68a;
+  background: rgba(20, 15, 11, 0.9);
+  border: 1px solid rgba(212, 166, 87, 0.48);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.fourg-deck-head.is-previewing {
+  white-space: normal;
+  border-radius: 8px;
+  color: #fff8eb;
+  background: rgba(34, 24, 15, 0.96);
+  border-color: #f0c774;
+}
+
+.fourg-card.is-spent {
+  opacity: 0.42;
+  filter: grayscale(0.65);
+}
+
+.corner-hand-fan.is-compact-fan {
+  opacity: 0.78;
+  transform: scale(0.92);
+  transform-origin: bottom right;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.corner-hand-fan.is-compact-fan:hover {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.spotlight-quiet-tools {
+  opacity: 0.72;
+  transition: opacity 0.18s ease;
+}
+
+.spotlight-quiet-tools:hover,
+.spotlight-quiet-tools:focus-within {
+  opacity: 1;
+}
+
+.player-turn-step-hint {
+  font-size: 10.5px;
+  color: #cbd5e1;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.09);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  line-height: 1.4;
+}
+
+@media (max-width: 767px) {
+  .fourg-deck-head {
+    position: static;
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    grid-column: 1 / -1;
+  }
+
+  .corner-hand-fan.is-compact-fan {
+    transform: none;
+    opacity: 0.92;
+  }
+}
+
+/* Daylight Xuan-Paper Theme Parity for v9.1 Convergence Elements */
+body.craft-ui.theme-day .live-toolkit-strip {
+  background: rgba(246, 238, 222, 0.85);
+  border-color: rgba(154, 112, 48, 0.4);
+}
+
+body.craft-ui.theme-day .toolkit-lead {
+  color: #5c4935;
+}
+
+body.craft-ui.theme-day .toolkit-pill.is-ready {
+  background: rgba(209, 244, 228, 0.9);
+  color: #166534;
+  border-color: rgba(36, 106, 80, 0.45);
+}
+
+body.craft-ui.theme-day .toolkit-pill.is-standby {
+  background: rgba(250, 236, 198, 0.9);
+  color: #7c4a12;
+  border-color: rgba(168, 118, 46, 0.45);
+}
+
+body.craft-ui.theme-day .guide-now-box {
+  background: rgba(250, 238, 208, 0.92);
+  border-color: rgba(168, 118, 46, 0.52);
+  color: #422a0d;
+}
+
+body.craft-ui.theme-day .guide-tool-item {
+  background: rgba(250, 244, 232, 0.95);
+  border-color: rgba(140, 104, 60, 0.3);
+  color: #3a2d21;
+}
+
+body.craft-ui.theme-day .fourg-deck-head {
+  background: rgba(252, 246, 234, 0.95);
+  border-color: rgba(168, 118, 46, 0.52);
+  color: #6b4310;
+  box-shadow: 0 4px 12px rgba(72, 48, 20, 0.16);
+}
+
+body.craft-ui.theme-day .player-turn-step-hint {
+  background: rgba(214, 244, 231, 0.65);
+  border-color: rgba(36, 106, 80, 0.32);
+  color: #1f3b2c;
+}
