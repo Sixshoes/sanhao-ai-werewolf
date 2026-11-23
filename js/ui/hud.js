@@ -501,7 +501,7 @@ function renderBeginnerCoachBanner() {
   } else if (p === "DAY_VOTE") {
     guideText = "🧭 新手小老師 (4/4 公投抓狼)：大家講完要投票囉！點上方最可疑的頭像，再按「確認投票」，票數最多的人會離席！";
   } else if (p === "DAY_VOTE_RESULT") {
-    guideText = "🧭 新手小老師（完成第一輪！）：看懂怎麼玩了吧！按「進入夜晚」開始第 2 輪，隨時點左下「❓ 能做什麼」都能看提示！";
+    guideText = "🧭 新手小老師（完成第一輪！）：看懂怎麼玩了吧！按「進入夜晚」開始第 2 輪，隨時點左下「指南」都能看提示！";
   } else if (p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "NIGHT_GUARD") {
     guideText = "🧭 新手小老師：天黑了，其他角色正在悄悄行動，馬上就輪到你！";
   }

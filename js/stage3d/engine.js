@@ -593,6 +593,14 @@ const stage3d = {
       this.resetCamera();
     }
     this.resize();
+    if (typeof resizeCanvas === "function") resizeCanvas();
+    const selfStage = this;
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(function () {
+        selfStage.resize();
+        if (typeof resizeCanvas === "function") resizeCanvas();
+      });
+    }
   },
 
   setShowcaseTarget: function (target) {

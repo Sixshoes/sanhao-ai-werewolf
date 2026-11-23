@@ -19,8 +19,18 @@ function openRadialMenu(seatId) {
   if (!node || !canvas || !menu) return;
   const rect = canvas.getBoundingClientRect();
   const dpr = canvas.width / Math.max(1, rect.width);
-  const cssX = clamp(node.x / dpr, 76, rect.width - 76);
-  const cssY = clamp(node.y / dpr, 56, rect.height - 56);
+  const hudEl = el("inGameTopHud");
+  let minTopY = 72;
+  if (hudEl && !hudEl.classList.contains("hidden")) {
+    const hudRect = hudEl.getBoundingClientRect();
+    if (hudRect.height > 0) {
+      minTopY = Math.max(72, Math.ceil(hudRect.bottom - rect.top) + 56);
+    }
+  }
+  const maxX = Math.max(96, rect.width - 96);
+  const maxY = Math.max(minTopY, rect.height - 72);
+  const cssX = clamp(node.x / dpr, Math.min(96, maxX), maxX);
+  const cssY = clamp(node.y / dpr, minTopY, maxY);
   state.radialTargetId = seatId;
   const pSelfRad = (state.match && state.match.started) ? getPlayerSeat() : null;
   const tSeatRad = (state.match && state.match.started) ? getSeat(seatId) : null;
@@ -139,6 +149,25 @@ function closeSeatIntel() {
   }
 }
 
+function positionSeatIntelPopover() {
+  const pop = el("seatIntelPopover");
+  if (!pop || pop.classList.contains("hidden")) return;
+  const hud = el("inGameTopHud");
+  const stageWrap = el("gameViewport");
+  if (hud && !hud.classList.contains("hidden") && typeof hud.getBoundingClientRect === "function") {
+    const hudRect = hud.getBoundingClientRect();
+    const baseTop = (stageWrap && typeof stageWrap.getBoundingClientRect === "function") ? stageWrap.getBoundingClientRect().top : 0;
+    if (hudRect.height > 0) {
+      const safeTop = Math.max(62, Math.ceil(hudRect.bottom - baseTop) + 8);
+      pop.style.top = safeTop + "px";
+      pop.style.maxHeight = "calc(100dvh - " + (safeTop + 16) + "px)";
+      return;
+    }
+  }
+  pop.style.top = "";
+  pop.style.maxHeight = "";
+}
+
 function renderSeatIntelPopover() {
   const pop = el("seatIntelPopover");
   if (!pop) return;
@@ -163,6 +192,7 @@ function renderSeatIntelPopover() {
   }
 
   pop.classList.remove("hidden");
+  positionSeatIntelPopover();
   const dot = el("intelSeatDot");
   if (dot) {
     dot.textContent = fmtSeatNum(s.id);

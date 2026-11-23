@@ -335,7 +335,8 @@ body.craft-ui main input[type="text"],
 body.craft-ui main textarea,
 body.craft-ui .craft-modal-box select,
 body.craft-ui .craft-modal-box input[type="text"],
-body.craft-ui .craft-modal-box input[type="password"] {
+body.craft-ui .craft-modal-box input[type="password"],
+body.craft-ui .craft-modal-box textarea {
   background-color: var(--surface-input);
   border-color: var(--border-card);
   color: var(--text-main);
@@ -389,6 +390,7 @@ body.craft-ui.theme-day main .text-emerald-200,
 body.craft-ui.theme-day main .text-emerald-300,
 body.craft-ui.theme-day main .text-teal-200,
 body.craft-ui.theme-day main .text-teal-300,
+body.craft-ui.theme-day .craft-modal-box .text-emerald-100,
 body.craft-ui.theme-day .craft-modal-box .text-emerald-200,
 body.craft-ui.theme-day .craft-modal-box .text-emerald-300,
 body.craft-ui.theme-day .craft-modal-box .text-teal-200,
@@ -400,6 +402,7 @@ body.craft-ui.theme-day main .text-rose-100,
 body.craft-ui.theme-day main .text-rose-200,
 body.craft-ui.theme-day main .text-rose-300,
 body.craft-ui.theme-day main .text-rose-400,
+body.craft-ui.theme-day .craft-modal-box .text-rose-100,
 body.craft-ui.theme-day .craft-modal-box .text-rose-200,
 body.craft-ui.theme-day .craft-modal-box .text-rose-300 {
   color: #9e2d24;
@@ -438,9 +441,11 @@ body.craft-ui.theme-day main .bg-amber-500\/15,
 body.craft-ui.theme-day main .bg-amber-500\/20,
 body.craft-ui.theme-day main .bg-amber-950\/30,
 body.craft-ui.theme-day .craft-modal-box .bg-amber-500\/10,
+body.craft-ui.theme-day .craft-modal-box .bg-amber-500\/12,
 body.craft-ui.theme-day .craft-modal-box .bg-amber-500\/15,
-body.craft-ui.theme-day .craft-modal-box .bg-amber-500\/20 {
-  background-color: rgba(178, 128, 52, 0.13);
+body.craft-ui.theme-day .craft-modal-box .bg-amber-500\/20,
+body.craft-ui.theme-day .craft-modal-box .bg-amber-500\/25 {
+  background-color: rgba(178, 128, 52, 0.14);
   border-color: rgba(158, 108, 38, 0.36);
 }
 
@@ -450,7 +455,9 @@ body.craft-ui.theme-day main .bg-emerald-500\/20,
 body.craft-ui.theme-day main .bg-emerald-500\/25,
 body.craft-ui.theme-day main .bg-emerald-950\/50,
 body.craft-ui.theme-day .craft-modal-box .bg-emerald-500\/15,
-body.craft-ui.theme-day .craft-modal-box .bg-emerald-500\/20 {
+body.craft-ui.theme-day .craft-modal-box .bg-emerald-500\/20,
+body.craft-ui.theme-day .craft-modal-box .bg-emerald-950\/40,
+body.craft-ui.theme-day .craft-modal-box .bg-emerald-950\/50 {
   background-color: rgba(36, 106, 80, 0.11);
   border-color: rgba(36, 106, 80, 0.34);
 }
@@ -460,7 +467,8 @@ body.craft-ui.theme-day main .bg-rose-500\/20,
 body.craft-ui.theme-day main .bg-rose-500\/25,
 body.craft-ui.theme-day .craft-modal-box .bg-rose-500\/10,
 body.craft-ui.theme-day .craft-modal-box .bg-rose-500\/15,
-body.craft-ui.theme-day .craft-modal-box .bg-rose-500\/20 {
+body.craft-ui.theme-day .craft-modal-box .bg-rose-500\/20,
+body.craft-ui.theme-day .craft-modal-box .bg-rose-950\/60 {
   background-color: rgba(166, 50, 38, 0.1);
   border-color: rgba(166, 50, 38, 0.34);
 }
@@ -476,7 +484,8 @@ body.craft-ui.theme-day .craft-modal-box .bg-sky-500\/20 {
 body.craft-ui.theme-day main .bg-purple-500\/20,
 body.craft-ui.theme-day main .bg-purple-500\/25,
 body.craft-ui.theme-day main .bg-purple-950\/50,
-body.craft-ui.theme-day .craft-modal-box .bg-indigo-500\/15 {
+body.craft-ui.theme-day .craft-modal-box .bg-indigo-500\/15,
+body.craft-ui.theme-day .craft-modal-box .bg-indigo-950\/40 {
   background-color: rgba(94, 66, 117, 0.1);
   border-color: rgba(94, 66, 117, 0.32);
 }
@@ -740,7 +749,7 @@ body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn {
   color: #30251b;
 }
 
-body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn:hover:not(:disabled) {
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn:hover:not(:disabled):not(.seat-is-selected) {
   background: rgba(238, 226, 205, 0.98);
   border-color: rgba(154, 104, 35, 0.62);
 }
@@ -763,9 +772,10 @@ body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-mark-good {
   color: #1a543d;
 }
 
-body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected {
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected,
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected:hover {
   background: var(--accent-cinnabar);
-  border-color: rgba(250, 232, 194, 0.72);
+  border-color: rgba(250, 232, 194, 0.78);
   color: #fbf5ea;
 }
 
@@ -773,4 +783,122 @@ body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-dead {
   background: rgba(226, 217, 200, 0.55);
   border-color: rgba(140, 104, 60, 0.2);
   color: #8c7e6e;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-badge.badge-speak {
+  background: rgba(180, 115, 30, 0.24);
+  border: 1px solid rgba(154, 104, 35, 0.45);
+  color: #6b3d08;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-badge.badge-wolf {
+  background: rgba(166, 50, 38, 0.18);
+  color: #8c1d14;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-badge.badge-good {
+  background: rgba(36, 106, 80, 0.18);
+  color: #16523a;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-badge.badge-dead {
+  background: rgba(120, 108, 94, 0.22);
+  color: #5c5144;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected .seat-pill-badge.badge-speak,
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected .seat-pill-badge.badge-wolf,
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected .seat-pill-badge.badge-good {
+  background: rgba(255, 248, 232, 0.22);
+  border-color: rgba(255, 248, 232, 0.52);
+  color: #fffaf0;
+}
+
+/* Keep Showcase Studio HUD dark lacquer glass even during daytime matches */
+body.craft-ui.theme-day #heroShowcaseOverlay .hud-pill-shell {
+  background: rgba(18, 14, 11, 0.88);
+  border-color: rgba(212, 166, 87, 0.48);
+  color: #efe7d8;
+}
+
+body.craft-ui.theme-day #heroShowcaseOverlay #btnCloseHeroShowcase {
+  background: rgba(24, 18, 14, 0.9);
+  border-color: rgba(212, 166, 87, 0.52);
+  color: #f6e7c8;
+}
+
+body.craft-ui.theme-day #speakerSeatMedallion {
+  background: #2b2016;
+  color: #f7e4bc;
+}
+
+body.craft-ui.theme-day #btnPauseVoice.is-paused {
+  background: rgba(180, 115, 30, 0.2);
+  border-color: #9a6823;
+  color: #6b3d08;
+}
+
+body.craft-ui.theme-day #voiceAuditionStrip [data-audition].is-auditioning {
+  background: rgba(180, 115, 30, 0.2);
+  border-color: #9a6823;
+  color: #6b3d08;
+}
+
+body.craft-ui.theme-day .vote-goodwill-badge.is-wolf {
+  background: rgba(255, 228, 230, 0.94);
+  border-color: rgba(190, 24, 93, 0.48);
+  color: #881337;
+}
+
+body.craft-ui.theme-day .sheriff-order-pill.is-withdrawn {
+  background: rgba(226, 217, 200, 0.6);
+  border-color: rgba(140, 104, 60, 0.26);
+  color: #7c6d5a;
+}
+
+body.craft-ui.theme-day #roleGuidePopover .text-amber-50,
+body.craft-ui.theme-day #roleGuidePopover .text-amber-100,
+body.craft-ui.theme-day #roleGuidePopover .text-amber-200,
+body.craft-ui.theme-day #roleGuidePopover .text-amber-200\/90,
+body.craft-ui.theme-day #roleGuidePopover .text-amber-300,
+body.craft-ui.theme-day #roleGuidePopover .text-amber-300\/90 {
+  color: #7c4a12;
+}
+
+body.craft-ui.theme-day #roleGuidePopover .text-emerald-200,
+body.craft-ui.theme-day #roleGuidePopover .text-emerald-300 {
+  color: #1f6148;
+}
+
+body.craft-ui.theme-day #roleGuidePopover .text-rose-200,
+body.craft-ui.theme-day #roleGuidePopover .text-rose-300 {
+  color: #9e2d24;
+}
+
+body.craft-ui.theme-day #roleGuidePopover .text-indigo-300 {
+  color: #354b7a;
+}
+
+body.craft-ui.theme-day #roleGuidePopover .text-slate-300 {
+  color: #5c4b37;
+}
+
+body.craft-ui.theme-day #roleGuidePopover .bg-amber-500\/20 {
+  background-color: rgba(178, 128, 52, 0.16);
+  border-color: rgba(158, 108, 38, 0.4);
+}
+
+body.craft-ui.theme-day #roleGuidePopover .bg-emerald-500\/20,
+body.craft-ui.theme-day #roleGuidePopover .bg-emerald-500\/25 {
+  background-color: rgba(36, 106, 80, 0.14);
+  border-color: rgba(36, 106, 80, 0.38);
+}
+
+body.craft-ui.theme-day #roleGuidePopover .bg-rose-500\/25 {
+  background-color: rgba(166, 50, 38, 0.14);
+  border-color: rgba(166, 50, 38, 0.38);
+}
+
+body.craft-ui.theme-day #roleGuidePopover .border-slate-700\/60 {
+  border-color: var(--border-card);
 }

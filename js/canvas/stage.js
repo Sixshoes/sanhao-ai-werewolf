@@ -27,6 +27,8 @@ function resizeCanvas() {
   const dpr = Math.min(window.devicePixelRatio || 1, maxOverlayDpr);
   canvas.width = Math.max(300, Math.floor(rect.width * dpr));
   canvas.height = Math.max(220, Math.floor(rect.height * dpr));
+  if (typeof closeRadialMenu === "function") closeRadialMenu();
+  if (typeof positionSeatIntelPopover === "function") positionSeatIntelPopover();
   if (typeof stage3d !== "undefined" && stage3d.ready) {
     stage3d.resize();
   }

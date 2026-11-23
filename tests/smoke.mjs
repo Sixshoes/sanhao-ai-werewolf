@@ -4447,7 +4447,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 
     // 5. Public Release 1.0 diagnostics & anonymous host helper
     const diag11 = collectFeedbackDiagnostics();
-    const version11Ok = diag11.version.includes("v11.0") && typeof isAnonymousReviewHost === "function";
+    const version11Ok = /v1[12]\\.\\d/.test(diag11.version) && diag11.version.includes("公測 1.0") && typeof isAnonymousReviewHost === "function";
 
     clearStepTimer();
     resetMatchToLobby();
@@ -5007,6 +5007,14 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const lobbyShowcase12Ok = getStageSeatListFor3D().length === 12;
     stage3d.showcaseMode = false;
 
+    // 7f) v12.3 syncPrefsToControls persists state.guardMode into #chkGuardMode
+    state.guardMode = true;
+    el("chkGuardMode").checked = false;
+    syncPrefsToControls();
+    const guardPrefSyncOk = el("chkGuardMode").checked === true;
+    state.guardMode = false;
+    syncPrefsToControls();
+
     clearStepTimer();
     resetMatchToLobby();
     return {
@@ -5025,7 +5033,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       passNoAutoOutSeerOk,
       sameDayTransferUiCleanOk,
       webglFailSafeOk,
-      lobbyShowcase12Ok
+      lobbyShowcase12Ok,
+      guardPrefSyncOk
     };
   })()`, ctx);
 
@@ -5034,6 +5043,26 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       throw new Error("v12.0 DUAL-SCENE & BUGFIX REGRESSION check failed for " + k + ": " + JSON.stringify(v12Res));
     }
   }
+
+  // v12.3 Multi-Device RWD, Stacking & Contrast Static Guardrails
+  const twLocal = fs.readFileSync("css/tailwind-local.css", "utf8");
+  const v123Static = {
+    twHasColSpan2: twLocal.includes(".col-span-2{grid-column:span 2 / span 2}"),
+    twHasSmInlineFlex: twLocal.includes(".sm\\:inline-flex{display:inline-flex}"),
+    twHasBgAmber500: twLocal.includes(".bg-amber-500{"),
+    twHasMaxH128: twLocal.includes(".max-h-\\[128px\\]{max-height:128px}"),
+    roleGuideOutsideDeck: html.indexOf('id="roleGuidePopover"') > html.indexOf('</main>'),
+    showcaseFullDvhRule: compCss.includes("body.craft-ui.hero-showcase-active #canvasStageWrap"),
+    toastAboveModals: compCss.includes("#toastContainer {\r\n  z-index: 80;") || compCss.includes("#toastContainer {\n  z-index: 80;"),
+    fourGNotClipped: !compCss.includes("overflow-x: auto;\r\n    padding-bottom: 2px;") && !compCss.includes("overflow-x: auto;\n    padding-bottom: 2px;"),
+    setupSheetScoped: !compCss.includes("#setupDrawer,\r\n  #journalDrawer") && !compCss.includes("#setupDrawer,\n  #journalDrawer"),
+    dayBadgeSpeakContrast: themeCss.includes("body.craft-ui.theme-day #seatButtonStrip .seat-pill-badge.badge-speak")
+  };
+  for (const [k, v] of Object.entries(v123Static)) {
+    if (!v) {
+      throw new Error("v12.3 MULTI-DEVICE RWD GUARDRAIL failed for " + k + ": " + JSON.stringify(v123Static));
+    }
+  }
 }
 
-console.log("[OK] Full v12.0 (Dual Switchable 3D Scenes + 29 Bug Fixes + Authentic Badge Flow + Front Camera + Living VRM + Anti-Cheat) E2E smoke test PASSED!");
+console.log("[OK] Full v12.3 (Multi-Device RWD + Dual Switchable 3D Scenes + Bug Fixes + Authentic Badge Flow + Front Camera + Living VRM + Anti-Cheat) E2E smoke test PASSED!");

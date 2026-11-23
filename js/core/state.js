@@ -289,6 +289,7 @@ function syncPrefsToControls() {
   if (el("selectAiDifficulty")) el("selectAiDifficulty").value = state.aiDifficulty || "normal";
   if (el("selectRuleDepth")) el("selectRuleDepth").value = state.ruleDepth || "full";
   if (el("chkSheriffMode")) el("chkSheriffMode").checked = Boolean(state.sheriffMode);
+  if (el("chkGuardMode")) el("chkGuardMode").checked = Boolean(state.guardMode);
   const selGm = el("selectGeminiModel");
   if (selGm) {
     const desired = state.localLlmModel ? ("ollama:" + state.localLlmModel) : (state.geminiModel || "gemini-3.8-flash");

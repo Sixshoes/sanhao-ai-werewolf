@@ -15,8 +15,13 @@ function hasBlockingModalOpen() {
 function bindModalEvents() {
   window.addEventListener("keydown", function (ev) {
     const tag = ev.target && ev.target.tagName ? ev.target.tagName.toLowerCase() : "";
-    if (tag === "textarea" || tag === "input" || tag === "select") return;
     if (ev.key === "Escape") {
+      if (tag === "textarea" || tag === "input" || tag === "select") {
+        if (!hasBlockingModalOpen()) {
+          if (ev.target && typeof ev.target.blur === "function") ev.target.blur();
+          return;
+        }
+      }
       const tutOpenEsc = el("modalTutorial") && !el("modalTutorial").classList.contains("hidden");
       if (tutOpenEsc) {
         el("modalTutorial").classList.add("hidden");
@@ -60,6 +65,7 @@ function bindModalEvents() {
       }
       return;
     }
+    if (tag === "textarea" || tag === "input" || tag === "select") return;
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
     if (ev.repeat && (ev.key === " " || ev.key === "Enter")) {
       ev.preventDefault();

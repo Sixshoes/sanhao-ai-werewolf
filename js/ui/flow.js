@@ -403,6 +403,11 @@ const indieFlow = {
     if (el("btnCloseSetupDrawer")) {
       el("btnCloseSetupDrawer").addEventListener("click", function () { self.openSetupDrawer(false); });
     }
+    if (el("setupDrawer")) {
+      el("setupDrawer").addEventListener("click", function (ev) {
+        if (ev && ev.target === el("setupDrawer")) self.openSetupDrawer(false);
+      });
+    }
     if (el("btnConfirmSetupStart")) {
       el("btnConfirmSetupStart").addEventListener("click", function () {
         self.openSetupDrawer(false);
@@ -551,7 +556,7 @@ const indieFlow = {
       el("btnDismissBeginnerCoach").addEventListener("click", function () {
         if (state.match) state.match.guidedBeginner = false;
         if (el("beginnerCoachBanner")) el("beginnerCoachBanner").classList.add("hidden");
-        if (typeof showToast === "function") showToast("已收合新手步驟提示，隨時可點左下「❓ 能做什麼」查看！", "emerald");
+        if (typeof showToast === "function") showToast("已收合新手步驟提示，隨時可點左下「指南」查看！", "emerald");
       });
     }
 

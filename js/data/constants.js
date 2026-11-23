@@ -48,7 +48,7 @@ const TUTORIAL_SLIDES = [
         '<div class="tut-role-item"><span class="tut-role-badge text-teal-300">🌿 清心長老 <small>(10/12人)</small></span><span>第一次被大家誤投時<strong>免離席</strong>（之後沒投票權但能繼續講話）。</span></div>' +
         '<div class="tut-role-item tut-role-wolf"><span class="tut-role-badge text-rose-200">👑 流言首領 <small>(10/12人)</small></span><span>壞人首領！白天被投出時可以<strong>反手拉走 1 位好人</strong>。</span></div>' +
       '</div>' +
-      '<div class="tut-tip-bar">📌 忘記自己是誰？對局中隨時點左下角<strong>「❓ 能做什麼」</strong>，立刻看你這回合該按什麼！</div>' +
+      '<div class="tut-tip-bar">📌 忘記自己是誰？對局中隨時點左下角<strong>「指南」</strong>，立刻看你這回合該按什麼！</div>' +
       '</div>'
   },
   {
