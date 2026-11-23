@@ -5,35 +5,147 @@
 
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-// Ultra-short visual tutorial cards!
+// Clear, structured 6-chapter interactive Game Manual & Quick-Start Guide!
 const TUTORIAL_SLIDES = [
   {
     icon: "01",
-    title: "林美山茶席推理：找出潛伏的「鍵盤酸民狼」",
+    tab: "規則流程",
+    title: "認識茶席：陣營目標與每輪三步驟",
     html:
-      '<div class="grid grid-cols-2 gap-2.5 text-left">' +
-      '<div class="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/40"><div class="text-base font-black text-emerald-300">書院好夥伴</div><div class="text-xs text-slate-200 mt-1">理性比對線索，公投請全部酸民狼離席冷靜即勝！</div></div>' +
-      '<div class="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40"><div class="text-base font-black text-rose-300">2～4 名酸民狼</div><div class="text-xs text-slate-200 mt-1">依 6/8/10/12 人局配置，晚上散播迷霧、白天偽裝帶風向，達屠邊即勝！</div></div>' +
+      '<div class="space-y-2.5 text-left text-xs">' +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
+        '<div class="tut-card tut-tone-good"><div class="tut-card-title text-emerald-300">🌿 書院好夥伴（好人陣營）</div><div class="tut-card-body">比對發言漏洞與票型，公投請離<strong>全部酸民狼</strong>即獲勝！</div></div>' +
+        '<div class="tut-card tut-tone-wolf"><div class="tut-card-title text-rose-300">🐺 鍵盤酸民狼（反派陣營）</div><div class="tut-card-body">夜晚散播迷霧、白天偽裝帶風向，達成<strong>屠神</strong>（全神職離席）或<strong>屠民</strong>（全書院生離席）即勝！</div></div>' +
+      '</div>' +
+      '<div class="tut-card tut-tone-neutral">' +
+        '<div class="tut-card-title text-amber-300 mb-1.5">每輪對弈 3 步驟（標準凹嗚屠邊制・狼刀在先）</div>' +
+        '<div class="grid grid-cols-3 gap-1.5 text-center">' +
+          '<div class="tut-step-pill"><div class="text-[10px] font-black text-indigo-300">STEP 1 · 夜晚</div><div class="font-bold mt-0.5">天黑施技</div><div class="text-[10.5px] opacity-80">守衛／狼襲／查驗／奉茶</div></div>' +
+          '<div class="tut-step-pill"><div class="text-[10px] font-black text-amber-300">STEP 2 · 白天</div><div class="font-bold mt-0.5">依序陳詞</div><div class="text-[10.5px] opacity-80">聽發言標記・輪到你出牌</div></div>' +
+          '<div class="tut-step-pill"><div class="text-[10px] font-black text-rose-300">STEP 3 · 公投</div><div class="font-bold mt-0.5">投票／PK</div><div class="text-[10.5px] opacity-80">最高票離席・平票進 PK</div></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="tut-tip-bar">💡 <strong>人數配置：</strong>6人（2狼）｜8人（2狼，可開守衛）｜10人（3狼＋流言首領＋清心長老）｜12人（4狼＋4神＋長老＋警長）。</div>' +
       '</div>'
   },
   {
     icon: "02",
-    title: "經典快節奏 3 步驟（零門檻上手）",
+    tab: "8大職能",
+    title: "8 大職能速查：拿到牌立刻知道做什麼",
     html:
-      '<div class="grid grid-cols-3 gap-2 text-center">' +
-      '<div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800"><div class="text-xs font-black text-indigo-400 mb-1">NIGHT</div><div class="text-xs font-bold text-indigo-300">1. 天黑靜心</div><div class="text-[11px] text-slate-400">迷霧・明心查證・滴水奉茶</div></div>' +
-      '<div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800"><div class="text-xs font-black text-amber-400 mb-1">DAY</div><div class="text-xs font-bold text-amber-300">2. 輪流發言</div><div class="text-[11px] text-slate-400">點認同／存疑互動記筆記</div></div>' +
-      '<div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800"><div class="text-xs font-black text-rose-400 mb-1">VOTE</div><div class="text-xs font-bold text-rose-300">3. 公投/PK</div><div class="text-[11px] text-slate-400">請說謊帶風向者離席冷靜</div></div>' +
+      '<div class="space-y-2 text-left text-[11.5px]">' +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">' +
+        '<div class="tut-role-item"><span class="tut-role-badge text-amber-300">🔮 明心觀察員</span><span>每晚查驗 1 人陣營；白天亮牌報查驗、帶領好人對齊視角。</span></div>' +
+        '<div class="tut-role-item"><span class="tut-role-badge text-emerald-300">🍵 滴水奉茶師</span><span>暖心茶護回 1 次＋清心茶請離 1 次（同夜限一盞、第2夜不可自護）。</span></div>' +
+        '<div class="tut-role-item"><span class="tut-role-badge text-sky-300">⚖️ 直心糾察長</span><span>遭夜襲或公投離席可帶走 1 人（遇清心茶或最後一神夜襲屠神除外）。</span></div>' +
+        '<div class="tut-role-item"><span class="tut-role-badge text-cyan-300">🛡️ 護心守衛</span><span>每晚守 1 人擋迷霧（可自守、不可連守同人；同守同救會破盾！）。</span></div>' +
+        '<div class="tut-role-item"><span class="tut-role-badge text-slate-200">📖 三好書院生</span><span>無夜技，專注聽表水、蒐證抓矛盾、保多位好人坑找出狼。</span></div>' +
+        '<div class="tut-role-item"><span class="tut-role-badge text-teal-300">🌿 清心長老 <small>(10/12人)</small></span><span>首次被公投誤投免離席（之後失去投票權，保留發言權帶隊）。</span></div>' +
+        '<div class="tut-role-item tut-role-wolf"><span class="tut-role-badge text-rose-300">🐺 鍵盤酸民狼</span><span>與狼同伴夜晚鎖定目標並下達明日戰術，白天偽裝帶節奏。</span></div>' +
+        '<div class="tut-role-item tut-role-wolf"><span class="tut-role-badge text-rose-200">👑 流言首領 <small>(10/12人)</small></span><span>白天被公投請離時（非清心茶）可發動反撲拉走 1 位在席者！</span></div>' +
+      '</div>' +
+      '<div class="tut-tip-bar">📌 對局中隨時看<strong>左下角職能卡</strong>的「▶ 現在能做什麼」提示，或按<strong>「指南」</strong>重看本角色玩法！</div>' +
       '</div>'
   },
   {
     icon: "03",
+    tab: "好人vs狼",
+    title: "好人與狼人專屬介面：操作邏輯大不同",
+    html:
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left text-[11.5px]">' +
+        '<div class="tut-card tut-tone-good space-y-1.5">' +
+          '<div class="tut-card-title text-emerald-300">🌿 好人陣營操作重點</div>' +
+          '<div>• <strong>聽發言時</strong>：按「認同／存疑／🔍觀微／🍵奉暖茶」，點擊台詞中的<strong>發光線索詞</strong>即可蒐證，抓到矛盾會解鎖金色<strong>⚡呈堂證供卡</strong>！</div>' +
+          '<div>• <strong>輪到你陳詞</strong>：點上方座號自由標記狼坑與<strong>不限人數的好人坑</strong>，還可一鍵點<strong>「✨ 其餘全保好人」</strong>或神職一鍵亮牌！</div>' +
+          '<div>• <strong>支援語音打字</strong>：可直接選 Q/W/E 卡牌、按 🎙️ 開口說話，或輸入台詞送出。</div>' +
+        '</div>' +
+        '<div class="tut-card tut-tone-wolf space-y-1.5">' +
+          '<div class="tut-card-title text-rose-300">🎭 酸民狼陣營專屬佈局</div>' +
+          '<div>• <strong>不需要點狼坑</strong>：你已知全部狼同伴（自動排除同伴防誤點）！陳詞區升級為<strong>「狼人佈局板」</strong>，循環切換 <strong>🎯甩鍋</strong>／<strong>🛡️假保</strong>！</div>' +
+          '<div>• <strong>🔍 獵神筆記</strong>：白天偷偷標記誰像觀察員／奉茶師／守衛，入夜行動列自動提醒優先鎖定！</div>' +
+          '<div>• <strong>指揮 AI 同伴</strong>：夜間可選「悍跳觀察員／深水倒鉤／聯手集火」同步戰術。</div>' +
+        '</div>' +
+      '</div>'
+  },
+  {
+    icon: "04",
+    tab: "三好四給",
     title: "三好蓮花覺醒 × 四給翻盤錦囊",
     html:
-      '<div class="space-y-2 text-left text-xs">' +
-      '<div class="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-400/40"><strong class="text-emerald-300">三好蓮花三瓣覺醒：</strong>行「存好心、說好話、做好事」逐瓣點亮桌心蓮花！集滿可獲「🌟 黃金善意票 +1」，說好話轉譯更享 <strong>1.5 倍</strong>說服力暴擊！</div>' +
-      '<div class="p-2.5 rounded-xl bg-amber-500/15 border border-amber-400/40"><strong class="text-amber-300">四給翻盤神技：</strong>給信心（隱密護盾擋 1 票，好夥伴暗中跟投）、給歡喜（大笑破冰揪出 2 位緊張嫌犯比對脈搏）、給希望（雙光柱二選一）、給方便（理清關係線並號召歸票）！</div>' +
-      '<div class="p-2 rounded-xl bg-slate-950/80 border border-slate-700 text-[11px] text-amber-200"><strong>3D 彩蛋：</strong>點桌心蓮花、點燭火、點遠方龜山島、雙擊角色看特寫、按 <code>F</code> 翻底牌、<code>C</code> 切機位</div>' +
+      '<div class="space-y-2 text-left text-[11.5px]">' +
+        '<div class="tut-card tut-tone-good space-y-1">' +
+          '<div class="tut-card-title text-emerald-300">🪷 三好蓮花三瓣（左下角蓮花隨時可點開查進度）</div>' +
+          '<div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-0.5">' +
+            '<div class="tut-step-pill"><strong class="text-amber-300">存好心</strong><div class="text-[10.5px] opacity-85">查證真偽、抓矛盾、理性點疑</div></div>' +
+            '<div class="tut-step-pill"><strong class="text-emerald-300">說好話</strong><div class="text-[10.5px] opacity-85">溫和陳詞、化解酸言、🌶轉好話×1.5暴擊</div></div>' +
+            '<div class="tut-step-pill"><strong class="text-sky-300">做好事</strong><div class="text-[10.5px] opacity-85">奉暖茶、回甘茶護友、使用四給卡</div></div>' +
+          '</div>' +
+          '<div class="text-[11px] pt-1">✨ <strong>三瓣圓滿覺醒：</strong>好人解鎖<strong>「🌟 黃金善意票 +1」</strong>（公投直接算 2 票！）；酸民狼觸發<strong>深水信任光環</strong>大幅降低好人戒心。</div>' +
+        '</div>' +
+        '<div class="tut-card tut-tone-gold space-y-1">' +
+          '<div class="tut-card-title text-amber-300">🎴 右下角四給錦囊（每局各限 1 次・打 2 張觸發🌸連心共鳴）</div>' +
+          '<div class="grid grid-cols-2 gap-1.5">' +
+            '<div><strong>給信心：</strong>隱密替夥伴擋 1 票（不洩漏陣營）</div>' +
+            '<div><strong>給歡喜：</strong>破冰大笑揪出 2 位緊張嫌犯</div>' +
+            '<div><strong>給希望：</strong>金色雙光柱鎖定 2 人必有 1 狼</div>' +
+            '<div><strong>給方便：</strong>展開全局關係線並號召歸票</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+  },
+  {
+    icon: "05",
+    tab: "操作熱鍵",
+    title: "滑鼠／觸控手勢、3D 互動與快捷鍵",
+    html:
+      '<div class="space-y-2 text-left text-[11.5px]">' +
+        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
+          '<div class="tut-card tut-tone-neutral space-y-1">' +
+            '<div class="tut-card-title text-amber-300">🖱️ 圓桌與 3D 場景操作</div>' +
+            '<div>• <strong>點角色／座位條</strong>：開情資卡；夜晚或投票時<strong>點兩下立即確認</strong>。</div>' +
+            '<div>• <strong>拖曳連線</strong>：拖空地 360° 環視古亭；從頭像拖線至他人可開輪盤或直接投票／施技。</div>' +
+            '<div>• <strong>3D 隱藏彩蛋</strong>：點桌心蓮花、撥亮燭火、點「清茗」、遠眺龜山島、雙擊角色看特寫！</div>' +
+          '</div>' +
+          '<div class="tut-card tut-tone-neutral space-y-1">' +
+            '<div class="tut-card-title text-sky-300">⌨️ 常用鍵盤快捷鍵</div>' +
+            '<div class="tut-kbd-grid">' +
+              '<span><kbd class="ui-kbd">Space</kbd> 推進發言</span>' +
+              '<span><kbd class="ui-kbd">Enter</kbd> 確認行動</span>' +
+              '<span><kbd class="ui-kbd">Q/W/E</kbd> 快捷出牌</span>' +
+              '<span><kbd class="ui-kbd">1-0/-=</kbd> 選 12 席</span>' +
+              '<span><kbd class="ui-kbd">J</kbd> 開茶席手札</span>' +
+              '<span><kbd class="ui-kbd">C</kbd> 切 3D/2D 視角</span>' +
+              '<span><kbd class="ui-kbd">F</kbd> 翻 3D 底牌</span>' +
+              '<span><kbd class="ui-kbd">P / V</kbd> 暫停 / 語音</span>' +
+              '<span><kbd class="ui-kbd">A</kbd> 自動推進</span>' +
+              '<span><kbd class="ui-kbd">Esc</kbd> 關閉／選單</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+  },
+  {
+    icon: "06",
+    tab: "進階設定",
+    title: "上警競選、席外觀戰與 AI 推理引擎",
+    html:
+      '<div class="space-y-2 text-left text-[11.5px]">' +
+        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
+          '<div class="tut-card tut-tone-neutral space-y-1">' +
+            '<div class="tut-card-title text-amber-300">👑 上警競選與茶席手札</div>' +
+            '<div>• 開啟警長制首日將上警競選，警長享 <strong>1.5 票權重</strong>、指定發言方向與末置位歸票權。</div>' +
+            '<div>• 右上<strong>「手札」</strong>內含對話紀錄、<strong>局勢矩陣</strong>（一鍵引用反駁）與歷輪<strong>票型小抄</strong>！</div>' +
+          '</div>' +
+          '<div class="tut-card tut-tone-good space-y-1">' +
+            '<div class="tut-card-title text-emerald-300">👁️ 離席觀戰推理挑戰</div>' +
+            '<div>• 不小心提早離席也很好玩！留下觀戰可開啟<strong>「席外猜狼／獵神挑戰」</strong>，鎖定答案即可<strong>一鍵解鎖上帝視角</strong>並贏額外加分！</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="tut-card tut-tone-gold space-y-1">' +
+          '<div class="tut-card-title text-amber-300">🤖 AI 推理引擎與語音</div>' +
+          '<div>• 預設採<strong>內建零延遲三好 AI</strong> 免設定即可開玩；隨時可在「選單 → AI 推理引擎設定」填入自己的 <strong>Gemini API Key</strong> 或切換本機免費 <strong>Ollama</strong> 升級真人級辯論！</div>' +
+        '</div>' +
+        '<div class="tut-tip-bar text-center">🎉 準備好了嗎？點右下角<strong>「開啟新手帶玩席」</strong>立即體驗 6 人明心觀察員第一局！</div>' +
       '</div>'
   }
 ];
@@ -241,6 +353,10 @@ const ROLE_STRATEGY_PLAYBOOKS = {
     "2. 視情況熱血吸引火力：關鍵時刻可挺身而出幫核心好人分擔壓力，但別造成好人陣營混亂。",
     "3. 追蹤三好態度：留意誰語氣急躁貼標籤或跟可疑者互相護航，理性歸票。"
   ].join("\n"),
+  elder: [
+    "1. 豁免扛壓：你首次被白天公投誤投時會觸發清心長老豁免盾免於離席（之後失去投票權，但保留發言權）。",
+    "2. 穩健帶隊：平時以理性態度多保可信好人坑；若遭誤推或已觸發護盾，果斷亮牌自證清白並引導好人集中歸票。"
+  ].join("\n"),
   wolf_fake_seer: [
     "1. 冒牌觀察員戰術：果斷搶先或反咬宣稱自己是真明心觀察員（預言家），給出看似合理的查驗理由，把真觀察員或強勢好人抹黑成酸民狼。",
     "2. 逼真細節：假裝預告『今晚要查驗誰』來模仿查證思維，同時絕不暴露或無故攻擊你的同伴。",
@@ -250,6 +366,10 @@ const ROLE_STRATEGY_PLAYBOOKS = {
     "1. 深水偽裝與團隊配合：裝作理性熱心的書院生，絕對不要出賣或主動懷疑你的酸民狼同伴。",
     "2. 聲援冒牌同伴：如果你的同伴冒充觀察員，你可以自然幫他說話或質疑真觀察員的動機，引導大家誤投好人。",
     "3. 微妙破綻：在看似客氣的推理中偶爾夾帶一點催票、貼標籤或挑撥對立的語氣。"
+  ].join("\n"),
+  wolf_king: [
+    "1. 獵神威懾：你白天被公投離席（非清心茶）時可發動「最後帶風向」拉走 1 人，因此白天可大膽帶節奏替同伴吸火力。",
+    "2. 絕不賣隊友：鎖定場上疑似明心觀察員、滴水奉茶師或護心守衛的好人施壓，切勿懷疑狼同伴。"
   ].join("\n")
 };
 

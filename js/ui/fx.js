@@ -333,8 +333,11 @@ function triggerAiCrowdReactions(mode, focusSeatId) {
   if (!aliveAis.length) return;
 
   if (mode === "crit" || mode === "cheer") {
-    const allies = aliveAis
-      .filter(function (s) { return s.id !== focusSeatId && (s.team === "good" || (s.suspicionMap && (s.suspicionMap[pid] || 50) <= 55)); })
+    // Zero-Leak Audience Reaction: NEVER filter by hidden s.team === "good" (would leak hidden team to players!)
+    const friendlyPool = aliveAis.filter(function (s) {
+      return s.id !== focusSeatId && s.publicVoteIntent !== pid && (!s.suspicionMap || (s.suspicionMap[pid] || 50) <= 58);
+    });
+    const allies = (friendlyPool.length > 0 ? friendlyPool : aliveAis.filter(function (s) { return s.id !== focusSeatId; }))
       .slice(0, mode === "crit" ? 2 : 1);
     allies.forEach(function (ai) {
       setSeatEmotion(ai.id, "happy", 2400);

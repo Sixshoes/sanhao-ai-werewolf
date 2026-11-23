@@ -15,10 +15,11 @@ function shouldWolfEmitToxicSlip(speaker, day, salt, panicBoost) {
 
 function tryDefendOrCounterClaim(speaker, ctx) {
   const {
-    aliveOthers, day, seatLabel, pickVoice, seerWolfOnMe, accuseOnMe, wolfPitOnMe,
+    snap, getBlindSeat, aliveOthers, day, seatLabel, pickVoice, seerWolfOnMe, accuseOnMe, wolfPitOnMe,
     priorGodClaims, priorSameRoleSteal, slotPlan, dualSeerWorlds,
     spokenOthers, unspokenOthers, spokeToday
   } = ctx;
+  const readSeat = typeof getBlindSeat === "function" ? getBlindSeat : (snap ? snap.getSeat : getSeat);
 
   const pVoice = typeof pickVoice === "function" ? pickVoice : function () { return ""; };
   const rebutLead = pVoice("rebutLead", 1);
@@ -42,19 +43,19 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     return out;
   };
 
-  const playerSelf = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
-  const playerIsWolf = Boolean(playerSelf && playerSelf.role === "wolf");
-  const wolfTactic = (playerIsWolf && state.match && state.match.wolfTactic) ? state.match.wolfTactic : "auto";
+  // Zero-Leak: Only Wolves receive legal pack-chat wolfTactic from Blind-View (Good AIs get null)
+  const wolfTactic = (snap && snap.wolfTactic) ? snap.wolfTactic : "auto";
 
   // 0PK. HIGHEST PRIORITY DURING TIE-BREAKER PK: Defend self & directly challenge PK rival!
-  const isInPk = Boolean(typeof isPkVoteActive === "function" && isPkVoteActive() && state.match.pkCandidates.indexOf(speaker.id) !== -1);
+  const pkCands = snap ? snap.pkCandidates : (state.match && state.match.pkCandidates);
+  const isInPk = Boolean(snap ? (snap.pkActive && pkCands.indexOf(speaker.id) !== -1) : (typeof isPkVoteActive === "function" && isPkVoteActive() && state.match.pkCandidates.indexOf(speaker.id) !== -1));
   if (isInPk) {
-    const rivalId = state.match.pkCandidates.find(function (id) {
+    const rivalId = pkCands.find(function (id) {
       if (id === speaker.id) return false;
-      const rs = getSeat(id);
+      const rs = readSeat(id);
       return Boolean(rs && rs.alive);
     });
-    const rival = rivalId ? getSeat(rivalId) : aliveOthers[0];
+    const rival = rivalId ? readSeat(rivalId) : aliveOthers[0];
     const rName = rival ? seatLabel(rival) : "另一位平票對手";
     const rid = rival ? rival.id : null;
     const pkWolfPits = mergePits(rid, baseWolfIds, 2, null);
@@ -62,13 +63,13 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     if (speaker.role === "seer" && speaker.checkedHistory.length > 0) {
       speaker.claimedRole = "seer";
       const aliveChecks = speaker.checkedHistory.filter(function (c) {
-        const ts = getSeat(c.targetId);
+        const ts = readSeat(c.targetId);
         return Boolean(ts && ts.alive);
       });
       const focusChk = aliveChecks.slice().reverse().find(function (c) { return c.isWolf; })
         || aliveChecks[aliveChecks.length - 1]
         || speaker.checkedHistory[speaker.checkedHistory.length - 1];
-      const chkSeat = getSeat(focusChk.targetId);
+      const chkSeat = readSeat(focusChk.targetId);
       const chkLbl = chkSeat ? seatLabel(chkSeat) : (fmtSeatNum(focusChk.targetId) + "號");
       return {
         targetId: rid,
@@ -88,7 +89,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     if (speaker.role === "witch") {
       speaker.claimedRole = "witch";
       speaker.witchAnnouncedSave = true;
-      const svSeat = speaker.savedSeatId ? getSeat(speaker.savedSeatId) : null;
+      const svSeat = speaker.savedSeatId ? readSeat(speaker.savedSeatId) : null;
       const saveProof = svSeat ? ("之前晚上是我用暖心回甘茶護回 " + seatLabel(svSeat) + "，") : "";
       const vId = (svSeat && svSeat.alive && svSeat.id !== speaker.id) ? svSeat.id : null;
       return {
@@ -120,8 +121,8 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     }
     if (speaker.role === "guard") {
       speaker.claimedRole = "guard";
-      const gLast = state.match.lastGuardTargetId;
-      const gSeat = gLast ? getSeat(gLast) : null;
+      const gLast = snap ? snap.lastGuardTargetId : state.match.lastGuardTargetId;
+      const gSeat = gLast ? readSeat(gLast) : null;
       const gNote = gSeat ? ("昨晚我展開結界守護過 " + seatLabel(gSeat) + "，") : "每晚我都謹慎交錯守護避免同守破盾，";
       return {
         targetId: rid,
@@ -133,6 +134,21 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         goodPits: mergePits(gSeat && gSeat.alive && gSeat.id !== rid ? gSeat.id : null, baseGoodIds, 2, rid),
         hasToxicSlip: false,
         text: rebutLead + "平票 PK 我直接拍出護心守衛底牌！" + gNote + "好人千萬別在 PK 把守衛投走讓神職裸奔，請大家這輪集中把票投給 " + rName + "！" + signoff
+      };
+    }
+    if (speaker.isElder) {
+      speaker.claimedRole = "elder";
+      speaker.elderAnnounced = true;
+      return {
+        targetId: rid,
+        relationType: rid ? "suspect" : null,
+        claimRole: "elder",
+        accuseId: rid,
+        vouchId: null,
+        wolfPits: pkWolfPits,
+        goodPits: mergePits(null, baseGoodIds, 2, rid),
+        hasToxicSlip: false,
+        text: rebutLead + "平票 PK 我先亮清心長老底牌提醒全場：" + (speaker.elderShieldUsed ? "我已經發動過豁免盾是鐵好人一張，" : "我是擁有首次公投豁免護盾的清心長老，浪費這輪公投推我只會白耗一輪還害我失票！") + "請大家集中把票投給 " + rName + "！" + signoff
       };
     }
     if (speaker.team === "wolf") {
@@ -164,7 +180,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
 
   // 0A. HIGHEST PRIORITY: Someone earlier today claimed Seer and called ME a Wolf!!
   if (seerWolfOnMe) {
-    const accSeat = getSeat(seerWolfOnMe.speakerId);
+    const accSeat = readSeat(seerWolfOnMe.speakerId);
     const accName = seatLabel(accSeat);
     speaker.suspicionMap[seerWolfOnMe.speakerId] = 100;
     const wPits0A = mergePits(seerWolfOnMe.speakerId, baseWolfIds, 2, null);
@@ -173,12 +189,12 @@ function tryDefendOrCounterClaim(speaker, ctx) {
       if (speaker.role === "seer" && speaker.checkedHistory.length > 0) {
         speaker.claimedRole = "seer";
         const aliveChks = speaker.checkedHistory.filter(function (c) {
-          const cs = getSeat(c.targetId);
+          const cs = readSeat(c.targetId);
           return Boolean(cs && cs.alive);
         });
         const myBest = aliveChks.slice().reverse().find(function (c) { return c.isWolf; })
           || speaker.checkedHistory[speaker.checkedHistory.length - 1];
-        const myBestSeat = getSeat(myBest.targetId);
+        const myBestSeat = readSeat(myBest.targetId);
         const myTarget = seatLabel(myBestSeat);
         const v0A = (!myBest.isWolf && myBestSeat && myBestSeat.alive) ? myBest.targetId : null;
         return {
@@ -227,6 +243,40 @@ function tryDefendOrCounterClaim(speaker, ctx) {
           text: rebutLead + "前置位 " + accName + " 居然敢假扮觀察員把我點進狼坑？我直接亮出直心糾察長底牌提醒全場：我是正氣好夥伴，這證明 " + accName + " 鐵定在狼坑裡！大家這輪投他，不然我離席一定發動共鳴帶他一起冷靜！"
         };
       }
+      if (speaker.role === "guard") {
+        speaker.claimedRole = "guard";
+        speaker.guardAnnounced = true;
+        const gLastId0A = snap ? snap.lastGuardTargetId : state.match.lastGuardTargetId;
+        const gLast0A = gLastId0A ? readSeat(gLastId0A) : null;
+        const gNote0A = gLast0A ? ("昨晚我才展開護心結界守過 " + seatLabel(gLast0A) + "，") : "";
+        const gVouch0A = (gLast0A && gLast0A.alive && gLast0A.id !== speaker.id && gLast0A.id !== seerWolfOnMe.speakerId) ? gLast0A.id : null;
+        return {
+          targetId: seerWolfOnMe.speakerId,
+          relationType: "suspect",
+          claimRole: "guard",
+          accuseId: seerWolfOnMe.speakerId,
+          vouchId: gVouch0A,
+          wolfPits: wPits0A,
+          goodPits: mergePits(gVouch0A, baseGoodIds, 2, seerWolfOnMe.speakerId),
+          hasToxicSlip: false,
+          text: rebutLead + "前置位 " + accName + " 竟然冒充觀察員硬把我查進狼坑？！我直接拍出護心守衛底牌，" + gNote0A + "敢亂查殺守衛直接坐實 " + accName + " 是冒牌酸民狼，這輪全場集中投 " + accName + "！" + signoff
+        };
+      }
+      if (speaker.isElder) {
+        speaker.claimedRole = "elder";
+        speaker.elderAnnounced = true;
+        return {
+          targetId: seerWolfOnMe.speakerId,
+          relationType: "suspect",
+          claimRole: "elder",
+          accuseId: seerWolfOnMe.speakerId,
+          vouchId: null,
+          wolfPits: wPits0A,
+          goodPits: mergePits(null, baseGoodIds, 2, seerWolfOnMe.speakerId),
+          hasToxicSlip: false,
+          text: rebutLead + "前置位 " + accName + " 居然假跳觀察員硬把我查進狼坑？我直接亮出清心長老底牌自證好人，他敢亂潑髒水直接鐵證 " + accName + " 是冒牌狼，這輪一起反投 " + accName + "！" + signoff
+        };
+      }
       return {
         targetId: seerWolfOnMe.speakerId,
         relationType: "suspect",
@@ -254,7 +304,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
   // 0B. DIRECT REACTION WHEN PUT IN SOMEONE'S WOLF PIT TODAY (accuseId OR wolfPits)!
   const pitCallerEv = wolfPitOnMe || accuseOnMe;
   if (pitCallerEv && speaker.role !== "seer") {
-    const accSeat = getSeat(pitCallerEv.speakerId);
+    const accSeat = readSeat(pitCallerEv.speakerId);
     const accName = seatLabel(accSeat);
     const inPitOnly = pitCallerEv.accuseId !== speaker.id && Array.isArray(pitCallerEv.wolfPits) && pitCallerEv.wolfPits.indexOf(speaker.id) !== -1;
     const pitPhrase = inPitOnly ? ("前置位 " + accName + " 剛才把我點進狼坑") : ("前置位 " + accName + " 剛才點名把我打進狼坑");
@@ -268,7 +318,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     if (speaker.team === "good") {
       if (speaker.role === "hunter" && !speaker.hunterAnnounced) {
         const secondSus = baseWolfIds.find(function (id) { return id !== pitCallerEv.speakerId; });
-        const secondSeat = secondSus ? getSeat(secondSus) : null;
+        const secondSeat = secondSus ? readSeat(secondSus) : null;
         speaker.claimedRole = "hunter";
         speaker.hunterAnnounced = true;
         return {
@@ -333,7 +383,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
       }
 
       const wPitsDef = mergePits(pitCallerEv.speakerId, baseWolfIds, 2, goodAllySpoken ? goodAllySpoken.id : null);
-      const pitNamesStr = wPitsDef.map(function (id) { return seatLabel(getSeat(id)); }).join(" 跟 ");
+      const pitNamesStr = wPitsDef.map(function (id) { return seatLabel(readSeat(id)); }).join(" 跟 ");
       return {
         targetId: pitCallerEv.speakerId,
         relationType: "suspect",
@@ -347,8 +397,8 @@ function tryDefendOrCounterClaim(speaker, ctx) {
           "我懷疑的狼坑是 " + pitNamesStr + "！" + unspokenTail + signoff
       };
     } else {
-      const spokenNonWolf = spokenOthers.filter(function (s) { return s.role !== "wolf" && s.id !== pitCallerEv.speakerId; });
-      const secondFakePit = spokenNonWolf[0] || aliveOthers.find(function (s) { return s.role !== "wolf" && s.id !== pitCallerEv.speakerId; });
+      const spokenNonWolf = spokenOthers.filter(function (s) { return !s.isWolfMate && s.id !== pitCallerEv.speakerId; });
+      const secondFakePit = spokenNonWolf[0] || aliveOthers.find(function (s) { return !s.isWolfMate && s.id !== pitCallerEv.speakerId; });
       const wolfFakePits = mergePits(pitCallerEv.speakerId, secondFakePit ? [secondFakePit.id] : [], 2, null);
       const secClause = secondFakePit
         ? (spokeToday(secondFakePit.id)
@@ -368,23 +418,35 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     }
   }
 
-  // 0C. REAL GOD ROLE STOLEN! If someone earlier stole MY exact Witch or Hunter role, IMMEDIATELY counter-claim!
-  if (priorSameRoleSteal && (speaker.role === "witch" || speaker.role === "hunter")) {
-    const thief = getSeat(priorSameRoleSteal.speakerId);
+  // 0C. REAL GOD / ELDER ROLE STOLEN! If someone earlier stole MY exact Witch/Hunter/Guard/Elder role, IMMEDIATELY counter-claim!
+  const myEffKey0C = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(speaker) : speaker.role;
+  if (priorSameRoleSteal && (myEffKey0C === "witch" || myEffKey0C === "hunter" || myEffKey0C === "guard" || myEffKey0C === "elder")) {
+    const thief = readSeat(priorSameRoleSteal.speakerId);
     const thiefName = seatLabel(thief);
-    const myRoleName = ROLE_DEFS[speaker.role].name;
-    speaker.claimedRole = speaker.role;
-    if (speaker.role === "witch") speaker.witchAnnouncedSave = true;
-    if (speaker.role === "hunter") speaker.hunterAnnounced = true;
+    const myRoleDef0C = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(speaker) : null) || ROLE_DEFS[myEffKey0C];
+    const myRoleName = myRoleDef0C ? myRoleDef0C.name : "神職";
+    speaker.claimedRole = myEffKey0C;
+    if (myEffKey0C === "witch") speaker.witchAnnouncedSave = true;
+    if (myEffKey0C === "hunter") speaker.hunterAnnounced = true;
+    if (myEffKey0C === "guard") speaker.guardAnnounced = true;
+    if (myEffKey0C === "elder") speaker.elderAnnounced = true;
     speaker.suspicionMap[priorSameRoleSteal.speakerId] = 100;
-    const v0C = (speaker.role === "witch" && speaker.savedSeatId) ? speaker.savedSeatId : null;
-    const extraProof = v0C
-      ? ("之前晚上是我端暖心回甘茶護回了 " + fmtSeatNum(v0C) + "號，")
-      : (speaker.role === "hunter" ? "如果大家誤投我，我離席一定發動共鳴帶他一起冷靜，" : "");
+    const gLastId0C = (myEffKey0C === "guard" && snap) ? snap.lastGuardTargetId : null;
+    const gLast0C = gLastId0C ? readSeat(gLastId0C) : null;
+    const v0C = (myEffKey0C === "witch" && speaker.savedSeatId && speaker.savedSeatId !== priorSameRoleSteal.speakerId)
+      ? speaker.savedSeatId
+      : ((gLast0C && gLast0C.alive && gLast0C.id !== speaker.id && gLast0C.id !== priorSameRoleSteal.speakerId) ? gLast0C.id : null);
+    const extraProof = (myEffKey0C === "witch" && speaker.savedSeatId)
+      ? ("之前晚上是我端暖心回甘茶護回了 " + fmtSeatNum(speaker.savedSeatId) + "號，")
+      : (myEffKey0C === "hunter"
+        ? "如果大家誤投我，我離席一定發動共鳴帶他一起冷靜，"
+        : (myEffKey0C === "guard"
+          ? (gLast0C ? ("昨晚就是我展開護心結界守護了 " + fmtSeatNum(gLast0C.id) + "號，") : "每晚都是我謹慎巡防護盾，")
+          : "我擁有首次公投豁免護盾隨時可驗證，"));
     return {
       targetId: priorSameRoleSteal.speakerId,
       relationType: "suspect",
-      claimRole: speaker.role,
+      claimRole: myEffKey0C,
       accuseId: priorSameRoleSteal.speakerId,
       vouchId: v0C,
       wolfPits: mergePits(priorSameRoleSteal.speakerId, baseWolfIds, 2, v0C),
@@ -394,20 +456,20 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     };
   }
 
-  // 0D. DYNAMIC WOLF COUNTER-CLAIM DECISION! When a God role claimed earlier, Wolves actively decide whether to counter-claim (對跳) or cast doubt!
+  // 0D. DYNAMIC WOLF COUNTER-CLAIM DECISION! When a non-wolf claimed a God/Elder role earlier, Wolves decide via Blind-View whether to counter-claim!
   if (speaker.role === "wolf" && wolfTactic !== "deep_stealth" && priorGodClaims.length > 0 && !speaker.claimedRole) {
     const latestGodEv = priorGodClaims[priorGodClaims.length - 1];
-    const godSeat = getSeat(latestGodEv.speakerId);
+    const godSeat = readSeat(latestGodEv.speakerId);
     const godName = seatLabel(godSeat);
     const claimedR = latestGodEv.claimRole;
-    const wolfTeamAlreadyCountered = state.match.seats.some(function (s) {
-      return s.role === "wolf" && s.claimedRole === claimedR;
+    const wolfTeamAlreadyCountered = (snap ? snap.seats : []).some(function (s) {
+      return (s.id === speaker.id || s.isWolfMate) && s.claimedRole === claimedR;
     });
 
-    if (!wolfTeamAlreadyCountered && godSeat && godSeat.team === "good") {
+    if (!wolfTeamAlreadyCountered && godSeat && !godSeat.isWolfMate && ROLE_DEFS[claimedR]) {
       const counterProb = claimedR === "seer" ? 0.78 : (claimedR === "witch" ? 0.45 : 0.35);
       const deterministicRoll = ((speaker.id * 37 + day * 19 + latestGodEv.speakerId * 13) % 100) / 100;
-      if (speaker.fakeSeer && claimedR === "seer" || deterministicRoll < counterProb) {
+      if ((speaker.fakeSeer && claimedR === "seer") || deterministicRoll < counterProb) {
         speaker.claimedRole = claimedR;
         if (claimedR === "seer") {
           speaker.fakeSeer = true;
@@ -443,10 +505,31 @@ function tryDefendOrCounterClaim(speaker, ctx) {
             hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 4),
             text: rebutLead + "剛才 " + godName + " 竟然敢冒充我的直心糾察長身分嚇唬大家？！我才是真正的糾察長，他就是怕被投才亂穿衣服，這輪請大家把冒牌貨 " + godName + " 投出去！"
           };
+        } else if (claimedR === "guard") {
+          return {
+            targetId: godSeat.id,
+            relationType: "suspect",
+            claimRole: "guard",
+            accuseId: godSeat.id,
+            vouchId: null,
+            hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 4),
+            text: rebutLead + "剛才 " + godName + " 竟然冒充我的護心守衛身分編守護路線？！我才是這局真正的守衛，一直低調防狼刀就是等著抓他這種亂穿衣服的狼，這輪直接把冒牌貨 " + godName + " 請離！" + signoff
+          };
+        } else if (claimedR === "elder") {
+          return {
+            targetId: godSeat.id,
+            relationType: "suspect",
+            claimRole: "elder",
+            accuseId: godSeat.id,
+            vouchId: null,
+            hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 4),
+            text: rebutLead + "剛才 " + godName + " 居然敢假跳清心長老想騙大家不敢投他？！我才是這局真正的清心長老，敢冒充長老的 " + godName + " 百分百是酸民狼，這輪全場直接投 " + godName + "！" + signoff
+          };
         }
+        speaker.claimedRole = null;
       } else {
         const rName = ROLE_DEFS[claimedR].name;
-        const otherGood = aliveOthers.find(function (s) { return s.role !== "wolf" && s.id !== godSeat.id; }) || godSeat;
+        const otherGood = aliveOthers.find(function (s) { return !s.isWolfMate && s.id !== godSeat.id; }) || godSeat;
         return {
           targetId: otherGood.id,
           relationType: "suspect",
@@ -463,10 +546,11 @@ function tryDefendOrCounterClaim(speaker, ctx) {
 
 function tryRoleSpecificSpeech(speaker, ctx) {
   const {
-    aliveOthers, day, spokenIdsToday, spokenOthers, unspokenOthers, spokeToday,
+    snap, getBlindSeat, aliveOthers, day, spokenIdsToday, spokenOthers, unspokenOthers, spokeToday,
     isFirstToday, flv, seatLabel, fill, prevVoteNote, prevVoteSuspect,
     priorFakeSeerEv, wolfPitOnMe, slotPlan, dualSeerWorlds
   } = ctx;
+  const readSeat = typeof getBlindSeat === "function" ? getBlindSeat : (snap ? snap.getSeat : getSeat);
 
   const baseGoodIds = (slotPlan && Array.isArray(slotPlan.goodPits)) ? slotPlan.goodPits.map(function (s) { return s.id; }) : [];
   const baseWolfIds = (slotPlan && Array.isArray(slotPlan.wolfPits)) ? slotPlan.wolfPits.map(function (s) { return s.id; }) : [];
@@ -474,17 +558,17 @@ function tryRoleSpecificSpeech(speaker, ctx) {
   // 1. Real Seer: Multi-night memory (prioritize alive checked Wolf -> alive fake-Seer -> latest check)
   if (speaker.role === "seer" && speaker.checkedHistory.length > 0) {
     const aliveChecks = speaker.checkedHistory.filter(function (c) {
-      const cs = getSeat(c.targetId);
+      const cs = readSeat(c.targetId);
       return Boolean(cs && cs.alive);
     });
     const aliveWolfCheck = aliveChecks.slice().reverse().find(function (c) { return c.isWolf; });
     const latest = aliveWolfCheck || aliveChecks[aliveChecks.length - 1] || speaker.checkedHistory[speaker.checkedHistory.length - 1];
-    const targetObj = getSeat(latest.targetId);
+    const targetObj = readSeat(latest.targetId);
     const latestAlive = Boolean(targetObj && targetObj.alive);
     const tName = seatLabel(targetObj);
     const targetSpoke = spokenIdsToday.indexOf(latest.targetId) !== -1;
     const pitRebut = wolfPitOnMe
-      ? ("先回應前置位 " + seatLabel(getSeat(wolfPitOnMe.speakerId)) + " 把我點進狼坑——你可把真正明心觀察員打進狼坑了！")
+      ? ("先回應前置位 " + seatLabel(readSeat(wolfPitOnMe.speakerId)) + " 把我點進狼坑——你可把真正明心觀察員打進狼坑了！")
       : "";
 
     // Strategic Hide Rule: If Day 1, only checked a Good seat, nobody claimed Seer yet, and nobody put me in a wolf pit -> hide role!
@@ -508,7 +592,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     speaker.claimedRole = "seer";
     const checkedIdsAll = speaker.checkedHistory.map(function (c) { return c.targetId; });
     const nextPlan = aliveOthers.find(function (s) { return checkedIdsAll.indexOf(s.id) === -1 && s.id !== latest.targetId; });
-    const fakeSeerSeat = priorFakeSeerEv ? getSeat(priorFakeSeerEv.speakerId) : null;
+    const fakeSeerSeat = priorFakeSeerEv ? readSeat(priorFakeSeerEv.speakerId) : null;
     const fakeSeerAlive = Boolean(fakeSeerSeat && fakeSeerSeat.alive && fakeSeerSeat.id !== speaker.id);
     const fakeCallout = priorFakeSeerEv ? ("剛才前置位 " + seatLabel(fakeSeerSeat) + " 根本是在冒充明心觀察員騙人，") : "";
     const planNote = nextPlan ? ("今晚我計畫再去查驗 " + seatLabel(nextPlan) + " 幫大家把關！") : "";
@@ -555,11 +639,11 @@ function tryRoleSpecificSpeech(speaker, ctx) {
           (!latest.isWolf
             ? ("另外我查證過 " + tName + (latestAlive ? " 是金水好人坑，大家別投錯他；" : "（雖已離席）確定是好人；"))
             : ("先前查過的 " + tName + " 已離席；")) +
-          "站我這邊第一個狼坑就是冒充觀察員的 " + seatLabel(fakeSeerSeat) + (secondPit ? ("，第二狼坑先盯 " + seatLabel(getSeat(secondPit)) + "！") : "！") + planNote
+          "站我這邊第一個狼坑就是冒充觀察員的 " + seatLabel(fakeSeerSeat) + (secondPit ? ("，第二狼坑先盯 " + seatLabel(readSeat(secondPit)) + "！") : "！") + planNote
       };
     } else {
       const watchSeat = nextPlan || unspokenOthers.find(function (s) { return s.id !== latest.targetId; }) || aliveOthers.find(function (s) { return s.id !== latest.targetId; });
-      const susWatch = (wolfPitOnMe ? getSeat(wolfPitOnMe.speakerId) : null) || ((watchSeat && (speaker.suspicionMap[watchSeat.id] || 50) >= 56) ? watchSeat : null);
+      const susWatch = (wolfPitOnMe ? readSeat(wolfPitOnMe.speakerId) : null) || ((watchSeat && (speaker.suspicionMap[watchSeat.id] || 50) >= 56) ? watchSeat : null);
       return {
         targetId: (!latest.isWolf && latestAlive) ? latest.targetId : (watchSeat ? watchSeat.id : null),
         relationType: (!latest.isWolf && latestAlive) ? "trust" : (susWatch ? "suspect" : null),
@@ -579,22 +663,24 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     }
   }
 
-  // 2. Fake-Seer Wolf weaving an in-character deceptive counter-claim with fresh check history
-  const pSeatRef = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
-  const pIsWolfTeam = Boolean(pSeatRef && pSeatRef.role === "wolf");
-  const curWolfTactic = (pIsWolfTeam && state.match && state.match.wolfTactic) ? state.match.wolfTactic : "auto";
-  const wantFakeSeer = (speaker.fakeSeer || (curWolfTactic === "fake_seer" && !state.match.seats.some(function (s) { return s.role === "wolf" && s.claimedRole === "seer"; })))
+  // 2. Fake-Seer Wolf weaving an in-character deceptive counter-claim (ZERO hidden Good-role peeking!)
+  const curWolfTactic = (snap && snap.wolfTactic) ? snap.wolfTactic : "auto";
+  const wolfTeamHasSeerClaim = (snap ? snap.seats : []).some(function (s) {
+    return (s.id === speaker.id || s.isWolfMate) && s.claimedRole === "seer";
+  });
+  const wantFakeSeer = (speaker.fakeSeer || (curWolfTactic === "fake_seer" && !wolfTeamHasSeerClaim))
     && curWolfTactic !== "deep_stealth";
   if (speaker.role === "wolf" && wantFakeSeer) {
     speaker.claimedRole = "seer";
     if (!speaker.fakeCheckedIds) speaker.fakeCheckedIds = [];
-    const nonWolves = aliveOthers.filter(function (s) { return s.role !== "wolf"; });
+    const nonWolves = aliveOthers.filter(function (s) { return !s.isWolfMate; });
     if (nonWolves.length > 0) {
-      const realSeerSpoke = spokenOthers.find(function (s) { return s.role === "seer" && s.claimedRole === "seer"; });
+      // Zero-Leak: Wolf only sees observable claimedRole === "seer" on non-wolves (NEVER peeks s.role === "seer"!)
+      const rivalSeerSpoke = spokenOthers.find(function (s) { return !s.isWolfMate && s.claimedRole === "seer"; });
       const freshTarget = nonWolves.find(function (s) { return speaker.fakeCheckedIds.indexOf(s.id) === -1; });
-      const frameTarget = (realSeerSpoke && speaker.fakeCheckedIds.indexOf(realSeerSpoke.id) === -1)
-        ? realSeerSpoke
-        : (freshTarget || realSeerSpoke || nonWolves[0]);
+      const frameTarget = (rivalSeerSpoke && speaker.fakeCheckedIds.indexOf(rivalSeerSpoke.id) === -1)
+        ? rivalSeerSpoke
+        : (freshTarget || rivalSeerSpoke || nonWolves[0]);
       if (speaker.fakeCheckedIds.indexOf(frameTarget.id) === -1) {
         speaker.fakeCheckedIds.push(frameTarget.id);
       }
@@ -619,7 +705,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
 
   // 3. Witch stepping forward ONCE to vouch for rescued player (做好事!)
   if (speaker.role === "witch" && speaker.savedSeatId && day >= 2 && !speaker.witchAnnouncedSave) {
-    const saved = getSeat(speaker.savedSeatId);
+    const saved = readSeat(speaker.savedSeatId);
     if (saved && saved.alive) {
       speaker.claimedRole = "witch";
       speaker.witchAnnouncedSave = true;
@@ -637,10 +723,10 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     }
   }
 
-  // 3.5 Hunter Deterrence: if Hunter is under heavy suspicion, reveal identity ONCE to stop wolves from pushing them out!
+  // 3.5 Hunter Deterrence: uses strictly PUBLIC observable table heat (ZERO mind-reading of others' suspicionMap!)
   if (speaker.role === "hunter" && day >= 1 && !speaker.hunterAnnounced) {
-    const othersHeat = aliveOthers.reduce(function (sum, o) { return sum + (o.suspicionMap[speaker.id] || 50); }, 0) / Math.max(1, aliveOthers.length);
-    if (othersHeat >= 58 || speaker.claimedRole === "hunter") {
+    const observableHeatH = snap ? snap.getObservableHeatOnSeat(speaker.id) : 40;
+    if (observableHeatH >= 54 || speaker.claimedRole === "hunter") {
       speaker.claimedRole = "hunter";
       speaker.hunterAnnounced = true;
       const topThreat = (spokenOthers.length ? spokenOthers : aliveOthers).slice().sort(function (a, b) {
@@ -660,17 +746,17 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     }
   }
 
-  // 3.6 Guard Clarification: share night-shield info once if peaceful night happened or heat rises
+  // 3.6 Guard Clarification: strictly PUBLIC observable heat + own lastGuardTargetId (ZERO mind-reading!)
   if (speaker.role === "guard" && day >= 2 && !speaker.guardAnnounced) {
-    const gPrevId = state.match.lastGuardTargetId;
-    const gTargetSeat = gPrevId ? getSeat(gPrevId) : null;
-    const hadRecentPeace = (state.match.peaceNights || []).length > 0;
-    const othersHeatG = aliveOthers.reduce(function (sum, o) { return sum + (o.suspicionMap[speaker.id] || 50); }, 0) / Math.max(1, aliveOthers.length);
-    if (othersHeatG >= 56 || hadRecentPeace || speaker.claimedRole === "guard") {
+    const gPrevId = snap ? snap.lastGuardTargetId : state.match.lastGuardTargetId;
+    const gTargetSeat = gPrevId ? readSeat(gPrevId) : null;
+    const hadRecentPeace = (snap ? snap.peaceNights : (state.match.peaceNights || [])).length > 0;
+    const observableHeatG = snap ? snap.getObservableHeatOnSeat(speaker.id) : 40;
+    if (observableHeatG >= 54 || hadRecentPeace || speaker.claimedRole === "guard") {
       speaker.claimedRole = "guard";
       speaker.guardAnnounced = true;
       const vouchTarget = (gTargetSeat && gTargetSeat.alive && gTargetSeat.id !== speaker.id) ? gTargetSeat : null;
-      const watchG = (baseWolfIds[0] && getSeat(baseWolfIds[0])) || aliveOthers[0] || null;
+      const watchG = (baseWolfIds[0] && readSeat(baseWolfIds[0])) || aliveOthers[0] || null;
       return {
         targetId: vouchTarget ? vouchTarget.id : (watchG ? watchG.id : null),
         relationType: vouchTarget ? "trust" : (watchG ? "suspect" : null),
@@ -687,22 +773,48 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     }
   }
 
-  // 4. Stealth Wolf (Coordinates with Fake-Seer partner, compares World A vs B plausibly & strictly obeys chronology!)
+  // 3.7 Elder Clarification: strictly PUBLIC observable heat + own elderShieldUsed (ZERO mind-reading!)
+  if (speaker.isElder && day >= 1 && !speaker.elderAnnounced) {
+    const observableHeatE = snap ? snap.getObservableHeatOnSeat(speaker.id) : 40;
+    if (observableHeatE >= 54 || speaker.elderShieldUsed || speaker.claimedRole === "elder") {
+      speaker.claimedRole = "elder";
+      speaker.elderAnnounced = true;
+      const topThreatE = (spokenOthers.length ? spokenOthers : aliveOthers).slice().sort(function (a, b) {
+        return (speaker.suspicionMap[b.id] || 50) - (speaker.suspicionMap[a.id] || 50);
+      })[0];
+      return {
+        targetId: topThreatE ? topThreatE.id : null,
+        relationType: topThreatE ? "suspect" : null,
+        claimRole: "elder",
+        accuseId: topThreatE ? topThreatE.id : null,
+        vouchId: null,
+        wolfPits: topThreatE ? [topThreatE.id] : baseWolfIds.slice(0, 2),
+        goodPits: baseGoodIds.slice(0, 2),
+        hasToxicSlip: false,
+        text: speaker.elderShieldUsed
+          ? ("我是已經亮牌的清心長老，雖然沒有投票權但絕對站好人視角！請大家把火力集中在 " + seatLabel(topThreatE) + " 身上，別讓酸民狼混水摸魚！")
+          : ("先亮一下清心長老幫神職扛壓：我首次被誤投會發動豁免盾，大家千萬別浪費公投在我身上！這輪我重點檢視 " + seatLabel(topThreatE) + "！")
+      };
+    }
+  }
+
+  // 4. Stealth Wolf (Coordinates with Fake-Seer partner via Blind-View — NEVER peeks hidden Good roles!)
   if (speaker.role === "wolf") {
     const pVoiceRole = typeof ctx.pickVoice === "function" ? ctx.pickVoice : function () { return ""; };
     const wolfLead = pVoiceRole("lead", 4);
     const wolfDualLead = pVoiceRole("dualLead", 5);
     const wolfSignoff = pVoiceRole("signoff", 6) || "先這樣，過！";
-    const goodSpoken = spokenOthers.filter(function (s) { return s.role !== "wolf"; });
-    const goodAll = aliveOthers.filter(function (s) { return s.role !== "wolf"; });
-    const wolfPartnerSeer = spokenOthers.find(function (s) { return s.role === "wolf" && s.claimedRole === "seer"; });
-    const realSeerExposed = spokenOthers.find(function (s) { return s.role === "seer" && s.claimedRole === "seer"; });
+    const goodSpoken = spokenOthers.filter(function (s) { return !s.isWolfMate; });
+    const goodAll = aliveOthers.filter(function (s) { return !s.isWolfMate; });
+    const wolfPartnerSeer = spokenOthers.find(function (s) { return s.isWolfMate && s.claimedRole === "seer"; });
+    // Zero-Leak: Wolf only sees observable Seer claim by a non-wolf (NEVER reads s.role === "seer"!)
+    const rivalSeerExposed = spokenOthers.find(function (s) { return !s.isWolfMate && s.claimedRole === "seer"; });
 
     if (curWolfTactic === "pack_push") {
-      const pidNow = typeof getPlayerId === "function" ? getPlayerId() : 1;
-      const playerAccEv = (state.match.daySpeechEvents || []).find(function (ev) { return ev.speakerId === pidNow && ev.accuseId; });
-      const playerTarget = playerAccEv ? getSeat(playerAccEv.accuseId) : null;
-      if (playerTarget && playerTarget.alive && playerTarget.role !== "wolf") {
+      const pidNow = snap ? snap.playerSeatId : (typeof getPlayerId === "function" ? getPlayerId() : 1);
+      const playerAccEv = (snap ? snap.daySpeechEvents : []).find(function (ev) { return ev.speakerId === pidNow && ev.accuseId; });
+      const playerTarget = playerAccEv ? readSeat(playerAccEv.accuseId) : null;
+      if (playerTarget && playerTarget.alive && !playerTarget.isWolfMate && playerTarget.id !== speaker.id) {
         const ptSpoke = spokeToday(playerTarget.id);
         return {
           targetId: playerTarget.id,
@@ -712,7 +824,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
           wolfPits: [playerTarget.id],
           goodPits: [],
           hasToxicSlip: false,
-          text: wolfLead + "聽完前面分析，我也跟 " + seatLabel(getPlayerSeat()) + " 有同感，" +
+          text: wolfLead + "聽完前面分析，我也跟 " + seatLabel(readSeat(pidNow)) + " 有同感，" +
             (ptSpoke ? (seatLabel(playerTarget) + " 剛才的發言確實破綻最多，") : (seatLabel(playerTarget) + " 雖然今天還沒開口，但前面立場很讓人懷疑，")) +
             "這輪我們先放一格狼坑在 " + seatLabel(playerTarget) + "！" + wolfSignoff
         };
@@ -739,43 +851,43 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     }
 
     // Dual-Seer Stealth Wolf: explicitly analyze BOTH worlds to make backing wolf partner sound credible!
-    if (wolfPartnerSeer && realSeerExposed && dualSeerWorlds && dualSeerWorlds.chosenWorld && dualSeerWorlds.rivalWorld) {
+    if (wolfPartnerSeer && rivalSeerExposed && dualSeerWorlds && dualSeerWorlds.chosenWorld && dualSeerWorlds.rivalWorld) {
       const partnerWorld = dualSeerWorlds.chosenWorld.trustedSeer.id === wolfPartnerSeer.id ? dualSeerWorlds.chosenWorld : dualSeerWorlds.rivalWorld;
-      const realWorld = dualSeerWorlds.chosenWorld.trustedSeer.id === realSeerExposed.id ? dualSeerWorlds.chosenWorld : dualSeerWorlds.rivalWorld;
+      const realWorld = dualSeerWorlds.chosenWorld.trustedSeer.id === rivalSeerExposed.id ? dualSeerWorlds.chosenWorld : dualSeerWorlds.rivalWorld;
       const p2 = partnerWorld.secondWolf ? ("＋" + seatLabel(partnerWorld.secondWolf)) : "";
       const r2 = realWorld.secondWolf ? ("＋" + seatLabel(realWorld.secondWolf)) : "";
       return {
-        targetId: realSeerExposed.id,
+        targetId: rivalSeerExposed.id,
         relationType: "suspect",
-        accuseId: realSeerExposed.id,
+        accuseId: rivalSeerExposed.id,
         vouchId: wolfPartnerSeer.id,
         standWithSeerId: wolfPartnerSeer.id,
         wolfPits: partnerWorld.wolfPits.map(function (s) { return s.id; }).slice(0, 2),
         goodPits: [wolfPartnerSeer.id],
         hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 6),
-        text: (wolfDualLead || "兩位明心觀察員對跳我也盤一下雙邊狼坑：") + "如果站 " + seatLabel(realSeerExposed) + "，狼坑變 " + seatLabel(wolfPartnerSeer) + r2 + " 邏輯其實很勉強；反而站 " + seatLabel(wolfPartnerSeer) + "，狼坑就落在 " + seatLabel(realSeerExposed) + p2 + " 合理多了！我這輪站邊 " + seatLabel(wolfPartnerSeer) + "，出 " + seatLabel(realSeerExposed) + "！" + wolfSignoff
+        text: (wolfDualLead || "兩位明心觀察員對跳我也盤一下雙邊狼坑：") + "如果站 " + seatLabel(rivalSeerExposed) + "，狼坑變 " + seatLabel(wolfPartnerSeer) + r2 + " 邏輯其實很勉強；反而站 " + seatLabel(wolfPartnerSeer) + "，狼坑就落在 " + seatLabel(rivalSeerExposed) + p2 + " 合理多了！我這輪站邊 " + seatLabel(wolfPartnerSeer) + "，出 " + seatLabel(rivalSeerExposed) + "！" + wolfSignoff
       };
     }
 
-    if (wolfPartnerSeer && realSeerExposed) {
+    if (wolfPartnerSeer && rivalSeerExposed) {
       return {
-        targetId: realSeerExposed.id,
+        targetId: rivalSeerExposed.id,
         relationType: "suspect",
-        accuseId: realSeerExposed.id,
+        accuseId: rivalSeerExposed.id,
         vouchId: wolfPartnerSeer.id,
         standWithSeerId: wolfPartnerSeer.id,
-        wolfPits: [realSeerExposed.id],
+        wolfPits: [rivalSeerExposed.id],
         goodPits: [wolfPartnerSeer.id],
         hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 6),
-        text: wolfLead + "比較剛剛兩位自稱明心觀察員的人，我覺得 " + seatLabel(wolfPartnerSeer) + " 講得清楚多了，反倒是 " + seatLabel(realSeerExposed) + " 聽起來超像在硬掰演戲！我站邊 " + seatLabel(wolfPartnerSeer) + "，這輪先把 " + seatLabel(realSeerExposed) + " 打進首出狼坑！" + wolfSignoff
+        text: wolfLead + "比較剛剛兩位自稱明心觀察員的人，我覺得 " + seatLabel(wolfPartnerSeer) + " 講得清楚多了，反倒是 " + seatLabel(rivalSeerExposed) + " 聽起來超像在硬掰演戲！我站邊 " + seatLabel(wolfPartnerSeer) + "，這輪先把 " + seatLabel(rivalSeerExposed) + " 打進首出狼坑！" + wolfSignoff
       };
     }
 
     if (isFirstToday) {
-      const target = (prevVoteSuspect && prevVoteSuspect.role !== "wolf") ? prevVoteSuspect : (goodAll[0] || aliveOthers[0]);
+      const target = (prevVoteSuspect && !prevVoteSuspect.isWolfMate && prevVoteSuspect.id !== speaker.id) ? prevVoteSuspect : (goodAll[0] || aliveOthers[0]);
       if (!target) return null;
       const secTarget = goodAll.find(function (s) { return s.id !== target.id; });
-      if (prevVoteNote && prevVoteSuspect && prevVoteSuspect.role !== "wolf") {
+      if (prevVoteNote && prevVoteSuspect && !prevVoteSuspect.isWolfMate && prevVoteSuspect.id !== speaker.id) {
         return {
           targetId: target.id,
           relationType: "suspect",

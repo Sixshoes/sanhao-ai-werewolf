@@ -322,6 +322,7 @@ async function executeAiTurnSpeech(speaker) {
       speakerId: speaker.id,
       code: contra.code,
       severity: contra.severity,
+      isPublic: contra.isPublic !== false,
       label: contra.label,
       detail: contra.detail,
       rebuttalText: contra.rebuttalText

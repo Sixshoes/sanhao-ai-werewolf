@@ -319,7 +319,7 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
   const uniqueToxic = [];
   toxicWords.forEach(function (w) { if (w && uniqueToxic.indexOf(w) === -1) uniqueToxic.push(w); });
   uniqueToxic.sort(function (a, b) { return b.length - a.length; });
-  const roleWords = ["明心觀察員", "觀察員", "滴水奉茶師", "奉茶師", "直心糾察長", "糾察長", "暖心回甘茶", "清心醒神茶", "預言家", "查殺", "金水", "酸民狼", "平安夜"];
+  const roleWords = ["明心觀察員", "觀察員", "滴水奉茶師", "奉茶師", "直心糾察長", "糾察長", "護心守衛", "護心結界", "清心長老", "流言首領", "暖心回甘茶", "清心醒神茶", "預言家", "查殺", "金水", "銀水", "酸民狼", "平安夜"];
   const activeContraRec = (state.match && state.match.activeSpeechContra && speaker && state.match.activeSpeechContra.speakerId === speaker.id)
     ? state.match.activeSpeechContra.contra
     : null;
@@ -424,7 +424,10 @@ function handleSpotlightClueClick(targetEl) {
     state.match.stats.contradictionsFound = (state.match.stats.contradictionsFound || 0) + 1;
     state.match.stats.cluesCaught = (state.match.stats.cluesCaught || 0) + 1;
     state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + (extraFeast ? 10 : 5), 0, 100);
-    state.playerMarks[sp.id] = "wolf";
+    const pSelfClue = getPlayerSeat();
+    if (!(pSelfClue && pSelfClue.role === "wolf" && sp.role === "wolf")) {
+      state.playerMarks[sp.id] = "wolf";
+    }
     spawnFx(sp.id, "⚡ 抓包" + labelStr + "!", "#fbbf24", { scale: 1.15, durationMs: 1800 });
     spawnBurst(sp.id, ["#fbbf24", "#fde68a", "#ffffff"], 22, "slash");
     if (typeof triggerScreenFlash === "function") triggerScreenFlash("#fbbf24", 380, 0.3);
@@ -443,7 +446,10 @@ function handleSpotlightClueClick(targetEl) {
   if (type === "toxic") {
     state.match.stats.cluesCaught = (state.match.stats.cluesCaught || 0) + 1;
     state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + 6, 0, 100);
-    state.playerMarks[sp.id] = "wolf";
+    const pSelfTox = getPlayerSeat();
+    if (!(pSelfTox && pSelfTox.role === "wolf" && sp.role === "wolf")) {
+      state.playerMarks[sp.id] = "wolf";
+    }
     spawnFx(sp.id, "📌 淨化酸言 +6!", "#fb7185");
     spawnBurst(sp.id, ["#fb7185", "#fbbf24", "#ffffff"], 14, "spark");
     nudgeSeat(sp.id, { scale: 1.1 });

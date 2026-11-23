@@ -258,6 +258,44 @@ class ServerTestCase(unittest.TestCase):
             remaining = sorted(p.name for p in td_path.glob("*.mp3"))
             self.assertEqual(remaining, ["sample_2.mp3", "sample_3.mp3", "sample_4.mp3"])
 
+    def test_feedback_endpoint_and_privacy_block(self):
+        import tempfile
+
+        for bad_body in (b"{}", b'{"message":" "}', b'{"message":"a"}', b"{not-json"):
+            st400, _, _ = dispatch_handler("POST", "/api/feedback", body=bad_body)
+            self.assertEqual(st400, 400)
+
+        oversized = b'{"message":"' + (b"x" * 9000) + b'"}'
+        st413, _, _ = dispatch_handler("POST", "/api/feedback", body=oversized)
+        self.assertEqual(st413, 413)
+
+        st_get_blocked, _, _ = dispatch_handler("GET", "/.feedback_inbox/feedback.jsonl")
+        self.assertEqual(st_get_blocked, 403)
+
+        with tempfile.TemporaryDirectory() as td:
+            td_inbox = Path(td) / ".feedback_inbox"
+            with patch.object(server, "FEEDBACK_DIR", td_inbox):
+                payload = json.dumps({
+                    "category": "ui",
+                    "rating": 5,
+                    "nickname": "測試茶客",
+                    "message": "坐席視角很棒，右上角反饋按鈕很好找！",
+                    "diagnostics": {"version": "v9.0", "totalSeats": 12},
+                }, ensure_ascii=False).encode("utf-8")
+                st200, _, resp_bytes = dispatch_handler("POST", "/api/feedback", body=payload)
+                self.assertEqual(st200, 200)
+                res = json.loads(resp_bytes.decode("utf-8"))
+                self.assertTrue(res.get("ok"))
+                self.assertTrue(res.get("saved"))
+                saved_file = td_inbox / "feedback.jsonl"
+                self.assertTrue(saved_file.exists())
+                saved_lines = saved_file.read_text(encoding="utf-8").strip().splitlines()
+                self.assertEqual(len(saved_lines), 1)
+                row = json.loads(saved_lines[0])
+                self.assertEqual(row.get("category"), "ui")
+                self.assertEqual(row.get("rating"), 5)
+                self.assertIn("坐席視角", row.get("message", ""))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -9,13 +9,35 @@ function renderTutorialSlide() {
   state.tutorialIndex = idx;
   const slide = TUTORIAL_SLIDES[idx];
 
+  const counterEl = el("tutorialStepCounter");
+  if (counterEl) {
+    counterEl.textContent = (idx + 1) + " / " + TUTORIAL_SLIDES.length;
+  }
+
+  const tabsEl = el("tutorialStepTabs");
+  if (tabsEl) {
+    tabsEl.innerHTML = "";
+    TUTORIAL_SLIDES.forEach(function (sl, tIdx) {
+      const tb = document.createElement("button");
+      tb.type = "button";
+      tb.className = "tut-step-tab" + (tIdx === idx ? " is-active" : "");
+      tb.textContent = sl.icon + " " + (sl.tab || ("第" + (tIdx + 1) + "章"));
+      tb.addEventListener("click", function () {
+        if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(520, 0.05, "triangle", 0.035, 0);
+        state.tutorialIndex = tIdx;
+        renderTutorialSlide();
+      });
+      tabsEl.appendChild(tb);
+    });
+  }
+
   const dots = el("tutorialDots");
   dots.innerHTML = "";
   for (let i = 0; i < TUTORIAL_SLIDES.length; i++) {
     const d = document.createElement("button");
     d.type = "button";
-    d.className = "h-2 rounded-full transition-all " + (i === idx ? "w-7 bg-amber-400" : "w-2 bg-slate-700");
-    d.setAttribute("aria-label", "第" + (i + 1) + "頁");
+    d.className = "h-2 rounded-full transition-all " + (i === idx ? "w-6 bg-amber-400" : "w-2 bg-slate-700");
+    d.setAttribute("aria-label", "第" + (i + 1) + "章");
     (function (pIdx) {
       d.addEventListener("click", function () {
         state.tutorialIndex = pIdx;
@@ -25,10 +47,14 @@ function renderTutorialSlide() {
     dots.appendChild(d);
   }
 
-  el("tutorialSlideBody").innerHTML =
-    '<div class="inline-block mx-auto px-3 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 text-[11px] font-bold tracking-widest text-amber-300">第 ' + slide.icon + ' 步</div>' +
+  const bodyEl = el("tutorialSlideBody");
+  bodyEl.innerHTML =
+    '<div class="inline-block mx-auto px-3 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 text-[11px] font-bold tracking-widest text-amber-300">第 ' + slide.icon + ' 章 · ' + escapeHtml(slide.tab || "") + '</div>' +
     '<h4 class="font-serif-craft text-base sm:text-lg font-bold text-white tracking-wide">' + slide.title + '</h4>' +
     '<div>' + slide.html + '</div>';
+  if (bodyEl.parentElement && typeof bodyEl.parentElement.scrollTop === "number") {
+    bodyEl.parentElement.scrollTop = 0;
+  }
 
   el("btnTutPrev").disabled = idx === 0;
   el("btnTutPrev").className = "cta-ink px-3 py-1.5 text-xs transition " + (

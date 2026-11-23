@@ -751,6 +751,10 @@ function preparePlayerSpeechPanel() {
   renderRoleTurnDashboard(player);
   renderPlayerPitBuilder(slotView, dualWorlds);
   const isFreshTurn = prevTurnKey !== draftNow.turnKey;
+  if (isFreshTurn && prevTurnKey) {
+    if (el("quickFreeInput")) el("quickFreeInput").value = "";
+    if (el("playerSpeechInput")) el("playerSpeechInput").value = "";
+  }
   if (isFreshTurn && (draftNow.wolfIds.length > 0 || draftNow.goodIds.length > 0)) {
     const qInNow = el("quickFreeInput");
     if (qInNow && !qInNow.value.trim()) syncDraftSpeechToInput();
@@ -1302,7 +1306,8 @@ function submitPlayerSpeech() {
       });
     };
     state.match.seats.forEach(function (ai) {
-      if (ai.id !== pid && ai.alive && (ai.suspicionMap[pid] || 0) < 100 && !(plClaimedGod && ai.role === plClaimedGod)) {
+      const aiEffRole = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(ai) : ai.role;
+      if (ai.id !== pid && ai.alive && (ai.suspicionMap[pid] || 0) < 100 && !(plClaimedGod && aiEffRole === plClaimedGod)) {
         ai.suspicionMap[pid] = clamp((ai.suspicionMap[pid] || 50) - (comboMult > 1 ? 11 : 8), 5, 95);
       }
     });

@@ -62,6 +62,8 @@ const state = {
   lastSpeakerPortraitId: null,
   activeBubble: null,
   seatCoords: [],
+  fpGlanceButtons: [],
+  hoverFpGlanceKey: null,
   typewriter: {
     timer: null,
     fullText: "",

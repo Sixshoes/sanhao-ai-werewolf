@@ -490,6 +490,35 @@ function renderOrchestratorTracePanel() {
     '<div class="p-2 rounded-lg bg-slate-950 border border-slate-800"><div class="text-[10px] text-slate-400">推理路由</div><div class="text-[11px] font-bold text-sky-300 truncate mt-0.5">' + escapeHtml(routeText) + '</div></div>' +
     '<div class="p-2 rounded-lg bg-slate-950 border border-slate-800"><div class="text-[10px] text-slate-400">合規淨化／事件</div><div class="text-[11px] font-bold text-rose-200 truncate mt-0.5">' + (st.complianceFiltered || 0) + ' 次・' + escapeHtml(curEv) + '</div></div>';
 
+  const acBox = el("antiCheatAuditBox");
+  if (acBox) {
+    const ac = (typeof antiCheatMonitor !== "undefined" && typeof antiCheatMonitor.getSummary === "function")
+      ? antiCheatMonitor.getSummary()
+      : { enabled: false, blindViewsIssued: 0, decisionsAudited: 0, promptAuditsPassed: 0, promptAuditsBlocked: 0, violationsBlocked: 0, byModule: {} };
+    const isClean = ac.violationsBlocked === 0;
+    const statusBadge = isClean
+      ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-400/45">✓ 隔離運行中・0 偷看違規</span>'
+      : '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-200 border border-rose-400/50">⚠ 已攔截 ' + ac.violationsBlocked + ' 次越權</span>';
+    const modEntries = Object.keys(ac.byModule || {}).map(function (k) {
+      const lblMap = { day_speech: "發言", day_vote: "公投", night_guard: "守衛", night_wolf: "狼襲", night_seer: "查驗", night_witch: "奉茶", hunter_shot: "共鳴", sheriff_speech: "上警", sheriff_vote: "投警", sheriff_transfer: "移徽", last_words: "遺言", llm_prompt: "LLM掃描" };
+      return escapeHtml((lblMap[k] || k) + "×" + ac.byModule[k]);
+    }).join(" · ");
+    acBox.innerHTML =
+      '<div class="flex items-center justify-between gap-2 flex-wrap">' +
+        '<span class="font-serif-craft text-xs font-bold text-emerald-300">🛡️ v9.0 反作弊盲視隔離防火牆（即時稽核）</span>' +
+        statusBadge +
+      '</div>' +
+      '<div class="grid grid-cols-3 gap-1.5 text-center text-[10.5px]">' +
+        '<div class="p-1.5 rounded bg-slate-900/90 border border-slate-800"><div class="text-[9.5px] text-slate-400">盲視快照簽發</div><div class="font-black text-amber-200 tabular-nums">' + ac.blindViewsIssued + ' 次</div></div>' +
+        '<div class="p-1.5 rounded bg-slate-900/90 border border-slate-800"><div class="text-[9.5px] text-slate-400">受保護 AI 決策</div><div class="font-black text-emerald-300 tabular-nums">' + ac.decisionsAudited + ' 次</div></div>' +
+        '<div class="p-1.5 rounded bg-slate-900/90 border border-slate-800"><div class="text-[9.5px] text-slate-400">LLM 零洩漏檢核</div><div class="font-black text-sky-300 tabular-nums">' + ac.promptAuditsPassed + ' 通過</div></div>' +
+      '</div>' +
+      '<div class="text-[10.5px] text-slate-300 leading-relaxed">' +
+        '封鎖項目：他席底牌（role/team/isElder/fakeSeer）、他人私密懷疑值（suspicionMap）、未揭露心虛脈搏、<code>nightArchive</code> 與玩家私密驗證。' +
+        (modEntries ? ('<div class="text-[10px] text-emerald-200/90 mt-1">本局已稽核：' + modEntries + '</div>') : '') +
+      '</div>';
+  }
+
   const traces = (hasOrch && Array.isArray(orchestrator.traces)) ? orchestrator.traces : [];
   if (traces.length === 0) {
     listEl.innerHTML = '<div class="rounded-xl p-5 text-center bg-slate-950/70 border border-slate-800 text-slate-400 text-xs">開局或試玩後，這裡將即時顯示四大 AI 代理的調度延遲、降級路線與文化合規檢核紀錄。</div>';

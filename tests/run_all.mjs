@@ -22,10 +22,11 @@ const pyBin = fs.existsSync(".venv/Scripts/python.exe")
       ? "python"
       : "python3";
 const steps = [
-  { name: "[1/4] Python 後端語法編譯檢查", cmd: pyBin, args: ["-m", "py_compile", "server.py"] },
-  { name: "[2/4] 後端安全性 / ETag / API 單元測試", cmd: pyBin, args: ["-m", "unittest", "tests/test_server.py", "-v"] },
-  { name: "[3/4] 靜態檢查 / 10 VRMs / GLSL / UI 操作與快捷鍵煙霧測試", cmd: process.execPath, args: ["tests/smoke.mjs"] },
-  { name: "[4/4] 60 局全流程多角色亂數壓力與不變量測試", cmd: process.execPath, args: ["tests/fuzz.mjs"] }
+  { name: "[1/5] Python 後端語法編譯檢查", cmd: pyBin, args: ["-m", "py_compile", "server.py"] },
+  { name: "[2/5] 後端安全性 / ETag / API 單元測試", cmd: pyBin, args: ["-m", "unittest", "tests/test_server.py", "-v"] },
+  { name: "[3/5] 靜態檢查 / 10 VRMs / GLSL / UI 操作與快捷鍵煙霧測試", cmd: process.execPath, args: ["tests/smoke.mjs"] },
+  { name: "[4/5] 60 局全流程多角色亂數壓力與不變量測試", cmd: process.execPath, args: ["tests/fuzz.mjs"] },
+  { name: "[5/5] v9.0 反作弊盲視隔離與反事實不變性證明測試", cmd: process.execPath, args: ["tests/anti_cheat.mjs"] }
 ];
 
 const totalStart = performance.now();
@@ -38,4 +39,4 @@ for (const step of steps) {
 }
 
 const totalMs = Math.round(performance.now() - totalStart);
-console.log(`\n[ALL 4 VERIFICATION LAYERS PASSED in ${totalMs} ms]`);
+console.log(`\n[ALL 5 VERIFICATION LAYERS PASSED in ${totalMs} ms]`);

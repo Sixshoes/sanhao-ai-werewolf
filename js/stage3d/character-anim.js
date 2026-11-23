@@ -297,7 +297,11 @@ function getStageSeatListFor3D() {
 function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
   const seats = getStageSeatListFor3D();
   const nSeats = seats.length;
-  const ringRadius = nSeats >= 12 ? 5.85 : (nSeats >= 10 ? 5.35 : (nSeats >= 8 ? 4.85 : 4.55));
+  const tLayout = typeof get3DTableLayout === "function"
+    ? get3DTableLayout(nSeats)
+    : { ringRadius: nSeats >= 12 ? 5.92 : (nSeats >= 10 ? 5.42 : (nSeats >= 8 ? 4.85 : 4.55)), propZ: nSeats >= 10 ? 2.08 : (nSeats >= 8 ? 2.06 : 1.95) };
+  const ringRadius = tLayout.ringRadius;
+  const propBaseZ = tLayout.propZ;
   const t = f.tSec;
   const p = f.p;
   const nowMs = f.nowMs;
@@ -368,6 +372,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     const hideSelfBodyInFP = isSelf && camPreset === "firstperson";
     actor.figureGroup.visible = !hideSelfBodyInFP;
     actor.chairGroup.visible = !hideSelfBodyInFP;
+    if (actor.plaqueMesh) actor.plaqueMesh.visible = !hideSelfBodyInFP;
     if (actor.vrmMountGroup) actor.vrmMountGroup.visible = Boolean(actor.useVrm && actor.vrmAvatar && !hideSelfBodyInFP);
 
     const isSelected = state.selectedSeatId === s.id;
@@ -397,6 +402,11 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     actor.root.position.set(pos.x * radialOut, -actor.outFade * 0.12, pos.z * radialOut);
     const baseFacingY = Math.atan2(-pos.x, -pos.z);
     actor.root.rotation.y = baseFacingY;
+
+    // Anchor tabletop props (plaque, candle, teacup, mark crystal, ID card) firmly ON the walnut table across 6/8/10/12 seats AND eliminated slide-out!
+    if (actor.tablePropGroup) {
+      actor.tablePropGroup.position.set(0, 1.24 + actor.outFade * 0.12, propBaseZ + ringRadius * (radialOut - 1.0));
+    }
 
     const breath = s.alive ? Math.sin(t * 2.2 + s.id * 1.1) * 0.025 : 0;
     const leanIn = isSpeaking ? (0.14 + liveAmp * 0.08) : (isBeingAccusedNow ? -0.14 : (isHovered ? 0.07 : (!s.alive ? 0.22 * actor.outFade : 0)));
@@ -755,9 +765,20 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     nextAnchors[s.id] = actor._anchorObj;
 
     projVec.copy(actor.headWorldPos).project(camera);
-    const inFront = projVec.z < 1.0;
+    const inFront = projVec.z >= -1.0 && projVec.z < 1.0;
+    const onScreen = inFront && projVec.x >= -1.06 && projVec.x <= 1.06 && projVec.y >= -1.08 && projVec.y <= 1.12;
     const sx = (projVec.x * 0.5 + 0.5) * canvasW;
     const sy = (-projVec.y * 0.5 + 0.5) * canvasH;
+
+    // Accurate left/right off-screen direction for seated POV edge-glance arrows
+    let offScreenDir = 0;
+    if (!onScreen && !hideSelfBodyInFP && camera && camera.position) {
+      const dxC = actor.headWorldPos.x - camera.position.x;
+      const dyC = actor.headWorldPos.y - camera.position.y;
+      const dzC = actor.headWorldPos.z - camera.position.z;
+      const dotR = dxC * camRight.x + dyC * camRight.y + dzC * camRight.z;
+      offScreenDir = dotR < 0 ? -1 : 1;
+    }
 
     projEdgeVec.copy(actor.headWorldPos).addScaledVector(camRight, 0.62 * phys.scale).project(camera);
     const edgeX = (projEdgeVec.x * 0.5 + 0.5) * canvasW;
@@ -767,12 +788,13 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       id: s.id,
       angle: Math.PI * 0.5 + (i * Math.PI * 2) / nSeats,
       deg: Math.round((((Math.PI * 0.5 + (i * Math.PI * 2) / nSeats) * 180) / Math.PI) % 360),
-      x: inFront ? sx : -999,
-      y: inFront ? sy : -999,
+      x: onScreen ? sx : -999,
+      y: onScreen ? sy : -999,
       r: projR,
       seat: s,
       zDepth: projVec.z,
-      visibleInView: inFront && !hideSelfBodyInFP
+      offScreenDir: offScreenDir,
+      visibleInView: onScreen && !hideSelfBodyInFP
     });
   }
 

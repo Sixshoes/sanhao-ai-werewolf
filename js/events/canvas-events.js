@@ -86,8 +86,15 @@ function bindCanvasEvents() {
       canvas.style.cursor = "grabbing";
     } else {
       const is3D = typeof stage3d !== "undefined" && stage3d.isActive();
+      let hitGlanceHover = null;
+      if (is3D && stage3d.camPreset === "firstperson" && Array.isArray(state.fpGlanceButtons) && state.fpGlanceButtons.length > 0) {
+        hitGlanceHover = state.fpGlanceButtons.find(function (b) {
+          return pt.x >= b.x && pt.x <= b.x + b.w && pt.y >= b.y && pt.y <= b.y + b.h;
+        }) || null;
+      }
+      state.hoverFpGlanceKey = hitGlanceHover ? hitGlanceHover.key : null;
       let hitProp = false;
-      if (is3D && !hitNode) {
+      if (is3D && !hitNode && !hitGlanceHover) {
         const nowRay = performance.now();
         if (!canvas._lastPropRayAt || nowRay - canvas._lastPropRayAt >= 48) {
           canvas._lastPropRayAt = nowRay;
@@ -95,7 +102,7 @@ function bindCanvasEvents() {
         }
         hitProp = Boolean(canvas._lastHitProp);
       }
-      canvas.style.cursor = hitNode ? "grab" : (hitProp ? "pointer" : (is3D ? "move" : "default"));
+      canvas.style.cursor = hitGlanceHover ? "pointer" : (hitNode ? "grab" : (hitProp ? "pointer" : (is3D ? "move" : "default")));
     }
   });
 
@@ -113,6 +120,23 @@ function bindCanvasEvents() {
     const pt = getCanvasPoint(ev);
     spawnRipple(pt.x, pt.y, document.body.classList.contains("theme-day") ? "#d97706" : "#fbbf24", 44);
     closeRadialMenu();
+    // Seated POV (firstperson) Edge-Glance & Recenter Button Hit Test: 1-click smooth head turn!
+    if (typeof stage3d !== "undefined" && stage3d.isActive() && stage3d.camPreset === "firstperson" && Array.isArray(state.fpGlanceButtons) && state.fpGlanceButtons.length > 0) {
+      const hitGlance = state.fpGlanceButtons.find(function (b) {
+        return pt.x >= b.x && pt.x <= b.x + b.w && pt.y >= b.y && pt.y <= b.y + b.h;
+      });
+      if (hitGlance) {
+        if (hitGlance.isRecenter) {
+          stage3d.resetCamera();
+        } else {
+          stage3d.glanceAtSeatInFirstPerson(hitGlance.seatId);
+        }
+        sound.tone(hitGlance.isRecenter ? 520 : 580, 0.06, "triangle", 0.04, 0);
+        state.suppressNextClick = true;
+        setTimeout(function () { state.suppressNextClick = false; }, 160);
+        return;
+      }
+    }
     const hitNode = hitTestSeat(pt.x, pt.y, 1.36, ev);
     if (hitNode && hitNode.seat && hitNode.seat.alive) {
       nudgeSeat(hitNode.id, { scale: 0.88, vScale: 0.14 });
@@ -212,6 +236,7 @@ function bindCanvasEvents() {
   canvas.addEventListener("pointerleave", function () {
     state.pointer.inside = false;
     state.hoverSeatId = null;
+    state.hoverFpGlanceKey = null;
     if (!state.dragAction.active) canvas.style.cursor = "default";
   });
 
@@ -259,12 +284,17 @@ function bindCanvasEvents() {
       const pt = getCanvasPoint(ev);
       const hitNode = hitTestSeat(pt.x, pt.y, 1.32, ev);
       if (hitNode) {
-        stage3d.focusSeatCloseUp(hitNode.id);
+        if (stage3d.camPreset === "firstperson") {
+          stage3d.glanceAtSeatInFirstPerson(hitNode.id);
+          stage3d.orbit.fpFovOffset = -7;
+        } else {
+          stage3d.focusSeatCloseUp(hitNode.id);
+        }
         openSeatIntel(hitNode.id);
       } else {
         stage3d.clearCloseUp();
         stage3d.resetCamera();
-        showToast("已重置 3D 運鏡視角", "emerald");
+        showToast(stage3d.camPreset === "firstperson" ? "已回正坐席視角" : "已重置 3D 運鏡視角", "emerald");
       }
     }
   });

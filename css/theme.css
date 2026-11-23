@@ -371,8 +371,12 @@ body.craft-ui.theme-day #setupDrawer .text-amber-200 {
 body.craft-ui.theme-day main .text-emerald-100,
 body.craft-ui.theme-day main .text-emerald-200,
 body.craft-ui.theme-day main .text-emerald-300,
+body.craft-ui.theme-day main .text-teal-200,
+body.craft-ui.theme-day main .text-teal-300,
 body.craft-ui.theme-day .craft-modal-box .text-emerald-200,
-body.craft-ui.theme-day .craft-modal-box .text-emerald-300 {
+body.craft-ui.theme-day .craft-modal-box .text-emerald-300,
+body.craft-ui.theme-day .craft-modal-box .text-teal-200,
+body.craft-ui.theme-day .craft-modal-box .text-teal-300 {
   color: #1f6148;
 }
 
@@ -388,8 +392,12 @@ body.craft-ui.theme-day .craft-modal-box .text-rose-300 {
 body.craft-ui.theme-day main .text-sky-100,
 body.craft-ui.theme-day main .text-sky-200,
 body.craft-ui.theme-day main .text-sky-300,
+body.craft-ui.theme-day main .text-cyan-200,
+body.craft-ui.theme-day main .text-cyan-300,
 body.craft-ui.theme-day .craft-modal-box .text-sky-200,
-body.craft-ui.theme-day .craft-modal-box .text-sky-300 {
+body.craft-ui.theme-day .craft-modal-box .text-sky-300,
+body.craft-ui.theme-day .craft-modal-box .text-cyan-200,
+body.craft-ui.theme-day .craft-modal-box .text-cyan-300 {
   color: #2c527a;
 }
 

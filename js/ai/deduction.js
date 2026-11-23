@@ -166,12 +166,14 @@ function detectSpeechContradictions(speaker, speechEv) {
     const otherClaimant = (m.seats || []).find(function (s) {
       return s.id !== speaker.id && s.alive && s.claimedRole === speechEv.claimRole;
     });
-    const stealsPlayerRealRole = Boolean(player && player.alive && player.role === speechEv.claimRole);
+    const playerEffKey = player && typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(player) : (player ? player.role : null);
+    const stealsPlayerRealRole = Boolean(player && player.alive && playerEffKey === speechEv.claimRole);
     if (otherClaimant || stealsPlayerRealRole) {
       const clashWho = otherClaimant ? labelSeat(otherClaimant.id) : "已現身的同職角色";
       return {
         code: "role_clash",
         severity: 3,
+        isPublic: Boolean(otherClaimant),
         targetId: speaker.id,
         label: "身分對跳衝突",
         detail: spTag + " 搶跳「" + rName + "」，與 " + clashWho + " 直接衝突",
@@ -180,7 +182,7 @@ function detectSpeechContradictions(speaker, speechEv) {
     }
   }
 
-  // 2. Direct clash against player's night-verified intel (Seer check or Witch heal)
+  // 2. Direct clash against player's night-verified intel (Seer check or Witch heal) — strictly player-private!
   const known = m.playerKnownRoles || {};
   if (speechEv.accuseId) {
     const accKnownGood = known[speechEv.accuseId] === "good_verified" || (player && player.role === "witch" && player.savedSeatId === speechEv.accuseId);
@@ -189,6 +191,7 @@ function detectSpeechContradictions(speaker, speechEv) {
       return {
         code: "known_fact_clash",
         severity: 3,
+        isPublic: false,
         targetId: speaker.id,
         label: "硬打已驗好人",
         detail: spTag + " 強打已確認清白的 " + tLbl,
@@ -196,11 +199,12 @@ function detectSpeechContradictions(speaker, speechEv) {
       };
     }
   }
-  if (speechEv.vouchId && known[speechEv.vouchId] === "wolf") {
+  if (speechEv.vouchId && known[speechEv.vouchId] === "wolf" && (!player || player.role !== "wolf")) {
     const wLbl = labelSeat(speechEv.vouchId);
     return {
       code: "known_fact_clash",
       severity: 3,
+      isPublic: false,
       targetId: speaker.id,
       label: "替查殺狼洗白",
       detail: spTag + " 力挺已知酸民狼 " + wLbl,
@@ -227,6 +231,7 @@ function detectSpeechContradictions(speaker, speechEv) {
           return {
             code: "vote_hypocrisy",
             severity: 2,
+            isPublic: true,
             targetId: speaker.id,
             label: "前後投票自打臉",
             detail: spTag + " 第" + (votedBefore.day || (day - 1)) + "輪才投 " + vLbl + "，今日突改口力挺",
@@ -254,6 +259,7 @@ function detectSpeechContradictions(speaker, speechEv) {
           return {
             code: "vote_hypocrisy",
             severity: 2,
+            isPublic: true,
             targetId: speaker.id,
             label: "昨挺今打反覆",
             detail: spTag + " 昨日才挺 " + aLbl + "，今日毫無徵兆突然改口懷疑",
@@ -274,6 +280,7 @@ function detectSpeechContradictions(speaker, speechEv) {
       return {
         code: "wolf_pack_echo",
         severity: 2,
+        isPublic: true,
         targetId: speaker.id,
         label: "護航酸言對象",
         detail: spTag + " 主動替曾出酸言的 " + tLbl + " 護航",
@@ -287,6 +294,7 @@ function detectSpeechContradictions(speaker, speechEv) {
     return {
       code: "toxic_bait",
       severity: 1,
+      isPublic: true,
       targetId: speaker.id,
       label: "情緒挑撥帶風向",
       detail: spTag + " 夾帶酸言強推 " + labelSeat(speechEv.accuseId),

@@ -7,6 +7,34 @@
  */
 "use strict";
 
+function get3DTableLayout(seatCount) {
+  const n = seatCount || 8;
+  if (n >= 12) {
+    return { n: 12, tableScale: 1.40, tableR: 4.55, ringRadius: 5.92, propZ: 2.08, pavilionScale: 1.15, heroMul: 1.24, camExtraR: 2.15 };
+  }
+  if (n >= 10) {
+    return { n: 10, tableScale: 1.24, tableR: 4.03, ringRadius: 5.42, propZ: 2.08, pavilionScale: 1.08, heroMul: 1.13, camExtraR: 1.15 };
+  }
+  if (n >= 8) {
+    return { n: 8, tableScale: 1.06, tableR: 3.45, ringRadius: 4.85, propZ: 2.06, pavilionScale: 1.0, heroMul: 1.0, camExtraR: 0.15 };
+  }
+  return { n: 6, tableScale: 1.00, tableR: 3.25, ringRadius: 4.55, propZ: 1.95, pavilionScale: 1.0, heroMul: 1.0, camExtraR: 0 };
+}
+
+function getActive3DSeatCount() {
+  try {
+    if (typeof state !== "undefined" && state.match && state.match.started && state.match.totalSeats) {
+      return state.match.totalSeats;
+    }
+    if (typeof document !== "undefined" && typeof document.getElementById === "function") {
+      if (typeof getLobbySeatCount === "function") return getLobbySeatCount();
+      const sel = document.getElementById("selectModeCount");
+      if (sel) return parseInt(sel.value, 10) || 8;
+    }
+  } catch (e) {}
+  return 8;
+}
+
 function build3DEnvironmentMap(renderer, scene, env) {
   if (!renderer || typeof THREE.PMREMGenerator !== "function") return;
   try {
@@ -146,7 +174,7 @@ function build3DSkyAndLights(scene, env) {
   env.dirLight.shadow.mapSize.height = shadowRes;
   env.dirLight.shadow.camera.near = 2;
   env.dirLight.shadow.camera.far = 48;
-  const sc = 10.5;
+  const sc = 12.6;
   env.dirLight.shadow.camera.left = -sc;
   env.dirLight.shadow.camera.right = sc;
   env.dirLight.shadow.camera.top = sc;
@@ -584,6 +612,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   terrace.position.y = -0.22;
   terrace.receiveShadow = true;
   scene.add(terrace);
+  env.terraceMesh = terrace;
   stage3dTextures.upgradeStoneWithPolyHavenCC0(env.terraceMat);
 
   // Far Horizon: Delicate Distant Guishan Island (龜山島) Silhouette + Coastal Beacon Light!
@@ -648,6 +677,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   terraceTrim.rotation.z = Math.PI / 8;
   terraceTrim.position.y = 0.01;
   scene.add(terraceTrim);
+  env.terraceTrim = terraceTrim;
 
   env.floorMandala = new THREE.Mesh(
     new THREE.RingGeometry(4.55, 4.72, 48),
@@ -729,6 +759,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   tableAO.rotation.x = -Math.PI * 0.5;
   tableAO.position.y = 0.012;
   scene.add(tableAO);
+  env.tableAO = tableAO;
 
   // 6. Handcrafted Taiwanese Mountain-Academy Belvedere Pavilion + Balustrades + Swept Backdrop Eaves
   const proceduralPavilionGroup = new THREE.Group();
@@ -975,7 +1006,11 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   });
 
   // 7. Lacquered Clearcoat Walnut Round Table + Artisan Yixing Teapot & Academy Life Props
+  // Round table geometry lives in env.tableScaleGroup so 6/8/10/12-seat modes scale X/Z cleanly without stretching inner tea props!
   const tableGroup = new THREE.Group();
+  const tableScaleGroup = new THREE.Group();
+  env.tableScaleGroup = tableScaleGroup;
+  tableGroup.add(tableScaleGroup);
   const MatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
   const tableWoodMat = new MatCtor({
     map: wood.map,
@@ -993,19 +1028,19 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   pedestal.position.y = 0.52;
   pedestal.castShadow = true;
   pedestal.receiveShadow = true;
-  tableGroup.add(pedestal);
+  tableScaleGroup.add(pedestal);
 
   const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(3.25, 3.10, 0.24, 48), tableWoodMat);
   tableTop.position.y = 1.12;
   tableTop.castShadow = true;
   tableTop.receiveShadow = true;
-  tableGroup.add(tableTop);
+  tableScaleGroup.add(tableTop);
   env.tableTopMesh = tableTop;
 
   const rimTorus = new THREE.Mesh(new THREE.TorusGeometry(3.22, 0.09, 14, 56), tableWoodMat);
   rimTorus.rotation.x = Math.PI * 0.5;
   rimTorus.position.y = 1.22;
-  tableGroup.add(rimTorus);
+  tableScaleGroup.add(rimTorus);
 
   // Antique-brass inlaid outer rim filigree & pedestal collar
   const outerBrassTrim = new THREE.Mesh(new THREE.TorusGeometry(3.28, 0.024, 10, 56), goldAccentMat);
@@ -1014,7 +1049,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   const pedestalCollar = new THREE.Mesh(new THREE.TorusGeometry(1.36, 0.042, 10, 28), goldAccentMat);
   pedestalCollar.rotation.x = Math.PI * 0.5;
   pedestalCollar.position.y = 0.05;
-  tableGroup.add(outerBrassTrim, pedestalCollar);
+  tableScaleGroup.add(outerBrassTrim, pedestalCollar);
 
   const feltDisk = new THREE.Mesh(
     new THREE.CylinderGeometry(2.58, 2.58, 0.03, 44),
@@ -1028,7 +1063,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   );
   feltDisk.position.y = 1.245;
   feltDisk.receiveShadow = true;
-  tableGroup.add(feltDisk);
+  tableScaleGroup.add(feltDisk);
 
   env.tableGlowRing = new THREE.Mesh(
     new THREE.TorusGeometry(2.60, 0.036, 12, 48),
@@ -1036,7 +1071,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   );
   env.tableGlowRing.rotation.x = Math.PI * 0.5;
   env.tableGlowRing.position.y = 1.255;
-  tableGroup.add(env.tableGlowRing);
+  tableScaleGroup.add(env.tableGlowRing);
 
   tableGroup.add(buildTabletopTeaSet(tableWoodMat));
   tableGroup.add(buildTabletopAcademyProps(tableWoodMat, env));
@@ -1519,6 +1554,12 @@ function build3DEnvironment(scene, renderer) {
     threeGoodPetals: null,
     resonancePillar: null,
     mistRing: null,
+    tableScaleGroup: null,
+    tableScaleCurrent: 0,
+    pavilionScaleCurrent: 0,
+    tableAO: null,
+    terraceMesh: null,
+    terraceTrim: null,
     tableGlowRing: null,
     tableTopMesh: null,
     oceanMat: null,
@@ -1686,6 +1727,27 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   const harmony = (state.match && typeof state.match.harmonyScore === "number") ? state.match.harmonyScore : 72;
   const isToxicHaze = Boolean(state.match && state.match.started && harmony <= 48);
   const isClearBreeze = Boolean(state.match && state.match.started && harmony >= 85);
+
+  // Dynamically scale walnut round table, floor mandala & pavilion terrace to fit 6 / 8 / 10 / 12 seats with zero floating props!
+  const activeSeatsN = typeof getActive3DSeatCount === "function" ? getActive3DSeatCount() : 8;
+  const tLayout = typeof get3DTableLayout === "function"
+    ? get3DTableLayout(activeSeatsN)
+    : { tableScale: 1.06, ringRadius: 4.85, pavilionScale: 1.0 };
+  if (!env.tableScaleCurrent) env.tableScaleCurrent = tLayout.tableScale;
+  else env.tableScaleCurrent += (tLayout.tableScale - env.tableScaleCurrent) * 0.16;
+  if (!env.pavilionScaleCurrent) env.pavilionScaleCurrent = tLayout.pavilionScale;
+  else env.pavilionScaleCurrent += (tLayout.pavilionScale - env.pavilionScaleCurrent) * 0.16;
+  const tsNow = env.tableScaleCurrent;
+  const psNow = env.pavilionScaleCurrent;
+  if (env.tableScaleGroup) env.tableScaleGroup.scale.set(tsNow, 1, tsNow);
+  if (env.tableAO) env.tableAO.scale.set(tsNow, tsNow, 1);
+  if (env.floorMandala) {
+    const mSc = (tLayout.ringRadius / 4.65);
+    env.floorMandala.scale.set(mSc, mSc, 1);
+  }
+  if (env.terraceMesh) env.terraceMesh.scale.set(psNow, 1, psNow);
+  if (env.terraceTrim) env.terraceTrim.scale.set(psNow, psNow, 1);
+  if (env.proceduralPavilionGroup) env.proceduralPavilionGroup.scale.set(psNow, 1, psNow);
 
   if (env.moodKey !== moodKey) {
     if (env.moodKey === "night" && moodKey === "day") {

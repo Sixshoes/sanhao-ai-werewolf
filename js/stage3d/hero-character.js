@@ -641,6 +641,15 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
   const t = f.tSec;
   const nowMs = f.nowMs;
 
+  // Keep Qingming's dais smoothly clear of the outer seat ring on 10 / 12-player tables!
+  if (typeof get3DTableLayout === "function" && typeof getActive3DSeatCount === "function" && hero.root && hero.root.position) {
+    const hLayout = get3DTableLayout(getActive3DSeatCount());
+    const tx = HERO_STAGE_ANCHOR.x * (hLayout.heroMul || 1.0);
+    const tz = HERO_STAGE_ANCHOR.z * (hLayout.heroMul || 1.0);
+    hero.root.position.x += (tx - hero.root.position.x) * 0.14;
+    hero.root.position.z += (tz - hero.root.position.z) * 0.14;
+  }
+
   if (hero.actionUntil > 0 && nowMs > hero.actionUntil) {
     hero.action = "idle_breathe";
     hero.actionUntil = 0;

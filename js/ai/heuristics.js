@@ -5,11 +5,12 @@
 
 function buildGoodTeamDeductionSpeech(speaker, ctx) {
   const {
-    aliveOthers, day, spokenIdsToday, spokenOthers, unspokenOthers, spokeToday,
+    snap, getBlindSeat, aliveOthers, day, spokenIdsToday, spokenOthers, unspokenOthers, spokeToday,
     isFirstToday, isLateSeat, flv, seatLabel, fill, pickVoice, callbackPhrase,
     prevVoteNote, prevVoteSuspect, vouchOnMe, priorSeerWolfEv, priorGodClaims,
     slotPlan, dualSeerWorlds
   } = ctx;
+  const readSeat = typeof getBlindSeat === "function" ? getBlindSeat : (snap ? snap.getSeat : getSeat);
 
   const pVoice = typeof pickVoice === "function" ? pickVoice : function () { return ""; };
   const leadPhrase = pVoice("lead", 1);
@@ -20,7 +21,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
   const baseGoodIds = (slotPlan && Array.isArray(slotPlan.goodPits)) ? slotPlan.goodPits.map(function (s) { return s.id; }) : [];
   const baseWolfIds = (slotPlan && Array.isArray(slotPlan.wolfPits)) ? slotPlan.wolfPits.map(function (s) { return s.id; }) : [];
   const formatSeatList = function (ids) {
-    return ids.map(function (id) { return seatLabel(getSeat(id)); }).filter(Boolean);
+    return ids.map(function (id) { return seatLabel(readSeat(id)); }).filter(Boolean);
   };
   const unspokenNote = unspokenOthers.length > 0
     ? ("後置位 " + seatLabel(unspokenOthers[0]) + (unspokenOthers.length > 1 ? " 等人" : "") + "今天還沒發言，先聽表水再補齊。")
@@ -130,7 +131,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
 
   // If someone earlier vouched for ME, thank them & map slots cleanly!
   if (vouchOnMe && !priorSeerWolfEv) {
-    const vSeat = getSeat(vouchOnMe.speakerId);
+    const vSeat = readSeat(vouchOnMe.speakerId);
     const susCandidate = topSpokenSus && topSpokenSus.id !== vSeat.id ? topSpokenSus : null;
     const susPits = [];
     if (susCandidate) susPits.push(susCandidate.id);
@@ -154,10 +155,10 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
   }
 
   // If someone left a Night-1 Last Word pointing out a Wolf or Good ally, react naturally on Day 1!
-  const fnIntel = (day === 1) ? state.match.firstNightIntel : null;
+  const fnIntel = (day === 1) ? (snap ? snap.firstNightIntel : state.match.firstNightIntel) : null;
   if (fnIntel && fnIntel.targetId && fnIntel.targetId !== speaker.id && !priorSeerWolfEv && speaker.team === "good") {
-    const fnSp = getSeat(fnIntel.speakerId);
-    const fnTgt = getSeat(fnIntel.targetId);
+    const fnSp = readSeat(fnIntel.speakerId);
+    const fnTgt = readSeat(fnIntel.targetId);
     if (fnTgt && fnTgt.alive) {
       if (fnIntel.isWolf === true) {
         const fnTalked = spokeToday(fnTgt.id);
@@ -189,9 +190,9 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
   }
 
   // Single Seer Wolf-Check reaction (react according to cognitive archetype & slot plausibility!)
-  if (priorSeerWolfEv && (!dualSeerWorlds) && getSeat(priorSeerWolfEv.speakerId) && getSeat(priorSeerWolfEv.checkedWolfId)) {
-    const sClaimer = getSeat(priorSeerWolfEv.speakerId);
-    const sTarget = getSeat(priorSeerWolfEv.checkedWolfId);
+  if (priorSeerWolfEv && (!dualSeerWorlds) && readSeat(priorSeerWolfEv.speakerId) && readSeat(priorSeerWolfEv.checkedWolfId)) {
+    const sClaimer = readSeat(priorSeerWolfEv.speakerId);
+    const sTarget = readSeat(priorSeerWolfEv.checkedWolfId);
     const targetAlreadyAnswered = spokenIdsToday.indexOf(priorSeerWolfEv.checkedWolfId) !== -1;
 
     if (speaker.deductionStyle === "gullible") {
@@ -243,12 +244,15 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     }
   }
 
-  // Witch / Hunter counter-claim clash on the table!
-  const witchClaimants = state.match.seats.filter(function (s) { return s.alive && s.claimedRole === "witch"; });
-  const hunterClaimants = state.match.seats.filter(function (s) { return s.alive && s.claimedRole === "hunter"; });
-  if (witchClaimants.length >= 2 || hunterClaimants.length >= 2) {
-    const pair = witchClaimants.length >= 2 ? witchClaimants : hunterClaimants;
-    const clashRoleName = witchClaimants.length >= 2 ? "滴水奉茶師" : "直心糾察長";
+  // Witch / Hunter / Guard / Elder counter-claim clash on the table!
+  const alivePoolBlind = snap ? snap.aliveSeats : state.match.seats.filter(function (s) { return s.alive; });
+  const witchClaimants = alivePoolBlind.filter(function (s) { return s.claimedRole === "witch"; });
+  const hunterClaimants = alivePoolBlind.filter(function (s) { return s.claimedRole === "hunter"; });
+  const guardClaimants = alivePoolBlind.filter(function (s) { return s.claimedRole === "guard"; });
+  const elderClaimants = alivePoolBlind.filter(function (s) { return s.claimedRole === "elder"; });
+  if (witchClaimants.length >= 2 || hunterClaimants.length >= 2 || guardClaimants.length >= 2 || elderClaimants.length >= 2) {
+    const pair = witchClaimants.length >= 2 ? witchClaimants : (hunterClaimants.length >= 2 ? hunterClaimants : (guardClaimants.length >= 2 ? guardClaimants : elderClaimants));
+    const clashRoleName = witchClaimants.length >= 2 ? "滴水奉茶師" : (hunterClaimants.length >= 2 ? "直心糾察長" : (guardClaimants.length >= 2 ? "護心守衛" : "清心長老"));
     const sortedPair = pair.slice().sort(function (a, b) {
       return (speaker.suspicionMap[b.id] || 50) - (speaker.suspicionMap[a.id] || 50);
     });
@@ -269,7 +273,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
 
   // Acknowledge earlier God claim (when uncontested)
   const latestGodEv = priorGodClaims.length > 0 ? priorGodClaims[priorGodClaims.length - 1] : null;
-  const latestGodSeat = latestGodEv ? getSeat(latestGodEv.speakerId) : null;
+  const latestGodSeat = latestGodEv ? readSeat(latestGodEv.speakerId) : null;
   if (latestGodEv && latestGodSeat && ROLE_DEFS[latestGodEv.claimRole]) {
     const gEv = latestGodEv;
     const gSeat = latestGodSeat;
@@ -311,7 +315,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     const goodSlots = [];
     if (bestSpokenAlly && (speaker.suspicionMap[bestSpokenAlly.id] || 50) <= 52) goodSlots.push(bestSpokenAlly);
     baseGoodIds.forEach(function (id) {
-      const s = getSeat(id);
+      const s = readSeat(id);
       if (s && s.alive && s.id !== speaker.id && spokeToday(id) && goodSlots.every(function (x) { return x.id !== id; })) {
         goodSlots.push(s);
       }
@@ -402,12 +406,13 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
   };
 }
 
-// Strictly Causal, Vividly In-Character Three-Goodness Deduction Speeches!
-function sanitizeSpeechMeta(speaker, out) {
+// Strictly Causal, Vividly In-Character Three-Goodness Deduction Speeches (Blind-View Enforced)!
+function sanitizeSpeechMeta(speaker, out, snapArg) {
   if (!out || !speaker) return out;
+  const readSeat = (snapArg && typeof snapArg.getSeat === "function") ? snapArg.getSeat : getSeat;
   const isAliveOther = function (id) {
     if (!id || id === speaker.id) return false;
-    const s = getSeat(id);
+    const s = readSeat(id);
     return Boolean(s && s.alive);
   };
   if (out.accuseId && !isAliveOther(out.accuseId)) {
@@ -451,5 +456,8 @@ function buildHeuristicAiSpeech(speaker) {
   const res = tryDefendOrCounterClaim(speaker, ctx)
     || tryRoleSpecificSpeech(speaker, ctx)
     || buildGoodTeamDeductionSpeech(speaker, ctx);
-  return sanitizeSpeechMeta(speaker, res);
+  if (typeof antiCheatMonitor !== "undefined" && speaker) {
+    antiCheatMonitor.recordDecision("day_speech", speaker.id, "盲視發言推理完成");
+  }
+  return sanitizeSpeechMeta(speaker, res, ctx && ctx.snap);
 }

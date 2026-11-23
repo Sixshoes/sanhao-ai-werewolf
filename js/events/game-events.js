@@ -132,6 +132,12 @@ function resetMatchToLobby() {
   state.voteResultPayload = null;
   state.activeClash = null;
   state.playerMarks = {};
+  if (el("quickFreeInput")) el("quickFreeInput").value = "";
+  if (el("playerSpeechInput")) el("playerSpeechInput").value = "";
+  if (el("lastWordsFreeInput")) el("lastWordsFreeInput").value = "";
+  if (el("btnQuickFreeSend")) el("btnQuickFreeSend").textContent = "陳詞";
+  if (el("speechThreeGoodBadge")) el("speechThreeGoodBadge").classList.add("hidden");
+  if (el("btnQuickInlineRewrite")) el("btnQuickInlineRewrite").classList.add("hidden");
   updateSpotlightBox("主持播報", "準備開局", "選擇下方人數與角色，按下「開始對局」即可進入第一晚！", "");
   renderPinnedCluesTray();
   renderTimeline();
@@ -766,11 +772,14 @@ function bindSpeechInputEvents() {
     }
     if (!niceText || (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep))) return;
     el("playerSpeechInput").value = niceText;
+    if (el("quickFreeInput")) el("quickFreeInput").value = niceText;
     state.match.stats.rewritesUsed += 1;
     state.match.rewriteCritReady = true;
+    addThreeGoodPoint("words", "說好話轉譯暴擊");
     sound.playBlessing();
     spawnFx(getPlayerId(), "好話暴擊準備!", "#34d399");
     bumpCombo("三好轉譯暴擊");
+    refreshQuickFreeInputHint();
     refreshLiveNlpUI();
   });
 
@@ -795,7 +804,9 @@ function bindSpeechInputEvents() {
   el("btnQuickFreeSend").addEventListener("click", sendQuickFreeSpeech);
   el("quickFreeInput").addEventListener("input", function () {
     state.match.rewriteCritReady = false;
+    if (el("playerSpeechInput")) el("playerSpeechInput").value = el("quickFreeInput").value;
     refreshQuickFreeInputHint();
+    refreshLiveNlpUI();
   });
   el("quickFreeInput").addEventListener("keydown", function (ev) {
     if (ev.key === "Enter") {
@@ -810,9 +821,14 @@ function bindSpeechInputEvents() {
       const qIn = el("quickFreeInput");
       if (!qIn) return;
       const pid = getPlayerId();
-      const aliveOthers = getAliveSeats().filter(function (s) { return s.id !== pid; });
-      const t = (getSeat(state.selectedSeatId) && state.selectedSeatId !== pid && getSeat(state.selectedSeatId).alive)
-        ? getSeat(state.selectedSeatId)
+      const pSelfSpice = getPlayerSeat();
+      const isWolfSpice = Boolean(pSelfSpice && pSelfSpice.role === "wolf");
+      const aliveOthers = getAliveSeats().filter(function (s) {
+        return s.id !== pid && (!isWolfSpice || s.role !== "wolf");
+      });
+      const selSpice = getSeat(state.selectedSeatId);
+      const t = (selSpice && selSpice.id !== pid && selSpice.alive && (!isWolfSpice || selSpice.role !== "wolf"))
+        ? selSpice
         : (aliveOthers[0] || { id: pid === 1 ? 2 : 1, name: "夥伴" });
       const roasts = [
         fmtSeatNum(t.id) + "號好了啦別演了，講那什麼胡說八道的風向！",
@@ -821,8 +837,11 @@ function bindSpeechInputEvents() {
         fmtSeatNum(t.id) + "號閉嘴啦，亂玩一通還在硬拗帶節奏！"
       ];
       state.match.rewriteCritReady = false;
-      qIn.value = roasts[((state.match.day || 1) + t.id) % roasts.length];
+      const pickedRoast = roasts[((state.match.day || 1) + t.id) % roasts.length];
+      qIn.value = pickedRoast;
+      if (el("playerSpeechInput")) el("playerSpeechInput").value = pickedRoast;
       refreshQuickFreeInputHint();
+      refreshLiveNlpUI();
       sound.tone(420, 0.07, "triangle", 0.045, 0);
       showToast("🌶 已填入熱血吐槽！點右邊「AI 轉好話 ×1.5」立刻反轉神回覆！", "warn");
     });
@@ -850,10 +869,13 @@ function bindSpeechInputEvents() {
       state.match.stats.rewritesUsed += 1;
       state.match.rewriteCritReady = true;
       btn.classList.add("hidden");
+      addThreeGoodPoint("words", "說好話轉譯暴擊");
       sound.playBlessing();
       spawnFx(getPlayerId(), "✨ 好話暴擊×1.5 就緒!", "#34d399");
       bumpCombo("三好轉譯暴擊");
-      showToast("已自動改寫成三好好話！直接按「發言」享 1.5 倍說服力暴擊！", "emerald");
+      refreshQuickFreeInputHint();
+      refreshLiveNlpUI();
+      showToast("已自動改寫成三好好話！直接按「陳詞」享 1.5 倍說服力暴擊！", "emerald");
     });
   }
 
@@ -1036,25 +1058,6 @@ function bindNightVoteAndFourGEvents() {
         };
         sound.tone(560, 0.08, "triangle", 0.05, 0);
         showToast(tacLabels[tac] || "已更新狼隊戰術指令", "emerald");
-        const pSelfW = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
-        if (state.match && state.match.started && state.match.phase === "NIGHT_WOLF" && pSelfW && pSelfW.role === "wolf") {
-          const mate = (state.match.seats || []).find(function (s) {
-            return s.id !== getPlayerId() && s.alive && s.role === "wolf";
-          });
-          if (mate) {
-            const mateReplies = {
-              fake_seer: "收到！明早我就搶先跳觀察員接警徽流、掩護你藏身分！",
-              deep_stealth: "了解！今晚起我全程低調倒鉤演好人，絕對不留破綻！",
-              pack_push: "沒問題！明天發言和公投我全力跟你衝票、一起壓過好人！"
-            };
-            const rMsg = mateReplies[tac] || "收到戰術暗號，明天見機配合！";
-            if (typeof setSeatBubble === "function") setSeatBubble(mate.id, rMsg, "wolf", 4200);
-            if (typeof nudgeSeat === "function") nudgeSeat(mate.id, 0.85);
-            if (typeof addLog === "function") {
-              addLog({ kind: "secret", title: "🐺 狼同伴暗語（" + fmtSeatNum(mate.id) + "號 " + mate.name + "）：" + rMsg, text: "" });
-            }
-          }
-        }
       });
     });
   }

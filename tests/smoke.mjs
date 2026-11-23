@@ -258,6 +258,7 @@ if (!html.includes('id="bottomUnifiedRow"') || !html.includes('id="focalCenterCa
     location: { protocol: "http:" },
     el: () => ({ value: "8", checked: false, classList: { add() { }, remove() { }, toggle() { }, contains: () => false } }),
     document: {
+      getElementById: () => ({ value: "8", checked: false, classList: { add() { }, remove() { }, toggle() { }, contains: () => false } }),
       createElementNS: () => ({ addEventListener() { }, removeEventListener() { } }),
       createElement: () => ({
         width: 256, height: 256, style: {},
@@ -481,6 +482,61 @@ vm.runInContext(`
       throw new Error("Zero-GC tea steam update produced invalid Y coordinate: " + steamY0);
     }
 
+    // P3-1b. 6/8/10/12-Seat Dynamic 3D Table Geometry Parity (ZERO floating candles/cups/plaques/cards, ZERO host collision!)
+    if (!rEnv.tableScaleGroup || !rEnv.tableAO || !rEnv.terraceMesh || !rEnv.terraceTrim) {
+      throw new Error("Dynamic 3D table scaling containers missing on environment!");
+    }
+    [6, 8, 10, 12].forEach(n => {
+      const ly = get3DTableLayout(n);
+      const tableR = 3.25 * ly.tableScale;
+      const propR = ly.ringRadius - ly.propZ;
+      const candleOuter = Math.hypot(0.765, propR + 0.06);
+      const cupOuter = Math.hypot(0.715, propR - 0.16);
+      const idCardOuter = propR + 0.58;
+      const chordSpacing = 2 * propR * Math.sin(Math.PI / n);
+      const hostDist = Math.hypot(HERO_STAGE_ANCHOR.x, HERO_STAGE_ANCHOR.z) * ly.heroMul;
+      if (candleOuter >= tableR - 0.05 || cupOuter >= tableR - 0.05 || idCardOuter >= tableR - 0.02) {
+        throw new Error("3D tabletop prop overhangs/floats outside rim for " + n + " seats! tableR=" + tableR.toFixed(2) + " candle=" + candleOuter.toFixed(2) + " card=" + idCardOuter.toFixed(2));
+      }
+      if (chordSpacing < 1.75) {
+        throw new Error("Adjacent 3D tabletop props collide for " + n + " seats! chord=" + chordSpacing.toFixed(2));
+      }
+      if (hostDist <= ly.ringRadius + 1.1) {
+        throw new Error("3D host Qingming collides with seat ring for " + n + " seats! hostDist=" + hostDist.toFixed(2) + " ring=" + ly.ringRadius);
+      }
+    });
+    const prevStartedGeom = state.match.started;
+    const prevTotalGeom = state.match.totalSeats;
+    state.match.started = true;
+    state.match.totalSeats = 12;
+    rEnv.tableScaleCurrent = 0;
+    rEnv.pavilionScaleCurrent = 0;
+    update3DEnvironment(rSc, rEnv, { tSec: 3.0, p: "DAY_SPEECH", daylight: true, night: false }, {});
+    if (Math.abs(rEnv.tableScaleGroup.scale.x - 1.40) > 0.01 || Math.abs(rEnv.proceduralPavilionGroup.scale.x - 1.15) > 0.01) {
+      throw new Error("12-seat dynamic 3D table/pavilion scale did not apply! tableScale=" + rEnv.tableScaleGroup.scale.x + " pavScale=" + rEnv.proceduralPavilionGroup.scale.x);
+    }
+    state.match.started = prevStartedGeom;
+    state.match.totalSeats = prevTotalGeom;
+
+    // P3-1c. Seated First-Person (坐席) Camera Geometry, Eye Clearance, Frustum Culling & Edge-Glance Verification
+    [6, 8, 10, 12].forEach(n => {
+      const ly = get3DTableLayout(n);
+      const backOffset = n >= 12 ? 1.15 : (n >= 10 ? 1.02 : (n >= 8 ? 0.90 : 0.82));
+      const eyeR = ly.ringRadius + backOffset;
+      const eyeY = n >= 12 ? 2.62 : (n >= 10 ? 2.56 : 2.48);
+      const pillarR = 7.85 * ly.pavilionScale;
+      if (eyeR >= pillarR - 1.5) {
+        throw new Error("First-person eye collides with pavilion pillars for " + n + " seats! eyeR=" + eyeR.toFixed(2) + " pillarR=" + pillarR.toFixed(2));
+      }
+      // Sightline from player's eye to opposite seat head (y=2.15) must clear central lotus (y=1.85) at center z=0!
+      const oppY = 2.15;
+      const tCenter = eyeR / (eyeR + ly.ringRadius);
+      const sightYAtLotus = eyeY + (oppY - eyeY) * tCenter;
+      if (sightYAtLotus <= 2.05) {
+        throw new Error("First-person sightline blocked by central lotus for " + n + " seats! sightY=" + sightYAtLotus.toFixed(2));
+      }
+    });
+
     // P3-2. Per-Persona Idle Variety & Embedded AnimationMixer Support
     const archCheng = stage3dVrm.getIdleArchetype("小澄");
     const archXing = stage3dVrm.getIdleArchetype("星兒");
@@ -589,10 +645,18 @@ function makeObj3D(geo, mat) {
     geometry: geo || { attributes: { position: { setXYZ() { }, needsUpdate: false } }, dispose() { } },
     material: mat || { color: makeColor(), emissive: makeColor(), emissiveIntensity: 0, opacity: 1, dispose() { } },
     position: makeVec3(), rotation: makeVec3(), scale: makeVec3(1, 1, 1), quaternion: {},
-    children: [], visible: true, castShadow: false, receiveShadow: false, frustumCulled: true, userData: {},
-    add(...items) { items.forEach(x => this.children.push(x)); },
-    remove(item) { const k = this.children.indexOf(item); if (k >= 0) this.children.splice(k, 1); },
-    lookAt() { }, updateMatrixWorld() { }, getWorldPosition(t) { return t.copy(this.position); },
+    parent: null, children: [], visible: true, castShadow: false, receiveShadow: false, frustumCulled: true, userData: {},
+    add(...items) { items.forEach(x => { if (x) { x.parent = this; this.children.push(x); } }); },
+    remove(item) { const k = this.children.indexOf(item); if (k >= 0) { this.children.splice(k, 1); if (item) item.parent = null; } },
+    lookAt() { }, updateMatrixWorld() { },
+    getWorldPosition(t) {
+      let wx = 0, wy = 0, wz = 0, cur = this;
+      while (cur) {
+        if (cur.position) { wx += cur.position.x || 0; wy += cur.position.y || 0; wz += cur.position.z || 0; }
+        cur = cur.parent;
+      }
+      return t.set(wx, wy, wz);
+    },
   };
 }
 function makeGeo() {
@@ -1138,22 +1202,63 @@ vm.runInContext(`
   voice.localNeuralAvailable = true;
   el("voiceEngineStatusLabel").textContent = "stale";
   voice.refreshVoices();
-  if (!el("voiceEngineStatusLabel").textContent.includes("8 位真人級聲線")) {
+  if (!el("voiceEngineStatusLabel").textContent.includes("12 位真人級聲線")) {
     throw new Error("voice.refreshVoices failed to update status label when speechSynthesis list is empty!");
   }
 
-  // Seat-aware First-Person POV camera & hands orientation when playerSeatId = 4
-  el("selectModeCount").value = "6";
+  // Seat-aware First-Person (坐席) POV: seated eye-level, responsive FOV, unobstructed own plaque, accurate lookAt, edge-glance & recenter pills!
+  el("selectModeCount").value = "8";
   startNewGame();
-  state.match.playerSeatId = 4;
+  indieFlow.hideRoleDealRitual();
+  state.match.playerSeatId = 5;
+  stage3d.camera.aspect = 16 / 9;
+  const fpDesktopFov = stage3d.getFirstPersonBaseFov();
+  stage3d.camera.aspect = 9 / 16;
+  const fpMobileFov = stage3d.getFirstPersonBaseFov();
+  stage3d.camera.aspect = 16 / 9;
+  if (fpDesktopFov < 56 || fpMobileFov < 70) {
+    throw new Error("First-person responsive FOV too narrow! desktop=" + fpDesktopFov + " mobile=" + fpMobileFov);
+  }
   stage3d.setCameraPreset("firstperson");
   stage3d.render(1000, el("sanctuaryCanvas"));
   stage3d.render(1016, el("sanctuaryCanvas"));
-  if (stage3d.camera.position.z > -4.0) {
-    throw new Error("First-person camera stayed near Seat 1 instead of playerSeatId=4! z=" + stage3d.camera.position.z);
+  if (stage3d.camera.position.z > -4.5) {
+    throw new Error("First-person camera stayed near Seat 1 instead of playerSeatId=5! z=" + stage3d.camera.position.z);
+  }
+  if (stage3d.camera.position.y < 2.35 || stage3d.camera.position.y > 2.75) {
+    throw new Error("First-person camera eye height out of natural seated range [2.35, 2.75]! y=" + stage3d.camera.position.y);
+  }
+  const fpSelfSlot = stage3d.seats && stage3d.seats.slots ? stage3d.seats.slots[5] : null;
+  if (!fpSelfSlot || fpSelfSlot.figureGroup.visible || fpSelfSlot.chairGroup.visible || (fpSelfSlot.plaqueMesh && fpSelfSlot.plaqueMesh.visible) || !fpSelfSlot.tablePropGroup.visible) {
+    throw new Error("First-person self foreground visibility invalid (own plaque/body must hide while teacup/candle/card stay visible)!");
+  }
+  // Test glanceAtSeatInFirstPerson & Recenter pill + Edge-Glance buttons in draw3DOverlayHud
+  if (!stage3d.glanceAtSeatInFirstPerson(4)) {
+    throw new Error("glanceAtSeatInFirstPerson(4) failed!");
+  }
+  const glanceYawMag = Math.abs(stage3d.orbit.fpTargetYaw);
+  if (!(glanceYawMag > 0.35 && glanceYawMag <= 1.45)) {
+    throw new Error("glanceAtSeatInFirstPerson(4) computed invalid yaw: " + stage3d.orbit.fpTargetYaw);
+  }
+  stage3d.orbit.fpYaw = stage3d.orbit.fpTargetYaw;
+  const fakeFpCoords = [
+    { id: 4, x: 400, y: 210, r: 28, zDepth: 0.4, offScreenDir: 0, visibleInView: true, seat: getSeat(4) },
+    { id: 6, x: -999, y: -999, r: 26, zDepth: 0.6, offScreenDir: 1, visibleInView: false, seat: getSeat(6) },
+    { id: 3, x: -999, y: -999, r: 26, zDepth: 0.6, offScreenDir: -1, visibleInView: false, seat: getSeat(3) }
+  ];
+  draw3DOverlayHud(el("sanctuaryCanvas").getContext("2d"), { dpr: 1, p: "DAY_SPEECH", w: 800, h: 450, nowMs: 2500, tSec: 2.5, daylight: true, cx: 400, cy: 225 }, fakeFpCoords);
+  const hasLeftEdge = state.fpGlanceButtons.some(b => b.seatId === 3 && !b.isRecenter);
+  const hasRightEdge = state.fpGlanceButtons.some(b => b.seatId === 6 && !b.isRecenter);
+  const hasRecenterPill = state.fpGlanceButtons.some(b => b.isRecenter === true);
+  if (!hasLeftEdge || !hasRightEdge || !hasRecenterPill) {
+    throw new Error("First-person Edge-Glance / Recenter pills missing! buttons=" + JSON.stringify(state.fpGlanceButtons));
+  }
+  stage3d.glanceAtSeatInFirstPerson(5);
+  if (stage3d.orbit.fpTargetYaw !== 0 || stage3d.orbit.fpFovOffset !== 0) {
+    throw new Error("glanceAtSeatInFirstPerson(self) failed to recenter!");
   }
   if (Math.abs(Math.abs(stage3d.fpHandsGroup.rotation.y) - Math.PI) > 0.08) {
-    throw new Error("fpHandsGroup failed to rotate toward Seat 4! rotY=" + stage3d.fpHandsGroup.rotation.y);
+    throw new Error("fpHandsGroup failed to rotate toward Seat 5! rotY=" + stage3d.fpHandsGroup.rotation.y);
   }
   stage3d.setCameraPreset("cinema");
 
@@ -3643,9 +3748,72 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const fairLedger = buildCrossDayMemoryLedger(fairVoucher);
     const noDeadWolfLeakOk = fairLedger.wolfProtectorIds.includes(fairVoucher.id);
 
+    // Verify Escape closes roleGuidePopover cleanly, and quickFreeInput typing updates live speechThreeGoodBadge!
+    openRoleGuidePopover("threegood");
+    window.dispatchEvent({ type: "keydown", key: "Escape", target: { tagName: "BODY" }, preventDefault() {} });
+    const escClosesGuideOk = el("roleGuidePopover").classList.contains("hidden");
+    el("quickFreeInput").value = "好了啦別演了，邏輯死亡";
+    el("quickFreeInput").dispatchEvent({ type: "input" });
+    const inlineBadgeWarnOk = !el("speechThreeGoodBadge").classList.contains("hidden") && el("speechThreeGoodBadge").textContent.includes("轉好話");
+
+    // Verify Wolf player NEVER gets false "替查殺狼洗白" contradiction when AI vouches for a Wolf teammate,
+    // Wolf 0D counter-claim against Guard/Elder NEVER mutates claimedRole while returning null,
+    // and parseGeminiStructuredSpeech accepts claimRole: "elder"!
+    const wkMateCheck = state.match.seats.find(s => s.id !== wkSelf.id && s.role === "wolf");
+    if (wkMateCheck) wkMateCheck.alive = true;
+    const wolfNoSelfContraOk = !wkMateCheck || !detectSpeechContradictions(wkGood, { speakerId: wkGood.id, vouchId: wkMateCheck.id, accuseId: null });
+    let wolfGuardCounterOk = true;
+    if (wkMateCheck) {
+      wkMateCheck.claimedRole = null;
+      const gClaimer = getAliveSeats().find(s => s.team === "good");
+      state.match.day = 1;
+      state.match.wolfTactic = "fake_seer";
+      state.match.daySpeechEvents = [{ day: 1, speakerId: gClaimer.id, claimRole: "guard", accuseId: null, vouchId: null }];
+      const ctx0D = buildSpeechContext(wkMateCheck);
+      const res0D = tryDefendOrCounterClaim(wkMateCheck, ctx0D);
+      wolfGuardCounterOk = Boolean(res0D && res0D.text) && (!wkMateCheck.claimedRole || res0D.claimRole === wkMateCheck.claimedRole);
+    }
+    const geminiElderParseOk = parseGeminiStructuredSpeech('{"text":"我是清心長老","claimRole":"elder","accuseId":null,"vouchId":null,"wolfPits":[],"goodPits":[]}').claimRole === "elder";
+
+    // Verify 6-chapter clear interactive Game Tutorial + Pause & Guide Popover entry points + ArrowRight navigation
+    el("btnOpenTutorialPause").click();
+    const tutOpenedOk = !el("modalTutorial").classList.contains("hidden") &&
+      TUTORIAL_SLIDES.length === 6 &&
+      el("tutorialStepTabs")._children.length === 6 &&
+      el("tutorialStepCounter").textContent === "1 / 6";
+    window.dispatchEvent({ type: "keydown", key: "ArrowRight", target: { tagName: "BODY" }, preventDefault() {} });
+    const tutArrowOk = el("tutorialStepCounter").textContent === "2 / 6" && el("tutorialSlideBody").innerHTML.includes("清心長老");
+    el("tutorialStepTabs")._children[5].click();
+    const tutLastOk = el("tutorialStepCounter").textContent === "6 / 6" && !el("btnLaunchGuidedDemo").classList.contains("hidden");
+    el("btnCloseTutorial").click();
+    openRoleGuidePopover("role");
+    el("btnOpenTutorialFromGuide").click();
+    const tutFromGuideOk = el("roleGuidePopover").classList.contains("hidden") && !el("modalTutorial").classList.contains("hidden") && el("tutorialStepCounter").textContent === "2 / 6";
+    el("btnCloseTutorial").click();
+    const tutorialV81Ok = tutOpenedOk && tutArrowOk && tutLastOk && tutFromGuideOk;
+
+    // v9.0 Anti-Cheat Blind-View Firewall HUD & Runtime Telemetry Smoke Check
+    const acBefore = antiCheatMonitor.getSummary();
+    const anyAiSeat = state.match.seats.find(s => s.id !== getPlayerId() && s.alive);
+    if (anyAiSeat) {
+      buildHeuristicAiSpeech(anyAiSeat);
+      chooseAiVoteTarget(anyAiSeat, { pkActive: false, playerTargetId: null });
+    }
+    const acAfter = antiCheatMonitor.getSummary();
+    switchGuideTab("trace");
+    const acBoxHtml = el("antiCheatAuditBox") ? el("antiCheatAuditBox").innerHTML : "";
+    const v9AntiCheatOk = Boolean(
+      acAfter.enabled &&
+      acAfter.violationsBlocked === 0 &&
+      acAfter.decisionsAudited >= acBefore.decisionsAudited + 2 &&
+      acAfter.blindViewsIssued > acBefore.blindViewsIssued &&
+      acBoxHtml.includes("反作弊盲視隔離防火牆") &&
+      acBoxHtml.includes("0 偷看違規")
+    );
+
     // Check Role Deal Action List & all 8 role guides exist
     const all8GuidesOk = ["seer", "witch", "hunter", "guard", "elder", "villager", "wolf", "wolf_king"].every(k => ROLE_GUIDES[k] && ROLE_GUIDES[k].nightAction && ROLE_GUIDES[k].dayAction && ROLE_GUIDES[k].threeGoodTip);
-    const v8Ok = unlimitedGoodOk && wolfExcludesMates && wolfBoardClassOk && wolfGodMarkOk && wolfNightTipOk && roleGuideOk && tgGuideOk && maskBlocksGuideOk && tgPetalQuoteOk && witchHidesWolfTacticOk && seerPkNoCrashOk && elderClaimOk && elderMissionOk && wkMissionOk && wolfMatrixOk && soloWolfHopeOk && noDeadWolfLeakOk && all8GuidesOk;
+    const v8Ok = unlimitedGoodOk && wolfExcludesMates && wolfBoardClassOk && wolfGodMarkOk && wolfNightTipOk && roleGuideOk && tgGuideOk && maskBlocksGuideOk && tgPetalQuoteOk && witchHidesWolfTacticOk && seerPkNoCrashOk && elderClaimOk && elderMissionOk && wkMissionOk && wolfMatrixOk && soloWolfHopeOk && noDeadWolfLeakOk && escClosesGuideOk && inlineBadgeWarnOk && wolfNoSelfContraOk && wolfGuardCounterOk && geminiElderParseOk && tutorialV81Ok && all8GuidesOk;
 
     clearStepTimer();
     resetMatchToLobby();
@@ -3659,7 +3827,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       v6SheriffOk: shStarted && shReelOk && shRunOk && shWithdrawOk && shPassOk,
       ledgerOk, coachOk,
       v61Ok: matrixFlipOk && directWkOk && directElderOk && v61AchOk && prefetchFnOk && fxPacingOk && fxPacingFastOk,
-      v8Ok
+      v8Ok,
+      v9AntiCheatOk
     };
   })()`, ctx);
 
@@ -3670,4 +3839,57 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v8.0 (Wolf/Good UX Separation + 8 Per-Role Dashboards/Guides + Triple-Strengthened Three-Good/Four-Givings + 3-Device RWD) E2E smoke test PASSED!");
+// TOP-RIGHT USER FEEDBACK SYSTEM: Title + In-Game buttons, modal, rating/category, XSS safety, localStorage & GitHub Issue builder
+{
+  const fbRes = await vm.runInContext(`(async () => {
+    window.localStorage.setItem(FEEDBACK_CONFIG.storageKey, "[]");
+    el("btnTitleFeedback").click();
+    const openedFromTitle = !el("modalFeedback").classList.contains("hidden") && hasBlockingModalOpen();
+    window.dispatchEvent({ type: "keydown", key: "Escape", target: { tagName: "BODY" }, preventDefault() {} });
+    const escClosed = el("modalFeedback").classList.contains("hidden");
+
+    el("btnOpenFeedback").click();
+    const openedInGame = !el("modalFeedback").classList.contains("hidden");
+
+    // Verify diagnostic snapshot NEVER leaks Gemini API key
+    const prevKey = state.geminiApiKey;
+    state.geminiApiKey = "SECRET_SHOULD_NOT_LEAK_XYZ";
+    const diag = collectFeedbackDiagnostics();
+    state.geminiApiKey = prevKey;
+    const noKeyLeak = !JSON.stringify(diag).includes("SECRET_SHOULD_NOT_LEAK_XYZ");
+
+    feedbackUiState.rating = 4;
+    feedbackUiState.category = "ui";
+    syncFeedbackStarUi();
+    syncFeedbackCategoryUi();
+    el("inputFeedbackName").value = "試玩同學A";
+    el("inputFeedbackBody").value = "<img src=x onerror=alert(1)>坐席視角很棒，建議投票按鈕加大！";
+    const savedEntry = await submitUserFeedback();
+    const histList = loadFeedbackHistory();
+    const histHtml = (el("feedbackHistoryList")._children || []).map(c => c.innerHTML || "").join(" ");
+    const xssEscaped = histHtml.includes("&lt;img") && !histHtml.includes("<img src=x");
+    const resultShown = !el("feedbackResultCard").classList.contains("hidden");
+    const ghUrl = savedEntry ? buildGitHubIssueUrl(savedEntry) : "";
+    const ghUrlOk = ghUrl.startsWith("https://github.com/Sixshoes/sanhao-ai-werewolf/issues/new?") && ghUrl.includes("title=") && ghUrl.includes("body=");
+
+    closeFeedbackModal();
+    return {
+      openedFromTitle,
+      escClosed,
+      openedInGame,
+      noKeyLeak,
+      savedOk: Boolean(savedEntry && histList.length === 1 && histList[0].rating === 4 && histList[0].category === "ui"),
+      xssEscaped,
+      resultShown,
+      ghUrlOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(fbRes)) {
+    if (!v) {
+      throw new Error("USER-FEEDBACK check failed for " + k + ": " + JSON.stringify(fbRes));
+    }
+  }
+}
+
+console.log("[OK] Full v9.0 (Zero-Leak Anti-Cheat Blind-View AI + 12p Table + 6-Chapter Tutorial + Seated POV + User Feedback + v8.0 UX/RWD) E2E smoke test PASSED!");

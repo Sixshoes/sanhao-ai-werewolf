@@ -59,6 +59,110 @@ function startVotingPhase() {
   }
 }
 
+function chooseAiVoteTarget(voter, opts) {
+  const o = opts || {};
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(voter, { module: "day_vote" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : voter;
+  const pkActive = typeof o.pkActive === "boolean" ? o.pkActive : (snap ? snap.pkActive : isPkVoteActive());
+  const pkCands = snap ? snap.pkCandidates : (state.match && state.match.pkCandidates);
+  const alive = snap ? snap.aliveSeats : getAliveSeats();
+  const pkPool = (pkActive && Array.isArray(pkCands))
+    ? alive.filter(function (t) { return pkCands.indexOf(t.id) !== -1 && t.id !== self.id; })
+    : null;
+  const others = (pkPool && pkPool.length > 0) ? pkPool : alive.filter(function (t) { return t.id !== self.id; });
+  const playerTargetId = o.playerTargetId || null;
+  const pidVote = snap ? snap.playerSeatId : getPlayerId();
+  let chosen = null;
+
+  if (self.role === "wolf") {
+    const nonWolves = others.filter(function (t) { return snap ? !t.isWolfMate : (t.role !== "wolf"); });
+    const pool = nonWolves.length > 0 ? nonWolves : others;
+    const dayEvs = snap ? snap.daySpeechEvents : (state.match.daySpeechEvents || []);
+    const readSeat = snap ? snap.getSeat : getSeat;
+    const playerWolfPush = (snap && snap.wolfTactic === "pack_push")
+      ? dayEvs.find(function (ev) { return ev.speakerId === pidVote && ev.accuseId && ev.accuseId !== self.id; })
+      : null;
+    const wolfPushEv = playerWolfPush || dayEvs.find(function (ev) {
+      const sp = readSeat(ev.speakerId);
+      const spIsPack = sp && (sp.id === self.id || (snap ? sp.isWolfMate : sp.role === "wolf"));
+      return spIsPack && ev.accuseId && ev.accuseId !== self.id;
+    });
+    const teamTargetId = wolfPushEv ? wolfPushEv.accuseId : null;
+    pool.sort(function (a, b) {
+      const sA = (a.id === teamTargetId ? 28 : 0) + (a.id === self.publicVoteIntent ? 18 : 0) + (a.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+      const sB = (b.id === teamTargetId ? 28 : 0) + (b.id === self.publicVoteIntent ? 18 : 0) + (b.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
+      return sB - sA;
+    });
+    chosen = pool[0] ? pool[0].id : null;
+  } else {
+    // Zero-Leak Good Team Vote: Fact-Guard + public vote promise + 2-Seer Clash Focus + Uniform Harmony Haze (NEVER peeks a.team!)
+    const rallyId = snap ? snap.convenienceRallyTargetId : (state.match.convenienceRallyTargetId || null);
+    const harmonyNow = snap ? snap.harmonyScore : state.match.harmonyScore;
+    const hazeChaos = (harmonyNow <= 45) ? 14 : 0;
+    const seerClaimants = alive.filter(function (s) { return s.claimedRole === "seer"; });
+
+    let candidatePool = others.slice();
+    const verifiedWolfIds = (self.role === "seer" && self.checkedHistory)
+      ? self.checkedHistory.filter(function (c) { return c.isWolf; }).map(function (c) { return c.targetId; })
+      : [];
+    const verifiedGoodIds = (self.role === "seer" && self.checkedHistory)
+      ? self.checkedHistory.filter(function (c) { return !c.isWolf; }).map(function (c) { return c.targetId; })
+      : [];
+    if (self.role === "seer") {
+      const safePool = others.filter(function (t) { return verifiedGoodIds.indexOf(t.id) === -1; });
+      if (safePool.length > 0) candidatePool = safePool;
+    } else if (self.role === "witch" && self.savedSeatId) {
+      const safePool = others.filter(function (t) { return t.id !== self.savedSeatId; });
+      if (safePool.length > 0) candidatePool = safePool;
+    }
+
+    const validPlayerTgt = Boolean(playerTargetId && candidatePool.some(function (t) { return t.id === playerTargetId; }));
+    const ironSafe = Boolean(self.ironFollowPlayer && validPlayerTgt && playerTargetId !== self.id
+      && (self.role !== "seer" || verifiedGoodIds.indexOf(playerTargetId) === -1)
+      && (self.role !== "witch" || self.savedSeatId !== playerTargetId));
+    if (ironSafe) {
+      chosen = playerTargetId;
+    } else if (self.role === "seer") {
+      const aliveCheckedWolf = candidatePool.find(function (t) { return verifiedWolfIds.indexOf(t.id) !== -1; });
+      const aliveFakeSeer = candidatePool.find(function (t) { return t.claimedRole === "seer" && t.id !== self.id; });
+      if (aliveCheckedWolf) {
+        chosen = aliveCheckedWolf.id;
+      } else if (aliveFakeSeer) {
+        chosen = aliveFakeSeer.id;
+      } else {
+        candidatePool.sort(function (a, b) {
+          const pA = (self.publicVoteIntent === a.id ? 24 : 0) + (rallyId === a.id ? 14 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+          const pB = (self.publicVoteIntent === b.id ? 24 : 0) + (rallyId === b.id ? 14 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
+          return pB - pA;
+        });
+        if (candidatePool[0] && ((self.publicVoteIntent === candidatePool[0].id) || (rallyId === candidatePool[0].id) || ((self.suspicionMap && self.suspicionMap[candidatePool[0].id]) || 50) >= 48)) {
+          chosen = candidatePool[0].id;
+        }
+      }
+    } else {
+      const twoSeerFocus = (seerClaimants.length >= 2 && candidatePool.some(function (t) { return t.claimedRole === "seer"; }));
+      candidatePool.sort(function (a, b) {
+        // Uniform low-harmony confusion jitter across ALL candidates (zero hidden team peeking!)
+        const jA = hazeChaos ? Math.sin(self.id * 7 + a.id * 3) * hazeChaos : 0;
+        const jB = hazeChaos ? Math.sin(self.id * 7 + b.id * 3) * hazeChaos : 0;
+        const pA = (self.publicVoteIntent === a.id ? 24 : 0) + (rallyId === a.id ? 18 : 0) + (twoSeerFocus && a.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50) + jA;
+        const pB = (self.publicVoteIntent === b.id ? 24 : 0) + (rallyId === b.id ? 18 : 0) + (twoSeerFocus && b.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50) + jB;
+        return pB - pA;
+      });
+      if (candidatePool[0] && ((self.publicVoteIntent === candidatePool[0].id) || (rallyId === candidatePool[0].id) || ((self.suspicionMap && self.suspicionMap[candidatePool[0].id]) || 50) >= 48)) {
+        chosen = candidatePool[0].id;
+      }
+    }
+  }
+
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("day_vote", self.id, chosen ? ("投 " + chosen + "號") : "棄票");
+  }
+  return chosen;
+}
+
 function finalizeVoteRound(playerTargetId) {
   clearStepTimer();
   sound.playVote();
@@ -78,84 +182,7 @@ function finalizeVoteRound(playerTargetId) {
     if (voter.id === getPlayerId()) {
       chosen = (playerTargetId && isValidVoteTarget(playerTargetId)) ? playerTargetId : null;
     } else {
-      const pkPool = pkActive
-        ? alive.filter(function (t) { return state.match.pkCandidates.indexOf(t.id) !== -1 && t.id !== voter.id; })
-        : null;
-      const others = (pkPool && pkPool.length > 0) ? pkPool : alive.filter(function (t) { return t.id !== voter.id; });
-      if (voter.role === "wolf") {
-        const nonWolves = others.filter(function (t) { return t.role !== "wolf"; });
-        const pool = nonWolves.length > 0 ? nonWolves : others;
-        // Coordinate wolf pack vote onto player's pack_push target or fake-Seer wolf partner's pushed target!
-        const pidVote = getPlayerId();
-        const playerWolfPush = (state.match.wolfTactic === "pack_push")
-          ? (state.match.daySpeechEvents || []).find(function (ev) { return ev.speakerId === pidVote && ev.accuseId && ev.accuseId !== voter.id; })
-          : null;
-        const wolfPushEv = playerWolfPush || (state.match.daySpeechEvents || []).find(function (ev) {
-          const sp = getSeat(ev.speakerId);
-          return sp && sp.role === "wolf" && ev.accuseId && ev.accuseId !== voter.id;
-        });
-        const teamTargetId = wolfPushEv ? wolfPushEv.accuseId : null;
-        pool.sort(function (a, b) {
-          const sA = (a.id === teamTargetId ? 28 : 0) + (a.id === voter.publicVoteIntent ? 18 : 0) + (a.claimedRole === "seer" ? 22 : 0) + (voter.suspicionMap[a.id] || 50);
-          const sB = (b.id === teamTargetId ? 28 : 0) + (b.id === voter.publicVoteIntent ? 18 : 0) + (b.claimedRole === "seer" ? 22 : 0) + (voter.suspicionMap[b.id] || 50);
-          return sB - sA;
-        });
-        chosen = pool[0] ? pool[0].id : null;
-      } else {
-        // AI Good team Fact-Guard + public vote promise + 2-Seer Clash Focus + Harmony Aura
-        const rallyId = state.match.convenienceRallyTargetId || null;
-        const hazeChaos = (state.match.harmonyScore <= 45) ? 14 : 0;
-        const seerClaimants = alive.filter(function (s) { return s.claimedRole === "seer"; });
-
-        let candidatePool = others;
-        const verifiedWolfIds = (voter.role === "seer" && voter.checkedHistory)
-          ? voter.checkedHistory.filter(function (c) { return c.isWolf; }).map(function (c) { return c.targetId; })
-          : [];
-        const verifiedGoodIds = (voter.role === "seer" && voter.checkedHistory)
-          ? voter.checkedHistory.filter(function (c) { return !c.isWolf; }).map(function (c) { return c.targetId; })
-          : [];
-        if (voter.role === "seer") {
-          const safePool = others.filter(function (t) { return verifiedGoodIds.indexOf(t.id) === -1; });
-          if (safePool.length > 0) candidatePool = safePool;
-        } else if (voter.role === "witch" && voter.savedSeatId) {
-          const safePool = others.filter(function (t) { return t.id !== voter.savedSeatId; });
-          if (safePool.length > 0) candidatePool = safePool;
-        }
-
-        const ironSafe = Boolean(voter.ironFollowPlayer && playerTargetId && isValidVoteTarget(playerTargetId) && playerTargetId !== voter.id
-          && (voter.role !== "seer" || verifiedGoodIds.indexOf(playerTargetId) === -1)
-          && (voter.role !== "witch" || voter.savedSeatId !== playerTargetId));
-        if (ironSafe) {
-          chosen = playerTargetId;
-        } else if (voter.role === "seer") {
-          const aliveCheckedWolf = candidatePool.find(function (t) { return verifiedWolfIds.indexOf(t.id) !== -1; });
-          const aliveFakeSeer = candidatePool.find(function (t) { return t.claimedRole === "seer" && t.id !== voter.id; });
-          if (aliveCheckedWolf) {
-            chosen = aliveCheckedWolf.id;
-          } else if (aliveFakeSeer) {
-            chosen = aliveFakeSeer.id;
-          } else {
-            candidatePool.sort(function (a, b) {
-              const pA = (voter.publicVoteIntent === a.id ? 24 : 0) + (rallyId === a.id ? 14 : 0) + (voter.suspicionMap[a.id] || 50);
-              const pB = (voter.publicVoteIntent === b.id ? 24 : 0) + (rallyId === b.id ? 14 : 0) + (voter.suspicionMap[b.id] || 50);
-              return pB - pA;
-            });
-            if (candidatePool[0] && ((voter.publicVoteIntent === candidatePool[0].id) || (rallyId === candidatePool[0].id) || (voter.suspicionMap[candidatePool[0].id] || 50) >= 48)) {
-              chosen = candidatePool[0].id;
-            }
-          }
-        } else {
-          const twoSeerFocus = (seerClaimants.length >= 2 && candidatePool.some(function (t) { return t.claimedRole === "seer"; }));
-          candidatePool.sort(function (a, b) {
-            const pA = (voter.publicVoteIntent === a.id ? 24 : 0) + (rallyId === a.id ? 18 : 0) + (twoSeerFocus && a.claimedRole === "seer" ? 20 : 0) + (voter.suspicionMap[a.id] || 50) + (hazeChaos && a.team === "good" ? Math.sin(voter.id * 7 + a.id * 3) * hazeChaos : 0);
-            const pB = (voter.publicVoteIntent === b.id ? 24 : 0) + (rallyId === b.id ? 18 : 0) + (twoSeerFocus && b.claimedRole === "seer" ? 20 : 0) + (voter.suspicionMap[b.id] || 50) + (hazeChaos && b.team === "good" ? Math.sin(voter.id * 7 + b.id * 3) * hazeChaos : 0);
-            return pB - pA;
-          });
-          if (candidatePool[0] && ((voter.publicVoteIntent === candidatePool[0].id) || (rallyId === candidatePool[0].id) || (voter.suspicionMap[candidatePool[0].id] || 50) >= 48)) {
-            chosen = candidatePool[0].id;
-          }
-        }
-      }
+      chosen = chooseAiVoteTarget(voter, { pkActive: pkActive, playerTargetId: playerTargetId });
     }
 
     if (chosen) {
@@ -833,6 +860,32 @@ function useFourGConvenience() {
   updateAllUI();
 }
 
+function chooseAiSheriffTransferTarget(deadSheriff) {
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(deadSheriff, { module: "sheriff_transfer" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : deadSheriff;
+  const alivePool = snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== deadSheriff.id; });
+  if (!alivePool.length) return null;
+
+  let pick = null;
+  if (self.role === "wolf") {
+    pick = alivePool.find(function (s) { return snap ? s.isWolfMate : (s.role === "wolf"); }) || null;
+  }
+  if (!pick) {
+    const trusted = alivePool.slice().sort(function (a, b) {
+      return ((self.suspicionMap && self.suspicionMap[a.id]) || 50) - ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
+    });
+    if (trusted[0] && ((self.suspicionMap && self.suspicionMap[trusted[0].id]) || 50) < 58) {
+      pick = trusted[0];
+    }
+  }
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("sheriff_transfer", self.id, pick ? ("移交 " + pick.id + "號") : "撕毀警徽");
+  }
+  return pick ? pick.id : null;
+}
+
 // ==================== SHERIFF BADGE TRANSFER & RALLY CALL ====================
 function handleSheriffEliminated(deadSheriff, onDone) {
   const doneCb = typeof onDone === "function" ? onDone : function () {};
@@ -848,18 +901,8 @@ function handleSheriffEliminated(deadSheriff, onDone) {
   }
 
   if (deadSheriff.id !== getPlayerId()) {
-    let pick = null;
-    if (deadSheriff.role === "wolf") {
-      pick = alivePool.find(function (s) { return s.role === "wolf"; }) || null;
-    }
-    if (!pick) {
-      const trusted = alivePool.slice().sort(function (a, b) {
-        return (deadSheriff.suspicionMap[a.id] || 50) - (deadSheriff.suspicionMap[b.id] || 50);
-      });
-      if (trusted[0] && (deadSheriff.suspicionMap[trusted[0].id] || 50) < 58) {
-        pick = trusted[0];
-      }
-    }
+    const pickId = chooseAiSheriffTransferTarget(deadSheriff);
+    const pick = pickId ? getSeat(pickId) : null;
     state.match.sheriffSeatId = pick ? pick.id : null;
     if (pick) {
       spawnBeam(deadSheriff.id, pick.id, "#fbbf24", "trust", 900);
@@ -942,66 +985,77 @@ function useSheriffRallyCall() {
   return true;
 }
 
+function shouldAiRunForSheriff(seat) {
+  if (!seat || !seat.alive || seat.id === getPlayerId()) return false;
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(seat, { module: "sheriff_signup" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : seat;
+  // Each AI decides independently using ONLY its own role & persona (zero cross-seat peeking!)
+  if (self.role === "seer") return true;
+  if (self.role === "wolf" && self.fakeSeer) return true;
+  if (self.role === "guard" && (self.id % 2 === 0)) return true;
+  return false;
+}
+
 function buildSheriffElectionCandidates() {
   const alive = getAliveSeats();
   const pid = getPlayerId();
-  const cands = [];
-  const seerLike = alive.find(function (s) { return s.id !== pid && s.role === "seer"; });
-  const wolfBluff = alive.find(function (s) { return s.id !== pid && s.role === "wolf" && s.fakeSeer; });
-  const extraAi = alive.find(function (s) { return s.id !== pid && s !== seerLike && s !== wolfBluff && s.team === "good"; });
-  [seerLike, wolfBluff, extraAi].forEach(function (s) {
-    if (s && !cands.some(function (c) { return c.id === s.id; })) cands.push(s);
-  });
-  if (cands.length < 2) {
-    alive.forEach(function (s) {
-      if (s.id !== pid && cands.length < 2 && !cands.some(function (c) { return c.id === s.id; })) {
+  const cands = alive.filter(function (s) { return s.id !== pid && shouldAiRunForSheriff(s); });
+  // Ensure an engaging 2–3 seat election using strictly public seat order (never peeking at s.team!)
+  alive.forEach(function (s) {
+    if (s.id !== pid && cands.length < 3 && !cands.some(function (c) { return c.id === s.id; })) {
+      if (cands.length < 2 || (s.id % 3 === 0)) {
         cands.push(s);
       }
-    });
-  }
-  return cands;
+    }
+  });
+  return cands.slice(0, 3);
 }
 
-function buildSheriffCandidateLine(cand, allCands) {
-  const others = getAliveSeats().filter(function (s) { return s.id !== cand.id; });
+function buildSheriffCandidateLine(cand, priorSpeechesArg) {
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(cand, { module: "sheriff_speech" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : cand;
+  const others = snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== cand.id; });
   const focusSeat = others[0] || null;
   const nextSeat = others[1] || null;
   const focus = focusSeat ? (fmtSeatNum(focusSeat.id) + "號" + focusSeat.name) : "前排席位";
   const next = nextSeat ? (fmtSeatNum(nextSeat.id) + "號" + nextSeat.name) : "後置位";
-  const cList = Array.isArray(allCands) ? allCands : [];
-  const rivalSeer = cList.find(function (c) {
-    return c && c.id !== cand.id && (c.role === "seer" || c.fakeSeer);
+  // Zero-Leak: Candidate ONLY observes prior speeches already spoken on the stand — NEVER peeks at future candidates' hidden role or fakeSeer!
+  const priorList = Array.isArray(priorSpeechesArg) ? priorSpeechesArg : [];
+  const priorSeerSpeech = priorList.find(function (sp) {
+    return sp && sp.id !== self.id && (sp.tone === "seer" || sp.tone === "clash");
   });
-  const isSeerClaim = Boolean(cand.role === "seer" || cand.fakeSeer);
-  const seerCheckTarget = (cand.role === "seer" && state.match && state.match.nightState && state.match.nightState.seerTarget)
-    ? getSeat(state.match.nightState.seerTarget)
-    : focusSeat;
+  const isSeerClaim = Boolean(self.role === "seer" || (self.role === "wolf" && self.fakeSeer));
+  const lastChk = (self.role === "seer" && Array.isArray(self.checkedHistory) && self.checkedHistory.length > 0)
+    ? self.checkedHistory[self.checkedHistory.length - 1]
+    : null;
+  const readSeat = snap ? snap.getSeat : getSeat;
+  const seerCheckTarget = lastChk ? readSeat(lastChk.targetId) : focusSeat;
   const checkLbl = seerCheckTarget ? (fmtSeatNum(seerCheckTarget.id) + "號" + seerCheckTarget.name) : focus;
+  const checkVerdict = lastChk ? (lastChk.isWolf ? "偏狼坑" : "偏金水") : "偏金水";
+
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("sheriff_speech", self.id, isSeerClaim ? "警上報觀察員" : "警上競選表態");
+  }
 
   if (isSeerClaim) {
-    const isSecondClash = Boolean(rivalSeer && cList.indexOf(cand) > cList.indexOf(rivalSeer));
-    if (isSecondClash) {
-      const rLbl = fmtSeatNum(rivalSeer.id) + "號" + rivalSeer.name;
+    if (priorSeerSpeech) {
+      const rLbl = fmtSeatNum(priorSeerSpeech.id) + "號" + priorSeerSpeech.name;
       return {
         tag: "⚡ 對跳明心",
         tone: "clash",
-        rivalId: rivalSeer.id,
-        text: "「等等！" + rLbl + " 你居然敢跟我對跳明心？！全場聽好，我才是真明心！昨晚我查了 " + checkLbl + "，警徽流先驗 " + next + "，敢跟我拍到底我就直接出你！」"
-      };
-    }
-    if (rivalSeer) {
-      return {
-        tag: "🔮 強拍明心",
-        tone: "seer",
-        rivalId: rivalSeer.id,
-        text: "「我先拍明心身分拿警徽！昨晚查了 " + checkLbl + "（偏金水），今晚警徽流鎖定 " + next + "！等等誰敢上警跟我對跳，直接標記悍跳狼！」"
+        rivalId: priorSeerSpeech.id,
+        text: "「等等！" + rLbl + " 你居然敢跟我對跳明心？！全場聽好，我才是真明心！昨晚我查了 " + checkLbl + "（" + checkVerdict + "），警徽流先驗 " + next + "，敢跟我拍到底我就直接出你！」"
       };
     }
     return {
-      tag: "🔮 明心帶隊",
+      tag: "🔮 強拍明心",
       tone: "seer",
       rivalId: null,
-      text: "「我直接拍明心上警！昨晚驗了 " + checkLbl + "，警徽給我，今晚再查 " + next + "，雙邊警徽流透明帶大家穩穩抓狼！」"
+      text: "「我先拍明心身分拿警徽！昨晚查了 " + checkLbl + "（" + checkVerdict + "），今晚警徽流鎖定 " + next + "！等等誰敢上警跟我對跳，直接標記悍跳狼！」"
     };
   }
 
@@ -1019,19 +1073,19 @@ function buildSheriffCandidateLine(cand, allCands) {
     "柚子": "「哇～警上氣氛好緊張！可是我也想當警長保護大家呀，選我選我，我會很認真聽大家發言的！」"
   };
 
-  if (cand.role === "guard") {
+  if (self.role === "guard") {
     return {
       tag: "🛡️ 穩健控場",
       tone: "bold",
       rivalId: null,
-      text: personaLines[cand.name] || "「我是理性帶隊派，警徽交給我能幫忙鎖定焦點與節奏、末置位穩穩歸票！」"
+      text: personaLines[self.name] || "「我是理性帶隊派，警徽交給我能幫忙鎖定焦點與節奏、末置位穩穩歸票！」"
     };
   }
   return {
     tag: "🔥 強勢上警",
     tone: "bold",
-    rivalId: rivalSeer ? rivalSeer.id : null,
-    text: personaLines[cand.name] || "「我說話講邏輯不情緒化，給我警徽我會在末置位整理正反兩邊坑位，公平歸票！」"
+    rivalId: priorSeerSpeech ? priorSeerSpeech.id : null,
+    text: personaLines[self.name] || "「我說話講邏輯不情緒化，給我警徽我會在末置位整理正反兩邊坑位，公平歸票！」"
   };
 }
 
@@ -1063,24 +1117,26 @@ function startSheriffElection(onDone) {
     if (typeof onDone === "function") onDone();
     return false;
   }
-  const speeches = cands.map(function (c) {
-    const built = buildSheriffCandidateLine(c, cands);
-    return {
+  // Strictly chronological stand speeches: each speaker only hears prior speakers!
+  const speeches = [];
+  cands.forEach(function (c) {
+    const built = buildSheriffCandidateLine(c, speeches);
+    speeches.push({
       id: c.id,
       name: c.name,
       tag: built.tag,
       tone: built.tone,
       rivalId: built.rivalId,
       text: built.text
-    };
+    });
   });
-  const seerCands = cands.filter(function (c) { return c.role === "seer" || c.fakeSeer; });
-  const hasDoubleSeerClash = seerCands.length >= 2;
+  const seerSpeeches = speeches.filter(function (sp) { return sp.tone === "seer" || sp.tone === "clash"; });
+  const hasDoubleSeerClash = seerSpeeches.length >= 2;
   const dramaEvents = [];
 
   if (hasDoubleSeerClash) {
-    const sA = seerCands[0];
-    const sB = seerCands[1];
+    const sA = seerSpeeches[0];
+    const sB = seerSpeeches[1];
     dramaEvents.push("⚡ 警上爆出「雙明心對跳」！ " + fmtSeatNum(sA.id) + "號" + sA.name + " 與 " + fmtSeatNum(sB.id) + "號" + sB.name + " 正面交鋒、火藥味十足！");
     if (typeof spawnBeam === "function") {
       spawnBeam(sA.id, sB.id, "#f43f5e", "clash");
@@ -1147,6 +1203,37 @@ function startSheriffElection(onDone) {
   return true;
 }
 
+function chooseAiSheriffElectionVote(voter, candidateIds, speeches, isAutoPass) {
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(voter, { module: "sheriff_vote" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : voter;
+  const pid = snap ? snap.playerSeatId : getPlayerId();
+  const claimedSeerOnStand = {};
+  (speeches || []).forEach(function (sp) {
+    if (sp && (sp.tone === "seer" || sp.tone === "clash")) claimedSeerOnStand[sp.id] = true;
+  });
+  const cands = (candidateIds || []).map(function (id) {
+    return snap ? snap.getSeat(id) : getSeat(id);
+  }).filter(function (s) { return s && s.alive; });
+  if (!cands.length) return null;
+
+  const scoreCand = function (cand) {
+    // Zero-Leak Fair Play: Good AIs NEVER peek hidden roles/teams; Wolves legally know their Wolf mates via isWolfMate!
+    const wolfKnowsMate = (self.role === "wolf" && (snap ? cand.isWolfMate : cand.role === "wolf")) ? 20 : 0;
+    const observableSeerClaim = claimedSeerOnStand[cand.id] ? 12 : 0;
+    const playerRunBonus = (isAutoPass && cand.id === pid) ? 14 : 0;
+    const seatJitter = ((self.id * 11 + cand.id * 7) % 9) - 4;
+    return wolfKnowsMate + observableSeerClaim + playerRunBonus + seatJitter - ((self.suspicionMap && self.suspicionMap[cand.id]) || 50);
+  };
+  const ranked = cands.slice().sort(function (a, b) { return scoreCand(b) - scoreCand(a); });
+  const chosenId = ranked[0] ? ranked[0].id : null;
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("sheriff_vote", self.id, chosenId ? ("投警 " + chosenId + "號") : "棄票");
+  }
+  return chosenId;
+}
+
 function finalizeSheriffElectionWinner(chosenCandId) {
   clearStepTimer();
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
@@ -1165,19 +1252,6 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     voteRecords[c.id] = [];
   });
 
-  const claimedSeerOnStand = {};
-  (ctx.speeches || []).forEach(function (sp) {
-    if (sp && (sp.tone === "seer" || sp.tone === "clash")) claimedSeerOnStand[sp.id] = true;
-  });
-  const scoreSheriffCand = function (voter, cand, isAutoPass) {
-    // Fair Play: Good AIs NEVER peek at hidden roles/teams! Only Wolves know their own Wolf mates.
-    const wolfKnowsMate = (voter.role === "wolf" && cand.role === "wolf") ? 20 : 0;
-    const observableSeerClaim = claimedSeerOnStand[cand.id] ? 12 : 0;
-    const playerRunBonus = (isAutoPass && cand.id === pid) ? 14 : 0;
-    const seatJitter = ((voter.id * 11 + cand.id * 7) % 9) - 4;
-    return wolfKnowsMate + observableSeerClaim + playerRunBonus + seatJitter - ((voter.suspicionMap && voter.suspicionMap[cand.id]) || 50);
-  };
-
   if (cands.length === 0) {
     winner = getAliveSeats()[0] || null;
   } else if (chosenCandId && cands.some(function (c) { return c.id === chosenCandId; })) {
@@ -1192,13 +1266,11 @@ function finalizeSheriffElectionWinner(chosenCandId) {
       }
       getAliveSeats().forEach(function (s) {
         if (s.id === pid || ctx.candidateIds.indexOf(s.id) !== -1) return;
-        const ranked = cands.slice().sort(function (a, b) {
-          return scoreSheriffCand(s, b, false) - scoreSheriffCand(s, a, false);
-        });
-        if (ranked[0]) {
-          counts[ranked[0].id] = (counts[ranked[0].id] || 0) + 1;
-          voteRecords[ranked[0].id].push(fmtSeatNum(s.id) + s.name);
-          if (typeof spawnBeam === "function") spawnBeam(s.id, ranked[0].id, "#fbbf24", "vote");
+        const pickId = chooseAiSheriffElectionVote(s, ctx.candidateIds, ctx.speeches, false);
+        if (pickId) {
+          counts[pickId] = (counts[pickId] || 0) + 1;
+          voteRecords[pickId].push(fmtSeatNum(s.id) + s.name);
+          if (typeof spawnBeam === "function") spawnBeam(s.id, pickId, "#fbbf24", "vote");
         }
       });
       winner = cands.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); })[0];
@@ -1206,13 +1278,11 @@ function finalizeSheriffElectionWinner(chosenCandId) {
   } else {
     getAliveSeats().forEach(function (s) {
       if (ctx.candidateIds.indexOf(s.id) !== -1) return;
-      const ranked = cands.slice().sort(function (a, b) {
-        return scoreSheriffCand(s, b, true) - scoreSheriffCand(s, a, true);
-      });
-      if (ranked[0]) {
-        counts[ranked[0].id] = (counts[ranked[0].id] || 0) + 1;
-        voteRecords[ranked[0].id].push(fmtSeatNum(s.id) + s.name);
-        if (typeof spawnBeam === "function") spawnBeam(s.id, ranked[0].id, "#fbbf24", "vote");
+      const pickId = chooseAiSheriffElectionVote(s, ctx.candidateIds, ctx.speeches, true);
+      if (pickId) {
+        counts[pickId] = (counts[pickId] || 0) + 1;
+        voteRecords[pickId].push(fmtSeatNum(s.id) + s.name);
+        if (typeof spawnBeam === "function") spawnBeam(s.id, pickId, "#fbbf24", "vote");
       }
     });
     winner = cands.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); })[0];
@@ -1345,12 +1415,16 @@ function resolveSheriffElectionAction(actionOrVoteId) {
     if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
     if (!Array.isArray(ctx.withdrawnIds)) ctx.withdrawnIds = [];
 
-    // Dramatic AI table reaction to player jumping onto the Sheriff stand!
+    // Zero-Leak Dramatic AI table reaction: based strictly on observable stand speeches (NEVER leaks hidden Wolf/fakeSeer!)
     const aiCands = ctx.candidateIds.filter(function (id) { return id !== pid; }).map(getSeat).filter(Boolean);
-    const nonSeerAi = aiCands.find(function (c) { return c.role !== "seer" && !c.fakeSeer; });
-    const wolfCand = aiCands.find(function (c) { return c.role === "wolf"; });
+    const seerStandMap = {};
+    (ctx.speeches || []).forEach(function (sp) {
+      if (sp && (sp.tone === "seer" || sp.tone === "clash")) seerStandMap[sp.id] = true;
+    });
+    const nonSeerAi = aiCands.find(function (c) { return !seerStandMap[c.id]; });
+    const seerClaimRival = aiCands.find(function (c) { return Boolean(seerStandMap[c.id]); });
     if (nonSeerAi && aiCands.length >= 2) {
-      // Dramatic "退水" (strategic withdrawal) by an extra good candidate!
+      // Dramatic "退水" (strategic withdrawal) by an extra non-Seer candidate!
       ctx.candidateIds = ctx.candidateIds.filter(function (id) { return id !== nonSeerAi.id; });
       ctx.speeches = ctx.speeches.filter(function (sp) { return sp.id !== nonSeerAi.id; });
       ctx.withdrawnIds.push(nonSeerAi.id);
@@ -1359,12 +1433,12 @@ function resolveSheriffElectionAction(actionOrVoteId) {
       if (typeof setSeatEmotion === "function") setSeatEmotion(nonSeerAi.id, "shock", 3400);
       if (typeof setSeatBubble === "function") setSeatBubble(nonSeerAi.id, "氣勢好強！我先退水觀戰～", "trust", 3800);
       addLog({ kind: "system", title: wLine, text: "" });
-    } else if (wolfCand) {
-      const rLine = "⚡ 警上嗆聲！" + fmtSeatNum(wolfCand.id) + "號" + wolfCand.name + " 立刻皺眉回擊：「你突然跳上警想幹嘛？大家小心他上警搶節奏！」";
+    } else if (seerClaimRival) {
+      const rLine = "⚡ 警上交鋒！" + fmtSeatNum(seerClaimRival.id) + "號" + seerClaimRival.name + " 立刻皺眉回擊：「你突然跳上警想搶警徽？大家先聽清楚再決定！」";
       ctx.dramaEvents.unshift(rLine);
-      if (typeof setSeatEmotion === "function") setSeatEmotion(wolfCand.id, "nervous", 3400);
-      if (typeof setSeatBubble === "function") setSeatBubble(wolfCand.id, "咦？！你也敢上警搶徽？！", "wolf", 3800);
-      if (typeof spawnBeam === "function") spawnBeam(wolfCand.id, pid, "#f43f5e", "clash");
+      if (typeof setSeatEmotion === "function") setSeatEmotion(seerClaimRival.id, "proud", 3400);
+      if (typeof setSeatBubble === "function") setSeatBubble(seerClaimRival.id, "你也上警搶徽？來正面對決！", "suspect", 3800);
+      if (typeof spawnBeam === "function") spawnBeam(seerClaimRival.id, pid, "#f43f5e", "clash");
     } else if (aiCands[0]) {
       const rival = aiCands[0];
       const rLine = "🔥 " + fmtSeatNum(rival.id) + "號" + rival.name + " 迎戰回話：「歡迎上警正面較量！就讓警下夥伴看看誰更有帶隊說服力！」";

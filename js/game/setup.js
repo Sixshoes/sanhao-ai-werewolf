@@ -187,6 +187,12 @@ function startNewGame() {
   state.lastWordsCtx = null;
   state.voteFlight = null;
   state.playerMarks = {};
+  if (el("quickFreeInput")) el("quickFreeInput").value = "";
+  if (el("playerSpeechInput")) el("playerSpeechInput").value = "";
+  if (el("lastWordsFreeInput")) el("lastWordsFreeInput").value = "";
+  if (el("btnQuickFreeSend")) el("btnQuickFreeSend").textContent = "陳詞";
+  if (el("speechThreeGoodBadge")) el("speechThreeGoodBadge").classList.add("hidden");
+  if (el("btnQuickInlineRewrite")) el("btnQuickInlineRewrite").classList.add("hidden");
   state.activeBubble = null;
   state.seatBubbles = {};
   state.beamFx = [];

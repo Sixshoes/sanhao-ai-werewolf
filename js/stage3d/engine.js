@@ -49,8 +49,69 @@ const stage3d = {
     targetLookAt: null,
     fpYaw: 0,
     fpTargetYaw: 0,
-    fpPitch: -0.14,
-    fpTargetPitch: -0.14
+    fpPitch: -0.10,
+    fpTargetPitch: -0.10,
+    fpFovOffset: 0
+  },
+
+  getFirstPersonBaseFov: function () {
+    const aspect = (this.camera && this.camera.aspect) ? this.camera.aspect : (16 / 9);
+    if (aspect < 0.85) return 72;
+    if (aspect < 1.25) return 64;
+    return 58;
+  },
+
+  getFirstPersonSeatEye: function () {
+    const pidNow = typeof getPlayerId === "function" ? getPlayerId() : 1;
+    const selfAnchor = this.seats && this.seats.anchors ? this.seats.anchors[pidNow] : null;
+    const nSeats = typeof getActive3DSeatCount === "function" ? getActive3DSeatCount() : 8;
+    const layout = typeof get3DTableLayout === "function" ? get3DTableLayout(nSeats) : { ringRadius: 4.85 };
+    const selfAngle = selfAnchor ? Math.atan2(selfAnchor.worldPos.x, selfAnchor.worldPos.z) : 0;
+    const selfR = selfAnchor ? Math.max(layout.ringRadius, Math.hypot(selfAnchor.worldPos.x, selfAnchor.worldPos.z)) : layout.ringRadius;
+    // Tuck naturally into the wooden armchair backrest so peripheral round-table seats & foreground teacup/candle/card all frame cleanly!
+    const backOffset = nSeats >= 12 ? 1.15 : (nSeats >= 10 ? 1.02 : (nSeats >= 8 ? 0.90 : 0.82));
+    const eyeR = selfR + backOffset;
+    const eyeY = nSeats >= 12 ? 2.62 : (nSeats >= 10 ? 2.56 : 2.48);
+    return {
+      pid: pidNow,
+      angle: selfAngle,
+      baseYaw: -selfAngle,
+      x: Math.sin(selfAngle) * eyeR,
+      y: eyeY,
+      z: Math.cos(selfAngle) * eyeR
+    };
+  },
+
+  computeFirstPersonAnglesToPoint: function (targetPos, eye) {
+    const dx = targetPos.x - eye.x;
+    const dy = targetPos.y - eye.y;
+    const dz = targetPos.z - eye.z;
+    const horiz = Math.max(0.25, Math.hypot(dx, dz));
+    const targetAbsYaw = Math.atan2(dx, -dz);
+    const relYaw = Math.atan2(Math.sin(targetAbsYaw - eye.baseYaw), Math.cos(targetAbsYaw - eye.baseYaw));
+    const pitch = Math.atan2(dy, horiz);
+    return {
+      yaw: clamp(relYaw, -1.44, 1.44),
+      pitch: clamp(pitch, -0.38, 0.18)
+    };
+  },
+
+  glanceAtSeatInFirstPerson: function (seatId) {
+    if (!this.isActive() || this.camPreset !== "firstperson" || !this.seats || !this.seats.anchors || !this.seats.anchors[seatId]) return false;
+    const eye = this.getFirstPersonSeatEye();
+    if (seatId === eye.pid) {
+      this.orbit.fpTargetYaw = 0;
+      this.orbit.fpTargetPitch = -0.10;
+      this.orbit.fpFovOffset = 0;
+      this.orbit.userOverrideUntil = 0;
+      return true;
+    }
+    const tgt = this.seats.anchors[seatId].headPos || this.seats.anchors[seatId].worldPos;
+    const ang = this.computeFirstPersonAnglesToPoint(tgt, eye);
+    this.orbit.fpTargetYaw = ang.yaw;
+    this.orbit.fpTargetPitch = ang.pitch;
+    this.orbit.userOverrideUntil = performance.now() + 6500;
+    return true;
   },
 
   isAvailable: function () {
@@ -906,8 +967,8 @@ const stage3d = {
     this.raycaster.setFromCamera(ndc, this.camera);
     const hitPt = new THREE.Vector3();
     if (this.raycaster.ray.intersectPlane(this.tablePlane, hitPt)) {
-      hitPt.x = clamp(hitPt.x, -7, 7);
-      hitPt.z = clamp(hitPt.z, -7, 7);
+      hitPt.x = clamp(hitPt.x, -8.5, 8.5);
+      hitPt.z = clamp(hitPt.z, -8.5, 8.5);
       this.fx.dragWorldEnd.copy(hitPt);
     }
   },
@@ -925,11 +986,31 @@ const stage3d = {
     this.camPreset = (preset === "firstperson" || preset === "overview") ? preset : "cinema";
     this.orbit.userOverrideUntil = 0;
     this.orbit.fpTargetYaw = 0;
-    this.orbit.fpTargetPitch = -0.14;
+    this.orbit.fpTargetPitch = -0.10;
+    this.orbit.fpFovOffset = 0;
+    if (this.camPreset === "firstperson") {
+      // Snap gentle sit-down framing toward current speaker or center of tea table
+      const pidNow = typeof getPlayerId === "function" ? getPlayerId() : 1;
+      const focusId = (state.activeSpeakerId && state.activeSpeakerId !== pidNow)
+        ? state.activeSpeakerId
+        : ((state.selectedSeatId && state.selectedSeatId !== pidNow) ? state.selectedSeatId : null);
+      if (focusId && this.seats && this.seats.anchors && this.seats.anchors[focusId]) {
+        const eye = this.getFirstPersonSeatEye();
+        const ang = this.computeFirstPersonAnglesToPoint(this.seats.anchors[focusId].headPos, eye);
+        this.orbit.fpTargetYaw = ang.yaw;
+        this.orbit.fpTargetPitch = ang.pitch;
+      }
+    }
     this.syncCameraPresetButtons();
+    const hintEl = el("dragGestureHint");
+    if (hintEl && this.isActive()) {
+      hintEl.textContent = this.camPreset === "firstperson"
+        ? "坐席視角：拖曳自由轉頭｜滾輪微調焦距｜雙擊空地回正｜點擊左右箭頭快速看鄰座"
+        : "拖曳空地可 360° 環視山城｜點擊角色、桌心蓮花或遠方龜山島互動";
+    }
     const labelMap = {
       cinema: "🎬 電影自動運鏡",
-      firstperson: "🪑 第一人稱坐桌視角",
+      firstperson: "🪑 沉浸坐席視角（可拖曳轉頭・點邊緣箭頭快速回望）",
       overview: "🦅 俯視全景戰術視角"
     };
     showToast("已切換視角：" + labelMap[this.camPreset], "emerald");
@@ -1019,8 +1100,9 @@ const stage3d = {
       return;
     }
     if (this.camPreset === "firstperson") {
-      this.orbit.fpTargetYaw = clamp(this.orbit.fpTargetYaw - dx * 0.0055, -1.25, 1.25);
-      this.orbit.fpTargetPitch = clamp(this.orbit.fpTargetPitch - dy * 0.0045, -0.52, 0.35);
+      // Natural grab-and-look drag with generous ±83° head turn so immediate left/right neighbors are effortless to inspect!
+      this.orbit.fpTargetYaw = clamp(this.orbit.fpTargetYaw - dx * 0.0052, -1.45, 1.45);
+      this.orbit.fpTargetPitch = clamp(this.orbit.fpTargetPitch + dy * 0.0040, -0.46, 0.24);
     } else {
       this.orbit.targetYaw -= dx * 0.0075;
       this.orbit.targetPitch = clamp(this.orbit.targetPitch + dy * 0.0055, 0.22, 1.22);
@@ -1039,11 +1121,11 @@ const stage3d = {
       return;
     }
     if (this.camPreset === "firstperson") {
-      this.camera.fov = clamp(this.camera.fov + deltaY * 0.025, 34, 62);
-      this.camera.updateProjectionMatrix();
+      this.orbit.fpFovOffset = clamp((this.orbit.fpFovOffset || 0) + deltaY * 0.022, -14, 14);
+      this.orbit.userOverrideUntil = performance.now() + 6500;
       return;
     }
-    this.orbit.targetRadius = clamp(this.orbit.targetRadius + deltaY * 0.006, 7.2, 16.5);
+    this.orbit.targetRadius = clamp(this.orbit.targetRadius + deltaY * 0.006, 7.2, 19.5);
     this.orbit.userOverrideUntil = performance.now() + 6500;
   },
 
@@ -1054,8 +1136,9 @@ const stage3d = {
     this.orbit.targetRadius = this.camPreset === "overview" ? 12.8 : 11.2;
     this.orbit.targetLookAt.set(0, 1.35, 0);
     this.orbit.fpTargetYaw = 0;
-    this.orbit.fpTargetPitch = -0.14;
-    this.camera.fov = 44;
+    this.orbit.fpTargetPitch = -0.10;
+    this.orbit.fpFovOffset = 0;
+    this.camera.fov = this.camPreset === "firstperson" ? this.getFirstPersonBaseFov() : 44;
     this.camera.updateProjectionMatrix();
   },
 
@@ -1093,55 +1176,95 @@ const stage3d = {
     }
 
     if (this.camPreset === "firstperson") {
-      // Dynamic seat-aware First-Person POV anchored inside whichever seat playerSeatId was assigned!
-      const pidNow = typeof getPlayerId === "function" ? getPlayerId() : 1;
-      const selfAnchor = this.seats && this.seats.anchors ? this.seats.anchors[pidNow] : null;
-      const selfAngle = selfAnchor ? Math.atan2(selfAnchor.worldPos.x, selfAnchor.worldPos.z) : 0;
-      const selfR = selfAnchor ? Math.max(4.55, Math.hypot(selfAnchor.worldPos.x, selfAnchor.worldPos.z)) : 4.95;
-      const eyeX = Math.sin(selfAngle) * (selfR - 0.08);
-      const eyeY = 3.26;
-      const eyeZ = Math.cos(selfAngle) * (selfR - 0.08);
-      const baseYaw = -selfAngle;
+      // Authentic Seated Eye-Level Round-Table POV (eye-to-eye framing, unobstructed tabletop props, smart face tracking!)
+      const eye = this.getFirstPersonSeatEye();
+      const pidNow = eye.pid;
+      const punch = this.cameraPunch;
+      if (punch && punch.pending) {
+        punch.pending = false;
+        punch.until = nowMs + (punch.durationMs || 1250);
+      }
+      const isFpPunch = Boolean(punch && nowMs < punch.until && punch.seatId && punch.seatId !== pidNow && this.seats.anchors[punch.seatId]);
+      const isPickStage = (p === "DAY_VOTE" || p === "DAY_PLAYER_TURN" || p === "NIGHT_GUARD" || p === "NIGHT_SEER" || p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "HUNTER_TRIGGER");
+      const shReelId = (p === "SHERIFF_ELECTION" && state.match && state.match.sheriffElectionCtx) ? state.match.sheriffElectionCtx.activeReelSeatId : null;
+      const activeSpId = ((p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId && state.activeSpeakerId !== pidNow)
+        ? state.activeSpeakerId
+        : ((shReelId && shReelId !== pidNow) ? shReelId : null);
 
+      let fpFocusLeanFov = 0;
       if (!o.dragging && nowMs > o.userOverrideUntil) {
-        if ((p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId && state.activeSpeakerId !== pidNow && this.seats.anchors[state.activeSpeakerId]) {
-          const sp = this.seats.anchors[state.activeSpeakerId].headPos;
-          const targetAbsYaw = Math.atan2(sp.x - eyeX, -(sp.z - eyeZ));
-          const relYaw = Math.atan2(Math.sin(targetAbsYaw - baseYaw), Math.cos(targetAbsYaw - baseYaw));
-          o.fpTargetYaw = clamp(relYaw, -1.05, 1.05);
-          o.fpTargetPitch = -0.18;
+        if (state.cardPeek3D && state.match && state.match.started) {
+          // Gently dip gaze down onto your own flipped 3D Secret Role Card!
+          o.fpTargetYaw = 0;
+          o.fpTargetPitch = -0.34;
+          fpFocusLeanFov = -5;
+        } else if (isFpPunch) {
+          const pp = this.seats.anchors[punch.seatId].headPos;
+          const angP = this.computeFirstPersonAnglesToPoint(pp, eye);
+          o.fpTargetYaw = angP.yaw;
+          o.fpTargetPitch = angP.pitch;
+          fpFocusLeanFov = -5.5;
+        } else if (activeSpId && this.seats.anchors[activeSpId]) {
+          const sp = this.seats.anchors[activeSpId].headPos;
+          const angS = this.computeFirstPersonAnglesToPoint(sp, eye);
+          o.fpTargetYaw = angS.yaw;
+          o.fpTargetPitch = angS.pitch;
+          fpFocusLeanFov = -3.5;
+        } else if (isPickStage && state.selectedSeatId && state.selectedSeatId !== pidNow && this.seats.anchors[state.selectedSeatId]) {
+          const selPos = this.seats.anchors[state.selectedSeatId].headPos;
+          const angSel = this.computeFirstPersonAnglesToPoint(selPos, eye);
+          o.fpTargetYaw = angSel.yaw;
+          o.fpTargetPitch = angSel.pitch;
+          fpFocusLeanFov = -2.5;
         } else {
-          o.fpTargetYaw = Math.sin(f.tSec * 0.25) * 0.08;
-          o.fpTargetPitch = -0.22;
+          // Steady, poised gaze straight across the lotus centerpiece into the opposite players' eyes!
+          o.fpTargetYaw = 0;
+          o.fpTargetPitch = isPickStage ? -0.14 : -0.10;
+          fpFocusLeanFov = isPickStage ? 3.5 : 0;
         }
       }
-      const sm = o.dragging ? 0.25 : 0.08;
+
+      if (typeof this.camera.fov === "number") {
+        const targetFpFov = clamp(this.getFirstPersonBaseFov() + (o.fpFovOffset || 0) + fpFocusLeanFov, 40, 78);
+        const diffFpFov = targetFpFov - this.camera.fov;
+        if (Math.abs(diffFpFov) > 0.05) {
+          this.camera.fov += diffFpFov * 0.12;
+          this.camera.updateProjectionMatrix();
+        } else if (this.camera.fov !== targetFpFov) {
+          this.camera.fov = targetFpFov;
+          this.camera.updateProjectionMatrix();
+        }
+      }
+
+      const sm = o.dragging ? 0.28 : (isFpPunch ? 0.14 : 0.09);
       o.fpYaw += (o.fpTargetYaw - o.fpYaw) * sm;
       o.fpPitch += (o.fpTargetPitch - o.fpPitch) * sm;
 
-      let cx = eyeX;
-      let cy = eyeY;
-      let cz = eyeZ;
+      let cx = eye.x;
+      let cy = eye.y + Math.sin(f.tSec * 1.35) * 0.014;
+      let cz = eye.z;
       if (nowMs < state.shakeUntil) {
-        cx += (Math.random() - 0.5) * 0.14;
-        cy += (Math.random() - 0.5) * 0.14;
+        cx += (Math.random() - 0.5) * 0.12;
+        cy += (Math.random() - 0.5) * 0.12;
       }
       this.camera.position.set(cx, cy, cz);
       const lookDist = 6.5;
-      const absYaw = baseYaw + o.fpYaw;
-      const lx = cx + Math.sin(absYaw) * lookDist;
+      const absYaw = eye.baseYaw + o.fpYaw;
+      const horizLook = Math.cos(o.fpPitch) * lookDist;
+      const lx = cx + Math.sin(absYaw) * horizLook;
       const ly = cy + Math.sin(o.fpPitch) * lookDist;
-      const lz = cz - Math.cos(absYaw) * lookDist;
+      const lz = cz - Math.cos(absYaw) * horizLook;
       this.camera.lookAt(lx, ly, lz);
       this.camera.updateMatrixWorld();
       return;
     }
 
     // Cinema or Tactical Overview Orbit Camera (with Double-Click Character Close-Up Inspection & 10/12-seat framing!)
-    const activeSeatCount = (state.match && state.match.started)
-      ? (state.match.totalSeats || 8)
-      : (typeof getLobbySeatCount === "function" ? getLobbySeatCount() : 8);
-    const largeTableR = activeSeatCount >= 12 ? 1.85 : (activeSeatCount >= 10 ? 0.95 : 0);
+    const activeSeatCount = typeof getActive3DSeatCount === "function"
+      ? getActive3DSeatCount()
+      : ((state.match && state.match.started) ? (state.match.totalSeats || 8) : (typeof getLobbySeatCount === "function" ? getLobbySeatCount() : 8));
+    const camLayout = typeof get3DTableLayout === "function" ? get3DTableLayout(activeSeatCount) : null;
+    const largeTableR = camLayout ? (camLayout.camExtraR || 0) : (activeSeatCount >= 12 ? 2.15 : (activeSeatCount >= 10 ? 1.15 : 0));
     if (!o.dragging && nowMs > o.userOverrideUntil) {
       if (this.closeUpSeatId && this.seats.anchors[this.closeUpSeatId]) {
         const cp = this.seats.anchors[this.closeUpSeatId].worldPos;
@@ -1211,7 +1334,7 @@ const stage3d = {
         } else {
           o.targetYaw = Math.sin(f.tSec * 0.2) * 0.16;
           o.targetPitch = 0.62;
-          o.targetRadius = 12.4;
+          o.targetRadius = 12.4 + largeTableR;
           o.targetLookAt.set(0, 0.62, 0.35);
         }
       } else if (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT") {
@@ -1220,18 +1343,18 @@ const stage3d = {
           const lp = leaderAnchor.worldPos;
           o.targetYaw = -Math.sin(Math.atan2(lp.x, lp.z)) * 0.32;
           o.targetPitch = 0.54;
-          o.targetRadius = 11.5;
+          o.targetRadius = 11.5 + largeTableR * 0.85;
           o.targetLookAt.set(lp.x * 0.24, 0.68, lp.z * 0.24 + 0.32);
         } else {
           o.targetYaw = Math.sin(f.tSec * 0.2) * 0.16;
           o.targetPitch = 0.62;
-          o.targetRadius = 12.4;
+          o.targetRadius = 12.4 + largeTableR;
           o.targetLookAt.set(0, 0.62, 0.35);
         }
       } else {
         o.targetYaw = 0;
         o.targetPitch = 0.54;
-        o.targetRadius = 12.0;
+        o.targetRadius = 12.0 + largeTableR;
         o.targetLookAt.set(0, 0.64, 0.35);
       }
     }
@@ -1450,6 +1573,11 @@ function draw3DOverlayHud(ctx, f, coords) {
     const sheriffPrefix = isSheriff ? "👑 " : "";
     const mark = state.playerMarks[s.id];
     const showTruth = isOver || (typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive());
+    const pSelf3D = state.match.started && typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
+    const isWolfViewer3D = Boolean(inMatch && !showTruth && !state.hidePlayerRole && pSelf3D && pSelf3D.role === "wolf");
+    const isWolfMate3D = Boolean(isWolfViewer3D && s.role === "wolf" && s.id !== getPlayerId());
+    const wolfGodKey3D = (isWolfViewer3D && !isWolfMate3D && state.match.wolfGodMarks) ? state.match.wolfGodMarks[s.id] : "";
+    const wolfGodLabel3D = (wolfGodKey3D && typeof getWolfGodMarkDef === "function") ? getWolfGodMarkDef(wolfGodKey3D).label : "";
 
     // Handcrafted lacquer & antique-gold floating tablet above 3D head
     let topTag = "";
@@ -1481,6 +1609,12 @@ function draw3DOverlayHud(ctx, f, coords) {
       topBorder = "rgba(250, 224, 156, 0.9)";
       topFg = "#fff8eb";
       prio = 4;
+    } else if (isWolfMate3D) {
+      topTag = sheriffPrefix + "🐺 同伴・" + fmtSeatNum(s.id) + s.name;
+      topBg = "rgba(136, 28, 38, 0.92)";
+      topBorder = "rgba(251, 113, 133, 0.78)";
+      topFg = "#ffe4e6";
+      prio = 3;
     } else if (state.match.started && s.id !== getPlayerId() && (state.match.microPulseRevealed || s.sweatExposed)) {
       topTag = sheriffPrefix + "心虛 " + s.microPulse + "%";
       topBg = s.microPulse >= 60 ? "rgba(154, 44, 34, 0.92)" : "rgba(33, 94, 73, 0.92)";
@@ -1493,14 +1627,20 @@ function draw3DOverlayHud(ctx, f, coords) {
       topBorder = "rgba(242, 212, 156, 0.65)";
       topFg = "#fbf5ea";
       prio = 3;
+    } else if (wolfGodLabel3D) {
+      topTag = sheriffPrefix + "🔍 " + wolfGodLabel3D + "・" + fmtSeatNum(s.id) + s.name;
+      topBg = "rgba(120, 72, 18, 0.92)";
+      topBorder = "rgba(251, 191, 36, 0.78)";
+      topFg = "#fef3c7";
+      prio = 2;
     } else if (mark === "wolf") {
-      topTag = sheriffPrefix + "存疑・" + fmtSeatNum(s.id) + s.name;
+      topTag = sheriffPrefix + (isWolfViewer3D ? "甩鍋・" : "存疑・") + fmtSeatNum(s.id) + s.name;
       topBg = "rgba(154, 44, 34, 0.9)";
       topBorder = "rgba(232, 140, 128, 0.65)";
       topFg = "#fbf5ea";
       prio = 2;
     } else if (mark === "good") {
-      topTag = sheriffPrefix + "認同・" + fmtSeatNum(s.id) + s.name;
+      topTag = sheriffPrefix + (isWolfViewer3D ? "假保・" : "認同・") + fmtSeatNum(s.id) + s.name;
       topBg = "rgba(33, 94, 73, 0.9)";
       topBorder = "rgba(126, 196, 166, 0.65)";
       topFg = "#fbf5ea";
@@ -1584,6 +1724,87 @@ function draw3DOverlayHud(ctx, f, coords) {
     ctx.fillText(pl.topTag, pl.x, pl.y + pl.h * 0.53);
     ctx.restore();
   });
+
+  // Seated POV (firstperson) Edge-Glance Indicators: clickable left/right turn arrows for off-screen speakers or neighbors!
+  state.fpGlanceButtons = [];
+  if (typeof stage3d !== "undefined" && stage3d.camPreset === "firstperson" && !stage3d.showcaseMode) {
+    const pidEdge = typeof getPlayerId === "function" ? getPlayerId() : 1;
+    const offLeft = [];
+    const offRight = [];
+    coords.forEach(function (node) {
+      if (node.visibleInView || !node.offScreenDir || node.id === pidEdge || !node.seat) return;
+      const isSpk = Boolean(state.activeSpeakerId === node.id && (node.seat.alive || p === "LAST_WORDS_SPEECH"));
+      const isSel = Boolean(state.selectedSeatId === node.id);
+      const weight = (isSpk ? 100 : 0) + (isSel ? 50 : 0) + (node.seat.alive ? 10 : 0);
+      const item = { node: node, isSpk: isSpk, isSel: isSel, weight: weight };
+      if (node.offScreenDir < 0) offLeft.push(item);
+      else offRight.push(item);
+    });
+    offLeft.sort(function (a, b) { return b.weight - a.weight; });
+    offRight.sort(function (a, b) { return b.weight - a.weight; });
+
+    const drawEdgeGlance = function (list, side) {
+      if (!list.length) return;
+      const best = list[0];
+      const s = best.node.seat;
+      const btnKey = (side < 0 ? "L:" : "R:") + s.id;
+      const isHoverBtn = state.hoverFpGlanceKey === btnKey;
+      const extraCnt = list.length > 1 ? (" +" + (list.length - 1)) : "";
+      const tag = side < 0
+        ? ("◀ " + fmtSeatNum(s.id) + " " + s.name + (best.isSpk ? "・發言" : extraCnt))
+        : (fmtSeatNum(s.id) + " " + s.name + (best.isSpk ? "・發言" : extraCnt) + " ▶");
+      ctx.save();
+      const font = "700 " + Math.round(10.5 * dpr) + "px 'Noto Serif TC', 'Noto Sans TC', serif";
+      ctx.font = font;
+      const bw = ctx.measureText(tag).width + 18 * dpr;
+      const bh = 24 * dpr;
+      const bx = side < 0 ? (12 * dpr) : (f.w - bw - 12 * dpr);
+      const by = clamp(f.h * 0.44 - bh * 0.5, 64 * dpr, Math.max(64 * dpr, f.h - bh - 120 * dpr));
+      drawRoundedRect(ctx, bx, by, bw, bh, 12 * dpr);
+      ctx.fillStyle = best.isSpk
+        ? (isHoverBtn ? "rgba(196, 62, 46, 0.96)" : "rgba(166, 50, 38, 0.92)")
+        : (isHoverBtn ? "rgba(44, 33, 22, 0.94)" : "rgba(22, 17, 13, 0.84)");
+      ctx.fill();
+      ctx.lineWidth = (isHoverBtn ? 1.6 : 1.2) * dpr;
+      ctx.strokeStyle = best.isSpk || isHoverBtn ? "rgba(250, 224, 156, 0.94)" : "rgba(212, 166, 87, 0.65)";
+      ctx.stroke();
+      ctx.fillStyle = best.isSpk || isHoverBtn ? "#fff8eb" : "#f5e6c8";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(tag, bx + bw * 0.5, by + bh * 0.52);
+      ctx.restore();
+      state.fpGlanceButtons.push({ key: btnKey, seatId: s.id, isRecenter: false, x: bx, y: by, w: bw, h: bh });
+    };
+    drawEdgeGlance(offLeft, -1);
+    drawEdgeGlance(offRight, 1);
+
+    // Subtle 1-click Recenter Pill whenever player has turned head or zoomed away from front center
+    const isOffCenterFp = Math.abs(stage3d.orbit.fpYaw || 0) > 0.34 || Math.abs(stage3d.orbit.fpFovOffset || 0) > 3;
+    if (isOffCenterFp) {
+      const recKey = "RECENTER";
+      const isHoverRec = state.hoverFpGlanceKey === recKey;
+      const recTag = "↺ 回正視線";
+      ctx.save();
+      const rFont = "700 " + Math.round(10 * dpr) + "px 'Noto Sans TC', sans-serif";
+      ctx.font = rFont;
+      const rw = ctx.measureText(recTag).width + 18 * dpr;
+      const rh = 22 * dpr;
+      const rx = (f.w - rw) * 0.5;
+      const ry = Math.max(54 * dpr, Math.min(72 * dpr, f.h * 0.13));
+      drawRoundedRect(ctx, rx, ry, rw, rh, 11 * dpr);
+      ctx.fillStyle = isHoverRec ? "rgba(44, 33, 22, 0.94)" : "rgba(22, 17, 13, 0.80)";
+      ctx.fill();
+      ctx.lineWidth = (isHoverRec ? 1.5 : 1.1) * dpr;
+      ctx.strokeStyle = isHoverRec ? "rgba(250, 224, 156, 0.94)" : "rgba(212, 166, 87, 0.62)";
+      ctx.stroke();
+      ctx.fillStyle = isHoverRec ? "#fff8eb" : "#f5e6c8";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(recTag, rx + rw * 0.5, ry + rh * 0.52);
+      ctx.restore();
+      state.fpGlanceButtons.push({ key: recKey, seatId: pidEdge, isRecenter: true, x: rx, y: ry, w: rw, h: rh });
+    }
+  }
 
   // Skip 2D beams AND 2D flat drag tether (rendered in real 3D space now!), keep bubbles, hover tooltip, bursts & VFX popups!
   drawStageOverlays(ctx, f, coords, true);

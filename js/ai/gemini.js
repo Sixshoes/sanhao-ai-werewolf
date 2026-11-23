@@ -238,7 +238,7 @@ function parseGeminiStructuredSpeech(rawText) {
           });
           return out;
         };
-        const cr = (obj.claimRole === "seer" || obj.claimRole === "witch" || obj.claimRole === "hunter" || obj.claimRole === "guard") ? obj.claimRole : null;
+        const cr = (obj.claimRole === "seer" || obj.claimRole === "witch" || obj.claimRole === "hunter" || obj.claimRole === "guard" || obj.claimRole === "elder") ? obj.claimRole : null;
         const emoAllow = ["calm", "sharp", "warm", "urgent", "defensive"];
         const emo = (typeof obj.emotion === "string" && emoAllow.indexOf(obj.emotion) !== -1) ? obj.emotion : null;
         return {
@@ -279,11 +279,14 @@ function syncGeminiSpeechMeta(speaker, generated, liveRes) {
     return (typeof sanitizeSpeechMeta === "function") ? sanitizeSpeechMeta(speaker, generated) : generated;
   }
 
+  const syncSnap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(speaker, { module: "gemini_sync" })
+    : null;
   const canTarget = function (id, forAccuse) {
     if (!id || id === speaker.id) return false;
-    const st = typeof getSeat === "function" ? getSeat(id) : null;
+    const st = syncSnap ? syncSnap.getSeat(id) : (typeof getSeat === "function" ? getSeat(id) : null);
     if (!st || !st.alive) return false;
-    if (forAccuse && speaker.role === "wolf" && st.role === "wolf") return false;
+    if (forAccuse && speaker.role === "wolf" && (syncSnap ? st.isWolfMate : st.role === "wolf")) return false;
     return true;
   };
 
@@ -328,21 +331,28 @@ function syncGeminiSpeechMeta(speaker, generated, liveRes) {
   return (typeof sanitizeSpeechMeta === "function") ? sanitizeSpeechMeta(speaker, generated) : generated;
 }
 
-async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
-  const flvObj = PERSONA_FLAVORS[speaker.name] || {};
-  const flvBio = flvObj.bio ? flvObj.bio : speaker.trait;
+function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(speaker, { module: "gemini_prompt" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : speaker;
+  const flvObj = PERSONA_FLAVORS[self.name] || {};
+  const flvBio = flvObj.bio ? flvObj.bio : self.trait;
   const vs = flvObj.voiceStyle || null;
   const styleSamples = vs
     ? ("【你的專屬口語口癖範例（務必融入台詞開頭與收尾）】：開場「" + (vs.lead || []).slice(0, 2).join(" / ") + "」｜反駁「" + (vs.rebutLead || []).slice(0, 1).join("") + "」｜收尾「" + (vs.signoff || []).slice(0, 1).join("") + "」。\n")
     : "";
-  const day = state.match.day;
-  const todayLogs = state.match.logs.filter(function (l) { return l.day === day && l.kind === "speech"; });
+  const day = snap ? snap.day : state.match.day;
+  const pidNow = snap ? snap.playerSeatId : getPlayerId();
+  const publicLogs = snap ? snap.publicLogs : state.match.logs.filter(function (l) { return l.kind !== "secret"; });
+  const todayLogs = publicLogs.filter(function (l) { return l.day === day && l.kind === "speech"; });
   const spokenIds = todayLogs.map(function (l) { return l.speakerId; });
-  const aliveList = getAliveSeats().map(function (s) {
-    return fmtSeatNum(s.id) + "號" + (s.id === getPlayerId() ? "玩家你" : s.name) + (spokenIds.indexOf(s.id) !== -1 ? "(今日已發言)" : (s.id === speaker.id ? "(正在發言)" : "(今日尚未發言)"));
+  const aliveList = (snap ? snap.aliveSeats : getAliveSeats()).map(function (s) {
+    return fmtSeatNum(s.id) + "號" + (s.id === pidNow ? "玩家你" : s.name) + (spokenIds.indexOf(s.id) !== -1 ? "(今日已發言)" : (s.id === self.id ? "(正在發言)" : "(今日尚未發言)"));
   }).join("、");
 
   const slotCtx = (typeof buildSpeechContext === "function") ? buildSpeechContext(speaker) : null;
+  const readSeat = snap ? snap.getSeat : getSeat;
   let pitContextNote = "";
   if (slotCtx) {
     pitContextNote += "【你的順位時序】：" + (slotCtx.positionTag || "中置位") + "。";
@@ -350,7 +360,7 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
       pitContextNote += "前置位焦點：" + slotCtx.callbackPhrase;
     }
     if (slotCtx.wolfPitOnMe) {
-      const caller = getSeat(slotCtx.wolfPitOnMe.speakerId);
+      const caller = readSeat(slotCtx.wolfPitOnMe.speakerId);
       pitContextNote += "前置位 " + fmtSeatNum(slotCtx.wolfPitOnMe.speakerId) + "號" + (caller ? caller.name : "") + "剛才把你點進狼坑了，你必須第一句正面回應並解釋自己不在狼坑！";
     }
     if (slotCtx.dualSeerWorlds) {
@@ -366,34 +376,44 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
     ? todayLogs.map(function (l) { return l.title + "：「" + l.text + "」"; }).join("\n")
     : "（你是今天第一位發言者，目前還沒有任何人發言過！）";
 
-  let secretIntel = "你的真實底牌：" + ROLE_DEFS[speaker.role].name + "（陣營：" + (speaker.team === "wolf" ? "酸民狼" : "好人") + "）。";
-  if (speaker.role === "seer" && speaker.checkedHistory.length > 0) {
-    secretIntel += "你已查驗的絕對真相：" + speaker.checkedHistory.map(function (c) {
+  const spEffKey = self.effectiveRoleKey || (typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(speaker) : self.role);
+  const spRoleDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(speaker) : null) || ROLE_DEFS[self.role];
+  let secretIntel = "你的真實底牌：" + (spRoleDef ? spRoleDef.name : "書院夥伴") + "（陣營：" + (self.team === "wolf" ? "酸民狼" : "好人") + "）。";
+  if (self.role === "seer" && (self.checkedHistory || []).length > 0) {
+    secretIntel += "你已查驗的絕對真相：" + self.checkedHistory.map(function (c) {
       return fmtSeatNum(c.targetId) + "號=" + (c.isWolf ? "酸民狼" : "好人");
     }).join("、") + "。";
-  } else if (speaker.role === "witch" && speaker.savedSeatId) {
-    secretIntel += "你之前護回過 " + fmtSeatNum(speaker.savedSeatId) + "號（他確定是好人）。";
-  } else if (speaker.role === "wolf") {
-    const mates = state.match.seats.filter(function (s) { return s.role === "wolf" && s.id !== speaker.id; });
-    if (mates.length > 0) secretIntel += "你的狼同伴是：" + mates.map(function (m) { return fmtSeatNum(m.id) + "號" + m.name; }).join("、") + "（絕不可出賣同伴，要偽裝好人並自然帶點挑撥語氣栽贓好人）。";
+  } else if (self.role === "witch" && self.savedSeatId) {
+    secretIntel += "你之前護回過 " + fmtSeatNum(self.savedSeatId) + "號（他確定是好人）。";
+  } else if (self.role === "guard" && snap && snap.lastGuardTargetId) {
+    secretIntel += "你昨晚展開護心結界守護過 " + fmtSeatNum(snap.lastGuardTargetId) + "號（今晚不可連守同一人，且須防與回甘茶同守破盾）。";
+  } else if (self.isElder) {
+    secretIntel += self.elderShieldUsed
+      ? "你已發動過清心長老豁免盾（目前無公投投票權，但發言具高公信力，應帶領好人歸票）。"
+      : "你擁有清心長老首次公投豁免盾（被誤投一次不會離席，可大膽替神職分擔火力）。";
+  } else if (self.role === "wolf") {
+    const mates = snap ? snap.knownWolfMates : [];
+    if (mates.length > 0) secretIntel += "你的狼同伴是：" + mates.map(function (m) { return fmtSeatNum(m.id) + "號" + m.name; }).join("、") + "（絕不可出賣同伴，且你並不知道好人之中誰是真神職，要偽裝好人並自然帶點挑撥語氣栽贓好人）。";
+    if (self.isWolfKing) secretIntel += "你同時是流言首領（白天被公投請離時可發動最後帶風向帶走 1 位在席夥伴）。";
   }
 
-  const playbookKey = speaker.role === "wolf"
-    ? (speaker.fakeSeer ? "wolf_fake_seer" : "wolf_stealth")
-    : (ROLE_STRATEGY_PLAYBOOKS[speaker.role] ? speaker.role : "villager");
+  const playbookKey = self.role === "wolf"
+    ? (self.fakeSeer ? "wolf_fake_seer" : (self.isWolfKing && ROLE_STRATEGY_PLAYBOOKS.wolf_king ? "wolf_king" : "wolf_stealth"))
+    : (ROLE_STRATEGY_PLAYBOOKS[spEffKey] ? spEffKey : (ROLE_STRATEGY_PLAYBOOKS[self.role] ? self.role : "villager"));
   const rolePlaybook = ROLE_STRATEGY_PLAYBOOKS[playbookKey];
 
-  const claimsSummary = state.match.seats
-    .filter(function (s) { return s.claimedRole; })
-    .map(function (s) { return fmtSeatNum(s.id) + "號" + (s.id === getPlayerId() ? "玩家你" : s.name) + "自稱" + ROLE_DEFS[s.claimedRole].name; })
+  const claimsSummary = (snap ? snap.seats : [])
+    .filter(function (s) { return s.claimedRole && ROLE_DEFS[s.claimedRole]; })
+    .map(function (s) { return fmtSeatNum(s.id) + "號" + (s.id === pidNow ? "玩家你" : s.name) + "自稱" + ROLE_DEFS[s.claimedRole].name; })
     .join("、") || "目前無人亮明神職身分";
 
   let priorRoundsArchive = "（目前為第 1 天，尚無前幾輪歷史紀錄）";
+  const voteHist = snap ? snap.voteHistory : (state.match.voteHistory || []);
   if (day >= 2) {
     const roundBlocks = [];
     for (let d = 1; d < day; d++) {
-      const dSpeeches = state.match.logs.filter(function (l) { return l.day === d && l.kind === "speech"; });
-      const dVote = state.match.voteHistory.find(function (vh) { return vh.day === d; });
+      const dSpeeches = publicLogs.filter(function (l) { return l.day === d && l.kind === "speech"; });
+      const dVote = voteHist.find(function (vh) { return vh.day === d; });
       const spText = dSpeeches.length > 0
         ? dSpeeches.map(function (l) { return "  - " + l.title + "：「" + l.text + "」"; }).join("\n")
         : "  - （無發言紀錄）";
@@ -405,44 +425,49 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
     priorRoundsArchive = roundBlocks.join("\n");
   }
 
-  const mindDesc = speaker.deductionStyle === "gullible"
+  const mindDesc = self.deductionStyle === "gullible"
     ? "思考風格：溫和輕信派（容易被先亮明身分或語氣溫暖的人說服，但仍會自然表達困惑）"
-    : (speaker.deductionStyle === "skeptical"
+    : (self.deductionStyle === "skeptical"
       ? "思考風格：審慎求證派（絕不會因為有人跳明心觀察員或滴水奉茶師就馬上相信！會綜合比對前面所有人的發言找邏輯漏洞）"
       : "思考風格：平衡綜合派（會把前面所有人的發言串起來交叉比對，理性權衡真假身分與站邊關係）");
-  const inPkNow = Boolean(typeof isPkVoteActive === "function" && isPkVoteActive() && state.match.pkCandidates.indexOf(speaker.id) !== -1);
+  const inPkNow = Boolean(snap && snap.pkActive && snap.pkCandidates.indexOf(self.id) !== -1);
   const pkHint = inPkNow
-    ? ("【緊急平票 PK 狀態】：你正與其他平票候選人（" + state.match.pkCandidates.join("號、") + "號）進入搶救拉票 PK，第一句就必須搶救清白並明確對比另位平票對手！\n")
+    ? ("【緊急平票 PK 狀態】：你正與其他平票候選人（" + snap.pkCandidates.join("號、") + "號）進入搶救拉票 PK，第一句就必須搶救清白並明確對比另位平票對手！\n")
     : "";
-  const shId = state.match.sheriffSeatId;
-  const shSeat = shId ? getSeat(shId) : null;
+  const shId = snap ? snap.sheriffSeatId : state.match.sheriffSeatId;
+  const shSeat = shId ? readSeat(shId) : null;
   const sheriffLine = (shSeat && shSeat.alive)
-    ? ("👑 本局警長（1.5票＆末置位歸票權）：" + fmtSeatNum(shSeat.id) + "號" + (shSeat.id === getPlayerId() ? "玩家你" : shSeat.name) + (shSeat.id === speaker.id ? "（就是你本人，務必在末置位歸總全場坑位）" : "") + "；")
+    ? ("👑 本局警長（1.5票＆末置位歸票權）：" + fmtSeatNum(shSeat.id) + "號" + (shSeat.id === pidNow ? "玩家你" : shSeat.name) + (shSeat.id === self.id ? "（就是你本人，務必在末置位歸總全場坑位）" : "") + "；")
     : "目前場上無警長；";
   const fgNotes = [];
-  if (Array.isArray(state.match.fourGJoySuspects) && state.match.fourGJoySuspects.length > 0) {
-    fgNotes.push("給歡喜曾笑僵對象：" + state.match.fourGJoySuspects.map(function (id) { return fmtSeatNum(id) + "號"; }).join("＋"));
+  if (snap && Array.isArray(snap.fourGJoySuspects) && snap.fourGJoySuspects.length > 0) {
+    fgNotes.push("給歡喜曾笑僵對象：" + snap.fourGJoySuspects.map(function (id) { return fmtSeatNum(id) + "號"; }).join("＋"));
   }
-  if (Array.isArray(state.match.fourGHopePair) && state.match.fourGHopePair.length === 2) {
-    fgNotes.push("給希望雙光必有1狼：" + fmtSeatNum(state.match.fourGHopePair[0]) + "號 與 " + fmtSeatNum(state.match.fourGHopePair[1]) + "號");
+  if (snap && Array.isArray(snap.fourGHopePair) && snap.fourGHopePair.length === 2) {
+    fgNotes.push("給希望雙光必有1狼：" + fmtSeatNum(snap.fourGHopePair[0]) + "號 與 " + fmtSeatNum(snap.fourGHopePair[1]) + "號");
   }
-  if (state.match.convenienceRallyTargetId) {
-    fgNotes.push("給方便歸票焦點：" + fmtSeatNum(state.match.convenienceRallyTargetId) + "號");
+  if (snap && snap.convenienceRallyTargetId) {
+    fgNotes.push("給方便歸票焦點：" + fmtSeatNum(snap.convenienceRallyTargetId) + "號");
   }
-  if (state.match.activeDirectorEvent) {
-    fgNotes.push("今日茶會事件：「" + state.match.activeDirectorEvent.shortTitle + "」");
+  if (snap && snap.activeDirectorEvent) {
+    fgNotes.push("今日茶會事件：「" + snap.activeDirectorEvent.shortTitle + "」");
   }
-  const hasGuardRole = state.match.seats.some(function (s) { return s.role === "guard"; });
+  // Zero-Leak: Public board configuration only (NEVER scans hidden seats[].role === "guard"!)
+  const hasGuardRole = snap ? snap.hasGuardMode : Boolean(state.guardMode && state.match && state.match.totalSeats >= 8);
   const aowuEndgameNote = "【凹嗚規則準則】：採標準屠邊制（狼刀在先），最後一神若是直心糾察長在夜間被狼鎖定將直接屠神結束且無法開槍" + (hasGuardRole ? "；本局含護心守衛，須防與回甘茶同守同救破盾！" : "。");
 
-  const ledgerObj = (day >= 2 && typeof buildCrossDayMemoryLedger === "function") ? buildCrossDayMemoryLedger(speaker) : null;
+  const ledgerObj = (day >= 2 && typeof buildCrossDayMemoryLedger === "function") ? buildCrossDayMemoryLedger(speaker, snap) : null;
   const ledgerNote = (ledgerObj && ledgerObj.lines && ledgerObj.lines.length)
     ? ("【跨日恩怨與矛盾記憶帳本】：\n- " + ledgerObj.lines.join("\n- ") + "\n")
     : "";
 
+  const lastCas = (snap && Array.isArray(snap.lastNightCasualties)) ? snap.lastNightCasualties : [];
+  const totalSeatsNow = snap ? snap.totalSeats : ((state.match && state.match.totalSeats) || 8);
+  const fallbackText = (fallbackMeta && fallbackMeta.text) ? fallbackMeta.text : "";
+
   const prompt =
     "你正在參與林美山書院茶席推理遊戲《三好AI狼人殺》（融入存好心、說好話、做好事理念，以理性防制網路酸言與假訊息取代傳統陰暗衝突，所有「出局」改為請離席冷靜）。\n" +
-    "你扮演：" + fmtSeatNum(speaker.id) + "號「" + speaker.name + "」。個性鮮明設定：" + flvBio + "。\n" +
+    "你扮演：" + fmtSeatNum(self.id) + "號「" + self.name + "」。個性鮮明設定：" + flvBio + "。\n" +
     styleSamples +
     mindDesc + "。\n" +
     secretIntel + "\n" +
@@ -450,22 +475,34 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
     (pitContextNote ? (pitContextNote + "\n") : "") +
     ledgerNote +
     "【你的專屬身分玩法攻略（務必遵守）】：\n" + rolePlaybook + "\n" +
-    "【當前局勢情報】：第 " + day + " 天白天｜昨夜結果：" + ((state.match.lastNightCasualties && state.match.lastNightCasualties.length > 0) ? (state.match.lastNightCasualties.map(function (id) { return id + "號離席"; }).join("、")) : "平安夜無人離席") + "｜" + sheriffLine + (fgNotes.length ? ("公開茶席線索（" + fgNotes.join("、") + "）｜") : "") + "在場座位：" + aliveList + "\n" +
+    "【當前局勢情報】：第 " + day + " 天白天｜昨夜結果：" + (lastCas.length > 0 ? (lastCas.map(function (id) { return id + "號離席"; }).join("、")) : "平安夜無人離席") + "｜" + sheriffLine + (fgNotes.length ? ("公開茶席線索（" + fgNotes.join("、") + "）｜") : "") + "在場座位：" + aliveList + "\n" +
     aowuEndgameNote + "\n" +
     "【場上已宣稱身分】：" + claimsSummary + "\n" +
     "【前 1 至 " + Math.max(0, day - 1) + " 輪完整歷史發言與票型檔案】：\n" + priorRoundsArchive + "\n" +
     "【今天（第 " + day + " 輪）到目前為止的真實發言逐字稿】：\n" + transcript + "\n" +
-    "【本輪基礎戰術參考】（請結合上方真實逐字稿與身分攻略靈活發揮）：" + fallbackMeta.text + "\n" +
+    "【本輪基礎戰術參考】（請結合上方真實逐字稿與身分攻略靈活發揮）：" + fallbackText + "\n" +
     "嚴格規則：\n" +
     "1. 【最高優先】必須嚴守今日發言時序並點好人坑與狼人坑！被前置位點進狼坑或指認時第一句必須回應；雙觀察員對跳時務必比較站 A 坑與站 B 坑分別在哪！\n" +
     "2. 【獨立綜合判斷】你完全不知道其他人的真實底牌（除同伴或觀察員親查對象外）！必須參考前面「所有」已發言者的話來綜合判斷誰在狼坑、誰在好人坑。\n" +
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
     "4. 【嚴禁 AI 報告腔】禁止出現「根據上述資料」「綜上所述」「第一點、第二點」或系統旁白！要像台灣真人圍坐喝茶聊推理，自然接前一位的話回嘴或讚聲，用你的專屬口癖開場與俐落「過！」收尾。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
-    "6. 保持鮮明口語節奏（" + ((state.match && state.match.totalSeats >= 10) ? "50～90字" : "65～115字") + "、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
-    '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":"seer"|"witch"|"hunter"|"guard"|null,"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
+    "6. 保持鮮明口語節奏（" + (totalSeatsNow >= 10 ? "50～90字" : "65～115字") + "、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
+    '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":"seer"|"witch"|"hunter"|"guard"|"elder"|null,"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
 
-  const rawOut = await callGeminiText(prompt, { jsonMode: true });
+  const audit = typeof auditLlmPromptLeak === "function"
+    ? auditLlmPromptLeak(snap, secretIntel, prompt)
+    : { ok: true, blockedReasons: [] };
+
+  return { prompt: prompt, secretIntel: secretIntel, snap: snap, audit: audit };
+}
+
+async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
+  const built = buildBlindGeminiSpeechPrompt(speaker, fallbackMeta);
+  if (!built || !built.audit || !built.audit.ok) {
+    return null;
+  }
+  const rawOut = await callGeminiText(built.prompt, { jsonMode: true });
   const parsed = rawOut ? parseGeminiStructuredSpeech(rawOut) : null;
   if (parsed && parsed.text && typeof voice !== "undefined" && voice.localNeuralAvailable && typeof voice.prefetchFreeLocalNeural === "function") {
     const segs = typeof voice.splitTwoStageStream === "function" ? voice.splitTwoStageStream(voice.formatMandarinText(parsed.text)) : [parsed.text];

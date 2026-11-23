@@ -1,5 +1,6 @@
 .DS_Store
 .venv/
 .tts_cache/
+.feedback_inbox/
 __pycache__/
 *.pyc

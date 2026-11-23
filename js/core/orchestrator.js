@@ -84,6 +84,9 @@ const orchestrator = {
   beginNewEpoch: function (reason) {
     this.matchEpoch += 1;
     this.clearAllTimers();
+    if (typeof antiCheatMonitor !== "undefined" && typeof antiCheatMonitor.resetMatch === "function") {
+      antiCheatMonitor.resetMatch();
+    }
     if (typeof state !== "undefined" && state.match) {
       state.match.activeDirectorEvent = null;
       state.match.directorEventClearedDay = 0;
@@ -476,6 +479,9 @@ const orchestrator = {
     if (agentName === "GodViewAnalystAgent") {
       const m = typeof state !== "undefined" ? state.match : {};
       const st = m.stats || {};
+      const acSummary = (typeof antiCheatMonitor !== "undefined" && typeof antiCheatMonitor.getSummary === "function")
+        ? antiCheatMonitor.getSummary()
+        : null;
       const summary = {
         winnerTeam: p.winnerTeam || m.winner || "good",
         reason: p.reason || m.winReason || "",
@@ -483,6 +489,7 @@ const orchestrator = {
         geminiHits: this.stats.geminiHits,
         heuristicHits: this.stats.heuristicHits,
         complianceFiltered: this.stats.complianceFiltered,
+        antiCheat: acSummary,
         eventsTriggered: (m.usedDirectorEventIds || []).slice(),
         kindnessHighlight: "說好話 " + (st.goodWordsCount || 0) + " 次・轉譯暴擊 " + (st.rewritesUsed || 0) + " 次・最高連擊 " + (m.maxCombo || 0)
       };

@@ -237,6 +237,7 @@ for (let i = 0; i < 60; i++) {
     if (el("chkGuardMode")) el("chkGuardMode").checked = ${JSON.stringify(guardOn)};
     voice.enabled = false;
     state.autoPlay = false;
+    if (typeof antiCheatMonitor !== "undefined") antiCheatMonitor.strictThrow = true;
     startNewGame();
     indieFlow.hideRoleDealRitual();
   `, ctx);
@@ -406,6 +407,11 @@ for (let i = 0; i < 60; i++) {
   else throw new Error(`Match ${i}: unexpected winner=${w}`);
   if (sawPk) pkTriggeredMatches += 1;
   if (gState.match.day > maxDaysSeen) maxDaysSeen = gState.match.day;
+
+  const acSum = vm.runInContext("typeof antiCheatMonitor !== 'undefined' ? antiCheatMonitor.getSummary() : null", ctx);
+  if (!acSum || acSum.violationsBlocked !== 0 || acSum.decisionsAudited <= 0) {
+    throw new Error(`Match ${i}: Anti-Cheat firewall failed! summary=${JSON.stringify(acSum)}`);
+  }
 
   ctx.resetMatchToLobby();
   if (gState.match.started || gState.match.phase !== "LOBBY" || gState.match.seats.length !== 0) {

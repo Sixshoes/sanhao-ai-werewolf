@@ -177,11 +177,11 @@ const voice = {
       const hintBox = document.getElementById("voiceQualityHintBox");
       if (lbl) {
         if (this.mode === "cozy") {
-          lbl.textContent = "目前：8角色療癒原音樂音（零機械感・3D定位）";
+          lbl.textContent = "目前：12角色療癒原音樂音（零機械感・3D定位）";
         } else if (this.localNeuralAvailable) {
-          lbl.textContent = "✨ 免費動漫多角色神經配音已連線（8 位真人級聲線・$0）";
+          lbl.textContent = "✨ 免費動漫多角色神經配音已連線（12 位真人級聲線・$0）";
         } else if (typeof state !== "undefined" && state.geminiApiKey) {
-          lbl.textContent = "已連線 Gemini Studio 8 位真人級配音";
+          lbl.textContent = "已連線 Gemini Studio 12 位真人級配音";
         } else if (bestScore >= 150) {
           lbl.textContent = "✨ 免費神經聲線：" + zh[0].name.split(" ")[0];
         } else if (bestScore >= 130) {

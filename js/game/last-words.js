@@ -4,16 +4,24 @@
 "use strict";
 
 function buildAiLastWords(seat, mode) {
-  const flv = PERSONA_FLAVORS[seat.name];
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(seat, { module: "last_words" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : seat;
+  const readSeat = snap ? snap.getSeat : getSeat;
+  const flv = PERSONA_FLAVORS[self.name];
   const isFirstNight = (mode === "first_night");
-  const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+  const pid = snap ? snap.playerSeatId : (typeof getPlayerId === "function" ? getPlayerId() : 1);
   const labelOf = function (s) {
     if (!s) return "";
     return fmtSeatNum(s.id) + "號" + (s.id === pid ? "你" : s.name);
   };
-  if (seat.role === "seer" && seat.checkedHistory && seat.checkedHistory.length > 0) {
-    const chk = seat.checkedHistory[seat.checkedHistory.length - 1];
-    const tSeat = getSeat(chk.targetId);
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("last_words", self.id, isFirstNight ? "首夜遺言" : "公投遺言");
+  }
+  if (self.role === "seer" && self.checkedHistory && self.checkedHistory.length > 0) {
+    const chk = self.checkedHistory[self.checkedHistory.length - 1];
+    const tSeat = readSeat(chk.targetId);
     const tLbl = labelOf(tSeat) || (fmtSeatNum(chk.targetId) + "號");
     return {
       text: (isFirstNight
@@ -24,8 +32,8 @@ function buildAiLastWords(seat, mode) {
       isWolf: chk.isWolf
     };
   }
-  if (seat.role === "witch") {
-    const sv = seat.savedSeatId ? getSeat(seat.savedSeatId) : null;
+  if (self.role === "witch") {
+    const sv = self.savedSeatId ? readSeat(self.savedSeatId) : null;
     return {
       text: sv
         ? ("我亮滴水奉茶師留遺言！之前是我用暖心回甘茶護回 " + labelOf(sv) + "，他是鐵好人，剩下靠大家穩住邏輯抓狼！")
@@ -35,9 +43,9 @@ function buildAiLastWords(seat, mode) {
       isWolf: false
     };
   }
-  if (seat.role === "guard") {
-    const gPrev = (typeof state !== "undefined" && state.match) ? state.match.lastGuardTargetId : null;
-    const gSeat = gPrev ? getSeat(gPrev) : null;
+  if (self.role === "guard") {
+    const gPrev = snap ? snap.lastGuardTargetId : ((typeof state !== "undefined" && state.match) ? state.match.lastGuardTargetId : null);
+    const gSeat = gPrev ? readSeat(gPrev) : null;
     return {
       text: gSeat
         ? ("我亮出護心守衛留遺言！上一晚我的護心結界剛守過 " + labelOf(gSeat) + "，奉茶師千萬別再對同位用藥撞破盾，剩下拜託大家穩住找狼！")
@@ -47,9 +55,9 @@ function buildAiLastWords(seat, mode) {
       isWolf: false
     };
   }
-  if (seat.role === "hunter") {
-    const aliveListH = getAliveSeats().filter(function (s) { return s.id !== seat.id; });
-    aliveListH.sort(function (a, b) { return (seat.suspicionMap[b.id] || 50) - (seat.suspicionMap[a.id] || 50); });
+  if (self.role === "hunter") {
+    const aliveListH = (snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== self.id; })).slice();
+    aliveListH.sort(function (a, b) { return ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50); });
     const hTop = aliveListH[0] || null;
     return {
       text: "我亮直心糾察長留遺言！" + (hTop ? ("我覺得場上最可疑的是 " + labelOf(hTop) + "，") : "") + "大家一定要從這輪票型跟對跳邏輯抓出剩餘酸民狼！",
@@ -58,7 +66,7 @@ function buildAiLastWords(seat, mode) {
       isWolf: hTop ? true : null
     };
   }
-  if (seat.team === "wolf") {
+  if (self.team === "wolf") {
     return {
       text: flv ? flv.lastWolf.replace(/^「|」$/g, "") : "可惡竟然被看穿破綻了，大家邏輯好強，我乖乖離席休息！",
       claimRole: null,
@@ -66,15 +74,15 @@ function buildAiLastWords(seat, mode) {
       isWolf: null
     };
   }
-  const aliveOthers = getAliveSeats().filter(function (s) { return s.id !== seat.id; });
-  const vHist = (typeof state !== "undefined" && state.match && Array.isArray(state.match.voteHistory)) ? state.match.voteHistory : [];
+  const aliveOthers = (snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== self.id; })).slice();
+  const vHist = snap ? snap.voteHistory : ((typeof state !== "undefined" && state.match && Array.isArray(state.match.voteHistory)) ? state.match.voteHistory : []);
   const lastVh = vHist.length ? vHist[vHist.length - 1] : null;
   const votersAgainstMe = (!isFirstNight && lastVh && Array.isArray(lastVh.ballots))
     ? lastVh.ballots
-      .filter(function (b) { return b.targetId === seat.id && b.voterId !== seat.id; })
-      .map(function (b) { return getSeat(b.voterId); })
+      .filter(function (b) { return b.targetId === self.id && b.voterId !== self.id; })
+      .map(function (b) { return readSeat(b.voterId); })
       .filter(function (s) { return Boolean(s && s.alive); })
-      .sort(function (a, b) { return (seat.suspicionMap[b.id] || 50) - (seat.suspicionMap[a.id] || 50); })
+      .sort(function (a, b) { return ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50); })
     : [];
 
   if (!isFirstNight && votersAgainstMe.length > 0) {
@@ -88,7 +96,7 @@ function buildAiLastWords(seat, mode) {
   }
 
   const wolfTotalLw = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
-  aliveOthers.sort(function (a, b) { return (seat.suspicionMap[b.id] || 50) - (seat.suspicionMap[a.id] || 50); });
+  aliveOthers.sort(function (a, b) { return ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50); });
   const topSus = aliveOthers[0] || null;
   return {
     text: isFirstNight

@@ -445,7 +445,7 @@ const indieFlow = {
       });
     }
     // Auto-close Pause Menu when jumping into a sub-modal
-    ["btnOpenMusicModal", "btnOpenAiModal", "btnOpenGuide", "btnOpenCareer", "btnOpenTutorial", "btnRestartTop"].forEach(function (id) {
+    ["btnOpenMusicModal", "btnOpenAiModal", "btnOpenGuide", "btnOpenCareer", "btnOpenTutorial", "btnOpenTutorialPause", "btnRestartTop"].forEach(function (id) {
       const b = el(id);
       if (b) b.addEventListener("click", function () { self.openPauseMenu(false); });
     });

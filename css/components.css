@@ -3632,3 +3632,349 @@ body.craft-ui.theme-day .vote-goodwill-badge.is-hint {
     right: 4px;
   }
 }
+
+/* ==================== V8.1 CLEAR 6-CHAPTER INTERACTIVE TUTORIAL ==================== */
+.tut-tab-strip {
+  background: rgba(15, 11, 8, 0.36);
+}
+
+.tut-step-tab {
+  padding: 4px 9px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid rgba(212, 166, 87, 0.28);
+  background: rgba(24, 19, 15, 0.72);
+  color: var(--text-sub);
+  transition: all 0.16s ease;
+  cursor: pointer;
+}
+
+.tut-step-tab:hover {
+  border-color: rgba(212, 166, 87, 0.65);
+  color: var(--text-main);
+}
+
+.tut-step-tab.is-active {
+  background: rgba(212, 166, 87, 0.24);
+  border-color: var(--accent-gold);
+  color: #fde68a;
+  box-shadow: 0 2px 10px rgba(212, 166, 87, 0.2);
+}
+
+.tut-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  line-height: 1.55;
+}
+
+.tut-card.tut-tone-good {
+  background: rgba(6, 78, 59, 0.34);
+  border-color: rgba(52, 211, 153, 0.42);
+}
+
+.tut-card.tut-tone-wolf {
+  background: rgba(136, 19, 55, 0.34);
+  border-color: rgba(251, 113, 133, 0.45);
+}
+
+.tut-card.tut-tone-gold {
+  background: rgba(120, 53, 15, 0.28);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+.tut-card-title {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.tut-card-body {
+  font-size: 11.5px;
+  color: #e2e8f0;
+}
+
+.tut-step-pill {
+  padding: 7px 6px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.68);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #f1f5f9;
+}
+
+.tut-role-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  color: #e2e8f0;
+  line-height: 1.45;
+}
+
+.tut-role-item.tut-role-wolf {
+  background: rgba(136, 19, 55, 0.28);
+  border-color: rgba(251, 113, 133, 0.4);
+}
+
+.tut-role-badge {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.tut-tip-bar {
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(212, 166, 87, 0.14);
+  border: 1px solid rgba(212, 166, 87, 0.36);
+  color: #fef3c7;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.tut-kbd-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 8px;
+  font-size: 11px;
+  color: #e2e8f0;
+}
+
+/* Daylight Xuan-Paper Parity for Interactive Tutorial */
+body.craft-ui.theme-day .tut-tab-strip {
+  background: rgba(235, 224, 202, 0.55);
+}
+
+body.craft-ui.theme-day .tut-step-tab {
+  background: rgba(252, 247, 236, 0.92);
+  border-color: rgba(140, 104, 60, 0.32);
+  color: #5c4935;
+}
+
+body.craft-ui.theme-day .tut-step-tab.is-active {
+  background: rgba(180, 125, 42, 0.18);
+  border-color: #9a6823;
+  color: #6b430e;
+}
+
+body.craft-ui.theme-day .tut-card,
+body.craft-ui.theme-day .tut-role-item,
+body.craft-ui.theme-day .tut-step-pill {
+  background: rgba(250, 244, 232, 0.96);
+  border-color: rgba(140, 104, 60, 0.3);
+  color: #2c2219;
+}
+
+body.craft-ui.theme-day .tut-card-body,
+body.craft-ui.theme-day .tut-kbd-grid {
+  color: #3a2d21;
+}
+
+body.craft-ui.theme-day .tut-card.tut-tone-good {
+  background: rgba(214, 244, 231, 0.72);
+  border-color: rgba(36, 106, 80, 0.38);
+}
+
+body.craft-ui.theme-day .tut-card.tut-tone-wolf,
+body.craft-ui.theme-day .tut-role-item.tut-role-wolf {
+  background: rgba(252, 226, 224, 0.72);
+  border-color: rgba(166, 50, 38, 0.38);
+}
+
+body.craft-ui.theme-day .tut-card.tut-tone-gold,
+body.craft-ui.theme-day .tut-tip-bar {
+  background: rgba(250, 238, 208, 0.85);
+  border-color: rgba(158, 108, 38, 0.42);
+  color: #5e3b0f;
+}
+
+/* ===== TOP-RIGHT USER FEEDBACK ENTRY & MODAL (ZERO !important, FULL RWD + DAYLIGHT PARITY) ===== */
+.title-feedback-btn {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 26;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fbecc8;
+  background: linear-gradient(135deg, rgba(36, 26, 18, 0.9) 0%, rgba(22, 16, 12, 0.86) 100%);
+  border: 1px solid rgba(212, 166, 87, 0.62);
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 206, 0.18), 0 8px 22px rgba(0, 0, 0, 0.36);
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.18s ease;
+}
+
+.title-feedback-btn:hover {
+  transform: translateY(-1px);
+  border-color: #f0c774;
+  background: linear-gradient(135deg, rgba(56, 39, 25, 0.95) 0%, rgba(30, 22, 15, 0.92) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 242, 210, 0.28), 0 10px 26px rgba(180, 125, 42, 0.32);
+}
+
+body.screen-ingame .title-feedback-btn,
+body.hero-showcase-active .title-feedback-btn {
+  display: none;
+}
+
+.hud-feedback-btn {
+  border-color: rgba(212, 166, 87, 0.56);
+  color: #f6e2b3;
+}
+
+.hud-feedback-btn:hover {
+  border-color: #f0c774;
+  color: #fff6df;
+}
+
+.fb-star-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(206, 170, 108, 0.25);
+  background: rgba(15, 23, 42, 0.72);
+  color: #64748b;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.14s ease, color 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.fb-star-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245, 196, 81, 0.65);
+}
+
+.fb-star-btn.is-lit {
+  color: #fbbf24;
+  background: rgba(212, 166, 87, 0.16);
+  border-color: rgba(245, 196, 81, 0.68);
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.45);
+}
+
+.fb-cat-btn {
+  padding: 7px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.fb-cat-btn:hover {
+  border-color: rgba(212, 166, 87, 0.55);
+  color: #fef3c7;
+}
+
+.fb-cat-btn.is-active {
+  background: rgba(180, 58, 46, 0.26);
+  border-color: #d4a657;
+  color: #fef3c7;
+  box-shadow: inset 0 0 0 1px rgba(212, 166, 87, 0.35);
+}
+
+.fb-env-preview {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(10, 14, 24, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #94a3b8;
+  font-size: 10.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.fb-env-preview.hidden {
+  display: none;
+}
+
+.fb-result-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.42);
+}
+
+.fb-result-card.hidden {
+  display: none;
+}
+
+.fb-history-item {
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+@media (max-width: 767px) {
+  .title-feedback-btn {
+    padding: 7px 11px;
+    font-size: 11px;
+  }
+
+  #inGameTopHud .feedback-btn-label {
+    display: none;
+  }
+}
+
+/* Daylight Xuan-Paper Theme Parity for User Feedback */
+body.craft-ui.theme-day .title-feedback-btn {
+  color: #5d3b10;
+  background: rgba(252, 246, 234, 0.92);
+  border-color: rgba(168, 118, 46, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 6px 18px rgba(72, 48, 20, 0.18);
+}
+
+body.craft-ui.theme-day .hud-feedback-btn {
+  color: #6b4310;
+  border-color: rgba(168, 118, 46, 0.56);
+}
+
+body.craft-ui.theme-day .fb-star-btn,
+body.craft-ui.theme-day .fb-cat-btn,
+body.craft-ui.theme-day .fb-env-preview,
+body.craft-ui.theme-day .fb-history-item {
+  background: rgba(250, 244, 232, 0.94);
+  border-color: rgba(140, 104, 60, 0.3);
+  color: #3a2d21;
+}
+
+body.craft-ui.theme-day .fb-star-btn.is-lit {
+  color: #b45309;
+  background: rgba(245, 196, 81, 0.25);
+  border-color: #b47824;
+}
+
+body.craft-ui.theme-day .fb-cat-btn.is-active {
+  background: rgba(180, 58, 46, 0.14);
+  border-color: #a63226;
+  color: #7c1f16;
+}
+
+body.craft-ui.theme-day .fb-result-card {
+  background: rgba(209, 244, 228, 0.72);
+  border-color: rgba(36, 106, 80, 0.42);
+}

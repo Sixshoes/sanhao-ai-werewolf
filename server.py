@@ -7,6 +7,7 @@
 3. 內建 .tts_cache/ 磁碟快取，重播或常見系統播報毫秒級零延遲
 """
 import asyncio
+import datetime
 import hashlib
 import json
 import os
@@ -29,6 +30,9 @@ VENV_PY = (
 )
 OLLAMA_BASE = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
 OLLAMA_MODEL_RE = re.compile(r"^[A-Za-z0-9._:/-]{1,96}$")
+FEEDBACK_DIR = ROOT_DIR / ".feedback_inbox"
+_FEEDBACK_LOCK = threading.Lock()
+ALLOWED_FEEDBACK_CATEGORIES = {"bug", "ui", "gameplay", "idea"}
 
 
 def strip_reasoning_tags(text):
@@ -446,6 +450,65 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
                 return True
         return False
 
+    def handle_post_feedback(self):
+        raw_len = self.headers.get("Content-Length", "0")
+        try:
+            length = int(raw_len)
+        except (TypeError, ValueError):
+            self.send_json(400, {"ok": False, "error": "Invalid Content-Length"})
+            return
+        if length < 0:
+            self.send_json(400, {"ok": False, "error": "Invalid Content-Length"})
+            return
+        if length > 8192:
+            self.send_json(413, {"ok": False, "error": "Feedback payload too large"})
+            return
+        raw = self.rfile.read(length)
+        try:
+            req = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.send_json(400, {"ok": False, "error": "Invalid JSON body"})
+            return
+        if not isinstance(req, dict):
+            self.send_json(400, {"ok": False, "error": "JSON body must be an object"})
+            return
+        raw_msg = req.get("message")
+        message = raw_msg.strip() if isinstance(raw_msg, str) else ""
+        if len(message) < 2:
+            self.send_json(400, {"ok": False, "error": "Empty feedback message"})
+            return
+        cat = str(req.get("category") or "idea").strip().lower()
+        if cat not in ALLOWED_FEEDBACK_CATEGORIES:
+            cat = "idea"
+        try:
+            rating = max(1, min(5, int(req.get("rating", 5))))
+        except (TypeError, ValueError):
+            rating = 5
+        nickname = str(req.get("nickname") or "").strip()[:32]
+        diag = req.get("diagnostics") if isinstance(req.get("diagnostics"), dict) else None
+        fb_id = f"fb_{uuid.uuid4().hex[:10]}"
+        record = {
+            "id": fb_id,
+            "receivedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "clientIp": self.client_address[0] if self.client_address else "",
+            "category": cat,
+            "rating": rating,
+            "nickname": nickname,
+            "message": message[:1500],
+            "diagnostics": diag,
+        }
+        try:
+            FEEDBACK_DIR.mkdir(parents=True, exist_ok=True)
+            inbox_file = FEEDBACK_DIR / "feedback.jsonl"
+            line = json.dumps(record, ensure_ascii=False) + "\n"
+            with _FEEDBACK_LOCK:
+                with inbox_file.open("a", encoding="utf-8") as fh:
+                    fh.write(line)
+        except OSError as exc:
+            self.send_json(500, {"ok": False, "error": f"Unable to save feedback: {str(exc)[:100]}"})
+            return
+        self.send_json(200, {"ok": True, "saved": True, "id": fb_id})
+
     def do_POST(self):
         route = self.path.split("?")[0]
         if not self.is_allowed_api_origin():
@@ -453,6 +516,9 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             return
         if route == "/api/local-llm":
             self.handle_post_local_llm()
+            return
+        if route == "/api/feedback":
+            self.handle_post_feedback()
             return
         if route != "/api/tts":
             self.send_json(404, {"ok": False, "error": "Not found"})
@@ -505,7 +571,11 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
                         try:
                             asyncio.run(synthesize_edge_mp3(text, voice_name, rate_str, pitch_str, tmp_path))
                             if tmp_path.exists() and tmp_path.stat().st_size >= 128:
-                                tmp_path.replace(mp3_path)
+                                try:
+                                    tmp_path.replace(mp3_path)
+                                except PermissionError:
+                                    if not mp3_path.exists():
+                                        mp3_path.write_bytes(tmp_path.read_bytes())
                                 global _TTS_WRITE_COUNTER
                                 _TTS_WRITE_COUNTER += 1
                                 if _TTS_WRITE_COUNTER % 20 == 0:
@@ -567,7 +637,11 @@ def prewarm_common_lines():
                         try:
                             asyncio.run(synthesize_edge_mp3(text, voice_name, rate_str, pitch_str, tmp_path))
                             if tmp_path.exists() and tmp_path.stat().st_size >= 128:
-                                tmp_path.replace(mp3_path)
+                                try:
+                                    tmp_path.replace(mp3_path)
+                                except PermissionError:
+                                    if not mp3_path.exists():
+                                        mp3_path.write_bytes(tmp_path.read_bytes())
                         finally:
                             try:
                                 if tmp_path.exists():

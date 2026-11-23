@@ -57,6 +57,36 @@ function beginNightPhase() {
   proceedToNightWolf();
 }
 
+function chooseAiGuardTarget(guardSeat, rngVal) {
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(guardSeat, { module: "night_guard", phase: "NIGHT_GUARD" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : guardSeat;
+  const aliveAll = snap ? snap.aliveSeats : getAliveSeats();
+  const bannedId = snap ? snap.lastGuardTargetId : (state.match.lastGuardTargetId || null);
+  const validPool = aliveAll.filter(function (s) { return s.id !== bannedId; });
+  const r = typeof rngVal === "number" ? rngVal : Math.random();
+  const skipFirstNightClash = (snap ? snap.day : state.match.day) === 1 && r < 0.18;
+  let pickId = null;
+  if (!skipFirstNightClash && validPool.length > 0) {
+    const exposedSeer = validPool.find(function (s) { return s.claimedRole === "seer" && ((self.suspicionMap && self.suspicionMap[s.id]) || 50) < 62; });
+    const shPending = snap ? snap.sheriffElectionPending : state.match.sheriffElectionPending;
+    const shId = snap ? snap.sheriffSeatId : state.match.sheriffSeatId;
+    const sheriffTgt = !shPending
+      ? validPool.find(function (s) { return s.id === shId && ((self.suspicionMap && self.suspicionMap[s.id]) || 50) < 60; })
+      : null;
+    const sortedTrusted = validPool.slice().sort(function (a, b) {
+      return ((self.suspicionMap && self.suspicionMap[a.id]) || 50) - ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
+    });
+    const pick = exposedSeer || sheriffTgt || sortedTrusted[0];
+    pickId = pick ? pick.id : null;
+  }
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("night_guard", self.id, pickId ? ("守護 " + pickId + "號") : "空守防破盾");
+  }
+  return pickId;
+}
+
 function proceedToNightGuard() {
   clearStepTimer();
   state.match.phase = "NIGHT_GUARD";
@@ -74,21 +104,10 @@ function proceedToNightGuard() {
     updateAllUI();
   } else {
     state.stepTimer = scheduleNightStep(function () {
-      const aliveAll = getAliveSeats();
-      const bannedId = state.match.lastGuardTargetId || null;
-      const validPool = aliveAll.filter(function (s) { return s.id !== bannedId; });
-      const skipFirstNightClash = state.match.day === 1 && Math.random() < 0.18;
-      if (!skipFirstNightClash && validPool.length > 0) {
-        const exposedSeer = validPool.find(function (s) { return s.claimedRole === "seer" && (guardSeat.suspicionMap[s.id] || 50) < 62; });
-        const sheriffTgt = !state.match.sheriffElectionPending
-          ? validPool.find(function (s) { return s.id === state.match.sheriffSeatId && (guardSeat.suspicionMap[s.id] || 50) < 60; })
-          : null;
-        const sortedTrusted = validPool.slice().sort(function (a, b) { return (guardSeat.suspicionMap[a.id] || 50) - (guardSeat.suspicionMap[b.id] || 50); });
-        const pick = exposedSeer || sheriffTgt || sortedTrusted[0];
-        if (pick) {
-          state.match.nightState.guardTarget = pick.id;
-          state.match.lastGuardTargetId = pick.id;
-        }
+      const pickId = chooseAiGuardTarget(guardSeat);
+      if (pickId) {
+        state.match.nightState.guardTarget = pickId;
+        state.match.lastGuardTargetId = pickId;
       } else {
         state.match.lastGuardTargetId = null;
       }
@@ -123,6 +142,7 @@ function applyWolfNightTactic(tacticKey) {
   if (primaryMate) {
     if (typeof setSeatBubble === "function") setSeatBubble(primaryMate.id, replyMap[key], "wolf", 5200);
     if (typeof setSeatEmotion === "function") setSeatEmotion(primaryMate.id, "proud", 3200);
+    if (typeof nudgeSeat === "function") nudgeSeat(primaryMate.id, { scale: 1.08, vy: -4 });
     if (typeof spawnBeam === "function") spawnBeam(pid, primaryMate.id, "#f43f5e", "grill", 700);
   }
   addLog({
@@ -146,14 +166,16 @@ function proceedToNightWolf() {
     const mate = state.match.seats.find(function (s) { return s.id !== getPlayerId() && s.alive && s.role === "wolf"; });
     const candidates = getAliveSeats().filter(function (s) { return s.role !== "wolf"; });
     if (mate && candidates.length > 0) {
-      const pick = chooseAiWolfTarget(candidates);
-      state.selectedSeatId = pick.id;
-      const planLine = mate.fakeSeer
-        ? ("噓…今晚我們先鎖定 " + fmtSeatNum(pick.id) + "號" + pick.name + "，明天白天我幫你冒充明心觀察員帶風向！")
-        : ("噓…我感覺 " + fmtSeatNum(pick.id) + "號" + pick.name + "很像核心好夥伴，今晚先請他暫離如何？已幫你標起來！");
-      setSeatBubble(mate.id, planLine, "wolf", 6800);
-      spawnBeam(mate.id, pick.id, "#f43f5e", "grill", 900);
-      addLog({ kind: "secret", title: "🐺 酸民狼密談（" + fmtSeatNum(mate.id) + "號" + mate.name + "）：", text: planLine });
+      const pick = chooseAiWolfTargetBlind(mate);
+      if (pick) {
+        state.selectedSeatId = pick.id;
+        const planLine = mate.fakeSeer
+          ? ("噓…今晚我們先鎖定 " + fmtSeatNum(pick.id) + "號" + pick.name + "，明天白天我幫你冒充明心觀察員帶風向！")
+          : ("噓…我感覺 " + fmtSeatNum(pick.id) + "號" + pick.name + "很像核心好夥伴，今晚先請他暫離如何？已幫你標起來！");
+        setSeatBubble(mate.id, planLine, "wolf", 6800);
+        spawnBeam(mate.id, pick.id, "#f43f5e", "grill", 900);
+        addLog({ kind: "secret", title: "🐺 酸民狼密談（" + fmtSeatNum(mate.id) + "號" + mate.name + "）：", text: planLine });
+      }
     }
     updateAllUI();
   } else {
@@ -164,49 +186,87 @@ function proceedToNightWolf() {
     }
     state.stepTimer = scheduleNightStep(function () {
       const wolves = getAliveSeats().filter(function (s) { return s.role === "wolf"; });
-      const goodTargets = getAliveSeats().filter(function (s) { return s.role !== "wolf"; });
-      if (wolves.length > 0 && goodTargets.length > 0) {
-        state.match.nightState.wolfTarget = chooseAiWolfTarget(goodTargets).id;
+      if (wolves.length > 0) {
+        const picked = chooseAiWolfTargetBlind(wolves[0]);
+        if (picked) state.match.nightState.wolfTarget = picked.id;
       }
       proceedToNightSeer();
     }, voice.canSpeak() ? 1250 : 820);
   }
 }
 
-function chooseAiWolfTarget(goodTargets) {
-  const diff = state.aiDifficulty || "normal";
+function chooseAiWolfTargetBlind(wolfSeat, rngVal) {
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(wolfSeat, { module: "night_wolf", phase: "NIGHT_WOLF" })
+    : null;
+  const goodTargets = snap
+    ? snap.aliveOthers.filter(function (s) { return !s.isWolfMate; })
+    : getAliveSeats().filter(function (s) { return s.role !== "wolf"; });
+  if (!goodTargets.length) return null;
+  const picked = chooseAiWolfTarget(goodTargets, { snap: snap, rngVal: rngVal });
+  if (typeof antiCheatMonitor !== "undefined" && wolfSeat) {
+    antiCheatMonitor.recordDecision("night_wolf", wolfSeat.id, picked ? ("夜襲 " + picked.id + "號") : "無目標");
+  }
+  return picked;
+}
+
+function chooseAiWolfTarget(goodTargets, opts) {
+  const o = opts || {};
+  const snap = o.snap || null;
+  const rand = typeof o.rngVal === "number" ? function () { return o.rngVal; } : Math.random;
+  const diff = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
   const seerChance = diff === "pro" ? 0.96 : (diff === "easy" ? 0.48 : 0.85);
   const witchChance = diff === "pro" ? 0.90 : (diff === "easy" ? 0.42 : 0.78);
   const guardChance = diff === "pro" ? 0.88 : (diff === "easy" ? 0.40 : 0.72);
   const exposedSeer = goodTargets.find(function (s) { return s.claimedRole === "seer"; });
-  if (exposedSeer && Math.random() < seerChance) return exposedSeer;
+  if (exposedSeer && rand() < seerChance) return exposedSeer;
   const exposedWitch = goodTargets.find(function (s) { return s.claimedRole === "witch"; });
-  if (exposedWitch && Math.random() < witchChance) return exposedWitch;
+  if (exposedWitch && rand() < witchChance) return exposedWitch;
   const exposedGuard = goodTargets.find(function (s) { return s.claimedRole === "guard"; });
-  if (exposedGuard && Math.random() < guardChance) return exposedGuard;
+  if (exposedGuard && rand() < guardChance) return exposedGuard;
   if (diff === "pro") {
-    // Strictly observable table state: if claimed Seer, Witch & (when active) Guard are all dead, an exposed Hunter may be the last God!
-    const allSeats = (state.match && state.match.seats) || [];
+    // Strictly observable table state via Blind-View: if claimed Seer, Witch & Guard are all dead, exposed Hunter may be last God!
+    const allSeats = snap ? snap.seats : ((state.match && state.match.seats) || []);
     const deadClaimedSeer = allSeats.some(function (s) { return !s.alive && s.claimedRole === "seer"; });
     const deadClaimedWitch = allSeats.some(function (s) { return !s.alive && s.claimedRole === "witch"; });
-    const guardBoardOn = Boolean(state.guardMode && state.match && state.match.totalSeats >= 8);
+    const guardBoardOn = snap ? snap.hasGuardMode : Boolean(state.guardMode && state.match && state.match.totalSeats >= 8);
     const deadClaimedGuard = !guardBoardOn || allSeats.some(function (s) { return !s.alive && s.claimedRole === "guard"; });
     const exposedHunter = goodTargets.find(function (s) { return s.claimedRole === "hunter"; });
-    if (deadClaimedSeer && deadClaimedWitch && deadClaimedGuard && exposedHunter && Math.random() < 0.92) {
+    if (deadClaimedSeer && deadClaimedWitch && deadClaimedGuard && exposedHunter && rand() < 0.92) {
       return exposedHunter;
     }
-    // Otherwise avoid exposed Hunter so he doesn't get an unnecessary night counter-shot!
     const nonHunters = goodTargets.filter(function (s) { return s.claimedRole !== "hunter"; });
     const smartPool = nonHunters.length > 0 ? nonHunters : goodTargets;
-    const sheriffTarget = smartPool.find(function (s) { return s.id === state.match.sheriffSeatId; });
-    if (sheriffTarget && Math.random() < 0.75) return sheriffTarget;
+    const shId = snap ? snap.sheriffSeatId : state.match.sheriffSeatId;
+    const sheriffTarget = smartPool.find(function (s) { return s.id === shId; });
+    if (sheriffTarget && rand() < 0.75) return sheriffTarget;
     const shieldTarget = smartPool.find(function (s) { return s.trustShield; });
-    if (shieldTarget && Math.random() < 0.65) return shieldTarget;
-    return smartPool[Math.floor(Math.random() * smartPool.length)];
+    if (shieldTarget && rand() < 0.65) return shieldTarget;
+    return smartPool[Math.floor(rand() * smartPool.length) % smartPool.length];
   }
   const observableShielded = goodTargets.find(function (s) { return s.trustShield; });
-  if (observableShielded && Math.random() < 0.55) return observableShielded;
-  return goodTargets[Math.floor(Math.random() * goodTargets.length)];
+  if (observableShielded && rand() < 0.55) return observableShielded;
+  return goodTargets[Math.floor(rand() * goodTargets.length) % goodTargets.length];
+}
+
+function chooseAiSeerTarget(seerSeat) {
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(seerSeat, { module: "night_seer", phase: "NIGHT_SEER" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : seerSeat;
+  const checkedIds = (self.checkedHistory || []).map(function (c) { return c.targetId; });
+  const aliveOthers = snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== seerSeat.id; });
+  const pool = aliveOthers.filter(function (s) { return checkedIds.indexOf(s.id) === -1; });
+  const candidates = (pool.length > 0 ? pool : aliveOthers).slice();
+  if (!candidates.length) return null;
+  candidates.sort(function (a, b) {
+    return ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+  });
+  const targetId = candidates[0] ? candidates[0].id : null;
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("night_seer", self.id, targetId ? ("查驗 " + targetId + "號") : "無目標");
+  }
+  return targetId;
 }
 
 function proceedToNightSeer() {
@@ -225,12 +285,10 @@ function proceedToNightSeer() {
     updateAllUI();
   } else {
     state.stepTimer = scheduleNightStep(function () {
-      const checkedIds = seer.checkedHistory.map(function (c) { return c.targetId; });
-      const pool = getAliveSeats().filter(function (s) { return s.id !== seer.id && checkedIds.indexOf(s.id) === -1; });
-      const candidates = pool.length > 0 ? pool : getAliveSeats().filter(function (s) { return s.id !== seer.id; });
-      if (candidates.length > 0) {
-        candidates.sort(function (a, b) { return (seer.suspicionMap[b.id] || 50) - (seer.suspicionMap[a.id] || 50); });
-        const target = candidates[0];
+      const targetId = chooseAiSeerTarget(seer);
+      const target = targetId ? getSeat(targetId) : null;
+      if (target) {
+        // Official rule engine resolves Seer check truth ONLY AFTER AI has chosen target blindly!
         const isWolf = target.team === "wolf";
         seer.checkedHistory.push({ day: state.match.day, targetId: target.id, isWolf: isWolf });
         seer.suspicionMap[target.id] = isWolf ? 100 : 0;
@@ -239,6 +297,43 @@ function proceedToNightSeer() {
       proceedToNightWitch();
     }, 650);
   }
+}
+
+function chooseAiWitchNightAction(witchSeat) {
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(witchSeat, { module: "night_witch", phase: "NIGHT_WITCH" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : witchSeat;
+  const pots = (snap && snap.witchPotions) ? snap.witchPotions : state.match.witchPotions;
+  const day = snap ? snap.day : state.match.day;
+  // Blind-View ONLY exposes nightWolfVictimId if heal potion is still available!
+  const victimId = snap ? snap.nightWolfVictimId : (pots && pots.heal ? state.match.nightState.wolfTarget : null);
+  let heal = false;
+  let poisonTargetId = null;
+
+  const aiCanHeal = Boolean(pots && pots.heal && victimId && (victimId !== self.id || day === 1));
+  if (aiCanHeal) {
+    const susp = (self.suspicionMap && self.suspicionMap[victimId]) || 50;
+    if (day === 1 || susp < 62) {
+      heal = true;
+    }
+  }
+  if (!heal && pots && pots.purify && day >= 2) {
+    const aliveOthers = snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== witchSeat.id; });
+    const suspects = aliveOthers.filter(function (s) {
+      return s.id !== self.savedSeatId && ((self.suspicionMap && self.suspicionMap[s.id]) || 0) >= 72;
+    });
+    if (suspects.length > 0) {
+      suspects.sort(function (a, b) {
+        return ((self.suspicionMap && self.suspicionMap[b.id]) || 0) - ((self.suspicionMap && self.suspicionMap[a.id]) || 0);
+      });
+      poisonTargetId = suspects[0].id;
+    }
+  }
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("night_witch", self.id, heal ? ("護回 " + victimId + "號") : (poisonTargetId ? ("清心 " + poisonTargetId + "號") : "保留茶盞"));
+  }
+  return { heal: heal, victimId: heal ? victimId : null, poisonTargetId: poisonTargetId };
 }
 
 function proceedToNightWitch() {
@@ -266,29 +361,17 @@ function proceedToNightWitch() {
     updateAllUI();
   } else {
     state.stepTimer = scheduleNightStep(function () {
-      const victimId = state.match.nightState.wolfTarget;
-      let usedPotionTonight = false;
-      const aiCanHeal = Boolean(state.match.witchPotions.heal && victimId && (victimId !== witch.id || state.match.day === 1));
-      if (aiCanHeal) {
-        const susp = witch.suspicionMap[victimId] || 50;
-        // 凹嗚規則：女巫僅第1夜可自救，第2夜起不可自救；同夜不可雙藥
-        if (state.match.day === 1 || susp < 62) {
-          state.match.nightState.witchSaved = true;
-          state.match.witchPotions.heal = false;
-          usedPotionTonight = true;
-          witch.savedSeatId = victimId;
-          witch.suspicionMap[victimId] = Math.max(5, susp - 35);
-        }
-      }
-      if (!usedPotionTonight && state.match.witchPotions.purify && state.match.day >= 2) {
-        // Pro Witch rule: never blind-poison Night 1; from Night 2+, eliminate highest-confidence wolf!
-        const suspects = getAliveSeats().filter(function (s) { return s.id !== witch.id && s.id !== witch.savedSeatId && (witch.suspicionMap[s.id] || 0) >= 72; });
-        if (suspects.length > 0) {
-          suspects.sort(function (a, b) { return witch.suspicionMap[b.id] - witch.suspicionMap[a.id]; });
-          state.match.nightState.witchPoisonTarget = suspects[0].id;
-          state.match.witchPotions.purify = false;
-          witch.purifiedSeatId = suspects[0].id;
-        }
+      const act = chooseAiWitchNightAction(witch);
+      if (act.heal && act.victimId) {
+        const susp = witch.suspicionMap[act.victimId] || 50;
+        state.match.nightState.witchSaved = true;
+        state.match.witchPotions.heal = false;
+        witch.savedSeatId = act.victimId;
+        witch.suspicionMap[act.victimId] = Math.max(5, susp - 35);
+      } else if (act.poisonTargetId) {
+        state.match.nightState.witchPoisonTarget = act.poisonTargetId;
+        state.match.witchPotions.purify = false;
+        witch.purifiedSeatId = act.poisonTargetId;
       }
       resolveDawn();
     }, 650);
@@ -485,6 +568,39 @@ function resolveDawn() {
   continueAfterDawnSheriff();
 }
 
+function chooseAiHunterTarget(hunterSeat) {
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(hunterSeat, { module: "hunter_shot", phase: "HUNTER_TRIGGER" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : hunterSeat;
+  const isWK = Boolean(self && self.isWolfKing);
+  const aliveOthers = (snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== hunterSeat.id; }))
+    .filter(function (s) { return !isWK || (snap ? !s.isWolfMate : s.team !== "wolf"); });
+  if (!aliveOthers.length) return null;
+
+  let chosenId = null;
+  if (isWK) {
+    // AI Wolf King legally knows non-Wolf seats via Blind-View, prioritizing ONLY observable claimedRole / sheriff!
+    const godPick = aliveOthers.find(function (s) { return s.claimedRole === "seer" || s.claimedRole === "witch" || s.claimedRole === "guard"; });
+    const shId = snap ? snap.sheriffSeatId : state.match.sheriffSeatId;
+    const shPick = aliveOthers.find(function (s) { return s.id === shId; });
+    const wkTarget = godPick || shPick || aliveOthers[0];
+    chosenId = wkTarget ? wkTarget.id : null;
+  } else {
+    const sorted = aliveOthers.slice().sort(function (a, b) {
+      return ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+    });
+    const best = sorted[0];
+    if (best && ((self.suspicionMap && self.suspicionMap[best.id]) || 50) >= 52) {
+      chosenId = best.id;
+    }
+  }
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("hunter_shot", self.id, chosenId ? ("帶走 " + chosenId + "號") : "壓槍不開");
+  }
+  return chosenId;
+}
+
 function triggerHunterResonance(hunterSeat, nextStage) {
   const isWK = Boolean(hunterSeat && hunterSeat.isWolfKing);
   state.match.phase = "HUNTER_TRIGGER";
@@ -505,22 +621,9 @@ function triggerHunterResonance(hunterSeat, nextStage) {
     updateAllUI();
     state.stepTimer = scheduleNightStep(function () {
       if (state.match.phase !== "HUNTER_TRIGGER") return;
-      const aliveOthers = getAliveSeats().filter(function (s) {
-        return s.id !== hunterSeat.id && (!isWK || s.team !== "wolf");
-      });
-      if (isWK) {
-        // AI Wolf King strictly targets good players, prioritizing exposed gods / sheriff!
-        const godPick = aliveOthers.find(function (s) { return s.claimedRole === "seer" || s.claimedRole === "witch" || s.claimedRole === "guard"; });
-        const shPick = aliveOthers.find(function (s) { return s.id === state.match.sheriffSeatId; });
-        const wkTarget = godPick || shPick || aliveOthers[0];
-        if (wkTarget) {
-          executeHunterShotPresentation(hunterSeat, wkTarget);
-          return;
-        }
-      }
-      aliveOthers.sort(function (a, b) { return (hunterSeat.suspicionMap[b.id] || 50) - (hunterSeat.suspicionMap[a.id] || 50); });
-      const best = aliveOthers[0];
-      if (best && (hunterSeat.suspicionMap[best.id] || 50) >= 52) {
+      const pickId = chooseAiHunterTarget(hunterSeat);
+      const best = pickId ? getSeat(pickId) : null;
+      if (best && best.alive) {
         executeHunterShotPresentation(hunterSeat, best);
       } else {
         const hName = hunterSeat.name || "";

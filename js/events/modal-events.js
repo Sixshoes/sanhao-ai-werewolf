@@ -4,7 +4,7 @@
 "use strict";
 
 function hasBlockingModalOpen() {
-  const modalIds = ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalPauseMenu", "heroSheetLightbox", "setupDrawer", "roleDealOverlay"];
+  const modalIds = ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalFeedback", "modalPauseMenu", "heroSheetLightbox", "setupDrawer", "roleDealOverlay"];
   return modalIds.some(function (mid) {
     const m = el(mid);
     return Boolean(m && m.classList && !m.classList.contains("hidden"));
@@ -36,7 +36,12 @@ function bindModalEvents() {
       closeSeatIntel();
       closeRadialMenu();
       let closedAny = false;
-      ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalPauseMenu", "heroSheetLightbox"].forEach(function (mid) {
+      const roleGuidePop = el("roleGuidePopover");
+      if (roleGuidePop && !roleGuidePop.classList.contains("hidden")) {
+        roleGuidePop.classList.add("hidden");
+        closedAny = true;
+      }
+      ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalFeedback", "modalPauseMenu", "heroSheetLightbox"].forEach(function (mid) {
         const m = el(mid);
         if (m && !m.classList.contains("hidden")) {
           m.classList.add("hidden");
@@ -49,6 +54,7 @@ function bindModalEvents() {
       }
       return;
     }
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
     if (ev.repeat && (ev.key === " " || ev.key === "Enter")) {
       ev.preventDefault();
       return;
@@ -61,7 +67,21 @@ function bindModalEvents() {
         return;
       }
     }
-    if (hasBlockingModalOpen()) return;
+    if (hasBlockingModalOpen()) {
+      const tutMod = el("modalTutorial");
+      if (tutMod && !tutMod.classList.contains("hidden")) {
+        if (ev.key === "ArrowRight") {
+          ev.preventDefault();
+          state.tutorialIndex = Math.min(TUTORIAL_SLIDES.length - 1, state.tutorialIndex + 1);
+          renderTutorialSlide();
+        } else if (ev.key === "ArrowLeft") {
+          ev.preventDefault();
+          state.tutorialIndex = Math.max(0, state.tutorialIndex - 1);
+          renderTutorialSlide();
+        }
+      }
+      return;
+    }
     if (ev.key === " ") {
       if (state.voteFlight && typeof state.voteFlight.finish === "function") {
         ev.preventDefault();
@@ -78,7 +98,7 @@ function bindModalEvents() {
         el("btnVoteResultNext").click();
         return;
       }
-      if (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH") {
+      if (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH" || state.match.phase === "HUNTER_RESOLVE") {
         ev.preventDefault();
         el("btnStepNext").click();
         return;
@@ -106,7 +126,7 @@ function bindModalEvents() {
         el("btnVoteResultNext").click();
         return;
       }
-      if (phNow === "DAY_SPEECH" || phNow === "LAST_WORDS_SPEECH") {
+      if (phNow === "DAY_SPEECH" || phNow === "LAST_WORDS_SPEECH" || phNow === "HUNTER_RESOLVE") {
         ev.preventDefault();
         el("btnStepNext").click();
         return;
@@ -157,7 +177,7 @@ function bindModalEvents() {
   });
 
   // Click outside backdrop to close any open modal cleanly!
-  ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalMusic", "modalCareer"].forEach(function (mid) {
+  ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalMusic", "modalCareer", "modalFeedback"].forEach(function (mid) {
     const m = el(mid);
     if (!m) return;
     m.addEventListener("click", function (ev) {
@@ -171,12 +191,22 @@ function bindModalEvents() {
     });
   });
 
-  el("btnOpenTutorial").addEventListener("click", function () {
+  function openTutorialModal(startIdx) {
     sound.unlock();
-    state.tutorialIndex = 0;
+    state.tutorialIndex = typeof startIdx === "number" ? startIdx : 0;
     renderTutorialSlide();
     el("modalTutorial").classList.remove("hidden");
-  });
+  }
+  el("btnOpenTutorial").addEventListener("click", function () { openTutorialModal(0); });
+  if (el("btnOpenTutorialPause")) {
+    el("btnOpenTutorialPause").addEventListener("click", function () { openTutorialModal(0); });
+  }
+  if (el("btnOpenTutorialFromGuide")) {
+    el("btnOpenTutorialFromGuide").addEventListener("click", function () {
+      if (typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
+      openTutorialModal(1);
+    });
+  }
   el("btnCloseTutorial").addEventListener("click", function () {
     sound.unlock();
     el("modalTutorial").classList.add("hidden");
@@ -371,5 +401,8 @@ function bindModalEvents() {
       sound.unlock();
       if (typeof copyMatchReplayReport === "function") copyMatchReplayReport();
     });
+  }
+  if (typeof bindFeedbackEvents === "function") {
+    bindFeedbackEvents();
   }
 }

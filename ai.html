@@ -104,7 +104,17 @@
             </div>
           </div>
 
-          <!-- MINIMAL FLOATING IN-GAME TOP HUD (LEFT: CHAPTER + HARMONY | RIGHT: ONLY 3 BUTTONS!) -->
+          <!-- TITLE SCREEN FLOATING TOP-RIGHT FEEDBACK BUTTON -->
+          <button id="btnTitleFeedback" type="button" class="title-feedback-btn" title="提交試玩心得或問題回報給作者">
+            <svg class="svg-ic" viewBox="0 0 24 24">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              <line x1="9" y1="9" x2="15" y2="9" />
+              <line x1="9" y1="13" x2="13" y2="13" />
+            </svg>
+            <span>使用反饋</span>
+          </button>
+
+          <!-- MINIMAL FLOATING IN-GAME TOP HUD (LEFT: CHAPTER + HARMONY | RIGHT: COMPACT CONTROLS + FEEDBACK) -->
           <div id="inGameTopHud" class="hidden">
             <div class="hud-pill-shell flex-wrap">
               <span id="skyIcon" class="sky-dot shrink-0"></span>
@@ -164,6 +174,14 @@
                   <span id="headerVoiceBars" class="eq-bars"><span></span><span></span><span></span></span>
                 </button>
               </div>
+              <button id="btnOpenFeedback" type="button" class="hud-icon-btn hud-feedback-btn" title="提交試玩反饋、建議或回報 BUG">
+                <svg class="svg-ic" viewBox="0 0 24 24">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <line x1="9" y1="9" x2="15" y2="9" />
+                  <line x1="9" y1="13" x2="13" y2="13" />
+                </svg>
+                <span class="feedback-btn-label">反饋</span>
+              </button>
               <button id="btnOpenPauseMenu" type="button" class="hud-icon-btn" title="遊戲選單與設定 (快捷鍵 Esc)">
                 <svg class="svg-ic" viewBox="0 0 24 24">
                   <line x1="4" y1="7" x2="20" y2="7" />
@@ -268,8 +286,13 @@
                     <span id="roleGuideTitle" class="font-serif-craft text-xs font-bold text-amber-200 truncate">職能指南</span>
                     <span id="roleGuideBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-400/35 shrink-0">好人陣營</span>
                   </div>
-                  <button id="btnCloseRoleGuide" type="button"
-                    class="w-5 h-5 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-300 text-[10px] font-bold flex items-center justify-center shrink-0">✕</button>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button id="btnOpenTutorialFromGuide" type="button"
+                      class="text-[10px] px-1.5 py-0.5 rounded border border-emerald-400/40 text-emerald-200 hover:bg-emerald-500/20 transition"
+                      title="開啟 6 步驟完整遊戲使用教學">📖 教學</button>
+                    <button id="btnCloseRoleGuide" type="button"
+                      class="w-5 h-5 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-300 text-[10px] font-bold flex items-center justify-center shrink-0">✕</button>
+                  </div>
                 </div>
                 <div id="roleGuideBody" class="space-y-1.5 text-[11px] leading-relaxed pt-1.5"></div>
               </div>
@@ -374,7 +397,7 @@
                     <div class="grid grid-cols-2 gap-2 pt-1">
                       <button id="btnStartTutorialMatch" type="button"
                         class="cta-celadon py-2 px-2.5 text-xs">新手帶玩席</button>
-                      <button id="btnOpenTutorial" type="button" class="cta-ink py-2 px-2.5 text-xs">十五秒入門</button>
+                      <button id="btnOpenTutorial" type="button" class="cta-brass py-2 px-2.5 text-xs">📖 遊戲教學</button>
                     </div>
                   </div>
 
@@ -1016,13 +1039,14 @@
         <div id="gpuPerfStatusLine" class="text-[10.5px] text-slate-400 text-center tabular-nums">3D 引擎就緒・即時監測中</div>
 
         <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+          <button id="btnOpenTutorialPause" type="button" class="pause-action-btn text-emerald-200">📖 遊戲使用教學</button>
           <button id="btnOpenHeroShowcasePause" type="button" class="pause-action-btn text-amber-200">3D
             角色鑑賞・清茗</button>
           <button id="btnOpenGuide" type="button" class="pause-action-btn">三好與 AI 架構</button>
           <button id="btnOpenCareer" type="button" class="pause-action-btn">書院生涯印記</button>
           <button id="btnOpenLogDrawer" type="button" class="pause-action-btn">對話手札</button>
           <button id="btnOpenVoteSheet" type="button" class="pause-action-btn">票型小抄</button>
-          <button id="btnRestartTop" type="button" class="cta-cinnabar py-2 text-xs text-center">返回主畫面</button>
+          <button id="btnRestartTop" type="button" class="cta-cinnabar py-2 text-xs text-center col-span-2">返回主畫面</button>
         </div>
 
         <div class="shortcut-legend-bar" aria-label="鍵盤快捷鍵速查">
@@ -1047,20 +1071,26 @@
 
   <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-xs"></div>
 
-  <!-- Tutorial Modal (Hidden by default on launch — never interrupts Title Screen!) -->
-  <div id="modalTutorial" class="hidden fixed inset-0 z-50 craft-modal-backdrop flex items-center justify-center p-4">
-    <div class="craft-modal-box max-w-md w-full overflow-hidden shadow-2xl">
-      <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-        <span class="modal-title-serif text-sm font-bold text-amber-300 tracking-wider">十五秒茶席入門</span>
-        <button id="btnCloseTutorial" type="button" class="cta-ink text-xs px-2.5 py-0.5">關閉</button>
+  <!-- Tutorial Modal (Clear 6-Chapter Interactive Game Manual — Accessible Anytime!) -->
+  <div id="modalTutorial" class="hidden fixed inset-0 z-50 craft-modal-backdrop flex items-center justify-center p-3 sm:p-4">
+    <div class="craft-modal-box max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="modal-title-serif text-sm sm:text-base font-bold text-amber-300 tracking-wider truncate">📖 三好・雲起茶席｜完整遊戲使用教學</span>
+          <span id="tutorialStepCounter" class="text-[10.5px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-200 border border-amber-400/35 shrink-0 tabular-nums">1 / 6</span>
+        </div>
+        <button id="btnCloseTutorial" type="button" class="cta-ink text-xs px-2.5 py-1 shrink-0">關閉</button>
       </div>
-      <div class="p-4">
-        <div id="tutorialDots" class="flex items-center justify-center gap-2 mb-3"></div>
-        <div id="tutorialSlideBody" class="min-h-[175px] flex flex-col justify-center text-center space-y-3"></div>
-        <div class="flex items-center justify-between gap-2 pt-3 mt-3 border-t border-slate-800">
-          <button id="btnTutPrev" type="button" class="cta-ink px-3 py-1.5 text-xs">← 上一頁</button>
-          <button id="btnTutNext" type="button" class="cta-brass px-4 py-2 text-xs">下一頁 →</button>
-          <button id="btnLaunchGuidedDemo" type="button" class="hidden cta-cinnabar px-4 py-2 text-xs">開啟新手帶玩席</button>
+      <div id="tutorialStepTabs" class="tut-tab-strip px-3.5 py-2 border-b border-slate-800/80 flex items-center gap-1.5 overflow-x-auto custom-scroll shrink-0"></div>
+      <div class="p-4 flex-1 overflow-y-auto custom-scroll">
+        <div id="tutorialSlideBody" class="min-h-[210px] flex flex-col justify-start text-center space-y-3"></div>
+      </div>
+      <div class="px-4 py-3 border-t border-slate-800 flex items-center justify-between gap-2 shrink-0">
+        <button id="btnTutPrev" type="button" class="cta-ink px-3 py-1.5 text-xs">← 上一章</button>
+        <div id="tutorialDots" class="flex items-center justify-center gap-1.5"></div>
+        <div class="flex items-center gap-1.5">
+          <button id="btnTutNext" type="button" class="cta-brass px-4 py-1.5 text-xs">下一章 →</button>
+          <button id="btnLaunchGuidedDemo" type="button" class="hidden cta-cinnabar px-4 py-1.5 text-xs">🚀 開啟新手帶玩席</button>
         </div>
       </div>
     </div>
@@ -1108,6 +1138,12 @@
           <div>・<strong>夜間職能與限制（狼刀在先）</strong>：護心守衛每晚守 1 人（不可連守同人，遇回甘茶同守同救會破盾）；明心觀察員每晚查驗 1 人；滴水奉茶師同夜限用一盞茶、第 2 夜起不可自護；直心糾察長遇清心茶請離、或身為最後一神於夜間遭酸民狼鎖定離席（達屠神終局）時，皆無法發動正氣共鳴。</div>
           <div>・<strong>上警、遺言與平票 PK</strong>：開啟警長制將於首日進行上警競選（1.5 票與末置位歸票）；首夜及白天公投離席（含糾察長）可留遺言，第 2 夜起夜間離席無遺言；同票進入 PK 拉票決選，再平票則無人離席。</div>
         </div>
+        <div class="p-2.5 rounded bg-emerald-500/15 border border-emerald-400/40 space-y-1 text-[11px] text-emerald-100">
+          <div class="font-serif-craft font-bold text-emerald-300">🛡️ v9.0 零洩漏反作弊資訊隔離防火牆（Epistemic Blind-View）</div>
+          <div>・<strong>嚴格盲視投影（Blind-View Proxy）</strong>：每位 AI 在發言、公投、夜晚職能、警長競選／移交與遺言時，一律只能讀取屬於自己視野的凍結快照，絕不接觸底層底牌、他人私密懷疑值或上帝視角紀錄。</div>
+          <div>・<strong>逐角色資訊邊界</strong>：酸民狼僅知狼同伴（無法偷看誰是真神職）；觀察員僅知自己親查結果；奉茶師僅知親救銀水與有藥當夜刀口；其餘好人 AI 零偷看、零讀心。</div>
+          <div>・<strong>LLM Prompt 洩漏稽核＋反事實不變性證明</strong>：外接 Gemini／Ollama 前自動掃描提示詞防止私密外洩，並通過 50+ 隨機對局置換底牌後 AI 行為 100% 一致的數學級驗證。</div>
+        </div>
         <div class="p-2.5 rounded bg-indigo-500/15 border border-indigo-400/35 space-y-1 text-[11px] text-indigo-100">
           <div class="font-serif-craft font-bold text-amber-300">雙核四層 Multi-Agent Orchestrator 技術透明速覽</div>
           <div>・<strong>四大 AI 代理路由器</strong>：由
@@ -1120,6 +1156,7 @@
       </div>
       <div id="guidePaneTrace" class="hidden p-4 space-y-3 text-xs text-slate-200 overflow-y-auto custom-scroll">
         <div id="orchSummaryBar" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center"></div>
+        <div id="antiCheatAuditBox" class="rounded-xl p-3 bg-slate-950/90 border border-emerald-500/35 space-y-2"></div>
         <div class="flex items-center justify-between gap-2">
           <span class="text-[11px] text-slate-400">即時 Multi-Agent 調度、降級路線與文化合規過濾軌跡（最新 32 筆）：</span>
           <button id="btnClearOrchTrace" type="button"
@@ -1231,8 +1268,8 @@
               1.13x</button>
           </div>
           <div class="space-y-1">
-            <div class="text-[10px] text-slate-400">點選試聽全角色動漫專屬配音（8 位真人級聲線）：</div>
-            <div id="voiceAuditionStrip" class="grid grid-cols-3 gap-1.5 text-center">
+            <div class="text-[10px] text-slate-400">點選試聽全角色動漫專屬配音（12 位真人級聲線＋主持）：</div>
+            <div id="voiceAuditionStrip" class="grid grid-cols-3 sm:grid-cols-4 gap-1.5 text-center">
               <button type="button" data-audition="你" class="cta-ink py-1 px-1.5 text-[10.5px]">你（玩家）</button>
               <button type="button" data-audition="暖暖" class="cta-ink py-1 px-1.5 text-[10.5px]">暖暖</button>
               <button type="button" data-audition="小澄" class="cta-ink py-1 px-1.5 text-[10.5px]">小澄</button>
@@ -1241,6 +1278,10 @@
               <button type="button" data-audition="小雲" class="cta-ink py-1 px-1.5 text-[10.5px]">小雲</button>
               <button type="button" data-audition="阿竹" class="cta-ink py-1 px-1.5 text-[10.5px]">阿竹</button>
               <button type="button" data-audition="晨晨" class="cta-ink py-1 px-1.5 text-[10.5px]">晨晨</button>
+              <button type="button" data-audition="墨白" class="cta-ink py-1 px-1.5 text-[10.5px]">墨白</button>
+              <button type="button" data-audition="晴嵐" class="cta-ink py-1 px-1.5 text-[10.5px]">晴嵐</button>
+              <button type="button" data-audition="阿朗" class="cta-ink py-1 px-1.5 text-[10.5px]">阿朗</button>
+              <button type="button" data-audition="柚子" class="cta-ink py-1 px-1.5 text-[10.5px]">柚子</button>
               <button type="button" data-audition="主持" class="cta-ink py-1 px-1.5 text-[10.5px]">清茗主持</button>
             </div>
           </div>
@@ -1266,7 +1307,7 @@
           </div>
           <div id="voiceQualityHintBox"
             class="hidden rounded px-2.5 py-1.5 bg-amber-500/10 border border-amber-400/30 text-[10.5px] text-amber-200 leading-relaxed">
-            <strong>免費升級高音質語音（$0）：</strong>本機執行 <code>python3 server.py</code> 即可啟用 9 位免費微軟神經台灣配音員。
+            <strong>免費升級高音質語音（$0）：</strong>本機執行 <code>python3 server.py</code> 即可啟用 13 位免費微軟神經台灣配音員。
           </div>
         </div>
         <div class="grid grid-cols-3 gap-2.5 pt-0.5">
@@ -1349,6 +1390,94 @@
     </div>
   </div>
 
+  <!-- User Feedback Modal (Top-Right Entry: Rating + Category + Auto Diagnostics + Multi-Channel Delivery) -->
+  <div id="modalFeedback"
+    class="hidden fixed inset-0 z-50 craft-modal-backdrop flex items-center justify-center p-3 sm:p-4" role="dialog" aria-label="玩家使用反饋">
+    <div class="craft-modal-box max-w-lg w-full max-h-[88vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2">
+        <div>
+          <h3 class="modal-title-serif text-sm font-bold text-amber-300 tracking-wider">💬 玩家使用反饋</h3>
+          <div class="text-[10.5px] text-slate-400 mt-0.5">歡迎回報問題、畫面建議或 AI 邏輯心得，協助讓茶席更好玩！</div>
+        </div>
+        <button id="btnCloseFeedback" type="button" class="cta-ink text-xs px-2.5 py-1 shrink-0">關閉</button>
+      </div>
+      <div class="p-4 overflow-y-auto custom-scroll space-y-3 text-xs text-slate-200">
+        <!-- 1. Star Rating -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-200">整體遊玩體驗評分</span>
+            <span id="feedbackRatingText" class="text-[11px] font-bold text-amber-300">5★ 超愛這個體驗！</span>
+          </div>
+          <div id="feedbackStarGroup" class="flex items-center gap-1.5">
+            <button type="button" data-fb-star="1" class="fb-star-btn is-lit" aria-label="1星">★</button>
+            <button type="button" data-fb-star="2" class="fb-star-btn is-lit" aria-label="2星">★</button>
+            <button type="button" data-fb-star="3" class="fb-star-btn is-lit" aria-label="3星">★</button>
+            <button type="button" data-fb-star="4" class="fb-star-btn is-lit" aria-label="4星">★</button>
+            <button type="button" data-fb-star="5" class="fb-star-btn is-lit" aria-label="5星">★</button>
+          </div>
+        </div>
+
+        <!-- 2. Category Chips -->
+        <div class="space-y-1.5">
+          <div class="font-bold text-amber-200">反饋類型</div>
+          <div id="feedbackCatGroup" class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            <button type="button" data-fb-cat="bug" class="fb-cat-btn">🐞 問題回報</button>
+            <button type="button" data-fb-cat="ui" class="fb-cat-btn">🎨 畫面與視角</button>
+            <button type="button" data-fb-cat="gameplay" class="fb-cat-btn">🧠 AI 與規則</button>
+            <button type="button" data-fb-cat="idea" class="fb-cat-btn is-active">💡 許願與建議</button>
+          </div>
+        </div>
+
+        <!-- 3. Nickname (Optional) & Message -->
+        <div class="space-y-2">
+          <div>
+            <label for="inputFeedbackName" class="block text-[11px] text-slate-400 mb-1">你的暱稱或聯絡方式（選填）</label>
+            <input id="inputFeedbackName" type="text" maxlength="32" placeholder="例如：小宇（不填則以匿名茶客送出）"
+              class="w-full rounded-lg px-3 py-1.5 bg-slate-950/85 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:border-amber-400" />
+          </div>
+          <div>
+            <label for="inputFeedbackBody" class="block text-[11px] text-amber-200 font-bold mb-1">詳細想法或遇到的問題（必填）</label>
+            <textarea id="inputFeedbackBody" rows="4" maxlength="1500"
+              placeholder="例如：12人桌坐席視角很順、但手機版投票按鈕想要大一點；或是某個階段遇到 BUG…"
+              class="w-full rounded-lg px-3 py-2 bg-slate-950/85 border border-slate-700 text-xs text-slate-100 leading-relaxed focus:outline-none focus:border-amber-400 resize-y"></textarea>
+          </div>
+        </div>
+
+        <!-- 4. Auto Environment Diagnostics -->
+        <div class="space-y-1.5">
+          <label class="inline-flex items-center gap-2 cursor-pointer text-[11px] text-slate-300">
+            <input id="chkFeedbackIncludeEnv" type="checkbox" checked class="accent-amber-400" />
+            <span>自動附帶目前對局環境（人數／視角／視窗大小，不含 API Key 或隱藏 AI 身分）</span>
+          </label>
+          <pre id="feedbackEnvPreview" class="fb-env-preview"></pre>
+        </div>
+
+        <!-- 5. Submit CTA -->
+        <div class="flex items-center justify-end gap-2">
+          <button id="btnSubmitFeedback" type="button" class="cta-cinnabar px-4 py-2 text-xs">📨 送出反饋</button>
+        </div>
+
+        <!-- 6. Instant Multi-Channel Confirmation Card -->
+        <div id="feedbackResultCard" class="hidden fb-result-card space-y-2">
+          <div id="feedbackResultMsg" class="text-[11.5px] font-bold text-emerald-200 leading-relaxed"></div>
+          <div class="flex flex-wrap gap-2">
+            <button id="btnOpenGithubFeedback" type="button" class="cta-brass px-3 py-1.5 text-[11px]">🐙 一鍵送至 GitHub 反饋板</button>
+            <button id="btnCopyLastFeedback" type="button" class="cta-celadon px-3 py-1.5 text-[11px]">📋 複製完整反饋（貼給作者 / LINE）</button>
+          </div>
+        </div>
+
+        <!-- 7. Local Stored Feedback Log & Export -->
+        <div class="pt-2 border-t border-slate-800/80 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span id="feedbackHistoryCount" class="text-[10.5px] text-slate-400">本機已留存 0 筆</span>
+            <button id="btnExportFeedbackJson" type="button" class="hidden cta-ink px-2.5 py-1 text-[10.5px]">📥 匯出全部反饋 (.json)</button>
+          </div>
+          <div id="feedbackHistoryList" class="space-y-1.5 max-h-36 overflow-y-auto custom-scroll"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Data & Core State -->
   <script src="js/data/constants.js"></script>
   <script src="js/core/state.js"></script>
@@ -1367,6 +1496,7 @@
   <script src="js/ui/hud.js"></script>
   <script src="js/ui/panels.js"></script>
   <script src="js/ui/modals.js"></script>
+  <script src="js/ui/feedback.js"></script>
   <script src="js/ui/flow.js"></script>
 
   <!-- Procedural Canvas Portraits & Stage Layers -->
@@ -1387,7 +1517,8 @@
   <script src="js/stage3d/postfx.js"></script>
   <script src="js/stage3d/engine.js"></script>
 
-  <!-- AI Engines (Gemini + Built-in Heuristics) -->
+  <!-- AI Engines (v9.0 Anti-Cheat Blind-View Firewall + Gemini + Built-in Heuristics) -->
+  <script src="js/ai/blind-view.js"></script>
   <script src="js/ai/gemini.js"></script>
   <script src="js/ai/deduction.js"></script>
   <script src="js/ai/context.js"></script>
