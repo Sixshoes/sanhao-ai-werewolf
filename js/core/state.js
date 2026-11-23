@@ -14,6 +14,7 @@ const state = {
   showRelationsOnCanvas: true,
   viewMode: "3d",
   quality3D: "high",
+  qualityUserChosen: false,
   playerGender: "f", // "f" | "m" (1-click player voice & VRM avatar toggle)
   portraitStyle: "painted", // "painted" (Studio ink cinema art) | "vrm3d" (3D VRM portrait)
   cardPeek3D: false,
@@ -162,6 +163,7 @@ function saveUserPrefs() {
       showRelations: Boolean(state.showRelationsOnCanvas),
       viewMode: state.viewMode === "2d" ? "2d" : "3d",
       quality3D: (state.quality3D === "eco" || state.quality3D === "balanced") ? state.quality3D : "high",
+      qualityUserChosen: Boolean(state.qualityUserChosen),
       playerGender: state.playerGender === "m" ? "m" : "f",
       portraitStyle: state.portraitStyle === "vrm3d" ? "vrm3d" : "painted",
       portraitPrefVersion: 2,
@@ -199,6 +201,7 @@ function loadUserPrefs() {
     if (typeof p.showRelations === "boolean") state.showRelationsOnCanvas = p.showRelations;
     if (p.viewMode === "2d" || p.viewMode === "3d") state.viewMode = p.viewMode;
     if (p.quality3D === "high" || p.quality3D === "balanced" || p.quality3D === "eco") state.quality3D = p.quality3D;
+    if (typeof p.qualityUserChosen === "boolean") state.qualityUserChosen = p.qualityUserChosen;
     if (p.playerGender === "m" || p.playerGender === "f") state.playerGender = p.playerGender;
     if ((p.portraitPrefVersion >= 2) && (p.portraitStyle === "vrm3d" || p.portraitStyle === "painted")) state.portraitStyle = p.portraitStyle;
     if (p.aiDifficulty === "easy" || p.aiDifficulty === "normal" || p.aiDifficulty === "pro") state.aiDifficulty = p.aiDifficulty;

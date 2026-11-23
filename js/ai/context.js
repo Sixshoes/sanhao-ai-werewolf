@@ -17,6 +17,64 @@ function pickPersonaVoice(speaker, slotKey, salt) {
   return list[((seed % list.length) + list.length) % list.length] || "";
 }
 
+function buildCrossDayMemoryLedger(viewerSeat) {
+  const m = (typeof state !== "undefined" && state.match) ? state.match : null;
+  if (!m || !m.started || m.day <= 1) return { lines: [], grudgeIds: [], flipIds: [], wolfProtectorIds: [] };
+  const allEvs = m.allSpeechEvents || [];
+  const priorEvs = allEvs.filter(function (ev) { return ev && ev.day && ev.day < m.day; });
+  const grudgeIds = [];
+  const flipIds = [];
+  const wolfProtectorIds = [];
+  const lines = [];
+  const nameOf = function (id) {
+    const s = typeof getSeat === "function" ? getSeat(id) : null;
+    return s ? (fmtSeatNum(s.id) + "號" + s.name) : (id + "號");
+  };
+
+  if (viewerSeat) {
+    const attackers = priorEvs.filter(function (ev) { return ev.accuseId === viewerSeat.id && ev.speakerId !== viewerSeat.id; });
+    attackers.forEach(function (ev) {
+      const sp = getSeat(ev.speakerId);
+      if (sp && sp.alive && grudgeIds.indexOf(sp.id) === -1) {
+        grudgeIds.push(sp.id);
+        lines.push("第" + ev.day + "天 " + nameOf(sp.id) + " 曾點名懷疑我");
+      }
+    });
+  }
+
+  // Detect players who vouched for a confirmed dead wolf on an earlier day
+  const deadWolves = (m.seats || []).filter(function (s) { return !s.alive && s.team === "wolf" && s.outReason === "投票出局"; });
+  deadWolves.forEach(function (dw) {
+    priorEvs.forEach(function (ev) {
+      if (ev.vouchId === dw.id && ev.speakerId !== dw.id) {
+        const sp = getSeat(ev.speakerId);
+        if (sp && sp.alive && wolfProtectorIds.indexOf(sp.id) === -1) {
+          wolfProtectorIds.push(sp.id);
+          lines.push("第" + ev.day + "天 " + nameOf(sp.id) + " 曾力保已出局的 " + nameOf(dw.id));
+        }
+      }
+    });
+  });
+
+  // Detect players who flipped from vouching to accusing the same target across days
+  const todayEvs = m.daySpeechEvents || [];
+  todayEvs.forEach(function (tev) {
+    if (!tev || !tev.accuseId) return;
+    const prevVouch = priorEvs.find(function (pev) { return pev.speakerId === tev.speakerId && pev.vouchId === tev.accuseId; });
+    if (prevVouch && flipIds.indexOf(tev.speakerId) === -1) {
+      flipIds.push(tev.speakerId);
+      lines.push(nameOf(tev.speakerId) + " 前一天還力保 " + nameOf(tev.accuseId) + "，今天卻突然改口反咬");
+    }
+  });
+
+  return {
+    lines: lines.slice(0, 4),
+    grudgeIds: grudgeIds,
+    flipIds: flipIds,
+    wolfProtectorIds: wolfProtectorIds
+  };
+}
+
 function buildPriorCallbackPhrase(speaker, dayEvents, seatLabel) {
   if (!speaker || !Array.isArray(dayEvents) || dayEvents.length === 0) return "";
   const prior = dayEvents.filter(function (ev) { return ev && ev.speakerId && ev.speakerId !== speaker.id; });
@@ -27,6 +85,20 @@ function buildPriorCallbackPhrase(speaker, dayEvents, seatLabel) {
     if (!s) return "";
     return typeof seatLabel === "function" ? seatLabel(s) : (fmtSeatNum(s.id) + "號" + s.name);
   };
+
+  // Cross-day memory callback (Day 2+): cite flips, wolf-protectors, or prior grudges!
+  if (typeof state !== "undefined" && state.match && state.match.day >= 2) {
+    const ledger = buildCrossDayMemoryLedger(speaker);
+    if (ledger.flipIds.length > 0 && ledger.flipIds[0] !== speaker.id) {
+      return "翻一下跨日帳本，" + nameOf(ledger.flipIds[0]) + " 昨天還在保人今天卻突然反水改口，這前後反差太大了；";
+    }
+    if (ledger.wolfProtectorIds.length > 0 && ledger.wolfProtectorIds[0] !== speaker.id) {
+      return "回頭複盤前一天的紀錄，" + nameOf(ledger.wolfProtectorIds[0]) + " 曾替已出局的可疑對象護航，今天得重點檢視；";
+    }
+    if (ledger.grudgeIds.length > 0 && ledger.grudgeIds[0] !== speaker.id && (speaker.id + state.match.day) % 2 === 0) {
+      return "我還記得昨天 " + nameOf(ledger.grudgeIds[0]) + " 一直把矛頭指向我，今天換我好好盯著你的邏輯；";
+    }
+  }
 
   // Mutual vouch / standing-together pair detection among today's spoken seats
   for (let i = prior.length - 1; i >= 1; i--) {

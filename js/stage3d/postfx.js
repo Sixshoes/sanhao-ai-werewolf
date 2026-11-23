@@ -4,7 +4,7 @@
  */
 "use strict";
 
-function build3DPostFx(renderer, scene, camera) {
+function build3DPostFx(renderer, scene, camera, opts) {
   if (
     !renderer || !scene || !camera ||
     typeof THREE.EffectComposer !== "function" ||
@@ -17,15 +17,16 @@ function build3DPostFx(renderer, scene, camera) {
   }
 
   try {
+    const preferLightweight = Boolean(opts && opts.preferLightweight);
     const w = 1280;
     const h = 720;
     const isWebGL2 = Boolean(renderer.capabilities && renderer.capabilities.isWebGL2);
     const hasHalfFloatExt = Boolean(renderer.extensions && renderer.extensions.get && renderer.extensions.get("EXT_color_buffer_float"));
-    const canHalfFloat = Boolean(isWebGL2 && hasHalfFloatExt && THREE.HalfFloatType);
+    const canHalfFloat = Boolean(!preferLightweight && isWebGL2 && hasHalfFloatExt && THREE.HalfFloatType);
 
     let rt = null;
     let isMsaa = false;
-    if (isWebGL2 && typeof THREE.WebGLMultisampleRenderTarget === "function") {
+    if (!preferLightweight && isWebGL2 && typeof THREE.WebGLMultisampleRenderTarget === "function") {
       try {
         const gl = typeof renderer.getContext === "function" ? renderer.getContext() : null;
         let msaaHalfFloatOk = false;

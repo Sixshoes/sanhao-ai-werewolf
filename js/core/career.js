@@ -148,6 +148,95 @@ function openCareerModal() {
   modal.classList.remove("hidden");
 }
 
+function buildAiPostMatchCoachInsights() {
+  const m = state.match;
+  if (!m || !m.started) return [];
+  const pid = getPlayerId();
+  const st = m.stats || {};
+  const insights = [];
+  const nameOf = function (id) {
+    const s = getSeat(id);
+    if (!s) return id + "號";
+    return fmtSeatNum(s.id) + "號" + (s.id === pid ? "你" : s.name);
+  };
+
+  // 1. Key Turning Vote
+  const vHist = m.voteHistory || [];
+  const wolfOutRound = vHist.find(function (vh) {
+    const s = vh.outId ? getSeat(vh.outId) : null;
+    return s && s.team === "wolf";
+  });
+  const goodMisvote = vHist.find(function (vh) {
+    const s = vh.outId ? getSeat(vh.outId) : null;
+    return s && s.team === "good";
+  });
+  if (wolfOutRound) {
+    insights.push({
+      icon: "🏆",
+      title: "關鍵轉折票",
+      text: "第 " + (wolfOutRound.day || 1) + " 天成功公投請離酸民狼 " + nameOf(wolfOutRound.outId) + "，是全場局勢翻轉的關鍵分水嶺！"
+    });
+  } else if (goodMisvote) {
+    insights.push({
+      icon: "⚖️",
+      title: "關鍵轉折票",
+      text: "第 " + (goodMisvote.day || 1) + " 天誤投了好夥伴 " + nameOf(goodMisvote.outId) + "，讓酸民狼趁勢掌控節奏；下次可多比對警上與票型交叉驗證。"
+    });
+  } else {
+    insights.push({
+      icon: "⚖️",
+      title: "節奏觀察",
+      text: "本局共歷經 " + (m.day || 1) + " 天茶席博弈，關鍵勝負取決於夜間技能配合與白天站邊速度。"
+    });
+  }
+
+  // 2. Biggest Logic Break / Tell
+  const contras = m.detectedContradictions || [];
+  const toxicEv = (m.allSpeechEvents || []).find(function (ev) { return ev && ev.hasToxicSlip; });
+  if (contras.length > 0) {
+    insights.push({
+      icon: "🔍",
+      title: "最大邏輯破綻",
+      text: "全場共抓出 " + contras.length + " 處發言矛盾，其中 " + nameOf(contras[0].speakerId) + " 的前後說法不一致成為重要突破口！"
+    });
+  } else if (toxicEv) {
+    insights.push({
+      icon: "🔍",
+      title: "語氣破綻偵測",
+      text: nameOf(toxicEv.speakerId) + " 曾在發言中露出急躁酸言破綻，留意「急著貼標籤催票」往往是酸民狼的特徵。"
+    });
+  } else {
+    insights.push({
+      icon: "🔍",
+      title: "推理精準度",
+      text: "本局偵探互動達 " + (m.maxCombo || 0) + " 連擊、觀微察心 " + (st.microInspectsUsed || 0) + " 次，善用「呈堂證供」可直接破防狼人話術！"
+    });
+  }
+
+  // 3. Three-Goodness Communication Review
+  if ((st.rewritesUsed || 0) > 0) {
+    insights.push({
+      icon: "🌿",
+      title: "三好溝通亮點",
+      text: "你成功運用「AI 說好話轉譯」" + st.rewritesUsed + " 次並維持友善度 " + m.harmonyScore + "，展現用理性與善意化解對立的高情商！"
+    });
+  } else if (m.harmonyScore >= 85) {
+    insights.push({
+      icon: "🌿",
+      title: "三好氣場滿點",
+      text: "茶席友善度高達 " + m.harmonyScore + "，正向發言讓好夥伴更容易凝聚共識、識破酸民挑撥！"
+    });
+  } else {
+    insights.push({
+      icon: "🌿",
+      title: "三好進階建議",
+      text: "本局友善度 " + m.harmonyScore + "；下次遇到火藥味發言，可試著按「說好話化解」或開啟四給錦囊，賺取 1.5 倍說服力暴擊！"
+    });
+  }
+
+  return insights;
+}
+
 function buildMatchReplayReport() {
   const m = state.match;
   const diffLabel = state.aiDifficulty === "pro" ? "凹嗚高手局" : (state.aiDifficulty === "easy" ? "新手友善" : "標準推理");
@@ -161,7 +250,8 @@ function buildMatchReplayReport() {
     "■ 全員底牌揭曉："
   ];
   (m.seats || []).forEach(function (s) {
-    const rName = ROLE_DEFS[s.role] ? ROLE_DEFS[s.role].name : s.role;
+    const rKey = s.isWolfKing ? "wolf_king" : (s.isElder ? "elder" : s.role);
+    const rName = ROLE_DEFS[rKey] ? ROLE_DEFS[rKey].name : (ROLE_DEFS[s.role] ? ROLE_DEFS[s.role].name : s.role);
     const tag = s.id === getPlayerId() ? "（你）" : "";
     const status = s.alive ? "存活" : ("離席：" + (s.outReason || "出局"));
     const sh = m.sheriffSeatId === s.id ? " [👑警長]" : "";
@@ -202,6 +292,13 @@ function buildMatchReplayReport() {
     "  角色密令：" + (misReport ? (misReport.title + "（" + (misReport.completed ? "已完成 +15分" : misReport.progressText) + "）") : "無"),
     "  邏輯破防：" + (st.logicBreaksLanded || 0) + " 次｜靜心觀微：" + (st.microInspectsUsed || 0) + " 次｜矛盾抓包：" + (st.contradictionsFound || 0) + " 次"
   );
+  const coachList = buildAiPostMatchCoachInsights();
+  if (coachList.length > 0) {
+    lines.push("", "■ AI 名偵探覆盤教練重點：");
+    coachList.forEach(function (ci) {
+      lines.push("  " + ci.icon + " " + ci.title + "：" + ci.text);
+    });
+  }
   return lines.join("\n");
 }
 

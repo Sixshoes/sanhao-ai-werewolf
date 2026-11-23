@@ -22,7 +22,11 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent
-VENV_PY = ROOT_DIR / ".venv" / "bin" / "python"
+VENV_PY = (
+    ROOT_DIR / ".venv" / "Scripts" / "python.exe"
+    if os.name == "nt"
+    else ROOT_DIR / ".venv" / "bin" / "python"
+)
 OLLAMA_BASE = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
 OLLAMA_MODEL_RE = re.compile(r"^[A-Za-z0-9._:/-]{1,96}$")
 
@@ -70,6 +74,9 @@ try:
 except ImportError:
     # Auto-switch into local .venv if edge-tts was installed there!
     if VENV_PY.exists() and Path(sys.executable).resolve() != VENV_PY.resolve():
+        if os.name == "nt":
+            import subprocess
+            sys.exit(subprocess.call([str(VENV_PY), str(Path(__file__).resolve())] + sys.argv[1:]))
         os.execv(str(VENV_PY), [str(VENV_PY), str(Path(__file__).resolve())] + sys.argv[1:])
     edge_tts = None
     HAS_EDGE_TTS = False

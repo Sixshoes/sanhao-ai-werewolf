@@ -23,7 +23,8 @@ function resizeCanvas() {
   const canvas = el("sanctuaryCanvas");
   if (!container || !canvas) return;
   const rect = container.getBoundingClientRect();
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const maxOverlayDpr = (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu) ? 1.25 : 2;
+  const dpr = Math.min(window.devicePixelRatio || 1, maxOverlayDpr);
   canvas.width = Math.max(300, Math.floor(rect.width * dpr));
   canvas.height = Math.max(220, Math.floor(rect.height * dpr));
   if (typeof stage3d !== "undefined" && stage3d.ready) {
@@ -411,7 +412,8 @@ function drawSanctuaryFrame(nowMs) {
   const ctx = canvas._ctx2d || (canvas._ctx2d = canvas.getContext("2d"));
   const w = canvas.width;
   const h = canvas.height;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const maxOverlayDpr = (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu) ? 1.25 : 2;
+  const dpr = Math.min(window.devicePixelRatio || 1, maxOverlayDpr);
 
   // 3D Mode: Render Three.js WebGL Sanctuary + Crisp Transparent 2D HUD Overlay!
   if (typeof stage3d !== "undefined" && stage3d.isActive()) {

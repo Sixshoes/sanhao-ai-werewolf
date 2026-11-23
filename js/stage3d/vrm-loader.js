@@ -919,7 +919,10 @@ const stage3dVrm = {
     inst.prevHeadYaw = yawNow;
     inst.headInertia = (inst.headInertia || 0) * 0.84 + dYaw * 1.4;
 
-    if (inst.springBones && inst.springBones.length) {
+    const qMode = (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high";
+    const springStride = o.isPriority ? 1 : (qMode === "eco" ? 3 : (qMode === "balanced" ? 2 : 1));
+    const runSprings = springStride <= 1 || typeof o.frameCounter !== "number" || ((o.frameCounter + (o.seatId || 0)) % springStride === 0);
+    if (runSprings && inst.springBones && inst.springBones.length) {
       for (let si = 0; si < inst.springBones.length; si++) {
         const sb = inst.springBones[si];
         if (!sb || !sb.quatMeta) continue;

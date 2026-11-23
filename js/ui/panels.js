@@ -414,12 +414,41 @@ function renderSheriffElectionPanel() {
   const cBox = el("sheriffElectionCandidates");
   if (cBox) {
     cBox.innerHTML = "";
+    if (Array.isArray(ctx.dramaEvents) && ctx.dramaEvents.length) {
+      const dramaBanner = document.createElement("div");
+      dramaBanner.className = "rounded px-2.5 py-1.5 text-[11px] font-bold bg-rose-950/65 border border-rose-400/45 text-amber-200 mb-1";
+      dramaBanner.textContent = ctx.dramaEvents[0];
+      cBox.appendChild(dramaBanner);
+    }
     ctx.speeches.forEach(function (sp) {
       const row = document.createElement("div");
-      row.className = "rounded px-2 py-1 text-[11px] bg-slate-900/55 border border-amber-400/25 text-slate-200";
-      row.innerHTML = '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("👑 " + playerNumTag() + " 你") : (fmtSeatNum(sp.id) + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
+      const isClash = sp.tone === "clash";
+      const isSeer = sp.tone === "seer";
+      const isActiveReel = ctx.activeReelSeatId === sp.id;
+      row.className = "rounded px-2 py-1.5 text-[11px] transition " + (isActiveReel
+        ? "bg-amber-500/25 border border-amber-300 text-amber-50"
+        : (isClash
+          ? "bg-rose-950/55 border border-rose-400/45 text-rose-50"
+          : (isSeer
+            ? "bg-indigo-950/55 border border-violet-400/40 text-slate-100"
+            : "bg-slate-900/55 border border-amber-400/25 text-slate-200")));
+      const badgeHtml = sp.tag
+        ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold ' + (isClash ? "bg-rose-500/30 text-rose-200" : (isSeer ? "bg-violet-500/30 text-violet-200" : "bg-amber-500/25 text-amber-200")) + '">' + escapeHtml(sp.tag) + "</span>")
+        : "";
+      row.innerHTML = badgeHtml + '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("👑 " + playerNumTag() + " 你") : (fmtSeatNum(sp.id) + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
       cBox.appendChild(row);
     });
+    if (ctx.speeches.length >= 2) {
+      const reelBtn = document.createElement("button");
+      reelBtn.type = "button";
+      reelBtn.className = "cta-ink py-1 px-2.5 text-[11px] mt-1";
+      reelBtn.textContent = ctx.activeReelSeatId ? "🎙 正在輪播候選人語音喊話…" : "🎙 播放警上候選人輪流語音喊話";
+      reelBtn.disabled = Boolean(ctx.activeReelSeatId);
+      reelBtn.addEventListener("click", function () {
+        if (typeof playSheriffStageReel === "function") playSheriffStageReel(0);
+      });
+      cBox.appendChild(reelBtn);
+    }
   }
   const vBox = el("sheriffElectionVoteRow");
   if (vBox) {
@@ -479,7 +508,7 @@ function renderControlPanels() {
     (p === "NIGHT_SEER" && player.role === "seer") ||
     (p === "NIGHT_WITCH" && player.role === "witch" && (state.match.witchPotions.heal || state.match.witchPotions.purify))
   );
-  const playerNeedsHunterInput = p === "HUNTER_TRIGGER" && player && player.role === "hunter" && !player.alive;
+  const playerNeedsHunterInput = p === "HUNTER_TRIGGER" && player && (player.role === "hunter" || player.isWolfKing) && !player.alive;
   if (playerNeedsNightInput || playerNeedsHunterInput) {
     renderNightAndHunterPanel(p);
     return;
@@ -498,16 +527,18 @@ function renderGameOverMetrics() {
   el("gameOverReason").textContent = m.winReason;
   const truthEl = el("gameOverTruthLine");
   if (truthEl) {
-    const wolfList = m.seats.filter(function (s) { return s.role === "wolf"; }).map(function (s) { return s.id + "號" + (s.id === getPlayerId() ? "你" : s.name); }).join("、");
+    const wolfList = m.seats.filter(function (s) { return s.role === "wolf"; }).map(function (s) { return s.id + "號" + (s.id === getPlayerId() ? "你" : s.name) + (s.isWolfKing ? "(流言首領)" : ""); }).join("、");
     const seerObj = m.seats.find(function (s) { return s.role === "seer"; });
     const witchObj = m.seats.find(function (s) { return s.role === "witch"; });
     const hunterObj = m.seats.find(function (s) { return s.role === "hunter"; });
     const guardObj = m.seats.find(function (s) { return s.role === "guard"; });
+    const elderObj = m.seats.find(function (s) { return s.isElder; });
     truthEl.textContent = "本局真相：酸民狼【" + wolfList + "】" +
       (seerObj ? ("｜明心觀察員【" + seerObj.id + "號" + (seerObj.id === getPlayerId() ? "你" : seerObj.name) + "】") : "") +
       (witchObj ? ("｜滴水奉茶師【" + witchObj.id + "號" + (witchObj.id === getPlayerId() ? "你" : witchObj.name) + "】") : "") +
       (hunterObj ? ("｜直心糾察長【" + hunterObj.id + "號" + (hunterObj.id === getPlayerId() ? "你" : hunterObj.name) + "】") : "") +
-      (guardObj ? ("｜護心守衛【" + guardObj.id + "號" + (guardObj.id === getPlayerId() ? "你" : guardObj.name) + "】") : "");
+      (guardObj ? ("｜護心守衛【" + guardObj.id + "號" + (guardObj.id === getPlayerId() ? "你" : guardObj.name) + "】") : "") +
+      (elderObj ? ("｜清心長老【" + elderObj.id + "號" + (elderObj.id === getPlayerId() ? "你" : elderObj.name) + "】") : "");
   }
 
   const gEval = (m.spectatorGuess && m.spectatorGuess.evaluated) ? m.spectatorGuess.evaluated : (typeof evaluateSpectatorGuess === "function" ? evaluateSpectatorGuess() : null);
@@ -544,6 +575,25 @@ function renderGameOverMetrics() {
     d.innerHTML = '<div class="text-[10px] text-slate-400">' + escapeHtml(item.label) + '</div><div class="text-xs font-black text-amber-200">' + escapeHtml(item.val) + "</div>";
     box.appendChild(d);
   });
+
+  // AI Post-Match Detective Coach Insights (3 crisp turning-point cards)
+  if (typeof buildAiPostMatchCoachInsights === "function" && box && box.parentNode) {
+    let coachBox = el("gameOverCoachBox");
+    if (!coachBox) {
+      coachBox = document.createElement("div");
+      coachBox.id = "gameOverCoachBox";
+      coachBox.className = "space-y-1 text-left mt-2";
+      box.parentNode.insertBefore(coachBox, box.nextSibling);
+    }
+    coachBox.innerHTML = "";
+    const insights = buildAiPostMatchCoachInsights();
+    insights.forEach(function (ci) {
+      const card = document.createElement("div");
+      card.className = "rounded-lg px-2 py-1 bg-slate-950/75 border border-amber-400/25 text-[10.5px] text-slate-200 leading-snug";
+      card.innerHTML = '<span class="font-bold text-amber-300">' + escapeHtml(ci.icon + " " + ci.title + "：") + "</span>" + escapeHtml(ci.text);
+      coachBox.appendChild(card);
+    });
+  }
 }
 
 function selectSeat(seatId) {
@@ -584,9 +634,9 @@ function selectSeat(seatId) {
       return;
     }
     if ((p === "NIGHT_GUARD" && player && player.alive && player.role === "guard" && state.match.lastGuardTargetId !== seatId) ||
-        (seatId !== pid && p === "NIGHT_SEER" && !state.seerReveal && player && player.alive && player.role === "seer") ||
-        (seatId !== pid && p === "NIGHT_WOLF" && player && player.alive && player.role === "wolf" && target.role !== "wolf") ||
-        (seatId !== pid && p === "HUNTER_TRIGGER" && player && player.role === "hunter" && !player.alive)) {
+      (seatId !== pid && p === "NIGHT_SEER" && !state.seerReveal && player && player.alive && player.role === "seer") ||
+      (seatId !== pid && p === "NIGHT_WOLF" && player && player.alive && player.role === "wolf" && target.role !== "wolf") ||
+      (seatId !== pid && p === "HUNTER_TRIGGER" && player && player.role === "hunter" && !player.alive)) {
       confirmTargetAction();
       return;
     }

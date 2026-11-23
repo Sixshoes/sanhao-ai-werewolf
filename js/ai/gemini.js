@@ -435,6 +435,11 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
   const hasGuardRole = state.match.seats.some(function (s) { return s.role === "guard"; });
   const aowuEndgameNote = "【凹嗚規則準則】：採標準屠邊制（狼刀在先），最後一神若是直心糾察長在夜間被狼鎖定將直接屠神結束且無法開槍" + (hasGuardRole ? "；本局含護心守衛，須防與回甘茶同守同救破盾！" : "。");
 
+  const ledgerObj = (day >= 2 && typeof buildCrossDayMemoryLedger === "function") ? buildCrossDayMemoryLedger(speaker) : null;
+  const ledgerNote = (ledgerObj && ledgerObj.lines && ledgerObj.lines.length)
+    ? ("【跨日恩怨與矛盾記憶帳本】：\n- " + ledgerObj.lines.join("\n- ") + "\n")
+    : "";
+
   const prompt =
     "你正在參與林美山書院茶席推理遊戲《三好AI狼人殺》（融入存好心、說好話、做好事理念，以理性防制網路酸言與假訊息取代傳統陰暗衝突，所有「出局」改為請離席冷靜）。\n" +
     "你扮演：" + fmtSeatNum(speaker.id) + "號「" + speaker.name + "」。個性鮮明設定：" + flvBio + "。\n" +
@@ -443,6 +448,7 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
     secretIntel + "\n" +
     pkHint +
     (pitContextNote ? (pitContextNote + "\n") : "") +
+    ledgerNote +
     "【你的專屬身分玩法攻略（務必遵守）】：\n" + rolePlaybook + "\n" +
     "【當前局勢情報】：第 " + day + " 天白天｜昨夜結果：" + ((state.match.lastNightCasualties && state.match.lastNightCasualties.length > 0) ? (state.match.lastNightCasualties.map(function (id) { return id + "號離席"; }).join("、")) : "平安夜無人離席") + "｜" + sheriffLine + (fgNotes.length ? ("公開茶席線索（" + fgNotes.join("、") + "）｜") : "") + "在場座位：" + aliveList + "\n" +
     aowuEndgameNote + "\n" +
@@ -460,5 +466,10 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
     '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":"seer"|"witch"|"hunter"|"guard"|null,"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
 
   const rawOut = await callGeminiText(prompt, { jsonMode: true });
-  return rawOut ? parseGeminiStructuredSpeech(rawOut) : null;
+  const parsed = rawOut ? parseGeminiStructuredSpeech(rawOut) : null;
+  if (parsed && parsed.text && typeof voice !== "undefined" && voice.localNeuralAvailable && typeof voice.prefetchFreeLocalNeural === "function") {
+    const segs = typeof voice.splitTwoStageStream === "function" ? voice.splitTwoStageStream(voice.formatMandarinText(parsed.text)) : [parsed.text];
+    if (segs[0]) voice.prefetchFreeLocalNeural(speaker.name, segs[0], "normal");
+  }
+  return parsed;
 }

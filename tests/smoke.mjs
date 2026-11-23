@@ -3461,11 +3461,50 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 
     clearStepTimer();
     resetMatchToLobby();
+
+    // 6. v6.0 Upgrades: Wolf Night Huddle, 12p WolfKing & Elder, Dramatic Sheriff Stage Reel, Cross-Day Memory Ledger & Post-Match AI Coach
+    el("selectModeCount").value = "12";
+    el("selectPreferredRole").value = "wolf";
+    el("chkSheriffMode").checked = true;
+    state.autoPlay = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const hasWolfKing12 = state.match.seats.some(s => s.isWolfKing);
+    const hasElder12 = state.match.seats.some(s => s.isElder);
+    if (state.match.phase === "NIGHT_GUARD") proceedToNightWolf();
+    const wolfHuddleOk = state.match.phase === "NIGHT_WOLF" && applyWolfNightTactic("deep_stealth") && state.match.wolfTactic === "deep_stealth";
+
+    // Test Dramatic Sheriff Election + Stage Reel + Player Run/Withdraw
+    state.match.day = 1;
+    state.match.sheriffElectionPending = true;
+    const shStarted = startSheriffElection();
+    const shReelOk = shStarted && playSheriffStageReel(0);
+    const shRunOk = resolveSheriffElectionAction("run") && state.match.sheriffElectionCtx.playerRunning === true;
+    const shWithdrawOk = resolveSheriffElectionAction("withdraw") && state.match.sheriffElectionCtx.playerWithdrew === true;
+    const shPassOk = resolveSheriffElectionAction("pass") && Boolean(state.match.sheriffSeatId);
+
+    // Test Cross-Day Memory Ledger & Post-Match Detective Coach
+    state.match.day = 2;
+    state.match.allSpeechEvents = state.match.allSpeechEvents || [];
+    state.match.daySpeechEvents = state.match.daySpeechEvents || [];
+    state.match.allSpeechEvents.push({ day: 1, speakerId: 2, accuseId: 3, vouchId: 4, text: "昨天先保4號踩3號" });
+    state.match.daySpeechEvents.push({ day: 2, speakerId: 2, accuseId: 4, vouchId: null, text: "今天改口踩4號" });
+    const ledgerRes = buildCrossDayMemoryLedger(getSeat(3));
+    const ledgerOk = ledgerRes && ledgerRes.flipIds.includes(2) && ledgerRes.grudgeIds.includes(2);
+    const coachRes = buildAiPostMatchCoachInsights();
+    const coachOk = Array.isArray(coachRes) && coachRes.length === 3 && buildMatchReplayReport().includes("AI 名偵探覆盤教練重點");
+
+    clearStepTimer();
+    resetMatchToLobby();
     return {
       fmtOk, splitOk, rateCycleOk,
       m10Ok: m10Seats === 10 && m10Wolves === 3 && m10Has10 && m10NoBadZero,
       m12Ok: m12Seats === 12 && m12Wolves === 4 && m12Gods === 4 && has4NewChars,
-      stanceOk, reactOk, matrixOk, quoteOk, strip12Ok
+      stanceOk, reactOk, matrixOk, quoteOk, strip12Ok,
+      v6RolesOk: hasWolfKing12 && hasElder12,
+      wolfHuddleOk,
+      v6SheriffOk: shStarted && shReelOk && shRunOk && shWithdrawOk && shPassOk,
+      ledgerOk, coachOk
     };
   })()`, ctx);
 
@@ -3476,4 +3515,4 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v5.3 Plan 1 & Plan 2 (6/8/10/12p + Voice/UI/PWA + Flagship 3D) E2E smoke test PASSED!");
+console.log("[OK] Full v6.0 (6/8/10/12p + Dramatic Sheriff + Wolf Huddle + WolfKing/Elder + AI Coach + iGPU 3D) E2E smoke test PASSED!");

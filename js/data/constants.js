@@ -84,6 +84,15 @@ const ROLE_DEFS = {
     icon: "",
     desc: "說好話推理：比對發言與票型，攜手守護山城茶席和諧！"
   },
+  elder: {
+    key: "elder",
+    name: "清心長老",
+    classicName: "豁免長老",
+    team: "good",
+    badgeBg: "bg-teal-500/20 text-teal-200 border-teal-400/40",
+    icon: "",
+    desc: "10/12 人進階好人：首次被白天公投誤投時，亮牌免於離席（之後失去投票權，但保留發言權帶隊）！"
+  },
   wolf: {
     key: "wolf",
     name: "鍵盤酸民狼",
@@ -92,6 +101,15 @@ const ROLE_DEFS = {
     badgeBg: "bg-rose-500/20 text-rose-200 border-rose-400/40",
     icon: "",
     desc: "晚上散播迷霧請人暫離，白天偽裝熱心同學偷放酸言帶風向！"
+  },
+  wolf_king: {
+    key: "wolf_king",
+    name: "流言首領",
+    classicName: "狼王",
+    team: "wolf",
+    badgeBg: "bg-red-600/25 text-rose-200 border-rose-400/50",
+    icon: "",
+    desc: "10/12 人進階酸民狼：被白天公投請離茶席時，可發動「最後帶風向」拉走 1 位在席夥伴！"
   }
 };
 

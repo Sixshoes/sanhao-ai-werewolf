@@ -973,7 +973,11 @@ function bindNightVoteAndFourGEvents() {
       btn.addEventListener("click", function () {
         sound.unlock();
         const tac = btn.getAttribute("data-wolf-tactic") || "fake_seer";
-        state.match.wolfTactic = tac;
+        if (typeof applyWolfNightTactic === "function") {
+          applyWolfNightTactic(tac);
+        } else {
+          state.match.wolfTactic = tac;
+        }
         el("wolfTacticRow").querySelectorAll("[data-wolf-tactic]").forEach(function (o) {
           o.classList.toggle("is-active", o === btn);
         });

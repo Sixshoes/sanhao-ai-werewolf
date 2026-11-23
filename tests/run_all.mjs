@@ -14,7 +14,13 @@ import { execFileSync } from "node:child_process";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.chdir(ROOT);
 
-const pyBin = fs.existsSync(".venv/bin/python") ? ".venv/bin/python" : "python3";
+const pyBin = fs.existsSync(".venv/Scripts/python.exe")
+  ? ".venv/Scripts/python.exe"
+  : fs.existsSync(".venv/bin/python")
+    ? ".venv/bin/python"
+    : process.platform === "win32"
+      ? "python"
+      : "python3";
 const steps = [
   { name: "[1/4] Python 後端語法編譯檢查", cmd: pyBin, args: ["-m", "py_compile", "server.py"] },
   { name: "[2/4] 後端安全性 / ETag / API 單元測試", cmd: pyBin, args: ["-m", "unittest", "tests/test_server.py", "-v"] },

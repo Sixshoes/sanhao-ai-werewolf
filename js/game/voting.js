@@ -19,7 +19,7 @@ function isValidVoteTarget(seatId) {
 
 function isPlayerEligibleToVote() {
   const player = getPlayerSeat();
-  if (!player || !player.alive) return false;
+  if (!player || !player.alive || player.voteDisabled) return false;
   if (isPkVoteActive() && state.match.pkCandidates.indexOf(player.id) !== -1) return false;
   return true;
 }
@@ -34,12 +34,18 @@ function startVotingPhase() {
 
   if (!isPlayerEligibleToVote()) {
     const inPk = Boolean(player && player.alive && isPkVoteActive());
+    const elderNoVote = Boolean(player && player.alive && player.voteDisabled);
     const ffVote = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
     updateAllUI();
+    if (elderNoVote && typeof showToast === "function") {
+      showToast("🛡️ 你身為已亮牌的清心長老，本輪不具投票權，由其餘夥伴計票！", "emerald");
+    }
     if (!ffVote) {
       voice.speakHost(inPk
         ? "平票 PK 拉票結束，依凹嗚規則由非平票玩家進行決選投票！"
-        : "全員發言結束，開始計票。");
+        : (elderNoVote
+          ? "你身為已亮牌的清心長老失去投票權，本輪由其餘夥伴計票。"
+          : "全員發言結束，開始計票。"));
     }
     state.stepTimer = setTimeout(function () { finalizeVoteRound(null); }, ffVote ? 240 : 1100);
     return;
@@ -62,10 +68,10 @@ function finalizeVoteRound(playerTargetId) {
   const tallies = {};
   const ballots = [];
 
-  // 凹嗚標準規則：平票 PK 決選時，PK 候選人本人不參與投票，僅由非平票存活玩家投給平票候選人！
-  const eligibleVoters = pkActive
+  // 凹嗚標準規則：平票 PK 決選時，PK 候選人本人不參與投票；清心長老發動過豁免後不參與投票
+  const eligibleVoters = (pkActive
     ? alive.filter(function (v) { return state.match.pkCandidates.indexOf(v.id) === -1; })
-    : alive;
+    : alive).filter(function (v) { return !v.voteDisabled; });
 
   eligibleVoters.forEach(function (voter) {
     let chosen = null;
@@ -276,6 +282,41 @@ function finalizeVoteRound(playerTargetId) {
     if (el("btnVoteResultNext")) el("btnVoteResultNext").textContent = "進入夜晚";
 
     const outSeat = getSeat(topIds[0]);
+
+    // 10/12人進階身分【清心長老】：首次被公投誤投時亮牌豁免離席，保留發言權但失去後續投票權！
+    if (outSeat.isElder && !outSeat.elderShieldUsed) {
+      outSeat.elderShieldUsed = true;
+      outSeat.voteDisabled = true;
+      outSeat.claimedRole = "elder";
+      sound.playBlessing();
+      spawnBurst(outSeat.id, ["#2dd4bf", "#fbbf24", "#ffffff"], 26, "star");
+      spawnFx(outSeat.id, "🛡️ 清心長老豁免!", "#2dd4bf", { scale: 1.25, durationMs: 1800 });
+      if (typeof setSeatEmotion === "function") setSeatEmotion(outSeat.id, "proud", 4200);
+      if (typeof setSeatBubble === "function") setSeatBubble(outSeat.id, "慢著！我是清心長老，本輪免於離席！", "trust", 4200);
+      triggerCutIn("🛡️ 清心長老亮牌豁免！", fmtSeatNum(outSeat.id) + "號 " + outSeat.name + " 亮出【清心長老】免於離席（保留發言權，失去投票權）！", "gold", 1800);
+      addLog({
+        kind: "blessing",
+        title: "🛡️ 清心長老豁免：" + fmtSeatNum(outSeat.id) + "號 " + outSeat.name + " 亮牌免於離席！（" + ballotStr + shieldNote + "）",
+        text: "自本輪起，清心長老失去公投投票權，但仍可留席發言協助好夥伴辨明是非。"
+      });
+      state.voteResultPayload = {
+        headline: "🛡️ " + fmtSeatNum(outSeat.id) + "號 " + outSeat.name + " 亮牌【清心長老】免於離席！" + shieldNote,
+        tallies: tallies,
+        groupedVoters: groupedVoters,
+        outId: null,
+        maxVotes: Math.max(1, maxVotes),
+        onContinue: beginNightPhase
+      };
+      state.match.phase = "DAY_VOTE_RESULT";
+      updateAllUI();
+      const ffEld = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+      if (!ffEld) voice.speakHost(outSeat.id + "號" + outSeat.name + "亮出清心長老身分免於離席！請點擊進入夜晚。");
+      if (state.autoPlay || ffEld) {
+        state.stepTimer = setTimeout(beginNightPhase, ffEld ? 600 : 4000);
+      }
+      return;
+    }
+
     outSeat.alive = false;
     outSeat.outReason = "投票出局";
     triggerShake(320);
@@ -304,9 +345,11 @@ function finalizeVoteRound(playerTargetId) {
     if (typeof orchestrator !== "undefined") orchestrator.emit("vote:resolved", { outId: outSeat.id, isWolf: outSeat.team === "wolf" });
 
     function continueAfterVoteSheriff() {
-      if (outSeat.role === "hunter") {
+      if (outSeat.role === "hunter" || outSeat.isWolfKing) {
         state.match.pendingVotedHunterId = outSeat.id;
-        voice.speakHost(outSeat.id + "號" + outSeat.name + "最高票離席，觸發直心糾察長正氣共鳴！");
+        voice.speakHost(outSeat.isWolfKing
+          ? (outSeat.id + "號" + outSeat.name + "身為流言首領，臨走前發動最後帶風向反撲！")
+          : (outSeat.id + "號" + outSeat.name + "最高票離席，觸發直心糾察長正氣共鳴！"));
         triggerHunterResonance(outSeat, "AFTER_VOTE");
         return;
       }
@@ -877,17 +920,77 @@ function buildSheriffElectionCandidates() {
   return cands;
 }
 
-function buildSheriffCandidateLine(cand) {
+function buildSheriffCandidateLine(cand, allCands) {
   const others = getAliveSeats().filter(function (s) { return s.id !== cand.id; });
-  const focus = others[0] ? (fmtSeatNum(others[0].id) + "號" + others[0].name) : "前排席位";
-  const next = others[1] ? (fmtSeatNum(others[1].id) + "號" + others[1].name) : "後置位";
-  if (cand.role === "seer" || cand.fakeSeer) {
-    return "「昨晚先查了 " + focus + "（視角偏正），若拿警徽今晚先驗 " + next + "，雙邊警徽流透明帶隊！」";
+  const focusSeat = others[0] || null;
+  const nextSeat = others[1] || null;
+  const focus = focusSeat ? (fmtSeatNum(focusSeat.id) + "號" + focusSeat.name) : "前排席位";
+  const next = nextSeat ? (fmtSeatNum(nextSeat.id) + "號" + nextSeat.name) : "後置位";
+  const cList = Array.isArray(allCands) ? allCands : [];
+  const rivalSeer = cList.find(function (c) {
+    return c && c.id !== cand.id && (c.role === "seer" || c.fakeSeer);
+  });
+  const isSeerClaim = Boolean(cand.role === "seer" || cand.fakeSeer);
+  const seerCheckTarget = (cand.role === "seer" && state.match && state.match.nightState && state.match.nightState.seerTarget)
+    ? getSeat(state.match.nightState.seerTarget)
+    : focusSeat;
+  const checkLbl = seerCheckTarget ? (fmtSeatNum(seerCheckTarget.id) + "號" + seerCheckTarget.name) : focus;
+
+  if (isSeerClaim) {
+    const isSecondClash = Boolean(rivalSeer && cList.indexOf(cand) > cList.indexOf(rivalSeer));
+    if (isSecondClash) {
+      const rLbl = fmtSeatNum(rivalSeer.id) + "號" + rivalSeer.name;
+      return {
+        tag: "⚡ 對跳明心",
+        tone: "clash",
+        rivalId: rivalSeer.id,
+        text: "「等等！" + rLbl + " 你居然敢跟我對跳明心？！全場聽好，我才是真明心！昨晚我查了 " + checkLbl + "，警徽流先驗 " + next + "，敢跟我拍到底我就直接出你！」"
+      };
+    }
+    if (rivalSeer) {
+      return {
+        tag: "🔮 強拍明心",
+        tone: "seer",
+        rivalId: rivalSeer.id,
+        text: "「我先拍明心身分拿警徽！昨晚查了 " + checkLbl + "（偏金水），今晚警徽流鎖定 " + next + "！等等誰敢上警跟我對跳，直接標記悍跳狼！」"
+      };
+    }
+    return {
+      tag: "🔮 明心帶隊",
+      tone: "seer",
+      rivalId: null,
+      text: "「我直接拍明心上警！昨晚驗了 " + checkLbl + "，警徽給我，今晚再查 " + next + "，雙邊警徽流透明帶大家穩穩抓狼！」"
+    };
   }
+
+  const personaLines = {
+    "小澄": "「警徽不是喊大聲就拿得到！給我 1.5 票，我把每個人的發言漏洞跟票型全算出來，誰在演戲一目了然！」",
+    "暖暖": "「大家別一上來就吵架嘛～警徽交給我，我會幫真明心穩住節奏、不讓狼人帶歪風向！」",
+    "阿松": "「這局水很深，警徽落到狼手就完了！交給我坐鎮末置位，我盯死每個退水跟跟票的人！」",
+    "星兒": "「我的直覺告訴我警上一定藏著狼！警徽給我，我要在末置位把心虛的那個人直接揪出來！」",
+    "小雲": "「先說好，我上警是來查核真假預言家的！誰發言前後矛盾，我末置位直接拍桌歸票！」",
+    "阿竹": "「上警如棋局，先手必爭。若願託付警徽於我，我必在末置位拆穿所有偽裝！」",
+    "晨晨": "「衝啦！第一天就要打出氣勢！給我警徽，誰敢悍跳我就帶全場一起衝他！」",
+    "墨白": "「多說無益，看人看骨。警徽給我，末置位一筆定江山，絕不手軟。」",
+    "晴嵐": "「茶未涼、局已動。若諸位信我，願執警徽居中調度，不讓混淆視聽之徒得逞。」",
+    "阿朗": "「辯論看邏輯、投票看證據！警徽給我，我保證把對跳兩邊的破綻攤在陽光下！」",
+    "柚子": "「哇～警上氣氛好緊張！可是我也想當警長保護大家呀，選我選我，我會很認真聽大家發言的！」"
+  };
+
   if (cand.role === "guard") {
-    return "「我是理性帶隊派，警徽交給我能幫忙鎖定焦點與節奏、末置位穩穩歸票！」";
+    return {
+      tag: "🛡️ 穩健控場",
+      tone: "bold",
+      rivalId: null,
+      text: personaLines[cand.name] || "「我是理性帶隊派，警徽交給我能幫忙鎖定焦點與節奏、末置位穩穩歸票！」"
+    };
   }
-  return "「我說話講邏輯不情緒化，給我警徽我會在末置位整理正反兩邊坑位，公平歸票！」";
+  return {
+    tag: "🔥 強勢上警",
+    tone: "bold",
+    rivalId: rivalSeer ? rivalSeer.id : null,
+    text: personaLines[cand.name] || "「我說話講邏輯不情緒化，給我警徽我會在末置位整理正反兩邊坑位，公平歸票！」"
+  };
 }
 
 function startSheriffElection(onDone) {
@@ -918,40 +1021,120 @@ function startSheriffElection(onDone) {
     if (typeof onDone === "function") onDone();
     return false;
   }
+  const speeches = cands.map(function (c) {
+    const built = buildSheriffCandidateLine(c, cands);
+    return {
+      id: c.id,
+      name: c.name,
+      tag: built.tag,
+      tone: built.tone,
+      rivalId: built.rivalId,
+      text: built.text
+    };
+  });
+  const seerCands = cands.filter(function (c) { return c.role === "seer" || c.fakeSeer; });
+  const hasDoubleSeerClash = seerCands.length >= 2;
+  const dramaEvents = [];
+
+  if (hasDoubleSeerClash) {
+    const sA = seerCands[0];
+    const sB = seerCands[1];
+    dramaEvents.push("⚡ 警上爆出「雙明心對跳」！ " + fmtSeatNum(sA.id) + "號" + sA.name + " 與 " + fmtSeatNum(sB.id) + "號" + sB.name + " 正面交鋒、火藥味十足！");
+    if (typeof spawnBeam === "function") {
+      spawnBeam(sA.id, sB.id, "#f43f5e", "clash");
+      spawnBeam(sB.id, sA.id, "#fbbf24", "clash");
+    }
+    if (typeof setSeatEmotion === "function") {
+      setSeatEmotion(sA.id, "proud", 4500);
+      setSeatEmotion(sB.id, "angry", 4500);
+    }
+    if (typeof setSeatBubble === "function") {
+      setSeatBubble(sA.id, "誰敢跟我對跳明心？！", "trust", 4200);
+      setSeatBubble(sB.id, "少裝了，我才是真明心！", "wolf", 4200);
+    }
+    if (typeof triggerCutIn === "function") {
+      triggerCutIn("⚡ 警上雙明心對跳！", fmtSeatNum(sA.id) + "號" + sA.name + " vs " + fmtSeatNum(sB.id) + "號" + sB.name + " 互拍警徽，全場屏息！", "crimson", 1600);
+    }
+    if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.triggerCameraPunch === "function") {
+      stage3d.triggerCameraPunch(sB.id, { fov: 38, durationMs: 1400 });
+    }
+    sound.tone(330, 0.14, "sawtooth", 0.06, 0);
+    sound.tone(440, 0.18, "triangle", 0.07, 0.09);
+  } else if (cands.length >= 2) {
+    const c0 = cands[0];
+    const c1 = cands[1];
+    dramaEvents.push("🔥 " + fmtSeatNum(c0.id) + "號" + c0.name + " 與 " + fmtSeatNum(c1.id) + "號" + c1.name + " 針鋒相對搶警徽，你要不要上警攪局？");
+    if (typeof setSeatEmotion === "function") {
+      setSeatEmotion(c0.id, "proud", 3800);
+      setSeatEmotion(c1.id, "proud", 3800);
+    }
+    if (typeof setSeatBubble === "function") {
+      setSeatBubble(c0.id, "這枚警徽我勢在必得！", "trust", 3600);
+      setSeatBubble(c1.id, "先問過我同不同意！", "suspect", 3600);
+    }
+    if (typeof spawnBeam === "function") {
+      spawnBeam(c0.id, c1.id, "#fbbf24", "grill");
+    }
+    sound.tone(523, 0.10, "triangle", 0.06, 0);
+  }
+
   m.sheriffElectionCtx = {
     candidateIds: cands.map(function (c) { return c.id; }),
-    speeches: cands.map(function (c) {
-      return { id: c.id, name: c.name, text: buildSheriffCandidateLine(c) };
-    }),
+    speeches: speeches,
+    dramaEvents: dramaEvents,
+    withdrawnIds: [],
+    hasDoubleSeerClash: hasDoubleSeerClash,
     playerRunning: false,
     playerWithdrew: false,
     onDone: typeof onDone === "function" ? onDone : null
   };
   m.phase = "SHERIFF_ELECTION";
-  addLog({ kind: "system", title: "👑 第一天「上警競選」開始！想爭取 1.5 票與末置位歸票權請點擊上警，或直接在警下聽選。", text: "" });
+  addLog({
+    kind: "system",
+    title: hasDoubleSeerClash
+      ? "⚡ 第一天上警競選爆出「雙明心對跳」！快決定要不要上警壓場，或在警下看清破綻投票！"
+      : "👑 第一天「上警競選」開始！想爭取 1.5 票與末置位歸票權請點擊上警，或直接在警下聽選。",
+    text: ""
+  });
   if (typeof voice !== "undefined" && voice.canSpeak()) {
-    voice.speakHost("第一天警長競選開始，想爭取末置位歸票權請上警，否則可在警下投票！");
+    voice.speakHost(hasDoubleSeerClash
+      ? "第一天警長競選爆出雙明心對跳！現場火藥味十足，請決定上警壓場或警下投票！"
+      : "第一天警長競選開始，想爭取末置位歸票權請上警，否則可在警下投票！");
   }
   updateAllUI();
   return true;
 }
 
 function finalizeSheriffElectionWinner(chosenCandId) {
+  clearStepTimer();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
+  state.activeSpeakerId = null;
   const m = state.match;
   const ctx = m ? m.sheriffElectionCtx : null;
   if (!m || !ctx) return null;
+  ctx.activeReelSeatId = null;
   const pid = getPlayerId();
   const cands = ctx.candidateIds.map(getSeat).filter(function (s) { return s && s.alive; });
   let winner = null;
+  const counts = {};
+  const voteRecords = {};
+  cands.forEach(function (c) {
+    counts[c.id] = 0;
+    voteRecords[c.id] = [];
+  });
+
   if (cands.length === 0) {
     winner = getAliveSeats()[0] || null;
   } else if (chosenCandId && cands.some(function (c) { return c.id === chosenCandId; })) {
     if (cands.length === 1) {
       winner = cands[0];
+      counts[winner.id] = 1;
     } else {
-      const counts = {};
-      cands.forEach(function (c) { counts[c.id] = 0; });
       counts[chosenCandId] = (counts[chosenCandId] || 0) + 1.2;
+      if (chosenCandId !== pid) {
+        voteRecords[chosenCandId].push(playerNumTag() + "你");
+        if (typeof spawnBeam === "function") spawnBeam(pid, chosenCandId, "#fbbf24", "vote");
+      }
       getAliveSeats().forEach(function (s) {
         if (s.id === pid || ctx.candidateIds.indexOf(s.id) !== -1) return;
         const ranked = cands.slice().sort(function (a, b) {
@@ -959,13 +1142,15 @@ function finalizeSheriffElectionWinner(chosenCandId) {
           const sb = (s.team === b.team ? 18 : 0) - ((s.suspicionMap && s.suspicionMap[b.id]) || 50) + (b.role === "seer" ? 12 : 0);
           return sb - sa;
         });
-        if (ranked[0]) counts[ranked[0].id] = (counts[ranked[0].id] || 0) + 1;
+        if (ranked[0]) {
+          counts[ranked[0].id] = (counts[ranked[0].id] || 0) + 1;
+          voteRecords[ranked[0].id].push(fmtSeatNum(s.id) + s.name);
+          if (typeof spawnBeam === "function") spawnBeam(s.id, ranked[0].id, "#fbbf24", "vote");
+        }
       });
       winner = cands.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); })[0];
     }
   } else {
-    const counts = {};
-    cands.forEach(function (c) { counts[c.id] = 0; });
     getAliveSeats().forEach(function (s) {
       if (ctx.candidateIds.indexOf(s.id) !== -1) return;
       const ranked = cands.slice().sort(function (a, b) {
@@ -975,10 +1160,25 @@ function finalizeSheriffElectionWinner(chosenCandId) {
         const sb = biasB - ((s.suspicionMap && s.suspicionMap[b.id]) || 50);
         return sb - sa;
       });
-      if (ranked[0]) counts[ranked[0].id] = (counts[ranked[0].id] || 0) + 1;
+      if (ranked[0]) {
+        counts[ranked[0].id] = (counts[ranked[0].id] || 0) + 1;
+        voteRecords[ranked[0].id].push(fmtSeatNum(s.id) + s.name);
+        if (typeof spawnBeam === "function") spawnBeam(s.id, ranked[0].id, "#fbbf24", "vote");
+      }
     });
     winner = cands.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); })[0];
   }
+
+  const sortedCands = cands.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); });
+  const runnerUp = sortedCands.length >= 2 ? sortedCands[1] : null;
+  const margin = (winner && runnerUp) ? ((counts[winner.id] || 0) - (counts[runnerUp.id] || 0)) : 2;
+  const isCloseCall = Boolean(runnerUp && margin <= 1.2);
+  const tallySummary = sortedCands.map(function (c) {
+    const voters = voteRecords[c.id] || [];
+    const cName = c.id === pid ? (playerNumTag() + "你") : (fmtSeatNum(c.id) + c.name);
+    return cName + "(" + Math.round((counts[c.id] || 0) * 10) / 10 + "票" + (voters.length ? ("：" + voters.join("、")) : "") + ")";
+  }).join(" ｜ ");
+
   const doneCb = ctx.onDone;
   m.sheriffElectionCtx = null;
   if (winner) {
@@ -986,21 +1186,87 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     m.stats.sheriffPassed = (m.stats.sheriffPassed || 0) + 1;
     const wLbl = winner.id === pid ? (playerNumTag() + " 你") : (fmtSeatNum(winner.id) + "號 " + winner.name);
     sound.playBlessing();
-    if (typeof spawnBurst === "function") spawnBurst(winner.id, ["#fbbf24", "#fde68a", "#ffffff"], 22, "star");
-    if (typeof spawnFx === "function") spawnFx(winner.id, "👑 當選警長!", "#fbbf24", { scale: 1.15, durationMs: 1600 });
-    triggerCutIn("👑 警長誕生！", wLbl + " 當選本局警長（1.5票歸票＋末置位發言權）！", "gold", 1500);
-    addLog({ kind: "blessing", title: "👑 競選揭曉：" + wLbl + " 高票當選本局警長！", text: "" });
+    if (typeof spawnBurst === "function") spawnBurst(winner.id, ["#fbbf24", "#fde68a", "#ffffff"], 26, "star");
+    if (typeof spawnFx === "function") spawnFx(winner.id, isCloseCall ? "👑 險勝奪徽!" : "👑 當選警長!", "#fbbf24", { scale: 1.2, durationMs: 1700 });
+    if (typeof setSeatEmotion === "function") {
+      setSeatEmotion(winner.id, "laugh", 3600);
+      if (runnerUp) setSeatEmotion(runnerUp.id, "nervous", 3200);
+    }
+    if (typeof setSeatBubble === "function") {
+      setSeatBubble(winner.id, isCloseCall ? "呼～險勝接下警徽，絕不辜負！" : "感謝大家信任，看我帶隊！", "trust", 3800);
+      if (runnerUp) setSeatBubble(runnerUp.id, "可惡只差一點…大家等等睜大眼！", "suspect", 3600);
+    }
+    if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.triggerCameraPunch === "function") {
+      stage3d.triggerCameraPunch(winner.id, { fov: 37, durationMs: 1300 });
+    }
+    triggerCutIn(
+      isCloseCall ? "👑 驚險奪下警徽！" : "👑 警長誕生！",
+      wLbl + (isCloseCall ? " 以些微差距驚險當選警長！" : " 獲全場擁戴當選警長（1.5票歸票＋末置位發言權）！"),
+      "gold",
+      1700
+    );
+    addLog({
+      kind: "blessing",
+      title: "👑 競選開票：" + wLbl + (isCloseCall ? " 驚險當選本局警長！" : " 高票當選本局警長！"),
+      text: tallySummary ? ("【警下票型】" + tallySummary) : ""
+    });
   }
   if (typeof doneCb === "function") doneCb();
   else updateAllUI();
   return winner;
 }
 
+function playSheriffStageReel(startIdx) {
+  const m = state.match;
+  const ctx = m ? m.sheriffElectionCtx : null;
+  if (!m || !ctx || m.phase !== "SHERIFF_ELECTION" || !Array.isArray(ctx.speeches) || !ctx.speeches.length) return false;
+  const idx = typeof startIdx === "number" ? startIdx : 0;
+  if (idx >= ctx.speeches.length) {
+    ctx.activeReelSeatId = null;
+    state.activeSpeakerId = null;
+    updateAllUI();
+    return true;
+  }
+  const sp = ctx.speeches[idx];
+  const seat = getSeat(sp.id);
+  if (!seat || !seat.alive) {
+    return playSheriffStageReel(idx + 1);
+  }
+  ctx.activeReelSeatId = sp.id;
+  state.activeSpeakerId = sp.id;
+  if (typeof setSeatEmotion === "function") setSeatEmotion(sp.id, sp.tone === "clash" ? "angry" : "proud", 4200);
+  if (typeof setSeatBubble === "function") setSeatBubble(sp.id, sp.text.slice(0, 26) + (sp.text.length > 26 ? "…" : ""), sp.tone === "clash" ? "wolf" : "trust", 4400);
+  if (sp.rivalId && typeof spawnBeam === "function") {
+    spawnBeam(sp.id, sp.rivalId, sp.tone === "clash" ? "#f43f5e" : "#fbbf24", "clash");
+  }
+  if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.triggerCameraPunch === "function") {
+    stage3d.triggerCameraPunch(sp.id, { fov: 38, durationMs: 1450 });
+  }
+  updateAllUI();
+  const nextStep = function () {
+    if (!state.match || state.match.phase !== "SHERIFF_ELECTION" || !state.match.sheriffElectionCtx) return;
+    if (state.match.sheriffElectionCtx.activeReelSeatId !== sp.id) return;
+    playSheriffStageReel(idx + 1);
+  };
+  if (typeof voice !== "undefined" && voice.canSpeak()) {
+    voice.speak(sp.name, sp.text, sp.tone === "clash" ? "accuse" : "claim_seer", function () {
+      state.stepTimer = setTimeout(nextStep, 450);
+    }, { seatId: sp.id });
+  } else {
+    state.stepTimer = setTimeout(nextStep, 2200);
+  }
+  return true;
+}
+
 function resolveSheriffElectionAction(actionOrVoteId) {
   sound.unlock();
+  clearStepTimer();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
+  state.activeSpeakerId = null;
   const m = state.match;
   const ctx = m ? m.sheriffElectionCtx : null;
   if (!m || !ctx || m.phase !== "SHERIFF_ELECTION") return false;
+  ctx.activeReelSeatId = null;
   const pid = getPlayerId();
   const pSeat = getPlayerSeat();
 
@@ -1009,16 +1275,57 @@ function resolveSheriffElectionAction(actionOrVoteId) {
     ctx.playerRunning = true;
     if (ctx.candidateIds.indexOf(pid) === -1) ctx.candidateIds.unshift(pid);
     if (!ctx.speeches.some(function (sp) { return sp.id === pid; })) {
+      const pTag = pSeat.role === "seer" ? "🔮 強拍明心" : (pSeat.role === "wolf" ? "🐺 霸氣搶徽" : "👑 強勢上警");
+      const pLine = pSeat.role === "seer"
+        ? "「讓開！我才是真明心！我直接拍身分拿警徽，每晚查驗透明報給大家，誰跟我對跳誰就是狼！」"
+        : (pSeat.role === "wolf"
+          ? "「這局節奏交給我來帶！我上警就是為了幫大家看清局勢、壓住亂帶風向的人，警徽交給我準沒錯！」"
+          : "「我也上警！我想聽聽場上誰在虛張聲勢，警徽交給我，末置位我幫大家把破綻一次揪出來！」");
       ctx.speeches.unshift({
         id: pid,
         name: "你",
-        text: (pSeat && pSeat.role === "seer")
-          ? "「我上警爭取警徽！我會報出每夜查驗與清晰警徽流，帶好人穩穩出狼！」"
-          : "「我上警參與競選！會在末置位整理全場坑位對立與票型，帶隊投出破綻！」"
+        tag: pTag,
+        tone: pSeat.role === "seer" ? "seer" : "player",
+        rivalId: null,
+        text: pLine
       });
     }
-    sound.tone(640, 0.08, "triangle", 0.05, 0);
-    addLog({ kind: "system", title: "🙋 你已舉手上警競選警長！若想棄權可按「退水」，或按「決選」直接開票。", text: "" });
+    if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
+    if (!Array.isArray(ctx.withdrawnIds)) ctx.withdrawnIds = [];
+
+    // Dramatic AI table reaction to player jumping onto the Sheriff stand!
+    const aiCands = ctx.candidateIds.filter(function (id) { return id !== pid; }).map(getSeat).filter(Boolean);
+    const nonSeerAi = aiCands.find(function (c) { return c.role !== "seer" && !c.fakeSeer; });
+    const wolfCand = aiCands.find(function (c) { return c.role === "wolf"; });
+    if (nonSeerAi && aiCands.length >= 2) {
+      // Dramatic "退水" (strategic withdrawal) by an extra good candidate!
+      ctx.candidateIds = ctx.candidateIds.filter(function (id) { return id !== nonSeerAi.id; });
+      ctx.speeches = ctx.speeches.filter(function (sp) { return sp.id !== nonSeerAi.id; });
+      ctx.withdrawnIds.push(nonSeerAi.id);
+      const wLine = "🏳 戲劇退水！" + fmtSeatNum(nonSeerAi.id) + "號" + nonSeerAi.name + " 見你氣勢逼人，當場舉手退水：「好傢伙，你上警氣場這麼強，我先退水去警下聽你表現！」";
+      ctx.dramaEvents.unshift(wLine);
+      if (typeof setSeatEmotion === "function") setSeatEmotion(nonSeerAi.id, "shock", 3400);
+      if (typeof setSeatBubble === "function") setSeatBubble(nonSeerAi.id, "氣勢好強！我先退水觀戰～", "trust", 3800);
+      addLog({ kind: "system", title: wLine, text: "" });
+    } else if (wolfCand) {
+      const rLine = "⚡ 警上嗆聲！" + fmtSeatNum(wolfCand.id) + "號" + wolfCand.name + " 立刻皺眉回擊：「你突然跳上警想幹嘛？大家小心他上警搶節奏！」";
+      ctx.dramaEvents.unshift(rLine);
+      if (typeof setSeatEmotion === "function") setSeatEmotion(wolfCand.id, "nervous", 3400);
+      if (typeof setSeatBubble === "function") setSeatBubble(wolfCand.id, "咦？！你也敢上警搶徽？！", "wolf", 3800);
+      if (typeof spawnBeam === "function") spawnBeam(wolfCand.id, pid, "#f43f5e", "clash");
+    } else if (aiCands[0]) {
+      const rival = aiCands[0];
+      const rLine = "🔥 " + fmtSeatNum(rival.id) + "號" + rival.name + " 迎戰回話：「歡迎上警正面較量！就讓警下夥伴看看誰更有帶隊說服力！」";
+      ctx.dramaEvents.unshift(rLine);
+      if (typeof setSeatEmotion === "function") setSeatEmotion(rival.id, "proud", 3200);
+      if (typeof setSeatBubble === "function") setSeatBubble(rival.id, "來啊，正面比一場！", "suspect", 3600);
+    }
+
+    sound.tone(640, 0.10, "triangle", 0.06, 0);
+    sound.tone(820, 0.12, "triangle", 0.05, 0.07);
+    if (typeof spawnBurst === "function") spawnBurst(pid, ["#fbbf24", "#ffffff"], 14, "star");
+    if (typeof spawnFx === "function") spawnFx(pid, "🙋 強勢上警!", "#fbbf24", { scale: 1.1, durationMs: 1200 });
+    addLog({ kind: "system", title: "🙋 你已舉手上警競選警長！全場瞬間騷動！若想詐完身分棄權可按「退水」，或按「決選」直接開票。", text: "" });
     updateAllUI();
     return true;
   }
@@ -1029,7 +1336,16 @@ function resolveSheriffElectionAction(actionOrVoteId) {
     ctx.playerWithdrew = true;
     ctx.candidateIds = ctx.candidateIds.filter(function (id) { return id !== pid; });
     ctx.speeches = ctx.speeches.filter(function (sp) { return sp.id !== pid; });
-    addLog({ kind: "system", title: "🏳 你已退水回到警下，待會將由警下夥伴投票決選。", text: "" });
+    if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
+    const topAi = ctx.candidateIds.map(getSeat).filter(Boolean)[0];
+    if (topAi) {
+      const smirkLine = "😏 " + fmtSeatNum(topAi.id) + "號" + topAi.name + " 笑道：「哈哈，詐完身分退水了嗎？那這枚警徽我就笑納囉！」";
+      ctx.dramaEvents.unshift(smirkLine);
+      if (typeof setSeatEmotion === "function") setSeatEmotion(topAi.id, "proud", 3200);
+      if (typeof setSeatBubble === "function") setSeatBubble(topAi.id, "退水了？警徽我收下囉！", "suspect", 3600);
+    }
+    sound.tone(420, 0.12, "sine", 0.05, 0);
+    addLog({ kind: "system", title: "🏳 你華麗退水回到警下，待會將由警下夥伴投票決選。", text: "" });
     updateAllUI();
     return true;
   }

@@ -61,6 +61,27 @@ const stage3d = {
     return state.viewMode === "3d" && this.ready && !this.failed;
   },
 
+  detectIntegratedGpu: function (renderer) {
+    try {
+      const gl = renderer && typeof renderer.getContext === "function" ? renderer.getContext() : null;
+      if (!gl || typeof gl.getExtension !== "function") return false;
+      const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+      if (!dbg) return false;
+      const info = String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "");
+      return /intel.*(uhd|hd graphics|iris)|swiftshader|llvmpipe|microsoft basic render/i.test(info);
+    } catch (e) {
+      return false;
+    }
+  },
+
+  getTargetDpr: function (quality) {
+    const q = quality === "eco" ? "eco" : (quality === "balanced" ? "balanced" : "high");
+    const cap = this.isIntegratedGpu
+      ? (q === "eco" ? 0.9 : (q === "balanced" ? 1.0 : 1.35))
+      : (q === "eco" ? 1.15 : (q === "balanced" ? 1.45 : 2.0));
+    return Math.min(window.devicePixelRatio || 1, cap);
+  },
+
   init: function () {
     if (this.ready || this.failed) return this.ready;
     const canvas3d = el("sanctuary3DCanvas");
@@ -76,9 +97,15 @@ const stage3d = {
         alpha: false,
         powerPreference: "high-performance"
       });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2.0));
+      this.isIntegratedGpu = this.detectIntegratedGpu(renderer);
+      if (this.isIntegratedGpu && !this._manualQualityLock && !state.qualityUserChosen && state.quality3D === "high") {
+        state.quality3D = "balanced";
+      }
+      renderer.setPixelRatio(this.getTargetDpr(state.quality3D));
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.shadowMap.type = this.isIntegratedGpu && THREE.PCFShadowMap !== undefined
+        ? THREE.PCFShadowMap
+        : THREE.PCFSoftShadowMap;
       renderer.outputEncoding = THREE.sRGBEncoding;
       if (THREE.ACESFilmicToneMapping !== undefined) {
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -103,7 +130,9 @@ const stage3d = {
       this.seats = build3DSeatPool(scene);
       this.hero = typeof buildHeroCharacter === "function" ? buildHeroCharacter(scene) : null;
       this.fx = build3DEffects(scene);
-      this.postfx = typeof build3DPostFx === "function" ? build3DPostFx(renderer, scene, camera) : null;
+      this.postfx = typeof build3DPostFx === "function"
+        ? build3DPostFx(renderer, scene, camera, { preferLightweight: this.isIntegratedGpu })
+        : null;
       this.fpHandsGroup = this.buildFirstPersonHands(scene);
       this.ready = true;
       this.checkAutoHeroGlb();
@@ -133,9 +162,11 @@ const stage3d = {
     const q = state.quality3D === "eco" ? "eco" : (state.quality3D === "balanced" ? "balanced" : "high");
     const isEco = q === "eco";
     const isBal = q === "balanced";
-    const dpr = Math.min(window.devicePixelRatio || 1, isEco ? 1.15 : (isBal ? 1.45 : 2.0));
+    const dpr = this.getTargetDpr(q);
     this.renderer.setPixelRatio(dpr);
     this.renderer.shadowMap.enabled = !isEco;
+    this.renderer.shadowMap.autoUpdate = !(this.isIntegratedGpu && !isEco);
+    if (this.renderer.shadowMap.enabled) this.renderer.shadowMap.needsUpdate = true;
     if (this.env && this.env.dirLight) this.env.dirLight.castShadow = !isEco;
     if (this.env && this.env.fireflyPoints) this.env.fireflyPoints.visible = q === "high";
     if (this.env && this.env.teaSteamPoints) this.env.teaSteamPoints.visible = !isEco;
@@ -152,6 +183,7 @@ const stage3d = {
 
   toggleQualityMode: function () {
     this._manualQualityLock = true;
+    state.qualityUserChosen = true;
     const order = ["high", "balanced", "eco"];
     const nextIdx = (order.indexOf(state.quality3D) + 1) % order.length;
     state.quality3D = order[nextIdx];
@@ -951,7 +983,7 @@ const stage3d = {
     const rect = container.getBoundingClientRect();
     const w = Math.max(300, Math.floor(rect.width));
     const h = Math.max(220, Math.floor(rect.height));
-    const dpr = Math.min(window.devicePixelRatio || 1, state.quality3D === "eco" ? 1.15 : (state.quality3D === "balanced" ? 1.45 : 2.0));
+    const dpr = this.getTargetDpr(state.quality3D);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -1263,9 +1295,9 @@ const stage3d = {
         const dt = nowMs - this._perfLastMs;
         if (dt > 0 && dt < 120) {
           this._perfEmaMs = this._perfEmaMs ? (this._perfEmaMs * 0.92 + dt * 0.08) : dt;
-          if (!this._manualQualityLock && state.quality3D !== "eco" && this._perfEmaMs > 54) {
+          if (!this._manualQualityLock && state.quality3D !== "eco" && this._perfEmaMs > 44) {
             this._perfSlowMs = (this._perfSlowMs || 0) + dt;
-            if (this._perfSlowMs > 4000) {
+            if (this._perfSlowMs > 3200) {
               state.quality3D = (state.quality3D === "high") ? "balanced" : "eco";
               this.applyQualityMode();
               this._perfSlowMs = 0;
@@ -1336,7 +1368,20 @@ const stage3d = {
     const harmonyBoost = (f.daylight && state.match && typeof state.match.harmonyScore === "number" && state.match.harmonyScore >= 75) ? 0.05 : 0;
     const dynExpBoost = harmonyBoost + (isPunchGlow ? 0.05 : 0) + (isFlashGlow ? 0.06 : 0);
 
-    if (state.quality3D !== "eco" && this.postfx) {
+    if (this.isIntegratedGpu && this.renderer && this.renderer.shadowMap && this.renderer.shadowMap.enabled) {
+      this._shadowFrameCounter = (this._shadowFrameCounter || 0) + 1;
+      const shadowStride = state.quality3D === "balanced" ? 3 : 2;
+      if (this._shadowFrameCounter % shadowStride === 0) {
+        this.renderer.shadowMap.needsUpdate = true;
+      }
+    }
+
+    const usePostFxNow = Boolean(
+      this.postfx &&
+      state.quality3D !== "eco" &&
+      (!this.isIntegratedGpu || state.quality3D === "high")
+    );
+    if (usePostFxNow) {
       // Single authoritative ACES Filmic pass inside PostFX gradePass (prevents double tone-mapping compression!)
       if (this.renderer && THREE.NoToneMapping !== undefined && this.renderer.toneMapping !== THREE.NoToneMapping) {
         this.renderer.toneMapping = THREE.NoToneMapping;

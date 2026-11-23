@@ -107,11 +107,29 @@ function startNewGame() {
       trustShield: false,
       microPulse: rKey === "wolf" ? (72 + Math.floor(Math.random() * 22)) : (16 + Math.floor(Math.random() * 22)),
       fakeSeer: false,
+      isWolfKing: false,
+      isElder: false,
+      elderShieldUsed: false,
+      voteDisabled: false,
       claimedRole: null,
       checkedHistory: [],
       savedSeatId: null,
       purifiedSeatId: null
     });
+  }
+
+  // 10/12-player advanced roles: 1 流言首領 (Wolf King) + 1 清心長老 (Elder)
+  if (count >= 10) {
+    const wolfSeatsAll = seats.filter(function (s) { return s.role === "wolf"; });
+    const villagerSeatsAll = seats.filter(function (s) { return s.role === "villager"; });
+    if (wolfSeatsAll.length > 0) {
+      const wk = wolfSeatsAll[Math.floor(Math.random() * wolfSeatsAll.length)];
+      wk.isWolfKing = true;
+    }
+    if (villagerSeatsAll.length > 0) {
+      const eld = villagerSeatsAll[Math.floor(Math.random() * villagerSeatsAll.length)];
+      eld.isElder = true;
+    }
   }
 
   const aiWolves = seats.filter(function (s) { return s.id !== playerSeatId && s.role === "wolf"; });
@@ -247,7 +265,9 @@ function startNewGame() {
     }
   };
 
-  const rDef = ROLE_DEFS[playerRole];
+  const pSeatObj = getPlayerSeat();
+  const effRoleKey = (pSeatObj && pSeatObj.isWolfKing) ? "wolf_king" : ((pSeatObj && pSeatObj.isElder) ? "elder" : playerRole);
+  const rDef = ROLE_DEFS[effRoleKey] || ROLE_DEFS[playerRole];
   addLog({
     kind: "banner",
     title: "開局！你是【" + rDef.icon + rDef.name + "】",

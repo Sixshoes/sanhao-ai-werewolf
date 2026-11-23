@@ -640,7 +640,13 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     }
 
     // Drive optional VRoid .VRM / rigged .GLB avatar attached to this AI seat
-    if (actor.useVrm && actor.vrmAvatar && typeof stage3dVrm !== "undefined") {
+    const isPrioritySeat = Boolean(isSpeaking || isHovered || isSelected || isDragSnap || isBeingAccusedNow || isVotingNow);
+    const vrmStride = isPrioritySeat
+      ? 1
+      : (state.quality3D === "eco" ? 3 : ((nSeats >= 10 || (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu && state.quality3D === "balanced")) ? 2 : 1));
+    const runVrmFrame = vrmStride <= 1 || !actor._vrmUpdatedOnce || ((pool.frameCounter + s.id) % vrmStride === 0);
+    if (actor.useVrm && actor.vrmAvatar && typeof stage3dVrm !== "undefined" && runVrmFrame) {
+      actor._vrmUpdatedOnce = true;
       if (actor.showcaseActionUntil && nowMs > actor.showcaseActionUntil) {
         actor.showcaseAction = "";
         actor.showcaseActionUntil = 0;
@@ -688,13 +694,19 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         isListeningCurious: isListeningCurious,
         speechAct: speechActNow,
         isHovered: isHovered || isSelected,
+        isPriority: isSpeaking || isHovered || isSelected || isDragSnap,
+        frameCounter: pool.frameCounter,
+        seatId: s.id,
         act: scAct || ((isCelebration && s.team === "good") ? "celebrate" : "")
       });
     }
 
     // Throttled Live 3D Anime Face Update (skipped cleanly when external .VRM avatar is active!)
     const isEco = state.quality3D === "eco";
-    const redrawEvery = (isSpeaking || isHovered || isSelected || isDragSnap) ? (isEco ? 3 : 2) : (isEco ? 8 : 5);
+    const isBal = state.quality3D === "balanced";
+    const redrawEvery = (isSpeaking || isHovered || isSelected || isDragSnap)
+      ? (isEco ? 3 : 2)
+      : (isEco ? 12 : ((nSeats >= 10 || isBal) ? 8 : 5));
     if (!actor.useVrm && (!actor.faceDrawnOnce || (pool.frameCounter + s.id) % redrawEvery === 0)) {
       actor.faceDrawnOnce = true;
       const sweating = Boolean(state.match.started && s.alive && (state.match.microPulseRevealed || s.sweatExposed) && s.microPulse >= 60);
@@ -724,13 +736,22 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     if (!hideSelfBodyInFP) hitMeshes.push(actor.hitMesh);
     if (actor.candleHit) candleHitMeshes.push(actor.candleHit);
 
-    nextAnchors[s.id] = {
-      id: s.id,
-      seat: s,
-      worldPos: actor.worldPos.clone(),
-      headPos: actor.headWorldPos.clone(),
-      handPos: actor.handWorldPos.clone()
-    };
+    if (!actor._anchorObj) {
+      actor._anchorObj = {
+        id: s.id,
+        seat: s,
+        worldPos: actor.worldPos.clone(),
+        headPos: actor.headWorldPos.clone(),
+        handPos: actor.handWorldPos.clone()
+      };
+    } else {
+      actor._anchorObj.id = s.id;
+      actor._anchorObj.seat = s;
+      actor._anchorObj.worldPos.copy(actor.worldPos);
+      actor._anchorObj.headPos.copy(actor.headWorldPos);
+      actor._anchorObj.handPos.copy(actor.handWorldPos);
+    }
+    nextAnchors[s.id] = actor._anchorObj;
 
     projVec.copy(actor.headWorldPos).project(camera);
     const inFront = projVec.z < 1.0;

@@ -137,11 +137,13 @@ function build3DSkyAndLights(scene, env) {
   env.hemiLight = new THREE.HemisphereLight(0x8fa8ff, 0x2b1b12, 0.92);
   scene.add(env.hemiLight);
 
+  const isIgpuEnv = Boolean(typeof stage3d !== "undefined" && stage3d.isIntegratedGpu);
+  const shadowRes = isIgpuEnv ? 1024 : 2048;
   env.dirLight = new THREE.DirectionalLight(0xfff1d0, 1.24);
   env.dirLight.position.set(11, 19, 9);
   env.dirLight.castShadow = true;
-  env.dirLight.shadow.mapSize.width = 2048;
-  env.dirLight.shadow.mapSize.height = 2048;
+  env.dirLight.shadow.mapSize.width = shadowRes;
+  env.dirLight.shadow.mapSize.height = shadowRes;
   env.dirLight.shadow.camera.near = 2;
   env.dirLight.shadow.camera.far = 48;
   const sc = 10.5;
