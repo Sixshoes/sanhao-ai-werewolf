@@ -1,4 +1,6 @@
 .DS_Store
+.env
+.env.*
 .venv/
 .tts_cache/
 .feedback_inbox/

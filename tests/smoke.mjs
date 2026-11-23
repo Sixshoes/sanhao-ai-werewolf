@@ -5252,6 +5252,25 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const gpuDetectIntelIgpuOk = Boolean(!pIntel.isSoftwareRenderer && pIntel.isIntegratedGpu && pIntel.isWindowsAngle);
     const overlayDprCapOk = typeof stage3d.getOverlayDpr === "function" && stage3d.getOverlayDpr() <= 1.5;
 
+    // 11. v13.5 Vercel /api/gemini cloud proxy frontend state & priority checks
+    const prevKey135 = state.geminiApiKey;
+    const prevLoc135 = state.localLlmModel;
+    state.geminiApiKey = "";
+    state.localLlmModel = "";
+    state.serverGeminiAvailable = true;
+    state.serverGeminiOptOut = false;
+    state.serverGeminiCooldownUntil = 0;
+    const cloudProxyOnOk = isServerGeminiProxyActive() && isExternalLlmActive() && getActiveLlmLabel() === "雲端 Gemini";
+    state.serverGeminiCooldownUntil = Date.now() + 60000;
+    const cloudProxyCooldownOk = !isServerGeminiProxyActive() && !isExternalLlmActive();
+    state.serverGeminiCooldownUntil = 0;
+    state.serverGeminiOptOut = true;
+    const cloudProxyOptOutOk = !isServerGeminiProxyActive();
+    state.serverGeminiOptOut = false;
+    state.serverGeminiAvailable = false;
+    state.geminiApiKey = prevKey135;
+    state.localLlmModel = prevLoc135;
+
     return {
       nightHidesStepNextOk,
       lobby12Ok,
@@ -5268,7 +5287,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       gpuDetectSwiftShaderOk,
       gpuDetectRtx5080AngleOk,
       gpuDetectIntelIgpuOk,
-      overlayDprCapOk
+      overlayDprCapOk,
+      cloudProxyOnOk,
+      cloudProxyCooldownOk,
+      cloudProxyOptOutOk
     };
   })()`, ctx);
   for (const [k, v] of Object.entries(v132Res)) {
@@ -5280,6 +5302,51 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const compCssRaw = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
   if (/backdrop-filter\s*:\s*blur\(/i.test(themeCssRaw) || /backdrop-filter\s*:\s*blur\(/i.test(compCssRaw)) {
     throw new Error("Windows WebGL perf guard failed: backdrop-filter: blur(...) found in css/theme.css or css/components.css!");
+  }
+  // Verify Vercel api/gemini.js security guardrails (origin check, Flash-only model cap, rate limiter, GET status, 403/503)
+  const apiGeminiSrc = fs.readFileSync(path.join(ROOT, "api/gemini.js"), "utf8");
+  if (apiGeminiSrc.includes("?key=")) {
+    throw new Error("api/gemini.js must pass API key via x-goog-api-key header, never ?key=");
+  }
+  const apiGeminiHandler = (await import("../api/gemini.js")).default;
+  if (apiGeminiHandler._resolveSafeModel("gemini-4-argon") !== "gemini-3.8-flash") {
+    throw new Error("api/gemini.js must cap public proxy models to Flash tier");
+  }
+  if (apiGeminiHandler._isAllowedOrigin({ headers: { host: "sanhao.vercel.app", origin: "https://evil.example" } })) {
+    throw new Error("api/gemini.js must reject cross-origin requests");
+  }
+  if (!apiGeminiHandler._isAllowedOrigin({ headers: { host: "sanhao.vercel.app", origin: "https://sanhao.vercel.app" } })) {
+    throw new Error("api/gemini.js must allow same-host origin");
+  }
+  apiGeminiHandler._resetRateLimit();
+  let rlTriggered = false;
+  for (let ri = 0; ri < 30; ri++) {
+    const r = apiGeminiHandler._checkRateLimit("203.0.113.9", 1000000 + ri * 100);
+    if (!r.allowed) { rlTriggered = true; break; }
+  }
+  apiGeminiHandler._resetRateLimit();
+  if (!rlTriggered) {
+    throw new Error("api/gemini.js per-IP rate limiter failed to trigger");
+  }
+  const mockRunProxy = async (method, headers, body) => {
+    let outStatus = 0;
+    let outBody = "";
+    const mockRes = {
+      statusCode: 200,
+      setHeader() {},
+      end(chunk) { outStatus = this.statusCode; outBody = String(chunk || ""); }
+    };
+    await apiGeminiHandler({ method, headers: headers || {}, body, socket: { remoteAddress: "127.0.0.1" } }, mockRes);
+    return { status: outStatus, json: JSON.parse(outBody || "{}") };
+  };
+  const savedGemEnv = process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  const gProbe = await mockRunProxy("GET", { host: "sanhao.vercel.app" });
+  const pCross = await mockRunProxy("POST", { host: "sanhao.vercel.app", origin: "https://evil.example" }, { prompt: "hi" });
+  const pNoKey = await mockRunProxy("POST", { host: "sanhao.vercel.app", origin: "https://sanhao.vercel.app" }, { prompt: "hi" });
+  if (savedGemEnv !== undefined) process.env.GEMINI_API_KEY = savedGemEnv;
+  if (gProbe.status !== 200 || gProbe.json.available !== false || pCross.status !== 403 || pNoKey.status !== 503) {
+    throw new Error("api/gemini.js handler status check failed: " + JSON.stringify({ gProbe, pCross, pNoKey }));
   }
 }
 

@@ -20,6 +20,7 @@ window.onload = function () {
   loadUserPrefs();
   voice.refreshVoices();
   voice.probeLocalNeuralServer();
+  if (typeof probeServerGeminiProxy === "function") probeServerGeminiProxy();
   syncPrefsToControls();
   if (typeof orchestrator !== "undefined" && typeof orchestrator.bindSensoryChoreography === "function") {
     orchestrator.bindSensoryChoreography();

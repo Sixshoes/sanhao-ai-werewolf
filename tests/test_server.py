@@ -338,6 +338,35 @@ class ServerTestCase(unittest.TestCase):
             if wav_path.exists():
                 wav_path.unlink()
 
+    def test_v135_gemini_proxy_status_and_api_source_blocked(self):
+        # Serverless source file under /api/ must never be downloadable via static server
+        st_src, _, _ = dispatch_handler("GET", "/api/gemini.js")
+        self.assertEqual(st_src, 403)
+
+        # Without GEMINI_API_KEY, GET /api/gemini reports available=False & POST returns 503
+        with patch.object(server, "get_server_gemini_key", return_value=""):
+            st_get, _, raw_get = dispatch_handler("GET", "/api/gemini")
+            self.assertEqual(st_get, 200)
+            info = json.loads(raw_get.decode("utf-8"))
+            self.assertTrue(info.get("ok"))
+            self.assertFalse(info.get("available"))
+
+            st_post503, _, _ = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"hello"}')
+            self.assertEqual(st_post503, 503)
+
+        # With server key & mocked upstream call, POST /api/gemini succeeds cleanly & rejects empty/bad bodies
+        with patch.object(server, "get_server_gemini_key", return_value="fake-test-key"), \
+             patch.object(server, "call_gemini_text_rest", return_value=("連線成功", "gemini-3.8-flash")):
+            st_empty, _, _ = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"  "}')
+            self.assertEqual(st_empty, 400)
+
+            st_ok, _, raw_ok = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"test","model":"gemini-4-argon"}')
+            self.assertEqual(st_ok, 200)
+            res = json.loads(raw_ok.decode("utf-8"))
+            self.assertTrue(res.get("ok"))
+            self.assertEqual(res.get("text"), "連線成功")
+            self.assertEqual(res.get("model"), "gemini-3.8-flash")
+
 
 if __name__ == "__main__":
     unittest.main()

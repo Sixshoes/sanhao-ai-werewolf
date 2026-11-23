@@ -317,7 +317,13 @@ function bindModalEvents() {
     el("inputGeminiKey").value = state.geminiApiKey;
     const sel = el("selectGeminiModel");
     if (sel) sel.value = state.localLlmModel ? ("ollama:" + state.localLlmModel) : (state.geminiModel || "gemini-3.8-flash");
-    el("aiTestResultBox").classList.add("hidden");
+    const box = el("aiTestResultBox");
+    if (state.serverGeminiAvailable && !state.geminiApiKey && !state.localLlmModel && !state.serverGeminiOptOut) {
+      box.classList.remove("hidden");
+      box.textContent = "☁️ 線上公測雲端 Gemini（" + (state.serverGeminiModel || "gemini-3.8-flash") + "）已自動啟用，免填 Key 即可體驗即時真 AI 對話！";
+    } else {
+      box.classList.add("hidden");
+    }
     el("modalAiConfig").classList.remove("hidden");
     refreshLocalOllamaOptions();
   });
@@ -333,6 +339,7 @@ function bindModalEvents() {
       const ollamaName = chosenModel.slice(7);
       state.localLlmModel = ollamaName;
       state.geminiApiKey = "";
+      if (typeof saveSessionGeminiKey === "function") saveSessionGeminiKey("");
       saveUserPrefs();
       box.textContent = "正在測試本機 Ollama 模型「" + ollamaName + "」…";
       const lRes = await callLocalOllamaOnce(ollamaName, "請只回覆「連線成功」四個字", 25000);
@@ -348,11 +355,16 @@ function bindModalEvents() {
     }
 
     state.localLlmModel = "";
+    state.serverGeminiOptOut = false;
+    state.serverGeminiCooldownUntil = 0;
     state.geminiApiKey = key;
+    if (typeof saveSessionGeminiKey === "function") saveSessionGeminiKey(key);
     state.geminiModel = chosenModel || "gemini-3.8-flash";
     saveUserPrefs();
     if (!key) {
-      box.textContent = "已切回內建三好 AI 推理引擎！";
+      box.textContent = state.serverGeminiAvailable
+        ? "已恢復使用線上公測雲端 Gemini（" + (state.serverGeminiModel || "gemini-3.8-flash") + "）！"
+        : "已切回內建三好 AI 推理引擎！";
       updateAllUI();
       return;
     }
@@ -380,6 +392,7 @@ function bindModalEvents() {
           box.textContent = chosenModel + " 暫無配額，已自動切換為 Gemini 2.5 Flash 並連線成功！";
         } else {
           state.geminiApiKey = "";
+          if (typeof saveSessionGeminiKey === "function") saveSessionGeminiKey("");
           box.textContent = "金鑰無效、配額不足或網路受限，已自動使用內建三好 AI 引擎";
         }
       }
@@ -390,11 +403,13 @@ function bindModalEvents() {
   el("btnClearApiKey").addEventListener("click", function () {
     state.geminiApiKey = "";
     state.localLlmModel = "";
+    state.serverGeminiOptOut = true;
+    if (typeof saveSessionGeminiKey === "function") saveSessionGeminiKey("");
     saveUserPrefs();
     el("inputGeminiKey").value = "";
     if (el("selectGeminiModel")) el("selectGeminiModel").value = state.geminiModel || "gemini-3.8-flash";
     el("aiTestResultBox").classList.remove("hidden");
-    el("aiTestResultBox").textContent = "已切回內建 AI！";
+    el("aiTestResultBox").textContent = "已切回內建 AI！（若要重新啟用雲端 Gemini，再按一次「連線並套用」即可）";
     updateAllUI();
   });
 

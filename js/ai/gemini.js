@@ -3,15 +3,26 @@
  */
 "use strict";
 
-// ==================== HIGH-TIER MULTI-AGENT GEMINI + LOCAL OLLAMA ENGINE ====================
+// ==================== HIGH-TIER MULTI-AGENT GEMINI + VERCEL PROXY + LOCAL OLLAMA ENGINE ====================
+function isServerGeminiProxyActive() {
+  if (typeof state === "undefined") return false;
+  if (state.localLlmModel || state.geminiApiKey || state.serverGeminiOptOut) return false;
+  if (!state.serverGeminiAvailable) return false;
+  if (state.serverGeminiCooldownUntil && Date.now() < state.serverGeminiCooldownUntil) return false;
+  return true;
+}
+
 function isExternalLlmActive() {
-  return typeof state !== "undefined" && Boolean(state.geminiApiKey || state.localLlmModel);
+  return typeof state !== "undefined" && Boolean(state.geminiApiKey || state.localLlmModel || isServerGeminiProxyActive());
 }
 
 function getActiveLlmLabel() {
   if (typeof state === "undefined") return "內建AI";
   if (state.localLlmModel) {
     return "本機 " + String(state.localLlmModel);
+  }
+  if (!state.geminiApiKey && isServerGeminiProxyActive()) {
+    return "雲端 Gemini";
   }
   if (!state.geminiApiKey) return "內建AI";
   const m = state.geminiModel || "gemini-3.8-flash";
@@ -22,6 +33,61 @@ function getActiveLlmLabel() {
   if (m === "gemini-2.5-pro") return "Gemini 2.5 Pro";
   if (m === "gemini-2.5-flash") return "Gemini 2.5 Flash";
   return m;
+}
+
+async function probeServerGeminiProxy() {
+  if (typeof window === "undefined" || !window.location || typeof fetch !== "function") return false;
+  const proto = window.location.protocol;
+  if (proto !== "http:" && proto !== "https:") return false;
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const timer = controller ? setTimeout(function () { controller.abort(); }, 3500) : null;
+  try {
+    const opts = { method: "GET", cache: "no-store" };
+    if (controller) opts.signal = controller.signal;
+    const res = await fetch("/api/gemini", opts);
+    if (timer) clearTimeout(timer);
+    if (!res || !res.ok) return false;
+    const data = await res.json().catch(function () { return null; });
+    if (data && data.ok && data.available) {
+      state.serverGeminiAvailable = true;
+      state.serverGeminiModel = String(data.model || "gemini-3.8-flash");
+      if (typeof updateAllUI === "function") updateAllUI();
+      return true;
+    }
+    state.serverGeminiAvailable = false;
+    return false;
+  } catch (e) {
+    if (timer) clearTimeout(timer);
+    return false;
+  }
+}
+
+async function callServerGeminiProxyOnce(promptText, timeoutMs, opts) {
+  if (typeof fetch !== "function") return { ok: false, status: 0, text: null };
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 14000) : null;
+  try {
+    const fetchOpts = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: promptText,
+        model: state.serverGeminiModel || "gemini-3.8-flash",
+        jsonMode: Boolean(opts && opts.jsonMode)
+      })
+    };
+    if (controller) fetchOpts.signal = controller.signal;
+    const res = await fetch("/api/gemini", fetchOpts);
+    if (timer) clearTimeout(timer);
+    const data = await res.json().catch(function () { return null; });
+    if (!res.ok || !data || !data.ok || !data.text) {
+      return { ok: false, status: res.status, text: null };
+    }
+    return { ok: true, status: res.status, text: String(data.text).trim() };
+  } catch (err) {
+    if (timer) clearTimeout(timer);
+    return { ok: false, status: 0, text: null };
+  }
 }
 
 async function callLocalOllamaOnce(modelName, promptText, timeoutMs, opts) {
@@ -171,7 +237,23 @@ async function callGeminiText(promptText, opts) {
     const loc = await callLocalOllamaOnce(state.localLlmModel, promptText, 40000, opts);
     return loc.ok && loc.text ? loc.text : null;
   }
-  if (!state.geminiApiKey) return null;
+  if (!state.geminiApiKey) {
+    if (!isServerGeminiProxyActive()) return null;
+    const prox = await callServerGeminiProxyOnce(promptText, 14000, opts);
+    if (prox.ok && prox.text) {
+      state._lastGeminiWarnKey = null;
+      return prox.text;
+    }
+    if (prox.status === 429) {
+      state.serverGeminiCooldownUntil = Date.now() + 180000;
+      notifyGeminiIssueOnce("proxy:429", "ℹ️ 公測雲端 Gemini 目前額度忙碌，先由內建 AI 接手；您也可填入自己的免費 Key", "sky");
+      if (typeof updateAllUI === "function") updateAllUI();
+    } else if (prox.status === 404 || prox.status === 503) {
+      state.serverGeminiAvailable = false;
+      if (typeof updateAllUI === "function") updateAllUI();
+    }
+    return null;
+  }
   const primary = state.geminiModel || "gemini-3.8-flash";
   const isHeavy = primary.indexOf("pro") !== -1 || primary.indexOf("argon") !== -1;
   const first = await callGeminiModelOnce(primary, promptText, isHeavy ? 20000 : 12000, opts);

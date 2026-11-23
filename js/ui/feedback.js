@@ -86,7 +86,9 @@ function collectFeedbackDiagnostics() {
     ? ("Ollama:" + state.localLlmModel)
     : ((typeof state !== "undefined" && state.geminiApiKey)
       ? ("Gemini:" + (state.geminiModel || "gemini-3.8-flash"))
-      : "內建三好AI");
+      : ((typeof isServerGeminiProxyActive === "function" && isServerGeminiProxyActive())
+        ? ("CloudGemini:" + (state.serverGeminiModel || "gemini-3.8-flash"))
+        : "內建三好AI"));
   const w = typeof window !== "undefined" ? (window.innerWidth || 0) : 0;
   const h = typeof window !== "undefined" ? (window.innerHeight || 0) : 0;
   const uaRaw = (typeof navigator !== "undefined" && navigator.userAgent) ? String(navigator.userAgent) : "unknown";

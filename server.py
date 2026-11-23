@@ -345,6 +345,65 @@ def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=12):
     return None, ""
 
 
+ALLOWED_PROXY_GEMINI_MODELS = {
+    "gemini-3.8-flash",
+    "gemini-3.6-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+}
+
+
+def get_server_gemini_key():
+    key = (os.environ.get("GEMINI_API_KEY") or "").strip()
+    if key:
+        return key
+    env_path = ROOT_DIR / ".env"
+    if env_path.is_file():
+        try:
+            for line in env_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+                s = line.strip()
+                if not s or s.startswith("#") or "=" not in s:
+                    continue
+                k, v = s.split("=", 1)
+                if k.strip() == "GEMINI_API_KEY":
+                    return v.strip().strip('"').strip("'")
+        except OSError:
+            pass
+    return ""
+
+
+def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeout=14):
+    safe_model = model_id if model_id in ALLOWED_PROXY_GEMINI_MODELS else "gemini-3.8-flash"
+    is_gen3 = safe_model.startswith("gemini-3")
+    gen_cfg = {
+        "temperature": 0.78,
+        "maxOutputTokens": (1536 if json_mode else 1024) if is_gen3 else (1024 if json_mode else 640),
+    }
+    if is_gen3:
+        gen_cfg["thinkingConfig"] = {"thinkingLevel": "LOW"}
+    if json_mode:
+        gen_cfg["responseMimeType"] = "application/json"
+    body = json.dumps({
+        "contents": [{"parts": [{"text": prompt_text}]}],
+        "generationConfig": gen_cfg,
+    }).encode("utf-8")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{urllib.parse.quote(safe_model, safe='')}:generateContent"
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key,
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    parts = (((data.get("candidates") or [{}])[0].get("content") or {}).get("parts") or [])
+    text = "".join(str(p.get("text") or "") for p in parts if isinstance(p, dict)).strip()
+    return text, safe_model
+
+
 class SanhaoHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         self._static_etag = None
@@ -442,9 +501,19 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             })
             return
 
+        if route == "/api/gemini":
+            gem_key = get_server_gemini_key()
+            self.send_json(200, {
+                "ok": True,
+                "available": bool(gem_key),
+                "model": os.environ.get("GEMINI_DEFAULT_MODEL", "gemini-3.8-flash").strip() or "gemini-3.8-flash",
+                "mode": "local-server-proxy",
+            })
+            return
+
         unquoted = urllib.parse.unquote(route)
         parts = [p for p in unquoted.split("/") if p]
-        blocked_top = ("server.py", "tests", "tools", "__pycache__")
+        blocked_top = ("server.py", "api", "tests", "tools", "__pycache__")
         if (
             any(p.startswith(".") or p == ".." or p == "__pycache__" for p in parts)
             or (parts and parts[0] in blocked_top)
@@ -523,6 +592,64 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             self.send_json(502, {"ok": False, "error": "Empty local model output"})
             return
         self.send_json(200, {"ok": True, "model": model, "text": out_text})
+
+    def handle_post_gemini_proxy(self):
+        api_key = get_server_gemini_key()
+        if not api_key:
+            self.send_json(503, {"ok": False, "error": "Server Gemini proxy not configured"})
+            return
+        raw_len = self.headers.get("Content-Length", "0")
+        try:
+            length = int(raw_len)
+        except (TypeError, ValueError):
+            self.send_json(400, {"ok": False, "error": "Invalid Content-Length"})
+            return
+        if length < 0:
+            self.send_json(400, {"ok": False, "error": "Invalid Content-Length"})
+            return
+        if length > 49152:
+            self.send_json(413, {"ok": False, "error": "Payload too large"})
+            return
+        raw = self.rfile.read(length)
+        try:
+            req = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.send_json(400, {"ok": False, "error": "Invalid JSON body"})
+            return
+        if not isinstance(req, dict):
+            self.send_json(400, {"ok": False, "error": "JSON body must be an object"})
+            return
+        raw_prompt = req.get("prompt")
+        prompt_text = raw_prompt.strip()[:14000] if isinstance(raw_prompt, str) else ""
+        if not prompt_text:
+            self.send_json(400, {"ok": False, "error": "Empty prompt"})
+            return
+        req_model = str(req.get("model") or os.environ.get("GEMINI_DEFAULT_MODEL", "gemini-3.8-flash")).strip()
+        primary_model = req_model if req_model in ALLOWED_PROXY_GEMINI_MODELS else "gemini-3.8-flash"
+        json_mode = bool(req.get("jsonMode"))
+        try:
+            out_text, used_model = call_gemini_text_rest(api_key, primary_model, prompt_text, json_mode=json_mode)
+            if out_text:
+                self.send_json(200, {"ok": True, "model": used_model, "text": out_text})
+                return
+        except urllib.error.HTTPError as hexc:
+            if primary_model != "gemini-2.5-flash" and hexc.code in (404, 429, 503):
+                try:
+                    fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode)
+                    if fb_text:
+                        self.send_json(200, {"ok": True, "model": fb_model, "text": fb_text})
+                        return
+                except urllib.error.HTTPError as fb_exc:
+                    self.send_json(429 if fb_exc.code == 429 else 502, {"ok": False, "error": f"Upstream Gemini HTTP {fb_exc.code}"})
+                    return
+                except Exception:
+                    pass
+            self.send_json(429 if hexc.code == 429 else 502, {"ok": False, "error": f"Upstream Gemini HTTP {hexc.code}"})
+            return
+        except Exception as exc:
+            self.send_json(502, {"ok": False, "error": f"Upstream Gemini error: {str(exc)[:100]}"})
+            return
+        self.send_json(502, {"ok": False, "error": "Empty Gemini output"})
 
     def is_allowed_api_origin(self):
         origin = (self.headers.get("Origin") or "").strip()
@@ -686,6 +813,9 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         route = self.path.split("?")[0]
         if not self.is_allowed_api_origin():
             self.send_json(403, {"ok": False, "error": "Forbidden cross-origin API request"})
+            return
+        if route == "/api/gemini":
+            self.handle_post_gemini_proxy()
             return
         if route == "/api/local-llm":
             self.handle_post_local_llm()

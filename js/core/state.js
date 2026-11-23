@@ -6,6 +6,10 @@
 const state = {
   geminiApiKey: "",
   geminiModel: "gemini-3.8-flash",
+  serverGeminiAvailable: false,
+  serverGeminiModel: "gemini-3.8-flash",
+  serverGeminiOptOut: false,
+  serverGeminiCooldownUntil: 0,
   localLlmModel: "",
   autoPlay: false,
   coachEnabled: true,
@@ -192,8 +196,30 @@ function saveUserPrefs() {
   } catch (e) {}
 }
 
+const SESSION_GEMINI_KEY = "sanhao_gemini_session_key_v1";
+
+function saveSessionGeminiKey(key) {
+  try {
+    if (typeof window === "undefined" || !window.sessionStorage) return;
+    const clean = String(key || "").trim();
+    if (clean) window.sessionStorage.setItem(SESSION_GEMINI_KEY, clean);
+    else window.sessionStorage.removeItem(SESSION_GEMINI_KEY);
+  } catch (e) {}
+}
+
+function loadSessionGeminiKey() {
+  try {
+    if (typeof window === "undefined" || !window.sessionStorage) return "";
+    return String(window.sessionStorage.getItem(SESSION_GEMINI_KEY) || "").trim();
+  } catch (e) {
+    return "";
+  }
+}
+
 function loadUserPrefs() {
   try {
+    const sessKey = loadSessionGeminiKey();
+    if (sessKey && !state.geminiApiKey) state.geminiApiKey = sessKey;
     const raw = window.localStorage.getItem(PREFS_STORAGE_KEY);
     if (!raw) return;
     const p = JSON.parse(raw);

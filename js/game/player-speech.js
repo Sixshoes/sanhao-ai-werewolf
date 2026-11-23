@@ -119,7 +119,8 @@ async function rewriteToThreeGoodness(rawText) {
   const targetSeat = getSeat(targetNum);
   const targetLabel = targetSeat ? (targetSeat.id + "號" + targetSeat.name) : (targetNum + "號");
 
-  if (state.geminiApiKey && text.length > 0) {
+  const canRewriteLlm = typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey);
+  if (canRewriteLlm && text.length > 0) {
     const prompt = "把這句狼人殺發言保留號碼，改寫成55到80字之間、溫和有禮、具三好精神又有邏輯說服力的繁體中文口語推理（不用專業術語與表情符號，只輸出一段話）：" + text;
     const live = await callGeminiText(prompt);
     if (live) return live;

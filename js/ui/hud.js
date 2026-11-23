@@ -125,9 +125,10 @@ function updateAllUI() {
   if (el("tgDeedsPill")) el("tgDeedsPill").textContent = (tg.deeds > 0 ? "✦" : "") + "做好事 " + tg.deeds + (m.goodwillVoteBonus ? "・🌟+1票" : "");
 
   const extLlmOn = Boolean(typeof isExternalLlmActive === "function" ? isExternalLlmActive() : (state.geminiApiKey || state.localLlmModel));
+  const cloudProxyOn = Boolean(typeof isServerGeminiProxyActive === "function" && isServerGeminiProxyActive());
   el("aiModeDot").className = state.localLlmModel
     ? "w-2 h-2 rounded-full bg-sky-400"
-    : (state.geminiApiKey ? "w-2 h-2 rounded-full bg-indigo-400" : "w-2 h-2 rounded-full bg-emerald-400");
+    : ((state.geminiApiKey || cloudProxyOn) ? "w-2 h-2 rounded-full bg-indigo-400" : "w-2 h-2 rounded-full bg-emerald-400");
   let modelShort = "內建AI";
   if (state.localLlmModel) {
     modelShort = "本地 " + String(state.localLlmModel).split(":")[0];
@@ -140,6 +141,8 @@ function updateAllUI() {
     else if (gm === "gemini-2.5-pro") modelShort = "2.5 Pro";
     else if (gm === "gemini-2.5-flash") modelShort = "2.5 Flash";
     else modelShort = "Gemini";
+  } else if (cloudProxyOn) {
+    modelShort = "雲端 Gemini";
   }
   el("aiModeLabel").textContent = extLlmOn ? modelShort : "內建AI";
 
