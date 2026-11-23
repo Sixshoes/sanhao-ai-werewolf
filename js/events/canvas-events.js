@@ -190,7 +190,7 @@ function bindCanvasEvents() {
         } else if (((p === "NIGHT_GUARD" && player && player.alive && player.role === "guard" && state.match.lastGuardTargetId !== targetId) ||
                     (p === "NIGHT_SEER" && !state.seerReveal && player && player.alive && player.role === "seer") ||
                     (p === "NIGHT_WOLF" && player && player.alive && player.role === "wolf" && getSeat(targetId) && getSeat(targetId).role !== "wolf") ||
-                    (p === "HUNTER_TRIGGER" && player && player.role === "hunter" && !player.alive)) && (p === "NIGHT_GUARD" || targetId !== pid)) {
+                    (p === "HUNTER_TRIGGER" && player && canSeatTriggerShot(player) && !player.alive && !(player.isWolfKing && getSeat(targetId) && getSeat(targetId).role === "wolf"))) && (p === "NIGHT_GUARD" || targetId !== pid)) {
           state.selectedSeatId = targetId;
           confirmTargetAction();
         } else if (p === "DAY_PLAYER_TURN" && targetId !== pid) {

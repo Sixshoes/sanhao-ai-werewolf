@@ -182,7 +182,8 @@ function finalizeVoteRound(playerTargetId) {
     }
   });
 
-  state.match.voteHistory.push({ day: state.match.day, ballots: ballots, tallies: Object.assign({}, tallies) });
+  const voteRecord = { day: state.match.day, ballots: ballots, tallies: Object.assign({}, tallies), outId: null };
+  state.match.voteHistory.push(voteRecord);
   const ballotStr = ballots.map(function (b) { return b.voterId + "→" + (b.targetId || "棄"); }).join(" ");
 
   let maxVotes = 0;
@@ -319,6 +320,7 @@ function finalizeVoteRound(playerTargetId) {
 
     outSeat.alive = false;
     outSeat.outReason = "投票出局";
+    voteRecord.outId = outSeat.id;
     triggerShake(320);
     spawnBurst(outSeat.id, ["#fb7185", "#fbbf24", "#ffffff"], 28, "slash");
     if (typeof triggerScreenFlash === "function") triggerScreenFlash("#f43f5e", 460, 0.34);
@@ -345,9 +347,11 @@ function finalizeVoteRound(playerTargetId) {
     if (typeof orchestrator !== "undefined") orchestrator.emit("vote:resolved", { outId: outSeat.id, isWolf: outSeat.team === "wolf" });
 
     function continueAfterVoteSheriff() {
-      if (outSeat.role === "hunter" || outSeat.isWolfKing) {
+      const aliveWolvesAfterOut = getAliveSeats().filter(function (s) { return s.team === "wolf"; }).length;
+      const canWkShot = Boolean(outSeat.isWolfKing && aliveWolvesAfterOut > 0);
+      if (outSeat.role === "hunter" || canWkShot) {
         state.match.pendingVotedHunterId = outSeat.id;
-        voice.speakHost(outSeat.isWolfKing
+        voice.speakHost(canWkShot
           ? (outSeat.id + "號" + outSeat.name + "身為流言首領，臨走前發動最後帶風向反撲！")
           : (outSeat.id + "號" + outSeat.name + "最高票離席，觸發直心糾察長正氣共鳴！"));
         triggerHunterResonance(outSeat, "AFTER_VOTE");

@@ -569,10 +569,11 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     actor.idCardPivot.visible = showIdCard;
     if (showIdCard) {
       playerCardHit = actor.idCardHit;
-      const rSig = s.role + ":" + state.hidePlayerRole;
+      const effCardDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : null) || ROLE_DEFS[s.role];
+      const rSig = (effCardDef ? effCardDef.key : s.role) + ":" + state.hidePlayerRole;
       if (actor.idCardRoleSig !== rSig) {
         actor.idCardRoleSig = rSig;
-        const freshFront = createIdCardFaceCanvas(true, ROLE_DEFS[s.role], state.hidePlayerRole);
+        const freshFront = createIdCardFaceCanvas(true, effCardDef, state.hidePlayerRole);
         if (actor.idCardMesh.material[3] && actor.idCardMesh.material[3].map) {
           actor.idCardMesh.material[3].map.dispose();
         }

@@ -4,7 +4,7 @@
  * - 核心網頁與腳本採 Network-First（離線自動降級快取）
  * - /api/* 即時動態端點永不快取
  */
-const CACHE_NAME = "sanhao-tea-v5.3";
+const CACHE_NAME = "sanhao-tea-v6.0";
 const IMMUTABLE_RE = /\/(assets\/(models\/.*\.vrm|portraits|portraits_vrm|sky|textures)|js\/vendor)\//i;
 
 self.addEventListener("install", function () {
@@ -30,7 +30,7 @@ self.addEventListener("fetch", function (event) {
   if (!req || req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.indexOf("/api/") === 0) return;
+  if (url.pathname.indexOf("/api/") !== -1) return;
 
   if (IMMUTABLE_RE.test(url.pathname)) {
     event.respondWith(

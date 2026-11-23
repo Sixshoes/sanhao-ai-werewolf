@@ -433,6 +433,23 @@ function getPlayerSeat() {
   return getSeat(getPlayerId());
 }
 
+function getSeatEffectiveRoleKey(seat) {
+  if (!seat) return "villager";
+  if (seat.isWolfKing) return "wolf_king";
+  if (seat.isElder) return "elder";
+  return seat.role || "villager";
+}
+
+function getSeatRoleDef(seat) {
+  if (typeof ROLE_DEFS === "undefined" || !seat) return null;
+  const effKey = getSeatEffectiveRoleKey(seat);
+  return ROLE_DEFS[effKey] || ROLE_DEFS[seat.role] || null;
+}
+
+function canSeatTriggerShot(seat) {
+  return Boolean(seat && (seat.role === "hunter" || seat.isWolfKing));
+}
+
 function fmtSeatNum(id) {
   const n = parseInt(id, 10);
   if (!Number.isFinite(n)) return String(id || "");

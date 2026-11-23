@@ -286,7 +286,7 @@ function bindIntelAndDetectiveEvents() {
       } else if ((ph === "NIGHT_GUARD" && pSelf && pSelf.alive && pSelf.role === "guard" && state.match.lastGuardTargetId !== sid) ||
                  (ph === "NIGHT_SEER" && !state.seerReveal && pSelf && pSelf.alive && pSelf.role === "seer") ||
                  (ph === "NIGHT_WOLF" && pSelf && pSelf.alive && pSelf.role === "wolf" && s.role !== "wolf") ||
-                 (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && pSelf.role === "hunter")) {
+                 (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && canSeatTriggerShot(pSelf) && !(pSelf.isWolfKing && s.role === "wolf"))) {
         closeSeatIntel();
         confirmTargetAction();
       } else if (ph === "DAY_PLAYER_TURN") {

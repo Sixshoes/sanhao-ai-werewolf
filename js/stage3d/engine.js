@@ -212,7 +212,8 @@ const stage3d = {
       spawn3DShockwave(this.fx, this.seats.anchors[getPlayerId()].worldPos, "#fbbf24", performance.now(), 1.28, 2.2);
     }
     const p = getPlayerSeat();
-    const rName = (p && ROLE_DEFS[p.role] && !state.hidePlayerRole) ? ROLE_DEFS[p.role].name : "已遮蔽";
+    const pRoleDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(p) : null) || (p && ROLE_DEFS[p.role]);
+    const rName = (pRoleDef && !state.hidePlayerRole) ? pRoleDef.name : "已遮蔽";
     showToast(state.cardPeek3D ? ("🃏 翻開 3D 底牌：你的身分是「" + rName + "」") : "🃏 已蓋回 3D 底牌", "emerald");
   },
 
@@ -1437,6 +1438,7 @@ function draw3DOverlayHud(ctx, f, coords) {
     let topFg = "#efe7d8";
     let isSubtleNameplate = false;
     let prio = 1;
+    const sRoleDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : null) || ROLE_DEFS[s.role];
     if (isSpeaking) {
       topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + s.name + (!s.alive ? "・遺言中" : "・發言中");
       topBg = "rgba(166, 50, 38, 0.94)";
@@ -1444,11 +1446,11 @@ function draw3DOverlayHud(ctx, f, coords) {
       topFg = "#fbf5ea";
       prio = 4;
     } else if (!s.alive) {
-      topTag = showTruth && ROLE_DEFS[s.role] ? ("離席・" + ROLE_DEFS[s.role].name) : "已離席";
+      topTag = showTruth && sRoleDef ? ("離席・" + sRoleDef.name) : "已離席";
       topBorder = "rgba(148, 134, 114, 0.35)";
       topFg = "#a89d8b";
-    } else if (showTruth && ROLE_DEFS[s.role]) {
-      topTag = sheriffPrefix + ROLE_DEFS[s.role].name;
+    } else if (showTruth && sRoleDef) {
+      topTag = sheriffPrefix + sRoleDef.name;
       topBg = s.role === "wolf" ? "rgba(154, 44, 34, 0.94)" : "rgba(33, 94, 73, 0.94)";
       topBorder = "rgba(242, 212, 156, 0.6)";
       topFg = "#fbf5ea";

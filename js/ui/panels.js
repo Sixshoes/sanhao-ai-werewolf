@@ -255,10 +255,12 @@ function renderNightAndHunterPanel(p) {
       });
     }
   }
+  const pSelfTarget = getPlayerSeat();
+  const isPlayerWK = Boolean(p === "HUNTER_TRIGGER" && pSelfTarget && pSelfTarget.isWolfKing);
   const validT = Boolean(sel && sel.alive && (p === "NIGHT_GUARD"
     ? state.match.lastGuardTargetId !== sel.id
-    : (sel.id !== getPlayerId() && !(p === "NIGHT_WOLF" && sel.role === "wolf"))));
-  const verb = p === "NIGHT_GUARD" ? "守護 " : (p === "NIGHT_SEER" ? "查證 " : (p === "NIGHT_WOLF" ? "鎖定 " : "共鳴請離 "));
+    : (sel.id !== getPlayerId() && !((p === "NIGHT_WOLF" || isPlayerWK) && sel.role === "wolf"))));
+  const verb = p === "NIGHT_GUARD" ? "守護 " : (p === "NIGHT_SEER" ? "查證 " : (p === "NIGHT_WOLF" ? "鎖定 " : (isPlayerWK ? "反撲帶走 " : "共鳴請離 ")));
   confirmBtn.disabled = !validT;
   if (validT) {
     confirmBtn.innerHTML = escapeHtml("確認" + verb + sel.id + "號") + ' <kbd class="ui-kbd ml-1">Enter</kbd>';
@@ -270,7 +272,9 @@ function renderNightAndHunterPanel(p) {
     ? ("已鎖定 " + fmtSeatNum(sel.id) + "號 " + (sel.id === getPlayerId() ? "你自己" : sel.name) + "（再點頭像或按 Enter 確認）")
     : (p === "NIGHT_GUARD"
       ? (lastG ? ("護心守衛：點上方頭像（含自己）守護；上晚守過 " + fmtSeatNum(lastG) + "號，今晚不可連守或按略過") : "護心守衛：點上方頭像（含自己）展開今夜守護結界")
-      : (p === "NIGHT_SEER" ? "明心觀察員：點上方頭像查證身分（再點一次秒查）" : "請直接點上方頭像選擇目標座位"));
+      : (p === "NIGHT_SEER"
+        ? "明心觀察員：點上方頭像查證身分（再點一次秒查）"
+        : (isPlayerWK ? "🐺 流言首領最後帶風向：點上方好人頭像帶走 1 位夥伴（或按略過）" : "請直接點上方頭像選擇目標座位")));
 }
 
 function renderStepperPanel(p) {
@@ -636,7 +640,7 @@ function selectSeat(seatId) {
     if ((p === "NIGHT_GUARD" && player && player.alive && player.role === "guard" && state.match.lastGuardTargetId !== seatId) ||
       (seatId !== pid && p === "NIGHT_SEER" && !state.seerReveal && player && player.alive && player.role === "seer") ||
       (seatId !== pid && p === "NIGHT_WOLF" && player && player.alive && player.role === "wolf" && target.role !== "wolf") ||
-      (seatId !== pid && p === "HUNTER_TRIGGER" && player && player.role === "hunter" && !player.alive)) {
+      (seatId !== pid && p === "HUNTER_TRIGGER" && player && canSeatTriggerShot(player) && !player.alive && !(player.isWolfKing && target.role === "wolf"))) {
       confirmTargetAction();
       return;
     }

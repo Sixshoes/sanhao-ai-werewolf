@@ -655,9 +655,12 @@ function resumeAfterHunter() {
   if (state.match.afterHunterNext === "AFTER_VOTE" && p1 && !p1.alive && !state.match.spectatorPrompted) {
     state.match.spectatorPrompted = true;
     const shot = state.match.lastHunterShot;
+    const isSelfWK = Boolean((shot && shot.isWolfKing) || p1.isWolfKing);
+    const actText = isSelfWK ? "最後帶風向" : "正氣共鳴";
+    const ico = isSelfWK ? "🐺" : "⚖️";
     const shotHeadline = (shot && shot.hunterId === getPlayerId())
-      ? ("⚖️ 你已發動正氣共鳴，帶走 " + fmtSeatNum(shot.targetId) + "號 " + shot.targetName + "！")
-      : (playerNumTag() + " 你已發動正氣共鳴並離席");
+      ? (ico + " 你已發動" + actText + "，帶走 " + fmtSeatNum(shot.targetId) + "號 " + shot.targetName + "！")
+      : (playerNumTag() + " 你已發動" + actText + "並離席");
     state.voteResultPayload = {
       headline: shotHeadline,
       lastWord: "",
@@ -671,7 +674,7 @@ function resumeAfterHunter() {
     };
     state.match.phase = "DAY_VOTE_RESULT";
     updateAllUI();
-    voice.speakHost("正氣共鳴已結算，你可以選擇直接結束看底牌，或繼續往下看觀戰。");
+    voice.speakHost(actText + "已結算，你可以選擇直接結束看底牌，或繼續往下看觀戰。");
     return;
   }
   if (state.match.afterHunterNext === "AFTER_DAWN") {
@@ -830,12 +833,17 @@ function confirmTargetAction() {
   }
 
   if (phase === "HUNTER_TRIGGER") {
+    const selfSeat = getPlayerSeat();
     if (!target || !target.alive || target.id === getPlayerId()) {
       showToast("點選 1 人帶走，或按略過！", "warn");
       return;
     }
+    if (selfSeat && selfSeat.isWolfKing && target.role === "wolf") {
+      showToast("他是你的酸民狼同伴，請改選好夥伴帶走！", "warn");
+      return;
+    }
     state.match.stats.nightSkillUsed += 1;
-    executeHunterShotPresentation(getPlayerSeat(), target);
+    executeHunterShotPresentation(selfSeat, target);
   }
 }
 

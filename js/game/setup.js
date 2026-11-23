@@ -303,10 +303,10 @@ function startNewGame() {
   }
 
   updateAllUI();
-  showToast("抽牌完成！本局你是 " + playerNumTag() + "（" + ROLE_DEFS[playerRole].name + "）", "emerald");
+  showToast("抽牌完成！本局你是 " + playerNumTag() + "（" + rDef.name + "）", "emerald");
   if (typeof orchestrator !== "undefined") orchestrator.emit("match:started", { totalSeats: count, playerRole: playerRole });
   beginNightPhase();
-  if (typeof indieFlow !== "undefined") indieFlow.showRoleDealRitual(playerRole);
+  if (typeof indieFlow !== "undefined") indieFlow.showRoleDealRitual(effRoleKey);
 }
 
 // ==================== WIN CHECK ====================

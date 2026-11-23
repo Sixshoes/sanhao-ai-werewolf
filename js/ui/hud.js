@@ -204,18 +204,18 @@ function renderSeatStrip() {
       (p === "NIGHT_GUARD" && pSelf && pSelf.alive && pSelf.role === "guard") ||
       (p === "NIGHT_SEER" && !state.seerReveal && pSelf && pSelf.alive && pSelf.role === "seer") ||
       (p === "NIGHT_WOLF" && pSelf && pSelf.alive && pSelf.role === "wolf") ||
-      (p === "HUNTER_TRIGGER" && pSelf && pSelf.role === "hunter" && !pSelf.alive)
+      (p === "HUNTER_TRIGGER" && pSelf && canSeatTriggerShot(pSelf) && !pSelf.alive)
     )
   );
   const isSpecGodView = Boolean(typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive());
-  const ROLE_SHORT_GOD = { seer: "觀", witch: "茶", hunter: "槍", guard: "守", villager: "民", wolf: "狼" };
+  const ROLE_SHORT_GOD = { seer: "觀", witch: "茶", hunter: "槍", guard: "守", villager: "民", elder: "長", wolf: "狼", wolf_king: "王" };
 
   seats.forEach(function (s) {
     const isSelected = state.selectedSeatId === s.id;
     const isSpeaking = state.match.started && (p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id;
     const isSheriff = Boolean(state.match.started && !state.match.sheriffElectionPending && s.alive && state.match.sheriffSeatId === s.id);
     const mark = state.playerMarks[s.id] || null;
-    const isWolfMateDisabled = Boolean(state.match.started && p === "NIGHT_WOLF" && pSelf && pSelf.role === "wolf" && s.role === "wolf" && s.id !== pid);
+    const isWolfMateDisabled = Boolean(state.match.started && ((p === "NIGHT_WOLF" && pSelf && pSelf.role === "wolf") || (p === "HUNTER_TRIGGER" && pSelf && pSelf.isWolfKing)) && s.role === "wolf" && s.id !== pid);
     const isLastGuardedDisabled = Boolean(state.match.started && p === "NIGHT_GUARD" && pSelf && pSelf.role === "guard" && state.match.lastGuardTargetId === s.id);
     const isPkOutDisabled = Boolean(state.match.started && p === "DAY_VOTE" && typeof isValidVoteTarget === "function" && !isValidVoteTarget(s.id));
 
@@ -257,15 +257,19 @@ function renderSeatStrip() {
     const canConfirmThisSeat = Boolean(canDoubleClickConfirm && isSelected && s.alive && (s.id !== pid || p === "NIGHT_GUARD") && !isWolfMateDisabled && !isLastGuardedDisabled && !isPkOutDisabled);
     let badgeText = "";
     let badgeKind = "";
+    const effRoleGod = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(s) : s.role;
     if (!s.alive) {
-      if (isSpecGodView && s.role && ROLE_SHORT_GOD[s.role]) {
-        badgeText = ROLE_SHORT_GOD[s.role];
+      if (isSpecGodView && effRoleGod && ROLE_SHORT_GOD[effRoleGod]) {
+        badgeText = ROLE_SHORT_GOD[effRoleGod];
         badgeKind = s.role === "wolf" ? "wolf" : "dead";
       } else if (s.outReason === "同守同救破盾") {
         badgeText = "破";
         badgeKind = "hunter-out";
       } else if (s.outReason === "正氣共鳴請離") {
         badgeText = "槍";
+        badgeKind = "hunter-out";
+      } else if (s.outReason === "流言反撲請離") {
+        badgeText = "反";
         badgeKind = "hunter-out";
       } else {
         badgeText = "離";
@@ -277,8 +281,11 @@ function renderSeatStrip() {
     } else if (isLastGuardedDisabled) {
       badgeText = "禁守";
       badgeKind = "wolf";
-    } else if (isSpecGodView && s.role && ROLE_SHORT_GOD[s.role]) {
-      badgeText = ROLE_SHORT_GOD[s.role];
+    } else if (s.isElder && s.voteDisabled) {
+      badgeText = "免票";
+      badgeKind = "good";
+    } else if (isSpecGodView && effRoleGod && ROLE_SHORT_GOD[effRoleGod]) {
+      badgeText = ROLE_SHORT_GOD[effRoleGod];
       badgeKind = s.role === "wolf" ? "wolf" : "good";
     } else if (isWolfMateDisabled) {
       badgeText = "伴";
@@ -304,8 +311,10 @@ function renderSeatStrip() {
       (canConfirmThisSeat
         ? "（再點一下立即確認）"
         : (s.alive
-          ? "（點擊鎖定／檢視情資，快捷鍵 " + s.id + "）"
-          : (s.outReason === "正氣共鳴請離" ? "（遭直心糾察長正氣共鳴帶走）" : "（已離席）")));
+          ? ((s.isElder && s.voteDisabled) ? "（已亮牌清心長老・無投票權）" : ("（點擊鎖定／檢視情資，快捷鍵 " + s.id + "）"))
+          : (s.outReason === "正氣共鳴請離"
+            ? "（遭直心糾察長正氣共鳴帶走）"
+            : (s.outReason === "流言反撲請離" ? "（遭流言首領最後帶風向帶走）" : "（已離席）"))));
     btn.addEventListener("click", function () { selectSeat(s.id); });
     strip.appendChild(btn);
   });
@@ -324,7 +333,7 @@ function renderPlayerRoleCard() {
   }
 
   const p = getPlayerSeat();
-  const rDef = ROLE_DEFS[p.role];
+  const rDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(p) : null) || ROLE_DEFS[p.role];
 
   if (state.hidePlayerRole && state.match.phase !== "GAME_OVER") {
     pill.textContent = "已遮蔽";
