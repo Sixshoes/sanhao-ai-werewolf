@@ -4522,11 +4522,16 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     renderVoteSheetIntoBody();
     const voteSheetHasSheriffOk = el("voteSheetBody").innerHTML.includes("警長競選票型");
 
-    // Dual-Seer Sheriff ballot pit scoring test: voter who backed rival Seer gets prioritized into wolfPits
+    // Dual-Seer Sheriff ballot pit scoring test: voter who backed rival Seer gets prioritized into wolfPits (deterministic setup!)
+    state.match.seats.forEach(s => { s.claimedRole = null; });
     const seatsAlive = getAliveSeats().filter(s => s.id !== pid2);
-    const sA = seatsAlive[0], sB = seatsAlive[1], sVoter = seatsAlive[2];
+    const sA = seatsAlive.find(s => s.role !== "wolf" && s.role !== "seer" && s.role !== "witch") || seatsAlive[0];
+    const restDual = seatsAlive.filter(s => s.id !== sA.id);
+    const sB = restDual[0], sVoter = restDual[1];
     sA.claimedRole = "seer";
     sB.claimedRole = "seer";
+    sA.suspicionMap = {};
+    state.match.seats.forEach(s => { sA.suspicionMap[s.id] = 50; });
     state.match.sheriffVoteRecord = {
       day: 1,
       kind: "sheriff",
@@ -4538,9 +4543,11 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       tallies: { [sA.id]: 3, [sB.id]: 1 }
     };
     const slotDual = buildTableSlotAndWorldAnalysis(sA);
-    const dualWorldSheriffPitOk = Boolean(slotDual && slotDual.dualSeerWorlds && slotDual.dualSeerWorlds.worldA
-      && slotDual.dualSeerWorlds.worldA.secondWolf && slotDual.dualSeerWorlds.worldA.secondWolf.id === sVoter.id
-      && slotDual.dualSeerWorlds.worldA.secondReason.includes("警長投票"));
+    const dwRes = slotDual && slotDual.dualSeerWorlds;
+    const wTrustedA = dwRes && (dwRes.worldA.trustedSeer.id === sA.id ? dwRes.worldA : dwRes.worldB);
+    const dualWorldSheriffPitOk = Boolean(wTrustedA
+      && wTrustedA.secondWolf && wTrustedA.secondWolf.id === sVoter.id
+      && wTrustedA.secondReason.includes("警長投票"));
 
     // Prominent pit CTA + Pit Builder sheriff strip & composed speech integration
     state.match.phase = "DAY_PLAYER_TURN";
@@ -4580,4 +4587,99 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v11.1 (Turn-by-Turn Sheriff Speech + Sheriff Ballot Pit Deduction + Prominent Pit CTA + Multi-Joint VRM + Wax-Seal Ritual + Anti-Cheat) E2E smoke test PASSED!");
+// v11.3 FRONT-FACING MEDIUM/HALF-BODY SPEAKER CAMERA & BOTTOM SEAT-BAR JUMP-TO-FRONT
+{
+  const v113Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+
+    // Synthesize 8-seat circular anchors for exact 3D camera geometry proof
+    const ringR = get3DTableLayout(8).ringRadius;
+    const mockAnchors = {};
+    for (let i = 0; i < 8; i++) {
+      const id = i + 1;
+      const ang = Math.PI * 0.5 + (i * Math.PI * 2) / 8;
+      const wx = Math.cos(ang) * ringR;
+      const wz = Math.sin(ang) * ringR;
+      mockAnchors[id] = {
+        id,
+        seat: getSeat(id),
+        worldPos: { x: wx, y: 0, z: wz },
+        headPos: { x: wx, y: 2.12, z: wz }
+      };
+    }
+    const prevReady = stage3d.ready;
+    const prevFailed = stage3d.failed;
+    const prevView = state.viewMode;
+    const prevSeats = stage3d.seats;
+    const prevPreset = stage3d.camPreset;
+    stage3d.ready = true;
+    stage3d.failed = false;
+    state.viewMode = "3d";
+    stage3d.camPreset = "cinema";
+    stage3d.seats = { anchors: mockAnchors };
+
+    // 1. Every seat's front framing places camera IN FRONT OF the character (facing them) and clears the central lotus (distFromCenter >= 0.90)
+    let allSeatsFrontAndLotusClear = true;
+    for (let id = 1; id <= 8; id++) {
+      const wp = mockAnchors[id].worldPos;
+      const fr = stage3d.computeSeatFrontFraming(id, "speaker");
+      if (!fr) { allSeatsFrontAndLotusClear = false; break; }
+      const horiz = Math.cos(fr.pitch) * fr.radius;
+      const camX = fr.lookX + Math.sin(fr.yaw) * horiz;
+      const camY = fr.lookY + Math.sin(fr.pitch) * fr.radius;
+      const camZ = fr.lookZ + Math.cos(fr.yaw) * horiz;
+      const camDistCenter = Math.hypot(camX, camZ);
+      // Unit front vector pointing out of seat toward table center
+      const fLen = Math.hypot(wp.x, wp.z);
+      const fx = -wp.x / fLen, fz = -wp.z / fLen;
+      // Vector from seat to camera
+      const sx = camX - wp.x, sz = camZ - wp.z;
+      const sLen = Math.hypot(sx, sz);
+      const frontDot = (sx * fx + sz * fz) / Math.max(0.01, sLen);
+      if (frontDot < 0.92 || camDistCenter < 0.90 || camY < 1.55 || camY > 2.20 || fr.radius > 3.55) {
+        allSeatsFrontAndLotusClear = false;
+      }
+    }
+
+    // 2. Clicking a seat in the bottom strip (selectSeat) jumps camera right in front of that seat; closeSeatIntel clears it!
+    state.match.phase = "DAY_SPEECH";
+    const pid = getPlayerId();
+    const otherSeat = state.match.seats.find(s => s.id !== pid && s.alive);
+    state.activeSpeakerId = otherSeat.id;
+    const anotherSeat = state.match.seats.find(s => s.id !== pid && s.id !== otherSeat.id && s.alive);
+    selectSeat(anotherSeat.id);
+    const clickJumpedToFrontOk = stage3d.closeUpSeatId === anotherSeat.id;
+    closeSeatIntel();
+    const closeIntelClearsOk = stage3d.closeUpSeatId === null;
+
+    // 3. openSeatIntel also jumps camera to that seat, and advanceSpeechQueue clears closeUp for the next speaker
+    openSeatIntel(anotherSeat.id);
+    const intelJumpedOk = stage3d.closeUpSeatId === anotherSeat.id;
+    state.match.speechQueue = [otherSeat.id];
+    advanceSpeechQueue();
+    const nextSpeakerClearsCloseUpOk = stage3d.closeUpSeatId === null;
+
+    // Restore stage3d mock state cleanly
+    stage3d.ready = prevReady;
+    stage3d.failed = prevFailed;
+    state.viewMode = prevView;
+    stage3d.seats = prevSeats;
+    stage3d.camPreset = prevPreset;
+    stage3d.clearCloseUp();
+    clearStepTimer();
+    resetMatchToLobby();
+    return { allSeatsFrontAndLotusClear, clickJumpedToFrontOk, closeIntelClearsOk, intelJumpedOk, nextSpeakerClearsCloseUpOk };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v113Res)) {
+    if (!v) {
+      throw new Error("v11.3 FRONT-CAMERA & SEAT-JUMP check failed for " + k + ": " + JSON.stringify(v113Res));
+    }
+  }
+}
+
+console.log("[OK] Full v11.3 (Front-Facing Medium Speaker Camera + Seat-Strip Jump + Living Full-Body VRM + Turn-by-Turn Sheriff + Pit Deduction + Anti-Cheat) E2E smoke test PASSED!");

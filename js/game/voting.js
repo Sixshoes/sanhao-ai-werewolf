@@ -29,6 +29,10 @@ function startVotingPhase() {
   voice.stop();
   state.activeSpeakerId = null;
   state.selectedSeatId = null;
+  if (typeof stage3d !== "undefined") {
+    if (typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
+    if (stage3d.orbit) stage3d.orbit.userOverrideUntil = 0;
+  }
   state.match.phase = "DAY_VOTE";
   const player = getPlayerSeat();
 
@@ -171,6 +175,9 @@ function chooseAiVoteTarget(voter, opts) {
 function finalizeVoteRound(playerTargetId) {
   clearStepTimer();
   sound.playVote();
+  if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") {
+    stage3d.clearCloseUp();
+  }
 
   const alive = getAliveSeats();
   const pkActive = isPkVoteActive();
@@ -893,7 +900,7 @@ function chooseAiSheriffTransferTarget(deadSheriff) {
 
 // ==================== SHERIFF BADGE TRANSFER & RALLY CALL ====================
 function handleSheriffEliminated(deadSheriff, onDone) {
-  const doneCb = typeof onDone === "function" ? onDone : function () {};
+  const doneCb = typeof onDone === "function" ? onDone : function () { };
   if (!deadSheriff || !state.match || state.match.sheriffSeatId !== deadSheriff.id) {
     doneCb();
     return;
@@ -1372,6 +1379,11 @@ function advanceSheriffSpeechTurn() {
   if (!cand) return advanceSheriffSpeechTurn();
   ctx.activeReelSeatId = candId;
   state.activeSpeakerId = candId;
+  if (typeof closeSeatIntel === "function") closeSeatIntel();
+  if (typeof stage3d !== "undefined") {
+    if (typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
+    if (stage3d.orbit) stage3d.orbit.userOverrideUntil = 0;
+  }
 
   if (candId === pid) {
     ctx.playerQuickOptions = buildPlayerSheriffQuickOptions(cand);
@@ -1845,8 +1857,8 @@ function startSheriffOrderPick(arg) {
   const onPicked = typeof arg === "function"
     ? arg
     : function (dir) {
-        startDayDiscussion(typeof arg === "string" ? arg : "", dir ? { forcedDir: dir } : undefined);
-      };
+      startDayDiscussion(typeof arg === "string" ? arg : "", dir ? { forcedDir: dir } : undefined);
+    };
   if (!m || !m.started || !state.sheriffMode || !sh || !sh.alive || sh.id !== getPlayerId() || state.autoPlay) {
     onPicked(null);
     return false;

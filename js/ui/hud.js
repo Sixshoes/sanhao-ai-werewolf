@@ -350,10 +350,10 @@ function renderSeatStrip() {
       (canConfirmThisSeat
         ? "（再點一下立即確認）"
         : (s.alive
-          ? ((s.isElder && s.voteDisabled) ? "（已亮牌清心長老・無投票權）" : ("（點擊鎖定／檢視情資，快捷鍵 " + s.id + "）"))
+          ? ((s.isElder && s.voteDisabled) ? "（已亮牌清心長老・無投票權）" : ("（點擊跳到他面前檢視／鎖定，快捷鍵 " + s.id + "）"))
           : (s.outReason === "正氣共鳴請離"
-            ? "（遭直心糾察長正氣共鳴帶走）"
-            : (s.outReason === "流言反撲請離" ? "（遭流言首領最後帶風向帶走）" : "（已離席）"))));
+            ? "（遭直心糾察長正氣共鳴帶走・點擊查看）"
+            : (s.outReason === "流言反撲請離" ? "（遭流言首領最後帶風向帶走・點擊查看）" : "（已離席・點擊查看）"))));
     btn.addEventListener("click", function () { selectSeat(s.id); });
     strip.appendChild(btn);
   });

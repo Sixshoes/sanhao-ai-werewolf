@@ -880,6 +880,15 @@ function selectSeat(seatId) {
     closeSeatIntel();
   }
 
+  // v11.3 Clicking any seat in the bottom strip or on the table smoothly jumps the 3D camera right in front of that character!
+  if (typeof stage3d !== "undefined" && typeof stage3d.jumpToSeatFront === "function") {
+    if (seatId === pid && stage3d.closeUpSeatId === pid) {
+      stage3d.clearCloseUp();
+    } else if (seatId !== pid || p === "NIGHT_GUARD" || stage3d.camPreset !== "firstperson") {
+      stage3d.jumpToSeatFront(seatId);
+    }
+  }
+
   if (p === "DAY_PLAYER_TURN") preparePlayerSpeechPanel();
   updateAllUI();
 }

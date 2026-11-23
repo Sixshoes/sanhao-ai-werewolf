@@ -293,17 +293,65 @@ const stage3d = {
     this.setCameraPreset(next);
   },
 
+  computeSeatFrontFraming: function (seatId, style) {
+    if (!this.seats || !this.seats.anchors || !this.seats.anchors[seatId]) return null;
+    const anchor = this.seats.anchors[seatId];
+    const wp = anchor.worldPos;
+    const hp = anchor.headPos;
+    if (!wp) return null;
+    const frontYaw = Math.atan2(-wp.x, -wp.z);
+    const seatDist = Math.hypot(wp.x, wp.z) || 4.44;
+    const isInspect = style === "inspect";
+    const isDramatic = style === "dramatic";
+    // Position camera strictly IN FRONT OF the character, clearing the central lotus (r≈0.65) across 6/8/10/12-seat tables!
+    const maxSafeR = Math.max(2.65, seatDist - 1.05);
+    const desiredR = isInspect ? 3.16 : (isDramatic ? 3.16 : 3.40);
+    const radius = Math.min(desiredR, maxSafeR);
+    const pitch = isInspect ? 0.14 : (isDramatic ? 0.15 : 0.17);
+    // Subtle ±6°..±8° three-quarter offset gives rich 3D facial depth instead of a flat mugshot
+    const angleOffset = (seatId % 2 === 0 ? 1 : -1) * (isInspect ? 0.11 : 0.14);
+    // Aim lookAt slightly below chest so face & gesturing upper body sit cleanly ABOVE the bottom dialogue card!
+    const headY = (hp && typeof hp.y === "number" && hp.y > 1.2) ? hp.y : 2.10;
+    const lookY = clamp(isInspect ? (headY - 0.72) : (headY - 0.80), 1.18, 1.52);
+    const fov = isInspect ? 39 : (isDramatic ? 38 : 40);
+    return {
+      yaw: frontYaw + angleOffset,
+      pitch: pitch,
+      radius: radius,
+      lookX: wp.x,
+      lookY: lookY,
+      lookZ: wp.z,
+      fov: fov
+    };
+  },
+
+  jumpToSeatFront: function (seatId, opts) {
+    if (!this.isActive() || !this.seats || !this.seats.anchors || !this.seats.anchors[seatId]) return false;
+    if (this.showcaseMode) return false;
+    if (this.camPreset === "firstperson") {
+      return this.glanceAtSeatInFirstPerson(seatId);
+    }
+    this.closeUpSeatId = seatId;
+    this.orbit.userOverrideUntil = 0;
+    if (opts && opts.toast) {
+      const s = getSeat(seatId) || (this.seats.anchors[seatId] && this.seats.anchors[seatId].seat);
+      showToast("📷 鏡頭切換至 " + fmtSeatNum(seatId) + "號 " + (s ? s.name : "") + " 面前（點空白處或換人復位）", "emerald");
+    }
+    return true;
+  },
+
   focusSeatCloseUp: function (seatId) {
     if (!this.isActive() || !this.seats || !this.seats.anchors[seatId]) return;
     if (this.closeUpSeatId === seatId) {
       this.closeUpSeatId = null;
-      showToast("已退回圓桌全景視角", "emerald");
+      this.orbit.userOverrideUntil = 0;
+      showToast("已退回圓桌自動運鏡", "emerald");
       return;
     }
     this.closeUpSeatId = seatId;
     this.orbit.userOverrideUntil = 0;
     const s = getSeat(seatId) || (this.seats.anchors[seatId] && this.seats.anchors[seatId].seat);
-    showToast("🔍 特寫檢視 " + fmtSeatNum(seatId) + "號 " + (s ? s.name : "") + "（點空白處退回全景）", "emerald");
+    showToast("🔍 正面特寫檢視 " + fmtSeatNum(seatId) + "號 " + (s ? s.name : "") + "（點空白處退回）", "emerald");
   },
 
   clearCloseUp: function () {
@@ -1108,7 +1156,7 @@ const stage3d = {
       this.orbit.fpTargetPitch = clamp(this.orbit.fpTargetPitch + dy * 0.0040, -0.46, 0.24);
     } else {
       this.orbit.targetYaw -= dx * 0.0075;
-      this.orbit.targetPitch = clamp(this.orbit.targetPitch + dy * 0.0055, 0.22, 1.22);
+      this.orbit.targetPitch = clamp(this.orbit.targetPitch + dy * 0.0055, 0.08, 1.22);
     }
     this.orbit.userOverrideUntil = performance.now() + 9000;
   },
@@ -1128,7 +1176,7 @@ const stage3d = {
       this.orbit.userOverrideUntil = performance.now() + 6500;
       return;
     }
-    this.orbit.targetRadius = clamp(this.orbit.targetRadius + deltaY * 0.006, 7.2, 19.5);
+    this.orbit.targetRadius = clamp(this.orbit.targetRadius + deltaY * 0.006, 2.45, 19.5);
     this.orbit.userOverrideUntil = performance.now() + 6500;
   },
 
@@ -1268,14 +1316,19 @@ const stage3d = {
       : ((state.match && state.match.started) ? (state.match.totalSeats || 8) : (typeof getLobbySeatCount === "function" ? getLobbySeatCount() : 8));
     const camLayout = typeof get3DTableLayout === "function" ? get3DTableLayout(activeSeatCount) : null;
     const largeTableR = camLayout ? (camLayout.camExtraR || 0) : (activeSeatCount >= 12 ? 2.15 : (activeSeatCount >= 10 ? 1.15 : 0));
+    let frontShotFov = null;
+    let isFrontShot = false;
     if (!o.dragging && nowMs > o.userOverrideUntil) {
       if (this.closeUpSeatId && this.seats.anchors[this.closeUpSeatId]) {
-        const cp = this.seats.anchors[this.closeUpSeatId].worldPos;
-        const cpAng = Math.atan2(-cp.x, -cp.z);
-        o.targetYaw = cpAng;
-        o.targetPitch = 0.28;
-        o.targetRadius = 5.4;
-        o.targetLookAt.set(cp.x * 0.72, 1.95, cp.z * 0.72);
+        const frInspect = this.computeSeatFrontFraming(this.closeUpSeatId, "inspect");
+        if (frInspect) {
+          o.targetYaw = frInspect.yaw;
+          o.targetPitch = frInspect.pitch;
+          o.targetRadius = frInspect.radius;
+          o.targetLookAt.set(frInspect.lookX, frInspect.lookY, frInspect.lookZ);
+          frontShotFov = frInspect.fov;
+          isFrontShot = true;
+        }
       } else if (this.camPreset === "overview") {
         o.targetYaw = Math.sin(f.tSec * 0.08) * 0.12;
         o.targetPitch = 0.96;
@@ -1303,24 +1356,21 @@ const stage3d = {
           o.targetLookAt.set(0, 0.56, 0.32);
         }
       } else if ((p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH" || p === "SHERIFF_ELECTION") && state.activeSpeakerId && this.seats.anchors[state.activeSpeakerId]) {
-        const spPos = this.seats.anchors[state.activeSpeakerId].worldPos;
+        // v11.3 True Front-Facing Medium / Half-Body Speaker Shot (builds vivid character recall while keeping face & hands clear above HUD!)
         const dayEvs = (state.match && state.match.daySpeechEvents) || [];
         const latestEv = dayEvs.length ? dayEvs[dayEvs.length - 1] : null;
-        const focusId = (latestEv && latestEv.speakerId === state.activeSpeakerId)
-          ? (latestEv.accuseId || latestEv.vouchId || null)
-          : null;
         const isAccuseShot = Boolean(latestEv && latestEv.speakerId === state.activeSpeakerId && latestEv.accuseId);
         const isClaimShot = Boolean(latestEv && latestEv.speakerId === state.activeSpeakerId && latestEv.claimRole);
         const isPkSpeech = Boolean(typeof isPkVoteActive === "function" && isPkVoteActive());
-        const focusAnchor = (focusId && this.seats.anchors[focusId]) ? this.seats.anchors[focusId] : null;
-        const focusPos = focusAnchor ? focusAnchor.worldPos : null;
-        const aimX = focusPos ? (spPos.x * 0.46 + focusPos.x * 0.20) : (spPos.x * 0.38);
-        const aimZ = focusPos ? (spPos.z * 0.46 + focusPos.z * 0.20 + 0.24) : (spPos.z * 0.38 + 0.26);
-        const spAngle = Math.atan2(spPos.x, spPos.z);
-        o.targetYaw = -Math.sin(spAngle) * ((isAccuseShot || isPkSpeech) ? 0.52 : 0.42);
-        o.targetPitch = (isClaimShot || isPkSpeech) ? 0.37 : (isAccuseShot ? 0.40 : (focusPos ? 0.44 : 0.42));
-        o.targetRadius = ((isClaimShot || isPkSpeech) ? 8.2 : (isAccuseShot ? 8.8 : (focusPos ? 9.4 : 8.9))) + largeTableR * 0.65;
-        o.targetLookAt.set(aimX, (isClaimShot || isPkSpeech) ? 0.98 : 0.84, aimZ);
+        const frSp = this.computeSeatFrontFraming(state.activeSpeakerId, (isClaimShot || isPkSpeech || isAccuseShot) ? "dramatic" : "speaker");
+        if (frSp) {
+          o.targetYaw = frSp.yaw + Math.sin(f.tSec * 0.42) * 0.035;
+          o.targetPitch = frSp.pitch;
+          o.targetRadius = frSp.radius;
+          o.targetLookAt.set(frSp.lookX, frSp.lookY, frSp.lookZ);
+          frontShotFov = frSp.fov;
+          isFrontShot = true;
+        }
       } else if ((p === "DAY_VOTE" && isPkVoteActive()) || (p === "DAY_SPEECH" && state.match.seats.filter(function (s) { return s.alive && s.claimedRole === "seer"; }).length >= 2 && !state.activeSpeakerId)) {
         // Dual-Rival Confrontation Framing (PK or Seer Clash!)
         const rivals = isPkVoteActive()
@@ -1369,16 +1419,20 @@ const stage3d = {
     }
     const isPunchActive = Boolean(punch && nowMs < punch.until && this.camPreset !== "firstperson" && !this.showcaseMode);
     if (isPunchActive && !o.dragging && nowMs > o.userOverrideUntil && punch.seatId && this.seats.anchors[punch.seatId]) {
-      const pp = this.seats.anchors[punch.seatId].worldPos;
-      if (!this._punchLookTmp) this._punchLookTmp = new THREE.Vector3();
-      o.targetYaw = -Math.sin(Math.atan2(pp.x, pp.z)) * 0.44;
-      o.targetRadius = Math.min(o.targetRadius, 9.6);
-      o.targetLookAt.lerp(this._punchLookTmp.set(pp.x * 0.45, 0.85, pp.z * 0.45), 0.55);
+      const frPunch = this.computeSeatFrontFraming(punch.seatId, "inspect");
+      if (frPunch) {
+        o.targetYaw = frPunch.yaw;
+        o.targetPitch = frPunch.pitch;
+        o.targetRadius = Math.min(frPunch.radius, 3.0);
+        o.targetLookAt.set(frPunch.lookX, frPunch.lookY, frPunch.lookZ);
+        frontShotFov = punch.fovTarget || 37;
+        isFrontShot = true;
+      }
     }
 
     if (typeof this.camera.fov === "number" && !this.showcaseMode && this.camPreset !== "firstperson") {
-      const baseFov = this.camPreset === "overview" ? 46 : 44;
-      const targetFov = isPunchActive ? (punch.fovTarget || 39) : baseFov;
+      const baseFov = frontShotFov !== null ? frontShotFov : (this.camPreset === "overview" ? 46 : 44);
+      const targetFov = isPunchActive ? (punch.fovTarget || 37) : baseFov;
       const diffFov = targetFov - this.camera.fov;
       if (Math.abs(diffFov) > 0.04) {
         this.camera.fov += diffFov * 0.14;
@@ -1389,8 +1443,13 @@ const stage3d = {
       }
     }
 
-    const smooth = o.dragging ? 0.24 : (isPunchActive ? 0.12 : 0.065);
-    o.yaw += (o.targetYaw - o.yaw) * smooth;
+    const smooth = o.dragging ? 0.24 : (this.closeUpSeatId ? 0.135 : ((isPunchActive || isFrontShot) ? 0.115 : 0.07));
+    let dYaw = o.targetYaw - o.yaw;
+    while (dYaw > Math.PI) dYaw -= Math.PI * 2;
+    while (dYaw < -Math.PI) dYaw += Math.PI * 2;
+    o.yaw += dYaw * smooth;
+    if (o.yaw > Math.PI) o.yaw -= Math.PI * 2;
+    if (o.yaw < -Math.PI) o.yaw += Math.PI * 2;
     o.pitch += (o.targetPitch - o.pitch) * smooth;
     o.radius += (o.targetRadius - o.radius) * smooth;
     o.lookAt.lerp(o.targetLookAt, smooth);

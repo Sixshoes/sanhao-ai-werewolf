@@ -229,6 +229,11 @@ function advanceLastWordsQueue() {
     advanceLastWordsQueue();
     return;
   }
+  if (typeof closeSeatIntel === "function") closeSeatIntel();
+  if (typeof stage3d !== "undefined") {
+    if (typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
+    if (stage3d.orbit) stage3d.orbit.userOverrideUntil = 0;
+  }
   state.activeSpeakerId = seat.id;
   const lwLabel = ctx.mode === "first_night" ? "首夜遺言" : "離席遺言";
 

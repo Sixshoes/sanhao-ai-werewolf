@@ -124,6 +124,9 @@ function openSeatIntel(seatId) {
   }
   state.intelSeatId = seatId;
   state.selectedSeatId = seatId;
+  if (typeof stage3d !== "undefined" && typeof stage3d.jumpToSeatFront === "function") {
+    stage3d.jumpToSeatFront(seatId);
+  }
   renderSeatIntelPopover();
 }
 
@@ -131,6 +134,9 @@ function closeSeatIntel() {
   state.intelSeatId = null;
   const pop = el("seatIntelPopover");
   if (pop) pop.classList.add("hidden");
+  if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") {
+    stage3d.clearCloseUp();
+  }
 }
 
 function renderSeatIntelPopover() {

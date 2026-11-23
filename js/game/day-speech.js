@@ -105,6 +105,11 @@ function advanceSpeechQueue() {
   state.activeSpeakerId = speaker.id;
   state.currentTurnSpoken = false;
   state.activeClash = null;
+  if (typeof closeSeatIntel === "function") closeSeatIntel();
+  if (typeof stage3d !== "undefined") {
+    if (typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
+    if (stage3d.orbit) stage3d.orbit.userOverrideUntil = 0;
+  }
 
   if (speaker.id === getPlayerId()) {
     // Harmony >= 85 Automatic Perk: "三好清風" spots the sharpest OBSERVABLE contradiction/slip (zero hidden-info leak!)
