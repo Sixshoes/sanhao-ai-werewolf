@@ -359,6 +359,8 @@ body.craft-ui.theme-day main .text-amber-200,
 body.craft-ui.theme-day main .text-amber-300,
 body.craft-ui.theme-day main .text-amber-400,
 body.craft-ui.theme-day .craft-modal-box .text-amber-200,
+body.craft-ui.theme-day .craft-modal-box .text-amber-100,
+body.craft-ui.theme-day .craft-modal-box .text-amber-200,
 body.craft-ui.theme-day .craft-modal-box .text-amber-300 {
   color: #8c5a18;
 }

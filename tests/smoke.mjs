@@ -3513,6 +3513,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     indieFlow.hideRoleDealRitual();
     const directElderOk = state.match.totalSeats === 10 && Boolean(getPlayerSeat() && getPlayerSeat().isElder && getSeatEffectiveRoleKey(getPlayerSeat()) === "elder");
     const v61AchOk = Array.isArray(ACHIEVEMENT_DEFS) && ACHIEVEMENT_DEFS.length >= 20;
+    const prefetchFnOk = typeof prefetchNextAiSpeech === "function" && typeof isPrefetchedAiSpeechReady === "function";
 
     clearStepTimer();
     resetMatchToLobby();
@@ -3525,7 +3526,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       wolfHuddleOk,
       v6SheriffOk: shStarted && shReelOk && shRunOk && shWithdrawOk && shPassOk,
       ledgerOk, coachOk,
-      v61Ok: matrixFlipOk && directWkOk && directElderOk && v61AchOk
+      v61Ok: matrixFlipOk && directWkOk && directElderOk && v61AchOk && prefetchFnOk
     };
   })()`, ctx);
 

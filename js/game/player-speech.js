@@ -1095,4 +1095,7 @@ function submitPlayerSpeech() {
     charDelay: 30,
     holdMs: 1850
   });
+  if (typeof prefetchNextAiSpeech === "function") {
+    prefetchNextAiSpeech();
+  }
 }

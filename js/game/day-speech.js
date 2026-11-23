@@ -46,6 +46,7 @@ function startDayDiscussion(dawnVoiceLine, opts) {
   state.match.pkUsedToday = false;
   state.activeSpeakerId = null;
   state.activeClash = null;
+  state.match._prefetchedSpeech = null;
   if (typeof orchestrator !== "undefined") {
     if (typeof isClassicSimpleMode === "function" && isClassicSimpleMode()) {
       state.match.activeDirectorEvent = null;
@@ -67,6 +68,9 @@ function startDayDiscussion(dawnVoiceLine, opts) {
   if (prog) prog.style.width = "100%";
 
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  if (!ff && typeof prefetchNextAiSpeech === "function") {
+    prefetchNextAiSpeech();
+  }
   if (dawnVoiceLine && voice.canSpeak() && !ff) {
     syncSpeakerBannerVisuals(null, "主持播報 · 天亮結果", "第 " + state.match.day + " 天", false);
     let kickedOff = false;
@@ -134,11 +138,87 @@ function advanceSpeechQueue() {
   updateAllUI();
 
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-  const delayMs = ff ? 85 : (state.autoPlay ? 320 : 180);
+  const hasReadyPrefetch = Boolean(typeof isPrefetchedAiSpeechReady === "function" && isPrefetchedAiSpeechReady(speaker.id));
+  const delayMs = ff ? 85 : (hasReadyPrefetch ? 45 : (state.autoPlay ? 220 : 120));
   state.stepTimer = setTimeout(function () {
     executeAiTurnSpeech(speaker);
   }, delayMs);
 }
+
+function _buildSpeechPrefetchKey(seatId) {
+  const m = state.match || {};
+  const evLen = Array.isArray(m.daySpeechEvents) ? m.daySpeechEvents.length : 0;
+  const pkTag = (typeof isPkVoteActive === "function" && isPkVoteActive()) ? "pk" : "reg";
+  return (m.day || 0) + ":" + seatId + ":" + evLen + ":" + pkTag;
+}
+
+function isPrefetchedAiSpeechReady(seatId) {
+  const pf = state.match && state.match._prefetchedSpeech;
+  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  return Boolean(pf && pf.epoch === ep && pf.seatId === seatId && pf.key === _buildSpeechPrefetchKey(seatId) && pf.resolvedMeta);
+}
+
+function prefetchNextAiSpeech() {
+  const m = state.match;
+  if (!m || !m.started) return false;
+  const extLlmOn = typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel);
+  if (!extLlmOn) return false;
+  if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
+  const q = m.speechQueue || [];
+  if (!q.length) return false;
+  const nextId = q[0];
+  if (nextId === getPlayerId()) return false;
+  const nextSeat = getSeat(nextId);
+  if (!nextSeat || !nextSeat.alive) return false;
+
+  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const key = _buildSpeechPrefetchKey(nextId);
+  const existing = m._prefetchedSpeech;
+  if (existing && existing.epoch === ep && existing.key === key) return true;
+
+  const fallbackMeta = buildHeuristicAiSpeech(nextSeat);
+  const entry = {
+    key: key,
+    epoch: ep,
+    seatId: nextId,
+    resolvedMeta: null,
+    promise: null
+  };
+  m._prefetchedSpeech = entry;
+
+  const runDispatch = (typeof orchestrator !== "undefined" && typeof orchestrator.dispatchAgent === "function")
+    ? orchestrator.dispatchAgent("PersonaAgent", { speaker: nextSeat, fallbackMeta: fallbackMeta }).then(function (dispatched) {
+        if (!dispatched || !dispatched.epochValid || !orchestrator.isEpochValid(ep)) return null;
+        return dispatched.generated || fallbackMeta;
+      })
+    : tryGenerateGeminiAiSpeech(nextSeat, fallbackMeta).then(function (liveRes) {
+        const liveTxt = typeof liveRes === "string" ? liveRes : (liveRes && liveRes.text);
+        if (liveTxt) {
+          if (typeof syncGeminiSpeechMeta === "function") syncGeminiSpeechMeta(nextSeat, fallbackMeta, liveRes);
+          else fallbackMeta.text = liveTxt;
+          fallbackMeta.text = String(fallbackMeta.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
+        }
+        return fallbackMeta;
+      });
+
+  entry.promise = runDispatch.then(function (resMeta) {
+    if (resMeta && m._prefetchedSpeech === entry) {
+      entry.resolvedMeta = resMeta;
+    }
+    return resMeta;
+  }).catch(function () {
+    if (m._prefetchedSpeech === entry) m._prefetchedSpeech = null;
+    return null;
+  });
+  return true;
+}
+
+const THINKING_MICROCUES = [
+  "輕抿一口茶，整理剛才的發言脈絡…",
+  "翻看手邊筆記，思索場上邏輯破綻…",
+  "微微頷首消化前幾位夥伴的說法…",
+  "沉吟片刻，準備接過話頭表態…"
+];
 
 async function executeAiTurnSpeech(speaker) {
   if (state.speakingInFlight) return;
@@ -149,36 +229,58 @@ async function executeAiTurnSpeech(speaker) {
     clearTimeout(state.stepTimer);
     state.stepTimer = null;
   }
-  let generated = buildHeuristicAiSpeech(speaker);
+  let generated = null;
   const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
-
   const extLlmOn = typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel);
+  const pf = state.match && state.match._prefetchedSpeech;
+  const curKey = _buildSpeechPrefetchKey(speaker.id);
+  const pfMatch = Boolean(pf && pf.epoch === ep && pf.seatId === speaker.id && pf.key === curKey);
+  if (pfMatch) state.match._prefetchedSpeech = null;
+
+  let cueTimer = null;
   try {
-    if (extLlmOn) {
-      const llmLabel = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : (state.geminiModel || "Gemini");
-      const thinkLabel = llmLabel + " 即時推理中…";
-      syncSpeakerBannerVisuals(speaker, fmtSeatNum(speaker.id) + "號 · " + speaker.name, speaker.trait, false);
-      updateSpotlightBox(fmtSeatNum(speaker.id) + "號 · " + speaker.name, speaker.trait, thinkLabel);
-    }
-    if (typeof orchestrator !== "undefined" && typeof orchestrator.dispatchAgent === "function") {
-      const dispatched = await orchestrator.dispatchAgent("PersonaAgent", { speaker: speaker, fallbackMeta: generated });
-      if (!dispatched || !dispatched.epochValid || !orchestrator.isEpochValid(ep)) {
-        return;
+    if (pfMatch && pf.resolvedMeta) {
+      // Zero-wait instant handoff from background prefetch!
+      generated = pf.resolvedMeta;
+    } else {
+      if (extLlmOn) {
+        // Only show a gentle in-character cue if the LLM takes longer than 350ms (eliminates jarring flashing!)
+        const cueLine = THINKING_MICROCUES[(speaker.id + (state.match.day || 1)) % THINKING_MICROCUES.length];
+        cueTimer = setTimeout(function () {
+          if (state.match.phase === "DAY_SPEECH" && state.activeSpeakerId === speaker.id && state.speakingInFlight) {
+            syncSpeakerBannerVisuals(speaker, fmtSeatNum(speaker.id) + "號 · " + speaker.name, speaker.trait, false);
+            updateSpotlightBox(fmtSeatNum(speaker.id) + "號 · " + speaker.name, speaker.trait, cueLine);
+          }
+        }, 350);
       }
-      generated = dispatched.generated || generated;
-    } else if (extLlmOn) {
-      const liveRes = await tryGenerateGeminiAiSpeech(speaker, generated);
-      const liveTxt = typeof liveRes === "string" ? liveRes : (liveRes && liveRes.text);
-      if (liveTxt) {
-        if (typeof syncGeminiSpeechMeta === "function") {
-          syncGeminiSpeechMeta(speaker, generated, liveRes);
-        } else {
-          generated.text = liveTxt;
+      if (pfMatch && pf.promise) {
+        const awaited = await pf.promise;
+        if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return;
+        generated = awaited || buildHeuristicAiSpeech(speaker);
+      } else {
+        generated = buildHeuristicAiSpeech(speaker);
+        if (typeof orchestrator !== "undefined" && typeof orchestrator.dispatchAgent === "function") {
+          const dispatched = await orchestrator.dispatchAgent("PersonaAgent", { speaker: speaker, fallbackMeta: generated });
+          if (!dispatched || !dispatched.epochValid || !orchestrator.isEpochValid(ep)) {
+            return;
+          }
+          generated = dispatched.generated || generated;
+        } else if (extLlmOn) {
+          const liveRes = await tryGenerateGeminiAiSpeech(speaker, generated);
+          const liveTxt = typeof liveRes === "string" ? liveRes : (liveRes && liveRes.text);
+          if (liveTxt) {
+            if (typeof syncGeminiSpeechMeta === "function") {
+              syncGeminiSpeechMeta(speaker, generated, liveRes);
+            } else {
+              generated.text = liveTxt;
+            }
+            generated.text = String(generated.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
+          }
         }
-        generated.text = String(generated.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
       }
     }
   } finally {
+    if (cueTimer) clearTimeout(cueTimer);
     state.speakingInFlight = false;
   }
   if (state.match.phase !== "DAY_SPEECH" || state.activeSpeakerId !== speaker.id || !speaker.alive) return;
@@ -345,6 +447,9 @@ async function executeAiTurnSpeech(speaker) {
     charDelay: 34,
     holdMs: 2400
   });
+
+  // Prefetch next AI speaker's LLM + TTS in parallel while this character is speaking (zero-wait conversational flow!)
+  prefetchNextAiSpeech();
 
   // Prefetch next predictable host prompt so transitions feel zero-latency!
   if (typeof voice !== "undefined" && typeof voice.prefetchFreeLocalNeural === "function") {
