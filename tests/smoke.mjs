@@ -4939,6 +4939,74 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     stage3d.orbit.dragging = false;
     const modestyPainterReadyOk = typeof stage3dVrm.paintVrmModestyShortsMap === "function";
 
+    // 7. v12.2 Post-Audit Regression Proofs (P0/P1/P2)
+    // 7a) Daytime auto-composed Badge Flow note NEVER poisons analyzeThreeGoodSpeech with fake gold/wolf checks
+    const bfAnalysis = analyzeThreeGoodSpeech("我先觀察局勢，昨晚平安夜。 今晚警徽流改留先驗 03號暖暖、再驗 05號星兒（我若倒牌，徽給03號即金水、飛05號或撕徽即查殺）！");
+    const bfNoFalseStanceOk = bfAnalysis.vouchTargets.length === 0 && bfAnalysis.accuseTargets.length === 0;
+
+    // 7b) Non-Seer Sheriff quick card mentioning "若出現雙明心對跳" does NOT falsely claim Seer; pass does NOT out hiding Seer!
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    state.sheriffMode = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    state.match.day = 1;
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    resolveSheriffElectionAction("run");
+    const pidV = getPlayerId();
+    const pV = getSeat(pidV);
+    const ctxV = state.match.sheriffElectionCtx;
+    ctxV.activeReelSeatId = pidV;
+    const nonSeerOpts = buildPlayerSheriffQuickOptions(pV, null);
+    const nonSeerCard2 = nonSeerOpts[1];
+    submitPlayerSheriffSpeech(nonSeerCard2.text, nonSeerCard2.badgeFlow || null, { claimsSeer: nonSeerCard2.claimsSeer });
+    const nonSeerCardNoFalseClaimOk = pV.claimedRole !== "seer" && nonSeerOpts[0].badgeFlow === null;
+
+    // Hiding Player Seer fast-skipping ("pass") must NOT be outed
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    state.match.day = 1;
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    resolveSheriffElectionAction("run");
+    const pidSeerPass = getPlayerId();
+    resolveSheriffElectionAction("pass");
+    const passNoAutoOutSeerOk = getSeat(pidSeerPass).claimedRole !== "seer";
+
+    // 7c) Same-day Sheriff transfer panel hides premature "報金水 / 疑為查殺" suffixes
+    state.match.sheriffSeatId = pidSeerPass;
+    const pS2 = getSeat(pidSeerPass);
+    pS2.checkedHistory = [];
+    const aliveO = state.match.seats.filter(s => s.id !== pidSeerPass && s.alive);
+    setSheriffBadgeFlow(pidSeerPass, aliveO[0].id, aliveO[1].id, "election");
+    state.match.phase = "SHERIFF_TRANSFER";
+    renderSheriffTransferPanel();
+    const sameDayTransferUiCleanOk = el("btnShatterSheriffBadge").textContent.indexOf("疑為查殺") === -1;
+
+    // 7d) WebGL-failed device safely ignores setShowcaseMode(true) & resetCamera() without TypeError
+    const prevFailed2 = stage3d.failed;
+    const prevCam2 = stage3d.camera;
+    const prevLook2 = stage3d.orbit.targetLookAt;
+    stage3d.failed = true;
+    stage3d.camera = null;
+    stage3d.orbit.targetLookAt = null;
+    stage3d.setShowcaseMode(true);
+    stage3d.resetCamera();
+    const webglFailSafeOk = stage3d.showcaseMode === false;
+    stage3d.failed = prevFailed2;
+    stage3d.camera = prevCam2;
+    stage3d.orbit.targetLookAt = prevLook2;
+
+    // 7e) Lobby Showcase exposes all 12 seats even when default lobby count is 8
+    clearStepTimer();
+    resetMatchToLobby();
+    el("selectModeCount").value = "8";
+    stage3d.showcaseMode = true;
+    const lobbyShowcase12Ok = getStageSeatListFor3D().length === 12;
+    stage3d.showcaseMode = false;
+
     clearStepTimer();
     resetMatchToLobby();
     return {
@@ -4951,7 +5019,13 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       showcaseResetsTargetOk,
       showcasePitchSafeOk,
       orbitPitchSafeOk,
-      modestyPainterReadyOk
+      modestyPainterReadyOk,
+      bfNoFalseStanceOk,
+      nonSeerCardNoFalseClaimOk,
+      passNoAutoOutSeerOk,
+      sameDayTransferUiCleanOk,
+      webglFailSafeOk,
+      lobbyShowcase12Ok
     };
   })()`, ctx);
 

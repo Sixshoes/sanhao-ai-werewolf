@@ -524,13 +524,16 @@ function renderSheriffTransferPanel() {
   const f1Chk = f1 ? getMyChk(f1) : null;
   const f2Chk = f2 ? getMyChk(f2) : null;
 
+  const hasNightElapsedP = Boolean(myFlow && ((m.day || 1) > (myFlow.dayDeclared || 1)));
+  const isSeerClaimOrRoleP = Boolean(isSeerP || (pSeat && pSeat.claimedRole === "seer"));
+  const canSignalFlow = Boolean(myFlow && f1 && isSeerClaimOrRoleP && (hasNightElapsedP || Boolean(f1Chk)));
+
   const guideEl = el("sheriffTransferFlowGuide");
   if (guideEl) {
     if (myFlow && f1 && typeof formatBadgeFlowSummary === "function") {
       const f1Lbl = typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(f1) : (fmtSeatNum(f1) + "號");
       const f2Lbl = f2 ? (typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(f2) : (fmtSeatNum(f2) + "號")) : "";
-      const hasNightElapsedP = (m.day || 1) > (myFlow.dayDeclared || 1);
-      let guideText = hasNightElapsedP
+      let guideText = canSignalFlow
         ? ("👑 警徽流傳訊指南【" + formatBadgeFlowSummary(myFlow) + "】：飛給警1（" + f1Lbl + "）⇒ 全場解讀為金水；" +
           (f2Lbl ? ("跳飛警2（" + f2Lbl + "）⇒ 報 " + f1Lbl + " 疑查殺、" + f2Lbl + " 金水；") : "") +
           "直接撕徽 ⇒ 報 " + f1Lbl + " 高度疑為查殺！")
@@ -554,7 +557,7 @@ function renderSheriffTransferPanel() {
 
   const shatterBtn = el("btnShatterSheriffBadge");
   if (shatterBtn) {
-    if (f1) {
+    if (canSignalFlow) {
       const f1LblS = typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(f1) : (fmtSeatNum(f1) + "號");
       shatterBtn.textContent = "✕ 撕毀警徽（警徽流暗號：報 " + f1LblS + " 疑為查殺）";
     } else {
@@ -571,10 +574,12 @@ function renderSheriffTransferPanel() {
     if (s.id === f1) {
       if (chk && !chk.isWolf) { tagSuffix = "〔警1★金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-xs"; }
       else if (chk && chk.isWolf) { tagSuffix = "〔警1⚠查殺〕"; cls = "cta-ink py-1.5 px-2.5 text-xs"; }
-      else { tagSuffix = "〔警1・報金水〕"; }
+      else if (canSignalFlow) { tagSuffix = "〔警1・報金水〕"; }
+      else { tagSuffix = "〔警1〕"; }
     } else if (s.id === f2) {
       if (chk && !chk.isWolf) { tagSuffix = "〔警2★金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-xs"; }
-      else { tagSuffix = "〔警2・跳飛〕"; }
+      else if (canSignalFlow) { tagSuffix = "〔警2・跳飛〕"; }
+      else { tagSuffix = "〔警2〕"; }
     } else if (chk && !chk.isWolf) {
       tagSuffix = "〔已驗金水〕";
       cls = "cta-celadon py-1.5 px-2.5 text-xs";
@@ -767,7 +772,9 @@ function renderSheriffElectionPanel() {
           '<div class="text-[11px] font-bold text-amber-200">' + escapeHtml(opt.title) + '</div>' +
           '<div class="text-[10px] text-slate-300 line-clamp-2 mt-0.5">' + escapeHtml(opt.text) + '</div>';
         card.addEventListener("click", function () {
-          if (typeof submitPlayerSheriffSpeech === "function") submitPlayerSheriffSpeech(opt.text, opt.badgeFlow || null);
+          if (typeof submitPlayerSheriffSpeech === "function") {
+            submitPlayerSheriffSpeech(opt.text, opt.badgeFlow || null, { claimsSeer: opt.claimsSeer });
+          }
         });
         chipsBox.appendChild(card);
       });

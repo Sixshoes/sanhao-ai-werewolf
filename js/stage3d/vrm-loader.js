@@ -146,7 +146,7 @@ const stage3dVrm = {
     this._recolorCacheKeys = [];
   },
 
-  recolorVrmTextureMap: function (srcTex, targetHex, strength) {
+  recolorVrmTextureMap: function (srcTex, targetHex, strength, localCache) {
     if (!srcTex || !srcTex.image || !targetHex || typeof document === "undefined" || typeof THREE.CanvasTexture !== "function") {
       return srcTex;
     }
@@ -155,7 +155,8 @@ const stage3dVrm = {
     const ih = img.naturalHeight || img.height || 0;
     if (iw < 4 || ih < 4) return srcTex;
     const cacheKey = (srcTex.uuid || "tex") + "|" + targetHex + "|" + (strength || 0.8);
-    if (this._recolorCache[cacheKey]) return this._recolorCache[cacheKey];
+    if (localCache && localCache[cacheKey]) return localCache[cacheKey];
+    if (!localCache && this._recolorCache[cacheKey]) return this._recolorCache[cacheKey];
     try {
       const hex = String(targetHex).replace("#", "");
       const tr = parseInt(hex.slice(0, 2), 16) || 0;
@@ -194,17 +195,21 @@ const stage3dVrm = {
       outTex.wrapT = srcTex.wrapT;
       if (THREE.sRGBEncoding !== undefined) outTex.encoding = THREE.sRGBEncoding;
       outTex.needsUpdate = true;
-      this._recolorCache[cacheKey] = outTex;
-      if (!Array.isArray(this._recolorCacheKeys)) this._recolorCacheKeys = [];
-      this._recolorCacheKeys.push(cacheKey);
-      while (this._recolorCacheKeys.length > 36) {
-        const oldestKey = this._recolorCacheKeys.shift();
-        if (oldestKey && oldestKey !== cacheKey && this._recolorCache[oldestKey]) {
-          const oldTex = this._recolorCache[oldestKey];
-          if (oldTex && typeof oldTex.dispose === "function") {
-            try { oldTex.dispose(); } catch (e) {}
+      if (localCache) {
+        localCache[cacheKey] = outTex;
+      } else {
+        this._recolorCache[cacheKey] = outTex;
+        if (!Array.isArray(this._recolorCacheKeys)) this._recolorCacheKeys = [];
+        this._recolorCacheKeys.push(cacheKey);
+        while (this._recolorCacheKeys.length > 128) {
+          const oldestKey = this._recolorCacheKeys.shift();
+          if (oldestKey && oldestKey !== cacheKey && this._recolorCache[oldestKey]) {
+            const oldTex = this._recolorCache[oldestKey];
+            if (oldTex && typeof oldTex.dispose === "function") {
+              try { oldTex.dispose(); } catch (e) {}
+            }
+            delete this._recolorCache[oldestKey];
           }
-          delete this._recolorCache[oldestKey];
         }
       }
       return outTex;
@@ -218,7 +223,7 @@ const stage3dVrm = {
    * female Body_00_SKIN UV maps, completely eliminating default white underwear & skin gaps
    * across pelvis, crotch, and upper thighs while leaving feet/hands/torso untouched.
    */
-  paintVrmModestyShortsMap: function (srcTex, shortHex) {
+  paintVrmModestyShortsMap: function (srcTex, shortHex, localCache) {
     if (!srcTex || !srcTex.image || typeof document === "undefined" || typeof THREE.CanvasTexture !== "function") {
       return srcTex;
     }
@@ -228,7 +233,8 @@ const stage3dVrm = {
     if (iw < 4 || ih < 4) return srcTex;
     const hexCol = shortHex || "#1e2330";
     const cacheKey = (srcTex.uuid || "tex") + "|modesty_shorts|" + hexCol;
-    if (this._recolorCache[cacheKey]) return this._recolorCache[cacheKey];
+    if (localCache && localCache[cacheKey]) return localCache[cacheKey];
+    if (!localCache && this._recolorCache[cacheKey]) return this._recolorCache[cacheKey];
     try {
       const maxDim = 512;
       const sc = Math.min(1, maxDim / Math.max(iw, ih));
@@ -299,17 +305,21 @@ const stage3dVrm = {
       outTex.wrapT = srcTex.wrapT;
       if (THREE.sRGBEncoding !== undefined) outTex.encoding = THREE.sRGBEncoding;
       outTex.needsUpdate = true;
-      this._recolorCache[cacheKey] = outTex;
-      if (!Array.isArray(this._recolorCacheKeys)) this._recolorCacheKeys = [];
-      this._recolorCacheKeys.push(cacheKey);
-      while (this._recolorCacheKeys.length > 36) {
-        const oldestKey = this._recolorCacheKeys.shift();
-        if (oldestKey && oldestKey !== cacheKey && this._recolorCache[oldestKey]) {
-          const oldTex = this._recolorCache[oldestKey];
-          if (oldTex && typeof oldTex.dispose === "function") {
-            try { oldTex.dispose(); } catch (e) {}
+      if (localCache) {
+        localCache[cacheKey] = outTex;
+      } else {
+        this._recolorCache[cacheKey] = outTex;
+        if (!Array.isArray(this._recolorCacheKeys)) this._recolorCacheKeys = [];
+        this._recolorCacheKeys.push(cacheKey);
+        while (this._recolorCacheKeys.length > 128) {
+          const oldestKey = this._recolorCacheKeys.shift();
+          if (oldestKey && oldestKey !== cacheKey && this._recolorCache[oldestKey]) {
+            const oldTex = this._recolorCache[oldestKey];
+            if (oldTex && typeof oldTex.dispose === "function") {
+              try { oldTex.dispose(); } catch (e) {}
+            }
+            delete this._recolorCache[oldestKey];
           }
-          delete this._recolorCache[oldestKey];
         }
       }
       return outTex;
@@ -1046,6 +1056,7 @@ const stage3dVrm = {
       (typeof state === "undefined" || state.quality3D !== "eco")
     );
     const selfLoader = this;
+    const avatarTexCache = {};
     if (typeof rawScene.traverse === "function") {
       rawScene.traverse(function (child) {
         if (!child || !child.isMesh) return;
@@ -1082,23 +1093,23 @@ const stage3dVrm = {
           const isFemaleBodySkin = /body.*skin/i.test(mName) && (/^f\d{2}/i.test(mName) || hasSkirt);
           if (isFemaleBodySkin && !isOutline && m.map) {
             m = m.clone ? m.clone() : m;
-            m.map = selfLoader.paintVrmModestyShortsMap(m.map, "#1e2330");
+            m.map = selfLoader.paintVrmModestyShortsMap(m.map, "#1e2330", avatarTexCache);
           }
 
           // v10.0 Luminance-preserving texture recolor so ALL 11 AI characters match their 2D portraits!
           if (personaStyling && !isOutline && m.map) {
             if (isHairMat && personaStyling.hairHex) {
               m = m.clone ? m.clone() : m;
-              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.hairHex, personaStyling.hairStr || 0.82);
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.hairHex, personaStyling.hairStr || 0.82, avatarTexCache);
             } else if (isTopsMat && personaStyling.topsHex) {
               m = m.clone ? m.clone() : m;
-              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.topsHex, personaStyling.topsStr || 0.80);
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.topsHex, personaStyling.topsStr || 0.80, avatarTexCache);
             } else if (isNeckMat && personaStyling.neckHex) {
               m = m.clone ? m.clone() : m;
-              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.neckHex, 0.78);
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.neckHex, 0.78, avatarTexCache);
             } else if (isIrisMat && personaStyling.eyeHex) {
               m = m.clone ? m.clone() : m;
-              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.eyeHex, 0.65);
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.eyeHex, 0.65, avatarTexCache);
             }
           }
 

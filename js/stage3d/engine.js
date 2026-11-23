@@ -565,7 +565,12 @@ const stage3d = {
   },
 
   setShowcaseMode: function (enabled) {
-    this.showcaseMode = Boolean(enabled);
+    const wantOn = Boolean(enabled);
+    if (wantOn && !this.isAvailable()) {
+      if (typeof showToast === "function") showToast("目前裝置不支援 3D 角色鑑賞模式", "warn");
+      return;
+    }
+    this.showcaseMode = wantOn;
     document.body.classList.toggle("hero-showcase-active", this.showcaseMode);
     const panel = el("heroShowcaseOverlay");
     if (panel) panel.classList.toggle("hidden", !this.showcaseMode);
@@ -573,8 +578,15 @@ const stage3d = {
       if (state.viewMode !== "3d") this.setViewMode("3d");
       this.closeUpSeatId = null;
       this.camPreset = "cinema";
+      if (this.camera && typeof this.camera.fov === "number") {
+        this.camera.fov = 44;
+        this.camera.updateProjectionMatrix();
+      }
       this.setShowcaseTarget(this.showcaseTarget || "hero");
       if (this.hero && typeof triggerHeroAction === "function") triggerHeroAction(this.hero, "welcome_bow", 0);
+      if (typeof indieFlow !== "undefined" && typeof indieFlow.syncShowcaseTargetUi === "function") {
+        indieFlow.syncShowcaseTargetUi();
+      }
       sound.playBlessing();
     } else {
       this.showcaseTarget = "hero";
@@ -1247,16 +1259,21 @@ const stage3d = {
 
   resetCamera: function () {
     this.closeUpSeatId = null;
+    if (!this.orbit) return;
     this.orbit.userOverrideUntil = 0;
     this.orbit.targetYaw = 0;
     this.orbit.targetPitch = this.camPreset === "overview" ? 0.96 : 0.52;
     this.orbit.targetRadius = this.camPreset === "overview" ? 12.8 : 11.2;
-    this.orbit.targetLookAt.set(0, 1.35, 0);
+    if (this.orbit.targetLookAt && typeof this.orbit.targetLookAt.set === "function") {
+      this.orbit.targetLookAt.set(0, 1.35, 0);
+    }
     this.orbit.fpTargetYaw = 0;
     this.orbit.fpTargetPitch = -0.10;
     this.orbit.fpFovOffset = 0;
-    this.camera.fov = this.camPreset === "firstperson" ? this.getFirstPersonBaseFov() : 44;
-    this.camera.updateProjectionMatrix();
+    if (this.camera && typeof this.camera.updateProjectionMatrix === "function") {
+      this.camera.fov = this.camPreset === "firstperson" ? this.getFirstPersonBaseFov() : 44;
+      this.camera.updateProjectionMatrix();
+    }
   },
 
   updateCamera: function (f) {

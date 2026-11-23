@@ -1031,8 +1031,10 @@ function recordAndBroadcastBadgeFlowSignal(deadSheriff, heirSeat) {
   }
   if (!activeFlow || !activeFlow.firstTargetId) return null;
 
-  // Temporal authenticity: only decode as a night-check Badge Flow signal if at least 1 night passed since declaration
-  // (or deadSheriff actually checked firstTargetId), preventing impossible "checked last night" alerts on same-day vote-out!
+  // Temporal & Role authenticity: only decode as a night-check Badge Flow signal if deadSheriff claimed/is Seer
+  // AND at least 1 night passed since declaration (or deadSheriff actually checked firstTargetId).
+  const isSeerClaimOrRole = Boolean(deadSheriff.role === "seer" || deadSheriff.claimedRole === "seer");
+  if (!isSeerClaimOrRole) return null;
   const hasElapsedNight = (m.day || 1) > (activeFlow.dayDeclared || 1);
   const deadCheckedFirst = Boolean(
     Array.isArray(deadSheriff.checkedHistory) &&
@@ -1456,18 +1458,21 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
       {
         title: "🔮 強拍明心＋雙警徽流",
         tag: "明心直拍",
+        claimsSeer: true,
         badgeFlow: flowObj,
         text: "我是真正的明心觀察員！" + chkStr + "，今晚" + flowDualText + "，請警下好夥伴把警徽投給我帶隊！"
       },
       {
         title: "👑 穩健報警徽流＋看票型",
         tag: "警徽流",
+        claimsSeer: true,
         badgeFlow: flowObj,
         text: "我起跳明心觀察員拿警徽，" + chkStr + "；警徽流鎖定 " + f1Lbl + (f2Lbl ? (" 接續 " + f2Lbl) : "") + "。若警上有人對跳，待會看警下衝票就能排坑！"
       },
       {
         title: "🌿 先隱藏身分聽局",
         tag: "觀察風向",
+        claimsSeer: false,
         badgeFlow: null,
         text: "我先上警聽一圈大家的態度與警下票型，暫時不急著亮底牌，警徽交給我我會在末置位客觀歸票！"
       }
@@ -1480,18 +1485,21 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
       {
         title: "🎭 悍跳明心＋假警徽流",
         tag: "悍跳施壓",
+        claimsSeer: true,
         badgeFlow: flowObj,
         text: "全場聽好，我才是這局真正的明心觀察員！昨晚查了 " + goodLbl + " 偏金水，" + flowDualText + "，誰敢對跳直接標記狼坑！"
       },
       {
         title: "👑 穩健帶隊拉票",
         tag: "節奏掌控",
+        claimsSeer: false,
         badgeFlow: null,
         text: "我上警是想幫好人穩住第一天節奏，待會誰在警下衝票、誰發言前後矛盾，我會在末置位一條條整理清楚！"
       },
       {
         title: "🔥 試探壓場詐身分",
         tag: "詐身分",
+        claimsSeer: false,
         badgeFlow: null,
         text: "我先上警給警上施壓看看誰會心虛，如果真有強明心我待會再決定退不退水，大家先仔細聽後置位表水！"
       }
@@ -1501,18 +1509,21 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
     {
       title: "👑 理性帶隊爭警徽",
       tag: "邏輯控場",
-      badgeFlow: flowObj,
+      claimsSeer: false,
+      badgeFlow: null,
       text: "我是好人視角上警，警徽給我我會在末置位幫大家整理發言與票型；若不慎離席，警徽會優先託付給 " + f1Lbl + (f2Lbl ? (" 或 " + f2Lbl) : "") + "！"
     },
     {
       title: "🛡️ 壓場查核對跳位",
       tag: "查核真偽",
+      claimsSeer: false,
       badgeFlow: null,
       text: "我上警是為了近距離檢視警上每個人的說法，若出現雙明心對跳，我會把兩邊的警下票型與警徽流攤開來對照，請支持我！"
     },
     {
       title: "🌿 詐後置位看反應",
       tag: "試探後置",
+      claimsSeer: false,
       badgeFlow: null,
       text: "我先舉手上警聽聽大家怎麼站邊、看後置位誰最慌張，等會再決定要競選到底還是退水回警下投票！"
     }
@@ -1838,7 +1849,7 @@ function setPlayerSheriffDraftBadgeFlow(firstTargetId, secondTargetId) {
   return ctx.playerBadgeFlowDraft;
 }
 
-function submitPlayerSheriffSpeech(rawText, explicitFlowArg) {
+function submitPlayerSheriffSpeech(rawText, explicitFlowArg, optsArg) {
   sound.unlock();
   const m = state.match;
   const ctx = m ? m.sheriffElectionCtx : null;
@@ -1848,13 +1859,28 @@ function submitPlayerSheriffSpeech(rawText, explicitFlowArg) {
     return false;
   }
   let cleanText = String(rawText || "").trim();
+  let autoCardClaimsSeer = null;
   if (!cleanText) {
     const opts = Array.isArray(ctx.playerQuickOptions) ? ctx.playerQuickOptions : [];
-    cleanText = (opts[0] && opts[0].text)
-      ? opts[0].text
-      : "我上警爭取警徽，會在末置位幫大家整理發言邏輯與警下票型，理性排坑歸票！";
+    if (opts[0] && opts[0].text) {
+      cleanText = opts[0].text;
+      if (typeof opts[0].claimsSeer === "boolean") autoCardClaimsSeer = opts[0].claimsSeer;
+    } else {
+      cleanText = "我上警爭取警徽，會在末置位幫大家整理發言邏輯與警下票型，理性排坑歸票！";
+    }
   }
-  const claimsSeer = /明心|觀察員|預言家|驗了|查了|查驗|金水|查殺/.test(cleanText);
+  let claimsSeer = false;
+  if (optsArg && typeof optsArg.claimsSeer === "boolean") {
+    claimsSeer = optsArg.claimsSeer;
+  } else if (autoCardClaimsSeer !== null) {
+    claimsSeer = autoCardClaimsSeer;
+  } else {
+    // Require affirmative Seer-claim phrasing and ignore conditional/negated mentions (e.g. "不是明心", "若出現雙明心", "真有強明心")!
+    const strippedSeerCheck = cleanText
+      .replace(/(?:不是|非|絕不是|沒有).{0,4}(?:明心|觀察員|預言家)/g, " ")
+      .replace(/(?:若|如果|萬一|假設)[^，。！？；;]*(?:明心|觀察員|預言家)[^，。！？；;]*/g, " ");
+    claimsSeer = /(?:我(?:才)?是|起跳|亮牌|強拍|拍|跳|身為).{0,8}(?:明心|觀察員|預言家)|昨晚(?:查驗?|驗)了|報(?:金水|查殺)/.test(strippedSeerCheck);
+  }
   const priorSeer = (ctx.spokenSpeeches || []).find(function (sp) {
     return sp && sp.id !== pid && (sp.tone === "seer" || sp.tone === "clash");
   });
@@ -1963,17 +1989,17 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     const already = ctx.spokenSpeeches.some(function (sp) { return sp && sp.id === c.id; });
     if (!already) {
       if (c.id === pid) {
+        // NEVER auto-out a hiding Player Seer when fast-skipping ("pass") speeches!
         const pLine = {
           id: pid,
           name: "你",
-          tag: c.role === "seer" ? "🔮 強拍明心" : "👑 強勢上警",
-          tone: c.role === "seer" ? "seer" : "player",
+          tag: "👑 強勢上警",
+          tone: "player",
           rivalId: null,
           text: "「我上警爭取警徽，末置位帶大家理性歸票！」"
         };
         ctx.spokenSpeeches.push(pLine);
         ctx.speeches.push(pLine);
-        if (pLine.tone === "seer") c.claimedRole = "seer";
       } else {
         const built = buildSheriffCandidateLine(c, ctx.spokenSpeeches);
         const spObj = { id: c.id, name: c.name, tag: built.tag, tone: built.tone, rivalId: built.rivalId, badgeFlow: built.badgeFlow || null, text: built.text };

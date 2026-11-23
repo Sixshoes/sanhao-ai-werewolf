@@ -4428,7 +4428,7 @@ body.fx-pacing-fast .play-card-btn.is-card-casting {
     align-items: center;
   }
 
-  #speakerActiveBanner > div:first-child {
+  #speakerActiveBanner>div:first-child {
     flex: 1 1 100%;
     min-width: 0;
   }
@@ -4443,6 +4443,49 @@ body.fx-pacing-fast .play-card-btn.is-card-casting {
     min-height: 26px;
     padding: 2px 7px;
     font-size: 10.5px;
+  }
+
+  #heroShowcaseOverlay {
+    padding: max(10px, env(safe-area-inset-top)) 10px max(12px, env(safe-area-inset-bottom));
+  }
+
+  body.hero-showcase-active #canvasStageWrap {
+    height: 100dvh;
+  }
+
+  .showcase-studio-dock {
+    padding: 9px 11px;
+    max-height: 44dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .showcase-target-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .showcase-target-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .showcase-target-row .showcase-chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  #showcaseUploadHint {
+    display: none;
+  }
+
+  .showcase-studio-dock .cta-celadon,
+  .showcase-studio-dock .cta-brass,
+  .showcase-studio-dock .cta-ink {
+    min-height: 32px;
+    padding: 4px 10px;
+    font-size: 11px;
   }
 
   #canvasStageWrap {
@@ -5384,6 +5427,7 @@ body.hero-showcase-active .title-feedback-btn {
 }
 
 @media (max-width: 767px) {
+
   .title-feedback-btn,
   .title-scene-btn {
     padding: 7px 10px;

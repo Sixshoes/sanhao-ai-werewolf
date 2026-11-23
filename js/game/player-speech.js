@@ -38,11 +38,18 @@ function analyzeThreeGoodSpeech(rawText) {
     if (n >= 1 && n <= maxSeats && seatNums.indexOf(n) === -1) seatNums.push(n);
   });
 
+  // Strip parenthetical explanations & Badge Flow declarations before stance extraction so
+  // unchecked Badge Flow notes like "（徽給03號即金水、飛05號或撕徽即查殺）" NEVER fabricate Seer checks or wolfPits!
+  const stanceText = text
+    .replace(/（[^）]*）/g, " ")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/(?:今晚)?(?:雙)?警徽流[^。！？\n]*/g, " ");
+
   // Clause-level Multi-Target Semantics: supports vouching A and accusing B in the same speech!
   const pidNow = typeof getPlayerId === "function" ? getPlayerId() : 1;
   const vouchMap = {};
   const accuseMap = {};
-  const clauses = text.split(/[，。！？；;、\n]+/);
+  const clauses = stanceText.split(/[，。！？；;、\n]+/);
   let lastStance = null;
   clauses.forEach(function (clause) {
     const cRaw = clause.trim();
@@ -1294,20 +1301,28 @@ function submitPlayerSpeech() {
     (res.vouchTargets || []).forEach(pushGoodPit);
   }
 
+  const stanceTextClean = text
+    .replace(/（[^）]*）/g, " ")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/(?:今晚)?(?:雙)?警徽流[^。！？\n]*/g, " ");
+  const draftBfIds = {};
+  if (draft.badgeFlowFirstId) draftBfIds[draft.badgeFlowFirstId] = true;
+  if (draft.badgeFlowSecondId) draftBfIds[draft.badgeFlowSecondId] = true;
   (res.seatMentions || []).forEach(function (sid) {
-    if (plGoodPits.indexOf(sid) === -1 && /(狼坑|檢視|懷疑|請離|投)/.test(text)) pushWolfPit(sid);
+    if (draftBfIds[sid] && (draft.wolfIds || []).indexOf(sid) === -1) return;
+    if (plGoodPits.indexOf(sid) === -1 && /(狼坑|檢視|懷疑|請離|投)/.test(stanceTextClean)) pushWolfPit(sid);
   });
 
-  const fallbackTarget = evForceId || res.seatMentions.find(function (n) { return n !== pid; }) || null;
+  const fallbackTarget = evForceId || res.seatMentions.find(function (n) { return n !== pid && !draftBfIds[n]; }) || null;
   let accuseId = evForceId || plWolfPits[0] || null;
   let vouchId = evForceId ? null : (plGoodPits[0] || null);
   if (!accuseId && !vouchId && fallbackTarget) {
-    const legacyVouch = /好人|信任|救活|保護|相信|金水/.test(text) && !/懷疑|酸民狼|查殺|投出去|矛盾|假冒|誤導|破綻|重點檢視|帶風向|問題|小心/.test(text);
+    const legacyVouch = /好人|信任|救活|保護|相信|金水/.test(stanceTextClean) && !/懷疑|酸民狼|查殺|投出去|矛盾|假冒|誤導|破綻|重點檢視|帶風向|問題|小心/.test(stanceTextClean);
     if (legacyVouch) { vouchId = fallbackTarget; pushGoodPit(fallbackTarget); }
     else { accuseId = fallbackTarget; pushWolfPit(fallbackTarget); }
   }
   const targetNum = accuseId || vouchId || fallbackTarget;
-  const isWolfCheckClaim = Boolean(claimedSeerNow && accuseId && /查殺|酸民狼|是狼|查到.*狼|查驗.*狼|投出去|投他|請離/.test(text));
+  const isWolfCheckClaim = Boolean(claimedSeerNow && accuseId && /查殺|酸民狼|是狼|查到.*狼|查驗.*狼|投出去|投他|請離/.test(stanceTextClean));
 
   plGoodPits.forEach(function (gId, gIdx) {
     recordRelation(pid, gId, "trust");

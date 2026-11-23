@@ -10,10 +10,10 @@
 function get3DTableLayout(seatCount) {
   const n = seatCount || 8;
   if (n >= 12) {
-    return { n: 12, tableScale: 1.40, tableR: 4.55, ringRadius: 5.52, propZ: 1.66, pavilionScale: 1.15, heroMul: 1.20, camExtraR: 1.55 };
+    return { n: 12, tableScale: 1.40, tableR: 4.55, ringRadius: 5.52, propZ: 1.66, pavilionScale: 1.15, heroMul: 1.38, camExtraR: 1.55 };
   }
   if (n >= 10) {
-    return { n: 10, tableScale: 1.24, tableR: 4.03, ringRadius: 4.98, propZ: 1.64, pavilionScale: 1.08, heroMul: 1.10, camExtraR: 0.65 };
+    return { n: 10, tableScale: 1.24, tableR: 4.03, ringRadius: 4.98, propZ: 1.64, pavilionScale: 1.08, heroMul: 1.22, camExtraR: 0.65 };
   }
   if (n >= 8) {
     return { n: 8, tableScale: 1.08, tableR: 3.51, ringRadius: 4.44, propZ: 1.62, pavilionScale: 1.0, heroMul: 1.00, camExtraR: -0.35 };
@@ -26,13 +26,34 @@ function getActive3DSeatCount() {
     if (typeof state !== "undefined" && state.match && state.match.started && state.match.totalSeats) {
       return state.match.totalSeats;
     }
+    if (typeof stage3d !== "undefined" && stage3d.showcaseMode) {
+      return 12;
+    }
     if (typeof document !== "undefined" && typeof document.getElementById === "function") {
       if (typeof getLobbySeatCount === "function") return getLobbySeatCount();
       const sel = document.getElementById("selectModeCount");
       if (sel) return parseInt(sel.value, 10) || 8;
     }
-  } catch (e) {}
+  } catch (e) { }
   return 8;
+}
+
+function apply3DEnvironmentIBL(scene, env) {
+  if (!scene || !env) return;
+  const mood = env.moodKey || "twilight";
+  const isCel = env.sceneThemeKey === "celestial";
+  let tex = null;
+  if (mood === "day") {
+    tex = (isCel && env.iblCelestialTex) ? env.iblCelestialTex : (env.iblDayTex || env.iblDefaultTex);
+  } else if (mood === "vote") {
+    tex = env.iblDuskTex || env.iblDayTex || env.iblDefaultTex;
+  } else if (mood === "night") {
+    tex = env.iblNightTex || env.iblDefaultTex;
+  } else {
+    // twilight / lobby
+    tex = (isCel && env.iblCelestialTex) ? env.iblCelestialTex : (env.iblDuskTex || env.iblNightTex || env.iblDefaultTex);
+  }
+  if (tex) scene.environment = tex;
 }
 
 function build3DEnvironmentMap(renderer, scene, env) {
@@ -84,10 +105,8 @@ function build3DEnvironmentMap(renderer, scene, env) {
         env.hasPhotoDay = true;
         try {
           env.iblDayTex = pmrem.fromEquirectangular(tex).texture;
-          if ((env.moodKey === "day" || env.moodKey === "vote") && env.sceneThemeKey !== "celestial") {
-            scene.environment = env.iblDayTex;
-          }
-        } catch (e) {}
+          apply3DEnvironmentIBL(scene, env);
+        } catch (e) { }
       });
       loader.load("assets/sky/sanctuary_celestial_day.jpg?v=12", function (tex) {
         tex.encoding = THREE.sRGBEncoding;
@@ -99,10 +118,8 @@ function build3DEnvironmentMap(renderer, scene, env) {
         env.hasPhotoCelestial = true;
         try {
           env.iblCelestialTex = pmrem.fromEquirectangular(tex).texture;
-          if (env.sceneThemeKey === "celestial" && env.moodKey === "day") {
-            scene.environment = env.iblCelestialTex;
-          }
-        } catch (e) {}
+          apply3DEnvironmentIBL(scene, env);
+        } catch (e) { }
       });
       loader.load("assets/sky/sanctuary_night.jpg?v=12", function (tex) {
         tex.encoding = THREE.sRGBEncoding;
@@ -112,10 +129,8 @@ function build3DEnvironmentMap(renderer, scene, env) {
         env.hasPhotoNight = true;
         try {
           env.iblNightTex = pmrem.fromEquirectangular(tex).texture;
-          if (env.moodKey === "night" || (!env.iblDuskTex && (env.moodKey === "twilight" || !env.moodKey))) {
-            scene.environment = env.iblNightTex;
-          }
-        } catch (e) {}
+          apply3DEnvironmentIBL(scene, env);
+        } catch (e) { }
       });
       loader.load("assets/sky/sanctuary_dusk.jpg?v=12", function (tex) {
         tex.encoding = THREE.sRGBEncoding;
@@ -127,13 +142,11 @@ function build3DEnvironmentMap(renderer, scene, env) {
         env.hasPhotoDusk = true;
         try {
           env.iblDuskTex = pmrem.fromEquirectangular(tex).texture;
-          if (env.moodKey === "twilight" || env.moodKey === "vote" || !env.moodKey) {
-            scene.environment = env.iblDuskTex;
-          }
-        } catch (e) {}
+          apply3DEnvironmentIBL(scene, env);
+        } catch (e) { }
       });
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function build3DSkyAndLights(scene, env) {
@@ -397,30 +410,30 @@ function buildMountainPineTree(x, y, z, scaleMul, woodTex) {
     : null;
   const fanMatShade = needleTex
     ? new THREE.MeshStandardMaterial({
-        map: needleTex,
-        color: 0x3e6e54,
-        alphaTest: 0.26,
-        transparent: true,
-        roughness: 0.86,
-        side: THREE.DoubleSide
-      })
+      map: needleTex,
+      color: 0x3e6e54,
+      alphaTest: 0.26,
+      transparent: true,
+      roughness: 0.86,
+      side: THREE.DoubleSide
+    })
     : deepLeafMat;
   const fanMatSun = needleTex
     ? new THREE.MeshStandardMaterial({
-        map: needleTex,
-        color: 0x6ea67c,
-        alphaTest: 0.26,
-        transparent: true,
-        roughness: 0.80,
-        side: THREE.DoubleSide
-      })
+      map: needleTex,
+      color: 0x6ea67c,
+      alphaTest: 0.26,
+      transparent: true,
+      roughness: 0.80,
+      side: THREE.DoubleSide
+    })
     : deepLeafMat;
 
   // Tapered gnarled Taiwanese black-pine trunk (3 organic bark segments from thick flared root to slender crest)
   const segs = [
-    { x0: 0,     y0: 0,    z0: 0,     x1: 0.26,  y1: 1.55, z1: 0.11, rBot: 0.25, rTop: 0.19 },
-    { x0: 0.26,  y0: 1.50, z0: 0.11,  x1: 0.16,  y1: 3.15, z1: 0.04, rBot: 0.19, rTop: 0.135 },
-    { x0: 0.16,  y0: 3.10, z0: 0.04,  x1: -0.18, y1: 4.65, z1: -0.10, rBot: 0.135, rTop: 0.075 }
+    { x0: 0, y0: 0, z0: 0, x1: 0.26, y1: 1.55, z1: 0.11, rBot: 0.25, rTop: 0.19 },
+    { x0: 0.26, y0: 1.50, z0: 0.11, x1: 0.16, y1: 3.15, z1: 0.04, rBot: 0.19, rTop: 0.135 },
+    { x0: 0.16, y0: 3.10, z0: 0.04, x1: -0.18, y1: 4.65, z1: -0.10, rBot: 0.135, rTop: 0.075 }
   ];
   segs.forEach(function (s) {
     const dx = s.x1 - s.x0, dy = s.y1 - s.y0, dz = s.z1 - s.z0;
@@ -553,14 +566,14 @@ function buildTabletopTeaSet(woodMat) {
   // Sculpted Artisan Yixing Clay Teapot
   const potGeo = hasLathe
     ? new THREE.LatheGeometry([
-        new THREE.Vector2(0.01, 0.0),
-        new THREE.Vector2(0.11, 0.0),
-        new THREE.Vector2(0.175, 0.08),
-        new THREE.Vector2(0.18, 0.15),
-        new THREE.Vector2(0.125, 0.22),
-        new THREE.Vector2(0.095, 0.24),
-        new THREE.Vector2(0.01, 0.25)
-      ], 18)
+      new THREE.Vector2(0.01, 0.0),
+      new THREE.Vector2(0.11, 0.0),
+      new THREE.Vector2(0.175, 0.08),
+      new THREE.Vector2(0.18, 0.15),
+      new THREE.Vector2(0.125, 0.22),
+      new THREE.Vector2(0.095, 0.24),
+      new THREE.Vector2(0.01, 0.25)
+    ], 18)
     : new THREE.SphereGeometry(0.16, 14, 12);
   const pot = new THREE.Mesh(potGeo, clayMat);
   pot.position.set(-0.04, 0.036, 0.0);
@@ -608,13 +621,13 @@ function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex) {
   const nodeMat = new THREE.MeshStandardMaterial({ color: 0xc2d8a4, roughness: 0.52, metalness: 0.04 });
   const leafMat = bambooLeafTex
     ? new THREE.MeshStandardMaterial({
-        map: bambooLeafTex,
-        color: 0xdffce6,
-        alphaTest: 0.28,
-        transparent: true,
-        roughness: 0.72,
-        side: THREE.DoubleSide
-      })
+      map: bambooLeafTex,
+      color: 0xdffce6,
+      alphaTest: 0.28,
+      transparent: true,
+      roughness: 0.72,
+      side: THREE.DoubleSide
+    })
     : new THREE.MeshStandardMaterial({ color: 0x4ca66a, roughness: 0.78, side: THREE.DoubleSide });
 
   const canopy = new THREE.Group();
@@ -681,27 +694,27 @@ function buildBlossomTree(x, y, z, scaleMul, kind, woodTex, blossomTex) {
   });
   const sprigMatShade = blossomTex
     ? new THREE.MeshStandardMaterial({
-        map: blossomTex,
-        color: isOsm ? 0xdec07a : 0xe2b8c7,
-        emissive: isOsm ? 0x523106 : 0x451a2a,
-        emissiveIntensity: 0.14,
-        alphaTest: 0.22,
-        transparent: true,
-        roughness: 0.78,
-        side: THREE.DoubleSide
-      })
+      map: blossomTex,
+      color: isOsm ? 0xdec07a : 0xe2b8c7,
+      emissive: isOsm ? 0x523106 : 0x451a2a,
+      emissiveIntensity: 0.14,
+      alphaTest: 0.22,
+      transparent: true,
+      roughness: 0.78,
+      side: THREE.DoubleSide
+    })
     : coreMat;
   const sprigMat = blossomTex
     ? new THREE.MeshStandardMaterial({
-        map: blossomTex,
-        color: isOsm ? 0xfff3cc : 0xfff5f8,
-        emissive: isOsm ? 0x6b4308 : 0x5c2438,
-        emissiveIntensity: 0.18,
-        alphaTest: 0.22,
-        transparent: true,
-        roughness: 0.70,
-        side: THREE.DoubleSide
-      })
+      map: blossomTex,
+      color: isOsm ? 0xfff3cc : 0xfff5f8,
+      emissive: isOsm ? 0x6b4308 : 0x5c2438,
+      emissiveIntensity: 0.18,
+      alphaTest: 0.22,
+      transparent: true,
+      roughness: 0.70,
+      side: THREE.DoubleSide
+    })
     : coreMat;
 
   const trunkSegs = [
@@ -1215,25 +1228,25 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     : null;
   const latticeMat = latticeTex
     ? new THREE.MeshStandardMaterial({
-        map: latticeTex,
-        emissiveMap: latticeTex,
-        color: 0xf7ead2,
-        emissive: 0xffb85c,
-        emissiveIntensity: 0.34,
-        roughness: 0.56,
-        metalness: 0.08
-      })
+      map: latticeTex,
+      emissiveMap: latticeTex,
+      color: 0xf7ead2,
+      emissive: 0xffb85c,
+      emissiveIntensity: 0.34,
+      roughness: 0.56,
+      metalness: 0.08
+    })
     : woodDarkMat;
   env.latticeScreenMat = latticeMat;
 
   const lanternBodyGeo = hasLathePav
     ? new THREE.LatheGeometry([
-        new THREE.Vector2(0.15, -0.30),
-        new THREE.Vector2(0.24, -0.20),
-        new THREE.Vector2(0.28, 0.0),
-        new THREE.Vector2(0.24, 0.20),
-        new THREE.Vector2(0.16, 0.30)
-      ], 16)
+      new THREE.Vector2(0.15, -0.30),
+      new THREE.Vector2(0.24, -0.20),
+      new THREE.Vector2(0.28, 0.0),
+      new THREE.Vector2(0.24, 0.20),
+      new THREE.Vector2(0.16, 0.30)
+    ], 16)
     : new THREE.CylinderGeometry(0.24, 0.19, 0.56, 12);
   const lanternCapGeo = new THREE.CylinderGeometry(0.19, 0.21, 0.075, 12);
   const lanternTrimRingGeo = new THREE.TorusGeometry(0.195, 0.016, 6, 16);
@@ -1333,14 +1346,14 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     : null;
   const balLatticeMat = balLatticeTex
     ? new THREE.MeshStandardMaterial({
-        map: balLatticeTex,
-        color: 0xf4e3c8,
-        alphaTest: 0.25,
-        transparent: true,
-        roughness: 0.56,
-        metalness: 0.14,
-        side: THREE.DoubleSide
-      })
+      map: balLatticeTex,
+      color: 0xf4e3c8,
+      alphaTest: 0.25,
+      transparent: true,
+      roughness: 0.56,
+      metalness: 0.14,
+      side: THREE.DoubleSide
+    })
     : null;
   for (let bi = 0; bi < 8; bi++) {
     // Bay 1 (Front South between li=1 and li=2) stays completely open gateway for uncluttered camera approach
@@ -1445,7 +1458,8 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     proceduralPavilionGroup.add(hornGrp);
   });
 
-  // 4 Courtyard Stone Lanterns + 5 Sculpted Mountain Black Pines framing the cliff & eaves!
+  // 4 Courtyard Stone Lanterns + 5 Sculpted Mountain Black Pines in a scaled courtyard group (never clip 10/12-seat eaves!)
+  const courtyardPropsGroup = new THREE.Group();
   [
     [8.8, -4.8, 0.4],
     [-8.8, -4.8, -0.4],
@@ -1453,7 +1467,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     [-4.4, -8.8, -0.1]
   ].forEach(function (sl) {
     const lanternObj = buildCourtyardStoneLantern(sl[0], sl[1], sl[2], stone);
-    scene.add(lanternObj.group);
+    courtyardPropsGroup.add(lanternObj.group);
     env.stoneLanternCores.push(lanternObj.coreMat);
   });
 
@@ -1465,9 +1479,11 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     [11.2, -0.75, -8.6, 1.44]
   ].forEach(function (pt, idx) {
     const pine = buildMountainPineTree(pt[0], pt[1], pt[2], pt[3], wood);
-    scene.add(pine);
+    courtyardPropsGroup.add(pine);
     env.pineTrees.push({ group: pine, canopy: pine.userData ? pine.userData.canopy : null, phase: idx * 1.45 });
   });
+  scene.add(courtyardPropsGroup);
+  env.courtyardPropsGroup = courtyardPropsGroup;
 
   // 6B. Dual Switchable Garden Themes!
   // Theme A: 林美山雅致書院風 (Linmei Academy — Swaying Jade Bamboo Groves + Osmanthus & Mountain Sakura + Mossy Cliff Boulders)
@@ -1687,13 +1703,13 @@ function buildTabletopAcademyProps(woodMat, env) {
   const censer = new THREE.Group();
   const bowlGeo = hasLathe
     ? new THREE.LatheGeometry([
-        new THREE.Vector2(0.01, 0.04),
-        new THREE.Vector2(0.11, 0.05),
-        new THREE.Vector2(0.15, 0.12),
-        new THREE.Vector2(0.12, 0.20),
-        new THREE.Vector2(0.145, 0.22),
-        new THREE.Vector2(0.10, 0.21)
-      ], 16)
+      new THREE.Vector2(0.01, 0.04),
+      new THREE.Vector2(0.11, 0.05),
+      new THREE.Vector2(0.15, 0.12),
+      new THREE.Vector2(0.12, 0.20),
+      new THREE.Vector2(0.145, 0.22),
+      new THREE.Vector2(0.10, 0.21)
+    ], 16)
     : new THREE.CylinderGeometry(0.14, 0.10, 0.18, 14);
   const censerBowl = new THREE.Mesh(bowlGeo, celadonMat);
   censerBowl.castShadow = true;
@@ -1910,15 +1926,15 @@ function build3DLotusAndAtmosphere(scene, env) {
   // Sculpted Stepped Antique-Bronze Chalice Stand resting on the felt mandala
   const standGeo = hasLatheLotus
     ? new THREE.LatheGeometry([
-        new THREE.Vector2(0.01, 0.0),
-        new THREE.Vector2(0.64, 0.0),
-        new THREE.Vector2(0.60, 0.05),
-        new THREE.Vector2(0.46, 0.09),
-        new THREE.Vector2(0.36, 0.14),
-        new THREE.Vector2(0.50, 0.21),
-        new THREE.Vector2(0.44, 0.23),
-        new THREE.Vector2(0.01, 0.19)
-      ], 28)
+      new THREE.Vector2(0.01, 0.0),
+      new THREE.Vector2(0.64, 0.0),
+      new THREE.Vector2(0.60, 0.05),
+      new THREE.Vector2(0.46, 0.09),
+      new THREE.Vector2(0.36, 0.14),
+      new THREE.Vector2(0.50, 0.21),
+      new THREE.Vector2(0.44, 0.23),
+      new THREE.Vector2(0.01, 0.19)
+    ], 28)
     : new THREE.CylinderGeometry(0.46, 0.62, 0.18, 20);
   const crystalStand = new THREE.Mesh(standGeo, bronzeMat);
   crystalStand.position.set(0, 1.09, 0);
@@ -2454,6 +2470,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   if (env.terraceTrim) env.terraceTrim.scale.set(psNow, psNow, 1);
   if (env.groundDisk) env.groundDisk.scale.set(psNow, 1, psNow);
   if (env.proceduralPavilionGroup) env.proceduralPavilionGroup.scale.set(psNow, 1, psNow);
+  if (env.courtyardPropsGroup) env.courtyardPropsGroup.scale.set(psNow, 1, psNow);
   if (env.linmeiGardenGroup) env.linmeiGardenGroup.scale.set(psNow, 1, psNow);
   if (env.celestialGardenGroup) env.celestialGardenGroup.scale.set(psNow, 1, psNow);
 

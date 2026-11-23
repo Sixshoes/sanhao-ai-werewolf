@@ -334,9 +334,29 @@ const indieFlow = {
   },
 
   syncShowcaseTargetUi: function () {
-    const tgt = (typeof stage3d !== "undefined" && stage3d.showcaseTarget) ? String(stage3d.showcaseTarget) : "hero";
+    const liveSeats = typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D() : [];
+    const inActiveMatch = Boolean(state.match && state.match.started);
+    let tgt = (typeof stage3d !== "undefined" && stage3d.showcaseTarget) ? String(stage3d.showcaseTarget) : "hero";
+    if (tgt !== "hero" && inActiveMatch) {
+      const sidCheck = parseInt(tgt, 10);
+      if (!liveSeats.some(function (x) { return x && x.id === sidCheck; })) {
+        tgt = "hero";
+        if (typeof stage3d !== "undefined") stage3d.showcaseTarget = "hero";
+      }
+    }
     document.querySelectorAll("[data-showcase-target]").forEach(function (b) {
-      b.classList.toggle("is-active", b.getAttribute("data-showcase-target") === tgt);
+      const val = b.getAttribute("data-showcase-target");
+      if (val && val !== "hero") {
+        const sidChip = parseInt(val, 10);
+        const matchSeat = liveSeats.find(function (x) { return x && x.id === sidChip; });
+        const hideChip = Boolean(inActiveMatch && !matchSeat);
+        b.classList.toggle("hidden", hideChip);
+        if (matchSeat) {
+          const isPlayerChip = typeof getPlayerId === "function" && matchSeat.id === getPlayerId();
+          b.textContent = fmtSeatNum(sidChip) + " " + (isPlayerChip ? "你" : matchSeat.name);
+        }
+      }
+      b.classList.toggle("is-active", val === tgt);
     });
     const titleEl = el("heroShowcaseTitle");
     const bioEl = el("showcasePersonaBio");

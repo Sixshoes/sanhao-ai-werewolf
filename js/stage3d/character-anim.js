@@ -277,7 +277,10 @@ function draw3DFaceCanvas(ctx, seat, st, opts) {
 }
 
 function getStageSeatListFor3D() {
-  const lobbySeatsN = typeof getLobbySeatCount === "function" ? getLobbySeatCount() : ((el("selectModeCount") && parseInt(el("selectModeCount").value, 10)) || 8);
+  const inLobbyShowcase = Boolean(typeof stage3d !== "undefined" && stage3d.showcaseMode && !(state.match && state.match.started));
+  const lobbySeatsN = inLobbyShowcase
+    ? 12
+    : (typeof getLobbySeatCount === "function" ? getLobbySeatCount() : ((el("selectModeCount") && parseInt(el("selectModeCount").value, 10)) || 8));
   return state.match.started
     ? state.match.seats
     : Array.from({ length: lobbySeatsN }, function (_, idx) {
@@ -353,6 +356,14 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
 
   const isVoteMood = (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT");
   const curMoodKey = f.daylight ? (isVoteMood ? "vote" : "day") : (f.night ? "night" : "twilight");
+  // Ensure every active seat slot (including newly expanded 9–12 seats in 10p/12p or Showcase) exists BEFORE syncing VRM avatars!
+  for (let siEnsure = 0; siEnsure < nSeats; siEnsure++) {
+    const se = seats[siEnsure];
+    if (!pool.slots[se.id]) {
+      pool.slots[se.id] = create3DSeatActor(se);
+      pool.root.add(pool.slots[se.id].root);
+    }
+  }
   if (typeof stage3d !== "undefined" && typeof stage3d.syncSeatAvatars === "function" && pool._lastSyncSig !== seatSig) {
     pool._lastSyncSig = seatSig;
     stage3d.syncSeatAvatars(seats);

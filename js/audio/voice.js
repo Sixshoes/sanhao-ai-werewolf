@@ -394,6 +394,8 @@ const voice = {
     this.clearTimers();
     this.paused = false;
     this.pauseMeta = null;
+    this._resumePendingClause = null;
+    this._resumeWatchdogFinish = null;
     this.activeUtterance = null;
     if (this.activeAudioNode) {
       try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); } catch (e) {}
@@ -466,6 +468,13 @@ const voice = {
       } else if (this.isSupported()) {
         try { window.speechSynthesis.resume(); } catch (e) {}
         this.setVisualSpeaking(true);
+        if (typeof this._resumeWatchdogFinish === "function") {
+          const fnFinish = this._resumeWatchdogFinish;
+          const selfResume = this;
+          this.watchdogTimer = setTimeout(function () {
+            if (!selfResume.paused) fnFinish();
+          }, 16000);
+        }
         if (typeof this._resumePendingClause === "function") {
           const fnResume = this._resumePendingClause;
           this._resumePendingClause = null;
@@ -512,8 +521,6 @@ const voice = {
 
     const startOffset = Math.max(0, Number(opts && opts.startOffset) || 0);
     const remainDur = Math.max(0.1, (audioBuf ? audioBuf.duration : 2.5) - startOffset);
-    this.activeAudioNode = src;
-    this.activeAudioGain = vGain;
     this.pauseMeta = {
       seq: seq,
       audioBuf: audioBuf,
@@ -523,6 +530,16 @@ const voice = {
       startedAt: sound.ctx.currentTime,
       playbackRate: pbRate
     };
+    // If user paused while async neural/Gemini TTS was still fetching, hold cleanly at offset 0 until resumed!
+    if (this.paused) {
+      this.activeAudioNode = null;
+      this.activeAudioGain = null;
+      this.setVisualSpeaking(false);
+      this.syncPauseButtonUi();
+      return true;
+    }
+    this.activeAudioNode = src;
+    this.activeAudioGain = vGain;
     this.setVisualSpeaking(true);
     this.syncPauseButtonUi();
 
@@ -669,7 +686,8 @@ const voice = {
     return this.playBufferedStudioAudio(seq, buf1, function () {
       if (seq !== self.utteranceSeq) return;
       fetchWithTimeout(seg2, 10000).then(function (buf2) {
-        if (!buf2 || seq !== self.utteranceSeq) {
+        if (seq !== self.utteranceSeq) return;
+        if (!buf2) {
           self.utteranceSeq += 1;
           self.setVisualSpeaking(false);
           if (typeof onDone === "function") onDone();
@@ -867,6 +885,7 @@ const voice = {
       }, 8500);
 
       const totalEstMs = Math.min(28000, Math.max(3600, Math.round((clean.length * 360) / baseRate) + clauses.length * 240 + 1400));
+      this._resumeWatchdogFinish = finishOnce;
       this.watchdogTimer = setTimeout(function () {
         if (!self.paused) finishOnce();
       }, totalEstMs);
@@ -878,6 +897,7 @@ const voice = {
           self._resumePendingClause = speakNextClause;
           return;
         }
+        self._resumePendingClause = null;
         if (idx >= clauses.length) {
           finishOnce();
           return;
@@ -918,6 +938,7 @@ const voice = {
             return;
           }
           const pauseMs = isEllipsis ? 195 : (isMajorStop ? 155 : 85);
+          self._resumePendingClause = speakNextClause;
           self.clauseTimer = setTimeout(speakNextClause, pauseMs);
         };
         utter.onend = onClauseDone;
@@ -931,6 +952,7 @@ const voice = {
 
       const leadDelay = wasBusy ? 55 : (this.mode === "hybrid" ? 90 : 0);
       if (leadDelay > 0) {
+        this._resumePendingClause = speakNextClause;
         this.clauseTimer = setTimeout(speakNextClause, leadDelay);
       } else {
         speakNextClause();
