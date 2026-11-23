@@ -201,6 +201,7 @@ function updateAllUI() {
   renderSeatStrip();
   renderPlayerRoleCard();
   renderFourGBlessings();
+  if (typeof renderBeginnerCoachBanner === "function") renderBeginnerCoachBanner();
   if (typeof renderPkDuelBanner === "function") renderPkDuelBanner(null);
   if (typeof renderDirectorEventChoiceBar === "function") renderDirectorEventChoiceBar();
   renderControlPanels();
@@ -466,6 +467,40 @@ function buildLiveAvailableTools(p, phase) {
       : "四張錦囊已全部圓滿施展！"
   });
   return { classicMode: classicMode, isAlive: isAlive, isDayToolPhase: isDayToolPhase, mRem: mRem, teaRem: teaRem, fgRem: fgRem, fgReadyNow: fgReadyNow, items: items };
+}
+
+function renderBeginnerCoachBanner() {
+  const box = el("beginnerCoachBanner");
+  const txt = el("beginnerCoachText");
+  if (!box || !txt) return;
+  const m = state.match;
+  if (!m || !m.started || !m.guidedBeginner || m.phase === "GAME_OVER" || m.day > 2) {
+    box.classList.add("hidden");
+    return;
+  }
+  const p = m.phase;
+  let guideText = "";
+  if (p === "NIGHT_SEER") {
+    guideText = state.seerReveal
+      ? "🧭 新手小老師 (1/4 記住結果)：太棒了！記住你剛查到的身分（左下角也會幫你記），按「記住了・繼續」等天亮！"
+      : "🧭 新手小老師 (1/4 晚上查驗)：天黑囉！點上方任意 1 位同學頭像，再按「確認查證」，就能偷偷知道他是不是酸民狼！";
+  } else if (p === "DAY_SPEECH") {
+    guideText = "🧭 新手小老師 (2/4 白天聽話)：大家會輪流發言！覺得像好人按「👍 認同」、覺得怪怪的按「🤨 存疑」，按「下一位 →」或空白鍵繼續聽！";
+  } else if (p === "DAY_PLAYER_TURN") {
+    guideText = "🧭 新手小老師 (3/4 輪到你講)：不用自己打字！直接點下方「🔮 亮觀察員報驗」或任一張「預設發言卡」，就會自動幫你講出來！";
+  } else if (p === "DAY_VOTE") {
+    guideText = "🧭 新手小老師 (4/4 公投抓狼)：大家講完要投票囉！點上方最可疑的頭像，再按「確認投票」，票數最多的人會離席！";
+  } else if (p === "DAY_VOTE_RESULT") {
+    guideText = "🧭 新手小老師（完成第一輪！）：看懂怎麼玩了吧！按「進入夜晚」開始第 2 輪，隨時點左下「❓ 能做什麼」都能看提示！";
+  } else if (p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "NIGHT_GUARD") {
+    guideText = "🧭 新手小老師：天黑了，其他角色正在悄悄行動，馬上就輪到你！";
+  }
+  if (!guideText) {
+    box.classList.add("hidden");
+    return;
+  }
+  txt.textContent = guideText;
+  box.classList.remove("hidden");
 }
 
 function renderLiveToolkitStrip(p) {

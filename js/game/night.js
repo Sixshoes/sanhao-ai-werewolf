@@ -6,9 +6,17 @@
 function scheduleNightStep(fn, ms) {
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   const waitMs = ff ? Math.min(ms, 180) : ms;
+  const wrapped = function () {
+    const dealOv = el("roleDealOverlay");
+    if (dealOv && !dealOv.classList.contains("hidden") && typeof indieFlow !== "undefined") {
+      indieFlow.onRoleDealClosed = function () { fn(); };
+      return;
+    }
+    fn();
+  };
   return (typeof orchestrator !== "undefined" && typeof orchestrator.schedule === "function")
-    ? orchestrator.schedule("turn_step", fn, waitMs)
-    : setTimeout(fn, waitMs);
+    ? orchestrator.schedule("turn_step", wrapped, waitMs)
+    : setTimeout(wrapped, waitMs);
 }
 
 // ==================== NIGHT ENGINE ====================

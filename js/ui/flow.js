@@ -11,6 +11,7 @@
 const indieFlow = {
   dealTimer: null,
   cardPeekTimer: null,
+  onRoleDealClosed: null,
 
   syncSetupDrawerFromSelects: function () {
     const cnt = el("selectModeCount") ? el("selectModeCount").value : "6";
@@ -112,18 +113,21 @@ const indieFlow = {
     const guide = (typeof ROLE_GUIDES !== "undefined" && ROLE_GUIDES[effKey]) ? ROLE_GUIDES[effKey] : null;
     if (el("roleDealTeam")) {
       el("roleDealTeam").textContent = isWolf
-        ? ("酸民狼陣營・" + (guide ? guide.shortRole : "暗中佈局"))
-        : ("林美山書院・" + (guide ? guide.shortRole : "好人陣營"));
+        ? "🐺 你是壞人隊（酸民狼・裝好人淘汰對手）"
+        : "🌿 你是好人隊（找出所有酸民狼就贏！）";
+      el("roleDealTeam").className = "role-deal-team-pill " + (isWolf ? "is-wolf" : "is-good");
     }
     if (el("roleDealName")) el("roleDealName").textContent = (guide ? (guide.icon + " ") : "") + rDef.name;
     if (el("roleDealSeat")) el("roleDealSeat").textContent = playerNumTag() + " 座位";
-    if (el("roleDealDesc")) el("roleDealDesc").textContent = rDef.desc;
+    if (el("roleDealDesc")) {
+      el("roleDealDesc").textContent = (guide && guide.cardOneLiner) ? guide.cardOneLiner : rDef.desc;
+    }
     if (el("roleDealActionList")) {
       el("roleDealActionList").innerHTML = guide
         ? (
-          '<div><span class="font-bold text-indigo-300">🌙 夜晚：</span>' + escapeHtml(guide.nightAction) + "</div>" +
-          '<div><span class="font-bold text-emerald-300">☀️ 白天：</span>' + escapeHtml(guide.dayAction) + "</div>" +
-          '<div><span class="font-bold text-amber-300">🪷 三好：</span>' + escapeHtml(guide.threeGoodTip) + "</div>"
+          '<div class="deal-step-line"><span class="deal-step-tag is-night">🌙 晚上</span><span>' + escapeHtml(guide.cardNight || guide.nightAction) + "</span></div>" +
+          '<div class="deal-step-line"><span class="deal-step-tag is-day">☀️ 白天</span><span>' + escapeHtml(guide.cardDay || guide.dayAction) + "</span></div>" +
+          '<div class="deal-step-line"><span class="deal-step-tag is-vote">🗳 投票</span><span>' + escapeHtml(guide.cardVote || guide.winCond) + "</span></div>"
         )
         : "";
     }
@@ -136,6 +140,7 @@ const indieFlow = {
     if (typeof sound !== "undefined" && typeof sound.playCardRustle === "function") {
       sound.playCardRustle();
     }
+    // User-paced reading: NEVER auto-dismiss the secret role card! Wait until player clicks "我看懂了・開始對局" (or Space/Enter/backdrop).
     const self = this;
     const pacingMul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
     if (typeof stage3d !== "undefined" && stage3d.isActive()) {
@@ -143,11 +148,8 @@ const indieFlow = {
       this.cardPeekTimer = setTimeout(function () {
         self.cardPeekTimer = null;
         state.cardPeek3D = false;
-      }, Math.round(2800 * pacingMul));
+      }, Math.round(3200 * pacingMul));
     }
-    this.dealTimer = setTimeout(function () {
-      self.hideRoleDealRitual();
-    }, Math.round(3600 * pacingMul));
   },
 
   hideRoleDealRitual: function () {
@@ -162,6 +164,9 @@ const indieFlow = {
     state.cardPeek3D = false;
     const ov = el("roleDealOverlay");
     if (ov) ov.classList.add("hidden");
+    const pendingCb = this.onRoleDealClosed;
+    this.onRoleDealClosed = null;
+    if (typeof pendingCb === "function") pendingCb();
   },
 
   cycleSmartView: function () {
@@ -380,9 +385,34 @@ const indieFlow = {
       });
     }
 
-    // Role Deal Ritual tap to dismiss
+    // Role Deal Ritual: confirm button or backdrop closes; "30秒白話教學" opens tutorial WITHOUT closing the card!
     if (el("roleDealOverlay")) {
-      el("roleDealOverlay").addEventListener("click", function () { self.hideRoleDealRitual(); });
+      el("roleDealOverlay").addEventListener("click", function (ev) {
+        if (ev && ev.target === el("roleDealOverlay")) self.hideRoleDealRitual();
+      });
+    }
+    if (el("btnRoleDealConfirm")) {
+      el("btnRoleDealConfirm").addEventListener("click", function (ev) {
+        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+        sound.unlock();
+        self.hideRoleDealRitual();
+      });
+    }
+    if (el("btnRoleDealOpenTut")) {
+      el("btnRoleDealOpenTut").addEventListener("click", function (ev) {
+        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+        sound.unlock();
+        state.tutorialIndex = 0;
+        if (typeof renderTutorialSlide === "function") renderTutorialSlide();
+        if (el("modalTutorial")) el("modalTutorial").classList.remove("hidden");
+      });
+    }
+    if (el("btnDismissBeginnerCoach")) {
+      el("btnDismissBeginnerCoach").addEventListener("click", function () {
+        if (state.match) state.match.guidedBeginner = false;
+        if (el("beginnerCoachBanner")) el("beginnerCoachBanner").classList.add("hidden");
+        if (typeof showToast === "function") showToast("已收合新手步驟提示，隨時可點左下「❓ 能做什麼」查看！", "emerald");
+      });
     }
 
     // Minimal Top-Right 3-Button HUD

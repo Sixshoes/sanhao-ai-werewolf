@@ -385,15 +385,18 @@ body.hero-showcase-active #dragGestureHint {
 #roleDealCardBox {
   position: relative;
   overflow: hidden;
-  width: 288px;
-  padding: 30px 24px;
-  border-radius: 8px;
+  width: min(372px, 92vw);
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: 24px 22px;
+  border-radius: 10px;
   text-align: center;
   background: linear-gradient(175deg, #271e17 0%, #17120d 55%, #110d0a 100%);
   border: 1.5px solid #d4a657;
   box-shadow: inset 0 0 0 6px rgba(212, 166, 87, 0.16), inset 0 0 0 7px rgba(212, 166, 87, 0.22), 0 28px 66px rgba(0, 0, 0, 0.78);
   color: #efe7d8;
   animation: dealFlipIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  cursor: default;
 }
 
 #roleDealCardBox::after {
@@ -4213,4 +4216,90 @@ body.craft-ui.theme-day .player-turn-step-hint {
   background: rgba(214, 244, 231, 0.65);
   border-color: rgba(36, 106, 80, 0.32);
   color: #1f3b2c;
+}
+
+/* ===== v9.2 USER-PACED ROLE DEAL CARD & GUIDED BEGINNER COACH BANNER (ZERO !important) ===== */
+.role-deal-team-pill {
+  display: inline-block;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  background: rgba(16, 185, 129, 0.16);
+  color: #a7f3d0;
+}
+
+.role-deal-team-pill.is-wolf {
+  border-color: rgba(251, 113, 133, 0.55);
+  background: rgba(225, 29, 72, 0.2);
+  color: #fecdd3;
+}
+
+.deal-step-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.56);
+  border: 1px solid rgba(212, 166, 87, 0.18);
+  color: #e2e8f0;
+  line-height: 1.45;
+}
+
+.deal-step-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.deal-step-tag.is-night {
+  background: rgba(99, 102, 241, 0.24);
+  color: #c7d2fe;
+}
+
+.deal-step-tag.is-day {
+  background: rgba(16, 185, 129, 0.22);
+  color: #a7f3d0;
+}
+
+.deal-step-tag.is-vote {
+  background: rgba(244, 63, 94, 0.22);
+  color: #fecdd3;
+}
+
+#modalTutorial {
+  z-index: 75;
+}
+
+.beginner-coach-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.18) 0%, rgba(212, 166, 87, 0.16) 100%);
+  border: 1px solid rgba(52, 211, 153, 0.52);
+  color: #ecfdf5;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.beginner-coach-banner.hidden {
+  display: none;
+}
+
+body.craft-ui.theme-day .beginner-coach-banner {
+  background: linear-gradient(90deg, rgba(209, 244, 228, 0.88) 0%, rgba(250, 238, 208, 0.88) 100%);
+  border-color: rgba(36, 106, 80, 0.45);
+  color: #164e34;
 }

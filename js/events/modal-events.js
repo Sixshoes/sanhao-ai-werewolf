@@ -16,6 +16,11 @@ function bindModalEvents() {
     const tag = ev.target && ev.target.tagName ? ev.target.tagName.toLowerCase() : "";
     if (tag === "textarea" || tag === "input" || tag === "select") return;
     if (ev.key === "Escape") {
+      const tutOpenEsc = el("modalTutorial") && !el("modalTutorial").classList.contains("hidden");
+      if (tutOpenEsc) {
+        el("modalTutorial").classList.add("hidden");
+        return;
+      }
       const dealOv = el("roleDealOverlay");
       if (dealOv && !dealOv.classList.contains("hidden") && typeof indieFlow !== "undefined") {
         indieFlow.hideRoleDealRitual();
@@ -59,9 +64,11 @@ function bindModalEvents() {
       ev.preventDefault();
       return;
     }
-    if (ev.key === " ") {
+    if (ev.key === " " || ev.key === "Enter") {
       const dealOv = el("roleDealOverlay");
-      if (dealOv && !dealOv.classList.contains("hidden") && typeof indieFlow !== "undefined") {
+      const tutModNow = el("modalTutorial");
+      const tutOpenNow = Boolean(tutModNow && !tutModNow.classList.contains("hidden"));
+      if (dealOv && !dealOv.classList.contains("hidden") && !tutOpenNow && typeof indieFlow !== "undefined") {
         ev.preventDefault();
         indieFlow.hideRoleDealRitual();
         return;

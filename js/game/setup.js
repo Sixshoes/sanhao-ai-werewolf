@@ -4,11 +4,17 @@
 "use strict";
 
 function startGuidedBeginnerMatch() {
-  el("modalTutorial").classList.add("hidden");
+  if (el("modalTutorial")) el("modalTutorial").classList.add("hidden");
   el("selectModeCount").value = "6";
   el("selectPreferredRole").value = "seer";
+  if (el("selectAiDifficulty")) el("selectAiDifficulty").value = "easy";
+  if (el("chkSheriffMode")) el("chkSheriffMode").checked = false;
+  if (el("chkGuardMode")) el("chkGuardMode").checked = false;
   state.coachEnabled = true;
+  state.autoPlay = false;
   startNewGame();
+  if (state.match) state.match.guidedBeginner = true;
+  if (typeof renderBeginnerCoachBanner === "function") renderBeginnerCoachBanner();
 }
 
 // ==================== START GAME ====================

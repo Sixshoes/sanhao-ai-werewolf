@@ -3952,4 +3952,63 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v9.1 (UI Convergence & Live Toolkit + Zero-Leak Anti-Cheat + 12p Table + 6-Chapter Tutorial + Seated POV + User Feedback) E2E smoke test PASSED!");
+// v9.2 ZERO-EXPERIENCE TUTORIAL, USER-PACED ROLE DEAL CARD & GUIDED BEGINNER COACH CHECK
+{
+  const begRes = vm.runInContext(`(() => {
+    clearStepTimer();
+    const tut1ZeroExpOk = Boolean(TUTORIAL_SLIDES[0] && TUTORIAL_SLIDES[0].title.includes("沒玩過也能懂") && TUTORIAL_SLIDES[0].html.includes("抓出誰在說謊"));
+
+    // startGuidedBeginnerMatch sets 6p Seer + easy + no sheriff + guidedBeginner=true and does NOT auto-dismiss role card!
+    startGuidedBeginnerMatch();
+    const cardStaysOpen = !el("roleDealOverlay").classList.contains("hidden") && indieFlow.dealTimer === null;
+    const cardSimpleOk = el("roleDealDesc").textContent.includes("偷看 1 個人") && el("roleDealActionList").innerHTML.includes("晚上") && el("roleDealActionList").innerHTML.includes("投票");
+    const guidedSetupOk = state.match.totalSeats === 6 && state.match.guidedBeginner === true && state.aiDifficulty === "easy" && !state.match.sheriffSeatId;
+
+    // Opening tutorial from inside roleDealOverlay keeps roleDealOverlay open underneath!
+    el("btnRoleDealOpenTut").click();
+    const tutOverCardOk = !el("modalTutorial").classList.contains("hidden") && !el("roleDealOverlay").classList.contains("hidden");
+    window.dispatchEvent({ type: "keydown", key: "Escape", target: { tagName: "BODY" }, preventDefault() {} });
+    const escClosedTutFirst = el("modalTutorial").classList.contains("hidden") && !el("roleDealOverlay").classList.contains("hidden");
+
+    // Confirm button closes role card cleanly
+    el("btnRoleDealConfirm").click();
+    const confirmClosedCard = el("roleDealOverlay").classList.contains("hidden");
+
+    // Step-by-step Beginner Coach updates cleanly across phases and dismisses on click
+    state.match.phase = "NIGHT_SEER";
+    state.seerReveal = null;
+    updateAllUI();
+    const coachNightOk = !el("beginnerCoachBanner").classList.contains("hidden") && el("beginnerCoachText").textContent.includes("1/4");
+
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    updateAllUI();
+    const coachTurnOk = !el("beginnerCoachBanner").classList.contains("hidden") && el("beginnerCoachText").textContent.includes("3/4");
+
+    el("btnDismissBeginnerCoach").click();
+    const coachDismissed = el("beginnerCoachBanner").classList.contains("hidden") && state.match.guidedBeginner === false;
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      tut1ZeroExpOk,
+      cardStaysOpen,
+      cardSimpleOk,
+      guidedSetupOk,
+      tutOverCardOk,
+      escClosedTutFirst,
+      confirmClosedCard,
+      coachNightOk,
+      coachTurnOk,
+      coachDismissed
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(begRes)) {
+    if (!v) {
+      throw new Error("v9.2 BEGINNER-EXPERIENCE check failed for " + k + ": " + JSON.stringify(begRes));
+    }
+  }
+}
+
+console.log("[OK] Full v9.2 (Zero-Experience Tutorial & User-Paced Role Card + UI Convergence + Anti-Cheat + 12p Table + Seated POV + Feedback) E2E smoke test PASSED!");
