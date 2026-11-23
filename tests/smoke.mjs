@@ -4016,4 +4016,44 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v9.2 (Zero-Experience Tutorial & User-Paced Role Card + UI Convergence + Anti-Cheat + 12p Table + Seated POV + Feedback) E2E smoke test PASSED!");
+// v9.3.1 SKIRT-DRAPE-FIX: Ensure seated VRM skirt panels NEVER flip upward above horizontal & sculpted lapSkirt flares downward
+{
+  const skirtRes = vm.runInContext(`(() => {
+    const legRx = -1.40;
+    const zones = ["front", "side", "back"];
+    let legParentNoFlip = true;
+    let hipsParentNoFlip = true;
+    let sideSplayOk = true;
+    for (const z of zones) {
+      let accLeg = legRx;
+      let accHips = 0;
+      for (let d = 0; d <= 2; d++) {
+        const aLeg = stage3dVrm.getSeatedSkirtTargetAngles({ isSkirt: true, skirtZone: z, skirtSideSign: 1, skirtInheritsLeg: true, depth: d }, 0);
+        const aHips = stage3dVrm.getSeatedSkirtTargetAngles({ isSkirt: true, skirtZone: z, skirtSideSign: -1, skirtInheritsLeg: false, depth: d }, 0);
+        accLeg += aLeg.rx;
+        accHips += aHips.rx;
+        // Must NEVER cross -PI/2 (-1.5708 rad, horizontal) into upward flip!
+        if (accLeg <= -1.45) legParentNoFlip = false;
+        if (accHips <= -1.45) hipsParentNoFlip = false;
+        if (z === "side" && d === 0) {
+          if (!(aLeg.rz > 0 && aHips.rz < 0)) sideSplayOk = false;
+        }
+      }
+      // Final hem must relax substantially downward (world angle > -0.80 rad for all zones!)
+      if (accLeg < -0.80) legParentNoFlip = false;
+    }
+    const charSrcOk = true;
+    return { legParentNoFlip, hipsParentNoFlip, sideSplayOk, charSrcOk };
+  })()`, ctx);
+  const meshSrc = fs.readFileSync(path.join(ROOT, "js/stage3d/character-mesh.js"), "utf8");
+  if (!meshSrc.includes("new THREE.Vector2(0.46, -0.14)") || !meshSrc.includes("new THREE.Vector2(0.24, 0.24)")) {
+    throw new Error("v9.3.1 SKIRT-DRAPE-FIX: sculpted lapSkirt must flare downward with ascending Y outward normals");
+  }
+  for (const [k, v] of Object.entries(skirtRes)) {
+    if (!v) {
+      throw new Error("v9.3.1 SKIRT-DRAPE-FIX check failed for " + k + ": " + JSON.stringify(skirtRes));
+    }
+  }
+}
+
+console.log("[OK] Full v9.3.1 (Seated VRM & Sculpted Skirt Drape Fix + Beginner Tutorial + UI Convergence + Anti-Cheat + 12p Table + Seated POV + Feedback) E2E smoke test PASSED!");

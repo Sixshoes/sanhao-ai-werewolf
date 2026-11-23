@@ -321,19 +321,51 @@ const stage3dVrm = {
     const json = gltf && gltf.parser && gltf.parser.json ? gltf.parser.json : null;
     const ext = json && json.extensions ? json.extensions : null;
 
+    const hasLegAncestor = function (node) {
+      let cur = node ? node.parent : null;
+      let steps = 0;
+      while (cur && steps < 8) {
+        if (/upper.*leg|thigh|upleg/i.test(String(cur.name || ""))) return true;
+        if (/hips|pelvis/i.test(String(cur.name || ""))) return false;
+        cur = cur.parent;
+        steps += 1;
+      }
+      return false;
+    };
+
+    const classifySkirtMeta = function (obj, tagStr) {
+      const isSkirt = skirtRe.test(tagStr);
+      if (!isSkirt) return { isSkirt: false, skirtZone: null, skirtSideSign: 0, skirtInheritsLeg: false };
+      const nm = String((obj && obj.name) || tagStr || "");
+      let zone = "front";
+      if (/back|rear/i.test(nm)) zone = "back";
+      else if (/side/i.test(nm)) zone = "side";
+      const sideSign = /(?:^|_)L(?:_|$)|left/i.test(nm) ? 1 : (/(?:^|_)R(?:_|$)|right/i.test(nm) ? -1 : 0);
+      return {
+        isSkirt: true,
+        skirtZone: zone,
+        skirtSideSign: sideSign,
+        skirtInheritsLeg: hasLegAncestor(obj)
+      };
+    };
+
     const addChainBone = function (obj, comment, depth, stiff) {
       if (!obj || !obj.rotation || seen.has(obj)) return;
       const nm = String(obj.name || "");
       const tag = String(comment || "") + " " + nm;
       if (skipRe.test(tag)) return;
       seen.add(obj);
+      const skMeta = classifySkirtMeta(obj, tag);
       const boneInfo = {
         obj: obj,
         restX: obj.rotation.x || 0,
         restY: obj.rotation.y || 0,
         restZ: obj.rotation.z || 0,
         depth: Math.min(depth || 0, 3),
-        isSkirt: skirtRe.test(tag),
+        isSkirt: skMeta.isSkirt,
+        skirtZone: skMeta.skirtZone,
+        skirtSideSign: skMeta.skirtSideSign,
+        skirtInheritsLeg: skMeta.skirtInheritsLeg,
         stiffness: clamp(Number(stiff) || 0.7, 0.2, 2.5),
         phase: (springBones.length * 0.73) % (Math.PI * 2)
       };
@@ -366,13 +398,17 @@ const stage3dVrm = {
           const obj = (jt && typeof jt.node === "number" && pickByIdxOrName) ? pickByIdxOrName(jt.node) : null;
           if (obj && !skipRe.test(obj.name || "") && !seen.has(obj)) {
             seen.add(obj);
+            const skMeta1 = classifySkirtMeta(obj, cmt + " " + (obj.name || ""));
             springBones.push({
               obj: obj,
               restX: obj.rotation.x || 0,
               restY: obj.rotation.y || 0,
               restZ: obj.rotation.z || 0,
               depth: Math.min(jIdx, 3),
-              isSkirt: skirtRe.test(cmt + " " + (obj.name || "")),
+              isSkirt: skMeta1.isSkirt,
+              skirtZone: skMeta1.skirtZone,
+              skirtSideSign: skMeta1.skirtSideSign,
+              skirtInheritsLeg: skMeta1.skirtInheritsLeg,
               stiffness: clamp(Number(jt.stiffness) || 1.0, 0.2, 3.0),
               phase: (springBones.length * 0.73) % (Math.PI * 2)
             });
@@ -450,6 +486,47 @@ const stage3dVrm = {
     }
   },
 
+  /**
+   * Compute anatomically grounded seated skirt drape deltas so VRoid skirt panels
+   * NEVER inherit UpperLeg (-1.40 rad) + compound negative tilts that flip the skirt upward!
+   * Positive rx relaxes the hem DOWNWARD (gravity toward knees/cushion); ±rz splays sides gently outward.
+   */
+  getSeatedSkirtTargetAngles: function (sb, sway) {
+    if (!sb) return { rx: 0, ry: 0, rz: 0 };
+    const d = Math.min(sb.depth || 0, 2);
+    const zone = sb.skirtZone || "front";
+    const sgn = sb.skirtSideSign || 0;
+    const sw = (typeof sway === "number" ? sway : 0) * (d === 0 ? 0.5 : 1.0);
+    if (sb.skirtInheritsLeg) {
+      // Parent UpperLeg is already bent -1.40 rad (-80 deg) forward along thigh; relax DOWNWARD (+rx)!
+      if (zone === "front") {
+        const rx = d === 0 ? 0.14 : (d === 1 ? 0.38 : 0.22);
+        return { rx: rx + sw, ry: 0, rz: 0 };
+      }
+      if (zone === "back") {
+        const rx = d === 0 ? 0.52 : (d === 1 ? 0.36 : 0.20);
+        return { rx: rx + sw * 0.4, ry: 0, rz: 0 };
+      }
+      // side panel parented to UpperLeg (Gen-A VRMs: player, xiaoyun, qingming)
+      const rx = d === 0 ? 0.66 : (d === 1 ? 0.38 : 0.20);
+      const rz = d === 0 ? (sgn * 0.14) : (d === 1 ? (sgn * 0.06) : 0);
+      return { rx: rx + sw * 0.6, ry: 0, rz: rz };
+    }
+    // Hips-parented skirt panels (Gen-B VRMs: nuannuan/xinger Side panels) start hanging straight down (0 rad)
+    if (zone === "side") {
+      const rx = d === 0 ? -0.16 : (d === 1 ? 0.10 : 0.06);
+      const rz = d === 0 ? (sgn * 0.18) : (d === 1 ? (sgn * 0.06) : 0);
+      return { rx: rx + sw * 0.6, ry: 0, rz: rz };
+    }
+    if (zone === "back") {
+      const rx = d === 0 ? 0.12 : (d === 1 ? 0.08 : 0.04);
+      return { rx: rx + sw * 0.4, ry: 0, rz: 0 };
+    }
+    // Hips-parented front panel fallback
+    const rxF = d === 0 ? -0.58 : (d === 1 ? 0.34 : 0.22);
+    return { rx: rxF + sw, ry: 0, rz: 0 };
+  },
+
   prepareLoadedAvatar: function (gltf, opts) {
     if (!gltf || !gltf.scene) return null;
     const o = opts || {};
@@ -519,10 +596,11 @@ const stage3dVrm = {
       this.setBoneModelDeltaImmediate(boneMeta.leftLowerArm, 0, -1.02, 0, "YXZ");
       this.setBoneModelDeltaImmediate(boneMeta.rightLowerArm, 0, 1.02, 0, "YXZ");
 
-      // Lift skirt spring-bones slightly forward over thighs to prevent thigh-skirt clipping!
+      // Anatomically drape skirt spring-bones DOWN over seated thighs & knees (compensating for UpperLeg -1.40 rad!)
       for (let si = 0; si < springBones.length; si++) {
         if (springBones[si].isSkirt && springBones[si].quatMeta) {
-          this.setBoneModelDeltaImmediate(springBones[si].quatMeta, -0.44, 0, 0, "YXZ");
+          const skAng = this.getSeatedSkirtTargetAngles(springBones[si], 0);
+          this.setBoneModelDeltaImmediate(springBones[si].quatMeta, skAng.rx, skAng.ry, skAng.rz, "YXZ");
         }
       }
 
@@ -927,8 +1005,9 @@ const stage3dVrm = {
         const sb = inst.springBones[si];
         if (!sb || !sb.quatMeta) continue;
         if (sb.isSkirt && inst.mode === "seated") {
-          const skSway = Math.sin(t * 1.6 + sb.phase) * 0.022;
-          this.slerpBoneModelDelta(sb.quatMeta, -0.44 + skSway, 0, 0, 0.16, "YXZ");
+          const skSway = Math.sin(t * 1.5 + sb.phase) * 0.014;
+          const skAng = this.getSeatedSkirtTargetAngles(sb, skSway);
+          this.slerpBoneModelDelta(sb.quatMeta, skAng.rx, skAng.ry, skAng.rz, 0.16, "YXZ");
         } else {
           const baseAmp = clamp(0.045 / Math.sqrt(sb.stiffness || 0.7), 0.02, 0.065);
           const breezeZ = clamp(Math.sin(t * 2.1 + sb.phase) * baseAmp + inst.headInertia * 0.18, -0.08, 0.08);

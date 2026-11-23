@@ -46,12 +46,12 @@ const stage3dCharGeos = {
         new THREE.Vector2(0.24, 0.90),
         new THREE.Vector2(0.01, 0.92)
       ], 22);
-      // Flared pleated lower robe / seated coat skirt resting cleanly onto the chair cushion
+      // Flared pleated lower robe / seated coat skirt draping DOWNWARD from waist onto chair cushion (ascending Y for outward normals!)
       this.lapSkirt = new THREE.LatheGeometry([
-        new THREE.Vector2(0.24, 0.0),
-        new THREE.Vector2(0.34, 0.10),
-        new THREE.Vector2(0.45, 0.28),
-        new THREE.Vector2(0.48, 0.42)
+        new THREE.Vector2(0.46, -0.14),
+        new THREE.Vector2(0.42, -0.02),
+        new THREE.Vector2(0.32, 0.12),
+        new THREE.Vector2(0.24, 0.24)
       ], 18);
       this.teacup = new THREE.LatheGeometry([
         new THREE.Vector2(0.01, 0.0),
@@ -509,10 +509,10 @@ function build3DCharacterOutfit(figureGroup, st, robeMat, accentMat, G) {
   buckle.position.set(0, 0.24, 0.26);
   figureGroup.add(belt, buckle);
 
-  // Flared coat / skirt lap draping gently onto chair cushion
+  // Flared coat / skirt lap draping gently DOWN onto chair cushion & thighs
   const lapSkirt = new THREE.Mesh(G.lapSkirt, robeMat);
-  lapSkirt.position.set(0, 0.06, 0.05);
-  lapSkirt.rotation.x = -0.22;
+  lapSkirt.position.set(0, 0.04, 0.04);
+  lapSkirt.rotation.x = 0.10;
   lapSkirt.castShadow = true;
   addOutline(lapSkirt, 0.009, 0x241512);
   figureGroup.add(lapSkirt);
