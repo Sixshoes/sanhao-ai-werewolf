@@ -96,7 +96,9 @@ const indieFlow = {
 
   showRoleDealRitual: function (roleKey) {
     const ov = el("roleDealOverlay");
-    const rDef = ROLE_DEFS[roleKey];
+    const pSelf = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
+    const effKey = (pSelf && typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(pSelf) : null) || roleKey;
+    const rDef = ROLE_DEFS[effKey] || ROLE_DEFS[roleKey];
     if (!ov || !rDef) return;
     if (this.dealTimer) {
       clearTimeout(this.dealTimer);
@@ -107,12 +109,24 @@ const indieFlow = {
       this.cardPeekTimer = null;
     }
     const isWolf = rDef.team === "wolf";
+    const guide = (typeof ROLE_GUIDES !== "undefined" && ROLE_GUIDES[effKey]) ? ROLE_GUIDES[effKey] : null;
     if (el("roleDealTeam")) {
-      el("roleDealTeam").textContent = isWolf ? "酸民狼陣營・暗中佈局" : "林美山書院・好人陣營";
+      el("roleDealTeam").textContent = isWolf
+        ? ("酸民狼陣營・" + (guide ? guide.shortRole : "暗中佈局"))
+        : ("林美山書院・" + (guide ? guide.shortRole : "好人陣營"));
     }
-    if (el("roleDealName")) el("roleDealName").textContent = rDef.name;
+    if (el("roleDealName")) el("roleDealName").textContent = (guide ? (guide.icon + " ") : "") + rDef.name;
     if (el("roleDealSeat")) el("roleDealSeat").textContent = playerNumTag() + " 座位";
     if (el("roleDealDesc")) el("roleDealDesc").textContent = rDef.desc;
+    if (el("roleDealActionList")) {
+      el("roleDealActionList").innerHTML = guide
+        ? (
+          '<div><span class="font-bold text-indigo-300">🌙 夜晚：</span>' + escapeHtml(guide.nightAction) + "</div>" +
+          '<div><span class="font-bold text-emerald-300">☀️ 白天：</span>' + escapeHtml(guide.dayAction) + "</div>" +
+          '<div><span class="font-bold text-amber-300">🪷 三好：</span>' + escapeHtml(guide.threeGoodTip) + "</div>"
+        )
+        : "";
+    }
     const card = el("roleDealCardBox");
     if (card) {
       card.classList.toggle("deal-wolf", isWolf);
@@ -203,6 +217,7 @@ const indieFlow = {
 
     if (el("inGameTopHud")) el("inGameTopHud").classList.toggle("hidden", isTitle);
     if (el("cornerRoleTile")) el("cornerRoleTile").classList.toggle("hidden", isTitle || isGameOver);
+    if ((isTitle || isGameOver) && typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
     if (el("cornerFourGDeck")) el("cornerFourGDeck").classList.toggle("hidden", isTitle || isGameOver || !fourGUsable);
     if (el("seatButtonStrip")) el("seatButtonStrip").classList.toggle("hidden", !showSeatBar);
     if (!isTitle) this.openSetupDrawer(false);

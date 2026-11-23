@@ -42,15 +42,15 @@ function buildCrossDayMemoryLedger(viewerSeat) {
     });
   }
 
-  // Detect players who vouched for a confirmed dead wolf on an earlier day
-  const deadWolves = (m.seats || []).filter(function (s) { return !s.alive && s.team === "wolf" && s.outReason === "投票出局"; });
-  deadWolves.forEach(function (dw) {
+  // Fair Play: Detect players who vouched for ANY voted-out seat on an earlier day (ZERO hidden team/role leak!)
+  const votedOutSeats = (m.seats || []).filter(function (s) { return !s.alive && s.outReason === "投票出局"; });
+  votedOutSeats.forEach(function (vo) {
     priorEvs.forEach(function (ev) {
-      if (ev.vouchId === dw.id && ev.speakerId !== dw.id) {
+      if (ev.vouchId === vo.id && ev.speakerId !== vo.id) {
         const sp = getSeat(ev.speakerId);
         if (sp && sp.alive && wolfProtectorIds.indexOf(sp.id) === -1) {
           wolfProtectorIds.push(sp.id);
-          lines.push("第" + ev.day + "天 " + nameOf(sp.id) + " 曾力保已出局的 " + nameOf(dw.id));
+          lines.push("第" + ev.day + "天 " + nameOf(sp.id) + " 曾力保後來被公投離席的 " + nameOf(vo.id));
         }
       }
     });

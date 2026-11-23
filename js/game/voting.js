@@ -205,8 +205,9 @@ function finalizeVoteRound(playerTargetId) {
 
   function commitVoteResolution() {
     if (maxVotes === 0 || topIds.length !== 1) {
-      // Real 凹嗚狼人殺 Tie-Breaker PK! First tie triggers PK speech & re-vote between tied seats!
-      if (maxVotes > 0 && topIds.length >= 2 && topIds.length < alive.length && !state.match.pkUsedToday) {
+      // Real 凹嗚狼人殺 Tie-Breaker PK! First tie triggers PK speech & re-vote ONLY if at least 1 non-PK voter can still vote!
+      const nonPkEligibleCount = alive.filter(function (v) { return topIds.indexOf(v.id) === -1 && !v.voteDisabled; }).length;
+      if (maxVotes > 0 && topIds.length >= 2 && nonPkEligibleCount > 0 && !state.match.pkUsedToday) {
         state.match.pkUsedToday = true;
         state.match.pkCandidates = topIds.slice();
         const pkNames = topIds.map(function (id) {
@@ -506,7 +507,11 @@ const PERSONA_CONFIDENCE_LINES = {
   "星兒": "欸嘿我的第六感剛剛也在亮燈！謝謝你的信心護盾，這輪鎖定留意 {t}！",
   "小雲": "感謝這張護盾替我分擔火力，查核組會用實際投票回報你的信任！",
   "阿竹": "得此誠心相託，如飲甘露；這輪我也會特別留神觀察 {t} 的動靜。",
-  "晨晨": "夠義氣！收到你的給信心護盾，這輪一定陪你把可疑人選查個水落石出！"
+  "晨晨": "夠義氣！收到你的給信心護盾，這輪一定陪你把可疑人選查個水落石出！",
+  "墨白": "承你一分信，還你十分明。這輪我會替你看緊 {t} 的每句破綻。",
+  "晴嵐": "這盞信任護盾收下了，風再急我也不會亂了立場，會特別留意 {t}。",
+  "阿朗": "多謝相挺！邏輯站得住腳就不怕風向，這輪我們盯緊 {t} 吧！",
+  "柚子": "哇謝謝你給我信心護盾！我一定鼓起勇氣把 {t} 的破綻看清楚！"
 };
 
 const PERSONA_LAUGH_LINES = {
@@ -516,7 +521,11 @@ const PERSONA_LAUGH_LINES = {
   "星兒": "噗哈哈太鬧了吧！誰剛剛邊笑邊偷瞄旁邊啊？",
   "小雲": "哼笑一下也是好的，心理防線鬆動才好辨別真假～",
   "阿竹": "呵呵…笑聲裡自見真性情，這一局越來越有趣了。",
-  "晨晨": "哈哈哈哈超讚！氣氛熱起來就對了！"
+  "晨晨": "哈哈哈哈超讚！氣氛熱起來就對了！",
+  "墨白": "呵呵，一笑解千愁，倒也看清了幾張不自在的臉。",
+  "晴嵐": "噗嗤，茶席有笑聲才像書院嘛，大家輕鬆聊！",
+  "阿朗": "哈哈好梗！剛才緊繃的辯論氣氛瞬間化開了！",
+  "柚子": "哈哈哈好好笑喔～可是我怎麼覺得旁邊有人笑得很僵呀？"
 };
 
 function triggerFourGSynergyCheck(cardKey) {
@@ -556,6 +565,17 @@ function canUseFourGNow() {
   return p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "DAY_VOTE";
 }
 
+function animateFourGCardCast(btnId) {
+  const isBrowser = typeof window !== "undefined" && typeof window.matchMedia === "function";
+  if (!isBrowser) return;
+  const btn = el(btnId);
+  if (!btn || !btn.classList) return;
+  btn.classList.add("is-fourg-casting");
+  setTimeout(function () {
+    if (btn && btn.classList) btn.classList.remove("is-fourg-casting");
+  }, 520);
+}
+
 function useFourGConfidence() {
   sound.unlock();
   if (!canUseFourGNow() || state.match.fourGivingsUsed.confidence) return;
@@ -564,6 +584,7 @@ function useFourGConfidence() {
     showToast("先點圓桌選 1 位夥伴，再按【給信心】！", "warn");
     return;
   }
+  animateFourGCardCast("btn4GConfidence");
   state.match.fourGivingsUsed.confidence = true;
   state.match.stats.fourGCount += 1;
   state.match.harmonyScore = clamp(state.match.harmonyScore + 8, 0, 100);
@@ -606,6 +627,7 @@ function useFourGConfidence() {
 function useFourGJoy() {
   sound.unlock();
   if (!canUseFourGNow() || state.match.fourGivingsUsed.joy) return;
+  animateFourGCardCast("btn4GJoy");
   state.match.fourGivingsUsed.joy = true;
   state.match.stats.fourGCount += 1;
   state.match.harmonyScore = clamp(state.match.harmonyScore + 16, 0, 100);
@@ -677,6 +699,7 @@ function useFourGJoy() {
 function useFourGHope() {
   sound.unlock();
   if (!canUseFourGNow() || state.match.fourGivingsUsed.hope) return;
+  animateFourGCardCast("btn4GHope");
   state.match.fourGivingsUsed.hope = true;
   state.match.stats.fourGCount += 1;
   state.match.harmonyScore = clamp(state.match.harmonyScore + 10, 0, 100);
@@ -686,9 +709,20 @@ function useFourGHope() {
 
   const aliveWolves = getAliveSeats().filter(function (s) { return s.role === "wolf" && s.id !== getPlayerId(); });
   const aliveGood = getAliveSeats().filter(function (s) { return s.role !== "wolf" && s.id !== getPlayerId(); });
+  const pHope = getPlayerSeat();
 
   let msg = "給希望線索：酸民狼已快現形！";
-  if (aliveWolves.length > 0 && aliveGood.length > 0) {
+  if (pHope && pHope.role === "wolf" && aliveWolves.length === 0) {
+    // Solo surviving Wolf: meaningful stealth benefit instead of wasting the card!
+    pHope.microPulse = Math.max(20, (pHope.microPulse || 70) - 18);
+    aliveGood.forEach(function (g) {
+      g.suspicionMap[getPlayerId()] = clamp((g.suspicionMap[getPlayerId()] || 50) - 10, 5, 95);
+    });
+    spawnBurst(getPlayerId(), ["#38bdf8", "#fde68a", "#ffffff"], 20, "petal");
+    spawnFx(getPlayerId(), "🌟 獨狼穩心 -18%!", "#38bdf8");
+    triggerCutIn("🌟 四給・給希望（獨狼穩心）！", "你以沉穩氣度化解全場緊繃，好人對你的懷疑度下降且心虛值平息！", "gold");
+    msg = "給希望（獨狼偽裝）：以善意穩住全場氣氛，心虛值降低且眾人戒心下降！";
+  } else if (aliveWolves.length > 0 && aliveGood.length > 0) {
     const pair = Math.random() < 0.5 ? [aliveWolves[0], aliveGood[0]] : [aliveGood[0], aliveWolves[0]];
     state.match.fourGHopePair = [pair[0].id, pair[1].id];
     spawnBeam(getPlayerId(), pair[0].id, "#38bdf8", "emote");
@@ -729,6 +763,7 @@ function useFourGConvenience() {
   sound.unlock();
   if (!state.match.started) return;
   if (!state.match.fourGivingsUsed.convenience && canUseFourGNow()) {
+    animateFourGCardCast("btn4GConvenience");
     state.match.fourGivingsUsed.convenience = true;
     state.match.stats.fourGCount += 1;
     state.match.harmonyScore = clamp(state.match.harmonyScore + 8, 0, 100);
@@ -1130,6 +1165,19 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     voteRecords[c.id] = [];
   });
 
+  const claimedSeerOnStand = {};
+  (ctx.speeches || []).forEach(function (sp) {
+    if (sp && (sp.tone === "seer" || sp.tone === "clash")) claimedSeerOnStand[sp.id] = true;
+  });
+  const scoreSheriffCand = function (voter, cand, isAutoPass) {
+    // Fair Play: Good AIs NEVER peek at hidden roles/teams! Only Wolves know their own Wolf mates.
+    const wolfKnowsMate = (voter.role === "wolf" && cand.role === "wolf") ? 20 : 0;
+    const observableSeerClaim = claimedSeerOnStand[cand.id] ? 12 : 0;
+    const playerRunBonus = (isAutoPass && cand.id === pid) ? 14 : 0;
+    const seatJitter = ((voter.id * 11 + cand.id * 7) % 9) - 4;
+    return wolfKnowsMate + observableSeerClaim + playerRunBonus + seatJitter - ((voter.suspicionMap && voter.suspicionMap[cand.id]) || 50);
+  };
+
   if (cands.length === 0) {
     winner = getAliveSeats()[0] || null;
   } else if (chosenCandId && cands.some(function (c) { return c.id === chosenCandId; })) {
@@ -1145,9 +1193,7 @@ function finalizeSheriffElectionWinner(chosenCandId) {
       getAliveSeats().forEach(function (s) {
         if (s.id === pid || ctx.candidateIds.indexOf(s.id) !== -1) return;
         const ranked = cands.slice().sort(function (a, b) {
-          const sa = (s.team === a.team ? 18 : 0) - ((s.suspicionMap && s.suspicionMap[a.id]) || 50) + (a.role === "seer" ? 12 : 0);
-          const sb = (s.team === b.team ? 18 : 0) - ((s.suspicionMap && s.suspicionMap[b.id]) || 50) + (b.role === "seer" ? 12 : 0);
-          return sb - sa;
+          return scoreSheriffCand(s, b, false) - scoreSheriffCand(s, a, false);
         });
         if (ranked[0]) {
           counts[ranked[0].id] = (counts[ranked[0].id] || 0) + 1;
@@ -1161,11 +1207,7 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     getAliveSeats().forEach(function (s) {
       if (ctx.candidateIds.indexOf(s.id) !== -1) return;
       const ranked = cands.slice().sort(function (a, b) {
-        const biasA = a.id === pid ? 16 : (a.role === "seer" ? 10 : 0);
-        const biasB = b.id === pid ? 16 : (b.role === "seer" ? 10 : 0);
-        const sa = biasA - ((s.suspicionMap && s.suspicionMap[a.id]) || 50);
-        const sb = biasB - ((s.suspicionMap && s.suspicionMap[b.id]) || 50);
-        return sb - sa;
+        return scoreSheriffCand(s, b, true) - scoreSheriffCand(s, a, true);
       });
       if (ranked[0]) {
         counts[ranked[0].id] = (counts[ranked[0].id] || 0) + 1;

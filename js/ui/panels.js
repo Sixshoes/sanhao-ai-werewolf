@@ -131,6 +131,24 @@ function renderVotePickPanel() {
   }
 
   el("panelVote").classList.remove("hidden");
+  const isWolfVoter = Boolean(player && player.role === "wolf");
+  const gwBadge = el("voteGoodwillBadge");
+  if (gwBadge) {
+    const tgObj = (state.match && state.match.threeGood) || { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
+    const litCnt = (tgObj.heart > 0 ? 1 : 0) + (tgObj.words > 0 ? 1 : 0) + (tgObj.deeds > 0 ? 1 : 0);
+    if (!isWolfVoter && state.match.goodwillVoteBonus) {
+      gwBadge.textContent = "🌟 三好蓮花覺醒・黃金善意票生效中（本票權重 +1 票！）";
+      gwBadge.className = "vote-goodwill-badge is-gold";
+    } else if (isWolfVoter && tgObj.resonanceTriggered) {
+      gwBadge.textContent = "🌟 深水三好偽裝生效中（好人戒心已降・請避開同伴精準投票）";
+      gwBadge.className = "vote-goodwill-badge is-wolf";
+    } else if (!isWolfVoter && litCnt === 2) {
+      gwBadge.textContent = "🪷 再點亮最後 1 瓣三好蓮花（打 1 張右側四給卡即可！），立即解鎖「黃金善意票 +1」！";
+      gwBadge.className = "vote-goodwill-badge is-hint";
+    } else {
+      gwBadge.className = "hidden vote-goodwill-badge";
+    }
+  }
   const vaneVoteEl = el("tableWindVaneVote");
   if (vaneVoteEl) {
     const vw = typeof computeTableWindVane === "function" ? computeTableWindVane() : null;
@@ -156,7 +174,7 @@ function renderVotePickPanel() {
   if (el("votePromptLabel")) {
     el("votePromptLabel").textContent = pkActive
       ? ("⚔️ 平票 PK 決選：請從【" + pkListLabel + "】擇一投票")
-      : "點擊外圍座位投票抓狼";
+      : (isWolfVoter ? "🐺 酸民狼歸票：點選好人座位帶節奏（避開同伴）" : "點擊外圍座位投票抓狼");
   }
   const sel = getSeat(state.selectedSeatId);
   const validVote = Boolean(sel && isValidVoteTarget(sel.id));
@@ -186,13 +204,72 @@ function renderVotePickPanel() {
   }
 }
 
+function renderNightRoleTipStrip(p, pSelf) {
+  const tipEl = el("nightRoleTipStrip");
+  if (!tipEl) return;
+  if (!pSelf || !state.match || !state.match.started) {
+    tipEl.classList.add("hidden");
+    return;
+  }
+  let text = "";
+  let tone = "is-good";
+  if (p === "NIGHT_SEER") {
+    const hist = pSelf.checkedHistory || [];
+    text = hist.length > 0
+      ? ("🔮 明心查驗本（請勿重複查）：" + hist.map(function (c) {
+        const cs = getSeat(c.targetId);
+        return fmtSeatNum(c.targetId) + (cs ? cs.name : "") + "=" + (c.isWolf ? "酸民狼" : "好人");
+      }).join(" ｜ "))
+      : "🔮 明心觀察員・首夜查證：點選 1 位夥伴立刻得知真實陣營！";
+  } else if (p === "NIGHT_WITCH") {
+    const healOk = Boolean(state.match.witchPotions && state.match.witchPotions.heal);
+    const purOk = Boolean(state.match.witchPotions && state.match.witchPotions.purify);
+    text = "🍵 滴水奉茶師庫存：暖心茶(" + (healOk ? "可用" : "已用") + ")・清心茶(" + (purOk ? "可用" : "已用") + ")｜同夜限一盞・第2夜不可自護";
+  } else if (p === "NIGHT_GUARD") {
+    const lg = state.match.lastGuardTargetId ? getSeat(state.match.lastGuardTargetId) : null;
+    text = lg
+      ? ("🛡️ 護心守衛輪值：上晚已守 " + fmtSeatNum(lg.id) + "號" + lg.name + "（今晚禁連守）｜可守己・留意勿與回甘茶同守破盾")
+      : "🛡️ 護心守衛首夜：可守護任意 1 席（含自己），若與奉茶師同守同救會造成破盾！";
+  } else if (p === "NIGHT_WOLF") {
+    tone = "is-wolf";
+    const mates = state.match.seats.filter(function (s) { return s.id !== getPlayerId() && s.role === "wolf"; });
+    const mateLbl = mates.length > 0
+      ? ("🐺 狼同伴：" + mates.map(function (m) { return fmtSeatNum(m.id) + m.name + (m.alive ? "" : "(離)"); }).join("、"))
+      : "🐺 獨狼作戰";
+    const marks = state.match.wolfGodMarks || {};
+    const markList = Object.keys(marks).map(function (k) {
+      const sid = parseInt(k, 10);
+      const ms = getSeat(sid);
+      const md = typeof getWolfGodMarkDef === "function" ? getWolfGodMarkDef(marks[k]) : { label: marks[k] };
+      return (ms && ms.alive && md.label) ? (fmtSeatNum(sid) + ms.name + "(" + md.label + ")") : "";
+    }).filter(Boolean);
+    text = mateLbl + (markList.length > 0 ? (" ｜ 🔍 獵神筆記：" + markList.join("、")) : " ｜ 下方可同步指定明日 AI 同伴戰術");
+  } else if (p === "HUNTER_TRIGGER") {
+    if (pSelf.isWolfKing) {
+      tone = "is-wolf";
+      text = "👑 流言首領・最後帶風向：挑選 1 位最棘手的好人或神職一同離席！";
+    } else {
+      text = "⚖️ 直心糾察長・正氣共鳴：挑選 1 位你最確定的酸民狼一同離席冷靜！";
+    }
+  }
+  if (text) {
+    tipEl.textContent = text;
+    tipEl.className = "night-role-tip-strip " + tone;
+  } else {
+    tipEl.classList.add("hidden");
+  }
+}
+
 function renderNightAndHunterPanel(p) {
   el("panelTargetAction").classList.remove("hidden");
   const revealCard = el("seerRevealCard");
   const actionBtnsRow = el("targetActionBtnsRow");
   const witchSub = el("witchSubPanel");
+  const tacticRowEarly = el("wolfTacticRow");
+  if (tacticRowEarly && p !== "NIGHT_WOLF") tacticRowEarly.classList.add("hidden");
   const confirmBtn = el("btnConfirmTarget");
   const sel = getSeat(state.selectedSeatId);
+  renderNightRoleTipStrip(p, getPlayerSeat());
 
   if (p === "NIGHT_SEER" && state.seerReveal) {
     const rv = state.seerReveal;
@@ -297,15 +374,39 @@ function renderStepperPanel(p) {
   if (markRow) markRow.classList.toggle("hidden", !showMarkTools);
   if (showMarkTools) {
     const curMark = state.playerMarks[activeSpeaker.id] || null;
-    el("btnMarkGood").textContent = curMark === "good" ? "✓ 已認同" : "👍 認同";
-    el("btnMarkWolf").textContent = curMark === "wolf" ? "⚠ 已存疑" : "🤨 存疑";
+    const isWolfListener = Boolean(pSeatLive && pSeatLive.role === "wolf");
+    const isWolfMateSpeaking = Boolean(isWolfListener && activeSpeaker.role === "wolf");
+    if (isWolfMateSpeaking) {
+      el("btnMarkGood").disabled = true;
+      el("btnMarkWolf").disabled = true;
+      el("btnMarkGood").textContent = "🐺 同伴發言中";
+      el("btnMarkWolf").textContent = "🛡️ 狼隊配合";
+      el("btnMarkGood").className = "py-1 px-2 text-[11px] shrink-0 cta-ink opacity-80";
+      el("btnMarkWolf").className = "py-1 px-2 text-[11px] shrink-0 cta-ink opacity-80";
+    } else if (isWolfListener) {
+      el("btnMarkGood").disabled = false;
+      el("btnMarkWolf").disabled = false;
+      el("btnMarkGood").textContent = curMark === "good" ? "✓ 已標假保" : "🛡️ 標記假保";
+      el("btnMarkWolf").textContent = curMark === "wolf" ? "🎯 已標甩鍋" : "🎯 標記甩鍋";
+      el("btnMarkGood").className = "py-1 px-2 text-[11px] shrink-0 " + (
+        curMark === "good" ? "cta-celadon font-bold" : "cta-ink"
+      );
+      el("btnMarkWolf").className = "py-1 px-2 text-[11px] shrink-0 " + (
+        curMark === "wolf" ? "cta-cinnabar" : "cta-ink"
+      );
+    } else {
+      el("btnMarkGood").disabled = false;
+      el("btnMarkWolf").disabled = false;
+      el("btnMarkGood").textContent = curMark === "good" ? "✓ 已認同" : "👍 認同";
+      el("btnMarkWolf").textContent = curMark === "wolf" ? "⚠ 已存疑" : "🤨 存疑";
+      el("btnMarkGood").className = "py-1 px-2 text-[11px] shrink-0 " + (
+        curMark === "good" ? "cta-celadon font-bold" : "cta-ink"
+      );
+      el("btnMarkWolf").className = "py-1 px-2 text-[11px] shrink-0 " + (
+        curMark === "wolf" ? "cta-cinnabar" : "cta-ink"
+      );
+    }
     if (el("btnPinCurrentSpeaker")) el("btnPinCurrentSpeaker").textContent = "📌 記筆記";
-    el("btnMarkGood").className = "py-1 px-2 text-[11px] shrink-0 " + (
-      curMark === "good" ? "cta-celadon font-bold" : "cta-ink"
-    );
-    el("btnMarkWolf").className = "py-1 px-2 text-[11px] shrink-0 " + (
-      curMark === "wolf" ? "cta-cinnabar" : "cta-ink"
-    );
     const mTxt = el("tableMomentumText");
     if (mTxt) {
       const pSus = Math.round(activeSpeaker.suspicionMap[getPlayerId()] || 50);
@@ -345,6 +446,7 @@ function renderStepperPanel(p) {
     if (warmBtn) {
       const canWarm = Boolean(showWatch && (state.activeClash.kind === "toxic_slip" || state.activeClash.kind === "accuse_you"));
       warmBtn.classList.toggle("hidden", !canWarm);
+      if (canWarm) warmBtn.textContent = "✨ 說好話化解 (+說好話)";
     }
     if (showWatch) {
       const cSp = getSeat(state.activeClash.speakerId);
@@ -649,10 +751,17 @@ function selectSeat(seatId) {
   const isSpecMode = (typeof isSpectatorGuessActive === "function" && isSpectatorGuessActive());
   if ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "DAY_VOTE_RESULT" || isSpecMode) && target && seatId !== pid) {
     if (state.intelSeatId === seatId && target.alive && p === "DAY_SPEECH" && !isSpecMode) {
-      const cur = state.playerMarks[seatId] || null;
-      const next = cur === null ? "wolf" : (cur === "wolf" ? "good" : null);
-      state.playerMarks[seatId] = next;
-      spawnFx(seatId, next === "wolf" ? "標記：懷疑" : (next === "good" ? "標記：好人" : "清除標記"), next === "wolf" ? "#fb7185" : "#34d399");
+      const isWolfSelf = Boolean(player && player.role === "wolf");
+      if (isWolfSelf && target.role === "wolf") {
+        spawnFx(seatId, "🐺 狼隊同伴", "#fb7185");
+      } else {
+        const cur = state.playerMarks[seatId] || null;
+        const next = cur === null ? "wolf" : (cur === "wolf" ? "good" : null);
+        state.playerMarks[seatId] = next;
+        const wLabel = isWolfSelf ? "標記：甩鍋" : "標記：懷疑";
+        const gLabel = isWolfSelf ? "標記：假保" : "標記：好人";
+        spawnFx(seatId, next === "wolf" ? wLabel : (next === "good" ? gLabel : "清除標記"), next === "wolf" ? "#fb7185" : "#34d399");
+      }
     } else {
       state.intelSeatId = seatId;
     }

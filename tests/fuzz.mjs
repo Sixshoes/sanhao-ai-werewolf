@@ -301,9 +301,10 @@ for (let i = 0; i < 60; i++) {
       } else {
         ctx.skipTargetAction();
       }
-    } else if (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && pSelf.role === "hunter") {
-      if (aliveOthers.length && i % 3 !== 0) {
-        gState.selectedSeatId = aliveOthers[0].id;
+    } else if (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && (pSelf.role === "hunter" || pSelf.isWolfKing)) {
+      const shotPool = pSelf.isWolfKing ? aliveOthers.filter(s => s.role !== "wolf") : aliveOthers;
+      if (shotPool.length && i % 3 !== 0) {
+        gState.selectedSeatId = shotPool[0].id;
         ctx.confirmTargetAction();
       } else {
         ctx.skipTargetAction();

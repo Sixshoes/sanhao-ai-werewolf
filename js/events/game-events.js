@@ -30,12 +30,14 @@ function resetMatchToLobby() {
   state.match.clearBreezeUsedDay = 0;
   state.match.quickReactedMap = {};
   state.match.harmonyScore = 70;
-  state.match.threeGood = { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
+  state.match.threeGood = { heart: 0, words: 0, deeds: 0, resonanceTriggered: false, milestones: { heart: false, words: false, deeds: false } };
   state.match.combo = 0;
   state.match.maxCombo = 0;
   state.match.comboBoostReady = false;
   state.match.pinnedClues = [];
   state.match.caughtSpeechClues = {};
+  state.match.wolfGodMarks = {};
+  if (typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
   state.match.fourGivingsUsed = { confidence: false, joy: false, hope: false, convenience: false };
   state.match.fourGJoySuspects = [];
   state.match.fourGSynergyTriggered = false;
@@ -199,6 +201,7 @@ function bindMatchFlowEvents() {
   el("btnToggleRoleMask").addEventListener("click", function () {
     state.hidePlayerRole = !state.hidePlayerRole;
     el("btnToggleRoleMask").textContent = state.hidePlayerRole ? "顯示" : "遮蔽";
+    if (state.hidePlayerRole && typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
     updateAllUI();
   });
 
@@ -315,9 +318,13 @@ function bindIntelAndDetectiveEvents() {
     el("btnIntelMarkGood").addEventListener("click", function () {
       const sid = state.intelSeatId;
       if (!sid || !state.match.started) return;
+      const pSelf = getPlayerSeat();
+      const targetS = getSeat(sid);
+      if (pSelf && pSelf.role === "wolf" && targetS && targetS.role === "wolf") return;
       state.playerMarks[sid] = state.playerMarks[sid] === "good" ? null : "good";
       sound.tone(660, 0.08, "triangle", 0.05, 0);
-      spawnFx(sid, state.playerMarks[sid] ? "標記：信任" : "清除標記", "#34d399");
+      const isWolfM = Boolean(pSelf && pSelf.role === "wolf");
+      spawnFx(sid, state.playerMarks[sid] ? (isWolfM ? "標記：假保" : "標記：信任") : "清除標記", "#34d399");
       updateAllUI();
     });
   }
@@ -325,9 +332,13 @@ function bindIntelAndDetectiveEvents() {
     el("btnIntelMarkWolf").addEventListener("click", function () {
       const sid = state.intelSeatId;
       if (!sid || !state.match.started) return;
+      const pSelf = getPlayerSeat();
+      const targetS = getSeat(sid);
+      if (pSelf && pSelf.role === "wolf" && targetS && targetS.role === "wolf") return;
       state.playerMarks[sid] = state.playerMarks[sid] === "wolf" ? null : "wolf";
       sound.tone(330, 0.09, "triangle", 0.05, 0);
-      spawnFx(sid, state.playerMarks[sid] ? "標記：懷疑" : "清除標記", "#fb7185");
+      const isWolfM = Boolean(pSelf && pSelf.role === "wolf");
+      spawnFx(sid, state.playerMarks[sid] ? (isWolfM ? "標記：甩鍋" : "標記：懷疑") : "清除標記", "#fb7185");
       updateAllUI();
     });
   }
@@ -368,6 +379,12 @@ function bindIntelAndDetectiveEvents() {
 
   function triggerQuickReactionToSpeaker(sp, kind) {
     if (!sp || !sp.alive || sp.id === getPlayerId()) return;
+    const selfPlayerChk = getPlayerSeat();
+    const isWolfSelf = Boolean(selfPlayerChk && selfPlayerChk.role === "wolf");
+    if (isWolfSelf && sp.role === "wolf") {
+      spawnFx(sp.id, "🐺 狼隊同伴", "#fb7185");
+      return;
+    }
     const key = (state.match.day || 0) + ":" + sp.id;
     if (!state.match.quickReactedMap) state.match.quickReactedMap = {};
     const firstTime = !state.match.quickReactedMap[key];
@@ -381,7 +398,10 @@ function bindIntelAndDetectiveEvents() {
     }
 
     if (state.playerMarks[sp.id] === kind) {
-      spawnFx(sp.id, isGoodReaction ? "👍 認同好人" : "🤨 存疑懷疑", isGoodReaction ? "#34d399" : "#fb7185");
+      const fxLbl = isWolfSelf
+        ? (isGoodReaction ? "🛡️ 標記假保" : "🎯 標記甩鍋")
+        : (isGoodReaction ? "👍 認同好人" : "🤨 存疑懷疑");
+      spawnFx(sp.id, fxLbl, isGoodReaction ? "#34d399" : "#fb7185");
       nudgeSeat(sp.id, { scale: isGoodReaction ? 1.12 : 0.90, vy: isGoodReaction ? -5 : 4, vTilt: isGoodReaction ? 0.06 : -0.14 });
       const selfPlayer = getPlayerSeat();
       const selfAlive = Boolean(selfPlayer && selfPlayer.alive);
@@ -942,6 +962,24 @@ function bindNightVoteAndFourGEvents() {
   el("btn4GJoy").addEventListener("click", useFourGJoy);
   el("btn4GHope").addEventListener("click", useFourGHope);
   el("btn4GConvenience").addEventListener("click", useFourGConvenience);
+
+  if (el("btnRoleGuide")) {
+    el("btnRoleGuide").addEventListener("click", function () {
+      sound.unlock();
+      if (typeof openRoleGuidePopover === "function") openRoleGuidePopover("role");
+    });
+  }
+  if (el("threeGoodMeters")) {
+    el("threeGoodMeters").addEventListener("click", function () {
+      sound.unlock();
+      if (typeof openRoleGuidePopover === "function") openRoleGuidePopover("threegood");
+    });
+  }
+  if (el("btnCloseRoleGuide")) {
+    el("btnCloseRoleGuide").addEventListener("click", function () {
+      if (typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
+    });
+  }
 
   if (el("btnSheriffRally")) {
     el("btnSheriffRally").addEventListener("click", function () {

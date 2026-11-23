@@ -131,13 +131,17 @@ function startNewGame() {
     if (pref === "wolf_king" && pSeatInit && pSeatInit.role === "wolf") {
       pSeatInit.isWolfKing = true;
     } else if (wolfSeatsAll.length > 0) {
-      const wk = wolfSeatsAll[Math.floor(Math.random() * wolfSeatsAll.length)];
+      const wkPool = (pref === "wolf") ? wolfSeatsAll.filter(function (s) { return s.id !== playerSeatId; }) : wolfSeatsAll;
+      const wkCands = wkPool.length > 0 ? wkPool : wolfSeatsAll;
+      const wk = wkCands[Math.floor(Math.random() * wkCands.length)];
       wk.isWolfKing = true;
     }
     if (pref === "elder" && pSeatInit && pSeatInit.role === "villager") {
       pSeatInit.isElder = true;
     } else if (villagerSeatsAll.length > 0) {
-      const eld = villagerSeatsAll[Math.floor(Math.random() * villagerSeatsAll.length)];
+      const eldPool = (pref === "villager") ? villagerSeatsAll.filter(function (s) { return s.id !== playerSeatId; }) : villagerSeatsAll;
+      const eldCands = eldPool.length > 0 ? eldPool : villagerSeatsAll;
+      const eld = eldCands[Math.floor(Math.random() * eldCands.length)];
       eld.isElder = true;
     }
   }
@@ -172,6 +176,7 @@ function startNewGame() {
   state.intelSeatId = null;
   closeSeatIntel();
   closeRadialMenu();
+  if (typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
   state.speakingInFlight = false;
   state.spectatorFastForward = false;
   if (typeof clearCutInQueue === "function") clearCutInQueue();
@@ -211,12 +216,13 @@ function startNewGame() {
     startOffset: startOffset,
     spectatorPrompted: false,
     harmonyScore: 72,
-    threeGood: { heart: 0, words: 0, deeds: 0, resonanceTriggered: false },
+    threeGood: { heart: 0, words: 0, deeds: 0, resonanceTriggered: false, milestones: { heart: false, words: false, deeds: false } },
     combo: 0,
     maxCombo: 0,
     comboBoostReady: false,
     pinnedClues: [],
     caughtSpeechClues: {},
+    wolfGodMarks: {},
     rewriteCritReady: false,
     seats: seats,
     playerKnownRoles: known,
@@ -239,7 +245,11 @@ function startNewGame() {
     pendingEvidenceTargetId: null,
     pendingEvidenceTag: "",
     playerDraftPits: { wolfIds: [], goodIds: [], claimRole: null, standSeerId: null, evidenceClueId: null, turnKey: "" },
-    roleMission: (!isClassicSimpleMode() && typeof createRoleMission === "function") ? createRoleMission(playerRole) : null,
+    roleMission: (!isClassicSimpleMode() && typeof createRoleMission === "function")
+      ? createRoleMission(typeof getSeatEffectiveRoleKey === "function"
+        ? getSeatEffectiveRoleKey(seats.find(function (s) { return s.id === playerSeatId; }))
+        : playerRole)
+      : null,
     speechQueue: [],
     relations: [],
     voteHistory: [],

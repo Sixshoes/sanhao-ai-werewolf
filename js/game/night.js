@@ -435,7 +435,7 @@ function resolveDawn() {
   state.match.pendingNight1LastWords = (state.match.day === 1 && fallenIds.length > 0) ? fallenIds.slice() : [];
 
   function enterDayDiscussionWithSheriffHooks(voiceLineArg) {
-    if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof startSheriffElection === "function" && !(typeof isSpectatorFastForward === "function" && isSpectatorFastForward())) {
+    if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof startSheriffElection === "function") {
       startSheriffElection(function () {
         if (!state.match.started || state.match.phase === "GAME_OVER") return;
         const shSeat = state.match.sheriffSeatId ? getSeat(state.match.sheriffSeatId) : null;

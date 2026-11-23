@@ -29,9 +29,19 @@ const ROLE_MISSION_DEFS = {
     desc: "全程零酸言且蒐證／抓矛盾達 2 次",
     bonusPts: 15
   },
+  elder: {
+    title: "泰山定海",
+    desc: "發動清心長老豁免護盾，或以零酸言率領好人陣營獲勝",
+    bonusPts: 15
+  },
   wolf: {
     title: "暗影帶風",
     desc: "帶隊奪勝或成功誘導好人錯投好人 2 票",
+    bonusPts: 15
+  },
+  wolf_king: {
+    title: "流言策動",
+    desc: "成功發動流言首領臨離反撲，或帶領酸民狼陣營奪勝",
     bonusPts: 15
   }
 };
@@ -102,6 +112,18 @@ function evaluateRoleMission() {
     prog = cleanSpeech
       ? (Math.min(2, cluesTotal) + "/2 線索蒐證")
       : "已發送過酸言（密令未成）";
+  } else if (mis.role === "elder") {
+    const stE = m.stats || {};
+    const shielded = Boolean(p.elderShieldUsed || (stE.elderExempted || 0) >= 1);
+    const cleanWin = Boolean(m.phase === "GAME_OVER" && m.winner === "good" && (stE.toxicSentCount || 0) === 0);
+    ok = shielded || cleanWin;
+    prog = shielded ? "已完成：豁免護盾穩住好人局勢" : (cleanWin ? "已完成：清心零酸言率隊奪勝" : "護盾未觸發・保持理性帶隊");
+  } else if (mis.role === "wolf_king") {
+    const stWk = m.stats || {};
+    const struck = (stWk.wolfKingStrikes || 0) >= 1;
+    const wkWin = Boolean(m.phase === "GAME_OVER" && m.winner === "wolf");
+    ok = struck || wkWin;
+    prog = struck ? "已完成：臨離反撲精準命中" : (wkWin ? "已完成：帶領酸民狼奪勝" : "佈局獵神・伺機奪勝或臨離反撲");
   } else if (mis.role === "wolf") {
     let misdirectedGoodVotes = 0;
     (m.voteHistory || []).forEach(function (vh) {
@@ -345,7 +367,9 @@ function computeTableWindVane() {
     return s && s.alive && state.playerMarks[k] === "wolf";
   });
   if (markedWolves.length > 0) {
-    parts.push("你標疑：" + markedWolves.map(function (id) { return fmtSeatNum(id); }).join("、"));
+    const pSelfVane = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
+    const isWolfVane = Boolean(pSelfVane && pSelfVane.role === "wolf");
+    parts.push((isWolfVane ? "你標甩鍋：" : "你標疑：") + markedWolves.map(function (id) { return fmtSeatNum(id); }).join("、"));
   }
 
   return {

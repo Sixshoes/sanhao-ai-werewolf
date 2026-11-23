@@ -105,6 +105,8 @@ function renderTableMatrixIntoBody() {
     return num + (st ? (st.id === pid ? "你" : st.name) : "號");
   };
 
+  const pSelfMat = getPlayerSeat();
+  const isWolfMat = Boolean(pSelfMat && pSelfMat.role === "wolf" && !state.hidePlayerRole);
   state.match.seats.forEach(function (s) {
     const todayEv = dayEvs.slice().reverse().find(function (e) { return e.speakerId === s.id; });
     const latestEv = todayEv || allEvs.slice().reverse().find(function (e) { return e.speakerId === s.id; });
@@ -116,17 +118,24 @@ function renderTableMatrixIntoBody() {
 
     const card = document.createElement("div");
     card.className = "matrix-seat-card" + (!s.alive ? " is-dead" : "");
-    const markBadge = mark === "wolf"
-      ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-500/25 text-rose-200">你標:懷疑</span>'
-      : (mark === "good"
-        ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/25 text-emerald-200">你標:認同</span>'
-        : "");
+    const isWolfMateCard = Boolean(isWolfMat && s.role === "wolf" && s.id !== pid);
+    const godNoteKey = (isWolfMat && !isWolfMateCard && state.match.wolfGodMarks) ? (state.match.wolfGodMarks[s.id] || "") : "";
+    const godNoteLbl = (godNoteKey && typeof getWolfGodMarkDef === "function") ? getWolfGodMarkDef(godNoteKey).label : "";
+    const markBadge = isWolfMateCard
+      ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-600/35 text-rose-100">🐺 同伴</span>'
+      : (godNoteLbl
+        ? ('<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-500/30 text-amber-100">🔍 ' + escapeHtml(godNoteLbl) + '</span>')
+        : (mark === "wolf"
+          ? ('<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-500/25 text-rose-200">' + (isWolfMat ? "你標:甩鍋" : "你標:懷疑") + '</span>')
+          : (mark === "good"
+            ? ('<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/25 text-emerald-200">' + (isWolfMat ? "你標:假保" : "你標:認同") + '</span>')
+            : "")));
     const alertBadge = (s.isElder && s.voteDisabled)
       ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-teal-500/25 text-teal-200">🛡️ 免票</span>'
       : (flipSet.indexOf(s.id) !== -1
         ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-600/35 text-rose-100">⚡ 跨日反水</span>'
         : (wolfProtSet.indexOf(s.id) !== -1
-          ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-600/30 text-amber-200">⚠ 曾保出局狼</span>'
+          ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-600/30 text-amber-200">⚠ 曾保公投離席者</span>'
           : ""));
     const accStr = latestEv && latestEv.accuseId ? ('<span class="text-rose-300 font-bold">🎯 打 ' + escapeHtml(fmtTag(latestEv.accuseId)) + '</span>') : '<span class="text-slate-400">🎯 打 —</span>';
     const vchStr = latestEv && latestEv.vouchId ? ('<span class="text-emerald-300 font-bold">✅ 保 ' + escapeHtml(fmtTag(latestEv.vouchId)) + '</span>') : '<span class="text-slate-400">✅ 保 —</span>';
@@ -225,7 +234,8 @@ function renderVoteSheetIntoBody() {
     const seatTag = function (id) {
       if (!id) return "無";
       const st = getSeat(id);
-      const rName = (st && ROLE_DEFS[st.role]) ? ("(" + ROLE_DEFS[st.role].name + ")") : "";
+      const effDef = (st && typeof getSeatRoleDef === "function") ? getSeatRoleDef(st) : (st && ROLE_DEFS[st.role]);
+      const rName = effDef ? ("(" + effDef.name + ")") : "";
       return fmtSeatNum(id) + "號" + (id === getPlayerId() ? "你" : (st ? st.name : "")) + rName;
     };
     html += '<div class="space-y-2.5">';
@@ -248,8 +258,10 @@ function renderVoteSheetIntoBody() {
       const dawnLine = (nr.casualties && nr.casualties.length > 0)
         ? ("☀️ 天亮離席：" + nr.casualties.map(function (c) { return escapeHtml(seatTag(c.id)) + (c.cause === "purify" ? "［清心茶請離］" : (c.cause === "double_clash" ? "［同守破盾］" : "［夜間迷霧］")); }).join("、"))
         : "☀️ 天亮結果：平安夜（全員在場）";
+      const hunterShooter = (nr.hunterShot && nr.hunterShot.hunterId) ? getSeat(nr.hunterShot.hunterId) : null;
+      const isWkShot = Boolean(hunterShooter && hunterShooter.isWolfKing);
       const hunterLine = nr.hunterShot
-        ? ('<div class="text-amber-300 font-bold">⚡ 直心糾察長共鳴：' + escapeHtml(seatTag(nr.hunterShot.hunterId)) + ' 請離 ' + escapeHtml(seatTag(nr.hunterShot.targetId)) + '</div>')
+        ? ('<div class="text-amber-300 font-bold">' + (isWkShot ? "🐺 流言首領反撲：" : "⚡ 直心糾察長共鳴：") + escapeHtml(seatTag(nr.hunterShot.hunterId)) + ' 請離 ' + escapeHtml(seatTag(nr.hunterShot.targetId)) + '</div>')
         : "";
       const dayVoteRec = (state.match.voteHistory || []).filter(function (vh) { return vh.day === nr.day; });
       let dayVoteLine = "";
@@ -257,9 +269,13 @@ function renderVoteSheetIntoBody() {
         const lastRound = dayVoteRec[dayVoteRec.length - 1];
         const maxV = Math.max.apply(null, Object.values(lastRound.tallies || { _: 0 }));
         const topK = Object.keys(lastRound.tallies || {}).filter(function (k) { return lastRound.tallies[k] === maxV && maxV > 0; });
-        dayVoteLine = topK.length === 1
-          ? ('<div class="text-amber-200">🗳 第 ' + nr.day + ' 天公投請離：' + escapeHtml(seatTag(parseInt(topK[0], 10))) + '（' + maxV + ' 票）</div>')
-          : '<div class="text-slate-300">🗳 第 ' + nr.day + ' 天公投：平票／棄票無人離席</div>';
+        if (lastRound.outId) {
+          dayVoteLine = '<div class="text-amber-200">🗳 第 ' + nr.day + ' 天公投請離：' + escapeHtml(seatTag(lastRound.outId)) + '（' + maxV + ' 票）</div>';
+        } else if (topK.length === 1) {
+          dayVoteLine = '<div class="text-teal-300">🛡️ 第 ' + nr.day + ' 天公投豁免：' + escapeHtml(seatTag(parseInt(topK[0], 10))) + ' 亮清心長老免離席（' + maxV + ' 票）</div>';
+        } else {
+          dayVoteLine = '<div class="text-slate-300">🗳 第 ' + nr.day + ' 天公投：平票／棄票無人離席</div>';
+        }
       }
       html += '<div class="rounded-2xl p-3 bg-slate-950/85 border border-emerald-500/30 space-y-1 text-[11.5px]">' +
         '<div class="text-xs font-black text-amber-300 pb-1 border-b border-slate-800/80">第 ' + nr.day + ' 輪・日夜時間軸</div>' +

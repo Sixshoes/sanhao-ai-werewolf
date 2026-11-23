@@ -124,6 +124,105 @@ async function rewriteToThreeGoodness(rawText) {
   return "大家先別急著動氣，我們心平氣和來比對線索：我發現 " + targetLabel + " 剛剛的說法跟場上局勢有些矛盾，想溫和請教他能不能多說明一點，這輪建議先留意 " + targetLabel + "。";
 }
 
+function getPlayerWolfPitCap() {
+  const baseWolves = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
+  return Math.max(3, baseWolves + 1);
+}
+
+function getWolfGodMarkDef(markKey) {
+  const list = typeof WOLF_GOD_MARK_CYCLE !== "undefined" ? WOLF_GOD_MARK_CYCLE : [{ key: "", label: "", title: "" }];
+  return list.find(function (m) { return m.key === (markKey || ""); }) || list[0];
+}
+
+function cycleWolfGodMark(seatId) {
+  if (!state.match || !state.match.started) return;
+  const player = getPlayerSeat();
+  const seat = getSeat(seatId);
+  if (!player || player.role !== "wolf" || !seat || !seat.alive || seat.role === "wolf") return;
+  if (!state.match.wolfGodMarks) state.match.wolfGodMarks = {};
+  const list = typeof WOLF_GOD_MARK_CYCLE !== "undefined" ? WOLF_GOD_MARK_CYCLE : [{ key: "", label: "" }];
+  const cur = state.match.wolfGodMarks[seatId] || "";
+  const idx = list.findIndex(function (m) { return m.key === cur; });
+  const next = list[(idx + 1) % list.length];
+  if (next.key) state.match.wolfGodMarks[seatId] = next.key;
+  else delete state.match.wolfGodMarks[seatId];
+  sound.tone(next.key ? 560 : 340, 0.06, "triangle", 0.045, 0);
+  if (next.key) {
+    spawnFx(seatId, "🔍 " + next.label, "#fbbf24");
+  }
+  renderPlayerPitBuilder();
+  if (typeof renderSeatIntelPopover === "function") renderSeatIntelPopover();
+}
+
+function renderRoleTurnDashboard(player) {
+  const dash = el("roleTurnDashboard");
+  if (!dash) return;
+  if (!state.match || !state.match.started || !player) {
+    dash.classList.add("hidden");
+    dash.innerHTML = "";
+    return;
+  }
+  const effKey = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(player) : player.role;
+  const guide = (typeof ROLE_GUIDES !== "undefined" && ROLE_GUIDES[effKey]) ? ROLE_GUIDES[effKey] : { icon: "📖", shortRole: "書院夥伴", themeClass: "role-theme-villager" };
+  const rDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(player) : null) || ROLE_DEFS[player.role] || { name: "書院生" };
+  const pid = getPlayerId();
+  let detailHtml = "";
+
+  if (effKey === "seer") {
+    const hist = player.checkedHistory || [];
+    const histStr = hist.length > 0
+      ? hist.map(function (c) {
+        const cs = getSeat(c.targetId);
+        const cls = c.isWolf ? "is-danger" : "is-safe";
+        return '<span class="role-dash-pill ' + cls + '">' + escapeHtml(fmtSeatNum(c.targetId) + (cs ? cs.name : "") + (c.isWolf ? "＝狼" : "＝好人")) + "</span>";
+      }).join("")
+      : '<span class="role-dash-pill">尚無查驗紀錄</span>';
+    detailHtml = histStr + '<span class="role-dash-hint">可點下方「🔮 亮觀察員報驗」公開全查驗</span>';
+  } else if (effKey === "witch") {
+    const healOk = Boolean(state.match.witchPotions && state.match.witchPotions.heal);
+    const purifyOk = Boolean(state.match.witchPotions && state.match.witchPotions.purify);
+    const sv = player.savedSeatId ? getSeat(player.savedSeatId) : null;
+    detailHtml =
+      '<span class="role-dash-pill ' + (healOk ? "is-safe" : "is-used") + '">🍵 暖心茶：' + (healOk ? "可用" : "已奉") + "</span>" +
+      '<span class="role-dash-pill ' + (purifyOk ? "is-warn" : "is-used") + '">🍃 清心茶：' + (purifyOk ? "可用" : "已奉") + "</span>" +
+      (sv ? ('<span class="role-dash-pill is-safe">💧 銀水：' + escapeHtml(fmtSeatNum(sv.id) + sv.name) + "</span>") : "") +
+      '<span class="role-dash-hint">銀水遭疑時可一鍵作證</span>';
+  } else if (effKey === "guard") {
+    const lg = state.match.lastGuardTargetId ? getSeat(state.match.lastGuardTargetId) : null;
+    detailHtml =
+      '<span class="role-dash-pill is-safe">' + (lg ? escapeHtml("🛡️ 上晚守：" + fmtSeatNum(lg.id) + lg.name + "（今晚禁連守）") : "🛡️ 今晚可任守 1 席（含自己）") + "</span>" +
+      '<span class="role-dash-hint">建議低調防狼刀，留意勿與回甘茶同守破盾</span>';
+  } else if (effKey === "hunter") {
+    detailHtml =
+      '<span class="role-dash-pill is-safe">⚖️ 正氣共鳴：就緒</span>' +
+      '<span class="role-dash-hint">被投或遭迷霧離席可帶走 1 席（清心茶請離除外）</span>';
+  } else if (effKey === "elder") {
+    detailHtml = player.elderShieldUsed
+      ? '<span class="role-dash-pill is-warn">🌿 豁免已觸發（無投票權・保留發言帶隊）</span>'
+      : '<span class="role-dash-pill is-safe">🌿 豁免護盾：未觸發（首次公投免離席）</span><span class="role-dash-hint">可放心盤多位好人坑替神職扛壓</span>';
+  } else if (player.role === "wolf") {
+    const mates = state.match.seats.filter(function (s) { return s.id !== pid && s.role === "wolf"; });
+    const mateHtml = mates.length > 0
+      ? mates.map(function (m) {
+        return '<span class="role-dash-pill is-danger">🐺 同伴 ' + escapeHtml(fmtSeatNum(m.id) + m.name + (m.alive ? "" : "(離)")) + "</span>";
+      }).join("")
+      : '<span class="role-dash-pill is-danger">🐺 獨狼作戰</span>';
+    const wkPill = player.isWolfKing ? '<span class="role-dash-pill is-warn">👑 狼王：被投可反撲帶走1人</span>' : "";
+    detailHtml = mateHtml + wkPill + '<span class="role-dash-hint">不需點狼坑・選好人甩鍋／假保＋獵神筆記</span>';
+  } else {
+    const wolfN = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
+    detailHtml =
+      '<span class="role-dash-pill is-safe">📖 好人坑不限人數</span>' +
+      '<span class="role-dash-hint">本局共 ' + wolfN + " 名酸民狼・多保可信好夥伴縮窄狼坑</span>";
+  }
+
+  dash.className = "role-turn-dashboard " + guide.themeClass;
+  dash.innerHTML =
+    '<span class="role-dash-title">' + escapeHtml(guide.icon + " " + rDef.name) + "</span>" +
+    '<div class="role-dash-items">' + detailHtml + "</div>";
+  dash.classList.remove("hidden");
+}
+
 function createEmptyPlayerDraftPits() {
   return { wolfIds: [], goodIds: [], claimRole: null, standSeerId: null, evidenceClueId: null, turnKey: "" };
 }
@@ -131,6 +230,9 @@ function createEmptyPlayerDraftPits() {
 function ensurePlayerDraftPits(seedIfNewTurn) {
   if (!state.match) return createEmptyPlayerDraftPits();
   const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+  const player = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
+  const isWolfPlayer = Boolean(player && player.role === "wolf");
+  const wolfCap = getPlayerWolfPitCap();
   const pkTag = (typeof isPkVoteActive === "function" && isPkVoteActive()) ? "pk" : "reg";
   const spokenCount = (state.match.daySpeechEvents || []).filter(function (e) { return e.speakerId === pid; }).length;
   const turnKey = (state.match.day || 1) + ":" + pkTag + ":" + spokenCount;
@@ -140,16 +242,23 @@ function ensurePlayerDraftPits(seedIfNewTurn) {
     if (seedIfNewTurn) {
       getAliveSeats().forEach(function (s) {
         if (s.id === pid) return;
+        if (isWolfPlayer && s.role === "wolf") return;
         const mk = state.playerMarks ? state.playerMarks[s.id] : null;
-        if (mk === "wolf" && fresh.wolfIds.length < 3) fresh.wolfIds.push(s.id);
-        else if (mk === "good" && fresh.goodIds.length < 3) fresh.goodIds.push(s.id);
+        if (mk === "wolf" && fresh.wolfIds.length < wolfCap) fresh.wolfIds.push(s.id);
+        else if (mk === "good") fresh.goodIds.push(s.id);
       });
     }
     state.match.playerDraftPits = fresh;
   } else {
     const d = state.match.playerDraftPits;
-    d.wolfIds = (d.wolfIds || []).filter(function (id) { const s = getSeat(id); return Boolean(s && s.alive && id !== pid); });
-    d.goodIds = (d.goodIds || []).filter(function (id) { const s = getSeat(id); return Boolean(s && s.alive && id !== pid && d.wolfIds.indexOf(id) === -1); });
+    d.wolfIds = (d.wolfIds || []).filter(function (id) {
+      const s = getSeat(id);
+      return Boolean(s && s.alive && id !== pid && !(isWolfPlayer && s.role === "wolf"));
+    });
+    d.goodIds = (d.goodIds || []).filter(function (id) {
+      const s = getSeat(id);
+      return Boolean(s && s.alive && id !== pid && d.wolfIds.indexOf(id) === -1 && !(isWolfPlayer && s.role === "wolf"));
+    });
   }
   return state.match.playerDraftPits;
 }
@@ -159,6 +268,7 @@ function composePlayerPitSpeechText() {
   const d = ensurePlayerDraftPits(false);
   const player = getPlayerSeat();
   const pid = getPlayerId();
+  const isWolfPlayer = Boolean(player && player.role === "wolf");
   const fmtList = function (ids) {
     return ids.map(function (id) {
       const s = getSeat(id);
@@ -174,9 +284,11 @@ function composePlayerPitSpeechText() {
   if (d.claimRole && player) {
     if (d.claimRole === "seer") {
       if (player.role === "seer" && player.checkedHistory && player.checkedHistory.length > 0) {
-        const latest = player.checkedHistory[player.checkedHistory.length - 1];
-        const cs = getSeat(latest.targetId);
-        parts.push("我是真正的明心觀察員！已查驗 " + fmtSeatNum(latest.targetId) + "號" + (cs ? cs.name : "") + " 是" + (latest.isWolf ? "酸民狼" : "好夥伴") + "。");
+        const histSummary = player.checkedHistory.map(function (c) {
+          const cs = getSeat(c.targetId);
+          return fmtSeatNum(c.targetId) + "號" + (cs ? cs.name : "") + "是" + (c.isWolf ? "酸民狼" : "好夥伴");
+        }).join("、");
+        parts.push("我是真正的明心觀察員！查驗紀錄：" + histSummary + "。");
       } else if (d.wolfIds.length > 0) {
         const w0 = getSeat(d.wolfIds[0]);
         parts.push("我才是這局真正的明心觀察員！昨晚查驗 " + fmtSeatNum(d.wolfIds[0]) + "號" + (w0 ? w0.name : "") + " 確定是酸民狼！");
@@ -195,6 +307,14 @@ function composePlayerPitSpeechText() {
         : "我是護心守衛！每晚都會錯開位置防破盾。");
     } else if (d.claimRole === "hunter") {
       parts.push("我是直心糾察長！正氣共鳴在手，若遭誤投離席必帶走最可疑狼坑。");
+    } else if (d.claimRole === "elder") {
+      parts.push(player.elderShieldUsed
+        ? "我是已亮牌的清心長老，雖無投票權但我全場視角最清澈，請好夥伴跟我一起理性歸票！"
+        : "我是這局的清心長老，身上有首次免離席護盾替神職扛壓，請好夥伴放心對齊邏輯！");
+    } else if (d.claimRole === "villager") {
+      parts.push("我是認真聽發言的三好書院生，我本著存好心說好話幫大家理清好人坑與可疑位：");
+    } else if (d.claimRole === "wolf_stealth") {
+      parts.push("大家先別急著動氣，我是低調理性聽盤的好夥伴，我們心平氣和比對一下線索：");
     }
   }
 
@@ -212,11 +332,20 @@ function composePlayerPitSpeechText() {
     }
   }
 
-  if (d.goodIds.length > 0) {
-    parts.push("好人坑我先放 " + fmtList(d.goodIds) + "（立場較真誠）；");
-  }
-  if (d.wolfIds.length > 0) {
-    parts.push("狼坑目前點進 " + fmtList(d.wolfIds) + "，邏輯最讓人起疑，建議今天集中檢視並優先公投 " + fmtSeatNum(d.wolfIds[0]) + "號！");
+  if (isWolfPlayer) {
+    if (d.goodIds.length > 0) {
+      parts.push("聽下來我覺得 " + fmtList(d.goodIds) + " 發言挺誠懇的，這輪我先放進好人視角力挺；");
+    }
+    if (d.wolfIds.length > 0) {
+      parts.push("反觀 " + fmtList(d.wolfIds) + " 的說法矛盾很多，我認為最值得懷疑，建議大家今天集中檢視並優先投票給 " + fmtSeatNum(d.wolfIds[0]) + "號！");
+    }
+  } else {
+    if (d.goodIds.length > 0) {
+      parts.push("好人坑我先放 " + fmtList(d.goodIds) + (d.goodIds.length >= 3 ? (" 等 " + d.goodIds.length + " 位（立場較真誠）；") : "（立場較真誠）；"));
+    }
+    if (d.wolfIds.length > 0) {
+      parts.push("狼坑目前點進 " + fmtList(d.wolfIds) + "，邏輯最讓人起疑，建議今天集中檢視並優先公投 " + fmtSeatNum(d.wolfIds[0]) + "號！");
+    }
   }
 
   return parts.join("").trim();
@@ -230,13 +359,19 @@ function syncDraftSpeechToInput() {
   if (pIn) pIn.value = composed;
   state.match.rewriteCritReady = false;
   const d = (state.match && state.match.playerDraftPits) || createEmptyPlayerDraftPits();
+  const player = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
+  const isWolfPlayer = Boolean(player && player.role === "wolf");
   const btnSend = el("btnQuickFreeSend");
   if (btnSend) {
     const wLen = (d.wolfIds || []).length;
     const gLen = (d.goodIds || []).length;
-    btnSend.textContent = (wLen || gLen)
-      ? ("陳詞 (" + (wLen ? (wLen + "狼") : "") + (wLen && gLen ? "·" : "") + (gLen ? (gLen + "好") : "") + ")")
-      : "陳詞";
+    if (wLen || gLen) {
+      const wTag = isWolfPlayer ? "甩" : "狼";
+      const gTag = isWolfPlayer ? "保" : "好";
+      btnSend.textContent = "陳詞 (" + (wLen ? (wLen + wTag) : "") + (wLen && gLen ? "·" : "") + (gLen ? (gLen + gTag) : "") + ")";
+    } else {
+      btnSend.textContent = "陳詞";
+    }
   }
   if (typeof refreshQuickFreeInputHint === "function") refreshQuickFreeInputHint();
   if (typeof refreshLiveNlpUI === "function") refreshLiveNlpUI();
@@ -245,19 +380,25 @@ function syncDraftSpeechToInput() {
 function togglePlayerDraftSeatPit(seatId) {
   if (!state.match || !state.match.started) return;
   const pid = getPlayerId();
+  const player = getPlayerSeat();
   const seat = getSeat(seatId);
   if (!seat || !seat.alive || seatId === pid) return;
+  if (player && player.role === "wolf" && seat.role === "wolf") {
+    showToast("🐺 這是你的狼隊同伴，不需要點進甩鍋目標！", "warn");
+    return;
+  }
   const d = ensurePlayerDraftPits(false);
+  const wolfCap = getPlayerWolfPitCap();
   const wIdx = d.wolfIds.indexOf(seatId);
   const gIdx = d.goodIds.indexOf(seatId);
   if (wIdx === -1 && gIdx === -1) {
     d.wolfIds.push(seatId);
-    if (d.wolfIds.length > 3) d.wolfIds.shift();
+    if (d.wolfIds.length > wolfCap) d.wolfIds.shift();
     sound.tone(420, 0.06, "triangle", 0.045, 0);
   } else if (wIdx !== -1) {
     d.wolfIds.splice(wIdx, 1);
     d.goodIds.push(seatId);
-    if (d.goodIds.length > 3) d.goodIds.shift();
+    // Good-pit is UNLIMITED — good players can vouch for as many good seats as needed!
     sound.tone(660, 0.06, "sine", 0.045, 0);
   } else {
     d.goodIds.splice(gIdx, 1);
@@ -268,26 +409,53 @@ function togglePlayerDraftSeatPit(seatId) {
   renderPlayerPitBuilder();
 }
 
+function markRemainingSeatsGoodPit() {
+  if (!state.match || !state.match.started) return;
+  const pid = getPlayerId();
+  const player = getPlayerSeat();
+  if (!player || player.role === "wolf") return;
+  const d = ensurePlayerDraftPits(false);
+  getAliveSeats().forEach(function (s) {
+    if (s.id === pid) return;
+    if (d.wolfIds.indexOf(s.id) === -1 && d.goodIds.indexOf(s.id) === -1) {
+      d.goodIds.push(s.id);
+    }
+  });
+  sound.tone(720, 0.08, "sine", 0.05, 0);
+  syncDraftSpeechToInput();
+  renderPlayerPitBuilder();
+}
+
 function togglePlayerDraftRoleClaim(roleKey) {
   if (!state.match || !state.match.started) return;
   const d = ensurePlayerDraftPits(false);
   const pid = getPlayerId();
+  const wolfCap = getPlayerWolfPitCap();
   d.claimRole = (d.claimRole === roleKey) ? null : roleKey;
   if (d.claimRole === "seer") {
     const p = getPlayerSeat();
     if (p && p.role === "seer" && p.checkedHistory && p.checkedHistory.length > 0) {
-      const latest = p.checkedHistory[p.checkedHistory.length - 1];
-      const cs = getSeat(latest.targetId);
-      if (cs && cs.alive && cs.id !== pid) {
-        if (latest.isWolf && d.wolfIds.indexOf(cs.id) === -1) {
-          d.goodIds = d.goodIds.filter(function (id) { return id !== cs.id; });
-          d.wolfIds.unshift(cs.id);
-          if (d.wolfIds.length > 3) d.wolfIds.pop();
-        } else if (!latest.isWolf && d.goodIds.indexOf(cs.id) === -1) {
-          d.wolfIds = d.wolfIds.filter(function (id) { return id !== cs.id; });
-          d.goodIds.unshift(cs.id);
-          if (d.goodIds.length > 3) d.goodIds.pop();
+      p.checkedHistory.forEach(function (chk) {
+        const cs = getSeat(chk.targetId);
+        if (cs && cs.alive && cs.id !== pid) {
+          if (chk.isWolf && d.wolfIds.indexOf(cs.id) === -1) {
+            d.goodIds = d.goodIds.filter(function (id) { return id !== cs.id; });
+            d.wolfIds.unshift(cs.id);
+            if (d.wolfIds.length > wolfCap) d.wolfIds.pop();
+          } else if (!chk.isWolf && d.goodIds.indexOf(cs.id) === -1) {
+            d.wolfIds = d.wolfIds.filter(function (id) { return id !== cs.id; });
+            d.goodIds.unshift(cs.id);
+          }
         }
+      });
+    }
+  } else if (d.claimRole === "witch") {
+    const p = getPlayerSeat();
+    if (p && p.role === "witch" && p.savedSeatId && p.savedSeatId !== pid) {
+      const sv = getSeat(p.savedSeatId);
+      if (sv && sv.alive && d.goodIds.indexOf(sv.id) === -1) {
+        d.wolfIds = d.wolfIds.filter(function (id) { return id !== sv.id; });
+        d.goodIds.unshift(sv.id);
       }
     }
   }
@@ -300,6 +468,7 @@ function togglePlayerDraftStandSeer(seerId, dualWorlds) {
   if (!state.match || !state.match.started) return;
   const d = ensurePlayerDraftPits(false);
   const pid = getPlayerId();
+  const wolfCap = getPlayerWolfPitCap();
   d.standSeerId = (d.standSeerId === seerId) ? null : seerId;
   if (d.standSeerId && dualWorlds) {
     const w = (dualWorlds.worldA && dualWorlds.worldA.trustedSeer && dualWorlds.worldA.trustedSeer.id === seerId)
@@ -312,7 +481,7 @@ function togglePlayerDraftStandSeer(seerId, dualWorlds) {
       d.wolfIds = (w.wolfPits || [])
         .map(function (s) { return s && s.id; })
         .filter(function (id) { const s = getSeat(id); return Boolean(s && s.alive && id !== pid && newGood.indexOf(id) === -1); })
-        .slice(0, 3);
+        .slice(0, wolfCap);
     }
   }
   sound.tone(580, 0.07, "triangle", 0.045, 0);
@@ -324,6 +493,7 @@ function togglePlayerDraftEvidence(clue) {
   if (!state.match || !clue) return;
   const d = ensurePlayerDraftPits(false);
   const pid = getPlayerId();
+  const wolfCap = getPlayerWolfPitCap();
   if (d.evidenceClueId === clue.id) {
     d.evidenceClueId = null;
     state.match.pendingEvidenceTargetId = null;
@@ -336,7 +506,7 @@ function togglePlayerDraftEvidence(clue) {
       d.goodIds = d.goodIds.filter(function (id) { return id !== clue.seatId; });
       if (d.wolfIds.indexOf(clue.seatId) === -1) {
         d.wolfIds.unshift(clue.seatId);
-        if (d.wolfIds.length > 3) d.wolfIds.pop();
+        if (d.wolfIds.length > wolfCap) d.wolfIds.pop();
       }
     }
   }
@@ -365,29 +535,44 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   if (!state.match || !state.match.started || !player) return;
 
   const pid = getPlayerId();
+  const isWolfPlayer = player.role === "wolf";
   const d = ensurePlayerDraftPits(false);
   const aliveOthers = getAliveSeats().filter(function (s) { return s.id !== pid; });
+  const targetSeats = isWolfPlayer
+    ? aliveOthers.filter(function (s) { return s.role !== "wolf"; })
+    : aliveOthers;
 
+  box.classList.toggle("is-wolf-board", isWolfPlayer);
+  box.classList.toggle("is-good-board", !isWolfPlayer);
+
+  // _children[0]: Primary seat targeting row (Wolf: Framing/Fake-Vouch on good seats ONLY; Good: Unlimited Good-Pit + Wolf-Pit)
   const seatRow = document.createElement("div");
   seatRow.className = "pit-seat-row";
   const lbl = document.createElement("span");
-  lbl.className = "text-[10.5px] font-bold text-amber-300/90 shrink-0";
-  lbl.textContent = "點坑：";
+  lbl.className = "text-[10.5px] font-bold shrink-0 " + (isWolfPlayer ? "text-rose-300" : "text-amber-300/90");
+  if (isWolfPlayer) {
+    lbl.textContent = "🎭 甩鍋／假保：";
+  } else {
+    const wolfTotal = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
+    lbl.textContent = "好人盤坑 (" + d.goodIds.length + "好·" + d.wolfIds.length + "/" + wolfTotal + "狼)：";
+  }
   seatRow.appendChild(lbl);
 
-  aliveOthers.forEach(function (s) {
+  targetSeats.forEach(function (s) {
     const isWolf = d.wolfIds.indexOf(s.id) !== -1;
     const isGood = d.goodIds.indexOf(s.id) !== -1;
     const chip = document.createElement("button");
     chip.type = "button";
     chip.setAttribute("data-pit-seat", String(s.id));
     chip.className = "pit-seat-chip" + (isWolf ? " is-wolf" : (isGood ? " is-good" : ""));
-    chip.title = "點1下標狼坑・點2下標好人坑・點3下清除";
+    chip.title = isWolfPlayer
+      ? "點1下設為甩鍋目標・點2下假保拉票・點3下清除（狼同伴已自動排除）"
+      : "點1下標狼坑・點2下標好人坑（好人坑不限人數！）・點3下清除";
     chip.textContent = fmtSeatNum(s.id) + s.name;
     if (isWolf || isGood) {
       const bdg = document.createElement("span");
       bdg.className = "pit-chip-badge";
-      bdg.textContent = isWolf ? "狼" : "好";
+      bdg.textContent = isWolfPlayer ? (isWolf ? "甩" : "保") : (isWolf ? "狼" : "好");
       chip.appendChild(bdg);
     }
     chip.addEventListener("click", function () {
@@ -410,7 +595,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   }
   box.appendChild(seatRow);
 
-  // Contextual Extra Row (Role Claim / Dual-Seer Stand / Evidence Proof)
+  // _children[1]: Contextual Extra Row (Per-Role 1-Click Actions / Dual-Seer Stand / Evidence Proof / Quick Good-Fill)
   let slotView = slotViewArg;
   let dualWorlds = dualWorldsArg;
   if (!slotView && typeof buildTableSlotAndWorldAnalysis === "function") {
@@ -422,15 +607,34 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
 
   const extras = [];
   if (player.role === "seer") {
-    extras.push({ label: "🔮 跳觀察員", active: d.claimRole === "seer", onClick: function () { togglePlayerDraftRoleClaim("seer"); } });
+    extras.push({ label: "🔮 亮觀察員報驗", active: d.claimRole === "seer", onClick: function () { togglePlayerDraftRoleClaim("seer"); } });
   } else if (player.role === "witch") {
-    extras.push({ label: "🍵 亮奉茶師", active: d.claimRole === "witch", onClick: function () { togglePlayerDraftRoleClaim("witch"); } });
+    extras.push({ label: "🍵 亮奉茶師報銀水", active: d.claimRole === "witch", onClick: function () { togglePlayerDraftRoleClaim("witch"); } });
   } else if (player.role === "guard") {
-    extras.push({ label: "🛡️ 亮守衛", active: d.claimRole === "guard", onClick: function () { togglePlayerDraftRoleClaim("guard"); } });
+    extras.push({ label: "🛡️ 亮守衛報路線", active: d.claimRole === "guard", onClick: function () { togglePlayerDraftRoleClaim("guard"); } });
   } else if (player.role === "hunter") {
-    extras.push({ label: "⚖️ 亮糾察長", active: d.claimRole === "hunter", onClick: function () { togglePlayerDraftRoleClaim("hunter"); } });
+    extras.push({ label: "⚖️ 亮糾察長威懾", active: d.claimRole === "hunter", onClick: function () { togglePlayerDraftRoleClaim("hunter"); } });
+  } else if (player.isElder) {
+    extras.push({ label: "🌿 亮清心長老穩局", active: d.claimRole === "elder", onClick: function () { togglePlayerDraftRoleClaim("elder"); } });
+  } else if (player.role === "villager") {
+    extras.push({ label: "📖 書院生理性歸票", active: d.claimRole === "villager", onClick: function () { togglePlayerDraftRoleClaim("villager"); } });
   } else if (player.role === "wolf") {
     extras.push({ label: "🎭 悍跳觀察員", active: d.claimRole === "seer", onClick: function () { togglePlayerDraftRoleClaim("seer"); } });
+    extras.push({ label: "🌿 低調裝好人", active: d.claimRole === "wolf_stealth", onClick: function () { togglePlayerDraftRoleClaim("wolf_stealth"); } });
+  }
+
+  // Good team convenience button: 1-click mark remaining unmarked seats as Good-Pit!
+  if (!isWolfPlayer && d.wolfIds.length > 0) {
+    const unmarkedCount = aliveOthers.filter(function (s) {
+      return d.wolfIds.indexOf(s.id) === -1 && d.goodIds.indexOf(s.id) === -1;
+    }).length;
+    if (unmarkedCount > 0) {
+      extras.push({
+        label: "✨ 其餘 " + unmarkedCount + " 位全保好人",
+        active: false,
+        onClick: markRemainingSeatsGoodPit
+      });
+    }
   }
 
   if (dualWorlds && dualWorlds.seerA && dualWorlds.seerB) {
@@ -473,6 +677,32 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
       exRow.appendChild(btn);
     });
     box.appendChild(exRow);
+  }
+
+  // _children[2] (Wolf-Only): Secret God-Hunt Notebook Row — track suspected Seer/Witch/Hunter/Guard/Elder for night hunting!
+  if (isWolfPlayer && targetSeats.length > 0) {
+    const huntRow = document.createElement("div");
+    huntRow.className = "pit-extra-row wolf-god-hunt-row";
+    const hLbl = document.createElement("span");
+    hLbl.className = "text-[10px] font-bold text-amber-300/90 shrink-0";
+    hLbl.textContent = "🔍 獵神筆記：";
+    huntRow.appendChild(hLbl);
+    const marks = state.match.wolfGodMarks || {};
+    targetSeats.forEach(function (s) {
+      const mDef = getWolfGodMarkDef(marks[s.id] || "");
+      const hBtn = document.createElement("button");
+      hBtn.type = "button";
+      hBtn.setAttribute("data-wolf-god-seat", String(s.id));
+      hBtn.className = "wolf-god-chip" + (mDef.key ? " is-marked" : "");
+      hBtn.title = "點擊標記你推測的真神職（僅狼隊自己可見，入夜時自動提醒）";
+      hBtn.textContent = fmtSeatNum(s.id) + (mDef.label ? (" " + mDef.label) : " 標神");
+      hBtn.addEventListener("click", function () {
+        sound.unlock();
+        cycleWolfGodMark(s.id);
+      });
+      huntRow.appendChild(hBtn);
+    });
+    box.appendChild(huntRow);
   }
 }
 
@@ -518,6 +748,7 @@ function preparePlayerSpeechPanel() {
 
   const prevTurnKey = state.match.playerDraftPits ? state.match.playerDraftPits.turnKey : "";
   const draftNow = ensurePlayerDraftPits(true);
+  renderRoleTurnDashboard(player);
   renderPlayerPitBuilder(slotView, dualWorlds);
   const isFreshTurn = prevTurnKey !== draftNow.turnKey;
   if (isFreshTurn && (draftNow.wolfIds.length > 0 || draftNow.goodIds.length > 0)) {
@@ -547,7 +778,7 @@ function preparePlayerSpeechPanel() {
   // Card 1: PK Rebuttal OR Dual-Seer World A vs B OR 存好心 (Truth & Evidence / Role Claim)
   if (inPk && pkRivalSeat && pkRivalSeat.alive) {
     const pkRoleProof = (player.role === "seer" && player.checkedHistory.length > 0)
-      ? ("我是真正的明心觀察員，已查證 " + fmtSeatNum(player.checkedHistory)[player.checkedHistory.length - 1].targetId + "號，絕不能在 PK 斷了查驗線！")
+      ? ("我是真正的明心觀察員，已查證 " + fmtSeatNum(player.checkedHistory[player.checkedHistory.length - 1].targetId) + "號，絕不能在 PK 斷了查驗線！")
       : (player.role === "witch" && player.savedSeatId
         ? ("我是滴水奉茶師，曾用暖心回甘茶護回 " + fmtSeatNum(player.savedSeatId) + "號，留我在場好人更穩！")
         : "我全程理性講話無任何邏輯矛盾，留我在場才能繼續幫好人對齊票型！");
@@ -594,6 +825,24 @@ function preparePlayerSpeechPanel() {
       text: guarded
         ? ("我先穩住全場視角：我是這局的護心守衛！昨晚我的護心結界剛守過 " + fmtSeatNum(guarded.id) + "號" + guarded.name + "，希望滴水奉茶師留意別跟我撞車造成破盾，今晚請大家齊心檢視 " + sampleTarget.id + "號！")
         : ("我是認真盤邏輯的好人，目前場上資訊有限，我先重點檢視 " + fmtSeatNum(sampleTarget.id) + "號" + sampleTarget.name + " 的立場與發言細節！")
+    });
+  } else if (player.role === "hunter") {
+    cards.push({
+      tgKind: "heart",
+      tgTag: "糾察表態",
+      label: "【存好心】直心糾察穩局：點評 " + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name + "（必要時正氣威懾）",
+      text: "我先替全場穩住節奏，我手上握有正氣共鳴絕對是硬好人一張！聽完目前發言，我覺得 " + fmtSeatNum(sampleTarget.id) + "號" + sampleTarget.name + " 的邏輯需要大家重點檢視，若酸民狼想推我上台就得承擔被我帶走的代價！"
+    });
+  } else if (player.isElder) {
+    cards.push({
+      tgKind: "heart",
+      tgTag: "長老穩局",
+      label: player.elderShieldUsed
+        ? ("【存好心】清心長老帶隊：點評 " + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name)
+        : ("【存好心】清心長老護航：替神職扛壓，重點檢視 " + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name),
+      text: player.elderShieldUsed
+        ? ("我是已經亮牌的清心長老，雖然沒有投票權，但我的視野最純粹！這輪拜託所有好夥伴幫我集中檢視 " + fmtSeatNum(sampleTarget.id) + "號" + sampleTarget.name + "，別讓酸民狼帶偏節奏！")
+        : ("我是這局的清心長老，首次被誤投有豁免護盾可以替神職分擔壓力！我先理性點出 " + fmtSeatNum(sampleTarget.id) + "號" + sampleTarget.name + " 的破綻，好人夥伴們穩穩盤坑！")
     });
   } else if (player.role === "wolf") {
     const wolfMateSeer = aliveOthers.find(function (s) { return s.role === "wolf" && s.claimedRole === "seer"; });
@@ -813,6 +1062,25 @@ function refreshLiveNlpUI() {
   const badge = el("nlpFeedbackBadge");
   badge.textContent = res.badge;
   badge.className = res.isToxic ? "text-rose-400 font-black" : "text-emerald-300 font-bold";
+
+  const inlineTg = el("speechThreeGoodBadge");
+  if (inlineTg) {
+    const hasText = Boolean(val && val.trim().length > 0);
+    if (!hasText) {
+      inlineTg.classList.add("hidden");
+    } else if (res.isToxic) {
+      inlineTg.textContent = "🌶 轉好話 ×1.5";
+      inlineTg.className = "speech-tg-badge is-warn shrink-0";
+    } else if (state.match && state.match.rewriteCritReady) {
+      inlineTg.textContent = "✨ 說好話暴擊 ×1.5";
+      inlineTg.className = "speech-tg-badge is-crit shrink-0";
+    } else if (res.kindScore >= 84) {
+      inlineTg.textContent = "🌸 說好話加持";
+      inlineTg.className = "speech-tg-badge is-kind shrink-0";
+    } else {
+      inlineTg.classList.add("hidden");
+    }
+  }
 }
 
 function submitPlayerSpeech() {
@@ -827,6 +1095,7 @@ function submitPlayerSpeech() {
   const claimedWitchNow = /(我是|我才是|我亮|我跳|其實我).{0,10}(女巫|滴水奉茶師|奉茶師)|^(真)?(滴水奉茶師|奉茶師)/.test(text);
   const claimedHunterNow = /(我是|我才是|我亮|我跳|其實我).{0,10}(獵人|直心糾察長|糾察長)|^(真)?(直心糾察長|糾察長)/.test(text);
   const claimedGuardNow = /(我是|我才是|我亮|我跳|其實我).{0,10}(護心守衛|守衛)|^(真)?(護心守衛|守衛)/.test(text);
+  const claimedElderNow = /(我是|我才是|我亮|我跳|其實我).{0,10}(清心長老|長老)|^(真)?清心長老/.test(text);
   if (claimedSeerNow) {
     player.claimedRole = "seer";
     const otherSeer = state.match.seats.some(function (s) { return s.id !== getPlayerId() && s.alive && s.claimedRole === "seer"; });
@@ -850,15 +1119,21 @@ function submitPlayerSpeech() {
     const otherGuard = state.match.seats.some(function (s) { return s.id !== getPlayerId() && s.alive && s.claimedRole === "guard"; });
     spawnFx(getPlayerId(), otherGuard ? "對跳守衛!" : "亮護心守衛!", "#22d3ee");
     if (otherGuard) triggerShake(300);
+  } else if (claimedElderNow) {
+    player.claimedRole = "elder";
+    const otherElder = state.match.seats.some(function (s) { return s.id !== getPlayerId() && s.alive && s.claimedRole === "elder"; });
+    spawnFx(getPlayerId(), otherElder ? "對跳長老!" : "亮清心長老!", "#2dd4bf");
+    if (otherElder) triggerShake(300);
   }
 
   const pid = getPlayerId();
   const draft = (state.match && state.match.playerDraftPits) ? state.match.playerDraftPits : createEmptyPlayerDraftPits();
   const evForceId = state.match.pendingEvidenceTargetId || null;
 
+  const plWolfCap = Math.max(4, getPlayerWolfPitCap());
   const plWolfPits = [];
   const pushWolfPit = function (id) {
-    if (!id || id === pid || plWolfPits.indexOf(id) !== -1 || plWolfPits.length >= 3) return;
+    if (!id || id === pid || plWolfPits.indexOf(id) !== -1 || plWolfPits.length >= plWolfCap) return;
     const s = getSeat(id);
     if (s && s.alive) plWolfPits.push(id);
   };
@@ -869,12 +1144,12 @@ function submitPlayerSpeech() {
 
   const plGoodPits = [];
   const pushGoodPit = function (id) {
-    if (!id || id === pid || plWolfPits.indexOf(id) !== -1 || plGoodPits.indexOf(id) !== -1 || plGoodPits.length >= 3) return;
+    if (!id || id === pid || id === evForceId || plWolfPits.indexOf(id) !== -1 || plGoodPits.indexOf(id) !== -1) return;
     const s = getSeat(id);
     if (s && s.alive) plGoodPits.push(id);
   };
+  (draft.goodIds || []).forEach(pushGoodPit);
   if (!evForceId) {
-    (draft.goodIds || []).forEach(pushGoodPit);
     pushGoodPit(res.primaryVouchId);
     (res.vouchTargets || []).forEach(pushGoodPit);
   }
@@ -912,7 +1187,7 @@ function submitPlayerSpeech() {
     turnOrderIndex: state.match.daySpeechEvents.length,
     speakerId: pid,
     speakerName: "你",
-    claimRole: claimedSeerNow ? "seer" : (claimedWitchNow ? "witch" : (claimedHunterNow ? "hunter" : (claimedGuardNow ? "guard" : null))),
+    claimRole: claimedSeerNow ? "seer" : (claimedWitchNow ? "witch" : (claimedHunterNow ? "hunter" : (claimedGuardNow ? "guard" : (claimedElderNow ? "elder" : null)))),
     accuseId: accuseId,
     vouchId: vouchId,
     wolfPits: plWolfPits,
@@ -952,11 +1227,11 @@ function submitPlayerSpeech() {
       );
     }
   }
-  // If player claimed any God role, the real alive AI holding that role immediately spots the bluff!
-  const plClaimedGod = claimedSeerNow ? "seer" : (claimedWitchNow ? "witch" : (claimedHunterNow ? "hunter" : (claimedGuardNow ? "guard" : null)));
+  // If player claimed any God/Elder role, the real alive AI holding that role immediately spots the bluff!
+  const plClaimedGod = claimedSeerNow ? "seer" : (claimedWitchNow ? "witch" : (claimedHunterNow ? "hunter" : (claimedGuardNow ? "guard" : (claimedElderNow ? "elder" : null))));
   if (plClaimedGod) {
     state.match.seats.forEach(function (ai) {
-      if (ai.id !== pid && ai.alive && ai.role === plClaimedGod) {
+      if (ai.id !== pid && ai.alive && (ai.role === plClaimedGod || (plClaimedGod === "elder" && ai.isElder))) {
         ai.suspicionMap[pid] = 100;
       }
     });

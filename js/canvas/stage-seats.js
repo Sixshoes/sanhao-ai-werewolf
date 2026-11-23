@@ -297,13 +297,15 @@ function drawStageSeats(ctx, f, coords) {
     const known = state.match.started && !state.hidePlayerRole
       ? (showTruth ? s.role : state.match.playerKnownRoles[s.id])
       : null;
+    const pSelfCanvas = state.match.started ? getPlayerSeat() : null;
+    const isWolfViewCanvas = Boolean(pSelfCanvas && pSelfCanvas.role === "wolf" && !state.hidePlayerRole);
     let plateText = fmtSeatNum(s.id) + " " + (s.id === getPlayerId() ? "你" : s.name);
     if (!s.alive) plateText = (showTruth && ROLE_DEFS[s.role]) ? (fmtSeatNum(s.id) + " " + ROLE_DEFS[s.role].name) : (fmtSeatNum(s.id) + " 休息");
-    else if (known === "wolf") plateText = fmtSeatNum(s.id) + " 酸民狼";
+    else if (known === "wolf") plateText = fmtSeatNum(s.id) + (isWolfViewCanvas && s.id !== getPlayerId() ? " 狼同伴" : " 酸民狼");
     else if (known === "good_verified") plateText = fmtSeatNum(s.id) + " 好人";
     else if (known && ROLE_DEFS[known] && showTruth) plateText = fmtSeatNum(s.id) + " " + ROLE_DEFS[known].name;
-    else if (pMark === "wolf") plateText = fmtSeatNum(s.id) + " 懷疑";
-    else if (pMark === "good") plateText = fmtSeatNum(s.id) + " 信任";
+    else if (pMark === "wolf") plateText = fmtSeatNum(s.id) + (isWolfViewCanvas ? " 甩鍋" : " 懷疑");
+    else if (pMark === "good") plateText = fmtSeatNum(s.id) + (isWolfViewCanvas ? " 假保" : " 信任");
 
     const plateW = Math.max(48 * dpr, (plateText.length * 8.2 + 12) * dpr);
     const plateH = 16 * dpr;

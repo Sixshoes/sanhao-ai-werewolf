@@ -241,7 +241,7 @@ function evaluateSpectatorGuess() {
     const lockedEarly = Boolean(g.locked && hasGuess);
     const bonusPts = hasGuess ? ((perfect ? 30 : hits * 12) + (lockedEarly && hits > 0 ? 8 : 0)) : 0;
     const title = perfect
-      ? "🏆 席外神探・全中雙狼"
+      ? (total === 2 ? "🏆 席外神探・全中雙狼" : ("🏆 席外神探・全中 " + total + " 狼"))
       : (hits > 0 ? ("🔎 席外觀察家・命中 " + hits + "/" + total + " 狼") : "🍵 席外品茗客・差一點就猜中");
     const wolfSummary = actualWolves.map(formatSpectatorSeatLabel).join("、");
     const res = {

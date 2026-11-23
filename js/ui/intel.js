@@ -22,6 +22,22 @@ function openRadialMenu(seatId) {
   const cssX = clamp(node.x / dpr, 76, rect.width - 76);
   const cssY = clamp(node.y / dpr, 56, rect.height - 56);
   state.radialTargetId = seatId;
+  const pSelfRad = (state.match && state.match.started) ? getPlayerSeat() : null;
+  const tSeatRad = (state.match && state.match.started) ? getSeat(seatId) : null;
+  const isWolfRad = Boolean(pSelfRad && pSelfRad.role === "wolf");
+  const isMateRad = Boolean(isWolfRad && tSeatRad && tSeatRad.role === "wolf");
+  if (typeof menu.querySelector === "function") {
+    const rbGood = menu.querySelector('[data-radial="good"]');
+    const rbWolf = menu.querySelector('[data-radial="wolf"]');
+    if (rbGood) {
+      rbGood.textContent = isMateRad ? "狼同伴" : (isWolfRad ? "標假保" : "標好人");
+      rbGood.disabled = isMateRad;
+    }
+    if (rbWolf) {
+      rbWolf.textContent = isMateRad ? "勿刀伴" : (isWolfRad ? "標甩鍋" : "標懷疑");
+      rbWolf.disabled = isMateRad;
+    }
+  }
   menu.style.left = cssX + "px";
   menu.style.top = cssY + "px";
   menu.classList.remove("hidden", "radial-ring-pop");
@@ -67,18 +83,28 @@ function executeRadialAction(actionKey) {
   const pid = getPlayerId();
   if (!target || !target.alive || target.id === pid) return;
 
+  const pSelfEx = (state.match && state.match.started) ? getPlayerSeat() : null;
+  const isWolfEx = Boolean(pSelfEx && pSelfEx.role === "wolf");
   if (actionKey === "good") {
+    if (isWolfEx && target.role === "wolf") {
+      spawnFx(target.id, "🐺 狼隊同伴", "#fb7185");
+      return;
+    }
     state.playerMarks[target.id] = state.playerMarks[target.id] === "good" ? null : "good";
     spawnBurst(target.id, ["#34d399", "#a7f3d0", "#fde68a"], 14, "petal");
     nudgeSeat(target.id, { scale: 0.92, vScale: 0.22, vy: -5 });
-    spawnFx(target.id, state.playerMarks[target.id] ? "✓ 標記好人" : "清除標記", "#34d399");
+    spawnFx(target.id, state.playerMarks[target.id] ? (isWolfEx ? "🛡️ 標記假保" : "✓ 標記好人") : "清除標記", "#34d399");
     sound.tone(660, 0.08, "triangle", 0.05, 0);
     updateAllUI();
   } else if (actionKey === "wolf") {
+    if (isWolfEx && target.role === "wolf") {
+      spawnFx(target.id, "🐺 勿標同伴", "#fb7185");
+      return;
+    }
     state.playerMarks[target.id] = state.playerMarks[target.id] === "wolf" ? null : "wolf";
     spawnBurst(target.id, ["#fb7185", "#fda4af", "#ffffff"], 14, "spark");
     nudgeSeat(target.id, { scale: 0.88, vScale: 0.2, vTilt: 0.2 });
-    spawnFx(target.id, state.playerMarks[target.id] ? "⚠ 標記懷疑" : "清除標記", "#fb7185");
+    spawnFx(target.id, state.playerMarks[target.id] ? (isWolfEx ? "🎯 標記甩鍋" : "⚠ 標記懷疑") : "清除標記", "#fb7185");
     sound.tone(330, 0.09, "triangle", 0.05, 0);
     updateAllUI();
   } else if (actionKey === "pin") {
@@ -148,12 +174,19 @@ function renderSeatIntelPopover() {
       pImg.classList.add("hidden");
     }
   }
+  const pSelfNow = state.match.started ? getPlayerSeat() : null;
+  const isWolfView = Boolean(pSelfNow && pSelfNow.role === "wolf");
+  const isWolfMateSeat = Boolean(isWolfView && s.role === "wolf");
+  const wolfGodTag = (isWolfView && !isWolfMateSeat && state.match.wolfGodMarks && state.match.wolfGodMarks[s.id] && typeof getWolfGodMarkDef === "function")
+    ? ("・🔍" + getWolfGodMarkDef(state.match.wolfGodMarks[s.id]).label)
+    : "";
+  const mateTag = isWolfMateSeat ? "・🐺狼同伴" : "";
   const roleTag = (s.claimedRole && ROLE_DEFS[s.claimedRole]) ? ("・跳" + ROLE_DEFS[s.claimedRole].name) : "";
   const sweatTag = (state.match.started && s.alive && (state.match.microPulseRevealed || s.sweatExposed))
     ? ("・心虛" + s.microPulse + "%")
     : "";
   el("intelSeatTitle").textContent = fmtSeatNum(s.id) + "號 " + s.name + (!s.alive ? "（已離席）" : "");
-  el("intelSeatSub").textContent = (s.trait || "推理夥伴") + roleTag + sweatTag;
+  el("intelSeatSub").textContent = (s.trait || "推理夥伴") + mateTag + roleTag + wolfGodTag + sweatTag;
 
   const attBox = el("intelAttitudeBox");
   if (state.match.started && s.alive) {
@@ -214,12 +247,28 @@ function renderSeatIntelPopover() {
   const bPoke = el("btnIntelPokeSeat");
   const bMicro = el("btnIntelMicroInspect");
   if (bGood) {
-    bGood.disabled = !state.match.started || !s.alive;
-    bGood.textContent = curMark === "good" ? "✓ 已標好人" : "✓ 標記好人";
+    if (isWolfMateSeat) {
+      bGood.disabled = true;
+      bGood.textContent = "🐺 狼隊同伴";
+    } else if (isWolfView) {
+      bGood.disabled = !state.match.started || !s.alive;
+      bGood.textContent = curMark === "good" ? "✓ 已標假保" : "🛡️ 標記假保";
+    } else {
+      bGood.disabled = !state.match.started || !s.alive;
+      bGood.textContent = curMark === "good" ? "✓ 已標好人" : "✓ 標記好人";
+    }
   }
   if (bWolf) {
-    bWolf.disabled = !state.match.started || !s.alive;
-    bWolf.textContent = curMark === "wolf" ? "⚠ 已標懷疑" : "⚠ 標記懷疑";
+    if (isWolfMateSeat) {
+      bWolf.disabled = true;
+      bWolf.textContent = "🛡️ 不可刀伴";
+    } else if (isWolfView) {
+      bWolf.disabled = !state.match.started || !s.alive;
+      bWolf.textContent = curMark === "wolf" ? "🎯 已標甩鍋" : "🎯 標記甩鍋";
+    } else {
+      bWolf.disabled = !state.match.started || !s.alive;
+      bWolf.textContent = curMark === "wolf" ? "⚠ 已標懷疑" : "⚠ 標記懷疑";
+    }
   }
   if (bPin) {
     bPin.disabled = !state.match.started || !s.alive;
@@ -273,8 +322,8 @@ function renderSeatIntelPopover() {
         quickLabel = "🔮 立即查證 " + fmtSeatNum(s.id) + "號";
       } else if (ph === "NIGHT_WOLF" && pAliveSelf && pSelf.role === "wolf" && s.role !== "wolf") {
         quickLabel = "🐺 夜間鎖定 " + fmtSeatNum(s.id) + "號";
-      } else if (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && pSelf.role === "hunter") {
-        quickLabel = "🎯 共鳴請離 " + fmtSeatNum(s.id) + "號";
+      } else if (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && typeof canSeatTriggerShot === "function" && canSeatTriggerShot(pSelf) && !(pSelf.isWolfKing && s.role === "wolf")) {
+        quickLabel = pSelf.isWolfKing ? ("👑 反撲帶走 " + fmtSeatNum(s.id) + "號") : ("🎯 共鳴請離 " + fmtSeatNum(s.id) + "號");
       } else if (ph === "DAY_PLAYER_TURN") {
         quickLabel = "🎯 設為發言點名對象";
       }
@@ -401,7 +450,11 @@ const PERSONA_TEA_REACTIONS = {
   "星兒": "哇茶香裡面有好人緣的味道耶～這輪我有在認真幫你看局勢喔！",
   "小雲": "收下這盞暖茶了。別擔心，我看重真憑實據，不會輕易誤傷無辜。",
   "阿竹": "清茗一盞，如沐春風；席間紛擾雖多，仍信君子坦蕩。",
-  "晨晨": "夠意思！喝完這杯整個人都精神起來，等一下跟緊你的節奏看票！"
+  "晨晨": "夠意思！喝完這杯整個人都精神起來，等一下跟緊你的節奏看票！",
+  "墨白": "茶色清冽，足見誠意。此情我記下了，論票時定當公允以待。",
+  "晴嵐": "這盞熱茶送得真巧，茶暖心安，等會兒我們細細比對場上線索。",
+  "阿朗": "多謝這杯好茶！頭腦更清醒了，等等一起把矛盾點拆開看！",
+  "柚子": "哇好香的暖茶呀～謝謝你請我喝茶，我覺得你人好好喔！"
 };
 
 function serveWarmTeaToSeat(seatId) {

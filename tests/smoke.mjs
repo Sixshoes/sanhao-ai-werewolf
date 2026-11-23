@@ -3521,6 +3521,132 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const fxPacingFastOk = getFxPacingMul() < 0.8;
     state.fxPacing = "cinematic";
 
+    // 8. v8.0 Upgrades: Wolf vs Good UX Separation, Unlimited Good-Pits, Wolf God-Hunt Board, All 8 Per-Role Dashboards/Guides & Triple-Strengthened Three-Good/Four-Givings
+    // 8A: Good team (10p Villager) can mark 5+ seats in goodIds (NO 3-seat cap!) + markRemainingSeatsGoodPit works!
+    clearStepTimer();
+    el("selectModeCount").value = "10";
+    el("selectPreferredRole").value = "villager";
+    el("chkSheriffMode").checked = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    updateAllUI();
+    const pidV8Good = getPlayerId();
+    const goodPoolV8 = getAliveSeats().filter(s => s.id !== pidV8Good);
+    // Mark 1 wolf pit, then click markRemainingSeatsGoodPit -> should put ALL 8 remaining seats into goodIds!
+    togglePlayerDraftSeatPit(goodPoolV8[0].id);
+    markRemainingSeatsGoodPit();
+    const unlimitedGoodOk = state.match.playerDraftPits.goodIds.length === 8 &&
+      el("quickFreeInput").value.includes("好人坑") &&
+      el("btnQuickFreeSend").textContent.includes("8好") &&
+      el("playerRoleActionHint").textContent.includes("好人坑不限人數");
+
+    // 8B: Wolf team (10p Wolf King) has NO wolf-pit & excludes wolf mates from pit chips, provides God-Hunt notebook & shows wolf mates in Night tip!
+    clearStepTimer();
+    el("selectModeCount").value = "10";
+    el("selectPreferredRole").value = "wolf_king";
+    el("chkSheriffMode").checked = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pidV8Wolf = getPlayerId();
+    const wolfMateV8 = state.match.seats.find(s => s.id !== pidV8Wolf && s.role === "wolf");
+    const goodTargetV8 = state.match.seats.find(s => s.id !== pidV8Wolf && s.role !== "wolf");
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    updateAllUI();
+    const wolfPitRowBtns = el("playerPitBuilder")._children[0]._children.filter(c => c.getAttribute && c.getAttribute("data-pit-seat"));
+    const wolfExcludesMates = !wolfPitRowBtns.some(b => b.getAttribute("data-pit-seat") === String(wolfMateV8.id)) && wolfPitRowBtns.length === 7;
+    const wolfBoardClassOk = el("playerPitBuilder").classList.contains("is-wolf-board");
+    cycleWolfGodMark(goodTargetV8.id);
+    const wolfGodMarkOk = state.match.wolfGodMarks[goodTargetV8.id] === "seer";
+    // Night Wolf tip shows wolf teammates + God-Hunt notes!
+    state.match.phase = "NIGHT_WOLF";
+    updateAllUI();
+    const wolfNightTipOk = el("nightRoleTipStrip").textContent.includes("獵神筆記") && el("nightRoleTipStrip").textContent.includes("疑觀");
+
+    // 8C: Per-role Guide Popover + Mask Guard + Three-Good Petal Wisdom Quote + Seer PK Crash Fix + Witch wolfTacticRow Hide + Elder Claim
+    openRoleGuidePopover("role");
+    const roleGuideOk = !el("roleGuidePopover").classList.contains("hidden") && el("roleGuideTitle").textContent.includes("流言首領");
+    openRoleGuidePopover("threegood");
+    const tgGuideOk = !el("roleGuidePopover").classList.contains("hidden") && el("roleGuideTitle").textContent.includes("三好蓮花");
+    closeRoleGuidePopover();
+    state.hidePlayerRole = true;
+    openRoleGuidePopover("role");
+    const maskBlocksGuideOk = el("roleGuidePopover").classList.contains("hidden");
+    state.hidePlayerRole = false;
+    const prevLogLenV8 = state.match.logs.length;
+    addThreeGoodPoint("heart", "存好心測試");
+    const tgPetalQuoteOk = state.match.logs.slice(prevLogLenV8).some(l => l.title && l.title.includes("點亮三好蓮花瓣"));
+
+    // Verify NIGHT_WITCH hides wolfTacticRow even right after NIGHT_WOLF showed it!
+    state.match.phase = "NIGHT_WOLF";
+    renderNightAndHunterPanel("NIGHT_WOLF");
+    renderNightAndHunterPanel("NIGHT_WITCH");
+    const witchHidesWolfTacticOk = el("wolfTacticRow").classList.contains("hidden");
+
+    // Verify Seer PK speech with 4+ checkedHistory entries does NOT crash or produce "undefined號"!
+    clearStepTimer();
+    el("selectModeCount").value = "10";
+    el("selectPreferredRole").value = "seer";
+    el("chkSheriffMode").checked = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const seerPkP = getPlayerSeat();
+    const seerPkOthers = getAliveSeats().filter(s => s.id !== seerPkP.id);
+    seerPkP.checkedHistory = seerPkOthers.slice(0, 4).map((s, idx) => ({ day: idx + 1, targetId: s.id, isWolf: s.role === "wolf" }));
+    state.match.pkCandidates = [seerPkP.id, seerPkOthers[0].id];
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    const seerPkCardText = el("playerSpeechInput").value || "";
+    const seerPkNoCrashOk = seerPkCardText.includes(fmtSeatNum(seerPkOthers[3].id) + "號") && !seerPkCardText.includes("undefined");
+
+    // Verify Elder claim recognition + dedicated Elder role mission
+    clearStepTimer();
+    el("selectModeCount").value = "10";
+    el("selectPreferredRole").value = "elder";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const elderMissionOk = state.match.roleMission && state.match.roleMission.role === "elder";
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    togglePlayerDraftRoleClaim("elder");
+    submitPlayerSpeech();
+    const elderClaimOk = getPlayerSeat().claimedRole === "elder";
+
+    // Verify Solo-Wolf useFourGHope grants microPulse reduction + Matrix shows Wolf mates & God-Hunt tags
+    clearStepTimer();
+    el("selectModeCount").value = "10";
+    el("selectPreferredRole").value = "wolf_king";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const wkMissionOk = state.match.roleMission && state.match.roleMission.role === "wolf_king";
+    const wkSelf = getPlayerSeat();
+    const wkGood = getAliveSeats().find(s => s.role !== "wolf");
+    cycleWolfGodMark(wkGood.id);
+    renderTableMatrixIntoBody();
+    const wolfMatHtml = (el("matrixSheetBody")._children || []).map(c => c.innerHTML || "").join(" ");
+    const wolfMatrixOk = wolfMatHtml.includes("同伴") && wolfMatHtml.includes("疑觀");
+    state.match.seats.forEach(s => { if (s.role === "wolf" && s.id !== wkSelf.id) s.alive = false; });
+    wkSelf.microPulse = 82;
+    state.match.phase = "DAY_SPEECH";
+    useFourGHope();
+    const soloWolfHopeOk = wkSelf.microPulse < 82;
+
+    // Verify cross-day memory ledger NEVER leaks hidden dead-seat team (treats voted-out Good identically to voted-out Wolf)
+    const fairGoodDead = getAliveSeats().find(s => s.id !== wkSelf.id && s.team === "good");
+    const fairVoucher = getAliveSeats().find(s => s.id !== wkSelf.id && s.id !== fairGoodDead.id && s.team === "good");
+    fairGoodDead.alive = false;
+    fairGoodDead.outReason = "投票出局";
+    state.match.day = 2;
+    state.match.allSpeechEvents = [{ day: 1, speakerId: fairVoucher.id, vouchId: fairGoodDead.id, accuseId: null }];
+    const fairLedger = buildCrossDayMemoryLedger(fairVoucher);
+    const noDeadWolfLeakOk = fairLedger.wolfProtectorIds.includes(fairVoucher.id);
+
+    // Check Role Deal Action List & all 8 role guides exist
+    const all8GuidesOk = ["seer", "witch", "hunter", "guard", "elder", "villager", "wolf", "wolf_king"].every(k => ROLE_GUIDES[k] && ROLE_GUIDES[k].nightAction && ROLE_GUIDES[k].dayAction && ROLE_GUIDES[k].threeGoodTip);
+    const v8Ok = unlimitedGoodOk && wolfExcludesMates && wolfBoardClassOk && wolfGodMarkOk && wolfNightTipOk && roleGuideOk && tgGuideOk && maskBlocksGuideOk && tgPetalQuoteOk && witchHidesWolfTacticOk && seerPkNoCrashOk && elderClaimOk && elderMissionOk && wkMissionOk && wolfMatrixOk && soloWolfHopeOk && noDeadWolfLeakOk && all8GuidesOk;
+
     clearStepTimer();
     resetMatchToLobby();
     return {
@@ -3532,7 +3658,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       wolfHuddleOk,
       v6SheriffOk: shStarted && shReelOk && shRunOk && shWithdrawOk && shPassOk,
       ledgerOk, coachOk,
-      v61Ok: matrixFlipOk && directWkOk && directElderOk && v61AchOk && prefetchFnOk && fxPacingOk && fxPacingFastOk
+      v61Ok: matrixFlipOk && directWkOk && directElderOk && v61AchOk && prefetchFnOk && fxPacingOk && fxPacingFastOk,
+      v8Ok
     };
   })()`, ctx);
 
@@ -3543,4 +3670,4 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v7.0 (Visual Polish + Ceremonial Card/FX Pacing + Desktop/Tablet/Mobile RWD + Zero-Wait LLM) E2E smoke test PASSED!");
+console.log("[OK] Full v8.0 (Wolf/Good UX Separation + 8 Per-Role Dashboards/Guides + Triple-Strengthened Three-Good/Four-Givings + 3-Device RWD) E2E smoke test PASSED!");

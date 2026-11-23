@@ -1180,15 +1180,16 @@ body.craft-ui .turn-chip.is-speaking {
 /* ===== 5. UNIFIED FLEX SIDE PIECES (LEFT ROLE TILE + RIGHT FAN HAND) ===== */
 .corner-role-tile {
   pointer-events: auto;
-  flex: 0 0 176px;
-  width: 176px;
+  flex: 0 0 218px;
+  width: 218px;
   padding: 8px 10px;
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--surface-panel-grad);
   border: 1px solid var(--border-accent);
-  border-left: 3.5px solid var(--accent-gold);
+  border-left: 4px solid var(--role-accent, var(--accent-gold));
   backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 12px 28px rgba(0, 0, 0, 0.38);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
 }
 
 .corner-role-tile.hidden {
@@ -1256,19 +1257,19 @@ body.craft-ui .turn-chip.is-speaking {
   cursor: pointer;
 }
 
-.fourg-card:nth-child(1) {
+.fourg-card.card-confidence {
   transform: rotate(-4deg) translateY(2px);
 }
 
-.fourg-card:nth-child(2) {
+.fourg-card.card-joy {
   transform: rotate(-1.3deg);
 }
 
-.fourg-card:nth-child(3) {
+.fourg-card.card-hope {
   transform: rotate(1.3deg);
 }
 
-.fourg-card:nth-child(4) {
+.fourg-card.card-convenience {
   transform: rotate(4deg) translateY(2px);
 }
 
@@ -1831,7 +1832,10 @@ body.fx-pacing-fast #dramaticCutIn.is-active.cutin-hold {
   }
 
   .fourg-card,
-  .fourg-card:nth-child(n) {
+  .fourg-card.card-confidence,
+  .fourg-card.card-joy,
+  .fourg-card.card-hope,
+  .fourg-card.card-convenience {
     margin-bottom: 0;
     height: 62px;
     width: 58px;
@@ -1917,7 +1921,10 @@ body.fx-pacing-fast #dramaticCutIn.is-active.cutin-hold {
   }
 
   .fourg-card,
-  .fourg-card:nth-child(n) {
+  .fourg-card.card-confidence,
+  .fourg-card.card-joy,
+  .fourg-card.card-hope,
+  .fourg-card.card-convenience {
     flex: 0 0 auto;
     min-height: 54px;
     height: auto;
@@ -3118,5 +3125,510 @@ body.fx-pacing-fast .play-card-btn.is-card-casting {
   #speakerPortraitImg.vn-bust-img {
     width: 54px;
     height: 54px;
+  }
+}
+
+/* ===== V8.0 PER-ROLE THEMES, WOLF SCHEME BOARD, GUIDE POPOVER & THREE-GOOD / FOUR-GIVINGS POLISH ===== */
+.role-theme-seer {
+  --role-accent: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.52);
+}
+
+.role-theme-witch {
+  --role-accent: #34d399;
+  border-color: rgba(52, 211, 153, 0.52);
+}
+
+.role-theme-hunter {
+  --role-accent: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.52);
+}
+
+.role-theme-guard {
+  --role-accent: #22d3ee;
+  border-color: rgba(34, 211, 238, 0.52);
+}
+
+.role-theme-elder {
+  --role-accent: #2dd4bf;
+  border-color: rgba(45, 212, 191, 0.52);
+}
+
+.role-theme-villager {
+  --role-accent: #a7f3d0;
+  border-color: rgba(148, 163, 184, 0.48);
+}
+
+.role-theme-wolf {
+  --role-accent: #fb7185;
+  border-color: rgba(244, 63, 94, 0.58);
+}
+
+.role-theme-wolf_king {
+  --role-accent: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.78);
+  box-shadow: inset 0 1px 0 rgba(254, 205, 211, 0.25), 0 10px 26px rgba(159, 18, 57, 0.36);
+}
+
+.lotus-meter-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 1px 3px;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.lotus-meter-btn:hover {
+  background: rgba(212, 166, 87, 0.18);
+  border-color: rgba(251, 191, 36, 0.5);
+  transform: scale(1.06);
+}
+
+.role-action-hint {
+  color: #fde68a;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  border-radius: 5px;
+  padding: 3px 6px;
+}
+
+body.craft-ui.theme-day .role-action-hint {
+  color: #78350f;
+  background: rgba(254, 243, 199, 0.78);
+  border-color: rgba(180, 118, 38, 0.35);
+}
+
+body.craft-ui.theme-day #playerRoleContent {
+  color: #1e293b;
+}
+
+body.craft-ui.theme-day .role-guide-trigger {
+  color: #92400e;
+  border-color: rgba(180, 118, 38, 0.55);
+  background: rgba(254, 243, 199, 0.72);
+}
+
+body.craft-ui.theme-day .role-guide-trigger:hover {
+  background: rgba(253, 230, 138, 0.9);
+}
+
+.three-good-guide-line {
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.three-good-guide-line.is-awakened {
+  color: #6ee7b7;
+  font-weight: 800;
+}
+
+body.craft-ui.theme-day .three-good-guide-line {
+  color: #334155;
+}
+
+body.craft-ui.theme-day .three-good-guide-line.is-awakened {
+  color: #047857;
+}
+
+.role-guide-popover {
+  position: fixed;
+  left: 16px;
+  bottom: 132px;
+  z-index: 42;
+  width: min(330px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  color: #f1f5f9;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.58);
+  pointer-events: auto;
+}
+
+.role-guide-popover.hidden {
+  display: none;
+}
+
+body.craft-ui.theme-day .role-guide-popover {
+  background: rgba(255, 251, 235, 0.98);
+  border-color: rgba(180, 118, 38, 0.62);
+  color: #1e293b;
+}
+
+.role-guide-row {
+  padding: 5px 7px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.role-guide-row.is-lit {
+  background: rgba(6, 78, 59, 0.38);
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+body.craft-ui.theme-day .role-guide-row {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(180, 118, 38, 0.24);
+}
+
+body.craft-ui.theme-day .role-guide-row.is-lit {
+  background: rgba(209, 250, 229, 0.72);
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.role-guide-reward {
+  padding: 5px 7px;
+  border-radius: 6px;
+  background: rgba(217, 119, 6, 0.18);
+  border: 1px solid rgba(251, 191, 36, 0.42);
+  color: #fef3c7;
+}
+
+body.craft-ui.theme-day .role-guide-reward {
+  background: rgba(254, 243, 199, 0.92);
+  border-color: rgba(217, 119, 6, 0.45);
+  color: #78350f;
+}
+
+/* Role Turn Dashboard & Night Tip Strip */
+.role-turn-dashboard {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.64);
+  border: 1px solid rgba(212, 166, 87, 0.36);
+  border-left: 3.5px solid var(--role-accent, #fbbf24);
+  font-size: 10.5px;
+}
+
+.role-turn-dashboard.hidden {
+  display: none;
+}
+
+body.craft-ui.theme-day .role-turn-dashboard {
+  background: rgba(255, 251, 235, 0.84);
+  color: #1e293b;
+}
+
+.role-dash-title {
+  font-weight: 800;
+  color: #fde68a;
+  white-space: nowrap;
+}
+
+body.craft-ui.theme-day .role-dash-title {
+  color: #92400e;
+}
+
+.role-dash-items {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1 1 auto;
+}
+
+.role-dash-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(51, 65, 85, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: #e2e8f0;
+}
+
+.role-dash-pill.is-safe {
+  background: rgba(6, 95, 70, 0.42);
+  border-color: rgba(52, 211, 153, 0.55);
+  color: #a7f3d0;
+}
+
+.role-dash-pill.is-danger {
+  background: rgba(159, 18, 57, 0.42);
+  border-color: rgba(251, 113, 133, 0.6);
+  color: #fecdd3;
+}
+
+.role-dash-pill.is-warn {
+  background: rgba(146, 64, 14, 0.42);
+  border-color: rgba(251, 191, 36, 0.55);
+  color: #fde68a;
+}
+
+.role-dash-pill.is-used {
+  opacity: 0.55;
+}
+
+body.craft-ui.theme-day .role-dash-pill {
+  background: rgba(241, 245, 249, 0.95);
+  color: #334155;
+}
+
+body.craft-ui.theme-day .role-dash-pill.is-safe {
+  background: rgba(209, 250, 229, 0.9);
+  color: #065f46;
+}
+
+body.craft-ui.theme-day .role-dash-pill.is-danger {
+  background: rgba(255, 228, 230, 0.92);
+  color: #9f1239;
+}
+
+body.craft-ui.theme-day .role-dash-pill.is-warn {
+  background: rgba(254, 243, 199, 0.95);
+  color: #92400e;
+}
+
+.role-dash-hint {
+  font-size: 10px;
+  color: rgba(203, 213, 225, 0.85);
+}
+
+body.craft-ui.theme-day .role-dash-hint {
+  color: #475569;
+}
+
+.night-role-tip-strip {
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(52, 211, 153, 0.42);
+  background: rgba(6, 78, 59, 0.34);
+  color: #d1fae5;
+}
+
+.night-role-tip-strip.is-wolf {
+  border-color: rgba(251, 113, 133, 0.52);
+  background: rgba(136, 19, 55, 0.38);
+  color: #ffe4e6;
+}
+
+.night-role-tip-strip.hidden {
+  display: none;
+}
+
+/* Wolf Scheme Board & God-Hunt Notebook */
+.pit-builder-box.is-wolf-board {
+  background: rgba(69, 10, 28, 0.56);
+  border-color: rgba(251, 113, 133, 0.45);
+}
+
+body.craft-ui.theme-day .pit-builder-box.is-wolf-board {
+  background: rgba(255, 241, 242, 0.88);
+  border-color: rgba(190, 18, 60, 0.42);
+}
+
+.wolf-god-hunt-row {
+  padding-top: 4px;
+  border-top: 1px dashed rgba(251, 191, 36, 0.25);
+}
+
+.wolf-god-chip {
+  padding: 1.5px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(30, 41, 59, 0.65);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.wolf-god-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(251, 191, 36, 0.72);
+}
+
+.wolf-god-chip.is-marked {
+  background: rgba(217, 119, 6, 0.3);
+  border-color: rgba(251, 191, 36, 0.86);
+  color: #fef3c7;
+}
+
+body.craft-ui.theme-day .wolf-god-chip {
+  background: rgba(255, 255, 255, 0.86);
+  color: #334155;
+}
+
+body.craft-ui.theme-day .wolf-god-chip.is-marked {
+  background: rgba(254, 243, 199, 0.95);
+  color: #92400e;
+}
+
+/* Inline Three-Good Feedback Badge & Vote Goodwill Badge */
+.speech-tg-badge {
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.speech-tg-badge.hidden {
+  display: none;
+}
+
+.speech-tg-badge.is-kind {
+  background: rgba(16, 185, 129, 0.24);
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  color: #a7f3d0;
+}
+
+.speech-tg-badge.is-crit {
+  background: rgba(245, 158, 11, 0.28);
+  border: 1px solid rgba(251, 191, 36, 0.8);
+  color: #fef3c7;
+}
+
+.speech-tg-badge.is-warn {
+  background: rgba(225, 29, 72, 0.28);
+  border: 1px solid rgba(251, 113, 133, 0.7);
+  color: #ffe4e6;
+}
+
+body.craft-ui.theme-day .speech-tg-badge.is-kind {
+  background: rgba(209, 250, 229, 0.92);
+  color: #065f46;
+}
+
+body.craft-ui.theme-day .speech-tg-badge.is-crit {
+  background: rgba(254, 243, 199, 0.95);
+  color: #92400e;
+}
+
+body.craft-ui.theme-day .speech-tg-badge.is-warn {
+  background: rgba(255, 228, 230, 0.95);
+  color: #9f1239;
+}
+
+.vote-goodwill-badge {
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.vote-goodwill-badge.hidden {
+  display: none;
+}
+
+.vote-goodwill-badge.is-gold {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.25), rgba(245, 158, 11, 0.3));
+  border: 1px solid rgba(251, 191, 36, 0.75);
+  color: #fef3c7;
+}
+
+.vote-goodwill-badge.is-wolf {
+  background: rgba(159, 18, 57, 0.3);
+  border: 1px solid rgba(251, 113, 133, 0.55);
+  color: #ffe4e6;
+}
+
+.vote-goodwill-badge.is-hint {
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fde68a;
+}
+
+body.craft-ui.theme-day .vote-goodwill-badge.is-gold {
+  background: linear-gradient(90deg, rgba(209, 250, 229, 0.92), rgba(254, 243, 199, 0.96));
+  color: #065f46;
+}
+
+body.craft-ui.theme-day .vote-goodwill-badge.is-hint {
+  background: rgba(254, 243, 199, 0.9);
+  color: #92400e;
+}
+
+/* Four-Givings Ceremonial Cast & Synergy Pulse */
+.corner-hand-fan {
+  position: relative;
+}
+
+.fourg-synergy-hint {
+  position: absolute;
+  top: -24px;
+  right: 0;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  background: rgba(6, 78, 59, 0.92);
+  border: 1px solid rgba(52, 211, 153, 0.72);
+  color: #a7f3d0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.fourg-synergy-hint.hidden {
+  display: none;
+}
+
+@keyframes fourgCastLift {
+  0% {
+    transform: translateY(-10px) scale(1.04);
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
+  }
+  55% {
+    transform: translateY(-28px) scale(1.12);
+    box-shadow: 0 0 28px rgba(52, 211, 153, 0.85), 0 0 14px rgba(251, 191, 36, 0.9);
+  }
+  100% {
+    transform: translateY(-22px) scale(1.06);
+    box-shadow: 0 0 18px rgba(251, 191, 36, 0.55);
+  }
+}
+
+.fourg-card.is-fourg-casting {
+  animation: fourgCastLift 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  border-color: #fde68a;
+  z-index: 9;
+}
+
+.corner-hand-fan.is-synergy-ready .fourg-card:not(:disabled) {
+  box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 10px 24px rgba(0, 0, 0, 0.44), 0 0 14px rgba(52, 211, 153, 0.35);
+}
+
+.role-deal-actions {
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+@media (max-width: 1199px) {
+  .corner-role-tile {
+    flex: 0 0 194px;
+    width: 194px;
+  }
+}
+
+@media (max-width: 767px) {
+  .corner-role-tile {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .role-guide-popover {
+    left: 12px;
+    right: 12px;
+    bottom: 92px;
+    width: auto;
+  }
+
+  .fourg-synergy-hint {
+    top: -22px;
+    right: 4px;
   }
 }

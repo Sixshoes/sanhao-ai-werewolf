@@ -87,11 +87,12 @@ function buildAiLastWords(seat, mode) {
     };
   }
 
+  const wolfTotalLw = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
   aliveOthers.sort(function (a, b) { return (seat.suspicionMap[b.id] || 50) - (seat.suspicionMap[a.id] || 50); });
   const topSus = aliveOthers[0] || null;
   return {
     text: isFirstNight
-      ? ("首夜倒牌好可惜！我是無辜好人，大家今天輪流發言時仔細聽誰語氣急著帶節奏，把兩隻酸民狼抓出來！")
+      ? ("首夜倒牌好可惜！我是無辜好人，大家今天輪流發言時仔細聽誰語氣急著帶節奏，把 " + wolfTotalLw + " 隻酸民狼抓出來！")
       : (flv ? flv.lastGood.replace(/^「|」$/g, "") : ("我是清白好人！離席前建議大家重點留意 " + (topSus ? labelOf(topSus) : "帶頭衝票的人") + "！")),
     claimRole: null,
     targetId: (!isFirstNight && topSus) ? topSus.id : null,
@@ -107,10 +108,12 @@ function applyLastWordsInfluence(seat, rawText, meta) {
   const claimedWitch = m.claimRole === "witch" || /女巫|滴水奉茶師|奉茶師/.test(clean);
   const claimedHunter = m.claimRole === "hunter" || /直心糾察長|糾察長|獵人/.test(clean);
   const claimedGuard = m.claimRole === "guard" || /護心守衛|守衛/.test(clean);
+  const claimedElder = m.claimRole === "elder" || /清心長老/.test(clean);
   if (claimedSeer) seat.claimedRole = "seer";
   else if (claimedWitch) seat.claimedRole = "witch";
   else if (claimedHunter) seat.claimedRole = "hunter";
   else if (claimedGuard) seat.claimedRole = "guard";
+  else if (claimedElder) seat.claimedRole = "elder";
 
   let targetId = m.targetId || null;
   let isWolfClaim = (typeof m.isWolf === "boolean") ? m.isWolf : null;
@@ -299,7 +302,7 @@ function preparePlayerLastWordsPanel(mode) {
         : "【護心守衛遺言】亮明護心守衛身分・呼籲穩住神職防線",
       text: gPrevP
         ? ("我亮出護心守衛留遺言！上一晚我的護心結界守過 " + fmtSeatNum(gPrevP.id) + "號" + gPrevP.name + "，請奉茶師留意交錯救援防破盾，大家照好人邏輯抓狼！")
-        : "我是這局的護心守衛，離席前提醒大家留意是誰避談昨夜保護視角、把兩隻酸民狼找出來！"
+        : ("我是這局的護心守衛，離席前提醒大家留意是誰避談昨夜保護視角、把 " + (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2) + " 隻酸民狼找出來！")
     });
   } else if (player.role === "hunter") {
     cards.push({
@@ -308,12 +311,19 @@ function preparePlayerLastWordsPanel(mode) {
       label: "【直心糾察長遺言】亮明正氣身分・點出剩餘狼坑焦點",
       text: "我是本局直心糾察長！希望大家接續把" + (pickSus ? (" " + fmtSeatNum(pickSus.id) + "號" + pickSus.name + " 等") : "") + "可疑發言對齊，穩穩拿下好人勝利！"
     });
+  } else if (player.isElder) {
+    cards.push({
+      tag: "長老囑託",
+      accent: "bg-teal-500/20 hover:bg-teal-500/35 border-teal-400/60 text-teal-100",
+      label: "【清心長老遺言】亮明長老視野・囑託好夥伴集中抓狼",
+      text: "我是這局的清心長老！雖要離席了但我站穩好人視角，請大家重點比對" + (pickSus ? (" " + fmtSeatNum(pickSus.id) + "號" + pickSus.name + " 的") : "") + "發言與票型，別被酸言帶偏！"
+    });
   } else if (player.role === "wolf") {
     const targetGood = aliveOthers.find(function (s) { return s.team === "good"; }) || pickSus;
     cards.push({
-      tag: "干擾視角",
+      tag: player.isWolfKing ? "狼王攪局" : "干擾視角",
       accent: "bg-rose-500/20 hover:bg-rose-500/35 border-rose-400/60 text-rose-100",
-      label: "【狼人偽裝】假裝好人將焦點導向 " + (targetGood ? (fmtSeatNum(targetGood.id) + "號") : "場上"),
+      label: (player.isWolfKing ? "【流言首領遺言】臨走再攪一池春水，咬向 " : "【狼人偽裝】假裝好人將焦點導向 ") + (targetGood ? (fmtSeatNum(targetGood.id) + "號") : "場上"),
       text: "哎呀你們真的投錯好人了！我真心覺得 " + (targetGood ? (fmtSeatNum(targetGood.id) + "號" + targetGood.name) : "剛才帶節奏的人") + " 講話破綻超大，大家下一輪務必盯緊他！"
     });
   }

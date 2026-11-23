@@ -306,15 +306,40 @@ function escapeHtml(str) {
 function addThreeGoodPoint(kind, reasonText) {
   if (!state.match.started || !state.match.threeGood) return;
   const tg = state.match.threeGood;
-  if (kind === "heart") tg.heart += 1;
-  else if (kind === "words") tg.words += 1;
-  else if (kind === "deeds") tg.deeds += 1;
+  if (!tg.milestones) tg.milestones = { heart: tg.heart > 0, words: tg.words > 0, deeds: tg.deeds > 0 };
+  const wasUnlit = (kind === "heart" && !tg.milestones.heart) ||
+    (kind === "words" && !tg.milestones.words) ||
+    (kind === "deeds" && !tg.milestones.deeds);
+  if (kind === "heart") { tg.heart += 1; tg.milestones.heart = true; }
+  else if (kind === "words") { tg.words += 1; tg.milestones.words = true; }
+  else if (kind === "deeds") { tg.deeds += 1; tg.milestones.deeds = true; }
   state.match.harmonyScore = clamp(state.match.harmonyScore + 5, 0, 100);
   if (reasonText) {
     spawnFx(getPlayerId(), reasonText + " +1", kind === "words" ? "#34d399" : (kind === "deeds" ? "#38bdf8" : "#fbbf24"));
   }
+  const willAwakenNow = !tg.resonanceTriggered && tg.heart >= 1 && tg.words >= 1 && tg.deeds >= 1;
+  // Individual Petal Lighting Celebration with Authentic Three-Goodness Wisdom Quote!
+  if (wasUnlit && !willAwakenNow) {
+    const qPool = (typeof THREE_GOOD_QUOTES !== "undefined" && THREE_GOOD_QUOTES[kind]) ? THREE_GOOD_QUOTES[kind] : null;
+    const litTotal = (tg.heart > 0 ? 1 : 0) + (tg.words > 0 ? 1 : 0) + (tg.deeds > 0 ? 1 : 0);
+    const virtueName = kind === "heart" ? "存好心" : (kind === "words" ? "說好話" : "做好事");
+    const quote = qPool ? qPool[((state.match.day || 1) + litTotal) % qPool.length] : (virtueName + "已點亮！");
+    if (typeof spawnBurst === "function") {
+      spawnBurst(getPlayerId(), kind === "words" ? ["#34d399", "#fde68a"] : (kind === "deeds" ? ["#38bdf8", "#fde68a"] : ["#fbbf24", "#ffffff"]), 16, "petal");
+    }
+    if (typeof sound !== "undefined" && typeof sound.tone === "function") {
+      sound.tone(528, 0.11, "sine", 0.055, 0);
+      sound.tone(792, 0.14, "triangle", 0.045, 0.08);
+    }
+    addLog({
+      kind: "blessing",
+      title: "🪷 點亮三好蓮花瓣（" + litTotal + "/3）・" + virtueName + "！",
+      text: quote
+    });
+    showToast("🪷 點亮「" + virtueName + "」(" + litTotal + "/3)｜" + quote, "emerald");
+  }
   // Trigger Golden Three-Goodness Lotus Full Awakening when all 3 virtues are practiced!
-  if (!tg.resonanceTriggered && tg.heart >= 1 && tg.words >= 1 && tg.deeds >= 1) {
+  if (willAwakenNow) {
     tg.resonanceTriggered = true;
     state.match.harmonyScore = clamp(state.match.harmonyScore + 15, 0, 100);
     sound.playBlessing();
