@@ -264,7 +264,8 @@ const sound = {
         return { a: wA, i: wI, u: wU, e: wE, o: wO, amp: amp };
       } catch (e) {}
     }
-    const isSpeaking = Boolean((typeof voice !== "undefined" && voice.speaking) || (typeof state !== "undefined" && state.typewriter && state.typewriter.active));
+    const isSpeechWindow = Boolean(typeof state !== "undefined" && state.activeSpeechAnimUntil && (nowMs || performance.now()) < state.activeSpeechAnimUntil);
+    const isSpeaking = Boolean((typeof voice !== "undefined" && voice.speaking) || (typeof state !== "undefined" && state.typewriter && state.typewriter.active) || isSpeechWindow);
     if (!isSpeaking && amp <= 0.01) {
       return { a: 0, i: 0, u: 0, e: 0, o: 0, amp: 0 };
     }
@@ -628,45 +629,49 @@ const sound = {
   playVoiceBlip: function (seatId) {
     this.playCozySyllable(seatId, 0, "啊", "");
   },
-  // Delicate 2-note acoustic signature motif right before each character speaks!
+  // Distinct 3-note character musical motif + instrument timbre right before each character speaks!
   playVoiceSignature: function (personaName, mood) {
     if (this.muted || !this.ctx || !this.sfxGain) return;
     try {
       const motifs = {
-        "主持": [62, 69],
-        "你":   [64, 71],
-        "你_男": [55, 62],
-        "小澄": [57, 64],
-        "暖暖": [67, 74],
-        "阿松": [50, 57],
-        "星兒": [74, 81],
-        "小雲": [69, 76],
-        "阿竹": [55, 62],
-        "晨晨": [62, 66]
+        "主持": { notes: [62, 69],      wave: "sine",     step: 0.08, lp: 2100 },
+        "你":   { notes: [64, 71],      wave: "triangle", step: 0.07, lp: 2200 },
+        "你_男": { notes: [55, 62],     wave: "triangle", step: 0.07, lp: 1700 },
+        "小澄": { notes: [60, 67, 72],  wave: "triangle", step: 0.055, lp: 2600 }, // Crisp analytical pulse
+        "暖暖": { notes: [65, 69, 72],  wave: "sine",     step: 0.085, lp: 1900 }, // Warm teacup chime
+        "阿松": { notes: [50, 55, 57],  wave: "triangle", step: 0.09,  lp: 1200 }, // Deep mountain woodblock
+        "星兒": { notes: [76, 81, 83],  wave: "sine",     step: 0.055, lp: 3200 }, // Sparkling celesta
+        "小雲": { notes: [69, 76, 81],  wave: "triangle", step: 0.05,  lp: 2700 }, // Crisp news chime
+        "阿竹": { notes: [62, 67, 71],  wave: "sine",     step: 0.085, lp: 1850 }, // Airy bamboo flute
+        "晨晨": { notes: [64, 68, 71],  wave: "triangle", step: 0.052, lp: 2800 }, // Sporty upward triad
+        "墨白": { notes: [45, 52, 48],  wave: "triangle", step: 0.105, lp: 950  }, // Solemn deep guqin bass
+        "晴嵐": { notes: [69, 71, 76],  wave: "sine",     step: 0.078, lp: 2500 }, // Graceful guzheng cascade
+        "阿朗": { notes: [57, 64, 69],  wave: "triangle", step: 0.048, lp: 2400 }, // Assertive debate tap
+        "柚子": { notes: [74, 78, 81],  wave: "sine",     step: 0.055, lp: 3000 }  // Sweet bouncy kalimba
       };
-      const pair = motifs[personaName] || [62, 69];
+      const spec = motifs[personaName] || motifs["主持"];
       const now = this.ctx.currentTime;
-      const vol = Math.max(0.015, Math.min(0.065, voice.volume * 0.055));
+      const vol = Math.max(0.02, Math.min(0.075, voice.volume * 0.065));
       const self = this;
-      pair.forEach(function (midi, idx) {
-        const t = now + idx * (mood === "panic" ? 0.055 : 0.075);
+      spec.notes.forEach(function (midi, idx) {
+        const t = now + idx * (mood === "panic" ? spec.step * 0.78 : spec.step);
         const freq = midiToFreq(midi + (mood === "panic" ? 1 : 0));
         const osc = self.ctx.createOscillator();
         const filt = self.ctx.createBiquadFilter();
         const gain = self.ctx.createGain();
-        osc.type = idx === 0 ? "triangle" : "sine";
+        osc.type = idx === 0 ? spec.wave : "sine";
         osc.frequency.setValueAtTime(freq, t);
         filt.type = "lowpass";
-        filt.frequency.setValueAtTime(Math.min(2400, freq * 2.6), t);
+        filt.frequency.setValueAtTime(Math.min(spec.lp, freq * 2.8), t);
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(vol * (idx === 0 ? 0.85 : 1.0), t + 0.016);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+        gain.gain.linearRampToValueAtTime(vol * (idx === spec.notes.length - 1 ? 1.0 : 0.85), t + 0.014);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
         osc.connect(filt);
         filt.connect(gain);
         gain.connect(self.sfxGain);
         if (self.reverb) gain.connect(self.reverb);
         osc.start(t);
-        osc.stop(t + 0.26);
+        osc.stop(t + 0.27);
       });
     } catch (e) {}
   },
@@ -770,6 +775,28 @@ const sound = {
       filt.connect(g);
       g.connect(this.sfxGain);
       src.start(now);
+    } catch (e) {}
+  },
+  playRoleRevealFanfare: function (isWolf) {
+    if (this.muted || !this.ctx || !this.sfxGain) return;
+    try {
+      const now = this.ctx.currentTime + 0.02;
+      const self = this;
+      if (isWolf) {
+        // Enigmatic twilight taiko pulse + deep guqin minor cadence for Acid-Wolf faction reveal
+        this.voiceDrum("deep", now, 0.24);
+        [50, 53, 57, 58].forEach(function (midi, idx) {
+          self.voicePluck(midiToFreq(midi), now + 0.05 + idx * 0.095, 0.95, 0.14);
+        });
+        this.voiceBell(midiToFreq(62), now + 0.34, 1.35, 0.06);
+      } else {
+        // Luminous pentatonic guzheng glissando + resonant bronze singing bowl for Academy Good faction reveal
+        [62, 66, 69, 71, 74].forEach(function (midi, idx) {
+          self.voicePluck(midiToFreq(midi), now + idx * 0.068, 1.05, 0.14);
+        });
+        this.voiceBell(midiToFreq(74), now + 0.22, 1.85, 0.10);
+        this.voiceBell(midiToFreq(81), now + 0.34, 1.55, 0.065);
+      }
     } catch (e) {}
   },
   playWin: function (goodWon) {

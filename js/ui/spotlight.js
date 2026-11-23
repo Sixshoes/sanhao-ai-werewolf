@@ -15,6 +15,7 @@ function stopTypewriterOnly() {
 
 function clearStepTimer() {
   state.speakingInFlight = false;
+  state.activeSpeechAnimUntil = 0;
   stopTypewriterOnly();
   if (typeof orchestrator !== "undefined" && typeof orchestrator.clearTimer === "function") {
     orchestrator.clearTimer("turn_step");
@@ -38,7 +39,7 @@ function renderSpeakerTurnStrip() {
   const pid = getPlayerId();
   const isPkOrder = Boolean(typeof isPkVoteActive === "function" && isPkVoteActive());
   const dirTagText = isPkOrder
-    ? "⚔️PK"
+    ? "PK決選"
     : (state.match.speechDirection === -1 ? "↺逆時針" : "↻順時針");
   const shIdNow = (!state.match.sheriffElectionPending && state.match.sheriffSeatId) ? state.match.sheriffSeatId : null;
 
@@ -111,24 +112,24 @@ function renderSpeakerStanceStrip(speaker, speechEv) {
   };
   const chips = [];
   if (speechEv.claimRole && ROLE_DEFS[speechEv.claimRole]) {
-    const iconMap = { seer: "🔮", witch: "🍵", hunter: "⚖️", guard: "🛡️" };
-    chips.push({ cls: "is-role", label: (iconMap[speechEv.claimRole] || "✦") + " 跳" + ROLE_DEFS[speechEv.claimRole].name, seatId: speaker.id });
+    const iconKeyMap = { seer: "seer", witch: "witch", hunter: "scales", guard: "guard", elder: "elder" };
+    chips.push({ cls: "is-role", iconKey: iconKeyMap[speechEv.claimRole] || "spark", tone: "gold", label: "亮・" + ROLE_DEFS[speechEv.claimRole].name, seatId: speaker.id });
   }
   if (speechEv.standWithSeerId) {
-    chips.push({ cls: "is-good", label: "🤝 站邊 " + fmtTag(speechEv.standWithSeerId), seatId: speechEv.standWithSeerId });
+    chips.push({ cls: "is-good", iconKey: "handshake", tone: "jade", label: "站・" + fmtTag(speechEv.standWithSeerId), seatId: speechEv.standWithSeerId });
   }
   if (speechEv.vouchId && speechEv.vouchId !== speechEv.standWithSeerId) {
-    chips.push({ cls: "is-good", label: "✅ 保 " + fmtTag(speechEv.vouchId), seatId: speechEv.vouchId });
+    chips.push({ cls: "is-good", iconKey: "check", tone: "jade", label: "保・" + fmtTag(speechEv.vouchId), seatId: speechEv.vouchId });
   }
   if (speechEv.accuseId) {
-    chips.push({ cls: "is-wolf", label: "🎯 打 " + fmtTag(speechEv.accuseId), seatId: speechEv.accuseId });
+    chips.push({ cls: "is-wolf", iconKey: "target", tone: "cinnabar", label: "指・" + fmtTag(speechEv.accuseId), seatId: speechEv.accuseId });
   }
   const extraWolves = (Array.isArray(speechEv.wolfPits) ? speechEv.wolfPits : []).filter(function (id) { return id !== speechEv.accuseId; });
   if (extraWolves.length > 0) {
-    chips.push({ cls: "is-wolf", label: "🐺 疑 " + extraWolves.map(fmtTag).join("・"), seatId: extraWolves[0] });
+    chips.push({ cls: "is-wolf", iconKey: "wolf", tone: "cinnabar", label: "疑・" + extraWolves.map(fmtTag).join("・"), seatId: extraWolves[0] });
   }
   if (speechEv.contradiction) {
-    chips.push({ cls: "is-contra", label: "⚡ " + (speechEv.contradiction.label || "邏輯矛盾"), seatId: speaker.id });
+    chips.push({ cls: "is-contra", iconKey: "spark", tone: "gold", label: "破綻・" + (speechEv.contradiction.label || "邏輯矛盾"), seatId: speaker.id });
   }
   if (!chips.length) {
     strip.classList.add("hidden");
@@ -139,6 +140,9 @@ function renderSpeakerStanceStrip(speaker, speechEv) {
     btn.type = "button";
     btn.className = "stance-chip " + c.cls;
     btn.textContent = c.label;
+    if (typeof shIcon === "function") {
+      btn.innerHTML = shIcon(c.iconKey, c.tone) + "<span>" + escapeHtml(c.label) + "</span>";
+    }
     btn.addEventListener("click", function (ev) {
       ev.stopPropagation();
       if (c.seatId && c.seatId !== pid && typeof openSeatIntel === "function") openSeatIntel(c.seatId);
@@ -223,7 +227,13 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
   const hint = el("typewriterStatusHint");
   const nextBtn = el("btnStepNext");
   const banner = el("speakerActiveBanner");
+  const stageBox = el("spotlightStageBox");
   const stillTalking = Boolean(isTyping || voice.speaking);
+  if (stageBox) {
+    const reg = (speaker && typeof getPersonaRegister === "function") ? getPersonaRegister(speaker) : "";
+    const isClassical = (reg === "classical" || reg === "guzheng" || reg === "poetic");
+    stageBox.classList.toggle("is-classical-speech", isClassical);
+  }
   if (speaker) {
     if (med) {
       med.textContent = fmtSeatNum(speaker.id);
@@ -301,7 +311,15 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
       ? "cta-brass py-1.5 px-3.5 text-xs shrink-0 inline-flex items-center"
       : "cta-ink py-1.5 px-3 text-xs shrink-0 inline-flex items-center";
   }
-  updateSpotlightBox(badge, trait);
+  const spProf = (speaker && typeof getPersonaProfile === "function") ? getPersonaProfile(speaker) : null;
+  const enrichedTrait = (spProf && speaker && speaker.id !== getPlayerId() && spProf.shortTag)
+    ? (spProf.shortTag + "・" + (spProf.registerBadge || trait || ""))
+    : trait;
+  updateSpotlightBox(badge, enrichedTrait);
+  const tTagEl = el("spotlightTraitTag");
+  if (tTagEl && spProf && speaker && speaker.id !== getPlayerId() && typeof shPrependIcon === "function" && spProf.iconKey) {
+    shPrependIcon(tTagEl, spProf.iconKey, spProf.iconTone || "gold");
+  }
   renderSpeakerTurnStrip();
 }
 
@@ -438,7 +456,7 @@ function handleSpotlightClueClick(targetEl) {
     bumpCombo("抓破矛盾" + (extraFeast ? "（茶點×2）" : ""));
     if (extraFeast) bumpCombo("茶點加碼連擊");
     if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
-    showToast("⚡ 已抓破 " + fmtSeatNum(sp.id) + "號「" + labelStr + "」！解鎖你的「⚡ 呈堂證供」邏輯破防卡！", "emerald");
+    showToast("已抓破 " + fmtSeatNum(sp.id) + "號「" + labelStr + "」，解鎖「呈堂證供」邏輯反駁卡。", "emerald");
     updateAllUI();
     return true;
   }
@@ -450,31 +468,31 @@ function handleSpotlightClueClick(targetEl) {
     if (!(pSelfTox && pSelfTox.role === "wolf" && sp.role === "wolf")) {
       state.playerMarks[sp.id] = "wolf";
     }
-    spawnFx(sp.id, "📌 淨化酸言 +6!", "#fb7185");
+    spawnFx(sp.id, "淨化酸言 +6", "#fb7185");
     spawnBurst(sp.id, ["#fb7185", "#fbbf24", "#ffffff"], 14, "spark");
     nudgeSeat(sp.id, { scale: 1.1 });
     sound.tone(580, 0.08, "triangle", 0.05, 0);
-    pinClue(sp.id, "記下酸言「" + word + "」", "剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + "發言用了挑撥字眼「" + word + "」，大家留意他的動機與立場！", "toxic");
+    pinClue(sp.id, "記下酸言「" + word + "」", "剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + "發言用了挑撥字眼「" + word + "」，大家留意他的動機與立場。", "toxic");
     addThreeGoodPoint("heart", "存好心蒐證");
     bumpCombo("靜默筆記蒐證");
     if (state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "anonymous_wall") {
       bumpCombo("匿名牆破綻連擊");
     }
     if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
-    showToast("📌 已揪出 " + fmtSeatNum(sp.id) + "號的酸言「" + word + "」並淨化場上友善度！", "emerald");
+    showToast("已記下 " + fmtSeatNum(sp.id) + "號的挑撥字眼「" + word + "」，場上友善度提升。", "emerald");
     updateAllUI();
   } else if (type === "role") {
     state.match.stats.cluesCaught = (state.match.stats.cluesCaught || 0) + 1;
-    spawnFx(sp.id, "📌 紀錄線索：" + word, "#fde68a");
+    spawnFx(sp.id, "紀錄線索：" + word, "#fde68a");
     spawnBurst(sp.id, ["#fbbf24", "#fde68a", "#ffffff"], 12, "star");
     nudgeSeat(sp.id, { scale: 1.1 });
     sound.tone(660, 0.09, "triangle", 0.055, 0);
-    pinClue(sp.id, fmtSeatNum(sp.id) + "號提到「" + word + "」", "剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + "提到「" + word + "」，請大家比對真偽與邏輯！", "role");
+    pinClue(sp.id, fmtSeatNum(sp.id) + "號提到「" + word + "」", "剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + "提到「" + word + "」，請大家比對真偽與邏輯。", "role");
     bumpCombo("線索歸檔");
     if (state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "anonymous_wall") {
       bumpCombo("匿名牆線索連擊");
     }
-    showToast("📌 已將 " + fmtSeatNum(sp.id) + "號提到的「" + word + "」存入發言筆記！", "amber");
+    showToast("已將 " + fmtSeatNum(sp.id) + "號提到的「" + word + "」存入發言筆記。", "amber");
     updateAllUI();
   }
   return true;
@@ -560,18 +578,17 @@ function startSpotlightTypewriter(opts) {
   const cleanText = String(opts.rawText || "").replace(/^「|」$/g, "").trim();
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   const useRealVoice = ff ? false : voice.canSpeak();
-  const syncedDelay = ff
-    ? 12
-    : (useRealVoice
-      ? Math.round(clamp(138 / voice.rate, 75, 165))
-      : (voice.mode === "cozy" ? 44 : (opts.charDelay || 36)));
 
+  // v10.3 Instant Calm Reading + v11.0 Silent-Mode Speech Animation Window so 3D lip-sync & persona gestures stay alive even when muted!
   state.typewriter.fullText = cleanText;
-  state.typewriter.pos = 0;
-  state.typewriter.active = true;
+  state.typewriter.pos = cleanText.length;
+  state.typewriter.active = false;
   state.typewriter.speakerId = speaker ? speaker.id : null;
+  state.activeSpeechAnimUntil = (speaker && cleanText.length > 0)
+    ? (performance.now() + clamp(cleanText.length * 68, 2400, 6400))
+    : 0;
   state.typewriter.holdMs = ff ? 280 : (opts.holdMs || 2450);
-  state.typewriter.onDone = opts.onDone || null;
+  state.typewriter.onDone = null;
 
   if (typeof renderSpeakerStanceStrip === "function") {
     renderSpeakerStanceStrip(speaker, opts.speechEv || null);
@@ -582,46 +599,29 @@ function startSpotlightTypewriter(opts) {
 
   const pEl = el("spotlightText");
   if (pEl) {
-    pEl.textContent = (useRealVoice && voice.localNeuralAvailable) ? "「…" : "「";
-    pEl.classList.add("typing-cursor");
+    pEl.classList.remove("typing-cursor", "spotlight-fade-in");
+    renderInteractiveSpotlightText(cleanText, speaker, false);
+    if (typeof pEl.offsetWidth === "number") void pEl.offsetWidth;
+    pEl.classList.add("spotlight-fade-in");
   }
   const prog = el("spotlightProgressBar");
-  if (prog) prog.style.width = "2%";
-  syncSpeakerBannerVisuals(speaker, opts.badge, opts.trait, true);
+  if (prog) prog.style.width = "100%";
+  syncSpeakerBannerVisuals(speaker, opts.badge, opts.trait, false);
 
-  let twStarted = false;
-  let waitAudioTimer = null;
-  const launchTypewriter = function (durMs) {
-    if (twStarted || !state.typewriter.active || state.typewriter.fullText !== cleanText) return;
-    twStarted = true;
-    if (waitAudioTimer) {
-      clearTimeout(waitAudioTimer);
-      waitAudioTimer = null;
-    }
-    const exactDelay = (durMs && durMs > 200)
-      ? Math.round(clamp((durMs * 0.94) / Math.max(1, cleanText.length), 26, 200))
-      : syncedDelay;
-    runTypewriterInterval(exactDelay, speaker, useRealVoice);
-  };
+  if (typeof opts.onDone === "function") {
+    opts.onDone();
+  }
 
   if (useRealVoice) {
-    const waitForNeuralAudio = Boolean(voice.localNeuralAvailable && typeof sound !== "undefined" && sound.ctx);
     voice.speakCharacter(speaker, cleanText, opts.voiceMood || "normal", function () {
       const curSp = getSeat(state.typewriter.speakerId);
       const bTxt = el("spotlightSpeakerBadge") ? el("spotlightSpeakerBadge").textContent : "";
       const tTxt = el("spotlightTraitTag") ? el("spotlightTraitTag").textContent : "";
-      syncSpeakerBannerVisuals(curSp, bTxt, tTxt, state.typewriter.active);
+      syncSpeakerBannerVisuals(curSp, bTxt, tTxt, false);
       maybeScheduleAutoAdvanceAfterSpeech();
-    }, waitForNeuralAudio ? { onAudioReady: launchTypewriter } : undefined);
-
-    if (waitForNeuralAudio) {
-      // Wait cleanly up to 900ms for first neural audio chunk so voice & subtitles start in exact lockstep!
-      waitAudioTimer = setTimeout(function () { launchTypewriter(0); }, 900);
-    } else {
-      launchTypewriter(0);
-    }
+    });
   } else {
-    launchTypewriter(0);
+    maybeScheduleAutoAdvanceAfterSpeech();
   }
 }
 

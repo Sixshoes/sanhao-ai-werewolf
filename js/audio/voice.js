@@ -5,20 +5,20 @@
 
 // ==================== MULTI-ACTOR STUDIO VOICE + NATURAL PROSODY ENGINE ====================
 const PERSONA_VOICE_PROFILES = {
-  "主持":  { gender: "f", slot: 0, seatHint: 0, studioVoice: "Leda",       pitch: 0.99, basicPitch: 0.996, rateMul: 0.97 },
-  "你":    { gender: "f", slot: 1, seatHint: 1, studioVoice: "Kore",       pitch: 1.00, basicPitch: 1.000, rateMul: 1.00 },
-  "你_男": { gender: "m", slot: 0, seatHint: 1, studioVoice: "Puck",       pitch: 0.98, basicPitch: 0.994, rateMul: 1.00 },
-  "小澄":  { gender: "m", slot: 1, seatHint: 2, studioVoice: "Orus",       pitch: 0.98, basicPitch: 0.992, rateMul: 1.05 },
-  "暖暖":  { gender: "f", slot: 2, seatHint: 3, studioVoice: "Aoede",      pitch: 1.03, basicPitch: 1.012, rateMul: 0.95 },
-  "阿松":  { gender: "m", slot: 2, seatHint: 4, studioVoice: "Charon",     pitch: 0.94, basicPitch: 0.980, rateMul: 0.93 },
-  "星兒":  { gender: "f", slot: 3, seatHint: 5, studioVoice: "Zephyr",     pitch: 1.05, basicPitch: 1.018, rateMul: 1.06 },
-  "小雲":  { gender: "f", slot: 4, seatHint: 6, studioVoice: "Callirrhoe", pitch: 1.01, basicPitch: 1.004, rateMul: 1.03 },
-  "阿竹":  { gender: "m", slot: 3, seatHint: 7,  studioVoice: "Fenrir",     pitch: 0.96, basicPitch: 0.986, rateMul: 0.93 },
-  "晨晨":  { gender: "m", slot: 4, seatHint: 8,  studioVoice: "Puck",       pitch: 1.01, basicPitch: 0.998, rateMul: 1.08 },
-  "墨白":  { gender: "m", slot: 5, seatHint: 9,  studioVoice: "Charon",     pitch: 0.91, basicPitch: 0.978, rateMul: 0.89 },
-  "晴嵐":  { gender: "f", slot: 5, seatHint: 10, studioVoice: "Leda",       pitch: 0.99, basicPitch: 0.996, rateMul: 0.92 },
-  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Orus",       pitch: 0.99, basicPitch: 0.995, rateMul: 1.07 },
-  "柚子":  { gender: "f", slot: 6, seatHint: 12, studioVoice: "Zephyr",     pitch: 1.06, basicPitch: 1.020, rateMul: 1.07 }
+  "主持":  { gender: "f", slot: 0, seatHint: 0, studioVoice: "Leda",       pitch: 1.00, basicPitch: 1.00, rateMul: 0.96 },
+  "你":    { gender: "f", slot: 1, seatHint: 1, studioVoice: "Kore",       pitch: 1.04, basicPitch: 1.03, rateMul: 1.00 },
+  "你_男": { gender: "m", slot: 0, seatHint: 1, studioVoice: "Puck",       pitch: 0.92, basicPitch: 0.90, rateMul: 1.00 },
+  "小澄":  { gender: "m", slot: 1, seatHint: 2, studioVoice: "Orus",       pitch: 0.95, basicPitch: 0.94, rateMul: 1.08 },
+  "暖暖":  { gender: "f", slot: 2, seatHint: 3, studioVoice: "Aoede",      pitch: 1.08, basicPitch: 1.06, rateMul: 0.92 },
+  "阿松":  { gender: "m", slot: 2, seatHint: 4, studioVoice: "Charon",     pitch: 0.80, basicPitch: 0.82, rateMul: 0.88 },
+  "星兒":  { gender: "f", slot: 3, seatHint: 5, studioVoice: "Zephyr",     pitch: 1.18, basicPitch: 1.13, rateMul: 1.12 },
+  "小雲":  { gender: "f", slot: 4, seatHint: 6, studioVoice: "Callirrhoe", pitch: 0.97, basicPitch: 0.98, rateMul: 1.11 },
+  "阿竹":  { gender: "m", slot: 3, seatHint: 7,  studioVoice: "Fenrir",     pitch: 0.88, basicPitch: 0.89, rateMul: 0.90 },
+  "晨晨":  { gender: "m", slot: 4, seatHint: 8,  studioVoice: "Puck",       pitch: 1.08, basicPitch: 1.04, rateMul: 1.16 },
+  "墨白":  { gender: "m", slot: 5, seatHint: 9,  studioVoice: "Charon",     pitch: 0.74, basicPitch: 0.78, rateMul: 0.83 },
+  "晴嵐":  { gender: "f", slot: 5, seatHint: 10, studioVoice: "Leda",       pitch: 0.88, basicPitch: 0.90, rateMul: 0.86 },
+  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Orus",       pitch: 1.01, basicPitch: 0.98, rateMul: 1.14 },
+  "柚子":  { gender: "f", slot: 6, seatHint: 12, studioVoice: "Zephyr",     pitch: 1.26, basicPitch: 1.18, rateMul: 1.14 }
 };
 
 const PERSONA_TTS_DIRECTIONS = {
@@ -166,7 +166,7 @@ const voice = {
 
   isMaleVoice: function (v) {
     const name = String(v.name || "");
-    return /YunJhe|Yunxi|Yunjian|Yunyang|Zhiwei|Kangkang|Yu-?shu|Male|男/i.test(name);
+    return /YunJhe|Yunxi|Yunjian|Yunyang|Yunjie|Yunze|Yunfeng|Yunhao|Zhiwei|Kangkang|Yu-?shu|Li-?mu|Male|男/i.test(name);
   },
 
   updateEngineStatusUi: function () {
@@ -829,14 +829,14 @@ const voice = {
       const isBasicVoice = vScore < 135;
       const missingMaleFallback = (profile && profile.gender === "m" && (!chosenVoice || !this.isMaleVoice(chosenVoice)));
 
-      // Zero-Distortion Pitch Guard: basic OS voices ring/buzz if pitch strays far from 1.0!
-      const baseRate = clamp(this.rate * (profile.rateMul || 1.0), 0.90, 1.15);
+      // Expressive Per-Persona Vocal Range: clearly separate all 11 characters in pitch & cadence even on static Web Speech API!
+      const baseRate = clamp(this.rate * (profile.rateMul || 1.0), 0.80, 1.24);
       const basePitch = missingMaleFallback
-        ? 0.96
+        ? clamp((profile.pitch || 0.94) - 0.14, 0.68, 0.94)
         : (isBasicVoice
-          ? clamp(profile.basicPitch || 1.0, 0.98, 1.02)
-          : clamp(profile.pitch || 1.0, 0.94, 1.05));
-      const effVol = clamp(this.volume * (isBasicVoice ? 0.90 : 1.0), 0, 1);
+          ? clamp(profile.basicPitch || 1.0, 0.76, 1.20)
+          : clamp(profile.pitch || 1.0, 0.70, 1.30));
+      const effVol = clamp(this.volume * (isBasicVoice ? 0.92 : 1.0), 0, 1);
 
       const clauses = this.splitMandarinClauses(clean);
       this.setVisualSpeaking(true);

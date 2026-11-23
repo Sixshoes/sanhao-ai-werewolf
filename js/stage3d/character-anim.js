@@ -299,7 +299,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
   const nSeats = seats.length;
   const tLayout = typeof get3DTableLayout === "function"
     ? get3DTableLayout(nSeats)
-    : { ringRadius: nSeats >= 12 ? 5.92 : (nSeats >= 10 ? 5.42 : (nSeats >= 8 ? 4.85 : 4.55)), propZ: nSeats >= 10 ? 2.08 : (nSeats >= 8 ? 2.06 : 1.95) };
+    : { ringRadius: nSeats >= 12 ? 5.52 : (nSeats >= 10 ? 4.98 : (nSeats >= 8 ? 4.44 : 4.18)), propZ: nSeats >= 12 ? 1.66 : (nSeats >= 10 ? 1.64 : 1.62) };
   const ringRadius = tLayout.ringRadius;
   const propBaseZ = tLayout.propZ;
   const t = f.tSec;
@@ -379,10 +379,14 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     const isHovered = state.hoverSeatId === s.id && s.alive;
     const isDragSnap = state.dragAction.active && state.dragAction.snapId === s.id;
     const isSpeaking = (((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN") && s.alive) || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id;
-    const isTalkingNow = isSpeaking && Boolean(state.typewriter.active || voice.speaking);
+    const isSilentSpeechWindow = Boolean(state.activeSpeechAnimUntil && nowMs < state.activeSpeechAnimUntil);
+    const isTalkingNow = isSpeaking && Boolean(state.typewriter.active || voice.speaking || isSilentSpeechWindow);
     const isVotingNow = (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT") && s.alive;
     const isBeingAccusedNow = Boolean(s.alive && activeAccuseTargetId === s.id && state.activeSpeakerId && state.activeSpeakerId !== s.id);
-    const liveAmp = isTalkingNow && typeof voice !== "undefined" ? voice.getLiveMouthLevel(s.id, nowMs) : 0;
+    let liveAmp = isTalkingNow && typeof voice !== "undefined" ? voice.getLiveMouthLevel(s.id, nowMs) : 0;
+    if (isTalkingNow && liveAmp < 0.08) {
+      liveAmp = clamp(0.32 + Math.abs(Math.sin(t * 11.4 + s.id * 1.9)) * 0.42 + Math.abs(Math.sin(t * 4.7 + s.id)) * 0.18, 0.18, 0.85);
+    }
 
     // Shared spring-damper physics
     const phys = ensureSeatPhys(s.id);
@@ -403,9 +407,9 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     const baseFacingY = Math.atan2(-pos.x, -pos.z);
     actor.root.rotation.y = baseFacingY;
 
-    // Anchor tabletop props (plaque, candle, teacup, mark crystal, ID card) firmly ON the walnut table across 6/8/10/12 seats AND eliminated slide-out!
+    // Anchor tabletop props (plaque, candle, teacup, mark crystal, ID card) firmly ON the ergonomic walnut table across 6/8/10/12 seats AND eliminated slide-out!
     if (actor.tablePropGroup) {
-      actor.tablePropGroup.position.set(0, 1.24 + actor.outFade * 0.12, propBaseZ + ringRadius * (radialOut - 1.0));
+      actor.tablePropGroup.position.set(0, 1.07 + actor.outFade * 0.12, propBaseZ + ringRadius * (radialOut - 1.0));
     }
 
     const breath = s.alive ? Math.sin(t * 2.2 + s.id * 1.1) * 0.025 : 0;
@@ -682,7 +686,11 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       const spSusVal = (s.suspicionMap && state.activeSpeakerId) ? (s.suspicionMap[state.activeSpeakerId] || 50) : 50;
       const isListeningCurious = Boolean(
         s.alive && !isSpeaking && !isBeingAccusedNow && !isBeingVouchedNow &&
-        p === "DAY_SPEECH" && state.activeSpeakerId && (spSusVal >= 56 || ((s.id + (state.match ? state.match.day : 1)) % 3 === 0))
+        p === "DAY_SPEECH" && state.activeSpeakerId && (spSusVal >= 58 || ((s.id + (state.match ? state.match.day : 1)) % 4 === 0))
+      );
+      const isListeningAgree = Boolean(
+        s.alive && !isSpeaking && !isBeingAccusedNow && !isListeningCurious &&
+        p === "DAY_SPEECH" && state.activeSpeakerId && spSusVal <= 42
       );
       stage3dVrm.updateVrmAvatar(actor.vrmAvatar, {
         tSec: t,
@@ -703,6 +711,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         isAccusing: isBeingAccusedNow || scAct === "gasp_react",
         isBeingVouched: isBeingVouchedNow,
         isListeningCurious: isListeningCurious,
+        isListeningAgree: isListeningAgree,
         speechAct: speechActNow,
         isHovered: isHovered || isSelected,
         isPriority: isSpeaking || isHovered || isSelected || isDragSnap,

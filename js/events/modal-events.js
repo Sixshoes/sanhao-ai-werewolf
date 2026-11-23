@@ -70,7 +70,11 @@ function bindModalEvents() {
       const tutOpenNow = Boolean(tutModNow && !tutModNow.classList.contains("hidden"));
       if (dealOv && !dealOv.classList.contains("hidden") && !tutOpenNow && typeof indieFlow !== "undefined") {
         ev.preventDefault();
-        indieFlow.hideRoleDealRitual();
+        if (!indieFlow.dealRevealed && typeof indieFlow.unsealRoleDealCard === "function") {
+          indieFlow.unsealRoleDealCard();
+        } else {
+          indieFlow.hideRoleDealRitual();
+        }
         return;
       }
     }

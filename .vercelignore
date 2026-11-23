@@ -1,0 +1,11 @@
+tests/
+tools/
+.tts_cache/
+.feedback_inbox/
+.git/
+server.py
+start_server.bat
+*.log
+*.bak
+*.tmp
+feedback_submissions.jsonl

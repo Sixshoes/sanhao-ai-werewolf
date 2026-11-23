@@ -220,16 +220,16 @@ function renderNightRoleTipStrip(p, pSelf) {
         const cs = getSeat(c.targetId);
         return fmtSeatNum(c.targetId) + (cs ? cs.name : "") + "=" + (c.isWolf ? "酸民狼" : "好人");
       }).join(" ｜ "))
-      : "🔮 明心觀察員・首夜查證：點選 1 位夥伴立刻得知真實陣營！";
+      : "";
   } else if (p === "NIGHT_WITCH") {
     const healOk = Boolean(state.match.witchPotions && state.match.witchPotions.heal);
     const purOk = Boolean(state.match.witchPotions && state.match.witchPotions.purify);
-    text = "🍵 滴水奉茶師庫存：暖心茶(" + (healOk ? "可用" : "已用") + ")・清心茶(" + (purOk ? "可用" : "已用") + ")｜同夜限一盞・第2夜不可自護";
+    text = "🍵 滴水奉茶師庫存：暖心茶(" + (healOk ? "可用" : "已用") + ")・清心茶(" + (purOk ? "可用" : "已用") + ")｜同夜限一盞";
   } else if (p === "NIGHT_GUARD") {
     const lg = state.match.lastGuardTargetId ? getSeat(state.match.lastGuardTargetId) : null;
     text = lg
-      ? ("🛡️ 護心守衛輪值：上晚已守 " + fmtSeatNum(lg.id) + "號" + lg.name + "（今晚禁連守）｜可守己・留意勿與回甘茶同守破盾")
-      : "🛡️ 護心守衛首夜：可守護任意 1 席（含自己），若與奉茶師同守同救會造成破盾！";
+      ? ("🛡️ 上晚已守 " + fmtSeatNum(lg.id) + "號" + lg.name + "（今晚禁連守）")
+      : "";
   } else if (p === "NIGHT_WOLF") {
     tone = "is-wolf";
     const mates = state.match.seats.filter(function (s) { return s.id !== getPlayerId() && s.role === "wolf"; });
@@ -243,14 +243,9 @@ function renderNightRoleTipStrip(p, pSelf) {
       const md = typeof getWolfGodMarkDef === "function" ? getWolfGodMarkDef(marks[k]) : { label: marks[k] };
       return (ms && ms.alive && md.label) ? (fmtSeatNum(sid) + ms.name + "(" + md.label + ")") : "";
     }).filter(Boolean);
-    text = mateLbl + (markList.length > 0 ? (" ｜ 🔍 獵神筆記：" + markList.join("、")) : " ｜ 下方可同步指定明日 AI 同伴戰術");
+    text = mateLbl + (markList.length > 0 ? (" ｜ 🔍 獵神筆記：" + markList.join("、")) : " ｜ 可指定明日同伴戰術");
   } else if (p === "HUNTER_TRIGGER") {
-    if (pSelf.isWolfKing) {
-      tone = "is-wolf";
-      text = "👑 流言首領・最後帶風向：挑選 1 位最棘手的好人或神職一同離席！";
-    } else {
-      text = "⚖️ 直心糾察長・正氣共鳴：挑選 1 位你最確定的酸民狼一同離席冷靜！";
-    }
+    text = "";
   }
   if (text) {
     tipEl.textContent = text;

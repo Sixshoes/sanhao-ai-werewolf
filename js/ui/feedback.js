@@ -34,6 +34,16 @@ const feedbackUiState = {
   lastEntry: null
 };
 
+function isAnonymousReviewHost() {
+  try {
+    if (typeof window !== "undefined" && window.location && window.location.hostname) {
+      const host = String(window.location.hostname).toLowerCase();
+      return host.endsWith(".vercel.app") || host.endsWith(".netlify.app");
+    }
+  } catch (e) {}
+  return false;
+}
+
 function resolveFeedbackGithubRepo() {
   try {
     if (typeof window !== "undefined" && window.location && window.location.hostname) {
@@ -89,7 +99,7 @@ function collectFeedbackDiagnostics() {
     : "未開局或已遮蔽";
 
   return {
-    version: "v9.3",
+    version: "v11.0 (公測 1.0)",
     timestamp: new Date().toISOString(),
     started: Boolean(m.started),
     phase: String(m.phase || "LOBBY"),
@@ -252,6 +262,9 @@ function openFeedbackModal() {
   refreshFeedbackEnvPreview();
   renderFeedbackHistoryList();
   if (el("feedbackResultCard")) el("feedbackResultCard").classList.add("hidden");
+  if (el("btnOpenGithubFeedback")) {
+    el("btnOpenGithubFeedback").classList.toggle("hidden", isAnonymousReviewHost());
+  }
   modal.classList.remove("hidden");
   if (el("inputFeedbackBody") && typeof el("inputFeedbackBody").focus === "function") {
     el("inputFeedbackBody").focus();

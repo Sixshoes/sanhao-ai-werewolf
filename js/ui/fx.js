@@ -7,10 +7,11 @@ function spawnFx(seatId, text, color, opts) {
   const node = state.seatCoords.find(function (c) { return c.id === seatId; });
   const mul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
   const baseDur = (opts && opts.durationMs) ? Math.max(opts.durationMs, 1750) : 1950;
+  const cleanText = typeof shStripCanvasEmoji === "function" ? shStripCanvasEmoji(text) : String(text || "");
   state.fxPopups.push({
     x: node ? node.x : 220,
     y: node ? (node.y - 24) : 140,
-    text: text,
+    text: cleanText,
     color: color || "#fde68a",
     born: performance.now(),
     duration: Math.round(baseDur * mul),

@@ -335,6 +335,20 @@ function bindCanvasEvents() {
   }
 
   window.addEventListener("resize", resizeCanvas);
+  if (typeof ResizeObserver === "function") {
+    const wrapEl = el("canvasStageWrap") || el("canvasContainer");
+    if (wrapEl) {
+      let roRaf = 0;
+      const ro = new ResizeObserver(function () {
+        if (roRaf) return;
+        roRaf = requestAnimationFrame(function () {
+          roRaf = 0;
+          resizeCanvas();
+        });
+      });
+      ro.observe(wrapEl);
+    }
+  }
 
   // Tactile 3D Card Perspective Tilt on hover for Speech Cards, Four-Givings Fan & Role Deal Card
   let activeTiltCard = null;

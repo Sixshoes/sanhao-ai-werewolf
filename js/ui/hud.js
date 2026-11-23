@@ -265,6 +265,9 @@ function renderSeatStrip() {
       cls.push("is-disabled-target");
     }
     btn.className = cls.join(" ");
+    if (s.alive && s.color && !isSelected) {
+      btn.style.borderLeftColor = s.color;
+    }
 
     const artUrl = (typeof getPortraitImageUrl === "function") ? getPortraitImageUrl(s) : null;
     if (artUrl) {
@@ -283,6 +286,7 @@ function renderSeatStrip() {
       btn.appendChild(numDot);
     }
 
+    const shortTagSeat = (s.id !== pid && typeof getPersonaShortTag === "function") ? getPersonaShortTag(s) : "";
     const nameSpan = document.createElement("span");
     nameSpan.className = "seat-pill-name";
     nameSpan.textContent = (isSheriff ? "👑" : "") + s.id + (s.id === pid ? "你" : s.name);
@@ -359,58 +363,58 @@ function getLiveRoleActionHint(p, effKey, phase) {
   if (!p) return "";
   if (!p.alive) {
     if (phase === "HUNTER_TRIGGER" && typeof canSeatTriggerShot === "function" && canSeatTriggerShot(p)) {
-      return p.isWolfKing ? "▶ 立即點選 1 位好人發動最後反撲！" : "▶ 立即點選 1 位可疑者發動正氣共鳴！";
+      return p.isWolfKing ? "點選 1 位好人發動最後反撲" : "點選 1 位可疑者發動正氣共鳴";
     }
-    if (phase === "LAST_WORDS_PLAYER") return "▶ 發表離席遺言，留下關鍵線索給夥伴！";
-    return p.role === "wolf" ? "▶ 席外觀戰中：可用下方「獵神挑戰」猜全場神職" : "▶ 席外觀戰中：可用下方「猜狼挑戰」抓出酸民狼";
+    if (phase === "LAST_WORDS_PLAYER") return "發表離席遺言，留下關鍵線索";
+    return p.role === "wolf" ? "席外觀戰・下方可猜全場神職" : "席外觀戰・下方可猜酸民狼";
   }
-  if (phase === "NIGHT_SEER" && effKey === "seer") return "▶ 今夜行動：點 1 席靜心查證真偽";
-  if (phase === "NIGHT_WITCH" && effKey === "witch") return "▶ 今夜行動：決定端暖心茶護回，或清心茶請離";
-  if (phase === "NIGHT_GUARD" && effKey === "guard") return "▶ 今夜行動：選 1 席展開結界（勿連守昨晚對象）";
-  if (phase === "NIGHT_WOLF" && p.role === "wolf") return "▶ 今夜行動：鎖定好人目標＋下達明日狼隊戰術";
+  if (phase === "NIGHT_SEER" && effKey === "seer") return "今夜點 1 席靜心查證真偽";
+  if (phase === "NIGHT_WITCH" && effKey === "witch") return "決定端暖心茶護回，或清心茶請離";
+  if (phase === "NIGHT_GUARD" && effKey === "guard") return "選 1 席展開結界（勿連守同人）";
+  if (phase === "NIGHT_WOLF" && p.role === "wolf") return "鎖定目標並下達明日狼隊戰術";
   if (phase === "SHERIFF_ELECTION") {
     return effKey === "seer"
-      ? "▶ 推薦上警競選：搶 1.5 票與警徽流主導權！"
-      : (p.role === "wolf" ? "▶ 可大膽上警悍跳搶警徽，或警下觀察真觀察員" : "▶ 聆聽候選人發言，決定上警或警下投票");
+      ? "建議上警競選，搶 1.5 票與歸票權"
+      : (p.role === "wolf" ? "可上警悍跳搶警徽，或警下觀察" : "聆聽候選人發言，決定上警或投票");
   }
   if (phase === "DAY_PLAYER_TURN") {
-    if (effKey === "seer") return "▶ 輪到你：可按「🔮 亮觀察員報驗」公開紀錄並盤好人坑";
-    if (effKey === "witch") return "▶ 輪到你：決定低調聽盤，或按「🍵 亮奉茶師報銀水」";
-    if (effKey === "guard") return "▶ 輪到你：建議低調防刀，危急時再亮守衛報路線";
-    if (effKey === "hunter") return "▶ 輪到你：穩健歸票；遭針對可按「⚖️ 亮糾察長威懾」";
-    if (effKey === "elder") return p.elderShieldUsed ? "▶ 輪到你：雖無投票權，但發言最可信，帶領好人歸票！" : "▶ 輪到你：善用豁免盾替神職扛壓，放心保多位好人坑";
-    if (effKey === "wolf_king") return "▶ 輪到你：用狼人佈局板甩鍋／假保＋獵神，被投可反撲！";
-    if (effKey === "wolf") return "▶ 輪到你：用狼人佈局板鎖定甩鍋目標與獵神筆記（勿點同伴）";
-    return "▶ 輪到你：好人坑不限人數！多保好夥伴並聚焦檢視狼坑";
+    if (effKey === "seer") return "可點「亮觀察員報驗」公開查證紀錄";
+    if (effKey === "witch") return "低調聽盤，或適時亮奉茶師作證";
+    if (effKey === "guard") return "建議低調防刀，危急時再報守衛線";
+    if (effKey === "hunter") return "穩健歸票；遭針對可亮糾察長威懾";
+    if (effKey === "elder") return p.elderShieldUsed ? "雖無投票權但公信最高，帶領歸票" : "善用豁免盾替神職扛壓、多保好人";
+    if (effKey === "wolf_king") return "用佈局板甩鍋／獵神，被投可反撲";
+    if (effKey === "wolf") return "用佈局板甩鍋並記獵神（勿點同伴）";
+    return "好人坑不限人數，多保好夥伴並鎖狼";
   }
   if (phase === "DAY_VOTE") {
-    if (effKey === "elder" && p.voteDisabled) return "▶ 已發動長老豁免（本局無投票權，靜候開票）";
-    if (p.role === "wolf") return p.isWolfKing ? "▶ 公投帶節奏避開同伴；若被投出將發動狼王反撲！" : "▶ 配合狼隊票型投好人，切勿投給同伴！";
-    return state.match.goodwillVoteBonus ? "▶ 🌟 黃金善意票 +1 生效中！選最可疑對象投出關鍵一票" : "▶ 點選最可疑座位公投（可先用右側四給錦囊！）";
+    if (effKey === "elder" && p.voteDisabled) return "長老豁免已觸發（本局靜候開票）";
+    if (p.role === "wolf") return p.isWolfKing ? "帶節奏避開同伴；被投出可反撲" : "配合狼隊投好人，切勿投同伴";
+    return state.match.goodwillVoteBonus ? "黃金善意票 +1 生效，投出關鍵票" : "點選最可疑座位公投（可用四給卡）";
   }
   if (phase === "DAY_SPEECH") {
-    if (p.role === "wolf") return "▶ 聽發言找真神職，點頭像記假保／甩鍋，裝作好人！";
-    return "▶ 聽發言按認同／存疑、觀微或奉暖茶，善用說好話化解酸言";
+    if (p.role === "wolf") return "聽發言找真神職，點頭像記假保／甩鍋";
+    return "聽發言按認同／存疑，適時觀微或奉茶";
   }
-  return "▶ 靜心觀察局勢，準備下一階段行動";
+  return "靜心觀察局勢，準備下一階段";
 }
 
 function getThreeGoodGuidanceSummary(isWolfPlayer) {
   const tg = (state.match && state.match.threeGood) || { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
   if (tg.resonanceTriggered) {
     return {
-      text: isWolfPlayer ? "🌟 三好偽裝圓滿・深水信任光環生效中" : "🌟 三好蓮花圓滿・公投「黃金善意票 +1」生效中！",
+      text: isWolfPlayer ? "三好偽裝圓滿・戒心已降" : "三好圓滿・黃金善意票 +1",
       litCount: 3,
       awakened: true
     };
   }
   const missing = [];
-  if (tg.heart < 1) missing.push("存好心(查證/推理)");
-  if (tg.words < 1) missing.push("說好話(溫和發言/給歡喜)");
-  if (tg.deeds < 1) missing.push("做好事(奉暖茶/給信心)");
+  if (tg.heart < 1) missing.push("存好心");
+  if (tg.words < 1) missing.push("說好話");
+  if (tg.deeds < 1) missing.push("做好事");
   const litCount = 3 - missing.length;
   return {
-    text: "🪷 三好 " + litCount + "/3｜缺：" + missing[0],
+    text: "三好 " + litCount + "/3 · 缺" + missing[0],
     litCount: litCount,
     awakened: false
   };
@@ -512,13 +516,16 @@ function renderLiveToolkitStrip(p) {
     return;
   }
   const tk = buildLiveAvailableTools(p, state.match.phase);
+  const icoSearch = typeof shIcon === "function" ? shIcon("search", "gold") : "";
+  const icoTea = typeof shIcon === "function" ? shIcon("witch", "jade") : "";
+  const icoSpark = typeof shIcon === "function" ? shIcon("spark", "gold") : "";
   const pills = [];
   if (!tk.classicMode) {
-    pills.push('<span class="toolkit-pill ' + (tk.mRem > 0 && tk.isDayToolPhase ? "is-ready" : (tk.mRem > 0 ? "is-standby" : "is-spent")) + '">🔍 心虛' + tk.mRem + "</span>");
-    pills.push('<span class="toolkit-pill ' + (tk.teaRem > 0 && tk.isDayToolPhase ? "is-ready" : (tk.teaRem > 0 ? "is-standby" : "is-spent")) + '">🍵 暖茶' + tk.teaRem + "</span>");
+    pills.push('<span class="toolkit-pill ' + (tk.mRem > 0 && tk.isDayToolPhase ? "is-ready" : (tk.mRem > 0 ? "is-standby" : "is-spent")) + '">' + icoSearch + "心虛" + tk.mRem + "</span>");
+    pills.push('<span class="toolkit-pill ' + (tk.teaRem > 0 && tk.isDayToolPhase ? "is-ready" : (tk.teaRem > 0 ? "is-standby" : "is-spent")) + '">' + icoTea + "暖茶" + tk.teaRem + "</span>");
   }
-  pills.push('<span class="toolkit-pill ' + (tk.fgRem > 0 && tk.fgReadyNow ? "is-ready" : (tk.fgRem > 0 ? "is-standby" : "is-spent")) + '">✨ 四給' + tk.fgRem + "</span>");
-  strip.innerHTML = '<span class="toolkit-lead">可用</span>' + pills.join("");
+  pills.push('<span class="toolkit-pill ' + (tk.fgRem > 0 && tk.fgReadyNow ? "is-ready" : (tk.fgRem > 0 ? "is-standby" : "is-spent")) + '">' + icoSpark + "四給" + tk.fgRem + "</span>");
+  strip.innerHTML = pills.join("");
   strip.classList.remove("hidden");
 }
 
@@ -579,7 +586,7 @@ function openRoleGuidePopover(mode) {
       '<div class="role-guide-reward">' + escapeHtml(rewardText) + "</div>" +
       '<div class="text-[10.5px] text-amber-200/90 pt-0.5">' + escapeHtml(synText) + "</div>";
   } else {
-    if (titleEl) titleEl.textContent = guide.icon + " " + rDef.name + "・此刻能做什麼";
+    if (titleEl) titleEl.textContent = guide.icon + " " + rDef.name + "・指南";
     if (badgeEl) {
       badgeEl.textContent = guide.shortRole;
       badgeEl.className = "text-[10px] px-1.5 py-0.5 rounded shrink-0 border " + (isWolf ? "bg-rose-500/25 text-rose-200 border-rose-400/45" : "bg-emerald-500/20 text-emerald-200 border-emerald-400/40");
@@ -596,8 +603,14 @@ function openRoleGuidePopover(mode) {
         '<div class="text-[10px] opacity-85 mt-0.5">' + escapeHtml(it.desc) + "</div>" +
       "</div>";
     }).join("");
+    const classicModeGuide = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
+    const misGuide = !classicModeGuide ? (typeof evaluateRoleMission === "function" ? evaluateRoleMission() : state.match.roleMission) : null;
+    const misGuideHtml = misGuide
+      ? ('<div class="role-guide-row ' + (misGuide.completed ? "is-lit" : "") + '"><span class="font-bold text-amber-200">' + (misGuide.completed ? "✅ 密令達成：" : "🎋 本局密令：") + '</span>' + escapeHtml(misGuide.title + "（" + misGuide.progressText + "）") + "</div>")
+      : "";
     bodyEl.innerHTML =
       '<div class="guide-now-box"><div class="text-[10px] font-bold text-amber-300/90">⚡ 現在這一步</div><div class="font-bold text-amber-50 mt-0.5">' + escapeHtml(nowHint) + "</div></div>" +
+      misGuideHtml +
       '<div class="space-y-1"><div class="text-[10px] font-bold text-slate-300">🎒 你目前手上的道具與按鈕</div>' + toolsHtml + "</div>" +
       '<div class="pt-1 border-t border-slate-700/60 space-y-1">' +
         '<div class="role-guide-row"><span class="font-bold text-amber-200">🎯 勝利目標：</span>' + escapeHtml(guide.winCond) + "</div>" +
@@ -627,8 +640,8 @@ function renderPlayerRoleCard() {
   }
   if (!state.match.started) {
     pill.textContent = "待抽牌";
-    pill.className = "inline-block text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-bold";
-    box.textContent = "推薦選「明心觀察員（預言家）」，每晚靜心查證 1 位夥伴！";
+    pill.className = "role-nameplate";
+    box.textContent = "推薦選「明心觀察員」，每晚靜心查證 1 位夥伴";
     if (actHint) actHint.textContent = "";
     if (tgLine) tgLine.textContent = "";
     if (misLine) misLine.classList.add("hidden");
@@ -639,11 +652,11 @@ function renderPlayerRoleCard() {
   const p = getPlayerSeat();
   const effKey = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(p) : p.role;
   const rDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(p) : null) || ROLE_DEFS[p.role];
-  const guide = (typeof ROLE_GUIDES !== "undefined" && ROLE_GUIDES[effKey]) ? ROLE_GUIDES[effKey] : { icon: "📖", themeClass: "role-theme-villager" };
+  const guide = (typeof ROLE_GUIDES !== "undefined" && ROLE_GUIDES[effKey]) ? ROLE_GUIDES[effKey] : { icon: "", themeClass: "role-theme-villager" };
 
   if (state.hidePlayerRole && state.match.phase !== "GAME_OVER") {
-    pill.textContent = "已遮蔽";
-    pill.className = "inline-block text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-bold";
+    pill.textContent = "底牌已遮蔽";
+    pill.className = "role-nameplate is-masked";
     box.textContent = "再點「遮蔽」即可顯示底牌";
     if (actHint) actHint.textContent = "";
     if (tgLine) tgLine.textContent = "";
@@ -653,35 +666,39 @@ function renderPlayerRoleCard() {
   }
 
   if (tile && guide.themeClass) tile.classList.add(guide.themeClass);
-  pill.textContent = guide.icon + " " + rDef.name + (!p.alive ? " (休息)" : "");
-  pill.className = "inline-block text-[11px] px-2 py-0.5 rounded-full border font-bold truncate " + rDef.badgeBg;
+  pill.textContent = rDef.name + (!p.alive ? " (離席)" : "");
+  pill.className = "role-nameplate " + (p.role === "wolf" ? "is-wolf" : "is-good");
+  if (typeof shPrependIcon === "function") {
+    const rkMap = { seer: "seer", witch: "witch", hunter: "scales", guard: "guard", elder: "elder", villager: "villager", wolf: "wolf", wolf_king: "crown" };
+    shPrependIcon(pill, rkMap[effKey] || "spark", p.role === "wolf" ? "cinnabar" : "gold");
+  }
 
   let info = rDef.desc;
   if (effKey === "guard") {
     info = state.match.lastGuardTargetId
-      ? ("上晚守：" + fmtSeatNum(state.match.lastGuardTargetId) + "號（今晚禁連守・可守己）")
-      : "護心結界就緒・每晚可守 1 席（防同守同救）";
+      ? ("上晚守 " + fmtSeatNum(state.match.lastGuardTargetId) + "號・今晚禁連守")
+      : "護心結界就緒・可守 1 席（防破盾）";
   } else if (effKey === "seer") {
     info = p.checkedHistory.length > 0
       ? ("查驗：" + p.checkedHistory.map(function (c) { return c.targetId + "號=" + (c.isWolf ? "狼" : "好"); }).join("｜"))
-      : "尚未查驗・每晚可靜心查證 1 位夥伴";
+      : "尚未查驗・每晚靜心查證 1 位夥伴";
   } else if (effKey === "witch") {
     const sv = p.savedSeatId ? ("｜銀水:" + p.savedSeatId + "號") : "";
     info = "暖心茶:" + (state.match.witchPotions.heal ? "有" : "已奉") + "｜清心茶:" + (state.match.witchPotions.purify ? "有" : "已奉") + sv;
   } else if (effKey === "hunter") {
-    info = "正氣共鳴就緒・遭投或迷霧離席可帶走 1 席";
+    info = "正氣共鳴就緒・離席可帶走 1 席";
   } else if (effKey === "elder") {
     info = p.elderShieldUsed
-      ? "豁免已觸發（無投票權・保留發言帶隊）"
-      : "豁免護盾未觸發・首次公投誤投免離席";
+      ? "豁免已觸發（無投票權・保留發言）"
+      : "護盾未觸發・首次公投誤投免離席";
   } else if (p.role === "wolf") {
     const mates = state.match.seats.filter(function (s) { return s.id !== getPlayerId() && s.role === "wolf"; });
     const mateTxt = mates.length > 0 ? ("同伴：" + mates.map(function (m) { return m.id + "號" + m.name + (m.alive ? "" : "(離)"); }).join("、")) : "獨狼作戰";
-    info = p.isWolfKing ? ("👑 狼王反撲就緒｜" + mateTxt) : mateTxt;
+    info = p.isWolfKing ? ("狼王反撲就緒｜" + mateTxt) : mateTxt;
   } else {
     const gCnt = Object.keys(state.playerMarks || {}).filter(function (k) { return state.playerMarks[k] === "good"; }).length;
     const wCnt = Object.keys(state.playerMarks || {}).filter(function (k) { return state.playerMarks[k] === "wolf"; }).length;
-    info = "好人推理位・已標 " + gCnt + " 好人 / " + wCnt + " 存疑（好人坑不限人數）";
+    info = "好人推理位・已標 " + gCnt + " 好人 / " + wCnt + " 存疑";
   }
   box.textContent = info;
 
@@ -692,17 +709,18 @@ function renderPlayerRoleCard() {
   if (tgLine) {
     const tgSum = getThreeGoodGuidanceSummary(p.role === "wolf");
     tgLine.textContent = tgSum.text;
-    tgLine.className = "three-good-guide-line text-[9.5px] mt-1 pt-1 border-t border-slate-700/50 truncate" + (tgSum.awakened ? " is-awakened" : "");
+    tgLine.className = "three-good-guide-line truncate" + (tgSum.awakened ? " is-awakened" : "");
   }
   if (misLine) {
     const classicMode = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
     const mis = !classicMode ? (typeof evaluateRoleMission === "function" ? evaluateRoleMission() : state.match.roleMission) : null;
     if (mis) {
       misLine.classList.remove("hidden");
-      misLine.textContent = (mis.completed ? "🏅 密令完成：" : "📜 密令「" + mis.title + "」：") + (mis.completed ? (mis.title + " +15") : mis.progressText);
-      misLine.className = mis.completed
-        ? "text-[9.5px] font-bold text-emerald-300 mt-1 pt-1 border-t border-slate-700/60 truncate"
-        : "text-[9.5px] text-amber-300/90 mt-1 pt-1 border-t border-slate-700/60 truncate";
+      misLine.textContent = (mis.completed ? "密令達成・" : "密令・") + mis.title + (mis.completed ? " (+15)" : ("（" + mis.progressText + "）"));
+      misLine.className = "role-mission-line truncate" + (mis.completed ? " is-done" : "");
+      if (typeof shPrependIcon === "function") {
+        shPrependIcon(misLine, mis.completed ? "trophy" : "bamboo", mis.completed ? "jade" : "gold");
+      }
     } else {
       misLine.classList.add("hidden");
     }
@@ -726,8 +744,8 @@ function renderFourGBlessings() {
   if (deck) deck.classList.toggle("is-synergy-ready", synReady);
   if (synHint) synHint.classList.toggle("hidden", !synReady);
   const defaultHeadText = remain > 0
-    ? ("✨ 四給錦囊 · 剩 " + remain + "/4（移上查看・點卡即用）")
-    : "✨ 四給錦囊 · 本局已全施展";
+    ? ("✨ 四給錦囊 · " + remain + "/4 ▴")
+    : "✨ 四給錦囊 · 已全用";
   if (deckHead) {
     deckHead.setAttribute("data-default-text", defaultHeadText);
     if (!deckHead.classList.contains("is-previewing")) {

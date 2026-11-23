@@ -65,13 +65,13 @@ const stage3d = {
     const pidNow = typeof getPlayerId === "function" ? getPlayerId() : 1;
     const selfAnchor = this.seats && this.seats.anchors ? this.seats.anchors[pidNow] : null;
     const nSeats = typeof getActive3DSeatCount === "function" ? getActive3DSeatCount() : 8;
-    const layout = typeof get3DTableLayout === "function" ? get3DTableLayout(nSeats) : { ringRadius: 4.85 };
+    const layout = typeof get3DTableLayout === "function" ? get3DTableLayout(nSeats) : { ringRadius: 4.44 };
     const selfAngle = selfAnchor ? Math.atan2(selfAnchor.worldPos.x, selfAnchor.worldPos.z) : 0;
     const selfR = selfAnchor ? Math.max(layout.ringRadius, Math.hypot(selfAnchor.worldPos.x, selfAnchor.worldPos.z)) : layout.ringRadius;
-    // Tuck naturally into the wooden armchair backrest so peripheral round-table seats & foreground teacup/candle/card all frame cleanly!
-    const backOffset = nSeats >= 12 ? 1.15 : (nSeats >= 10 ? 1.02 : (nSeats >= 8 ? 0.90 : 0.82));
+    // Tuck cleanly at seated eye-level ahead of neighbor hands so bottom corners stay pristine & opposite faces clear the lotus!
+    const backOffset = nSeats >= 12 ? 0.68 : (nSeats >= 10 ? 0.56 : (nSeats >= 8 ? 0.42 : 0.36));
     const eyeR = selfR + backOffset;
-    const eyeY = nSeats >= 12 ? 2.62 : (nSeats >= 10 ? 2.56 : 2.48);
+    const eyeY = nSeats >= 12 ? 2.62 : (nSeats >= 10 ? 2.56 : 2.50);
     return {
       pid: pidNow,
       angle: selfAngle,
@@ -180,7 +180,7 @@ const stage3d = {
       this.scene = scene;
       this.camera = camera;
       this.raycaster = new THREE.Raycaster();
-      this.tablePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.35);
+      this.tablePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.12);
       this.orbit.lookAt = new THREE.Vector3(0, 1.35, 0);
       this.orbit.targetLookAt = new THREE.Vector3(0, 1.35, 0);
 
@@ -558,7 +558,7 @@ const stage3d = {
     rootObj.traverse(function (node) {
       if (!node) return;
       if (node.geometry && typeof node.geometry.dispose === "function") {
-        try { node.geometry.dispose(); } catch (e) {}
+        try { node.geometry.dispose(); } catch (e) { }
       }
       if (node.material) {
         const mats = Array.isArray(node.material) ? node.material : [node.material];
@@ -566,11 +566,11 @@ const stage3d = {
           if (!m) return;
           ["map", "normalMap", "emissiveMap", "roughnessMap", "metalnessMap"].forEach(function (k) {
             if (m[k] && typeof m[k].dispose === "function") {
-              try { m[k].dispose(); } catch (e) {}
+              try { m[k].dispose(); } catch (e) { }
             }
           });
           if (typeof m.dispose === "function") {
-            try { m.dispose(); } catch (e) {}
+            try { m.dispose(); } catch (e) { }
           }
         });
       }
@@ -585,7 +585,7 @@ const stage3d = {
     }
     let prep = null;
     if (typeof stage3dVrm !== "undefined" && typeof stage3dVrm.prepareLoadedAvatar === "function") {
-      prep = stage3dVrm.prepareLoadedAvatar(gltf, { mode: "standing", targetHeight: 2.40, baseY: 0.18 });
+      prep = stage3dVrm.prepareLoadedAvatar(gltf, { mode: "standing", targetHeight: 2.14, baseY: 0.08 });
     }
     const mdl = prep ? prep.root : gltf.scene;
     if (!prep) {
@@ -596,11 +596,11 @@ const stage3d = {
         box.getSize(size);
         box.getCenter(center);
         const maxH = Math.max(0.001, size.y);
-        const sc = 2.40 / maxH;
+        const sc = 2.14 / maxH;
         mdl.scale.setScalar(sc);
-        mdl.position.set(-center.x * sc, 0.18 - box.min.y * sc, -center.z * sc);
+        mdl.position.set(-center.x * sc, 0.08 - box.min.y * sc, -center.z * sc);
       } else {
-        mdl.position.y = 0.18;
+        mdl.position.y = 0.08;
       }
       if (typeof mdl.traverse === "function") {
         mdl.traverse(function (child) {
@@ -676,16 +676,16 @@ const stage3d = {
         if (typeof gltf.parser.getDependency === "function") {
           gltf.parser.getDependency("image", imgIdx).then(function (img) {
             if (img) stage3d._canvasEncodePortrait(personaKey, img);
-          }).catch(function () {});
+          }).catch(function () { });
         }
         return null;
       }
       if (typeof texIdx === "number" && typeof gltf.parser.getDependency === "function") {
         gltf.parser.getDependency("texture", texIdx).then(function (tex) {
           if (tex && tex.image) stage3d._canvasEncodePortrait(personaKey, tex.image);
-        }).catch(function () {});
+        }).catch(function () { });
       }
-    } catch (e) {}
+    } catch (e) { }
     return null;
   },
 
@@ -703,7 +703,7 @@ const stage3d = {
       if (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.registerVrmPortrait === "function") {
         stage3dTextures.registerVrmPortrait(personaKey, url);
       }
-    } catch (e) {}
+    } catch (e) { }
   },
 
   updateVrmLoadIndicator: function () {
@@ -908,7 +908,7 @@ const stage3d = {
       if (info.pavilionModel) {
         loader.load(info.pavilionModel, function (pvGltf) {
           self.attachCustomPavilionGlb(pvGltf, info.pavilionModel.split("/").pop(), true);
-        }, undefined, function () {});
+        }, undefined, function () { });
       }
       const heroUrl = info.heroModel || (info.hasHeroGlb ? "assets/models/qingming.glb" : null);
       if (heroUrl && self.hero) {
@@ -1282,25 +1282,25 @@ const stage3d = {
         o.targetRadius = 12.8 + largeTableR * 1.15;
         o.targetLookAt.set(0, 1.0, 0);
       } else if (!state.match.started || p === "LOBBY") {
-        // Theatrical Indie Title Screen Framing: gentle sweep showing table + Qingming + Guishan Island right of title
-        o.targetYaw = -0.18 + Math.sin(f.tSec * 0.14) * 0.26;
-        o.targetPitch = 0.36;
-        o.targetRadius = 11.4 + largeTableR;
-        o.targetLookAt.set(-1.05, 1.55, -1.15);
+        // Theatrical Indie Title Screen Framing: gentle sweep showing intimate table + Qingming + layered mountains & Guishan Island
+        o.targetYaw = -0.18 + Math.sin(f.tSec * 0.14) * 0.24;
+        o.targetPitch = 0.34;
+        o.targetRadius = 10.6 + largeTableR;
+        o.targetLookAt.set(-0.92, 1.42, -0.95);
       } else if (f.night) {
         const nightFocusId = state.selectedSeatId || state.hoverSeatId;
         const nightAnchor = (nightFocusId && this.seats.anchors[nightFocusId]) ? this.seats.anchors[nightFocusId] : null;
         if (nightAnchor) {
           const np = nightAnchor.worldPos;
           o.targetYaw = -Math.sin(Math.atan2(np.x, np.z)) * 0.24;
-          o.targetPitch = 0.62;
-          o.targetRadius = 11.6 + largeTableR * 0.85;
-          o.targetLookAt.set(np.x * 0.22, 0.72, np.z * 0.22 + 0.28);
+          o.targetPitch = 0.60;
+          o.targetRadius = 11.0 + largeTableR * 0.85;
+          o.targetLookAt.set(np.x * 0.22, 0.68, np.z * 0.22 + 0.26);
         } else {
           o.targetYaw = Math.sin(f.tSec * 0.12) * 0.14;
-          o.targetPitch = 0.68;
-          o.targetRadius = 12.6 + largeTableR;
-          o.targetLookAt.set(0, 0.58, 0.35);
+          o.targetPitch = 0.65;
+          o.targetRadius = 11.8 + largeTableR;
+          o.targetLookAt.set(0, 0.56, 0.32);
         }
       } else if ((p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId && this.seats.anchors[state.activeSpeakerId]) {
         const spPos = this.seats.anchors[state.activeSpeakerId].worldPos;
@@ -1315,12 +1315,12 @@ const stage3d = {
         const focusAnchor = (focusId && this.seats.anchors[focusId]) ? this.seats.anchors[focusId] : null;
         const focusPos = focusAnchor ? focusAnchor.worldPos : null;
         const aimX = focusPos ? (spPos.x * 0.46 + focusPos.x * 0.20) : (spPos.x * 0.38);
-        const aimZ = focusPos ? (spPos.z * 0.46 + focusPos.z * 0.20 + 0.26) : (spPos.z * 0.38 + 0.28);
+        const aimZ = focusPos ? (spPos.z * 0.46 + focusPos.z * 0.20 + 0.24) : (spPos.z * 0.38 + 0.26);
         const spAngle = Math.atan2(spPos.x, spPos.z);
         o.targetYaw = -Math.sin(spAngle) * ((isAccuseShot || isPkSpeech) ? 0.52 : 0.42);
-        o.targetPitch = (isClaimShot || isPkSpeech) ? 0.39 : (isAccuseShot ? 0.42 : (focusPos ? 0.46 : 0.44));
-        o.targetRadius = ((isClaimShot || isPkSpeech) ? 8.7 : (isAccuseShot ? 9.3 : (focusPos ? 10.0 : 9.4))) + largeTableR * 0.65;
-        o.targetLookAt.set(aimX, (isClaimShot || isPkSpeech) ? 1.02 : 0.86, aimZ);
+        o.targetPitch = (isClaimShot || isPkSpeech) ? 0.37 : (isAccuseShot ? 0.40 : (focusPos ? 0.44 : 0.42));
+        o.targetRadius = ((isClaimShot || isPkSpeech) ? 8.2 : (isAccuseShot ? 8.8 : (focusPos ? 9.4 : 8.9))) + largeTableR * 0.65;
+        o.targetLookAt.set(aimX, (isClaimShot || isPkSpeech) ? 0.98 : 0.84, aimZ);
       } else if ((p === "DAY_VOTE" && isPkVoteActive()) || (p === "DAY_SPEECH" && state.match.seats.filter(function (s) { return s.alive && s.claimedRole === "seer"; }).length >= 2 && !state.activeSpeakerId)) {
         // Dual-Rival Confrontation Framing (PK or Seer Clash!)
         const rivals = isPkVoteActive()
@@ -1590,10 +1590,12 @@ function draw3DOverlayHud(ctx, f, coords) {
     let isSubtleNameplate = false;
     let prio = 1;
     const sRoleDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : null) || ROLE_DEFS[s.role];
+    const sShortTag = (s.id !== getPlayerId() && typeof getPersonaShortTag === "function") ? getPersonaShortTag(s) : "";
+    const sNameTag = s.id === getPlayerId() ? "你" : (s.name + (sShortTag ? ("·" + sShortTag) : ""));
     if (isSpeaking) {
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + s.name + (!s.alive ? "・遺言中" : "・發言中");
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sNameTag + (!s.alive ? "｜遺言中" : "｜發言中");
       topBg = "rgba(166, 50, 38, 0.94)";
-      topBorder = "rgba(242, 212, 156, 0.85)";
+      topBorder = s.color || "rgba(242, 212, 156, 0.85)";
       topFg = "#fbf5ea";
       prio = 4;
     } else if (!s.alive) {
@@ -1649,18 +1651,26 @@ function draw3DOverlayHud(ctx, f, coords) {
       topFg = "#fbf5ea";
       prio = 2;
     } else if (state.hoverSeatId === s.id) {
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + "號 " + s.name;
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + "號 " + sNameTag;
       topBg = "rgba(22, 17, 13, 0.92)";
-      topBorder = "rgba(212, 166, 87, 0.72)";
-      topFg = "#e8c884";
+      topBorder = s.color || "rgba(212, 166, 87, 0.72)";
+      topFg = "#f5dfac";
       prio = 3;
     } else if (inMatch && isSheriff) {
       isSubtleNameplate = true;
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + (s.id === getPlayerId() ? "你" : s.name);
-      topBg = "rgba(18, 14, 11, 0.72)";
-      topBorder = "rgba(245, 196, 81, 0.75)";
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sNameTag;
+      topBg = "rgba(18, 14, 11, 0.78)";
+      topBorder = "rgba(245, 196, 81, 0.78)";
       topFg = "#fde68a";
       prio = 2;
+    } else if (inMatch && s.alive) {
+      // Permanent whisper-subtle color-coded character nameplate above every seated avatar so players instantly recognize who is who!
+      isSubtleNameplate = true;
+      topTag = fmtSeatNum(s.id) + " " + sNameTag;
+      topBg = "rgba(18, 14, 11, 0.72)";
+      topBorder = s.color || "rgba(212, 166, 87, 0.48)";
+      topFg = "#efe7d8";
+      prio = 1;
     }
 
     if (topTag) {

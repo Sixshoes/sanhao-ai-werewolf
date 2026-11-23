@@ -12,7 +12,10 @@
 const PERSONA_COGNITIVE_PROFILES = Object.freeze({
   "小澄": Object.freeze({
     register: "data",
-    registerBadge: "📊 數據運算派",
+    shortTag: "數據",
+    iconKey: "abacus",
+    iconTone: "indigo",
+    registerBadge: "邏輯推演派",
     logicTags: "極度審慎・獨立派・愛藏牌",
     credulity: 0.48,
     grudgeMemory: 1.35,
@@ -21,12 +24,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.56,
     godHideBias: 0.72,
     talkCadence: 1.05,
-    sampleQuote: "載入時間軸比對完畢！邏輯閉環率不到兩成，異常值警報直接鎖死，照證據投票就好，結案！",
-    llmStyleRule: "使用資訊工程／數據分析口吻（常帶『時間軸、異常值、邏輯閉環、樣本數、機率收斂、結案』），冷靜俐落、絕不盲從起鬨。"
+    sampleQuote: "我把前面幾位的時間點對了一遍，前後完全兜不攏。先照證據投這張，別被帶偏了，過。",
+    llmStyleRule: "使用冷靜俐落的台灣資工系學長口吻（常帶『對一下時間線、前後兜不攏、用排除法看、講重點、票型對照、先過』），克制不煽情；嚴禁使用『邏輯閉環、高置信度、異常值、行為向量、算力、載入模型』等生硬機器詞彙。"
   }),
   "暖暖": Object.freeze({
     register: "warm",
-    registerBadge: "🍵 暖茶反差萌",
+    shortTag: "泡茶",
+    iconKey: "witch",
+    iconTone: "jade",
+    registerBadge: "暖茶反差萌",
     logicTags: "高輕信・極痛恨酸言・溫柔補刀",
     credulity: 1.45,
     grudgeMemory: 0.55,
@@ -35,12 +41,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.42,
     godHideBias: 0.28,
     talkCadence: 0.88,
-    sampleQuote: "先喝口熱茶別動氣嘛～暖暖最怕大家兇巴巴吵架了，如果誰一直刺刺地挑撥，只好先請他去旁邊喝花茶冷靜囉～",
+    sampleQuote: "先喝口熱茶別動氣嘛～暖暖最怕大家兇巴巴吵架了，如果誰一直刺刺地挑撥，只好先請他去旁邊喝花茶冷靜囉。",
     llmStyleRule: "溫柔軟萌、愛用泡茶暖場哄人（常帶『熱茶、別動氣嘛、暖暖好擔心、喝花茶冷靜』）；抽到酸民狼時要展現笑裡藏刀的反差萌，用最甜的語氣補最狠的刀。"
   }),
   "阿松": Object.freeze({
     register: "mountain",
-    registerBadge: "🏔️ 山林江湖台味",
+    shortTag: "登山",
+    iconKey: "mountain",
+    iconTone: "jade",
+    registerBadge: "山林江湖台味",
     logicTags: "老練穩健・不易跟風・重義氣",
     credulity: 0.60,
     grudgeMemory: 1.05,
@@ -49,12 +58,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.50,
     godHideBias: 0.55,
     talkCadence: 0.82,
-    sampleQuote: "嘿！老松爬林美山三十年看雲海嵐氣看多了，誰一開口就在放山霧迷魂陣我一眼就懂，咱們不繞山路直接抓狼！",
+    sampleQuote: "老松爬林美山三十年，雲海嵐氣看多了。誰一開口就在放山霧迷魂陣我一眼就懂，咱們不繞山路，直接抓狼。",
     llmStyleRule: "自稱『老松』，充滿台灣登山老學長的豪爽江湖味，愛用『爬山、看雲海、走稜線、山嵐、龜山島日出、老江湖』等山林比喻，講話接地氣又帶幽默。"
   }),
   "星兒": Object.freeze({
     register: "astro",
-    registerBadge: "🔮 占星靈感少女",
+    shortTag: "占星",
+    iconKey: "star",
+    iconTone: "gold",
+    registerBadge: "占星靈感少女",
     logicTags: "直覺衝刺・有牌必亮・高悍跳膽量",
     credulity: 1.32,
     grudgeMemory: 1.15,
@@ -63,12 +75,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.80,
     godHideBias: 0.15,
     talkCadence: 1.28,
-    sampleQuote: "嗚哇水逆警報大響！我的觀星第六感雷達狂閃紅燈，起雞皮疙瘩了啦，這股氣場絕對藏著酸民狼！",
-    llmStyleRule: "活潑中二占星少女口吻（常帶『水逆警報、星盤紅燈、塔羅第六感、觀星雷達、起雞皮疙瘩、封印』），綜藝驚嘆感強、語速輕快有靈氣。"
+    sampleQuote: "欸等等，我今天的水逆直覺突然大響，剛聽那段整個起雞皮疙瘩耶，這股氣場絕對藏著酸民狼。",
+    llmStyleRule: "活潑帶點神祕感的占星社女生口吻（常帶『水逆、星盤、第六感、起雞皮疙瘩、氣場不對』），生動輕快，注意自然口語、不要每句都塞滿驚嘆號。"
   }),
   "小雲": Object.freeze({
     register: "press",
-    registerBadge: "📰 事實查核踢爆",
+    shortTag: "主播",
+    iconKey: "press",
+    iconTone: "cinnabar",
+    registerBadge: "事實查核踢爆",
     logicTags: "銳利審慎・高記仇追查・獨立求證",
     credulity: 0.52,
     grudgeMemory: 1.65,
@@ -77,12 +92,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.68,
     godHideBias: 0.62,
     talkCadence: 1.10,
-    sampleQuote: "事實查核報告出爐！調出剛才的逐字稿交叉對照，前後時間差完全對不上，典型的帶風向假訊息話術！",
-    llmStyleRule: "犀利校園新聞查核社長口吻（常帶『事實查核、逐字稿對照、消息來源、時間差、頭版踢爆、標記紅燈』），追查前後矛盾絕不手軟。"
+    sampleQuote: "我翻了一下剛才記的逐字筆記，前後說法明顯有時間差，這種帶風向的話術瞞不過查核。",
+    llmStyleRule: "犀利校園新聞查核社長口吻（常帶『逐字筆記、消息來源、時間差、查核對照、頭版點名』），追查前後矛盾不留情面、語氣乾脆冷靜。"
   }),
   "阿竹": Object.freeze({
     register: "poetic",
-    registerBadge: "📜 江南詩茶半文言",
+    shortTag: "詩茶",
+    iconKey: "bamboo",
+    iconTone: "jade",
+    registerBadge: "江南詩茶半文言",
     logicTags: "風雅平衡・重三好氣度・從容藏鋒",
     credulity: 0.88,
     grudgeMemory: 0.72,
@@ -91,12 +109,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.35,
     godHideBias: 0.58,
     talkCadence: 0.85,
-    sampleQuote: "且慢，一盞凍頂未涼，席間破綻已浮茶面矣！古人云聽其言而觀其行，小生便以此茶敬奉諸君明辨。",
-    llmStyleRule: "江南書院詩茶文青的『半文言雅韻』口吻（自稱『小生』或『阿竹』，常帶『且慢、一盞茶未涼、古人云、清者自清、席間破綻、莫急莫躁』），優雅幽默不說教。"
+    sampleQuote: "且慢，一盞凍頂未涼，席間破綻已浮茶面矣。古人云聽其言而觀其行，小生便以此茶敬奉諸君明辨。",
+    llmStyleRule: "江南書院詩茶文青的『半文言雅韻』口吻（自稱『小生』或『阿竹』，常帶『且慢、一盞茶未涼、古人云、清者自清、席間破綻、莫急莫躁』），從容幽默不說教。"
   }),
   "晨晨": Object.freeze({
     register: "sport",
-    registerBadge: "🔥 熱血球社衝鋒",
+    shortTag: "球社",
+    iconKey: "flame",
+    iconTone: "cinnabar",
+    registerBadge: "熱血球社衝鋒",
     logicTags: "熱血硬剛・極愛搶跳・零藏牌衝鋒",
     credulity: 1.12,
     grudgeMemory: 1.50,
@@ -105,12 +126,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.92,
     godHideBias: 0.10,
     talkCadence: 1.32,
-    sampleQuote: "燃起來啦兄弟們！剛才那波發言防守破綻大得像大空檔，不直接抄截快攻灌籃投出去對不起全場！衝了！",
-    llmStyleRule: "熱血運動漫畫主角口吻（常帶『燃起來啦、兄弟們、防守破綻、抄截快攻、絕殺灌籃、全場進攻、衝了』），情緒高昂、直來直往、絕不閃躲。"
+    sampleQuote: "兄弟們這波看清楚了，剛才那段發言破綻大得像漏防空檔，不直接抄截投出去對不起全場，衝了！",
+    llmStyleRule: "熱血球社隊長口吻（常帶『兄弟們、防守破綻、抄截快攻、正面對決、衝了』），爽朗直來直往、有球友講義氣的語感。"
   }),
   "墨白": Object.freeze({
     register: "classical",
-    registerBadge: "🖋️ 魏晉純文言判詞",
+    shortTag: "文言",
+    iconKey: "brush",
+    iconTone: "indigo",
+    registerBadge: "魏晉純文言判詞",
     logicTags: "極度審慎・最強反骨・深水控場",
     credulity: 0.42,
     grudgeMemory: 1.42,
@@ -119,12 +143,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.28,
     godHideBias: 0.85,
     talkCadence: 0.68,
-    sampleQuote: "觀此席間，破綻昭然。此人言辭閃爍、顛倒黑白，實乃酸民狼無疑！諸君莫為浮言所惑，當共逐之。言盡於此，請公決之。",
-    llmStyleRule: "【最高優先文言文規範】全程必須使用簡練冷峻、易懂有氣勢的純正魏晉文言文！自稱『吾』、稱眾人『諸君』、稱對手『此人／彼輩』，結尾用『言盡於此，請公決之』或『吾言畢，過』；絕對禁用『欸、啦、超扯、哈哈、喔』等現代白話語氣詞！"
+    sampleQuote: "觀此席間，破綻昭然。此人言辭閃爍、顛倒黑白，實乃酸民狼無疑。諸君莫為浮言所惑，當共逐之。言盡於此，請公決之。",
+    llmStyleRule: "【最高優先文言文規範】全程必須使用簡練冷峻、易懂有氣勢的純正魏晉文言文！自稱『吾』、稱眾人『諸君』、稱對手『此人／彼輩』，結尾用『言盡於此，請公決之。』或『吾言畢，過。』；絕對禁用『欸、啦、超扯、哈哈、喔』等現代白話語氣詞，標點以句號與分號為主，克制沉穩。"
   }),
   "晴嵐": Object.freeze({
     register: "guzheng",
-    registerBadge: "🎼 宋詞樂府雅言",
+    shortTag: "古箏",
+    iconKey: "guzheng",
+    iconTone: "gold",
+    registerBadge: "宋詞樂府雅言",
     logicTags: "溫雅審慎・極重清音和氣・深藏不露",
     credulity: 0.75,
     grudgeMemory: 0.82,
@@ -138,7 +165,10 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
   }),
   "阿朗": Object.freeze({
     register: "debate",
-    registerBadge: "⚖️ 法庭奧瑞岡辯論",
+    shortTag: "辯論",
+    iconKey: "scales",
+    iconTone: "gold",
+    registerBadge: "法庭奧瑞岡辯論",
     logicTags: "高審慎・最高記仇反打・強勢對跳",
     credulity: 0.50,
     grudgeMemory: 1.78,
@@ -147,12 +177,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.88,
     godHideBias: 0.48,
     talkCadence: 1.20,
-    sampleQuote: "我方提出異議！請問對方辯友，您既無法提出實質佐證又意圖偷換概念，舉證責任完全失守，請全場評審本輪裁決！",
+    sampleQuote: "我方提出異議。請問對方辯友，您既拿不出實質佐證又意圖偷換概念，舉證責任完全失守，請全場評審本輪裁決。",
     llmStyleRule: "犀利辯論社主辯／法庭交叉質詢口吻（常帶『我方提出異議、請問對方辯友、舉證責任、偷換概念、結辯陳詞、全場評審裁決』），字字鏗鏘、擅長反問壓制。"
   }),
   "柚子": Object.freeze({
     register: "pastry",
-    registerBadge: "🧁 元氣烘焙甜點派",
+    shortTag: "甜點",
+    iconKey: "pastry",
+    iconTone: "jade",
+    registerBadge: "元氣烘焙甜點派",
     logicTags: "高輕信・最強跟票共鳴・甜美活潑",
     credulity: 1.40,
     grudgeMemory: 0.78,
@@ -161,14 +194,17 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.52,
     godHideBias: 0.20,
     talkCadence: 1.24,
-    sampleQuote: "咦～等等唷！剛剛那段發言聽起來像沒烤熟的舒芙蕾一樣軟趴趴又空心耶～柚子要先把這盤烤焦的嫌疑端下桌囉！",
-    llmStyleRule: "元氣點心社學妹口吻，愛用烘焙甜點比喻推理（常帶『舒芙蕾塌掉、烤焦、沒發酵、糖霜、剛出爐、甜甜的、咦～等等唷』），語氣活潑可愛、充滿朝氣。"
+    sampleQuote: "咦～等等唷，剛剛那段聽起來像沒烤熟的舒芙蕾一樣軟趴趴又空心耶，柚子想先把這盤烤焦的嫌疑端下桌。",
+    llmStyleRule: "元氣點心社學妹口吻，愛用烘焙甜點比喻推理（常帶『舒芙蕾塌掉、烤焦、沒發酵、糖霜、剛出爐、咦～等等唷』），語氣活潑自然、充滿朝氣。"
   })
 });
 
 const DEFAULT_PERSONA_PROFILE = Object.freeze({
   register: "balanced",
-  registerBadge: "🍃 書院推理派",
+  shortTag: "書院",
+  iconKey: "leaf",
+  iconTone: "jade",
+  registerBadge: "書院推理派",
   logicTags: "理性觀察・平和推理",
   credulity: 1.0,
   grudgeMemory: 1.0,
@@ -177,9 +213,16 @@ const DEFAULT_PERSONA_PROFILE = Object.freeze({
   bluffBoldness: 0.55,
   godHideBias: 0.40,
   talkCadence: 1.0,
-  sampleQuote: "大家心平氣和對齊線索，一起守護林美山茶席的清朗氣氛！",
+  sampleQuote: "大家心平氣和對齊線索，一起守護林美山茶席的清朗氣氛。",
   llmStyleRule: "自然親切的台灣書院夥伴口語，理性清晰。"
 });
+
+function getPersonaShortTag(seatOrName) {
+  const name = typeof seatOrName === "string" ? seatOrName : (seatOrName && seatOrName.name ? seatOrName.name : "");
+  if (!name || name === "你") return "";
+  const prof = PERSONA_COGNITIVE_PROFILES[name];
+  return (prof && prof.shortTag) || "";
+}
 
 function getPersonaProfile(seatOrName) {
   const name = typeof seatOrName === "string"
@@ -257,63 +300,63 @@ function getPersonaVotePersonalityDelta(voter, candidate, opts) {
 // ==================== 11-REGISTER RICH SPEECH ENGINE ====================
 
 const PERSONA_THINKING_CUES = Object.freeze({
-  "小澄": "指尖輕點桌面，正在載入剛才的發言時間軸模型…",
+  "小澄": "指尖輕點桌面，正在把剛才的發言順序理成一條時間線…",
   "暖暖": "雙手捧起暖茶杯，溫柔地回想剛才每位夥伴的語氣…",
   "阿松": "雙手抱胸微微頷首，像在山頂望雲海般看穿席間風向…",
-  "星兒": "雙眼亮起靈感星芒，正接收全場的占星第六感訊號…",
+  "星兒": "眨眼望著燈火，正捕捉席間幾位夥伴的微妙氣場…",
   "小雲": "迅速翻閱查核筆記本，比對前幾位發言的時間差…",
   "阿竹": "輕搖茶盞聞香片刻，細細推敲方才幾句弦外之音…",
-  "晨晨": "握拳熱身躍躍欲試，已經鎖定這波要衝鋒突破的破綻…",
+  "晨晨": "握拳摩掌躍躍欲試，已經盯準這輪要追問的破綻…",
   "墨白": "垂眸靜息凝神，心中暗擬一紙冷峻判詞…",
-  "晴嵐": "指尖似撥無形古箏，靜聆前席餘韻辨其清濁…",
-  "阿朗": "整理胸前辯論筆記，準備展開凌厲的交叉質詢…",
+  "晴嵐": "指尖輕拂案沿似撥古箏，靜聆前席餘韻辨其清濁…",
+  "阿朗": "整理手邊辯論提綱，準備展開凌厲的交叉質詢…",
   "柚子": "歪頭托腮眨眨眼，回味誰的說法像沒烤熟的舒芙蕾…"
 });
 
 const PERSONA_LOBBY_GREETINGS = Object.freeze({
   "小澄": [
-    "早安！我的邏輯模型已經預熱完畢，開局後記得跟我同步時間線抓酸民狼！",
-    "開桌前先確認一下：這局照證據和票型收斂，酸民狼跑不掉的。"
+    "早安，筆記本都攤開了。開局後我們一起對齊時間線抓酸民狼。",
+    "開桌前先講好，這局照票型跟證據投，酸民狼藏不住的。"
   ],
   "暖暖": [
-    "嗨呀快坐下喝杯熱茶～這局我們一起說好話、和和氣氣揪出酸民狼好不好？",
-    "茶席的桂花茶剛沏好喔！開局後別緊張，暖暖會幫好人暖場的～"
+    "嗨呀，快坐下喝杯熱茶～這局我們說好話、和和氣氣抓出酸民狼好不好？",
+    "茶席的桂花茶剛沏好喔，開局後別緊張，暖暖會幫大家暖場的。"
   ],
   "阿松": [
-    "哈哈來坐來坐！老松剛從林美山觀景台下來，眼神雪亮得很，等下一起抓狼！",
-    "山風吹得正舒服，按「開始對局」上桌喝茶，看老松怎麼一眼識破假風向！"
+    "哈哈，來坐來坐，老松剛從林美山觀景台下來，眼神還亮得很，等等一起抓狼。",
+    "山風吹得正舒服，按「入席開局」上桌喝茶，看老松一眼識破假風向。"
   ],
   "星兒": [
-    "欸欸！我剛剛看星盤說我們今天超有默契耶～快開局讓我的第六感大爆發吧！",
-    "叮咚！觀星雷達已開機，等下誰心虛亂講話我保證第一個抓到！"
+    "欸，我剛剛翻星盤說我們今天特別有默契耶，快開局試試手氣吧。",
+    "第六感已經暖機好了，等下誰心虛亂帶風向我一定第一個聽出來。"
   ],
   "小雲": [
-    "你好，查核筆記本已經翻開第一頁了！這局誰敢散播假風向我就直接頭版踢爆！",
-    "開局前記得留心每個人前後有沒有自相矛盾，細節永遠不會說謊。"
+    "你好，查核筆記已經翻開第一頁了。這局誰敢散播假風向我直接點名。",
+    "開局前記得留心每個人前後有沒有自相矛盾，細節不會說謊。"
   ],
   "阿竹": [
-    "幸會同窗！清茶已備、山嵐正雅，待開局且與小生共品席間真偽。",
-    "茶都還沒涼呢，選好席次便入座對弈吧，清者自清、妄言難藏！"
+    "幸會同窗，清茶已備、山嵐正雅，待開局且與小生共品席間真偽。",
+    "茶都還沒涼呢，選好席次便入座對弈吧，清者自清、妄言難藏。"
   ],
   "晨晨": [
-    "衝啊夥伴！熱身完畢就差按「開始對局」開球啦，這局直接把酸民狼灌爆！",
-    "耶！氣勢拉滿！開局後跟著我一起守住好人防線、抓破綻快攻！"
+    "走吧夥伴，熱身完畢就差開局了，這場我們穩穩守住好人防線！",
+    "氣勢到位，等等跟著一起看票型抓破綻，把酸民狼送下場。"
   ],
   "墨白": [
     "幸會。墨池已研、茶席將啟，待會觀諸君言行，真偽自見分曉。",
     "既臨書院茶席，便當明辨是非。請即開局，吾已備好判詞待之。"
   ],
   "晴嵐": [
-    "同窗安好～古箏初調、清茶微暖，願今日席間和氣清音，共辨真誠與虛妄。",
-    "輕撥一弦迎君入席，開局後不妨細聆眾人弦外之音，破綻自然浮現喔。"
+    "同窗安好，古箏初調、清茶微暖，願今日席間和氣清音，共辨真偽。",
+    "輕撥一弦迎君入席，開局後不妨細聆眾人弦外之音，破綻自然浮現。"
   ],
   "阿朗": [
-    "歡迎來到林美山辯論茶席！準備好跟我一起用交叉質詢拆穿酸民狼的漏洞了嗎？",
-    "正反雙方即將就位！按「開始對局」，這場邏輯攻防保證精彩！"
+    "歡迎來到林美山辯論茶席，準備好一起用交叉質詢拆穿漏洞了嗎？",
+    "正反雙方就位，開局後這場邏輯攻防肯定精彩。"
   ],
   "柚子": [
-    "學長姊好呀～柚子剛烤好小茶點端上桌囉！快按開始對局，一起開心抓狼吧！",
-    "耶～好期待這局喔！等等大家要溫柔說好話，不要被酸溜溜的壞狼騙走囉！"
+    "學長姊好呀，柚子剛烤好小茶點端上桌囉，快開局一起抓狼吧。",
+    "好期待這局喔，等等大家溫柔說好話，可別被酸溜溜的壞狼騙走了。"
   ]
 });
 
@@ -351,7 +394,7 @@ function formatUnspokenNoteByPersona(speaker, unspokenOthers, seatLabelFn) {
     return "後置位 " + firstLbl + (more ? " 諸位" : "") + "茶尚未舉、言猶未發，且待後聞再補全圖。";
   }
   if (reg === "data") {
-    return "後置位 " + firstLbl + (more ? " 等席位" : "") + "樣本數為零，待數據回填再收斂狼坑。";
+    return "後置位 " + firstLbl + (more ? " 幾位" : "") + "還沒發言，等他們講完再補齊狼坑。";
   }
   if (reg === "debate") {
     return "後置位 " + firstLbl + (more ? " 等辯友" : "") + "尚未申論，暫保留質詢空間。";
@@ -407,10 +450,10 @@ function buildPersonaDualSeerText(speaker, data) {
   }
   if (reg === "data") {
     return leadPrefix +
-      "分支一：站 " + sALbl + "，則 " + sBLbl + " 必佔狼位" + aSecondStr + aConflict + "；" +
-      "分支二：站 " + sBLbl + "，則 " + sALbl + " 必佔狼位" + bSecondStr + bConflict + "。" +
-      "雙邊矩陣收斂完畢，我站邊 " + trustedLbl + "，" + goodSideText +
-      "本輪最優解先出 " + fakeLbl + "！" + unspokenNote + signoffPhrase;
+      "分兩條線看：站 " + sALbl + "，那 " + sBLbl + " 必佔一狼" + aSecondStr + aConflict + "；" +
+      "改站 " + sBLbl + "，則換 " + sALbl + " 必佔一狼" + bSecondStr + bConflict + "。" +
+      "把兩邊說詞核對完，我站邊 " + trustedLbl + "，" + goodSideText +
+      "這輪先出 " + fakeLbl + "。" + unspokenNote + signoffPhrase;
   }
   if (reg === "debate") {
     return leadPrefix +
@@ -559,8 +602,8 @@ function buildPersonaPitRebutText(speaker, mode, d) {
       (allyLbl ? (allyLbl + " 先歸好人席，") : "") + "小生所指狼坑為 " + pitNamesStr + "！" + unspokenTail + signoff;
   }
   if (reg === "data") {
-    return rebutLead + "修正異常數據！前置位 " + accName + " 把我點進狼坑完全是雜訊誤判，我的行為向量 100% 符合好人模型！反而是 " + accName + " 零佐證就硬拉仇恨；重新計算後" +
-      (allyLbl ? (allyLbl + " 歸類好人坑，") : "") + "真實高風險狼坑是 " + pitNamesStr + "！" + unspokenTail + signoff;
+    return rebutLead + "前置位 " + accName + " 把我點進狼坑根本站不住腳，我前面立場跟發言前後一致，哪來的破綻？反倒是 " + accName + " 沒拿出證據就急著拉仇恨；重新理過一輪，" +
+      (allyLbl ? (allyLbl + " 先放好人坑，") : "") + "真正該盯的狼坑是 " + pitNamesStr + "。" + unspokenTail + signoff;
   }
   if (reg === "debate") {
     return rebutLead + "我方嚴正抗議！對方辯友 " + accName + " 在零證據下把我點進狼坑，已徹底喪失客觀立場！" +
@@ -703,7 +746,7 @@ function buildPersonaWolfNightLine(mate, targetLbl, mode) {
     if (reg === "classical") return "噤聲…吾觀 " + targetLbl + " 頗似神職要員，今夜先請彼暫退如何？已為汝標定！";
     if (reg === "guzheng") return "輕聲…妾身覺察 " + targetLbl + " 似為席間主心骨，今夜先請他歇息可好？";
     if (reg === "poetic") return "噓…小生觀 " + targetLbl + " 氣度不凡恐為核心好人，今夜先請他喝杯靜心茶吧！";
-    if (reg === "data") return "數據評估完畢，" + targetLbl + " 威脅度最高，建議今晚優先請他離席，已幫你標記！";
+    if (reg === "data") return "照場上表現看，" + targetLbl + " 最像核心好人，建議今晚先請他離席，我先標起來了。";
     if (reg === "pastry") return "噓～柚子覺得 " + targetLbl + " 看起來好厲害喔，今晚我們偷偷先把他請去休息好不好？";
     return "噓…我感覺 " + targetLbl + " 很像核心好夥伴，今晚先請他暫離如何？已幫你標起來！";
   }

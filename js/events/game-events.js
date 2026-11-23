@@ -990,6 +990,32 @@ function bindNightVoteAndFourGEvents() {
   el("btn4GHope").addEventListener("click", useFourGHope);
   el("btn4GConvenience").addEventListener("click", useFourGConvenience);
 
+  // v10.3 Collapsible Four-Givings Pouch: click header pill to toggle open/close cleanly on both touch and desktop
+  if (el("fourGDeckHeader") && el("cornerFourGDeck")) {
+    el("fourGDeckHeader").addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      sound.unlock();
+      el("cornerFourGDeck").classList.toggle("is-fan-open");
+    });
+    ["btn4GConfidence", "btn4GJoy", "btn4GHope", "btn4GConvenience"].forEach(function (bid) {
+      const b = el(bid);
+      if (b) {
+        b.addEventListener("click", function () {
+          el("cornerFourGDeck").classList.remove("is-fan-open");
+        });
+      }
+    });
+    if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+      document.addEventListener("click", function (ev) {
+        const deck = el("cornerFourGDeck");
+        if (!deck || !deck.classList.contains("is-fan-open")) return;
+        const tgt = ev && ev.target;
+        if (tgt && typeof deck.contains === "function" && deck.contains(tgt)) return;
+        deck.classList.remove("is-fan-open");
+      });
+    }
+  }
+
   // Live plain-language hover/focus preview on Four-Givings cards so players never have to guess what a card does!
   ["btn4GConfidence", "btn4GJoy", "btn4GHope", "btn4GConvenience"].forEach(function (bid) {
     const b = el(bid);

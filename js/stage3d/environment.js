@@ -10,15 +10,15 @@
 function get3DTableLayout(seatCount) {
   const n = seatCount || 8;
   if (n >= 12) {
-    return { n: 12, tableScale: 1.40, tableR: 4.55, ringRadius: 5.92, propZ: 2.08, pavilionScale: 1.15, heroMul: 1.24, camExtraR: 2.15 };
+    return { n: 12, tableScale: 1.40, tableR: 4.55, ringRadius: 5.52, propZ: 1.66, pavilionScale: 1.15, heroMul: 1.20, camExtraR: 1.55 };
   }
   if (n >= 10) {
-    return { n: 10, tableScale: 1.24, tableR: 4.03, ringRadius: 5.42, propZ: 2.08, pavilionScale: 1.08, heroMul: 1.13, camExtraR: 1.15 };
+    return { n: 10, tableScale: 1.24, tableR: 4.03, ringRadius: 4.98, propZ: 1.64, pavilionScale: 1.08, heroMul: 1.10, camExtraR: 0.65 };
   }
   if (n >= 8) {
-    return { n: 8, tableScale: 1.06, tableR: 3.45, ringRadius: 4.85, propZ: 2.06, pavilionScale: 1.0, heroMul: 1.0, camExtraR: 0.15 };
+    return { n: 8, tableScale: 1.08, tableR: 3.51, ringRadius: 4.44, propZ: 1.62, pavilionScale: 1.0, heroMul: 1.00, camExtraR: -0.35 };
   }
-  return { n: 6, tableScale: 1.00, tableR: 3.25, ringRadius: 4.55, propZ: 1.95, pavilionScale: 1.0, heroMul: 1.0, camExtraR: 0 };
+  return { n: 6, tableScale: 1.00, tableR: 3.25, ringRadius: 4.18, propZ: 1.62, pavilionScale: 1.0, heroMul: 0.96, camExtraR: -0.45 };
 }
 
 function getActive3DSeatCount() {
@@ -322,90 +322,103 @@ function createSculptedMountainRing(innerR, outerR, maxHeight, mat, seedShift) {
   return new THREE.Mesh(geo, mat);
 }
 
-function buildMountainPineTree(x, y, z, scaleMul) {
+function buildMountainPineTree(x, y, z, scaleMul, woodTex) {
   const g = new THREE.Group();
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x422a1b, roughness: 0.90, metalness: 0.03 });
-  const deepLeafMat = new THREE.MeshStandardMaterial({ color: 0x1d3b2b, roughness: 0.86, metalness: 0.03 });
+  const trunkMat = new THREE.MeshStandardMaterial({
+    map: woodTex ? woodTex.map : null,
+    bumpMap: woodTex ? woodTex.bump : null,
+    bumpScale: 0.085,
+    color: 0x332116,
+    roughness: 0.94,
+    metalness: 0.02
+  });
+  const deepLeafMat = new THREE.MeshStandardMaterial({ color: 0x183528, roughness: 0.90, metalness: 0.02 });
   const needleTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createPineNeedleTexture === "function")
     ? stage3dTextures.createPineNeedleTexture()
     : null;
   const fanMatShade = needleTex
     ? new THREE.MeshStandardMaterial({
         map: needleTex,
-        color: 0x5c9472,
-        alphaTest: 0.28,
+        color: 0x3e6e54,
+        alphaTest: 0.26,
         transparent: true,
-        roughness: 0.82,
+        roughness: 0.86,
         side: THREE.DoubleSide
       })
     : deepLeafMat;
   const fanMatSun = needleTex
     ? new THREE.MeshStandardMaterial({
         map: needleTex,
-        color: 0x8bc99b,
-        alphaTest: 0.28,
+        color: 0x6ea67c,
+        alphaTest: 0.26,
         transparent: true,
-        roughness: 0.76,
+        roughness: 0.80,
         side: THREE.DoubleSide
       })
     : deepLeafMat;
 
-  if (typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function") {
-    const curve = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0.42, 1.48, 0.18),
-      new THREE.Vector3(-0.14, 3.12, -0.08)
-    );
-    const trunk = new THREE.Mesh(new THREE.TubeGeometry(curve, 11, 0.155, 7, false), trunkMat);
-    trunk.castShadow = true;
-    g.add(trunk);
+  // Tapered gnarled Taiwanese black-pine trunk (3 organic bark segments from thick flared root to slender crest)
+  const segs = [
+    { x0: 0,     y0: 0,    z0: 0,     x1: 0.26,  y1: 1.55, z1: 0.11, rBot: 0.25, rTop: 0.19 },
+    { x0: 0.26,  y0: 1.50, z0: 0.11,  x1: 0.16,  y1: 3.15, z1: 0.04, rBot: 0.19, rTop: 0.135 },
+    { x0: 0.16,  y0: 3.10, z0: 0.04,  x1: -0.18, y1: 4.65, z1: -0.10, rBot: 0.135, rTop: 0.075 }
+  ];
+  segs.forEach(function (s) {
+    const dx = s.x1 - s.x0, dy = s.y1 - s.y0, dz = s.z1 - s.z0;
+    const len = Math.hypot(dx, dy, dz);
+    const segMesh = new THREE.Mesh(new THREE.CylinderGeometry(s.rTop, s.rBot, len, 9), trunkMat);
+    segMesh.position.set((s.x0 + s.x1) * 0.5, (s.y0 + s.y1) * 0.5, (s.z0 + s.z1) * 0.5);
+    segMesh.rotation.z = -Math.atan2(dx, dy);
+    segMesh.rotation.x = Math.atan2(dz, dy);
+    segMesh.castShadow = true;
+    g.add(segMesh);
+  });
 
-    // Gnarled bonsai-style lateral limbs connecting trunk to pine clouds
+  if (typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function") {
+    // Sweeping Taiwanese cliffside black-pine lateral limbs rising gracefully past pavilion eaves
     [
-      [new THREE.Vector3(0.24, 1.62, 0.10), new THREE.Vector3(0.56, 1.88, 0.24), new THREE.Vector3(0.76, 1.98, 0.30)],
-      [new THREE.Vector3(0.08, 2.22, 0.02), new THREE.Vector3(-0.32, 2.40, -0.16), new THREE.Vector3(-0.62, 2.48, -0.26)]
-    ].forEach(function (pts) {
-      const bCurve = new THREE.QuadraticBezierCurve3(pts[0], pts[1], pts[2]);
-      const limb = new THREE.Mesh(new THREE.TubeGeometry(bCurve, 6, 0.055, 5, false), trunkMat);
+      { pts: [new THREE.Vector3(0.22, 2.38, 0.09), new THREE.Vector3(0.86, 2.74, 0.30), new THREE.Vector3(1.38, 2.92, 0.44)], r: 0.068 },
+      { pts: [new THREE.Vector3(0.14, 3.25, 0.04), new THREE.Vector3(-0.56, 3.55, -0.24), new THREE.Vector3(-1.12, 3.72, -0.38)], r: 0.060 },
+      { pts: [new THREE.Vector3(-0.04, 3.92, -0.02), new THREE.Vector3(0.42, 4.22, -0.24), new THREE.Vector3(0.84, 4.34, -0.34)], r: 0.048 }
+    ].forEach(function (br) {
+      const bCurve = new THREE.QuadraticBezierCurve3(br.pts[0], br.pts[1], br.pts[2]);
+      const limb = new THREE.Mesh(new THREE.TubeGeometry(bCurve, 7, br.r, 6, false), trunkMat);
       g.add(limb);
     });
-  } else {
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.20, 3.0, 8), trunkMat);
-    trunk.position.y = 1.5;
-    g.add(trunk);
   }
 
   const canopy = new THREE.Group();
-  const fanGeo = new THREE.PlaneGeometry(1.52, 1.08);
+  const fanGeo = new THREE.PlaneGeometry(1.92, 1.32);
   [
-    [0.68, 2.02, 0.28, 1.02],
-    [-0.56, 2.52, -0.24, 0.94],
-    [0.10, 3.10, 0.04, 1.12],
-    [-0.14, 2.82, 0.44, 0.78]
+    [1.26, 2.96, 0.40, 1.24],
+    [-1.02, 3.76, -0.36, 1.20],
+    [0.78, 4.38, -0.32, 1.08],
+    [-0.18, 4.72, -0.06, 1.38],
+    [-0.22, 4.18, 0.58, 1.00]
   ].forEach(function (c, ti) {
-    // Low-profile dark-emerald pine bough core (tapered flat pagoda silhouette instead of round sphere)
-    const core = new THREE.Mesh(new THREE.ConeGeometry(c[3] * 0.66, c[3] * 0.36, 7), deepLeafMat);
-    core.scale.set(1.16, 0.85, 0.98);
+    // Subtle dark-emerald inner shadow core tucked cleanly inside lush needle cloud sprays
+    const core = new THREE.Mesh(new THREE.ConeGeometry(c[3] * 0.46, c[3] * 0.24, 7), deepLeafMat);
+    core.scale.set(1.22, 0.72, 1.04);
     core.position.set(c[0], c[1] + 0.02, c[2]);
     core.rotation.y = ti * 0.95;
     core.castShadow = true;
     canopy.add(core);
     if (needleTex) {
-      // Lower shaded pine fronds (5 radial) + upper sunlit crown fronds (4 offset)
-      for (let fi = 0; fi < 5; fi++) {
-        const fa = (fi / 5) * Math.PI * 2 + ti * 0.65;
+      // Richer painterly pine bough sprays: 6 lower shaded fronds + 5 upper sunlit crown fronds
+      for (let fi = 0; fi < 6; fi++) {
+        const fa = (fi / 6) * Math.PI * 2 + ti * 0.65;
         const fan = new THREE.Mesh(fanGeo, fanMatShade);
-        fan.position.set(c[0] + Math.cos(fa) * c[3] * 0.54, c[1] - 0.02 + (fi % 2) * 0.06, c[2] + Math.sin(fa) * c[3] * 0.54);
-        fan.rotation.set(-0.62, fa, 0.14 * (fi % 2 ? 1 : -1));
-        fan.scale.setScalar(c[3] * 0.86);
+        fan.position.set(c[0] + Math.cos(fa) * c[3] * 0.48, c[1] - 0.04 + (fi % 2) * 0.06, c[2] + Math.sin(fa) * c[3] * 0.48);
+        fan.rotation.set(-0.68, fa, 0.14 * (fi % 2 ? 1 : -1));
+        fan.scale.setScalar(c[3] * 0.90);
         canopy.add(fan);
       }
-      for (let ui = 0; ui < 4; ui++) {
-        const ua = (ui / 4) * Math.PI * 2 + ti * 0.9 + 0.4;
+      for (let ui = 0; ui < 5; ui++) {
+        const ua = (ui / 5) * Math.PI * 2 + ti * 0.9 + 0.35;
         const uFan = new THREE.Mesh(fanGeo, fanMatSun);
-        uFan.position.set(c[0] + Math.cos(ua) * c[3] * 0.30, c[1] + 0.14 + (ui % 2) * 0.07, c[2] + Math.sin(ua) * c[3] * 0.30);
-        uFan.rotation.set(-0.42, ua, -0.10 * (ui % 2 ? 1 : -1));
-        uFan.scale.setScalar(c[3] * 0.72);
+        uFan.position.set(c[0] + Math.cos(ua) * c[3] * 0.28, c[1] + 0.12 + (ui % 2) * 0.06, c[2] + Math.sin(ua) * c[3] * 0.28);
+        uFan.rotation.set(-0.46, ua, -0.10 * (ui % 2 ? 1 : -1));
+        uFan.scale.setScalar(c[3] * 0.76);
         canopy.add(uFan);
       }
     }
@@ -418,9 +431,17 @@ function buildMountainPineTree(x, y, z, scaleMul) {
   return g;
 }
 
-function buildCourtyardStoneLantern(x, z, rotY) {
+function buildCourtyardStoneLantern(x, z, rotY, stoneTex) {
   const g = new THREE.Group();
-  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x9aa3ad, roughness: 0.82, metalness: 0.08 });
+  const stoneMat = new THREE.MeshStandardMaterial({
+    map: stoneTex ? stoneTex.map : null,
+    bumpMap: stoneTex ? stoneTex.bump : null,
+    bumpScale: 0.045,
+    color: 0x5d656d,
+    roughness: 0.92,
+    metalness: 0.04
+  });
+  const mullionMat = new THREE.MeshStandardMaterial({ color: 0x2e231c, roughness: 0.65, metalness: 0.35 });
   const coreMat = new THREE.MeshStandardMaterial({
     color: 0xffefc2,
     emissive: 0xffae42,
@@ -428,21 +449,27 @@ function buildCourtyardStoneLantern(x, z, rotY) {
     roughness: 0.22
   });
 
-  const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.22, 0.58), stoneMat);
-  plinth.position.y = 0.11;
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.20, 0.50), stoneMat);
+  plinth.position.y = 0.10;
   plinth.castShadow = true;
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.95, 8), stoneMat);
-  post.position.y = 0.68;
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.14, 0.88, 8), stoneMat);
+  post.position.y = 0.64;
   post.castShadow = true;
-  const tray = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.10, 0.50), stoneMat);
-  tray.position.y = 1.18;
-  const firebox = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.34, 6), coreMat);
-  firebox.position.y = 1.40;
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(0.46, 0.28, 6), stoneMat);
-  roof.position.y = 1.70;
+  const tray = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.09, 0.44), stoneMat);
+  tray.position.y = 1.12;
+  const firebox = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.29, 6), coreMat);
+  firebox.position.y = 1.31;
+  // 4 delicate bronze lattice corner mullions framing the glowing lantern chamber
+  [[-0.145, -0.145], [0.145, -0.145], [-0.145, 0.145], [0.145, 0.145]].forEach(function (mp) {
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.32, 5), mullionMat);
+    bar.position.set(mp[0], 1.31, mp[1]);
+    g.add(bar);
+  });
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.25, 6), stoneMat);
+  roof.position.y = 1.59;
   roof.castShadow = true;
-  const finial = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), stoneMat);
-  finial.position.y = 1.88;
+  const finial = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), stoneMat);
+  finial.position.y = 1.75;
 
   g.add(plinth, post, tray, firebox, roof, finial);
   g.position.set(x, 0, z);
@@ -512,18 +539,18 @@ function buildTabletopTeaSet(woodMat) {
     teaSet.add(aromaCup);
   });
 
-  teaSet.position.set(-1.26, 1.255, -0.44);
+  teaSet.position.set(-1.18, 1.085, -0.42);
   return teaSet;
 }
 
 function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   const bokehTex = stage3dTextures.createGlowParticleTexture();
 
-  // 4. Subtle Cliffside Foothills tucked below terrace lip so 360° sea-of-clouds, sunset & Milky Way shine completely unobstructed!
+  // 4. Layered Qinglü Shan-Shui Mountain Peaks embracing the coastal valley toward Guishan Island!
   env.mtnMatBack = new THREE.MeshStandardMaterial({ color: 0x263854, roughness: 0.94, metalness: 0.04, vertexColors: true });
   env.mtnMatFront = new THREE.MeshStandardMaterial({ color: 0x324a64, roughness: 0.90, metalness: 0.06, vertexColors: true });
-  scene.add(createSculptedMountainRing(19.0, 34.0, 2.5, env.mtnMatFront, 0.4));
-  scene.add(createSculptedMountainRing(32.0, 50.0, 3.2, env.mtnMatBack, 2.3));
+  scene.add(createSculptedMountainRing(19.5, 35.0, 7.4, env.mtnMatFront, 0.4));
+  scene.add(createSculptedMountainRing(33.0, 52.0, 11.2, env.mtnMatBack, 2.3));
 
   // Soft Translucent Distant Pacific Sea-Shimmer (radial alpha fade so photographic cloud sea glows cleanly!)
   env.oceanBumpTex = stage3dTextures.createWaterBumpTexture();
@@ -615,9 +642,9 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   env.terraceMesh = terrace;
   stage3dTextures.upgradeStoneWithPolyHavenCC0(env.terraceMat);
 
-  // Far Horizon: Delicate Distant Guishan Island (龜山島) Silhouette + Coastal Beacon Light!
+  // Far Horizon: Grounded Guishan Island (龜山島) anchored into the Pacific sea-mist + Coastal Beacon Light!
   const guishanGroup = new THREE.Group();
-  const islandMat = new THREE.MeshStandardMaterial({ color: 0x263f54, roughness: 0.90, metalness: 0.04, transparent: true, opacity: 0.72 });
+  const islandMat = new THREE.MeshStandardMaterial({ color: 0x264458, roughness: 0.92, metalness: 0.04, transparent: true, opacity: 0.86 });
   const shellMain = new THREE.Mesh(new THREE.SphereGeometry(4.4, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.5), islandMat);
   shellMain.scale.set(1.65, 0.58, 0.78);
   const headHill = new THREE.Mesh(new THREE.SphereGeometry(2.3, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), islandMat);
@@ -626,6 +653,13 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   const tailHill = new THREE.Mesh(new THREE.SphereGeometry(1.7, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), islandMat);
   tailHill.scale.set(1.5, 0.44, 0.68);
   tailHill.position.set(-5.6, -0.05, -0.15);
+  const waterlineMist = new THREE.Mesh(
+    new THREE.RingGeometry(5.2, 9.4, 28),
+    new THREE.MeshBasicMaterial({ color: 0xdbeafe, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false })
+  );
+  waterlineMist.rotation.x = -Math.PI * 0.5;
+  waterlineMist.scale.set(1.35, 0.58, 1.0);
+  waterlineMist.position.y = 0.05;
   const guishanBeacon = new THREE.Mesh(
     new THREE.SphereGeometry(0.28, 10, 8),
     new THREE.MeshBasicMaterial({ color: 0xffe49e, fog: false })
@@ -633,10 +667,10 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   guishanBeacon.position.set(6.0, 2.0, 0.25);
   const guishanHit = new THREE.Mesh(new THREE.BoxGeometry(16, 6.5, 6.5), new THREE.MeshBasicMaterial({ visible: false }));
   guishanHit.position.set(0, 1.8, 0);
-  guishanGroup.add(shellMain, headHill, tailHill, guishanBeacon, guishanHit);
-  guishanGroup.scale.set(0.46, 0.40, 0.46);
-  guishanGroup.position.set(17.5, -2.55, -43);
-  guishanGroup.rotation.y = -0.26;
+  guishanGroup.add(shellMain, headHill, tailHill, waterlineMist, guishanBeacon, guishanHit);
+  guishanGroup.scale.set(0.58, 0.52, 0.58);
+  guishanGroup.position.set(14.8, -3.08, -38.5);
+  guishanGroup.rotation.y = -0.24;
   scene.add(guishanGroup);
   env.guishanGroup = guishanGroup;
   env.guishanHitMesh = guishanHit;
@@ -670,8 +704,8 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   scene.add(env.lanyangLights);
 
   const terraceTrim = new THREE.Mesh(
-    new THREE.TorusGeometry(8.46, 0.06, 8, 8),
-    new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.28, metalness: 0.78 })
+    new THREE.TorusGeometry(8.46, 0.055, 8, 8),
+    new THREE.MeshStandardMaterial({ color: 0x6b4c2a, roughness: 0.48, metalness: 0.55 })
   );
   terraceTrim.rotation.x = Math.PI * 0.5;
   terraceTrim.rotation.z = Math.PI / 8;
@@ -769,9 +803,9 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   const roofTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createRoofTileTextures === "function")
     ? stage3dTextures.createRoofTileTextures()
     : null;
-  const pillarMat = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x992b21, roughness: 0.32, metalness: 0.16 });
-  const woodDarkMat = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x5c3621, roughness: 0.48, metalness: 0.14 });
-  const stonePlinthMat = new THREE.MeshStandardMaterial({ color: 0xebe6dc, roughness: 0.70, metalness: 0.06 });
+  const pillarMat = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x8f2920, roughness: 0.34, metalness: 0.14 });
+  const woodDarkMat = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x52301d, roughness: 0.50, metalness: 0.12 });
+  const stonePlinthMat = new THREE.MeshStandardMaterial({ color: 0xd6cfc2, roughness: 0.74, metalness: 0.05 });
   const roofTileMat = new THREE.MeshStandardMaterial({
     map: roofTex ? roofTex.map : null,
     bumpMap: roofTex ? roofTex.bump : null,
@@ -983,24 +1017,26 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     proceduralPavilionGroup.add(hornGrp);
   });
 
-  // 4 Courtyard Stone Lanterns + 3 Sculpted Mountain Pines framing the horizon cliff!
+  // 4 Courtyard Stone Lanterns + 5 Sculpted Mountain Black Pines framing the cliff & eaves!
   [
     [8.8, -4.8, 0.4],
     [-8.8, -4.8, -0.4],
     [4.4, -8.8, 0.1],
     [-4.4, -8.8, -0.1]
   ].forEach(function (sl) {
-    const lanternObj = buildCourtyardStoneLantern(sl[0], sl[1], sl[2]);
+    const lanternObj = buildCourtyardStoneLantern(sl[0], sl[1], sl[2], stone);
     scene.add(lanternObj.group);
     env.stoneLanternCores.push(lanternObj.coreMat);
   });
 
   [
-    [-9.8, -0.45, -3.8, 1.15],
-    [-7.6, -0.55, -8.4, 1.32],
-    [9.6, -0.45, -4.6, 1.10]
+    [-10.4, -0.55, -3.2, 1.28],
+    [-7.8, -0.65, -8.8, 1.48],
+    [-1.8, -0.85, -10.8, 1.18],
+    [9.8, -0.55, -4.4, 1.32],
+    [11.2, -0.75, -8.6, 1.44]
   ].forEach(function (pt, idx) {
-    const pine = buildMountainPineTree(pt[0], pt[1], pt[2], pt[3]);
+    const pine = buildMountainPineTree(pt[0], pt[1], pt[2], pt[3], wood);
     scene.add(pine);
     env.pineTrees.push({ group: pine, canopy: pine.userData ? pine.userData.canopy : null, phase: idx * 1.45 });
   });
@@ -1024,29 +1060,29 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   });
   stage3dTextures.upgradeWoodWithPolyHavenCC0(tableWoodMat);
 
-  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 1.35, 1.05, 18), tableWoodMat);
-  pedestal.position.y = 0.52;
+  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 1.28, 0.90, 18), tableWoodMat);
+  pedestal.position.y = 0.45;
   pedestal.castShadow = true;
   pedestal.receiveShadow = true;
   tableScaleGroup.add(pedestal);
 
-  const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(3.25, 3.10, 0.24, 48), tableWoodMat);
-  tableTop.position.y = 1.12;
+  const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(3.25, 3.12, 0.18, 48), tableWoodMat);
+  tableTop.position.y = 0.98;
   tableTop.castShadow = true;
   tableTop.receiveShadow = true;
   tableScaleGroup.add(tableTop);
   env.tableTopMesh = tableTop;
 
-  const rimTorus = new THREE.Mesh(new THREE.TorusGeometry(3.22, 0.09, 14, 56), tableWoodMat);
+  const rimTorus = new THREE.Mesh(new THREE.TorusGeometry(3.22, 0.072, 14, 56), tableWoodMat);
   rimTorus.rotation.x = Math.PI * 0.5;
-  rimTorus.position.y = 1.22;
+  rimTorus.position.y = 1.055;
   tableScaleGroup.add(rimTorus);
 
   // Antique-brass inlaid outer rim filigree & pedestal collar
-  const outerBrassTrim = new THREE.Mesh(new THREE.TorusGeometry(3.28, 0.024, 10, 56), goldAccentMat);
+  const outerBrassTrim = new THREE.Mesh(new THREE.TorusGeometry(3.28, 0.022, 10, 56), goldAccentMat);
   outerBrassTrim.rotation.x = Math.PI * 0.5;
-  outerBrassTrim.position.y = 1.235;
-  const pedestalCollar = new THREE.Mesh(new THREE.TorusGeometry(1.36, 0.042, 10, 28), goldAccentMat);
+  outerBrassTrim.position.y = 1.072;
+  const pedestalCollar = new THREE.Mesh(new THREE.TorusGeometry(1.30, 0.040, 10, 28), goldAccentMat);
   pedestalCollar.rotation.x = Math.PI * 0.5;
   pedestalCollar.position.y = 0.05;
   tableScaleGroup.add(outerBrassTrim, pedestalCollar);
@@ -1061,16 +1097,16 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
       metalness: 0.06
     })
   );
-  feltDisk.position.y = 1.245;
+  feltDisk.position.y = 1.075;
   feltDisk.receiveShadow = true;
   tableScaleGroup.add(feltDisk);
 
   env.tableGlowRing = new THREE.Mesh(
-    new THREE.TorusGeometry(2.60, 0.036, 12, 48),
+    new THREE.TorusGeometry(2.60, 0.032, 12, 48),
     new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xf59e0b, emissiveIntensity: 0.95, roughness: 0.2, metalness: 0.82 })
   );
   env.tableGlowRing.rotation.x = Math.PI * 0.5;
-  env.tableGlowRing.position.y = 1.255;
+  env.tableGlowRing.position.y = 1.085;
   tableScaleGroup.add(env.tableGlowRing);
 
   tableGroup.add(buildTabletopTeaSet(tableWoodMat));
@@ -1113,7 +1149,7 @@ function buildTabletopAcademyProps(woodMat, env) {
   ember.position.y = 0.20;
   censer.add(ember);
   env.incenseEmberMat = emberMat;
-  censer.position.set(1.26, 1.255, -0.48);
+  censer.position.set(1.18, 1.085, -0.44);
   propsGroup.add(censer);
 
   // 2. Unrolled Academy Scroll, Jade Weight & Inkstone
@@ -1135,7 +1171,7 @@ function buildTabletopAcademyProps(woodMat, env) {
   brush.rotation.y = 0.32;
   brush.position.set(-0.04, 0.022, 0.04);
   scrollGrp.add(paper, rodL, rodR, inkstone, brush);
-  scrollGrp.position.set(0.92, 1.255, 0.86);
+  scrollGrp.position.set(0.86, 1.085, 0.80);
   scrollGrp.rotation.y = -0.48;
   propsGroup.add(scrollGrp);
 
@@ -1156,7 +1192,7 @@ function buildTabletopAcademyProps(woodMat, env) {
     cake.castShadow = true;
     plateGrp.add(cake);
   });
-  plateGrp.position.set(-0.96, 1.255, 0.88);
+  plateGrp.position.set(-0.90, 1.085, 0.82);
   propsGroup.add(plateGrp);
 
   return propsGroup;
@@ -1257,12 +1293,13 @@ function build3DLotusAndAtmosphere(scene, env) {
       depthWrite: false
     })
   );
-  env.resonancePillar.position.set(0, 1.25, 0);
+  env.resonancePillar.position.set(0, 1.08, 0);
   scene.add(env.resonancePillar);
 
-  // 8. Interactive Handcrafted Glass-Jade Sacred Lotus Centerpiece (Curved Double-Tier Petals + Filigree Halos!)
+  // 8. Interactive Handcrafted Glass-Jade Sacred Lotus Centerpiece (Harmoniously Proportioned 0.66x Tabletop Sculpture — Clear Eye-Level Sightline!)
   const lotusGroup = new THREE.Group();
-  lotusGroup.position.set(0, 1.98, 0);
+  lotusGroup.position.set(0, 1.48, 0);
+  lotusGroup.scale.setScalar(0.66);
 
   const hasLatheLotus = typeof THREE.LatheGeometry === "function" && typeof THREE.Vector2 === "function";
   const bronzeMat = new THREE.MeshStandardMaterial({ color: 0x6f4318, roughness: 0.26, metalness: 0.84 });
@@ -1288,12 +1325,14 @@ function build3DLotusAndAtmosphere(scene, env) {
       ], 28)
     : new THREE.CylinderGeometry(0.46, 0.62, 0.18, 20);
   const crystalStand = new THREE.Mesh(standGeo, bronzeMat);
-  crystalStand.position.set(0, 1.26, 0);
+  crystalStand.position.set(0, 1.09, 0);
+  crystalStand.scale.setScalar(0.66);
   crystalStand.receiveShadow = true;
   scene.add(crystalStand);
   const standRim = new THREE.Mesh(new THREE.TorusGeometry(0.49, 0.018, 8, 32), filigreeGoldMat);
   standRim.rotation.x = Math.PI * 0.5;
-  standRim.position.set(0, 1.47, 0);
+  standRim.position.set(0, 1.23, 0);
+  standRim.scale.setScalar(0.66);
   scene.add(standRim);
 
   const CoreMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
@@ -1427,10 +1466,10 @@ function build3DLotusAndAtmosphere(scene, env) {
 
   // 9. Zero-GC Rising Tea Steam & Sandalwood Incense Wisps + Ambient Fireflies
   const steamEmitters = [
-    { x: -1.56, y: 1.50, z: -0.44, count: 14, maxRise: 0.72, drift: 0.09, speed: 0.48 }, // Yixing Teapot Spout
-    { x: -1.06, y: 1.38, z: -0.28, count: 6, maxRise: 0.50, drift: 0.055, speed: 0.42 }, // Celadon Aroma Cup 1
-    { x: -1.02, y: 1.38, z: -0.54, count: 6, maxRise: 0.50, drift: 0.055, speed: 0.40 }, // Celadon Aroma Cup 2
-    { x: 1.26, y: 1.48, z: -0.48, count: 16, maxRise: 1.15, drift: 0.14, speed: 0.36 }   // Tripod Incense Burner
+    { x: -1.48, y: 1.33, z: -0.42, count: 14, maxRise: 0.68, drift: 0.09, speed: 0.48 }, // Yixing Teapot Spout
+    { x: -0.98, y: 1.21, z: -0.26, count: 6, maxRise: 0.48, drift: 0.055, speed: 0.42 }, // Celadon Aroma Cup 1
+    { x: -0.94, y: 1.21, z: -0.52, count: 6, maxRise: 0.48, drift: 0.055, speed: 0.40 }, // Celadon Aroma Cup 2
+    { x: 1.18, y: 1.31, z: -0.44, count: 16, maxRise: 1.08, drift: 0.14, speed: 0.36 }   // Tripod Incense Burner
   ];
   let steamTotal = 0;
   steamEmitters.forEach(function (em) { steamTotal += em.count; });
@@ -1732,7 +1771,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   const activeSeatsN = typeof getActive3DSeatCount === "function" ? getActive3DSeatCount() : 8;
   const tLayout = typeof get3DTableLayout === "function"
     ? get3DTableLayout(activeSeatsN)
-    : { tableScale: 1.06, ringRadius: 4.85, pavilionScale: 1.0 };
+    : { tableScale: 1.08, ringRadius: 4.44, pavilionScale: 1.0 };
   if (!env.tableScaleCurrent) env.tableScaleCurrent = tLayout.tableScale;
   else env.tableScaleCurrent += (tLayout.tableScale - env.tableScaleCurrent) * 0.16;
   if (!env.pavilionScaleCurrent) env.pavilionScaleCurrent = tLayout.pavilionScale;
@@ -1825,7 +1864,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   const tg = (state.match && state.match.threeGood) || { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
   const litCount = (tg.heart > 0 ? 1 : 0) + (tg.words > 0 ? 1 : 0) + (tg.deeds > 0 ? 1 : 0);
   const pulse = 1 + Math.sin(t * 2.6) * 0.06 + env.lotusSpinBoost * 0.22 + litCount * 0.035;
-  env.lotusGroup.position.y = 1.98 + Math.sin(t * 1.9) * 0.10 + env.lotusSpinBoost * 0.26;
+  env.lotusGroup.position.y = 1.48 + Math.sin(t * 1.9) * 0.055 + env.lotusSpinBoost * 0.18;
   env.lotusGroup.rotation.y += 0.012 + (isVote ? 0.015 : 0) + env.lotusSpinBoost * 0.18 + (tg.resonanceTriggered ? 0.014 : 0);
   env.lotusCore.scale.setScalar(pulse);
   env.lotusCore.material.emissive.lerp(env.targetColors.lotus, lerpAmt);

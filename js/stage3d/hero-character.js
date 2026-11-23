@@ -7,7 +7,7 @@
  */
 "use strict";
 
-const HERO_STAGE_ANCHOR = { x: 2.95, y: 0.02, z: -5.45, rotY: -0.44 };
+const HERO_STAGE_ANCHOR = { x: 2.75, y: 0.02, z: -5.18, rotY: -0.44 };
 
 const HERO_PALETTES = {
   celadon: {
@@ -281,17 +281,17 @@ function buildHeroCharacter(scene) {
   root.position.set(HERO_STAGE_ANCHOR.x, HERO_STAGE_ANCHOR.y, HERO_STAGE_ANCHOR.z);
   root.rotation.y = HERO_STAGE_ANCHOR.rotY;
 
-  // Carved Lacquered Dais Pedestal (anchors Qingming on dedicated right-rear tea stage!)
-  const dais = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 1.08, 0.18, 28), mats.daisWood);
-  dais.position.y = 0.09;
+  // Low-Profile Carved Lacquered Mat Pedestal (keeps Qingming harmoniously scaled with seated students!)
+  const dais = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.92, 0.08, 28), mats.daisWood);
+  dais.position.y = 0.04;
   dais.receiveShadow = true;
   dais.castShadow = true;
-  const daisRing = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.025, 8, 36), mats.gold);
+  const daisRing = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.020, 8, 36), mats.gold);
   daisRing.rotation.x = Math.PI * 0.5;
-  daisRing.position.y = 0.18;
+  daisRing.position.y = 0.08;
   const daisShadow = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.4, 2.4),
-    new THREE.MeshBasicMaterial({ map: stage3dTextures.createContactShadowTexture(), transparent: true, opacity: 0.62, depthWrite: false })
+    new THREE.PlaneGeometry(2.1, 2.1),
+    new THREE.MeshBasicMaterial({ map: stage3dTextures.createContactShadowTexture(), transparent: true, opacity: 0.58, depthWrite: false })
   );
   daisShadow.rotation.x = -Math.PI * 0.5;
   daisShadow.position.y = 0.01;
@@ -299,7 +299,7 @@ function buildHeroCharacter(scene) {
 
   // Built-in Collector's Ceramic Rig Container (cleanly hidden when a custom .glb is active!)
   const rigRoot = new THREE.Group();
-  rigRoot.position.y = 0.18;
+  rigRoot.position.y = 0.08;
   root.add(rigRoot);
 
   // 1. Feet & Relaxed Academy Trousers
@@ -658,8 +658,10 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
   // Auto-select ambient action from live match state unless pinned in showcase or timed gesture
   let act = hero.action;
   if (!isShowcase && hero.actionUntil === 0) {
-    if (!state.match.started || f.p === "LOBBY") act = "welcome_bow";
-    else if (f.p === "GAME_OVER" && state.match.winner === "good") act = "celebrate";
+    if (!state.match.started || f.p === "LOBBY") {
+      // Gentle periodic tea-host welcome bow on title screen (3.2s warm welcome, then poised graceful idle!)
+      act = ((t % 12.0) < 3.2) ? "welcome_bow" : "idle_breathe";
+    } else if (f.p === "GAME_OVER" && state.match.winner === "good") act = "celebrate";
     else if (typeof voice !== "undefined" && voice.speaking && !state.activeSpeakerId) act = "speak_gesture";
     else act = "idle_breathe";
   }
@@ -668,8 +670,8 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
   const targetRim = isShowcase ? 1.45 : (act === "purify_cast" ? 1.2 : 0.36);
   hero.showcaseLight.intensity += (targetRim - hero.showcaseLight.intensity) * 0.1;
 
-  // Gaze toward camera or pointer in showcase (used by both sculpt rig & VRM)
-  let targetYaw = Math.sin(t * 0.7) * 0.14;
+  // Organic Gaze: track active speaking seat during debate, camera/pointer in showcase, gentle sanctuary scan in lobby!
+  let targetYaw = Math.sin(t * 0.55) * 0.16;
   let targetPitch = -0.02;
   if (isShowcase && state.pointer.inside) {
     targetYaw = clamp((state.pointer.x / Math.max(1, f.w) - 0.5) * 0.85, -0.52, 0.52);
@@ -677,9 +679,16 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
   } else if (act === "gasp_react") {
     targetYaw = Math.sin(t * 9) * 0.24;
     targetPitch = -0.12;
+  } else if (!isShowcase && state.match && state.match.started && state.activeSpeakerId && typeof stage3d !== "undefined" && stage3d.seats && stage3d.seats.anchors && stage3d.seats.anchors[state.activeSpeakerId]) {
+    const spPos = stage3d.seats.anchors[state.activeSpeakerId].worldPos;
+    let diffH = Math.atan2(spPos.x - hero.root.position.x, spPos.z - hero.root.position.z) - hero.root.rotation.y;
+    while (diffH > Math.PI) diffH -= Math.PI * 2;
+    while (diffH < -Math.PI) diffH += Math.PI * 2;
+    targetYaw = clamp(diffH * 0.85, -0.72, 0.72);
+    targetPitch = 0.08;
   }
-  hero.headYaw += (targetYaw - hero.headYaw) * 0.12;
-  hero.headPitch += (targetPitch - hero.headPitch) * 0.12;
+  hero.headYaw += (targetYaw - hero.headYaw) * 0.10;
+  hero.headPitch += (targetPitch - hero.headPitch) * 0.10;
 
   const isTalking = act === "speak_gesture" || (typeof voice !== "undefined" && voice.speaking && !state.activeSpeakerId);
   const mouthOpenNow = isTalking || act === "gasp_react";
@@ -778,7 +787,7 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
       });
     } else {
       const glbHop = act === "celebrate" ? Math.abs(Math.sin(t * 6.5)) * 0.12 : Math.sin(t * 2.1) * 0.018;
-      hero.customGlbRoot.position.y = (hero.customGlbBaseY || 0.18) + glbHop;
+      hero.customGlbRoot.position.y = (hero.customGlbBaseY || 0.08) + glbHop;
       hero.customGlbRoot.rotation.x = act === "welcome_bow" ? (0.05 + Math.sin(t * 1.6) * 0.035) : 0;
     }
   }

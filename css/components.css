@@ -3,7 +3,8 @@
 /* ===== FULL-BLEED 100DVH INDIE GAME VIEWPORT (ZERO WEBPAGE SCROLLING ON DESKTOP) ===== */
 #gameViewport {
   position: relative;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
@@ -71,6 +72,98 @@ body.craft-ui.theme-day #canvasStageWrap::after {
   stroke-linecap: round;
   stroke-linejoin: round;
   flex-shrink: 0;
+}
+
+/* ===== v10.1 EASTERN INK-AND-BRASS CRAFT ICON SYSTEM & LITERARY TYPOGRAPHY (ZERO !important) ===== */
+.sh-ico {
+  display: inline-block;
+  width: 1.08em;
+  height: 1.08em;
+  vertical-align: -0.18em;
+  margin-right: 0.28em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.sh-ico.sh-ico-solo {
+  margin-right: 0;
+}
+
+.sh-ico-gold {
+  color: #e4ba67;
+}
+
+.sh-ico-jade {
+  color: #5ec49f;
+}
+
+.sh-ico-cinnabar {
+  color: #eb7a6e;
+}
+
+.sh-ico-indigo {
+  color: #8eb2e0;
+}
+
+.sh-ico-muted {
+  color: #a89984;
+}
+
+body.craft-ui.theme-day .sh-ico-gold {
+  color: #9a6823;
+}
+
+body.craft-ui.theme-day .sh-ico-jade {
+  color: #246a50;
+}
+
+body.craft-ui.theme-day .sh-ico-cinnabar {
+  color: #a63226;
+}
+
+body.craft-ui.theme-day .sh-ico-indigo {
+  color: #395c84;
+}
+
+body.craft-ui.theme-day .sh-ico-muted {
+  color: #7c6d5a;
+}
+
+#spotlightText {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.78;
+  letter-spacing: 0.032em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+body.craft-ui.theme-day #spotlightText {
+  text-shadow: none;
+}
+
+#spotlightStageBox.is-classical-speech #spotlightText {
+  letter-spacing: 0.058em;
+  line-height: 1.86;
+  padding-left: 11px;
+  border-left: 2px solid var(--border-accent);
+  color: #f6ead4;
+}
+
+body.craft-ui.theme-day #spotlightStageBox.is-classical-speech #spotlightText {
+  color: #2c1f12;
+  border-left-color: rgba(154, 104, 35, 0.65);
+}
+
+#intelPersonaBadge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
 }
 
 .cta-cinnabar {
@@ -364,66 +457,623 @@ body.hero-showcase-active #dragGestureHint {
   box-shadow: inset 0 0 0 1px rgba(212, 166, 87, 0.42);
 }
 
-/* ===== 2. ROLE DEAL RITUAL OVERLAY (TACTILE CARD REVEAL ABOVE CURTAIN) ===== */
+/* ===== 2. ROLE DEAL RITUAL OVERLAY (v11.0 3D WAX-SEAL FLIP CEREMONY ABOVE CURTAIN) ===== */
 #roleDealOverlay {
   position: fixed;
   inset: 0;
   z-index: 65;
-  background: rgba(10, 8, 6, 0.78);
-  backdrop-filter: blur(5px);
+  background: radial-gradient(ellipse at 50% 45%, rgba(28, 20, 14, 0.78) 0%, rgba(8, 6, 5, 0.88) 100%);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   cursor: pointer;
+  animation: dealBackdropIn 0.34s ease-out both;
 }
 
 #roleDealOverlay.hidden {
   display: none;
 }
 
+@keyframes dealBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.deal-ritual-stage {
+  position: relative;
+  width: min(444px, 92vw);
+  perspective: 1450px;
+  cursor: default;
+  animation: dealStageRise 0.56s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes dealStageRise {
+  0% {
+    opacity: 0;
+    transform: translateY(34px) scale(0.88);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.deal-ritual-burst {
+  position: absolute;
+  inset: -44px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 0;
+}
+
+.deal-burst-ring {
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  border: 2px solid rgba(242, 198, 109, 0.85);
+  box-shadow: 0 0 36px rgba(212, 166, 87, 0.55), inset 0 0 28px rgba(255, 232, 174, 0.28);
+  opacity: 0;
+  transform: scale(0.32);
+}
+
+.deal-burst-ring.is-secondary {
+  width: 196px;
+  height: 196px;
+  border-width: 1px;
+  border-color: rgba(110, 231, 183, 0.65);
+  box-shadow: 0 0 24px rgba(110, 231, 183, 0.32);
+}
+
+#roleDealOverlay.deal-theme-wolf .deal-burst-ring {
+  border-color: rgba(232, 92, 78, 0.88);
+  box-shadow: 0 0 40px rgba(200, 62, 52, 0.62), inset 0 0 26px rgba(255, 165, 150, 0.24);
+}
+
+#roleDealOverlay.deal-theme-wolf .deal-burst-ring.is-secondary {
+  border-color: rgba(245, 185, 92, 0.58);
+  box-shadow: 0 0 22px rgba(212, 146, 67, 0.35);
+}
+
+#roleDealOverlay.is-revealed .deal-burst-ring {
+  animation: dealRingExpand 0.96s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#roleDealOverlay.is-revealed .deal-burst-ring.is-secondary {
+  animation: dealRingExpand 1.12s cubic-bezier(0.16, 1, 0.3, 1) 0.08s forwards;
+}
+
+@keyframes dealRingExpand {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.34);
+  }
+  55% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.45);
+  }
+}
+
+.deal-spark-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.deal-spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff8dc 0%, #e5b75a 58%, transparent 100%);
+  box-shadow: 0 0 10px rgba(245, 200, 108, 0.85);
+  opacity: 0;
+  --sp-ang: 0deg;
+  --sp-dist: 185px;
+  --sp-delay: 0s;
+}
+
+#roleDealOverlay.deal-theme-wolf .deal-spark {
+  background: radial-gradient(circle, #ffe4de 0%, #e25b4e 60%, transparent 100%);
+  box-shadow: 0 0 10px rgba(226, 91, 78, 0.85);
+}
+
+.deal-spark:nth-child(1)  { --sp-ang: 0deg;   --sp-dist: 195px; --sp-delay: 0.02s; }
+.deal-spark:nth-child(2)  { --sp-ang: 30deg;  --sp-dist: 215px; --sp-delay: 0.05s; }
+.deal-spark:nth-child(3)  { --sp-ang: 60deg;  --sp-dist: 180px; --sp-delay: 0.01s; }
+.deal-spark:nth-child(4)  { --sp-ang: 90deg;  --sp-dist: 225px; --sp-delay: 0.06s; }
+.deal-spark:nth-child(5)  { --sp-ang: 120deg; --sp-dist: 188px; --sp-delay: 0.03s; }
+.deal-spark:nth-child(6)  { --sp-ang: 150deg; --sp-dist: 210px; --sp-delay: 0.04s; }
+.deal-spark:nth-child(7)  { --sp-ang: 180deg; --sp-dist: 192px; --sp-delay: 0.02s; }
+.deal-spark:nth-child(8)  { --sp-ang: 210deg; --sp-dist: 218px; --sp-delay: 0.05s; }
+.deal-spark:nth-child(9)  { --sp-ang: 240deg; --sp-dist: 182px; --sp-delay: 0.01s; }
+.deal-spark:nth-child(10) { --sp-ang: 270deg; --sp-dist: 220px; --sp-delay: 0.06s; }
+.deal-spark:nth-child(11) { --sp-ang: 300deg; --sp-dist: 190px; --sp-delay: 0.03s; }
+.deal-spark:nth-child(12) { --sp-ang: 330deg; --sp-dist: 208px; --sp-delay: 0.04s; }
+
+#roleDealOverlay.is-revealed .deal-spark {
+  animation: dealSparkBurst 0.88s cubic-bezier(0.16, 1, 0.3, 1) var(--sp-delay) forwards;
+}
+
+@keyframes dealSparkBurst {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--sp-ang)) translateX(18px) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+    transform: rotate(var(--sp-ang)) translateX(74px) scale(1.25);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--sp-ang)) translateX(var(--sp-dist)) scale(0.15);
+  }
+}
+
+.deal-card-flipper {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  transform-style: preserve-3d;
+  transform: rotateY(180deg);
+  pointer-events: none;
+  will-change: transform;
+}
+
+#roleDealOverlay.is-sealed .deal-card-flipper {
+  transform: rotateY(180deg);
+  transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#roleDealOverlay.is-sealed .deal-card-flipper:hover {
+  transform: rotateY(180deg) translateY(-4px) scale(1.015);
+}
+
+#roleDealOverlay.is-unsealing .deal-card-flipper {
+  transform: rotateY(194deg) translateY(-6px) scale(1.03);
+  transition: transform 0.20s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#roleDealOverlay.is-revealed .deal-card-flipper {
+  transform: rotateY(0deg);
+  animation: dealFlipReveal 0.84s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes dealFlipReveal {
+  0% {
+    transform: rotateY(194deg) translateY(-6px) scale(1.03);
+  }
+  42% {
+    transform: rotateY(88deg) translateY(-14px) scale(1.07);
+  }
+  78% {
+    transform: rotateY(-5deg) translateY(-2px) scale(1.015);
+  }
+  100% {
+    transform: rotateY(0deg) translateY(0) scale(1);
+  }
+}
+
+.deal-card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  pointer-events: auto;
+}
+
+/* Sealed Lacquer Card Back with Breathing Cinnabar Wax Seal */
+.deal-card-back {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotateY(180deg);
+  padding: 16px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(212, 166, 87, 0.78);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(212, 166, 87, 0.16) 0%, transparent 56%),
+    repeating-linear-gradient(135deg, rgba(212, 166, 87, 0.035) 0 1px, transparent 1px 14px),
+    linear-gradient(168deg, #271b13 0%, #160f0a 56%, #0d0907 100%);
+  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.84), inset 0 1px 0 rgba(255, 240, 200, 0.25);
+  color: #efe2c6;
+  cursor: pointer;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  text-align: center;
+}
+
+#roleDealOverlay.is-revealed .deal-card-back {
+  pointer-events: none;
+}
+
+.deal-back-frame {
+  position: relative;
+  width: 100%;
+  border: 1px solid rgba(212, 166, 87, 0.36);
+  border-radius: 6px;
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: radial-gradient(ellipse at 50% 44%, rgba(180, 58, 46, 0.10) 0%, transparent 62%);
+}
+
+.deal-back-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: rgba(226, 184, 108, 0.76);
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+}
+
+.deal-back-corner.is-tl { top: 8px; left: 8px; border-top-width: 2px; border-left-width: 2px; }
+.deal-back-corner.is-tr { top: 8px; right: 8px; border-top-width: 2px; border-right-width: 2px; }
+.deal-back-corner.is-bl { bottom: 8px; left: 8px; border-bottom-width: 2px; border-left-width: 2px; }
+.deal-back-corner.is-br { bottom: 8px; right: 8px; border-bottom-width: 2px; border-right-width: 2px; }
+
+.deal-back-eyebrow {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  color: rgba(232, 196, 132, 0.82);
+}
+
+.deal-back-seal-wrap {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  margin: 10px 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deal-back-seal-halo {
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212, 166, 87, 0.32) 0%, rgba(180, 58, 46, 0.16) 46%, transparent 72%);
+  animation: dealSealBreath 2.4s ease-in-out infinite;
+}
+
+.deal-back-seal-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px dashed rgba(228, 186, 108, 0.56);
+  animation: dealSealOrbit 18s linear infinite;
+}
+
+.deal-back-wax-seal {
+  position: relative;
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 34% 28%, #d64e3e 0%, #a52f24 55%, #6e1c16 100%);
+  border: 2px solid rgba(246, 206, 128, 0.82);
+  box-shadow:
+    0 0 0 4px rgba(165, 47, 36, 0.32),
+    0 12px 26px rgba(0, 0, 0, 0.62),
+    inset 0 2px 6px rgba(255, 224, 192, 0.34),
+    inset 0 -4px 10px rgba(48, 10, 8, 0.58);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
+}
+
+.deal-card-back:hover .deal-back-wax-seal {
+  transform: scale(1.07);
+  box-shadow:
+    0 0 0 6px rgba(212, 166, 87, 0.26),
+    0 14px 32px rgba(0, 0, 0, 0.68),
+    inset 0 2px 8px rgba(255, 232, 204, 0.45);
+}
+
+#roleDealOverlay.is-unsealing .deal-back-wax-seal {
+  transform: scale(0.84);
+  box-shadow:
+    0 0 32px 12px rgba(251, 191, 36, 0.72),
+    inset 0 0 18px rgba(255, 245, 210, 0.8);
+}
+
+.deal-back-seal-char {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 900;
+  color: #fcecd0;
+  text-shadow: 0 2px 4px rgba(62, 12, 8, 0.72);
+  line-height: 1;
+}
+
+.deal-back-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  color: #fff3da;
+  margin-top: 2px;
+}
+
+.deal-back-seat {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: rgba(212, 166, 87, 0.12);
+  border: 1px solid rgba(212, 166, 87, 0.36);
+  color: #ebd09c;
+}
+
+.deal-back-prompt {
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.20em;
+  color: #f6d591;
+  animation: dealPromptPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes dealSealBreath {
+  0%, 100% { opacity: 0.55; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes dealSealOrbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dealPromptPulse {
+  0%, 100% { opacity: 0.65; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
+/* Front Face: Existing Role Card Scroll */
 #roleDealCardBox {
   position: relative;
-  overflow: hidden;
-  width: min(372px, 92vw);
-  max-height: 90dvh;
+  width: 100%;
+  max-height: 92dvh;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 24px 22px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 166, 87, 0.35) transparent;
+  padding: 26px 28px 22px;
   border-radius: 10px;
   text-align: center;
-  background: linear-gradient(175deg, #271e17 0%, #17120d 55%, #110d0a 100%);
-  border: 1.5px solid #d4a657;
-  box-shadow: inset 0 0 0 6px rgba(212, 166, 87, 0.16), inset 0 0 0 7px rgba(212, 166, 87, 0.22), 0 28px 66px rgba(0, 0, 0, 0.78);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(212, 166, 87, 0.14) 0%, transparent 52%),
+    linear-gradient(172deg, #251c15 0%, #17110c 58%, #100c09 100%);
+  border: 1.5px solid rgba(212, 166, 87, 0.72);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 240, 200, 0.22);
   color: #efe7d8;
-  animation: dealFlipIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   cursor: default;
+  transform: rotateY(0deg) translateZ(2px);
+}
+
+#roleDealOverlay.is-revealed .deal-crest-medallion {
+  animation: dealCrestStamp 0.52s cubic-bezier(0.22, 1, 0.36, 1) 0.30s both;
+}
+
+#roleDealOverlay.is-revealed .deal-title-row {
+  animation: dealItemFadeUp 0.42s ease-out 0.38s both;
+}
+
+#roleDealOverlay.is-revealed .role-deal-team-pill {
+  animation: dealItemFadeUp 0.42s ease-out 0.44s both;
+}
+
+#roleDealOverlay.is-revealed .deal-role-oneliner {
+  animation: dealItemFadeUp 0.42s ease-out 0.50s both;
+}
+
+#roleDealOverlay.is-revealed .role-deal-actions {
+  animation: dealItemFadeUp 0.44s ease-out 0.56s both;
+}
+
+#roleDealOverlay.is-revealed .deal-cta-stack {
+  animation: dealItemFadeUp 0.44s ease-out 0.64s both;
+}
+
+@keyframes dealCrestStamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.65) rotate(-14deg);
+  }
+  68% {
+    opacity: 1;
+    transform: scale(0.94) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes dealItemFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#roleDealCardBox::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(212, 166, 87, 0.26);
+  border-radius: 6px;
+  pointer-events: none;
 }
 
 #roleDealCardBox::after {
   content: "";
   position: absolute;
-  inset: -20%;
+  top: 0;
+  left: -72%;
+  width: 68%;
+  height: 100%;
   pointer-events: none;
-  background: linear-gradient(112deg, transparent 40%, rgba(255, 240, 196, 0.18) 50%, transparent 60%);
-  animation: foilSweep 3.4s ease-in-out infinite;
+  background: linear-gradient(112deg, transparent 18%, rgba(255, 242, 204, 0.11) 50%, transparent 82%);
+  animation: foilSweep 4.6s ease-in-out infinite;
 }
 
 @keyframes foilSweep {
-
-  0%,
-  25% {
-    transform: translateX(-85%);
+  0%, 30% {
+    transform: translateX(-60%);
   }
-
-  75%,
-  100% {
-    transform: translateX(85%);
+  75%, 100% {
+    transform: translateX(460%);
   }
 }
 
 #roleDealCardBox.deal-wolf {
-  border-color: #c84b3e;
-  box-shadow: inset 0 0 0 6px rgba(200, 75, 62, 0.2), inset 0 0 0 7px rgba(200, 75, 62, 0.25), 0 28px 66px rgba(0, 0, 0, 0.82);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(200, 75, 62, 0.2) 0%, transparent 52%),
+    linear-gradient(172deg, #2a1514 0%, #1a0d0c 58%, #120908 100%);
+  border-color: rgba(208, 86, 74, 0.78);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.84), inset 0 1px 0 rgba(255, 210, 200, 0.18);
+}
+
+#roleDealCardBox.deal-wolf::before {
+  border-color: rgba(208, 86, 74, 0.3);
+}
+
+.deal-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  letter-spacing: 0.24em;
+  color: rgba(232, 196, 132, 0.82);
+}
+
+.deal-eyebrow::before,
+.deal-eyebrow::after {
+  content: "";
+  width: 24px;
+  height: 1px;
+  background: rgba(212, 166, 87, 0.42);
+}
+
+.deal-crest-medallion {
+  width: 52px;
+  height: 52px;
+  margin: 12px auto 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 35% 30%, rgba(58, 43, 28, 0.95) 0%, rgba(22, 16, 12, 0.98) 100%);
+  border: 1.5px solid rgba(212, 166, 87, 0.68);
+  box-shadow: 0 0 0 4px rgba(212, 166, 87, 0.12), 0 8px 20px rgba(0, 0, 0, 0.45);
+  font-size: 24px;
+}
+
+#roleDealCardBox.deal-wolf .deal-crest-medallion {
+  background: radial-gradient(circle at 35% 30%, rgba(74, 24, 22, 0.95) 0%, rgba(26, 12, 11, 0.98) 100%);
+  border-color: rgba(224, 96, 84, 0.72);
+  box-shadow: 0 0 0 4px rgba(200, 75, 62, 0.16), 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+.deal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.deal-role-title {
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: #fff6e5;
+  line-height: 1.2;
+}
+
+.deal-seat-seal {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: rgba(212, 166, 87, 0.14);
+  border: 1px solid rgba(212, 166, 87, 0.45);
+  color: #ebd09c;
+}
+
+.deal-role-oneliner {
+  margin: 10px 0 0;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: 0.03em;
+  color: #f5e6ca;
+  text-wrap: balance;
+}
+
+.deal-cta-stack {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.deal-confirm-btn {
+  width: 100%;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  letter-spacing: 0.22em;
+}
+
+.deal-tut-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  background: transparent;
+  border: none;
+  font-size: 11.5px;
+  color: rgba(220, 200, 168, 0.78);
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
+
+.deal-tut-link:hover {
+  color: #f6dca4;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 @keyframes dealFlipIn {
@@ -625,14 +1275,14 @@ body.screen-ingame #controlDeck {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 12px;
+  bottom: 10px;
   top: auto;
   z-index: 22;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 14px;
+  gap: 8px;
   padding: 0 14px;
   pointer-events: none;
 }
@@ -656,7 +1306,7 @@ body.screen-ingame #focalCenterCard {
   max-width: 720px;
   max-height: none;
   overflow: visible;
-  padding: 12px 17px;
+  padding: 10px 15px;
   border-radius: 8px;
   background: var(--surface-panel-grad);
   border: 1px solid var(--border-accent);
@@ -804,13 +1454,44 @@ body.screen-gameover #focalCenterCard {
 }
 
 .play-card-btn.is-tilting,
-.fourg-card.is-tilting,
-#roleDealCardBox.is-tilting {
+.fourg-card.is-tilting {
   transform: perspective(640px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-5px) scale(1.03);
 }
 
+#roleDealOverlay.is-revealed #roleDealCardBox.is-tilting {
+  transform: perspective(960px) translateZ(18px) rotateX(calc(var(--tilt-x, 0deg) * 0.55)) rotateY(calc(var(--tilt-y, 0deg) * 0.55)) translateY(-3px) scale(1.015);
+}
+
+.title-release-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #f6dca4;
+  background: rgba(212, 166, 87, 0.14);
+  border: 1px solid rgba(212, 166, 87, 0.48);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 210, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #roleDealOverlay.is-revealed .deal-card-flipper {
+    animation: none;
+    transform: rotateY(0deg);
+  }
+  .deal-burst-ring,
+  .deal-spark,
+  .deal-back-seal-halo,
+  .deal-back-seal-ring {
+    animation: none;
+  }
+}
+
 .fourg-card.is-tilting {
-  transform: perspective(640px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-22px) scale(1.08);
+  transform: perspective(640px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-4px) scale(1.04);
   z-index: 6;
 }
 
@@ -1014,8 +1695,8 @@ body.craft-ui .turn-chip.is-speaking {
   pointer-events: auto;
   position: relative;
   width: 100%;
-  max-width: 720px;
-  padding: 6px 9px;
+  max-width: 780px;
+  padding: 5px 8px;
   border-radius: 9px;
   background: var(--surface-panel-grad);
   border: 1px solid var(--border-accent);
@@ -1050,10 +1731,51 @@ body.craft-ui .turn-chip.is-speaking {
   font-size: 11px;
   font-weight: 700;
   border: 1px solid rgba(148, 134, 114, 0.28);
+  border-left-width: 3px;
   background: rgba(24, 20, 16, 0.88);
   color: #ede5d6;
   transition: transform 0.14s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.16s ease;
   cursor: pointer;
+}
+
+.seat-pill-archetype {
+  display: none;
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.68;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1200px) {
+  .seat-pill-archetype {
+    display: inline;
+  }
+}
+
+#spotlightTraitTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: var(--accent-gold-soft);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-sub);
+  white-space: nowrap;
+}
+
+#spotlightTraitTag:empty {
+  display: none;
+}
+
+body.craft-ui.theme-day #spotlightTraitTag {
+  color: #6b4310;
+  background: rgba(180, 128, 46, 0.12);
+  border-color: rgba(154, 104, 35, 0.34);
 }
 
 .seat-pill-btn:hover:not(:disabled) {
@@ -1180,23 +1902,158 @@ body.craft-ui .turn-chip.is-speaking {
   border: 1px solid rgba(251, 191, 36, 0.75);
 }
 
-/* ===== 5. UNIFIED FLEX SIDE PIECES (LEFT ROLE TILE + RIGHT FAN HAND) ===== */
+/* ===== 5. UNIFIED FLEX SIDE PIECES (ULTRA-SLIM LEFT ROLE PLAQUE + COLLAPSIBLE RIGHT POUCH) ===== */
 .corner-role-tile {
   pointer-events: auto;
   flex: 0 0 218px;
   width: 218px;
-  padding: 8px 10px;
+  padding: 8px 11px;
   border-radius: 8px;
   background: var(--surface-panel-grad);
   border: 1px solid var(--border-accent);
-  border-left: 4px solid var(--role-accent, var(--accent-gold));
+  border-left: 3.5px solid var(--role-accent, var(--accent-gold));
   backdrop-filter: blur(12px);
-  box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 12px 28px rgba(0, 0, 0, 0.38);
+  box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 10px 24px rgba(0, 0, 0, 0.32);
   transition: border-color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .corner-role-tile.hidden {
   display: none;
+}
+
+.role-tile-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
+.role-tile-details {
+  display: none;
+}
+
+.role-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.role-nameplate {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #f7e4bc;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.role-nameplate.is-wolf {
+  color: #fda4af;
+}
+
+.role-nameplate.is-masked {
+  color: var(--text-muted);
+}
+
+body.craft-ui.theme-day .role-nameplate {
+  color: #3a2410;
+}
+
+body.craft-ui.theme-day .role-nameplate.is-wolf {
+  color: #96261d;
+}
+
+body.craft-ui.theme-day .role-nameplate.is-masked {
+  color: #766756;
+}
+
+.role-tile-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.role-guide-trigger {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #ecd19a;
+  background: rgba(212, 166, 87, 0.14);
+  border: 1px solid rgba(212, 166, 87, 0.42);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.role-guide-trigger:hover {
+  background: rgba(212, 166, 87, 0.26);
+  border-color: rgba(240, 198, 118, 0.72);
+}
+
+.role-mask-trigger {
+  padding: 2px 3px;
+  background: transparent;
+  border: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.role-mask-trigger:hover {
+  color: var(--accent-gold);
+}
+
+.role-tile-status {
+  font-size: 11px;
+  color: var(--text-sub);
+  line-height: 1.4;
+}
+
+.role-tile-lotus-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.role-mission-line {
+  display: flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #e4ba67;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.role-mission-line.hidden {
+  display: none;
+}
+
+.role-mission-line.is-done {
+  color: #5ec49f;
+}
+
+body.craft-ui.theme-day .role-mission-line {
+  color: #7c4a12;
+}
+
+body.craft-ui.theme-day .role-mission-line.is-done {
+  color: #1f6148;
 }
 
 @keyframes lotusGlow {
@@ -1212,12 +2069,17 @@ body.craft-ui .turn-chip.is-speaking {
 }
 
 .lotus-petal-svg {
-  width: 15px;
-  height: 15px;
-  fill: rgba(148, 134, 114, 0.2);
-  stroke: rgba(206, 170, 108, 0.45);
-  stroke-width: 1.2;
+  width: 14px;
+  height: 14px;
+  fill: rgba(212, 166, 87, 0.14);
+  stroke: rgba(212, 166, 87, 0.58);
+  stroke-width: 1.45;
   transition: all 0.35s ease;
+}
+
+body.craft-ui.theme-day .lotus-petal-svg {
+  fill: rgba(154, 104, 35, 0.1);
+  stroke: rgba(138, 92, 30, 0.62);
 }
 
 .lotus-petal-svg.is-lit {
@@ -1226,26 +2088,71 @@ body.craft-ui .turn-chip.is-speaking {
   animation: lotusGlow 2.4s ease-in-out infinite;
 }
 
+body.craft-ui.theme-day .lotus-petal-svg.is-lit {
+  fill: #b87c24;
+  stroke: #7c4a12;
+}
+
 .corner-hand-fan {
+  position: relative;
   pointer-events: auto;
   flex: 0 0 auto;
   display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  padding-bottom: 2px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
 }
 
 .corner-hand-fan.hidden {
   display: none;
 }
 
+.fourg-fan-tray {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 68px);
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-accent);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.48), inset 0 1px 0 var(--border-inner-highlight);
+  backdrop-filter: blur(14px);
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  transform-origin: bottom left;
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 26;
+}
+
+.fourg-fan-tray::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 12px;
+}
+
+.corner-hand-fan:hover .fourg-fan-tray,
+.corner-hand-fan:focus-within .fourg-fan-tray,
+.corner-hand-fan.is-fan-open .fourg-fan-tray {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
 .fourg-card {
   position: relative;
   overflow: hidden;
-  width: 56px;
-  height: 70px;
-  margin-bottom: -10px;
-  padding: 7px 3px 4px;
+  width: 68px;
+  height: 62px;
+  margin-bottom: 0;
+  padding: 6px 4px 4px;
   border-radius: 7px 7px 3px 3px;
   border: 1px solid var(--border-accent);
   border-top: 3.5px solid var(--card-ink, var(--accent-gold));
@@ -1260,20 +2167,11 @@ body.craft-ui .turn-chip.is-speaking {
   cursor: pointer;
 }
 
-.fourg-card.card-confidence {
-  transform: rotate(-4deg) translateY(2px);
-}
-
-.fourg-card.card-joy {
-  transform: rotate(-1.3deg);
-}
-
-.fourg-card.card-hope {
-  transform: rotate(1.3deg);
-}
-
+.fourg-card.card-confidence,
+.fourg-card.card-joy,
+.fourg-card.card-hope,
 .fourg-card.card-convenience {
-  transform: rotate(4deg) translateY(2px);
+  transform: none;
 }
 
 .fourg-card::before {
@@ -1300,7 +2198,7 @@ body.craft-ui .turn-chip.is-speaking {
 }
 
 .fourg-card:hover:not(:disabled) {
-  transform: translateY(-22px) rotate(0deg) scale(1.07);
+  transform: translateY(-3px) scale(1.04);
   z-index: 6;
   border-color: var(--card-ink, var(--accent-gold));
   box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 16px 32px rgba(0, 0, 0, 0.56), 0 0 16px rgba(212, 166, 87, 0.22);
@@ -1559,13 +2457,330 @@ body.craft-ui.theme-day .clue-token.clue-caught {
   top: 62px;
   right: 14px;
   z-index: 24;
-  width: 240px;
+  width: 276px;
+  padding: 12px 13px;
   background: var(--surface-panel-grad);
   border: 1px solid var(--border-accent);
   border-top: 2px solid var(--accent-gold);
   border-radius: 8px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.54), inset 0 1px 0 var(--border-inner-highlight);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.48), inset 0 1px 0 var(--border-inner-highlight);
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+#seatIntelPopover.hidden {
+  display: none;
+}
+
+.intel-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.intel-seat-seal {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #1f1710;
+  color: #f3d99b;
+  border: 1.5px solid #d4a657;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.42);
+}
+
+body.craft-ui.theme-day .intel-seat-seal {
+  background: #2f2216;
+  color: #f8e6bd;
+}
+
+.intel-persona-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #e4ba67;
+}
+
+.intel-persona-tag.hidden {
+  display: none;
+}
+
+body.craft-ui.theme-day .intel-persona-tag {
+  color: #855215;
+}
+
+.intel-close-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.intel-close-btn:hover {
+  background: var(--surface-btn-hover);
+  border-color: var(--border-accent);
+  color: var(--text-main);
+}
+
+.intel-attitude-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.intel-att-key {
+  color: var(--text-muted);
+}
+
+.intel-att-track {
+  height: 3.5px;
+  width: 100%;
+  border-radius: 2px;
+  background: var(--border-subtle);
+  overflow: hidden;
+}
+
+.intel-att-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.intel-att-fill.is-jade {
+  background: var(--accent-celadon);
+}
+
+.intel-att-fill.is-gold {
+  background: var(--accent-gold);
+}
+
+.intel-att-fill.is-cinnabar {
+  background: var(--accent-cinnabar);
+}
+
+.intel-quote-card {
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-subtle);
+  border-left: 2px solid var(--border-accent);
+  max-height: 108px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.intel-quote-meta {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.intel-quote-meta.is-wolf {
+  color: #eb7a6e;
+}
+
+.intel-quote-meta.is-good {
+  color: #5ec49f;
+}
+
+.intel-quote-meta.is-god {
+  color: #e4ba67;
+}
+
+body.craft-ui.theme-day .intel-quote-meta.is-wolf {
+  color: #9e2d24;
+}
+
+body.craft-ui.theme-day .intel-quote-meta.is-good {
+  color: #1f6148;
+}
+
+body.craft-ui.theme-day .intel-quote-meta.is-god {
+  color: #855215;
+}
+
+.intel-quote-body {
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  line-height: 1.62;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+}
+
+.intel-action-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.intel-stance-seg {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid var(--border-card);
+  background: var(--surface-btn);
+}
+
+.intel-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.intel-seg-btn:last-child {
+  border-right: none;
+}
+
+.intel-seg-btn:hover:not(:disabled) {
+  background: var(--surface-btn-hover);
+  color: var(--text-main);
+}
+
+.intel-seg-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.intel-seg-btn.is-active-good {
+  background: var(--accent-celadon-soft);
+  color: #5ec49f;
+}
+
+.intel-seg-btn.is-active-wolf {
+  background: rgba(180, 58, 46, 0.22);
+  color: #f4a49c;
+}
+
+body.craft-ui.theme-day .intel-seg-btn.is-active-good {
+  background: rgba(36, 106, 80, 0.15);
+  color: #1c5941;
+}
+
+body.craft-ui.theme-day .intel-seg-btn.is-active-wolf {
+  background: rgba(166, 50, 38, 0.14);
+  color: #96261d;
+}
+
+.intel-skill-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.intel-skill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  border-radius: 5px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid var(--border-card);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.intel-skill-btn.hidden,
+.intel-seg-btn.hidden,
+.intel-footer-link.hidden,
+.role-guide-trigger.hidden,
+.role-deal-team-pill.hidden,
+.deal-seat-seal.hidden,
+.deal-crest-medallion.hidden {
+  display: none;
+}
+
+.intel-skill-btn.is-gold {
+  background: rgba(212, 166, 87, 0.15);
+  border-color: rgba(212, 166, 87, 0.48);
+  color: #f3d79e;
+}
+
+.intel-skill-btn.is-jade {
+  background: rgba(60, 139, 110, 0.16);
+  border-color: rgba(60, 139, 110, 0.48);
+  color: #9be0c5;
+}
+
+body.craft-ui.theme-day .intel-skill-btn.is-gold {
+  background: rgba(180, 128, 46, 0.13);
+  border-color: rgba(154, 104, 35, 0.48);
+  color: #6b4310;
+}
+
+body.craft-ui.theme-day .intel-skill-btn.is-jade {
+  background: rgba(36, 106, 80, 0.11);
+  border-color: rgba(36, 106, 80, 0.44);
+  color: #1b5740;
+}
+
+.intel-skill-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.intel-skill-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.intel-footer-link {
+  width: 100%;
+  padding: 4px 2px 1px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.intel-footer-link:hover {
+  color: var(--accent-gold);
 }
 
 
@@ -1629,6 +2844,9 @@ body.craft-ui.theme-day #voteFlightBanner {
 
 .craft-toast {
   border-radius: 4px;
+  font-family: var(--font-display);
+  letter-spacing: 0.025em;
+  line-height: 1.55;
   background: rgba(22, 18, 14, 0.95);
   color: #efe7d8;
   border: 1px solid var(--border-card);
@@ -2205,7 +3423,9 @@ body.screen-ingame.phase-listening .corner-hand-fan {
   transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
-body.screen-ingame.phase-listening .corner-hand-fan:hover {
+body.screen-ingame.phase-listening .corner-hand-fan:hover,
+body.screen-ingame.phase-listening .corner-hand-fan:focus-within,
+body.screen-ingame.phase-listening .corner-hand-fan.is-fan-open {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
@@ -2646,10 +3866,12 @@ body.craft-ui.theme-day .pit-extra-chip {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 1.5px 7px;
-  border-radius: 9999px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--font-display);
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   border: 1px solid rgba(212, 166, 87, 0.35);
   background: rgba(30, 24, 18, 0.78);
   color: #f5e6c8;
@@ -2902,10 +4124,6 @@ body.fx-pacing-fast .play-card-btn.is-card-casting {
 #spotlightText {
   line-height: 1.62;
   letter-spacing: 0.015em;
-}
-
-#roleDealCardBox {
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(242, 212, 156, 0.45);
 }
 
 /* Desktop Widescreen Refinement (>= 1200px) */
@@ -3189,49 +4407,56 @@ body.fx-pacing-fast .play-card-btn.is-card-casting {
 }
 
 .role-action-hint {
-  color: #fde68a;
-  font-weight: 700;
-  background: rgba(15, 23, 42, 0.45);
-  border: 1px solid rgba(251, 191, 36, 0.24);
-  border-radius: 5px;
-  padding: 3px 6px;
+  color: #ebd09a;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  background: transparent;
+  border: none;
+  border-left: 2px solid var(--accent-gold);
+  border-radius: 0;
+  padding: 1px 0 1px 8px;
 }
 
 body.craft-ui.theme-day .role-action-hint {
-  color: #78350f;
-  background: rgba(254, 243, 199, 0.78);
-  border-color: rgba(180, 118, 38, 0.35);
+  color: #6b4310;
+  background: transparent;
+  border-left-color: rgba(154, 104, 35, 0.65);
 }
 
 body.craft-ui.theme-day #playerRoleContent {
-  color: #1e293b;
+  color: #4b3f33;
 }
 
 body.craft-ui.theme-day .role-guide-trigger {
-  color: #92400e;
-  border-color: rgba(180, 118, 38, 0.55);
-  background: rgba(254, 243, 199, 0.72);
+  color: #7c4a12;
+  border-color: rgba(158, 108, 38, 0.45);
+  background: rgba(180, 128, 46, 0.12);
 }
 
 body.craft-ui.theme-day .role-guide-trigger:hover {
-  background: rgba(253, 230, 138, 0.9);
+  background: rgba(180, 128, 46, 0.22);
 }
 
 .three-good-guide-line {
-  color: rgba(226, 232, 240, 0.85);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-sub);
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .three-good-guide-line.is-awakened {
-  color: #6ee7b7;
-  font-weight: 800;
+  color: #5ec49f;
+  font-weight: 700;
 }
 
 body.craft-ui.theme-day .three-good-guide-line {
-  color: #334155;
+  color: #5c4b37;
 }
 
 body.craft-ui.theme-day .three-good-guide-line.is-awakened {
-  color: #047857;
+  color: #1f6148;
 }
 
 .role-guide-popover {
@@ -3605,15 +4830,10 @@ body.craft-ui.theme-day .vote-goodwill-badge.is-hint {
   box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 10px 24px rgba(0, 0, 0, 0.44), 0 0 14px rgba(52, 211, 153, 0.35);
 }
 
-.role-deal-actions {
-  color: #e2e8f0;
-  line-height: 1.5;
-}
-
 @media (max-width: 1199px) {
   .corner-role-tile {
-    flex: 0 0 194px;
-    width: 194px;
+    flex: 0 0 226px;
+    width: 226px;
   }
 }
 
@@ -3982,65 +5202,62 @@ body.craft-ui.theme-day .fb-result-card {
   border-color: rgba(36, 106, 80, 0.42);
 }
 
-/* ===== v9.1 UI CONVERGENCE & LIVE "WHAT CAN I DO" TOOLKIT (ZERO !important) ===== */
+/* ===== v9.1 / v10.2 SINGLE-ROW TOOLKIT BAR (ZERO !important) ===== */
 .live-toolkit-strip {
-  margin-top: 4px;
-  padding: 3px 5px;
+  padding: 0;
   width: 100%;
-  border-radius: 6px;
-  border: 1px dashed rgba(212, 166, 87, 0.34);
-  background: rgba(15, 19, 30, 0.48);
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 3px;
-  text-align: left;
+  border: none;
+  background: transparent;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  text-align: center;
   cursor: pointer;
-  transition: border-color 0.16s ease, background 0.16s ease;
 }
 
 .live-toolkit-strip.hidden {
   display: none;
 }
 
-.live-toolkit-strip:hover {
-  border-color: rgba(245, 196, 81, 0.72);
-  background: rgba(30, 24, 16, 0.76);
+.live-toolkit-strip:hover .toolkit-pill:not(.is-spent) {
+  border-color: var(--accent-gold);
 }
 
 .toolkit-lead {
-  font-size: 9px;
-  font-weight: 700;
-  color: #cbd5e1;
-  margin-right: 1px;
+  display: none;
 }
 
 .toolkit-pill {
-  font-size: 9.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
   font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 999px;
-  line-height: 1.35;
+  padding: 3px 4px;
+  border-radius: 4px;
+  line-height: 1.25;
   white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .toolkit-pill.is-ready {
-  background: rgba(16, 185, 129, 0.2);
-  color: #a7f3d0;
-  border: 1px solid rgba(52, 211, 153, 0.48);
+  background: rgba(60, 139, 110, 0.16);
+  color: #9be0c5;
+  border: 1px solid rgba(60, 139, 110, 0.44);
 }
 
 .toolkit-pill.is-standby {
-  background: rgba(212, 166, 87, 0.15);
-  color: #fde68a;
-  border: 1px solid rgba(212, 166, 87, 0.36);
+  background: rgba(212, 166, 87, 0.13);
+  color: #ebd09a;
+  border: 1px solid rgba(212, 166, 87, 0.34);
 }
 
 .toolkit-pill.is-spent {
-  background: rgba(51, 65, 85, 0.38);
-  color: #64748b;
-  border: 1px solid rgba(100, 116, 139, 0.24);
+  background: rgba(51, 65, 85, 0.22);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
   text-decoration: line-through;
+  opacity: 0.6;
 }
 
 .guide-now-box {
@@ -4089,28 +5306,42 @@ body.craft-ui.theme-day .fb-result-card {
 }
 
 .fourg-deck-head {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  right: 0;
-  max-width: 265px;
-  padding: 4px 9px;
-  border-radius: 999px;
-  font-size: 10px;
+  position: relative;
+  bottom: auto;
+  right: auto;
+  min-width: 158px;
+  max-width: 186px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #fde68a;
-  background: rgba(20, 15, 11, 0.9);
-  border: 1px solid rgba(212, 166, 87, 0.48);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  letter-spacing: 0.04em;
+  color: #f3d79e;
+  background: var(--surface-panel-grad);
+  border: 1px solid var(--border-accent);
+  box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 10px 24px rgba(0, 0, 0, 0.34);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  pointer-events: none;
-  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.14s ease;
+}
+
+.fourg-deck-head:hover,
+.corner-hand-fan.is-fan-open .fourg-deck-head {
+  border-color: var(--accent-gold);
+  transform: translateY(-1px);
 }
 
 .fourg-deck-head.is-previewing {
   white-space: normal;
+  text-align: left;
   border-radius: 8px;
   color: #fff8eb;
   background: rgba(34, 24, 15, 0.96);
@@ -4171,26 +5402,22 @@ body.craft-ui.theme-day .fb-result-card {
   }
 }
 
-/* Daylight Xuan-Paper Theme Parity for v9.1 Convergence Elements */
+/* Daylight Xuan-Paper Theme Parity for v9.1 / v10.2 Convergence Elements */
 body.craft-ui.theme-day .live-toolkit-strip {
-  background: rgba(246, 238, 222, 0.85);
-  border-color: rgba(154, 112, 48, 0.4);
-}
-
-body.craft-ui.theme-day .toolkit-lead {
-  color: #5c4935;
+  background: transparent;
+  border: none;
 }
 
 body.craft-ui.theme-day .toolkit-pill.is-ready {
-  background: rgba(209, 244, 228, 0.9);
-  color: #166534;
-  border-color: rgba(36, 106, 80, 0.45);
+  background: rgba(36, 106, 80, 0.1);
+  color: #1c5941;
+  border-color: rgba(36, 106, 80, 0.36);
 }
 
 body.craft-ui.theme-day .toolkit-pill.is-standby {
-  background: rgba(250, 236, 198, 0.9);
-  color: #7c4a12;
-  border-color: rgba(168, 118, 46, 0.45);
+  background: rgba(180, 128, 46, 0.1);
+  color: #724510;
+  border-color: rgba(154, 104, 35, 0.34);
 }
 
 body.craft-ui.theme-day .guide-now-box {
@@ -4199,10 +5426,39 @@ body.craft-ui.theme-day .guide-now-box {
   color: #422a0d;
 }
 
+body.craft-ui.theme-day .guide-now-box .text-amber-50 {
+  color: #3a2410;
+}
+
 body.craft-ui.theme-day .guide-tool-item {
   background: rgba(250, 244, 232, 0.95);
   border-color: rgba(140, 104, 60, 0.3);
   color: #3a2d21;
+}
+
+body.craft-ui.theme-day .guide-tool-status.is-ready {
+  background: rgba(36, 106, 80, 0.14);
+  color: #1b5740;
+  border: 1px solid rgba(36, 106, 80, 0.34);
+}
+
+body.craft-ui.theme-day .guide-tool-status.is-muted {
+  background: rgba(140, 104, 60, 0.12);
+  color: #5c4e3e;
+  border: 1px solid rgba(140, 104, 60, 0.24);
+}
+
+body.craft-ui.theme-day .role-guide-popover .text-indigo-300 {
+  color: #2f4f75;
+}
+
+body.craft-ui.theme-day .role-guide-popover .text-emerald-300,
+body.craft-ui.theme-day .role-guide-popover .text-emerald-200 {
+  color: #1c5941;
+}
+
+body.craft-ui.theme-day .role-guide-popover .text-slate-300 {
+  color: #4b3f33;
 }
 
 body.craft-ui.theme-day .fourg-deck-head {
@@ -4218,60 +5474,83 @@ body.craft-ui.theme-day .player-turn-step-hint {
   color: #1f3b2c;
 }
 
-/* ===== v9.2 USER-PACED ROLE DEAL CARD & GUIDED BEGINNER COACH BANNER (ZERO !important) ===== */
+/* ===== v9.2 / v10.2 COLLECTIBLE ROLE DEAL SCROLL & GUIDED COACH BANNER (ZERO !important) ===== */
 .role-deal-team-pill {
   display: inline-block;
-  padding: 4px 11px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  border: 1px solid rgba(52, 211, 153, 0.5);
-  background: rgba(16, 185, 129, 0.16);
-  color: #a7f3d0;
+  margin-top: 6px;
+  padding: 2px 10px;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border: 1px solid rgba(94, 196, 159, 0.38);
+  background: rgba(36, 106, 80, 0.18);
+  color: #9be0c5;
 }
 
 .role-deal-team-pill.is-wolf {
-  border-color: rgba(251, 113, 133, 0.55);
-  background: rgba(225, 29, 72, 0.2);
-  color: #fecdd3;
+  border-color: rgba(235, 122, 110, 0.45);
+  background: rgba(180, 58, 46, 0.22);
+  color: #f8b4ac;
+}
+
+.role-deal-actions {
+  margin-top: 14px;
+  border-radius: 6px;
+  background: rgba(42, 31, 22, 0.56);
+  border: 1px solid rgba(212, 166, 87, 0.24);
+  overflow: hidden;
+  text-align: left;
+}
+
+#roleDealCardBox.deal-wolf .role-deal-actions {
+  background: rgba(54, 24, 20, 0.48);
+  border-color: rgba(208, 86, 74, 0.28);
 }
 
 .deal-step-line {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 5px 8px;
-  border-radius: 7px;
-  background: rgba(15, 23, 42, 0.56);
-  border: 1px solid rgba(212, 166, 87, 0.18);
-  color: #e2e8f0;
-  line-height: 1.45;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(212, 166, 87, 0.14);
+  font-size: 12px;
+  color: #e9dfd0;
+  line-height: 1.5;
+}
+
+.deal-step-line:last-child {
+  border-bottom: none;
 }
 
 .deal-step-tag {
-  font-size: 10.5px;
-  font-weight: 800;
-  padding: 1px 6px;
-  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  width: 54px;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   white-space: nowrap;
   flex-shrink: 0;
-  margin-top: 1px;
+}
+
+.deal-step-text {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .deal-step-tag.is-night {
-  background: rgba(99, 102, 241, 0.24);
-  color: #c7d2fe;
+  color: #9cbce6;
 }
 
 .deal-step-tag.is-day {
-  background: rgba(16, 185, 129, 0.22);
-  color: #a7f3d0;
+  color: #e9c478;
 }
 
 .deal-step-tag.is-vote {
-  background: rgba(244, 63, 94, 0.22);
-  color: #fecdd3;
+  color: #eb8a7e;
 }
 
 #modalTutorial {
@@ -4349,4 +5628,70 @@ body.craft-ui.theme-day .speech-adv-toggle.is-active {
 body.craft-ui.theme-day .speech-adv-drawer {
   background: rgba(250, 244, 232, 0.92);
   border-color: rgba(140, 104, 60, 0.34);
+}
+
+/* ===== v10.3 SINGLE-FOCUS CALM HUD & INSTANT TEXT REVEAL (ZERO !important) ===== */
+@keyframes spotlightCalmFade {
+  from {
+    opacity: 0.25;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#spotlightText.spotlight-fade-in {
+  animation: spotlightCalmFade 0.18s ease-out;
+}
+
+.spotlight-progress-track,
+.spotlight-meta-foot {
+  display: none;
+}
+
+#inGameTopHud #bannerHeadline,
+#inGameTopHud .hud-sep-headline,
+#inGameTopHud #directorEventPill {
+  display: none;
+}
+
+body.screen-ingame #dragGestureHint {
+  display: none;
+}
+
+#seatButtonStrip {
+  padding: 4px 7px;
+}
+
+body.craft-ui.theme-day .fourg-deck-head {
+  background: var(--surface-panel-grad);
+  border-color: var(--border-accent);
+  color: #5d3b10;
+}
+
+body.craft-ui.theme-day .fourg-deck-head.is-previewing {
+  background: rgba(254, 249, 238, 0.98);
+  border-color: #9a6823;
+  color: #3a2410;
+}
+
+@media (max-width: 767px) {
+  .corner-hand-fan {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .fourg-deck-head {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+  }
+
+  .fourg-fan-tray {
+    left: 0;
+    right: 0;
+    justify-content: center;
+  }
 }

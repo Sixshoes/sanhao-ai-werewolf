@@ -16,24 +16,24 @@ const stage3dCharGeos = {
     const hasAnime = typeof stage3dAnime !== "undefined";
     const hasLathe = typeof THREE.LatheGeometry === "function" && typeof THREE.Vector2 === "function";
 
-    this.baseRing = new THREE.TorusGeometry(0.86, 0.045, 10, 28);
-    this.seatCushion = new THREE.BoxGeometry(1.04, 0.14, 0.94);
-    this.cushionPiping = new THREE.BoxGeometry(1.06, 0.024, 0.96);
+    this.baseRing = new THREE.TorusGeometry(0.76, 0.042, 10, 28);
+    this.seatCushion = new THREE.BoxGeometry(0.86, 0.11, 0.80);
+    this.cushionPiping = new THREE.BoxGeometry(0.88, 0.022, 0.82);
     if (typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function") {
-      // Classic Ming-style gently arched official-hat headrest rail (搭腦曲線)
+      // Classic Ming-style slender arched official-hat headrest rail (搭腦曲線) scaled to VRM proportions
       const crestCurve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(-0.56, 0.04, 0.05),
-        new THREE.Vector3(0.0, 0.10, -0.04),
-        new THREE.Vector3(0.56, 0.04, 0.05)
+        new THREE.Vector3(-0.46, 0.04, 0.04),
+        new THREE.Vector3(0.0, 0.09, -0.04),
+        new THREE.Vector3(0.46, 0.04, 0.04)
       );
-      this.backrest = new THREE.TubeGeometry(crestCurve, 14, 0.058, 8, false);
+      this.backrest = new THREE.TubeGeometry(crestCurve, 14, 0.048, 8, false);
     } else {
-      this.backrest = new THREE.BoxGeometry(1.04, 0.14, 0.10);
+      this.backrest = new THREE.BoxGeometry(0.86, 0.11, 0.09);
     }
-    this.chairSplat = new THREE.BoxGeometry(0.30, 0.88, 0.045);
-    this.chairMedallion = new THREE.CylinderGeometry(0.095, 0.095, 0.056, 14);
-    this.chairSpindle = new THREE.CylinderGeometry(0.036, 0.042, 0.98, 8);
-    this.chairLeg = new THREE.CylinderGeometry(0.055, 0.045, 0.66, 8);
+    this.chairSplat = new THREE.BoxGeometry(0.24, 0.84, 0.040);
+    this.chairMedallion = new THREE.CylinderGeometry(0.082, 0.082, 0.050, 14);
+    this.chairSpindle = new THREE.CylinderGeometry(0.030, 0.036, 0.94, 8);
+    this.chairLeg = new THREE.CylinderGeometry(0.048, 0.038, 0.65, 8);
 
     if (hasLathe) {
       // Refined slimmer anime torso proportions with sculpted waist & chest contour
@@ -114,12 +114,13 @@ const stage3dCharGeos = {
     this.hairPin = new THREE.OctahedronGeometry(0.072, 0);
     this.haloRing = new THREE.RingGeometry(0.56, 0.66, 28);
     this.hitCyl = new THREE.CylinderGeometry(0.76, 0.76, 2.55, 10);
-    this.plaqueBox = new THREE.BoxGeometry(1.06, 0.42, 0.065);
+    this.plaqueBox = new THREE.BoxGeometry(0.78, 0.28, 0.048);
     this.candleStick = new THREE.CylinderGeometry(0.065, 0.075, 0.28, 10);
     this.candleFlame = new THREE.ConeGeometry(0.055, 0.16, 8);
     this.candleHit = new THREE.CylinderGeometry(0.16, 0.16, 0.52, 8);
-    this.sheriffCrown = new THREE.ConeGeometry(0.18, 0.26, 6);
-    this.sheriffRing = new THREE.TorusGeometry(0.24, 0.032, 8, 18);
+    this.sheriffCrown = new THREE.ConeGeometry(0.036, 0.11, 5);
+    this.sheriffRing = new THREE.TorusGeometry(0.125, 0.018, 8, 22);
+    this.sheriffPearl = new THREE.SphereGeometry(0.032, 10, 8);
     this.markCrystal = new THREE.OctahedronGeometry(0.14, 0);
     this.idCard = new THREE.BoxGeometry(0.58, 0.032, 0.80);
     this.idCardHit = new THREE.BoxGeometry(0.76, 0.28, 0.96);
@@ -715,11 +716,11 @@ function create3DSeatActor(seat) {
   baseRing.position.y = 0.04;
   root.add(baseRing);
 
-  // 2. Handcrafted Ming-Style Curved Backrest Tea Chair with Gold Medallion Splat & Brocade Cushion
+  // 2. Handcrafted Ming-Style Curved Backrest Tea Chair with Gold Medallion Splat & Crimson-Espresso Brocade Cushion
   const chairGroup = new THREE.Group();
-  const chairWoodMat = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x57311d, roughness: 0.38, metalness: 0.16 });
+  const chairWoodMat = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x482616, roughness: 0.36, metalness: 0.16 });
   const chairGoldMat = new THREE.MeshStandardMaterial({ color: 0xd4a657, roughness: 0.28, metalness: 0.78 });
-  const cushionMat = new THREE.MeshStandardMaterial({ color: 0x45281c, bumpMap: fabric.bump, bumpScale: 0.018, roughness: 0.82, metalness: 0.04 });
+  const cushionMat = new THREE.MeshStandardMaterial({ color: 0x52231c, bumpMap: fabric.bump, bumpScale: 0.022, roughness: 0.86, metalness: 0.04 });
 
   const shadowDisc = new THREE.Mesh(
     G.contactShadow,
@@ -730,40 +731,40 @@ function create3DSeatActor(seat) {
   chairGroup.add(shadowDisc);
 
   const seatCushion = new THREE.Mesh(G.seatCushion, cushionMat);
-  seatCushion.position.set(0, 0.66, -0.05);
+  seatCushion.position.set(0, 0.675, -0.03);
   seatCushion.castShadow = true;
   seatCushion.receiveShadow = true;
   chairGroup.add(seatCushion);
 
   const piping = new THREE.Mesh(G.cushionPiping, chairGoldMat);
-  piping.position.set(0, 0.60, -0.05);
+  piping.position.set(0, 0.62, -0.03);
   chairGroup.add(piping);
 
   const topRail = new THREE.Mesh(G.backrest, chairWoodMat);
-  topRail.position.set(0, 1.62, -0.48);
+  topRail.position.set(0, 1.56, -0.41);
   topRail.castShadow = true;
   chairGroup.add(topRail);
 
   const centerSplat = new THREE.Mesh(G.chairSplat, chairWoodMat);
-  centerSplat.position.set(0, 1.18, -0.49);
+  centerSplat.position.set(0, 1.14, -0.42);
   centerSplat.castShadow = true;
   chairGroup.add(centerSplat);
 
   const backMedallion = new THREE.Mesh(G.chairMedallion, chairGoldMat);
   backMedallion.rotation.x = Math.PI * 0.5;
-  backMedallion.position.set(0, 1.34, -0.49);
+  backMedallion.position.set(0, 1.30, -0.42);
   chairGroup.add(backMedallion);
 
-  [-0.46, 0.46].forEach(function (sx) {
+  [-0.38, 0.38].forEach(function (sx) {
     const sp = new THREE.Mesh(G.chairSpindle, chairWoodMat);
-    sp.position.set(sx, 1.18, -0.46);
+    sp.position.set(sx, 1.14, -0.39);
     sp.castShadow = true;
     chairGroup.add(sp);
   });
 
-  [[-0.44, -0.44], [0.44, -0.44], [-0.44, 0.36], [0.44, 0.36]].forEach(function (p) {
+  [[-0.36, -0.37], [0.36, -0.37], [-0.36, 0.31], [0.36, 0.31]].forEach(function (p) {
     const leg = new THREE.Mesh(G.chairLeg, chairWoodMat);
-    leg.position.set(p[0], 0.33, p[1]);
+    leg.position.set(p[0], 0.325, p[1]);
     leg.castShadow = true;
     chairGroup.add(leg);
   });
@@ -862,14 +863,25 @@ function create3DSeatActor(seat) {
   haloRing.position.y = 0.68;
   headPivot.add(haloRing);
 
+  // Refined Antique-Gold Lotus-Prong Sheriff Coronet (replaces oversized cone hat!)
   const sheriffCrownGroup = new THREE.Group();
-  const crownMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.85, flatShading: true });
+  const crownMat = new THREE.MeshStandardMaterial({ color: 0xf6d379, emissive: 0xd4942a, emissiveIntensity: 0.65, roughness: 0.22, metalness: 0.86 });
+  const crownJadeMat = new THREE.MeshStandardMaterial({ color: 0x6ee7b7, emissive: 0x10b981, emissiveIntensity: 0.55, roughness: 0.20, metalness: 0.22 });
   const crownBase = new THREE.Mesh(G.sheriffRing, crownMat);
   crownBase.rotation.x = Math.PI * 0.5;
-  const crownPeak = new THREE.Mesh(G.sheriffCrown, crownMat);
-  crownPeak.position.y = 0.14;
-  sheriffCrownGroup.add(crownBase, crownPeak);
-  sheriffCrownGroup.position.set(0, 0.78, 0);
+  sheriffCrownGroup.add(crownBase);
+  for (let ci = 0; ci < 5; ci++) {
+    const ca = (ci / 5) * Math.PI * 2;
+    const prong = new THREE.Mesh(G.sheriffCrown, crownMat);
+    prong.position.set(Math.cos(ca) * 0.12, 0.055, Math.sin(ca) * 0.12);
+    prong.rotation.z = -Math.cos(ca) * 0.22;
+    prong.rotation.x = Math.sin(ca) * 0.22;
+    sheriffCrownGroup.add(prong);
+  }
+  const crownPearl = new THREE.Mesh(G.sheriffPearl, crownJadeMat);
+  crownPearl.position.y = 0.075;
+  sheriffCrownGroup.add(crownPearl);
+  sheriffCrownGroup.position.set(0, 0.76, 0);
   sheriffCrownGroup.visible = false;
   headPivot.add(sheriffCrownGroup);
 
@@ -886,9 +898,9 @@ function create3DSeatActor(seat) {
   hitMesh.userData = { seatId: seat.id };
   root.add(hitMesh);
 
-  // 4. Tabletop Props (Fixed Non-Mirrored Plaque + Candle + Celadon Tea Cup + Mark Crystal + Flippable ID Card)
+  // 4. Tabletop Props (Refined Low-Angle Desk Plaque + Candle + Celadon Tea Cup + Mark Crystal + Flippable ID Card)
   const tablePropGroup = new THREE.Group();
-  tablePropGroup.position.set(0, 1.24, 1.86);
+  tablePropGroup.position.set(0, 1.07, 1.62);
 
   const plaqueBundle = stage3dTextures.createPlaqueCanvas();
   const plaqueFaceMat = new THREE.MeshBasicMaterial({ map: plaqueBundle.tex });
@@ -897,13 +909,13 @@ function create3DSeatActor(seat) {
     plaqueFaceMat,
     plaqueFaceMat
   ]);
-  plaqueMesh.position.set(0, 0.16, 0);
-  plaqueMesh.rotation.x = -0.35;
+  plaqueMesh.position.set(0, 0.10, 0);
+  plaqueMesh.rotation.x = -0.58;
   plaqueMesh.castShadow = true;
   tablePropGroup.add(plaqueMesh);
 
   const candleGroup = new THREE.Group();
-  candleGroup.position.set(0.62, 0, -0.06);
+  candleGroup.position.set(0.52, 0, -0.04);
   const brassMat = new THREE.MeshStandardMaterial({ color: 0xc28b2c, roughness: 0.24, metalness: 0.85 });
   const candleHolder = new THREE.Mesh(G.candleHolder, brassMat);
   candleHolder.castShadow = true;
@@ -929,7 +941,7 @@ function create3DSeatActor(seat) {
   tablePropGroup.add(candleGroup);
 
   const teaGroup = new THREE.Group();
-  teaGroup.position.set(-0.56, 0.015, 0.16);
+  teaGroup.position.set(-0.48, 0.015, 0.12);
   const CupMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
   const celadonMat = new CupMatCtor({
     color: 0xd1fae5,

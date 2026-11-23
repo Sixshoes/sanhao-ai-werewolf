@@ -258,13 +258,13 @@ function drawStageOverlays(ctx, f, coords, skipBeams) {
       let dragLabel = "拖曳到任一角色頭像放開互動";
       if (snapN) {
         const snName = fmtSeatNum(snapN.id) + "號" + snapN.seat.name;
-        if (!state.match.started || p === "LOBBY") dragLabel = "👋 放開與 " + snName + " 擊掌打招呼！";
-        else if (p === "DAY_VOTE") dragLabel = "🗳 放開直接投票給 " + snName + "！";
-        else if (p === "NIGHT_SEER") dragLabel = "🔮 放開立即查驗 " + snName + "！";
-        else if (p === "NIGHT_WOLF") dragLabel = "🐺 放開夜間鎖定 " + snName + "！";
-        else if (p === "HUNTER_TRIGGER") dragLabel = "🎯 放開帶走 " + snName + "！";
-        else if (p === "DAY_PLAYER_TURN") dragLabel = "🎯 放開點名鎖定 " + snName + "！";
-        else dragLabel = "📋 放開開啟 " + snName + " 靜默偵探輪盤！";
+        if (!state.match.started || p === "LOBBY") dragLabel = "放開與 " + snName + " 打招呼";
+        else if (p === "DAY_VOTE") dragLabel = "放開投票給 " + snName;
+        else if (p === "NIGHT_SEER") dragLabel = "放開查驗 " + snName;
+        else if (p === "NIGHT_WOLF") dragLabel = "放開夜間鎖定 " + snName;
+        else if (p === "HUNTER_TRIGGER") dragLabel = "放開帶走 " + snName;
+        else if (p === "DAY_PLAYER_TURN") dragLabel = "放開點名 " + snName;
+        else dragLabel = "放開開啟 " + snName + " 靜默輪盤";
       }
       ctx.font = "900 " + Math.round(10.5 * dpr) + "px 'Noto Sans TC', sans-serif";
       const lw = ctx.measureText(dragLabel).width + 18 * dpr;

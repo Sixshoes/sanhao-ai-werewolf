@@ -160,14 +160,14 @@ function renderSeatIntelPopover() {
   const dot = el("intelSeatDot");
   if (dot) {
     dot.textContent = fmtSeatNum(s.id);
-    dot.style.backgroundColor = s.color || "#38bdf8";
+    dot.style.borderColor = s.color || "#d4a657";
   }
   const pImg = el("intelSeatPortrait");
   if (pImg && typeof getPortraitImageUrl === "function") {
     const artUrl = getPortraitImageUrl(s);
     if (artUrl) {
       pImg.src = artUrl;
-      pImg.style.borderColor = s.alive ? (s.color || "#fbbf24") : "#64748b";
+      pImg.style.borderColor = s.alive ? (s.color || "#d4a657") : "#64748b";
       pImg.style.filter = s.alive ? "" : "grayscale(0.85) opacity(0.65)";
       pImg.classList.remove("hidden");
     } else {
@@ -178,12 +178,12 @@ function renderSeatIntelPopover() {
   const isWolfView = Boolean(pSelfNow && pSelfNow.role === "wolf");
   const isWolfMateSeat = Boolean(isWolfView && s.role === "wolf");
   const wolfGodTag = (isWolfView && !isWolfMateSeat && state.match.wolfGodMarks && state.match.wolfGodMarks[s.id] && typeof getWolfGodMarkDef === "function")
-    ? ("・🔍" + getWolfGodMarkDef(state.match.wolfGodMarks[s.id]).label)
+    ? ("・" + getWolfGodMarkDef(state.match.wolfGodMarks[s.id]).label)
     : "";
-  const mateTag = isWolfMateSeat ? "・🐺狼同伴" : "";
-  const roleTag = (s.claimedRole && ROLE_DEFS[s.claimedRole]) ? ("・跳" + ROLE_DEFS[s.claimedRole].name) : "";
+  const mateTag = isWolfMateSeat ? "・狼同伴" : "";
+  const roleTag = (s.claimedRole && ROLE_DEFS[s.claimedRole]) ? ("・亮" + ROLE_DEFS[s.claimedRole].name) : "";
   const sweatTag = (state.match.started && s.alive && (state.match.microPulseRevealed || s.sweatExposed))
-    ? ("・心虛" + s.microPulse + "%")
+    ? ("・心虛 " + s.microPulse + "%")
     : "";
   el("intelSeatTitle").textContent = fmtSeatNum(s.id) + "號 " + s.name + (!s.alive ? "（已離席）" : "");
   el("intelSeatSub").textContent = (s.trait || "推理夥伴") + mateTag + roleTag + wolfGodTag + sweatTag;
@@ -191,7 +191,11 @@ function renderSeatIntelPopover() {
   const pProfIntel = typeof getPersonaProfile === "function" ? getPersonaProfile(s) : null;
   if (pBadgeEl) {
     if (pProfIntel && pProfIntel.registerBadge) {
-      pBadgeEl.textContent = pProfIntel.registerBadge + "｜" + pProfIntel.logicTags;
+      pBadgeEl.textContent = pProfIntel.registerBadge;
+      pBadgeEl.title = pProfIntel.registerBadge + (pProfIntel.logicTags ? ("｜" + pProfIntel.logicTags) : "");
+      if (typeof shPrependIcon === "function" && pProfIntel.iconKey) {
+        shPrependIcon(pBadgeEl, pProfIntel.iconKey, pProfIntel.iconTone || "gold");
+      }
       pBadgeEl.classList.remove("hidden");
     } else {
       pBadgeEl.classList.add("hidden");
@@ -206,17 +210,17 @@ function renderSeatIntelPopover() {
     const lbl = el("intelAttitudeLabel");
     const bar = el("intelAttitudeBar");
     if (susOnYou >= 62) {
-      lbl.textContent = "高度懷疑你 (" + susOnYou + "%)";
-      lbl.className = "text-rose-300";
-      bar.className = "h-full bg-rose-400 transition-all duration-300";
+      lbl.textContent = "高度懷疑你 · " + susOnYou + "%";
+      lbl.className = "font-bold text-rose-300";
+      bar.className = "intel-att-fill is-cinnabar";
     } else if (susOnYou <= 38) {
-      lbl.textContent = "高度信任你 (" + trustPct + "%)";
-      lbl.className = "text-emerald-300";
-      bar.className = "h-full bg-emerald-400 transition-all duration-300";
+      lbl.textContent = "傾向信任你 · " + trustPct + "%";
+      lbl.className = "font-bold text-emerald-300";
+      bar.className = "intel-att-fill is-jade";
     } else {
-      lbl.textContent = "觀望評估中 (" + trustPct + "%)";
-      lbl.className = "text-amber-300";
-      bar.className = "h-full bg-amber-400 transition-all duration-300";
+      lbl.textContent = "觀望評估中 · " + trustPct + "%";
+      lbl.className = "font-bold text-amber-300";
+      bar.className = "intel-att-fill is-gold";
     }
     bar.style.width = trustPct + "%";
   } else {
@@ -225,22 +229,32 @@ function renderSeatIntelPopover() {
 
   const qBox = el("intelQuoteBox");
   if (!state.match.started) {
-    qBox.textContent = (pProfIntel && pProfIntel.sampleQuote)
+    const sampleLine = (pProfIntel && pProfIntel.sampleQuote)
       ? ("「" + pProfIntel.sampleQuote + "」")
-      : ("性格風格：「" + (s.trait || "觀察派") + "」—— 點下方「打個招呼」先跟這位夥伴暖身！");
+      : ("性格風格：「" + (s.trait || "觀察派") + "」—— 點下方與這位夥伴打聲招呼。");
+    qBox.textContent = sampleLine;
+    qBox.innerHTML = '<div class="intel-quote-meta is-neutral">角色代表語氣</div><div class="intel-quote-body">' + escapeHtml(sampleLine) + "</div>";
   } else {
     const allEvs = (state.match.allSpeechEvents || []).filter(function (ev) { return ev.speakerId === s.id; });
     const latest = allEvs.length ? allEvs[allEvs.length - 1] : null;
+    let metaTone = "is-neutral";
+    let metaText = "尚未發言";
+    let bodyText = s.alive ? "本局尚未輪到他發言，點下方可先靜默標記或查看票型。" : ("離席原因：" + (s.outReason || "出局"));
     if (latest) {
-      const stance = latest.accuseId
-        ? ("【指控 " + fmtSeatNum(latest.accuseId) + "號】")
-        : (latest.vouchId ? ("【力挺 " + fmtSeatNum(latest.vouchId) + "號】") : "【發言摘要】");
-      qBox.textContent = "第" + latest.day + "天 " + stance + " " + latest.rawText;
-    } else {
-      qBox.textContent = s.alive ? "本局尚未輪到他發言，點下方可先做靜默標記或看票型。" : ("離席原因：" + (s.outReason || "出局"));
+      if (latest.accuseId) {
+        metaTone = "is-wolf";
+        metaText = "第 " + latest.day + " 天 · 指控 " + fmtSeatNum(latest.accuseId) + "號";
+      } else if (latest.vouchId) {
+        metaTone = "is-good";
+        metaText = "第 " + latest.day + " 天 · 力挺 " + fmtSeatNum(latest.vouchId) + "號";
+      } else {
+        metaText = "第 " + latest.day + " 天 · 發言摘要";
+      }
+      bodyText = "「" + String(latest.rawText || "").replace(/^「|」$/g, "").trim() + "」";
     }
+    let godPrefix = "";
     if (typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive()) {
-      const rInfo = (typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[s.role]) ? ROLE_DEFS[s.role] : { icon: "👁", name: s.role };
+      const rInfo = (typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[s.role]) ? ROLE_DEFS[s.role] : { name: s.role };
       const tops = state.match.seats
         .filter(function (o) { return o.alive && o.id !== s.id; })
         .map(function (o) { return { id: o.id, score: Math.round((s.suspicionMap && s.suspicionMap[o.id]) || 50) }; })
@@ -248,8 +262,13 @@ function renderSeatIntelPopover() {
         .slice(0, 2)
         .map(function (o) { return fmtSeatNum(o.id) + "號(" + o.score + "%)"; })
         .join("、");
-      qBox.textContent = "👁 真實：" + rInfo.icon + rInfo.name + (tops ? ("｜最疑：" + tops) : "") + " ▸ " + qBox.textContent;
+      godPrefix = "真實：" + rInfo.name + (tops ? ("｜最疑：" + tops) : "");
     }
+    qBox.textContent = (godPrefix ? (godPrefix + " ▸ ") : "") + metaText + " " + bodyText;
+    qBox.innerHTML =
+      (godPrefix ? ('<div class="intel-quote-meta is-god">' + escapeHtml(godPrefix) + "</div>") : "") +
+      '<div class="intel-quote-meta ' + metaTone + '">' + escapeHtml(metaText) + "</div>" +
+      '<div class="intel-quote-body">' + escapeHtml(bodyText) + "</div>";
   }
 
   const curMark = state.playerMarks[s.id] || null;
@@ -261,34 +280,42 @@ function renderSeatIntelPopover() {
   if (bGood) {
     if (isWolfMateSeat) {
       bGood.disabled = true;
-      bGood.textContent = "🐺 狼隊同伴";
+      bGood.className = "intel-seg-btn";
+      bGood.textContent = "狼同伴";
     } else if (isWolfView) {
       bGood.disabled = !state.match.started || !s.alive;
-      bGood.textContent = curMark === "good" ? "✓ 已標假保" : "🛡️ 標記假保";
+      bGood.className = "intel-seg-btn" + (curMark === "good" ? " is-active-good" : "");
+      bGood.textContent = curMark === "good" ? "✓ 已假保" : "標假保";
     } else {
       bGood.disabled = !state.match.started || !s.alive;
-      bGood.textContent = curMark === "good" ? "✓ 已標好人" : "✓ 標記好人";
+      bGood.className = "intel-seg-btn" + (curMark === "good" ? " is-active-good" : "");
+      bGood.textContent = curMark === "good" ? "✓ 好人" : "好人";
     }
   }
   if (bWolf) {
     if (isWolfMateSeat) {
       bWolf.disabled = true;
-      bWolf.textContent = "🛡️ 不可刀伴";
+      bWolf.className = "intel-seg-btn";
+      bWolf.textContent = "勿刀伴";
     } else if (isWolfView) {
       bWolf.disabled = !state.match.started || !s.alive;
-      bWolf.textContent = curMark === "wolf" ? "🎯 已標甩鍋" : "🎯 標記甩鍋";
+      bWolf.className = "intel-seg-btn" + (curMark === "wolf" ? " is-active-wolf" : "");
+      bWolf.textContent = curMark === "wolf" ? "✓ 已甩鍋" : "標甩鍋";
     } else {
       bWolf.disabled = !state.match.started || !s.alive;
-      bWolf.textContent = curMark === "wolf" ? "⚠ 已標懷疑" : "⚠ 標記懷疑";
+      bWolf.className = "intel-seg-btn" + (curMark === "wolf" ? " is-active-wolf" : "");
+      bWolf.textContent = curMark === "wolf" ? "✓ 懷疑" : "懷疑";
     }
   }
   if (bPin) {
     bPin.disabled = !state.match.started || !s.alive;
-    bPin.textContent = state.match.phase === "DAY_PLAYER_TURN" ? "🎯 鎖定點名" : "📌 記進發言";
+    bPin.className = "intel-seg-btn";
+    bPin.textContent = state.match.phase === "DAY_PLAYER_TURN" ? "點名他" : "記筆記";
+    if (typeof shPrependIcon === "function") shPrependIcon(bPin, state.match.phase === "DAY_PLAYER_TURN" ? "target" : "pin", "gold");
   }
   if (bPoke) {
     bPoke.disabled = false;
-    bPoke.textContent = state.match.started ? "📋 看全場票型" : "👋 打個招呼";
+    bPoke.textContent = state.match.started ? "查看全場票型紀錄 →" : "與這位夥伴打個招呼 →";
   }
   if (bMicro) {
     const classicMode = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
@@ -303,8 +330,9 @@ function renderSeatIntelPopover() {
       const validPh = state.match.phase === "DAY_SPEECH" || state.match.phase === "DAY_PLAYER_TURN" || state.match.phase === "DAY_VOTE";
       bMicro.disabled = !state.match.started || !s.alive || !(pSelf && pSelf.alive) || !validPh || rem <= 0 || alreadyDone;
       bMicro.textContent = alreadyDone
-        ? "🔍 已看心虛"
-        : ("🔍 看心虛 (" + rem + "/" + mMax + ")");
+        ? "已看心虛"
+        : ("觀微 " + rem + "/" + mMax);
+      if (typeof shPrependIcon === "function") shPrependIcon(bMicro, "search", "gold");
       bMicro.title = "偵測對方此刻心虛緊張度，判斷發言是否說謊（每日限用 " + mMax + " 次）";
     }
   }
@@ -317,7 +345,8 @@ function renderSeatIntelPopover() {
       const validPhT = state.match.phase === "DAY_SPEECH" || state.match.phase === "DAY_PLAYER_TURN" || state.match.phase === "DAY_VOTE";
       const usedTodayT = (state.match && state.match.teaServedDay === state.match.day);
       bTea.disabled = !state.match.started || !s.alive || !(pSelfT && pSelfT.alive) || !validPhT || usedTodayT;
-      bTea.textContent = usedTodayT ? "🍵 已奉茶 (0/1)" : "🍵 奉暖茶 (1/1)";
+      bTea.textContent = usedTodayT ? "已奉茶 0/1" : "奉暖茶 1/1";
+      if (typeof shPrependIcon === "function") shPrependIcon(bTea, "witch", "jade");
       bTea.title = "請對方喝暖茶：大幅降低他對你的懷疑度，並點亮三好「做好事」蓮花瓣（每日 1 次）";
     }
   }
@@ -327,23 +356,33 @@ function renderSeatIntelPopover() {
     const pAliveSelf = Boolean(pSelf && pSelf.alive);
     const ph = state.match.phase;
     let quickLabel = "";
+    let quickIco = "target";
     if (state.match.started && s.alive) {
       if (ph === "DAY_VOTE" && typeof isPlayerEligibleToVote === "function" && isPlayerEligibleToVote() && !(state.voteFlight && state.voteFlight.active) && (typeof isValidVoteTarget !== "function" || isValidVoteTarget(s.id))) {
-        quickLabel = "🗳 確認投給 " + fmtSeatNum(s.id) + "號";
+        quickLabel = "確認投給 " + fmtSeatNum(s.id) + "號";
+        quickIco = "ballot";
       } else if (ph === "NIGHT_GUARD" && pAliveSelf && pSelf.role === "guard" && state.match.lastGuardTargetId !== s.id) {
-        quickLabel = "🛡️ 守護 " + fmtSeatNum(s.id) + "號";
+        quickLabel = "守護 " + fmtSeatNum(s.id) + "號";
+        quickIco = "guard";
       } else if (ph === "NIGHT_SEER" && !state.seerReveal && pAliveSelf && pSelf.role === "seer") {
-        quickLabel = "🔮 立即查證 " + fmtSeatNum(s.id) + "號";
+        quickLabel = "立即查證 " + fmtSeatNum(s.id) + "號";
+        quickIco = "seer";
       } else if (ph === "NIGHT_WOLF" && pAliveSelf && pSelf.role === "wolf" && s.role !== "wolf") {
-        quickLabel = "🐺 夜間鎖定 " + fmtSeatNum(s.id) + "號";
+        quickLabel = "夜間鎖定 " + fmtSeatNum(s.id) + "號";
+        quickIco = "wolf";
       } else if (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && typeof canSeatTriggerShot === "function" && canSeatTriggerShot(pSelf) && !(pSelf.isWolfKing && s.role === "wolf")) {
-        quickLabel = pSelf.isWolfKing ? ("👑 反撲帶走 " + fmtSeatNum(s.id) + "號") : ("🎯 共鳴請離 " + fmtSeatNum(s.id) + "號");
+        quickLabel = pSelf.isWolfKing ? ("反撲帶走 " + fmtSeatNum(s.id) + "號") : ("共鳴請離 " + fmtSeatNum(s.id) + "號");
+        quickIco = pSelf.isWolfKing ? "crown" : "scales";
       } else if (ph === "DAY_PLAYER_TURN") {
-        quickLabel = "🎯 設為發言點名對象";
+        quickLabel = "設為發言點名對象";
+        quickIco = "target";
       }
     }
     bQuick.classList.toggle("hidden", !quickLabel);
-    if (quickLabel) bQuick.textContent = quickLabel;
+    if (quickLabel) {
+      bQuick.textContent = quickLabel;
+      if (typeof shPrependIcon === "function") shPrependIcon(bQuick, quickIco, "gold");
+    }
   }
 }
 
@@ -458,17 +497,17 @@ function inspectSeatMicroExpression(seatId) {
 }
 
 const PERSONA_TEA_REACTIONS = {
-  "小澄": "謝謝這杯烏龍，回甘度 98%！我會把你的善意納入今日信任權重。",
-  "暖暖": "哇茶湯暖進心坎裡了～大家喝杯好茶心平氣和推理最棒！",
-  "阿松": "好茶！像極了林美山晨霧裡的那口甘泉，謝謝你的關照。",
-  "星兒": "哇茶香裡面有好人緣的味道耶～這輪我有在認真幫你看局勢喔！",
-  "小雲": "收下這盞暖茶了。別擔心，我看重真憑實據，不會輕易誤傷無辜。",
+  "小澄": "這杯烏龍焙火剛剛好，謝謝。你的善意我記下了。",
+  "暖暖": "哇，茶湯暖進心坎裡了～喝杯好茶、心平氣和推理最舒服了。",
+  "阿松": "好茶！像極了林美山晨霧裡的那口甘泉，多謝關照。",
+  "星兒": "哇，茶香裡有好人緣的味道耶～這輪我有認真幫你看局勢喔。",
+  "小雲": "收下這盞暖茶了。放心，我看重實據，不會輕易誤傷無辜。",
   "阿竹": "清茗一盞，如沐春風；席間紛擾雖多，仍信君子坦蕩。",
-  "晨晨": "夠意思！喝完這杯整個人都精神起來，等一下跟緊你的節奏看票！",
-  "墨白": "茶色清冽，足見誠意。此情我記下了，論票時定當公允以待。",
-  "晴嵐": "這盞熱茶送得真巧，茶暖心安，等會兒我們細細比對場上線索。",
-  "阿朗": "多謝這杯好茶！頭腦更清醒了，等等一起把矛盾點拆開看！",
-  "柚子": "哇好香的暖茶呀～謝謝你請我喝茶，我覺得你人好好喔！"
+  "晨晨": "夠意思！喝完這杯整個人都精神起來，等等跟緊你的節奏看票。",
+  "墨白": "茶色清冽，足見誠意。此情吾記下了，論票時定當公允以待。",
+  "晴嵐": "這盞熱茶送得真巧，茶暖心安，待會兒我們細細比對席間線索。",
+  "阿朗": "多謝這杯好茶，頭腦更清醒了，等等一起把矛盾點拆開看。",
+  "柚子": "好香的暖茶呀～謝謝你請我喝茶，你人真好喔。"
 };
 
 function serveWarmTeaToSeat(seatId) {

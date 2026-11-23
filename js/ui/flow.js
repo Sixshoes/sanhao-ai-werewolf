@@ -95,6 +95,58 @@ const indieFlow = {
     }
   },
 
+  dealUnsealTimer: null,
+  dealRevealTimer: null,
+  dealRevealed: false,
+  dealIsWolf: false,
+
+  unsealRoleDealCard: function () {
+    const ov = el("roleDealOverlay");
+    if (!ov || ov.classList.contains("hidden") || this.dealRevealed) return;
+    if (this.dealUnsealTimer) {
+      clearTimeout(this.dealUnsealTimer);
+      this.dealUnsealTimer = null;
+    }
+    if (this.dealRevealTimer) {
+      clearTimeout(this.dealRevealTimer);
+      this.dealRevealTimer = null;
+    }
+    this.dealRevealed = true;
+    const isWolfNow = Boolean(this.dealIsWolf);
+    ov.classList.remove("is-sealed");
+    ov.classList.add("is-unsealing");
+    if (typeof sound !== "undefined" && typeof sound.playCardRustle === "function") {
+      sound.playCardRustle();
+    }
+    const self = this;
+    const pacingMul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
+    this.dealRevealTimer = setTimeout(function () {
+      self.dealRevealTimer = null;
+      const ovNow = el("roleDealOverlay");
+      if (!ovNow || ovNow.classList.contains("hidden")) return;
+      ovNow.classList.remove("is-unsealing");
+      ovNow.classList.add("is-revealed");
+      if (typeof sound !== "undefined" && typeof sound.playRoleRevealFanfare === "function") {
+        sound.playRoleRevealFanfare(isWolfNow);
+      }
+      if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive()) {
+        if (stage3d.env) stage3d.env.lotusSpinBoost = 1.15;
+        if (stage3d.fx && typeof spawn3DShockwave === "function" && typeof THREE !== "undefined") {
+          spawn3DShockwave(stage3d.fx, new THREE.Vector3(0, 0, 0), isWolfNow ? "#e11d48" : "#f5b942", performance.now(), 1.18, 7.2);
+        }
+        if (stage3d.hero && typeof triggerHeroAction === "function") {
+          triggerHeroAction(stage3d.hero, "welcome_bow", 2600);
+        }
+        state.cardPeek3D = true;
+        if (self.cardPeekTimer) clearTimeout(self.cardPeekTimer);
+        self.cardPeekTimer = setTimeout(function () {
+          self.cardPeekTimer = null;
+          state.cardPeek3D = false;
+        }, Math.round(3200 * pacingMul));
+      }
+    }, 200);
+  },
+
   showRoleDealRitual: function (roleKey) {
     const ov = el("roleDealOverlay");
     const pSelf = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
@@ -105,29 +157,51 @@ const indieFlow = {
       clearTimeout(this.dealTimer);
       this.dealTimer = null;
     }
+    if (this.dealUnsealTimer) {
+      clearTimeout(this.dealUnsealTimer);
+      this.dealUnsealTimer = null;
+    }
+    if (this.dealRevealTimer) {
+      clearTimeout(this.dealRevealTimer);
+      this.dealRevealTimer = null;
+    }
     if (this.cardPeekTimer) {
       clearTimeout(this.cardPeekTimer);
       this.cardPeekTimer = null;
     }
     const isWolf = rDef.team === "wolf";
+    this.dealIsWolf = isWolf;
+    this.dealRevealed = false;
     const guide = (typeof ROLE_GUIDES !== "undefined" && ROLE_GUIDES[effKey]) ? ROLE_GUIDES[effKey] : null;
+    const rkMap = { seer: "seer", witch: "witch", hunter: "scales", guard: "guard", elder: "elder", villager: "villager", wolf: "wolf", wolf_king: "crown" };
+    const roleIcoKey = rkMap[effKey] || "spark";
+    if (el("roleDealCrest") && typeof shIcon === "function") {
+      el("roleDealCrest").innerHTML = shIcon(roleIcoKey, isWolf ? "cinnabar" : "gold").replace('class="sh-ico', 'class="sh-ico sh-ico-solo');
+    }
     if (el("roleDealTeam")) {
       el("roleDealTeam").textContent = isWolf
-        ? "🐺 你是壞人隊（酸民狼・裝好人淘汰對手）"
-        : "🌿 你是好人隊（找出所有酸民狼就贏！）";
+        ? "酸民狼陣營・隱藏身分淘汰對手"
+        : "好人陣營・找出所有酸民狼即勝";
       el("roleDealTeam").className = "role-deal-team-pill " + (isWolf ? "is-wolf" : "is-good");
     }
-    if (el("roleDealName")) el("roleDealName").textContent = (guide ? (guide.icon + " ") : "") + rDef.name;
-    if (el("roleDealSeat")) el("roleDealSeat").textContent = playerNumTag() + " 座位";
+    if (el("roleDealName")) {
+      el("roleDealName").textContent = rDef.name;
+    }
+    const seatTagStr = playerNumTag() + "席";
+    if (el("roleDealSeat")) el("roleDealSeat").textContent = seatTagStr;
+    if (el("roleDealBackSeat")) el("roleDealBackSeat").textContent = seatTagStr + "・密函待啟";
     if (el("roleDealDesc")) {
       el("roleDealDesc").textContent = (guide && guide.cardOneLiner) ? guide.cardOneLiner : rDef.desc;
     }
     if (el("roleDealActionList")) {
+      const icoMoon = typeof shIcon === "function" ? shIcon("moon", "indigo") : "";
+      const icoSun = typeof shIcon === "function" ? shIcon("sun", "gold") : "";
+      const icoBallot = typeof shIcon === "function" ? shIcon("ballot", "cinnabar") : "";
       el("roleDealActionList").innerHTML = guide
         ? (
-          '<div class="deal-step-line"><span class="deal-step-tag is-night">🌙 晚上</span><span>' + escapeHtml(guide.cardNight || guide.nightAction) + "</span></div>" +
-          '<div class="deal-step-line"><span class="deal-step-tag is-day">☀️ 白天</span><span>' + escapeHtml(guide.cardDay || guide.dayAction) + "</span></div>" +
-          '<div class="deal-step-line"><span class="deal-step-tag is-vote">🗳 投票</span><span>' + escapeHtml(guide.cardVote || guide.winCond) + "</span></div>"
+          '<div class="deal-step-line"><span class="deal-step-tag is-night">' + icoMoon + '晚上</span><span class="deal-step-text">' + escapeHtml(guide.cardNight || guide.nightAction) + "</span></div>" +
+          '<div class="deal-step-line"><span class="deal-step-tag is-day">' + icoSun + '白天</span><span class="deal-step-text">' + escapeHtml(guide.cardDay || guide.dayAction) + "</span></div>" +
+          '<div class="deal-step-line"><span class="deal-step-tag is-vote">' + icoBallot + '投票</span><span class="deal-step-text">' + escapeHtml(guide.cardVote || guide.winCond) + "</span></div>"
         )
         : "";
     }
@@ -136,20 +210,19 @@ const indieFlow = {
       card.classList.toggle("deal-wolf", isWolf);
       card.classList.toggle("deal-good", !isWolf);
     }
-    ov.classList.remove("hidden");
+    ov.classList.remove("hidden", "is-unsealing", "is-revealed", "deal-theme-wolf", "deal-theme-good");
+    ov.classList.add("is-sealed", isWolf ? "deal-theme-wolf" : "deal-theme-good");
     if (typeof sound !== "undefined" && typeof sound.playCardRustle === "function") {
       sound.playCardRustle();
     }
-    // User-paced reading: NEVER auto-dismiss the secret role card! Wait until player clicks "我看懂了・開始對局" (or Space/Enter/backdrop).
+    // User-paced reading: NEVER auto-dismiss the secret role card (dealTimer stays null).
+    // Click wax seal / press Space to unseal immediately, OR let the brief suspense beat auto-unseal into the 3D flip!
     const self = this;
     const pacingMul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
-    if (typeof stage3d !== "undefined" && stage3d.isActive()) {
-      state.cardPeek3D = true;
-      this.cardPeekTimer = setTimeout(function () {
-        self.cardPeekTimer = null;
-        state.cardPeek3D = false;
-      }, Math.round(3200 * pacingMul));
-    }
+    this.dealUnsealTimer = setTimeout(function () {
+      self.dealUnsealTimer = null;
+      self.unsealRoleDealCard();
+    }, Math.round(1350 * clamp(pacingMul, 0.7, 1.3)));
   },
 
   hideRoleDealRitual: function () {
@@ -157,13 +230,25 @@ const indieFlow = {
       clearTimeout(this.dealTimer);
       this.dealTimer = null;
     }
+    if (this.dealUnsealTimer) {
+      clearTimeout(this.dealUnsealTimer);
+      this.dealUnsealTimer = null;
+    }
+    if (this.dealRevealTimer) {
+      clearTimeout(this.dealRevealTimer);
+      this.dealRevealTimer = null;
+    }
     if (this.cardPeekTimer) {
       clearTimeout(this.cardPeekTimer);
       this.cardPeekTimer = null;
     }
+    this.dealRevealed = false;
     state.cardPeek3D = false;
     const ov = el("roleDealOverlay");
-    if (ov) ov.classList.add("hidden");
+    if (ov) {
+      ov.classList.add("hidden");
+      ov.classList.remove("is-sealed", "is-unsealing", "is-revealed", "deal-theme-wolf", "deal-theme-good");
+    }
     const pendingCb = this.onRoleDealClosed;
     this.onRoleDealClosed = null;
     if (typeof pendingCb === "function") pendingCb();
@@ -256,7 +341,10 @@ const indieFlow = {
     const resetBtn = el("btnResetHeroRig");
     if (tgt === "hero") {
       if (titleEl) titleEl.textContent = "清茗・雲茶書靈";
-      if (bioEl) bioEl.textContent = "🍃 雲起茶席說書主持｜點選下方 02～12 號可 360° 鑑賞全 11 位 AI 角色的 3D 造型與專屬語風（含文言文）！";
+      if (bioEl) {
+        bioEl.textContent = "雲起茶席說書主持｜點選下方 02～12 號可 360° 鑑賞全 11 位 AI 角色的 3D 造型與專屬語風（含文言文）。";
+        if (typeof shPrependIcon === "function") shPrependIcon(bioEl, "leaf", "jade");
+      }
       const glbActive = Boolean(typeof stage3d !== "undefined" && stage3d.hero && stage3d.hero.visualMode === "glb" && stage3d.hero.customGlbRoot);
       if (resetBtn) resetBtn.classList.toggle("hidden", !glbActive);
     } else {
@@ -270,7 +358,10 @@ const indieFlow = {
       if (bioEl) {
         bioEl.textContent = (pProfShow && s && s.name !== "你")
           ? (pProfShow.logicTags + "｜代表台詞：「" + pProfShow.sampleQuote + "」")
-          : "🎭 你的專屬玩家席位（可於主畫面或設定切換男／女 3D 模型與聲線）";
+          : "你的專屬玩家席位（可於主畫面或設定切換男／女 3D 模型與聲線）";
+        if (typeof shPrependIcon === "function") {
+          shPrependIcon(bioEl, (pProfShow && s && s.name !== "你" && pProfShow.iconKey) ? pProfShow.iconKey : "mask", (pProfShow && pProfShow.iconTone) || "gold");
+        }
       }
       const actor = (typeof stage3d !== "undefined" && stage3d.seats && stage3d.seats.slots) ? stage3d.seats.slots[sid] : null;
       if (resetBtn) resetBtn.classList.toggle("hidden", !(actor && actor.useVrm));
@@ -395,10 +486,24 @@ const indieFlow = {
       });
     }
 
-    // Role Deal Ritual: confirm button or backdrop closes; "30秒白話教學" opens tutorial WITHOUT closing the card!
+    // Role Deal Ritual: click wax seal to unseal immediately; once revealed, confirm button or backdrop enters match!
+    if (el("roleDealCardBack")) {
+      el("roleDealCardBack").addEventListener("click", function (ev) {
+        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+        sound.unlock();
+        self.unsealRoleDealCard();
+      });
+    }
     if (el("roleDealOverlay")) {
       el("roleDealOverlay").addEventListener("click", function (ev) {
-        if (ev && ev.target === el("roleDealOverlay")) self.hideRoleDealRitual();
+        if (ev && ev.target === el("roleDealOverlay")) {
+          if (!self.dealRevealed) {
+            sound.unlock();
+            self.unsealRoleDealCard();
+          } else {
+            self.hideRoleDealRitual();
+          }
+        }
       });
     }
     if (el("btnRoleDealConfirm")) {

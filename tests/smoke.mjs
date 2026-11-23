@@ -1590,7 +1590,7 @@ vm.runInContext(`
     state.match.phase = "DAY_SPEECH";
     state.match.pkCandidates = [pkA.id, pkB.id];
     const aiPkSpeech = buildHeuristicAiSpeech(pkA);
-    if (!aiPkSpeech || aiPkSpeech.accuseId !== pkB.id || !aiPkSpeech.text.includes("PK")) {
+    if (!aiPkSpeech || aiPkSpeech.accuseId !== pkB.id || !/PK|平票/.test(aiPkSpeech.text)) {
       throw new Error("PK candidate AI failed to deliver PK defense targeting rival! got=" + JSON.stringify(aiPkSpeech));
     }
     state.match.pkCandidates = [getPlayerId(), pkA.id];
@@ -3106,7 +3106,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   if (upgRes.vhCase.afterShotResolvePhase !== "HUNTER_RESOLVE" || upgRes.vhCase.phaseAfterHunterCommit !== "LAST_WORDS_SPEECH" || upgRes.vhCase.lastWordSpeakerId !== upgRes.vhCase.expectedHunterId) {
     throw new Error("FULL-UPGRADE Voted-out Hunter Last Words check failed: " + JSON.stringify(upgRes.vhCase));
   }
-  if (upgRes.wolfDeckInfo.tacticNow !== "deep_stealth" || !upgRes.wolfDeckInfo.mateBubble.includes("倒鉤") || (!upgRes.wolfDeckInfo.cardsHtml.includes("悍跳") && !upgRes.wolfDeckInfo.cardsHtml.includes("狼隊")) || !upgRes.wolfDeckInfo.cardsHtml.includes("拉攏") || !upgRes.wolfDeckInfo.hasBackstabNote) {
+  if (upgRes.wolfDeckInfo.tacticNow !== "deep_stealth" || !/深水|倒鉤/.test(upgRes.wolfDeckInfo.mateBubble) || (!upgRes.wolfDeckInfo.cardsHtml.includes("悍跳") && !upgRes.wolfDeckInfo.cardsHtml.includes("狼隊")) || !upgRes.wolfDeckInfo.cardsHtml.includes("拉攏") || !upgRes.wolfDeckInfo.hasBackstabNote) {
     throw new Error("FULL-UPGRADE Wolf Deck / Mate Reply / Backstab check failed: " + JSON.stringify(upgRes.wolfDeckInfo));
   }
   if (!upgRes.capturedPrompt.includes("警長") || !upgRes.capturedPrompt.includes("給希望") || !upgRes.capturedPrompt.includes("凹嗚")) {
@@ -3532,10 +3532,13 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const has4NewChars = ["墨白", "晴嵐", "阿朗", "柚子"].every(n => m12Names.includes(n));
 
     // 5. Plan 1 UI components in 12-player context: stance strip, target reaction card, table matrix & quote rebuttal
-    const qId = getPlayerId() === 10 ? 11 : 10;
-    const tId = getPlayerId() === 12 ? 10 : 12;
+    const highAlive = [10, 11, 12].filter(id => id !== getPlayerId() && getSeat(id) && getSeat(id).alive);
+    const qId = highAlive[0] || (getPlayerId() === 10 ? 11 : 10);
+    const tId = highAlive[1] || (getPlayerId() === 12 ? 10 : 12);
     const s10 = getSeat(qId);
     const s12 = getSeat(tId);
+    if (s10) s10.alive = true;
+    if (s12) s12.alive = true;
     const fakeEv = {
       day: 1, speakerId: qId, speakerName: s10.name,
       claimRole: "seer", accuseId: tId, vouchId: 2,
@@ -4157,4 +4160,236 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v10.0 (11-Persona Overhaul: Classical/Literary Registers, 7-Dim Blind Cognitive Logic, Unified VRM Styling & Accessories + Skirt Fix + Anti-Cheat) E2E smoke test PASSED!");
+// v10.1 CRAFT-ICONS & ANTI-AI-TEXT POLISH: Eastern Fine-Line SVG Icon Library, Zero Cartoon Emojis in ai.html, Classical Speech Typography & Zero AI Cliché Buzzwords
+{
+  // 1. Verify zero OS cartoon emojis remain in visible ai.html markup (excluding <script> and HTML comments)
+  const visibleHtml = html
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "");
+  const htmlEmojiHits = visibleHtml.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{23F0}-\u{23FF}\u{2B50}\u{2B55}]/gu) || [];
+  const disallowedHtmlEmojis = htmlEmojiHits.filter(ch => !["✓", "✕", "✦", "○", "▶", "▸", "▾", "★", "☆", "↺", "↻", "→", "←"].includes(ch));
+  if (disallowedHtmlEmojis.length > 0) {
+    throw new Error("v10.1 CRAFT-ICONS: cartoon emojis still present in visible ai.html: " + [...new Set(disallowedHtmlEmojis)].join(" "));
+  }
+  if (!compCss.includes(".sh-ico") || !compCss.includes("is-classical-speech")) {
+    throw new Error("v10.1 CRAFT-ICONS: missing .sh-ico or .is-classical-speech styles in css/components.css");
+  }
+
+  // 2. Runtime icon library, XSS safety, classical typography toggle, carved stance stamps & zero AI cliché buzzwords
+  const v101Res = vm.runInContext(`(() => {
+    const allIconKeysOk = AI_PERSONAS.every(p => {
+      const prof = PERSONA_COGNITIVE_PROFILES[p.name];
+      return Boolean(prof && prof.iconKey && SANHAO_SVG_PATHS[prof.iconKey]);
+    }) && ["seer", "witch", "guard", "wolf", "crown", "target", "check", "leaf", "lotus", "chat", "scales", "brush", "guzheng", "bamboo", "abacus", "mountain", "star", "press", "flame", "pastry"].every(k => Boolean(SANHAO_SVG_PATHS[k]));
+
+    const richOut = shRichHtml('<script>alert(1)</script> 🔮 墨白');
+    const richXssSafe = richOut.includes("&lt;script&gt;") && !richOut.includes("<script>") && richOut.includes('<svg class="sh-ico sh-ico-gold"');
+    const strippedCanvas = shStripCanvasEmoji("⚡ 抓包邏輯矛盾! 🐺");
+    const canvasStripOk = !strippedCanvas.includes("⚡") && !strippedCanvas.includes("🐺") && strippedCanvas.includes("抓包邏輯矛盾");
+
+    // Zero robotic AI-cliché buzzwords in spoken persona flavors, voice styles & showcase sample quotes
+    const bannedBuzz = ["邏輯閉環率", "行為向量", "高置信度報告", "逆向工程", "異常值警報", "載入時間軸比對完畢"];
+    const quotesDump = Object.values(PERSONA_COGNITIVE_PROFILES).map(p => p.registerBadge + " " + p.sampleQuote).join(" ");
+    const flavorsDump = JSON.stringify(PERSONA_FLAVORS) + " " + quotesDump;
+    const noAiBuzzwords = bannedBuzz.every(w => !flavorsDump.includes(w));
+
+    // Classical speech typography class toggle on #spotlightStageBox & carved SVG stance chips
+    clearStepTimer();
+    el("selectModeCount").value = "12";
+    el("selectPreferredRole").value = "villager";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const mobai = state.match.seats.find(s => s.name === "墨白");
+    const cheng = state.match.seats.find(s => s.name === "小澄");
+    syncSpeakerBannerVisuals(mobai, "09 墨白", mobai.trait, false);
+    const mobaiHasClassicalClass = el("spotlightStageBox").classList.contains("is-classical-speech");
+    syncSpeakerBannerVisuals(cheng, "02 小澄", cheng.trait, false);
+    const chengDropsClassicalClass = !el("spotlightStageBox").classList.contains("is-classical-speech");
+
+    renderSpeakerStanceStrip(mobai, { claimRole: "seer", accuseId: cheng.id, vouchId: 3, wolfPits: [cheng.id] });
+    const stanceHtml = el("speakerStanceStrip").children.map(c => c.innerHTML || c.textContent).join(" ");
+    const stanceSvgOk = stanceHtml.includes('<svg class="sh-ico') && stanceHtml.includes("亮・明心觀察員") && !stanceHtml.includes("🔮") && !stanceHtml.includes("🎯");
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return { allIconKeysOk, richXssSafe, canvasStripOk, noAiBuzzwords, mobaiHasClassicalClass, chengDropsClassicalClass, stanceSvgOk };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v101Res)) {
+    if (!v) {
+      throw new Error("v10.1 CRAFT-ICONS & ANTI-AI check failed for " + k + ": " + JSON.stringify(v101Res));
+    }
+  }
+}
+
+// v10.2 THREE-CARD CRAFT REDESIGN: Ceremonial Role Deal Scroll, Legible Daylight Role Plaque & Editorial Seat Intel Dossier
+{
+  const themeCss = fs.readFileSync(path.join(ROOT, "css/theme.css"), "utf8");
+  const dayAmberFixOk = themeCss.includes("text-amber-300\\/90") && compCss.includes(".intel-dossier-card") || (themeCss.includes("text-amber-300\\/90") && compCss.includes(".intel-seat-seal") && compCss.includes(".role-nameplate") && compCss.includes(".deal-crest-medallion"));
+  if (!dayAmberFixOk) {
+    throw new Error("v10.2 THREE-CARD REDESIGN: missing daylight amber-opacity override or craft card CSS classes");
+  }
+  const dealScrollOk = html.includes('id="roleDealCardBox"') && html.includes('custom-scroll') && html.includes('id="roleDealCrest"');
+  if (!dealScrollOk) {
+    throw new Error("v10.2 THREE-CARD REDESIGN: missing #roleDealCrest or .custom-scroll on #roleDealCardBox");
+  }
+
+  const v102Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+
+    // 1. Ceremonial Role Deal Card
+    const dealCrestSvg = el("roleDealCrest").innerHTML.includes('<svg class="sh-ico');
+    const dealSeatSeal = el("roleDealSeat").textContent.includes("號席");
+    const dealStepLedger = el("roleDealActionList").innerHTML.includes("deal-step-text") && el("roleDealActionList").innerHTML.includes('<svg class="sh-ico');
+    indieFlow.hideRoleDealRitual();
+
+    // 2. Bottom-left Secret Role Plaque (no truncation, crisp SVG nameplate & mission line)
+    renderPlayerRoleCard();
+    const rolePlaqueOk = String(el("playerTeamPill").className).includes("role-nameplate") && el("playerTeamPill").textContent.includes("明心觀察員");
+    const missionPlaqueOk = String(el("playerMissionLine").className).includes("role-mission-line") && el("playerMissionLine").textContent.includes("密令");
+    const toolkitSingleRowOk = el("liveToolkitStrip").innerHTML.includes("心虛1") && el("liveToolkitStrip").innerHTML.includes("暖茶1") && el("liveToolkitStrip").innerHTML.includes("四給4");
+
+    // 3. Top-right Seat Intel Dossier (lacquer seal without neon bg, editorial quote header/body, segmented stance toggle)
+    const targetAi = state.match.seats.find(s => s.id !== getPlayerId() && s.alive);
+    targetAi.lastSpeech = { day: 1, stance: "accuse", text: "一號稍早話未說清，我先留一分查證空間。", targetId: 1 };
+    openSeatIntel(targetAi.id);
+    const sealNoNeonBg = !el("intelSeatDot").style.backgroundColor;
+    const editorialQuoteOk = el("intelQuoteBox").innerHTML.includes("intel-quote-meta") && el("intelQuoteBox").innerHTML.includes("intel-quote-body") && !el("intelQuoteBox").innerHTML.includes("【指控");
+    el("btnIntelMarkGood").click();
+    const segGoodActive = String(el("btnIntelMarkGood").className).includes("is-active-good");
+    closeSeatIntel();
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      dealCrestSvg, dealSeatSeal, dealStepLedger,
+      rolePlaqueOk, missionPlaqueOk, toolkitSingleRowOk,
+      sealNoNeonBg, editorialQuoteOk, segGoodActive
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v102Res)) {
+    if (!v) {
+      throw new Error("v10.2 THREE-CARD REDESIGN check failed for " + k + ": " + JSON.stringify(v102Res));
+    }
+  }
+}
+
+// v10.3 SINGLE-FOCUS CALM HUD & INSTANT TEXT REVEAL: Zero Typewriter Crawl, Slim 2-Line Role Plaque, Collapsible Four-Givings Pouch & 100% Viewport Lock
+{
+  const themeCss103 = fs.readFileSync(path.join(ROOT, "css/theme.css"), "utf8");
+  const viewportFixOk = compCss.includes("width: 100%;") && !compCss.includes("width: 100vw;\r\n  height: 100vh") && !compCss.includes("width: 100vw;\n  height: 100vh") && themeCss103.includes("html {");
+  const calmHudCssOk = compCss.includes("spotlightCalmFade") && compCss.includes(".role-tile-details") && compCss.includes(".fourg-fan-tray") && compCss.includes("#inGameTopHud #bannerHeadline");
+  if (!viewportFixOk || !calmHudCssOk) {
+    throw new Error("v10.3 CALM-HUD CSS check failed! viewportFixOk=" + viewportFixOk + ", calmHudCssOk=" + calmHudCssOk);
+  }
+
+  const v103Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+
+    // 1. Night 1 Seer no longer duplicates instruction in #nightRoleTipStrip
+    state.match.phase = "NIGHT_SEER";
+    updateAllUI();
+    const nightNoDuplicateTip = el("nightRoleTipStrip").classList.contains("hidden");
+
+    // 2. Instant calm speech reveal (no running typewriter interval, complete text immediately readable!)
+    state.match.phase = "DAY_SPEECH";
+    const sp = state.match.seats.find(s => s.id !== getPlayerId() && s.alive);
+    state.activeSpeakerId = sp.id;
+    startSpotlightTypewriter({ speaker: sp, badge: "02號・" + sp.name, trait: sp.trait, rawText: "昨晚風平浪靜，我先聽聽後置位意見。" });
+    const instantFullTextOk = !state.typewriter.active && el("spotlightText").innerHTML.includes("昨晚風平浪靜") && el("spotlightText").innerHTML.includes("」");
+
+    // 3. Collapsible Four-Givings pouch toggles cleanly via #fourGDeckHeader
+    updateAllUI();
+    const pouchClosedInit = !el("cornerFourGDeck").classList.contains("is-fan-open");
+    el("fourGDeckHeader").click();
+    const pouchOpensOnClick = el("cornerFourGDeck").classList.contains("is-fan-open");
+    el("fourGDeckHeader").click();
+    const pouchClosesOnClick = !el("cornerFourGDeck").classList.contains("is-fan-open");
+
+    // 4. Role guide popover now includes active mission alongside live tools
+    openRoleGuidePopover("role");
+    const guideHasMission = el("roleGuideBody").innerHTML.includes("密令");
+    closeRoleGuidePopover();
+
+    // 5. Distinct 11-persona voice pitch spread & 2-char shortTag recognizability
+    const voicePitches = AI_PERSONAS.map(p => PERSONA_VOICE_PROFILES[p.name] && PERSONA_VOICE_PROFILES[p.name].pitch).filter(Boolean);
+    const voiceSpreadOk = voicePitches.length === 11 && (Math.max(...voicePitches) - Math.min(...voicePitches)) >= 0.45;
+    const shortTagsOk = AI_PERSONAS.every(p => typeof getPersonaShortTag === "function" && getPersonaShortTag(p.name).length === 2);
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return { nightNoDuplicateTip, instantFullTextOk, pouchClosedInit, pouchOpensOnClick, pouchClosesOnClick, guideHasMission, voiceSpreadOk, shortTagsOk };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v103Res)) {
+    if (!v) {
+      throw new Error("v10.3 CALM-HUD check failed for " + k + ": " + JSON.stringify(v103Res));
+    }
+  }
+}
+
+// v11.0 PUBLIC RELEASE 1.0: Ergonomic 3D Proportions, Multi-Joint VRM Rig + Fingers, 3D Wax-Seal Card Flip Ritual, Silent-Mode Anim & Vercel Blind-Review Config
+{
+  const vercelCfgOk = fs.existsSync(path.join(ROOT, "vercel.json")) && fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8").includes("/ai.html");
+  const vercelIgnOk = fs.existsSync(path.join(ROOT, ".vercelignore")) && fs.readFileSync(path.join(ROOT, ".vercelignore"), "utf8").includes("tests/");
+  const cardRitualHtmlOk = html.includes('id="roleDealFlipper"') && html.includes('id="roleDealCardBack"') && html.includes("deal-back-wax-seal") && html.includes("公測 1.0");
+  const cardRitualCssOk = compCss.includes("dealFlipReveal") && compCss.includes(".deal-card-back") && compCss.includes(".deal-burst-ring") && compCss.includes(".title-release-badge");
+  const vrmSource11 = fs.readFileSync(path.join(ROOT, "js/stage3d/vrm-loader.js"), "utf8");
+  const multiJointSrcOk = vrmSource11.includes("bm.neck") && vrmSource11.includes("bm.rightShoulder") && vrmSource11.includes("bm.rightHand") && vrmSource11.includes("rightIndexProximal") && vrmSource11.includes("FINGER_PRESETS");
+  if (!vercelCfgOk || !vercelIgnOk || !cardRitualHtmlOk || !cardRitualCssOk || !multiJointSrcOk) {
+    throw new Error("v11.0 STATIC CHECK FAILED: " + JSON.stringify({ vercelCfgOk, vercelIgnOk, cardRitualHtmlOk, cardRitualCssOk, multiJointSrcOk }));
+  }
+
+  const v110Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    // 1. Ergonomic 3D chair-to-table gap across 6/8/10/12 seats (<= 1.0 unit gap!)
+    const layoutChecks = [6, 8, 10, 12].map(n => get3DTableLayout(n));
+    const ergonomicGapOk = layoutChecks.every(l => (l.ringRadius - l.tableR) >= 0.85 && (l.ringRadius - l.tableR) <= 1.02 && l.propZ >= 1.55 && l.propZ <= 1.72);
+
+    // 2. All 11 personas have gestureStyle defined in VRM_IDLE_ARCHETYPES
+    const allGestureStylesOk = AI_PERSONAS.every(p => VRM_IDLE_ARCHETYPES[p.name] && typeof VRM_IDLE_ARCHETYPES[p.name].gestureStyle === "string");
+
+    // 3. 3D Wax-Seal Card Flip Ritual states: sealed on open -> unsealRoleDealCard -> unsealing/revealed -> hide resets!
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    const ritualStartsSealed = !el("roleDealOverlay").classList.contains("hidden") && el("roleDealOverlay").classList.contains("is-sealed") && indieFlow.dealRevealed === false && indieFlow.dealTimer === null;
+    const backSeatOk = el("roleDealBackSeat").textContent.includes("席");
+    indieFlow.unsealRoleDealCard();
+    const unsealTriggeredOk = indieFlow.dealRevealed === true && !el("roleDealOverlay").classList.contains("is-sealed") && (el("roleDealOverlay").classList.contains("is-unsealing") || el("roleDealOverlay").classList.contains("is-revealed"));
+    const fanfareFnOk = typeof sound.playRoleRevealFanfare === "function";
+    indieFlow.hideRoleDealRitual();
+    const ritualCleanReset = el("roleDealOverlay").classList.contains("hidden") && indieFlow.dealRevealed === false;
+
+    // 4. Silent-mode speech animation window stays active after instant text display
+    state.match.phase = "DAY_SPEECH";
+    const sp11 = state.match.seats.find(s => s.id !== getPlayerId() && s.alive);
+    state.activeSpeakerId = sp11.id;
+    startSpotlightTypewriter({ speaker: sp11, badge: "02號・" + sp11.name, trait: sp11.trait, rawText: "請各位細察昨日票型與前後發言的邏輯脈絡。" });
+    const silentAnimWindowOk = typeof state.activeSpeechAnimUntil === "number" && state.activeSpeechAnimUntil > performance.now() + 1500;
+
+    // 5. Public Release 1.0 diagnostics & anonymous host helper
+    const diag11 = collectFeedbackDiagnostics();
+    const version11Ok = diag11.version.includes("v11.0") && typeof isAnonymousReviewHost === "function";
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return { ergonomicGapOk, allGestureStylesOk, ritualStartsSealed, backSeatOk, unsealTriggeredOk, fanfareFnOk, ritualCleanReset, silentAnimWindowOk, version11Ok };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v110Res)) {
+    if (!v) {
+      throw new Error("v11.0 PUBLIC RELEASE check failed for " + k + ": " + JSON.stringify(v110Res));
+    }
+  }
+}
+
+console.log("[OK] Full v11.0 Public Release 1.0 (3D Proportions + Multi-Joint VRM + Wax-Seal Card Flip Ritual + Calm HUD + Vercel Blind-Review + Anti-Cheat) E2E smoke test PASSED!");
