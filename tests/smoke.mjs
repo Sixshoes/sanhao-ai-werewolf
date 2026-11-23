@@ -5296,6 +5296,24 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const blockWolfSelfOutOk = !validateGeminiSpeechReality({ id: 2, role: "wolf", claimedRole: null }, { text: "fallback" }, { text: "其實我是酸民狼，我的狼同伴是4號" }, { seats: [], voteHistory: [{ day: 1 }] }).ok;
     const blockUnspokenFabOk = !validateGeminiSpeechReality(spPrefTest, { text: "fallback" }, { text: "剛才8號講得超怪，我覺得他很可疑" }, { day: 1, seats: [{ id: 8, alive: true }], publicLogs: [], voteHistory: [{ day: 1 }] }).ok;
     const ttsZeroPadOk = voice.formatMandarinText("今晚必驗03，狼坑01跟04。") === "今晚必驗3號，狼坑1號跟4號。";
+    // v13.9 Universal seat number normalization & detection (bare digits, zero-padded, Chinese numerals, false-positive guard, spotlight pills, NLP, badge flow)
+    const shotLine = "站06狼坑在03跟05，站03狼坑就是06跟衝票的01。雖然我警下投給06，但 5 直接硬打01破綻很大耶，我這輪傾向站03回頭抓06";
+    const normShot = normalizeSeatRefsInText(shotLine, 12);
+    const normShotOk = normShot.includes("站6號狼坑在3號跟5號") && normShot.includes("就是6號跟衝票的1號") && normShot.includes("投給6號") && normShot.includes("5號 直接硬打1號") && normShot.includes("站3號回頭抓6號");
+    const normCnOk = normalizeSeatRefsInText("三號跟十一號很可疑，我這輪傾向站三回頭抓六，今晚先驗四再驗十", 12) === "3號跟11號很可疑，我這輪傾向站3號回頭抓6號，今晚先驗4號再驗10號";
+    const normBareOk = normalizeSeatRefsInText("3跟5很怪，我投6，昨晚驗了4，保2好人", 12) === "3號跟5號很怪，我投6號，昨晚驗了4號，保2號好人";
+    const normSafeStr = "第1天我講兩句，站一邊投一票打一下，還有1.5票跟3好精神與4G及100%";
+    const normFalsePosSafeOk = normalizeSeatRefsInText(normSafeStr, 12) === normSafeStr;
+    renderInteractiveSpotlightText(shotLine, state.match.seats[0], false);
+    const spotHtml139 = String((el("spotlightText") && el("spotlightText").innerHTML) || "");
+    const spotAllPills139Ok = spotHtml139.includes('data-seat-id="6"') && spotHtml139.includes('>6號</span>') && spotHtml139.includes('data-seat-id="3"') && spotHtml139.includes('>3號</span>') && spotHtml139.includes('data-seat-id="5"') && spotHtml139.includes('>5號</span>') && spotHtml139.includes('data-seat-id="1"') && spotHtml139.includes('>1號</span>') && !spotHtml139.includes("站06") && !spotHtml139.includes("打01");
+    const prevTotal139 = state.match.totalSeats;
+    state.match.totalSeats = 12;
+    const nlpCnBare = analyzeThreeGoodSpeech("我覺得三號跟五很可疑，這輪投六，但十一號像好人");
+    const nlpCnBareOk = nlpCnBare.seatMentions.includes(3) && nlpCnBare.seatMentions.includes(5) && nlpCnBare.seatMentions.includes(6) && nlpCnBare.seatMentions.includes(11) && nlpCnBare.accuseTargets.includes(3) && nlpCnBare.accuseTargets.includes(6) && nlpCnBare.vouchTargets.includes(11);
+    state.match.totalSeats = prevTotal139;
+    const bfCnBare = parseBadgeFlowFromText("今晚先驗三號再驗五", 1);
+    const bfCnBareOk = Boolean(bfCnBare && bfCnBare.firstTargetId === 3 && bfCnBare.secondTargetId === 5);
     spPrefTest.claimedRole = origClaimPref;
 
     return {
@@ -5328,7 +5346,14 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       blockFakeVoteOk,
       blockWolfSelfOutOk,
       blockUnspokenFabOk,
-      ttsZeroPadOk
+      ttsZeroPadOk,
+      normShotOk,
+      normCnOk,
+      normBareOk,
+      normFalsePosSafeOk,
+      spotAllPills139Ok,
+      nlpCnBareOk,
+      bfCnBareOk
     };
   })()`, ctx);
   for (const [k, v] of Object.entries(v132Res)) {

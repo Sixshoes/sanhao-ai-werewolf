@@ -336,7 +336,10 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
   const pEl = el("spotlightText");
   if (!pEl) return;
   const rawStr = String(rawText || "").replace(/^「|」$/g, "");
-  const clean = isPartial ? rawStr : rawStr.trim();
+  const trimmed = isPartial ? rawStr : rawStr.trim();
+  const clean = (typeof normalizeSeatRefsInText === "function" && (!isPartial || !/[01十]$/.test(trimmed)))
+    ? normalizeSeatRefsInText(trimmed)
+    : trimmed;
   if (!clean) {
     pEl.textContent = isPartial ? "「" : "";
     return;

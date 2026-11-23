@@ -31,19 +31,23 @@ function analyzeThreeGoodSpeech(rawText) {
   });
 
   const maxSeats = (state.match && state.match.totalSeats) ? state.match.totalSeats : 12;
-  const seatMatches = text.match(/(?:1[0-2]|0?[1-9])\s*號/g) || [];
-  const seatNums = [];
-  seatMatches.forEach(function (m) {
-    const n = parseInt(m, 10);
-    if (n >= 1 && n <= maxSeats && seatNums.indexOf(n) === -1) seatNums.push(n);
-  });
+  const seatNums = typeof extractSeatIdsFromText === "function"
+    ? extractSeatIdsFromText(text, maxSeats, { includeNames: true })
+    : (text.match(/(?:1[0-2]|0?[1-9])\s*號/g) || []).reduce(function (acc, m) {
+        const n = parseInt(m, 10);
+        if (n >= 1 && n <= maxSeats && acc.indexOf(n) === -1) acc.push(n);
+        return acc;
+      }, []);
 
   // Strip parenthetical explanations & Badge Flow declarations before stance extraction so
   // unchecked Badge Flow notes like "（徽給03號即金水、飛05號或撕徽即查殺）" NEVER fabricate Seer checks or wolfPits!
-  const stanceText = text
+  const stanceTextRaw = text
     .replace(/（[^）]*）/g, " ")
     .replace(/\([^)]*\)/g, " ")
     .replace(/(?:今晚)?(?:雙)?警徽流[^。！？\n]*/g, " ");
+  const stanceText = typeof normalizeSeatRefsInText === "function"
+    ? normalizeSeatRefsInText(stanceTextRaw, maxSeats)
+    : stanceTextRaw;
 
   // Clause-level Multi-Target Semantics: supports vouching A and accusing B in the same speech!
   const pidNow = typeof getPlayerId === "function" ? getPlayerId() : 1;
@@ -57,18 +61,19 @@ function analyzeThreeGoodSpeech(rawText) {
     const cCleanWolf = cRaw.replace(/(?:不像|不是|非|絕不是|絕非).{0,2}(?:酸民)?狼/g, "好人");
     const cClean = cCleanWolf.replace(/(?:不是|不像|絕非).{0,2}(?:好人|好夥伴|夥伴)/g, "可疑");
     const hasPosWord = /好人|信任|救活|保護|護回|守護|相信|金水|清白|誠懇|沒問題|正氣|善良|放心/.test(cClean);
-    const hasNegWord = /懷疑|酸民狼|是狼|查殺|投出去|投他|投給|出他|請離|矛盾|假冒|冒充|誤導|破綻|重點檢視|重點留意|帶風向|可疑|問題|小心|盯緊|別信|栽贓|最像狼/.test(cClean);
+    const hasNegWord = /懷疑|酸民狼|是狼|查殺|投出去|投他|投給|出他|請離|矛盾|假冒|冒充|誤導|破綻|重點檢視|重點留意|帶風向|可疑|問題|小心|盯緊|別信|栽贓|最像狼|硬打|抓|投\d+號/.test(cClean);
     let clauseStance = lastStance;
     if (hasNegWord && !hasPosWord) clauseStance = "accuse";
     else if (hasPosWord && !hasNegWord) clauseStance = "vouch";
     else if (hasNegWord && hasPosWord) {
-      clauseStance = /懷疑|酸民狼|是狼|查殺|投出去|投他|投給|破綻|誤導|可疑|假冒|冒充/.test(cClean) ? "accuse" : "vouch";
+      clauseStance = /懷疑|酸民狼|是狼|查殺|投出去|投他|投給|破綻|誤導|可疑|假冒|冒充|硬打|抓|投\d+號/.test(cClean) ? "accuse" : "vouch";
     }
     if (clauseStance) lastStance = clauseStance;
 
-    const cSeats = cRaw.match(/(?:1[0-2]|0?[1-9])\s*號/g) || [];
-    cSeats.forEach(function (m) {
-      const n = parseInt(m, 10);
+    const cSeatIds = typeof extractSeatIdsFromText === "function"
+      ? extractSeatIdsFromText(cRaw, maxSeats, { includeNames: true })
+      : (cRaw.match(/(?:1[0-2]|0?[1-9])\s*號/g) || []).map(function (m) { return parseInt(m, 10); });
+    cSeatIds.forEach(function (n) {
       if (n >= 1 && n <= maxSeats && n !== pidNow) {
         if (clauseStance === "vouch") {
           delete accuseMap[n];
@@ -1237,6 +1242,9 @@ function submitPlayerSpeech() {
   state.currentTurnSpoken = true;
 
   let text = el("playerSpeechInput").value.trim() || "大家冷靜聽線索，一起抓出酸民狼！";
+  if (typeof normalizeSeatRefsInText === "function") {
+    text = normalizeSeatRefsInText(text);
+  }
   const res = analyzeThreeGoodSpeech(text);
   const player = getPlayerSeat();
   const claimedSeerNow = /(我是|我才是|我亮|我跳|其實我|本著.{0,6}公開).{0,10}(預言家|明心觀察員|觀察員)|^(真)?(預言家|明心觀察員)/.test(text);

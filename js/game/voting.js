@@ -936,10 +936,11 @@ function parseBadgeFlowFromText(rawText, ownerId) {
   const cueIdx = text.search(/警徽流|警徽先|先驗|今晚驗|今晚先驗|今晚查|今晚優先|優先查|優先驗|改留/);
   if (cueIdx === -1) return null;
   const tail = text.slice(cueIdx);
-  const matches = tail.match(/(?:1[0-2]|0?[1-9])\s*號/g) || [];
+  const seatIds = typeof extractSeatIdsFromText === "function"
+    ? extractSeatIdsFromText(tail, maxSeats)
+    : (tail.match(/(?:1[0-2]|0?[1-9])\s*號/g) || []).map(function (tok) { return parseInt(tok, 10); });
   const picked = [];
-  matches.forEach(function (tok) {
-    const n = parseInt(tok, 10);
+  seatIds.forEach(function (n) {
     if (n >= 1 && n <= maxSeats && n !== ownerId && picked.indexOf(n) === -1) {
       const s = getSeat(n);
       if (s && s.alive) picked.push(n);

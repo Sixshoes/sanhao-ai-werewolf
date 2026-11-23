@@ -531,9 +531,12 @@ function bindIntelAndDetectiveEvents() {
             if (ev.results[i].isFinal) finalChunk += seg;
             else interimChunk += seg;
           }
-          committedText = finalChunk;
+          committedText = typeof normalizeSeatRefsInText === "function" ? normalizeSeatRefsInText(finalChunk) : finalChunk;
           if (el("quickFreeInput")) {
-            el("quickFreeInput").value = (basePrefix + committedText + interimChunk).trim();
+            const mergedMic = (basePrefix + committedText + interimChunk).trim();
+            el("quickFreeInput").value = typeof normalizeSeatRefsInText === "function" ? normalizeSeatRefsInText(mergedMic) : mergedMic;
+            if (el("playerSpeechInput")) el("playerSpeechInput").value = el("quickFreeInput").value;
+            if (typeof refreshLiveNlpUI === "function") refreshLiveNlpUI();
             if (typeof refreshQuickFreeInputHint === "function") refreshQuickFreeInputHint();
           }
         };

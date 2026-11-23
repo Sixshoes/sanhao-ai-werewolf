@@ -328,12 +328,18 @@ const voice = {
 
   formatMandarinText: function (raw) {
     if (!raw) return "";
-    return String(raw)
+    let out = String(raw)
       .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu, "")
       .replace(/（[^）]*）/g, "")
-      .replace(/\([^)]*\)/g, "")
-      .replace(/(?<!\d)0([1-9])\s*號/g, "$1號")
-      .replace(/(?<!\d)0([1-9])(?=[\u4e00-\u9fff，。！？、；：,\.!?;:\s]|$)/g, "$1號")
+      .replace(/\([^)]*\)/g, "");
+    if (typeof normalizeSeatRefsInText === "function") {
+      out = normalizeSeatRefsInText(out);
+    } else {
+      out = out
+        .replace(/(?<!\d)0([1-9])\s*號/g, "$1號")
+        .replace(/(?<!\d)0([1-9])(?=[\u4e00-\u9fff，。！？、；：,\.!?;:\s]|$)/g, "$1號");
+    }
+    return out
       .replace(/\b4G\b/gi, "四給")
       .replace(/3好/g, "三好")
       .replace(/[×xX]\s*1\.5/g, "一點五倍")

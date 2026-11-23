@@ -301,10 +301,15 @@ function normalizeGeminiSpeechText(txt) {
     .replace(/（[^）]*）/g, "")
     .replace(/\([^)]*\)/g, "")
     .replace(/^["「『]+|["」』]+$/g, "")
-    .replace(/(?<!\d)0([1-9])\s*號/g, "$1號")
-    .replace(/(?<!\d)0([1-9])(?=[\u4e00-\u9fff，。！？、；：,\.!?;:\s]|$)/g, "$1號")
     .replace(/\s{2,}/g, " ")
     .trim();
+  if (typeof normalizeSeatRefsInText === "function") {
+    s = normalizeSeatRefsInText(s);
+  } else {
+    s = s
+      .replace(/(?<!\d)0([1-9])\s*號/g, "$1號")
+      .replace(/(?<!\d)0([1-9])(?=[\u4e00-\u9fff，。！？、；：,\.!?;:\s]|$)/g, "$1號");
+  }
   // Gracefully trim rambling > 145-char LLM paragraphs at a natural sentence boundary so UI & TTS stay crisp
   if (s.length > 145) {
     const windowStr = s.slice(0, 145);
@@ -429,7 +434,7 @@ function getAllowedGeminiClaimRole(speaker, fallbackMeta) {
 
 function validateGeminiSpeechReality(speaker, fallbackMeta, parsed, snap) {
   if (!parsed || !parsed.text || !speaker) return { ok: false, reason: "empty" };
-  const txt = String(parsed.text);
+  const txt = typeof normalizeSeatRefsInText === "function" ? normalizeSeatRefsInText(parsed.text) : String(parsed.text);
   const allowedClaim = getAllowedGeminiClaimRole(speaker, fallbackMeta);
 
   // 1. Block unauthorized God-role claims or hallucinated Seer checks by non-claiming seats
@@ -605,7 +610,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   const todayLogs = publicLogs.filter(function (l) { return l.day === day && l.kind === "speech"; });
   const spokenIds = todayLogs.map(function (l) { return l.speakerId; });
   const aliveList = (snap ? snap.aliveSeats : getAliveSeats()).map(function (s) {
-    return fmtSeatNum(s.id) + "號" + (s.id === pidNow ? "玩家你" : s.name) + (spokenIds.indexOf(s.id) !== -1 ? "(今日已發言)" : (s.id === self.id ? "(正在發言)" : "(今日尚未發言)"));
+    return s.id + "號" + (s.id === pidNow ? "玩家你" : s.name) + (spokenIds.indexOf(s.id) !== -1 ? "(今日已發言)" : (s.id === self.id ? "(正在發言)" : "(今日尚未發言)"));
   }).join("、");
 
   const slotCtx = (typeof buildSpeechContext === "function") ? buildSpeechContext(speaker) : null;
@@ -618,14 +623,14 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     }
     if (slotCtx.wolfPitOnMe) {
       const caller = readSeat(slotCtx.wolfPitOnMe.speakerId);
-      pitContextNote += "前置位 " + fmtSeatNum(slotCtx.wolfPitOnMe.speakerId) + "號" + (caller ? caller.name : "") + "剛才把你點進狼坑了，你必須第一句正面回應並解釋自己不在狼坑！";
+      pitContextNote += "前置位 " + slotCtx.wolfPitOnMe.speakerId + "號" + (caller ? caller.name : "") + "剛才把你點進狼坑了，你必須第一句正面回應並解釋自己不在狼坑！";
     }
     if (slotCtx.dualSeerWorlds) {
       const dw = slotCtx.dualSeerWorlds;
-      const aPits = dw.worldA.wolfPits.map(function (s) { return fmtSeatNum(s.id) + "號"; }).join("+");
-      const bPits = dw.worldB.wolfPits.map(function (s) { return fmtSeatNum(s.id) + "號"; }).join("+");
-      pitContextNote += "\n【雙明心觀察員盤坑參考】：如果站 " + fmtSeatNum(dw.seerA.id) + "號，狼坑在 " + aPits + (dw.worldA.conflictReason ? ("(" + dw.worldA.conflictReason + ")") : "") +
-        "；如果站 " + fmtSeatNum(dw.seerB.id) + "號，狼坑在 " + bPits + (dw.worldB.conflictReason ? ("(" + dw.worldB.conflictReason + ")") : "") + "。務必清楚比較站 A 與站 B 的狼坑後表態站邊！";
+      const aPits = dw.worldA.wolfPits.map(function (s) { return s.id + "號"; }).join("+");
+      const bPits = dw.worldB.wolfPits.map(function (s) { return s.id + "號"; }).join("+");
+      pitContextNote += "\n【雙明心觀察員盤坑參考】：如果站 " + dw.seerA.id + "號，狼坑在 " + aPits + (dw.worldA.conflictReason ? ("(" + dw.worldA.conflictReason + ")") : "") +
+        "；如果站 " + dw.seerB.id + "號，狼坑在 " + bPits + (dw.worldB.conflictReason ? ("(" + dw.worldB.conflictReason + ")") : "") + "。務必清楚比較站 A 與站 B 的狼坑後表態站邊！";
     }
   }
 
@@ -638,19 +643,19 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   let secretIntel = "你的真實底牌：" + (spRoleDef ? spRoleDef.name : "書院夥伴") + "（陣營：" + (self.team === "wolf" ? "酸民狼" : "好人") + "）。";
   if (self.role === "seer" && (self.checkedHistory || []).length > 0) {
     secretIntel += "你已查驗的絕對真相：" + self.checkedHistory.map(function (c) {
-      return fmtSeatNum(c.targetId) + "號=" + (c.isWolf ? "酸民狼" : "好人");
+      return c.targetId + "號=" + (c.isWolf ? "酸民狼" : "好人");
     }).join("、") + "。";
   } else if (self.role === "witch" && self.savedSeatId) {
-    secretIntel += "你之前護回過 " + fmtSeatNum(self.savedSeatId) + "號（他確定是好人）。";
+    secretIntel += "你之前護回過 " + self.savedSeatId + "號（他確定是好人）。";
   } else if (self.role === "guard" && snap && snap.lastGuardTargetId) {
-    secretIntel += "你昨晚展開護心結界守護過 " + fmtSeatNum(snap.lastGuardTargetId) + "號（今晚不可連守同一人，且須防與回甘茶同守破盾）。";
+    secretIntel += "你昨晚展開護心結界守護過 " + snap.lastGuardTargetId + "號（今晚不可連守同一人，且須防與回甘茶同守破盾）。";
   } else if (self.isElder) {
     secretIntel += self.elderShieldUsed
       ? "你已發動過清心長老豁免盾（目前無公投投票權，但發言具高公信力，應帶領好人歸票）。"
       : "你擁有清心長老首次公投豁免盾（被誤投一次不會離席，可大膽替神職分擔火力）。";
   } else if (self.role === "wolf") {
     const mates = snap ? snap.knownWolfMates : [];
-    if (mates.length > 0) secretIntel += "你的狼同伴是：" + mates.map(function (m) { return fmtSeatNum(m.id) + "號" + m.name; }).join("、") + "（絕不可出賣同伴，且你並不知道好人之中誰是真神職，要偽裝好人並自然帶點挑撥語氣栽贓好人）。";
+    if (mates.length > 0) secretIntel += "你的狼同伴是：" + mates.map(function (m) { return m.id + "號" + m.name; }).join("、") + "（絕不可出賣同伴，且你並不知道好人之中誰是真神職，要偽裝好人並自然帶點挑撥語氣栽贓好人）。";
     if (self.isWolfKing) secretIntel += "你同時是流言首領（白天被公投請離時可發動最後帶風向帶走 1 位在席夥伴）。";
   }
 
@@ -661,7 +666,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
 
   const claimsSummary = (snap ? snap.seats : [])
     .filter(function (s) { return s.claimedRole && ROLE_DEFS[s.claimedRole]; })
-    .map(function (s) { return fmtSeatNum(s.id) + "號" + (s.id === pidNow ? "玩家你" : s.name) + "自稱" + ROLE_DEFS[s.claimedRole].name; })
+    .map(function (s) { return s.id + "號" + (s.id === pidNow ? "玩家你" : s.name) + "自稱" + ROLE_DEFS[s.claimedRole].name; })
     .join("、") || "目前無人亮明神職身分";
 
   let priorRoundsArchive = "（目前為第 1 天，尚無前幾輪歷史紀錄）";
@@ -694,14 +699,14 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   const shId = snap ? snap.sheriffSeatId : state.match.sheriffSeatId;
   const shSeat = shId ? readSeat(shId) : null;
   const sheriffLine = (shSeat && shSeat.alive)
-    ? ("本局警長（1.5票＆末置位歸票權）：" + fmtSeatNum(shSeat.id) + "號" + (shSeat.id === pidNow ? "玩家你" : shSeat.name) + (shSeat.id === self.id ? "（就是你本人，務必在末置位歸總全場坑位）" : "") + "；")
+    ? ("本局警長（1.5票＆末置位歸票權）：" + shSeat.id + "號" + (shSeat.id === pidNow ? "玩家你" : shSeat.name) + (shSeat.id === self.id ? "（就是你本人，務必在末置位歸總全場坑位）" : "") + "；")
     : "目前場上無警長；";
   const shRecPrompt = snap ? snap.sheriffVoteRecord : null;
   let sheriffVoteArchive = "";
   if (shRecPrompt) {
-    const shCandStr = (shRecPrompt.candidateIds || []).map(function (id) { return fmtSeatNum(id) + "號"; }).join("、") || "無";
+    const shCandStr = (shRecPrompt.candidateIds || []).map(function (id) { return id + "號"; }).join("、") || "無";
     const shWithStr = (shRecPrompt.withdrawnIds || []).length
-      ? ("｜退水：" + shRecPrompt.withdrawnIds.map(function (id) { return fmtSeatNum(id) + "號"; }).join("、"))
+      ? ("｜退水：" + shRecPrompt.withdrawnIds.map(function (id) { return id + "號"; }).join("、"))
       : "";
     const shBallotStr = (shRecPrompt.ballots || []).length
       ? shRecPrompt.ballots.map(function (b) { return b.voterId + "號→" + (b.targetId ? (b.targetId + "號") : "棄票"); }).join("｜")
@@ -716,7 +721,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
       const bfOw = readSeat(bfActivePrompt.ownerId);
       const bf1 = readSeat(bfActivePrompt.firstTargetId);
       const bf2 = bfActivePrompt.secondTargetId ? readSeat(bfActivePrompt.secondTargetId) : null;
-      bfLines.push("現任警長 " + (bfOw ? (fmtSeatNum(bfOw.id) + "號") : "") + " 公開警徽流：先驗 " + (bf1 ? (fmtSeatNum(bf1.id) + "號") : "") + (bf2 ? (" → 再驗 " + fmtSeatNum(bf2.id) + "號") : "") + "（倒牌徽給先位即金水、跳飛或撕徽即查殺）");
+      bfLines.push("現任警長 " + (bfOw ? (bfOw.id + "號") : "") + " 公開警徽流：先驗 " + (bf1 ? (bf1.id + "號") : "") + (bf2 ? (" → 再驗 " + bf2.id + "號") : "") + "（倒牌徽給先位即金水、跳飛或撕徽即查殺）");
     }
     bfSigsPrompt.forEach(function (sig) {
       if (sig && sig.detail) bfLines.push("第" + (sig.day || 1) + "天暗號解讀：" + sig.detail);
@@ -727,13 +732,13 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   }
   const fgNotes = [];
   if (snap && Array.isArray(snap.fourGJoySuspects) && snap.fourGJoySuspects.length > 0) {
-    fgNotes.push("給歡喜曾笑僵對象：" + snap.fourGJoySuspects.map(function (id) { return fmtSeatNum(id) + "號"; }).join("＋"));
+    fgNotes.push("給歡喜曾笑僵對象：" + snap.fourGJoySuspects.map(function (id) { return id + "號"; }).join("＋"));
   }
   if (snap && Array.isArray(snap.fourGHopePair) && snap.fourGHopePair.length === 2) {
-    fgNotes.push("給希望雙光必有1狼：" + fmtSeatNum(snap.fourGHopePair[0]) + "號 與 " + fmtSeatNum(snap.fourGHopePair[1]) + "號");
+    fgNotes.push("給希望雙光必有1狼：" + snap.fourGHopePair[0] + "號 與 " + snap.fourGHopePair[1] + "號");
   }
   if (snap && snap.convenienceRallyTargetId) {
-    fgNotes.push("給方便歸票焦點：" + fmtSeatNum(snap.convenienceRallyTargetId) + "號");
+    fgNotes.push("給方便歸票焦點：" + snap.convenienceRallyTargetId + "號");
   }
   if (snap && snap.activeDirectorEvent) {
     fgNotes.push("今日茶會事件：「" + snap.activeDirectorEvent.shortTitle + "」");
@@ -796,7 +801,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "1. 【最高優先】嚴守上方【本輪最高鎖定規則】與今日發言時序！被前置位點進狼坑或指認時第一句必須回應；雙觀察員對跳時務必比較站 A 坑與站 B 坑；若你自己就是跳明心觀察員且已有對跳對手，對方在你眼中已是定狼，絕對不可說「今晚再去驗對跳觀察員」，警徽流只能驗其他未驗的中立位（且你自己跳觀察員時 JSON 的 standWithSeerId 必為 null）！\n" +
     "2. 【獨立綜合判斷】你完全不知道其他人的真實底牌（除同伴或觀察員親查對象外）！必須參考前面「所有」已發言者的話來綜合判斷誰在狼坑、誰在好人坑。\n" +
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
-    "4. 【嚴禁 AI 機器味與朗讀播報腔・像真實台灣人圍桌講話】提到座位請一律寫自然中文「1號」「3號」「11號」（禁止寫前導零 01、03 或省略號字）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或誇張卡通口號！現代角色請務必用台灣真人圓桌聊天碎句口語（可自然穿插「欸等一下」「老實說吼」「不是啊你看」「我剛聽下來覺得」等呼吸短句，只有墨白、晴嵐、阿竹保持古風或詩茶雅韻），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感），自然接前一位的話回嘴或讚聲，用專屬收尾結束。\n" +
+    "4. 【嚴禁 AI 機器味與朗讀播報腔・像真實台灣人圍桌講話】提到任何座位請一律寫「阿拉伯數字＋號」（如 1號、3號、6號、11號），嚴禁寫前導零（01、06）、嚴禁省略「號」字（站3、抓6），也嚴禁寫中文數字（三號、六號）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或誇張卡通口號！現代角色請務必用台灣真人圓桌聊天碎句口語（可自然穿插「欸等一下」「老實說吼」「不是啊你看」「我剛聽下來覺得」等呼吸短句，只有墨白、晴嵐、阿竹保持古風或詩茶雅韻），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感），自然接前一位的話回嘴或讚聲，用專屬收尾結束。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
     "6. 【嚴格控制字數與純口語格式】整段台詞必須為單一段落、嚴格控制在 " + (totalSeatsNow >= 10 ? "50～85字" : "55～95字") + "（切勿長篇大論、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
     '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":' + (lockedClaim ? ('"' + lockedClaim + '"') : 'null') + ',"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員且你本人非觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';

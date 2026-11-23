@@ -556,6 +556,92 @@ function fmtSeatTag(id) {
   return fmtSeatNum(id) + "號";
 }
 
+const _CN_SEAT_MAP = {
+  "十二": 12, "十一": 11, "十": 10,
+  "九": 9, "八": 8, "七": 7, "六": 6, "五": 5, "四": 4, "三": 3, "二": 2, "一": 1
+};
+
+function normalizeSeatRefsInText(rawText, maxSeats) {
+  let s = String(rawText || "");
+  if (!s) return "";
+  const cap = Number.isFinite(maxSeats) && maxSeats > 0
+    ? maxSeats
+    : ((typeof state !== "undefined" && state.match && state.match.totalSeats) ? state.match.totalSeats : 12);
+
+  // 1. Explicit Chinese numerals + 號 (e.g. 三號 -> 3號, 十一號 -> 11號, 十二號 -> 12號)
+  s = s.replace(/(?<![一二三四五六七八九十零百千萬\d])(十二|十一|十|九|八|七|六|五|四|三|二|一)\s*號/g, function (full, cn) {
+    const n = _CN_SEAT_MAP[cn];
+    return (n && n <= cap) ? (n + "號") : full;
+  });
+
+  // 2. Zero-padded Arabic seat numbers with or without 號 (e.g. 06 -> 6號, 03號 -> 3號, 01 -> 1號)
+  s = s.replace(/(?<![\d.:])0([1-9])(?:\s*號)?(?!\d)/g, function (full, d) {
+    const n = parseInt(d, 10);
+    return (n >= 1 && n <= cap) ? (n + "號") : full;
+  });
+
+  // 3. Paired bare Arabic seat numbers (e.g. "3跟5", "3和5", "3、5", "3+5")
+  s = s.replace(/(?<![\d.:第每近前前後剩共這那全])(1[0-2]|[1-9])(?=\s*(?:跟|和|與|及|或|、|＋|\+)\s*(?:1[0-2]|0?[1-9])(?![\d.%％~～天晚輪夜票神民人個位名張次句段秒分時倍Gｇ]))/g, function (full, d) {
+    const n = parseInt(d, 10);
+    return (n >= 1 && n <= cap) ? (n + "號") : full;
+  });
+
+  // 4. Bare Arabic seat numbers after Werewolf action / relation cues (2 passes for chains like "狼坑在3跟5")
+  const arabicCueRe = /(站邊|站了|站|信|相信|力挺|挺|保了|保|投給|投了|投|歸票|歸|點了|點|硬打|打了|打|踩了|踩|回頭抓|抓了|抓|親驗|必驗|先驗|再驗|去驗|驗了|驗過|驗|查殺是|查殺|查了|查|護回|護|救了|救|守護|守了|守|毒了|毒|刀了|刀|殺|票|衝票的|跟票的|分票的|對跳的|退水的|警下的|上警的|衝|沖|徽給|給|飛|移交|帶走|懷疑|排|鎖定|鎖|盯緊|盯|狼坑就是|狼坑在|狼坑是|坑在|金水是|就是|是|在|把|對|跟|和|與|及|或|、|＋|\+|\/)\s*(1[0-2]|[1-9])(?![\d.%％~～號天晚輪夜票神民人個位名張次句段秒分時倍Gｇ點下步層組對刀毒藥盾邊茶座場局款種條招手星級萬千百十起定直樣半隻筆件口杯碗])(?!狼(?![坑隊]))(?!好(?!人))/g;
+  for (let pass = 0; pass < 2; pass++) {
+    s = s.replace(arabicCueRe, function (full, cue, d) {
+      const n = parseInt(d, 10);
+      return (n >= 1 && n <= cap) ? (cue + n + "號") : full;
+    });
+  }
+
+  // 5. Bare Arabic seat numbers at clause start or before persona name / Werewolf predicate (e.g. "但 5 直接硬打", "6晴嵐", "3發言很怪")
+  const predBareRe = /(^|[，。！？、；：,\.!?;:\s但可而像讓叫看聽覺得認為])(1[0-2]|[1-9])(?=\s*(?:晴嵐|小澄|暖暖|阿松|星兒|小雲|阿竹|晨晨|墨白|阿朗|柚子|直接|剛才|剛剛|破綻|邏輯|是狼|是好人|不像狼|很怪|很可疑|很像|跳|自稱|點|硬打|歸票|站邊|查殺|金水|銀水|發言|表水|退水|上警|警下|離席|帶風向|沒問題|太明顯))/g;
+  s = s.replace(predBareRe, function (full, lead, d) {
+    const n = parseInt(d, 10);
+    return (n >= 1 && n <= cap) ? (lead + n + "號") : full;
+  });
+
+  // 6. Bare Chinese numerals after strong Werewolf cues (e.g. "站三", "抓六", "投六", "狼坑在三跟五", "先驗四再驗十一")
+  const cnCueRe = /(站邊|站了|站|投給|投了|投|歸票|硬打|打了|踩了|踩|回頭抓|抓了|抓|親驗|必驗|先驗|再驗|去驗|驗了|驗過|驗|查殺是|查殺|護回|救了|救|守護|守了|守|毒了|毒|刀了|刀|徽給|狼坑就是|狼坑在|狼坑是|坑在|保了|保|力挺|挺|懷疑|盯緊|帶走|飛|點了|點)\s*(十二|十一|十|九|八|七|六|五|四|三|二|一)(?![一二三四五六七八九十零百千萬號票入降下個位名張次句段秒分時倍邊手眼步點些直定起樣半天晚輪夜神民人刀毒盾好心話事隻筆件口杯碗])(?=[，。！？、；：,\.!?;:\s跟和與及或回直接是破很這那我你他她不就也又再才都沒狼坑]|$)/g;
+  s = s.replace(cnCueRe, function (full, cue, cn) {
+    const n = _CN_SEAT_MAP[cn];
+    return (n && n <= cap) ? (cue + n + "號") : full;
+  });
+  const cnChainRe = /(\d+號\s*(?:跟|和|與|及|或|、|＋|\+))\s*(十二|十一|十|九|八|七|六|五|四|三|二|一)(?![一二三四五六七八九十零百千萬號票入降下個位名張次句段秒分時倍邊手眼步點些直定起樣半天晚輪夜神民人刀毒盾好心話事隻筆件口杯碗])(?=[，。！？、；：,\.!?;:\s跟和與及或回直接是破很這那我你他她不就也又再才都沒狼坑]|$)/g;
+  for (let pass = 0; pass < 2; pass++) {
+    s = s.replace(cnChainRe, function (full, lead, cn) {
+      const n = _CN_SEAT_MAP[cn];
+      return (n && n <= cap) ? (lead + n + "號") : full;
+    });
+  }
+  return s;
+}
+
+function extractSeatIdsFromText(rawText, maxSeats, opts) {
+  const cap = Number.isFinite(maxSeats) && maxSeats > 0
+    ? maxSeats
+    : ((typeof state !== "undefined" && state.match && state.match.totalSeats) ? state.match.totalSeats : 12);
+  const norm = normalizeSeatRefsInText(rawText, cap);
+  const out = [];
+  const matches = norm.match(/(?:1[0-2]|0?[1-9])\s*號/g) || [];
+  for (let i = 0; i < matches.length; i++) {
+    const n = parseInt(matches[i], 10);
+    if (n >= 1 && n <= cap && out.indexOf(n) === -1) out.push(n);
+  }
+  if (opts && opts.includeNames && typeof state !== "undefined" && state.match && Array.isArray(state.match.seats)) {
+    const rawStr = String(rawText || "");
+    for (let i = 0; i < state.match.seats.length; i++) {
+      const st = state.match.seats[i];
+      if (!st || !st.name || st.name === "你" || st.name.length < 2) continue;
+      if (st.id >= 1 && st.id <= cap && out.indexOf(st.id) === -1 && rawStr.indexOf(st.name) !== -1) {
+        out.push(st.id);
+      }
+    }
+  }
+  return out;
+}
+
 function getLobbySeatCount() {
   const raw = el("selectModeCount") ? parseInt(el("selectModeCount").value, 10) : 8;
   if (raw === 12 || raw === 10 || raw === 8 || raw === 6) return raw;

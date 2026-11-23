@@ -133,9 +133,11 @@ function applyLastWordsInfluence(seat, rawText, meta) {
   let targetId = m.targetId || null;
   let isWolfClaim = (typeof m.isWolf === "boolean") ? m.isWolf : null;
   if (!targetId) {
-    const matches = clean.match(/(?:1[0-2]|0?[1-9])\s*號/g) || [];
-    for (let i = 0; i < matches.length; i++) {
-      const num = parseInt(matches[i], 10);
+    const ids = typeof extractSeatIdsFromText === "function"
+      ? extractSeatIdsFromText(clean, state.match.totalSeats, { includeNames: true })
+      : (clean.match(/(?:1[0-2]|0?[1-9])\s*號/g) || []).map(function (m) { return parseInt(m, 10); });
+    for (let i = 0; i < ids.length; i++) {
+      const num = ids[i];
       if (num >= 1 && num <= state.match.totalSeats && num !== seat.id) {
         targetId = num;
         break;
