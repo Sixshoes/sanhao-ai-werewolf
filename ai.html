@@ -207,6 +207,7 @@
                   <div id="intelSeatTitle" class="font-serif-craft text-xs font-bold text-amber-200 truncate">02號 小澄
                   </div>
                   <div id="intelSeatSub" class="text-[10px] text-slate-400 truncate">資訊社數據控</div>
+                  <div id="intelPersonaBadge" class="text-[9.5px] text-amber-300/90 truncate mt-0.5">📊 數據運算派・極度審慎</div>
                 </div>
               </div>
               <button id="btnCloseIntel" type="button"
@@ -900,8 +901,8 @@
           <span id="heroShowcaseTitle"
             class="font-serif-craft text-base font-bold text-amber-200 tracking-wider">清茗・雲茶書靈</span>
         </div>
-        <div id="heroShowcaseSub" class="text-[10.5px] text-slate-400">二次元賽璐珞 3D 鑑賞台（支援 9 位全角色免費 VRoid Studio .VRM /
-          .GLB 自動偵測升級）｜拖曳 360° 旋轉、滾輪縮放</div>
+        <div id="heroShowcaseSub" class="text-[10.5px] text-slate-400">全 12 席次二次元 VRM 3D 鑑賞台（11 位 AI 角色對齊水墨立繪＋專屬 3D 配件＋文言／多語風）｜拖曳 360° 旋轉、滾輪縮放</div>
+        <div id="showcasePersonaBio" class="text-[11px] text-amber-100/90 mt-1 leading-snug">🍃 雲起茶席引路人｜點選下方席次可鑑賞 3D 造型與試聽角色代表台詞</div>
       </div>
       <button id="btnCloseHeroShowcase" type="button" class="hud-icon-btn">← 返回茶席</button>
     </div>
@@ -944,6 +945,7 @@
         <span id="showcaseUploadHint" class="text-slate-400 truncate">可放入 VRoid 免費捏臉之 `qingming.vrm`、`xiaocheng.vrm` 等至
           `assets/models/` 自動載入，或於右側即時套用</span>
         <div class="flex items-center gap-1.5 shrink-0">
+          <button id="btnShowcaseAuditionVoice" type="button" class="cta-celadon px-3 py-1 text-[11px]">🎙 試聽角色台詞</button>
           <button id="btnResetHeroRig" type="button" class="hidden cta-ink px-3 py-1 text-[11px]">切回內建 3D</button>
           <button id="btnToggleHeroSheet" type="button" class="cta-brass px-3 py-1 text-[11px]">檢視三視圖設計稿</button>
           <button id="btnUploadHeroGlb" type="button" class="cta-ink px-3 py-1 text-[11px]">載入 .VRM / .GLB</button>
@@ -1518,6 +1520,7 @@
 
   <!-- AI Engines (v9.0 Anti-Cheat Blind-View Firewall + Gemini + Built-in Heuristics) -->
   <script src="js/ai/blind-view.js"></script>
+  <script src="js/ai/persona-engine.js"></script>
   <script src="js/ai/gemini.js"></script>
   <script src="js/ai/deduction.js"></script>
   <script src="js/ai/context.js"></script>

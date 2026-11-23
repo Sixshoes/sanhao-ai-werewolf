@@ -74,7 +74,9 @@ function chooseAiGuardTarget(guardSeat, rngVal) {
   const bannedId = snap ? snap.lastGuardTargetId : (state.match.lastGuardTargetId || null);
   const validPool = aliveAll.filter(function (s) { return s.id !== bannedId; });
   const r = typeof rngVal === "number" ? rngVal : Math.random();
-  const skipFirstNightClash = (snap ? snap.day : state.match.day) === 1 && r < 0.18;
+  const gProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
+  const emptyGuardChance = gProf ? clamp(0.10 + gProf.godHideBias * 0.16, 0.10, 0.28) : 0.18;
+  const skipFirstNightClash = (snap ? snap.day : state.match.day) === 1 && r < emptyGuardChance;
   let pickId = null;
   if (!skipFirstNightClash && validPool.length > 0) {
     const exposedSeer = validPool.find(function (s) { return s.claimedRole === "seer" && ((self.suspicionMap && self.suspicionMap[s.id]) || 50) < 62; });
@@ -147,8 +149,11 @@ function applyWolfNightTactic(tacticKey) {
     pack_push: "🔥 聯手集火目標"
   };
   const primaryMate = mates[0];
+  const wolfNightLine = (primaryMate && typeof buildPersonaWolfNightLine === "function")
+    ? buildPersonaWolfNightLine(primaryMate, "", "reply_" + key)
+    : replyMap[key];
   if (primaryMate) {
-    if (typeof setSeatBubble === "function") setSeatBubble(primaryMate.id, replyMap[key], "wolf", 5200);
+    if (typeof setSeatBubble === "function") setSeatBubble(primaryMate.id, wolfNightLine, "wolf", 5200);
     if (typeof setSeatEmotion === "function") setSeatEmotion(primaryMate.id, "proud", 3200);
     if (typeof nudgeSeat === "function") nudgeSeat(primaryMate.id, { scale: 1.08, vy: -4 });
     if (typeof spawnBeam === "function") spawnBeam(pid, primaryMate.id, "#f43f5e", "grill", 700);
@@ -156,7 +161,7 @@ function applyWolfNightTactic(tacticKey) {
   addLog({
     kind: "secret",
     title: "🐺 狼隊密謀拍板【" + labelMap[key] + "】",
-    text: primaryMate ? (fmtSeatNum(primaryMate.id) + "號" + primaryMate.name + "：「" + replyMap[key] + "」") : ""
+    text: primaryMate ? (fmtSeatNum(primaryMate.id) + "號" + primaryMate.name + "：「" + wolfNightLine + "」") : ""
   });
   return true;
 }
@@ -177,9 +182,12 @@ function proceedToNightWolf() {
       const pick = chooseAiWolfTargetBlind(mate);
       if (pick) {
         state.selectedSeatId = pick.id;
-        const planLine = mate.fakeSeer
-          ? ("噓…今晚我們先鎖定 " + fmtSeatNum(pick.id) + "號" + pick.name + "，明天白天我幫你冒充明心觀察員帶風向！")
-          : ("噓…我感覺 " + fmtSeatNum(pick.id) + "號" + pick.name + "很像核心好夥伴，今晚先請他暫離如何？已幫你標起來！");
+        const pickLbl = fmtSeatNum(pick.id) + "號" + pick.name;
+        const planLine = typeof buildPersonaWolfNightLine === "function"
+          ? buildPersonaWolfNightLine(mate, pickLbl, mate.fakeSeer ? "fake_seer_plan" : "stealth_plan")
+          : (mate.fakeSeer
+            ? ("噓…今晚我們先鎖定 " + pickLbl + "，明天白天我幫你冒充明心觀察員帶風向！")
+            : ("噓…我感覺 " + pickLbl + "很像核心好夥伴，今晚先請他暫離如何？已幫你標起來！"));
         setSeatBubble(mate.id, planLine, "wolf", 6800);
         spawnBeam(mate.id, pick.id, "#f43f5e", "grill", 900);
         addLog({ kind: "secret", title: "🐺 酸民狼密談（" + fmtSeatNum(mate.id) + "號" + mate.name + "）：", text: planLine });
@@ -267,8 +275,16 @@ function chooseAiSeerTarget(seerSeat) {
   const pool = aliveOthers.filter(function (s) { return checkedIds.indexOf(s.id) === -1; });
   const candidates = (pool.length > 0 ? pool : aliveOthers).slice();
   if (!candidates.length) return null;
+  const sProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
+  const pubEvsS = snap ? snap.allSpeechEvents : [];
   candidates.sort(function (a, b) {
-    return ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+    const susDiff = ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+    if (Math.abs(susDiff) >= 4) return susDiff;
+    // Blind-View tie-breaker: analytical personas check outspoken/high-activity seats; intuitive personas check quieter seats
+    const actA = pubEvsS.filter(function (ev) { return ev.speakerId === a.id && ev.accuseId; }).length;
+    const actB = pubEvsS.filter(function (ev) { return ev.speakerId === b.id && ev.accuseId; }).length;
+    const dir = (sProf && sProf.credulity <= 0.65) ? 1 : -1;
+    return (actB - actA) * dir;
   });
   const targetId = candidates[0] ? candidates[0].id : null;
   if (typeof antiCheatMonitor !== "undefined" && self) {

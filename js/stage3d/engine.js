@@ -642,8 +642,10 @@ const stage3d = {
       actor.vrmMountGroup.remove(oldChild);
       this.disposeObject3D(oldChild);
     }
+    const curSeatForPrep = seatObjHint || (typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D().find(function (s) { return s.id === seatId; }) : null);
+    const prepPersonaName = (curSeatForPrep && (!modelSlug || modelSlug.indexOf("custom:") !== 0)) ? curSeatForPrep.name : null;
     const prep = (typeof stage3dVrm !== "undefined" && typeof stage3dVrm.prepareLoadedAvatar === "function")
-      ? stage3dVrm.prepareLoadedAvatar(gltf, { mode: "seated", targetHeight: 2.10, baseY: 0.0 })
+      ? stage3dVrm.prepareLoadedAvatar(gltf, { mode: "seated", targetHeight: 2.10, baseY: 0.0, personaName: prepPersonaName })
       : { root: gltf.scene, baseY: 0, isVrm: false };
     actor.vrmAvatar = prep;
     if (modelSlug) actor.boundModelSlug = modelSlug;
@@ -777,8 +779,9 @@ const stage3d = {
       if (!actor) return;
       if (actor.boundModelSlug && actor.boundModelSlug.indexOf("custom:") === 0) return;
       let slug = stage3dVrm.getSeatModelSlug(s);
-      let url = self.avatarManifest[slug];
-      if (!url && slug === "player_male") {
+      let rigSlug = typeof stage3dVrm.resolveVrmRigSlug === "function" ? stage3dVrm.resolveVrmRigSlug(s) : slug;
+      let url = self.avatarManifest[rigSlug] || self.avatarManifest[slug];
+      if (!url && (slug === "player_male" || rigSlug === "player_male")) {
         slug = "player";
         url = self.avatarManifest[slug];
       }

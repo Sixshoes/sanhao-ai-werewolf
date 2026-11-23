@@ -23,9 +23,12 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
   const formatSeatList = function (ids) {
     return ids.map(function (id) { return seatLabel(readSeat(id)); }).filter(Boolean);
   };
-  const unspokenNote = unspokenOthers.length > 0
-    ? ("後置位 " + seatLabel(unspokenOthers[0]) + (unspokenOthers.length > 1 ? " 等人" : "") + "今天還沒發言，先聽表水再補齊。")
-    : "";
+  const unspokenNote = typeof formatUnspokenNoteByPersona === "function"
+    ? formatUnspokenNoteByPersona(speaker, unspokenOthers, seatLabel)
+    : (unspokenOthers.length > 0
+      ? ("後置位 " + seatLabel(unspokenOthers[0]) + (unspokenOthers.length > 1 ? " 等人" : "") + "今天還沒發言，先聽表水再補齊。")
+      : "");
+  const spReg = typeof getPersonaRegister === "function" ? getPersonaRegister(speaker) : "balanced";
 
   // 1. First Speaker Today (Strict Chronology: Day 1 opens clean; Day 2+ dissects yesterday's vote/night clues!)
   if (isFirstToday) {
@@ -67,7 +70,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
       wolfPits: [],
       goodPits: [],
       hasToxicSlip: false,
-      text: "我在起手位先開口，這輪還沒有前置位發言可盤，沒辦法硬點狼坑。" + fill(flv.openFirst, { next: seatLabel(nextWatch) })
+      text: fill(flv.openFirst, { next: seatLabel(nextWatch) })
     };
   }
 
@@ -82,10 +85,10 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
 
     const aSecondStr = wA.secondWolf
       ? ("、第二狼坑在 " + seatLabel(wA.secondWolf) + (wA.secondReason ? ("（" + wA.secondReason + "）") : ""))
-      : "（餘坑待後置位補充）";
+      : (spReg === "classical" ? "（餘位待後席補明）" : "（餘坑待後置位補充）");
     const bSecondStr = wB.secondWolf
       ? ("、第二狼坑就變成 " + seatLabel(wB.secondWolf) + (wB.secondReason ? ("（" + wB.secondReason + "）") : ""))
-      : "（餘坑待後置位補充）";
+      : (spReg === "classical" ? "（餘位待後席補明）" : "（餘坑待後置位補充）");
     const aConflict = wA.conflictReason ? ("——但這條線「" + wA.conflictReason + "」") : "";
     const bConflict = wB.conflictReason ? ("——但這條線「" + wB.conflictReason + "」") : "";
 
@@ -93,11 +96,34 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
       .filter(function (s) { return s.id !== speaker.id && s.id !== chosen.fakeSeer.id; })
       .slice(0, 2);
     const goodSideText = goodSidePits.length > 0
-      ? ("好人坑可以先認 " + goodSidePits.map(seatLabel).join("、") + "。")
+      ? (spReg === "classical"
+        ? ("善席可先認 " + goodSidePits.map(seatLabel).join("、") + "。")
+        : ("好人坑可以先認 " + goodSidePits.map(seatLabel).join("、") + "。"))
       : "";
     const leadPrefix = isLateSeat
-      ? (leadPhrase + "我在末置位幫全場盤清兩邊狼坑：")
+      ? (leadPhrase + (spReg === "classical" ? "吾居末席總攬雙邊狼籍：" : (spReg === "guzheng" ? "妾身居末席為諸君理清雙音脈絡：" : "我在末置位幫全場盤清兩邊狼坑：")))
       : (dualLeadPhrase || ("場上 " + sALbl + " 跟 " + sBLbl + " 對跳明心觀察員，我直接對比兩邊的坑位："));
+
+    const dualText = typeof buildPersonaDualSeerText === "function"
+      ? buildPersonaDualSeerText(speaker, {
+          leadPrefix: leadPrefix,
+          sALbl: sALbl,
+          sBLbl: sBLbl,
+          aSecondStr: aSecondStr,
+          bSecondStr: bSecondStr,
+          aConflict: aConflict,
+          bConflict: bConflict,
+          trustedLbl: seatLabel(chosen.trustedSeer),
+          fakeLbl: seatLabel(chosen.fakeSeer),
+          goodSideText: goodSideText,
+          unspokenNote: unspokenNote,
+          signoffPhrase: signoffPhrase
+        })
+      : (leadPrefix +
+          "如果站 " + sALbl + "，" + sBLbl + " 必佔一狼" + aSecondStr + aConflict + "；" +
+          "如果改站 " + sBLbl + "，" + sALbl + " 必一狼" + bSecondStr + bConflict + "。" +
+          "兩邊盤完我站邊 " + seatLabel(chosen.trustedSeer) + "，" + goodSideText +
+          "這輪先把 " + seatLabel(chosen.fakeSeer) + " 請離！" + unspokenNote + signoffPhrase);
 
     return {
       targetId: chosen.fakeSeer.id,
@@ -108,11 +134,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
       wolfPits: chosen.wolfPits.map(function (s) { return s.id; }).slice(0, 2),
       goodPits: goodSidePits.map(function (s) { return s.id; }),
       hasToxicSlip: false,
-      text: leadPrefix +
-        "如果站 " + sALbl + "，" + sBLbl + " 必佔一狼" + aSecondStr + aConflict + "；" +
-        "如果改站 " + sBLbl + "，" + sALbl + " 必一狼" + bSecondStr + bConflict + "。" +
-        "兩邊盤完我站邊 " + seatLabel(chosen.trustedSeer) + "，" + goodSideText +
-        "這輪先把 " + seatLabel(chosen.fakeSeer) + " 請離！" + unspokenNote + signoffPhrase
+      text: dualText
     };
   }
 
@@ -142,6 +164,13 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     const unspokenPitHint = (!spokenPits.length && unspokenOthers.length > 0)
       ? ("目前後置位 " + seatLabel(unspokenOthers[0]) + " 還沒講話，先等後面表水再開狼坑。")
       : (spokenPits.length > 0 ? ("目前前面發言較可疑的狼坑位是 " + formatSeatList(spokenPits).join(" 跟 ") + "。") : "");
+    const vouchText = spReg === "classical"
+      ? (leadPhrase + "多謝前席 " + seatLabel(vSeat) + " 明察秋毫列吾於善席！觀其論述章法秩然，吾亦先互保 " + seatLabel(vSeat) + " 居好人坑；" + unspokenPitHint + signoffPhrase)
+      : (spReg === "guzheng"
+        ? (leadPhrase + "謝過方才 " + seatLabel(vSeat) + " 知音相護、將妾身列入善席！聽其音色清正，晴嵐亦願先保 " + seatLabel(vSeat) + "；" + unspokenPitHint + signoffPhrase)
+        : (spReg === "poetic"
+          ? (leadPhrase + "多謝同窗 " + seatLabel(vSeat) + " 仗義相保！一席清談投緣，小生這廂也先互保 " + seatLabel(vSeat) + " 站好人坑；" + unspokenPitHint + signoffPhrase)
+          : (leadPhrase + "謝謝剛剛前置位 " + seatLabel(vSeat) + " 把我放進好人坑！聽完他剛才的盤法我覺得邏輯順暢，我這邊也先互保 " + seatLabel(vSeat) + " 站好人坑；" + unspokenPitHint + signoffPhrase)));
     return {
       targetId: susCandidate ? susCandidate.id : vouchOnMe.speakerId,
       relationType: susCandidate ? "suspect" : "trust",
@@ -150,7 +179,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
       wolfPits: susPits,
       goodPits: [vouchOnMe.speakerId],
       hasToxicSlip: false,
-      text: leadPhrase + "謝謝剛剛前置位 " + seatLabel(vSeat) + " 把我放進好人坑！聽完他剛才的盤法我覺得邏輯順暢，我這邊也先互保 " + seatLabel(vSeat) + " 站好人坑；" + unspokenPitHint + signoffPhrase
+      text: vouchText
     };
   }
 
@@ -327,14 +356,33 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     const topSus = wolfSlots[0] || topSpokenSus;
     const secSus = wolfSlots[1] || null;
     const goodText = goodSlots.length > 0
-      ? (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 前面講話比較誠懇，我先放進好人坑；")
+      ? (spReg === "classical"
+        ? (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 方才陳詞醇正，吾先列之於善席；")
+        : (spReg === "guzheng"
+          ? (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 音色清朗真誠，妾身先列善席；")
+          : (spReg === "poetic"
+            ? (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 言辭坦蕩茶味清正，小生先置好人坑；")
+            : (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 前面講話比較誠懇，我先放進好人坑；"))))
       : "";
     const wolfText = wolfSlots.length > 0
-      ? ("目前前面講過的人裡，狼坑我重點圈 " + wolfSlots.map(seatLabel).join(" 跟 ") + "！")
+      ? (spReg === "classical"
+        ? ("綜觀前席已言諸人，狼籍首當深究 " + wolfSlots.map(seatLabel).join(" 及 ") + "！")
+        : (spReg === "guzheng"
+          ? ("細辨前席餘韻，失調可疑之狼坑首在 " + wolfSlots.map(seatLabel).join(" 與 ") + "！")
+          : (spReg === "poetic"
+            ? ("細品前面幾番對答，小生重點圈定的狼坑是 " + wolfSlots.map(seatLabel).join(" 跟 ") + "！")
+            : ("目前前面講過的人裡，狼坑我重點圈 " + wolfSlots.map(seatLabel).join(" 跟 ") + "！"))))
       : "";
-    const openPrefix = isLateSeat ? (leadPhrase + "我在末置位幫大家總結前面坑位：") : (leadPhrase + cbNote);
+    const openPrefix = isLateSeat
+      ? (leadPhrase + (spReg === "classical" ? "吾居末席總覽全場是非：" : (spReg === "guzheng" ? "晴嵐居末席為諸君收束餘韻：" : "我在末置位幫大家總結前面坑位：")))
+      : (leadPhrase + cbNote);
 
     if (topSus && (speaker.suspicionMap[topSus.id] || 50) >= 54) {
+      const focusTail = spReg === "classical"
+        ? ("此輪吾票先指 " + seatLabel(topSus) + (secSus ? ("，並嚴察 " + seatLabel(secSus)) : "") + "！")
+        : (spReg === "guzheng"
+          ? ("本輪妾身焦點先落於 " + seatLabel(topSus) + (secSus ? ("，兼察 " + seatLabel(secSus)) : "") + "！")
+          : ("這輪我的焦點先掛在 " + seatLabel(topSus) + (secSus ? ("，順便緊盯 " + seatLabel(secSus)) : "") + "！"));
       return {
         targetId: topSus.id,
         relationType: "suspect",
@@ -343,8 +391,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
         wolfPits: wolfSlots.map(function (s) { return s.id; }),
         goodPits: goodSlots.map(function (s) { return s.id; }).slice(0, 2),
         hasToxicSlip: false,
-        text: openPrefix + goodText + (prevVoteNote ? prevVoteNote : "") + wolfText +
-          "這輪我的焦點先掛在 " + seatLabel(topSus) + (secSus ? ("，順便緊盯 " + seatLabel(secSus)) : "") + "！" + unspokenNote + signoffPhrase
+        text: openPrefix + goodText + (prevVoteNote ? prevVoteNote : "") + wolfText + focusTail + unspokenNote + signoffPhrase
       };
     }
     if (goodSlots.length > 0) {

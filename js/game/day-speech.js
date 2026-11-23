@@ -245,7 +245,9 @@ async function executeAiTurnSpeech(speaker) {
     } else {
       if (extLlmOn) {
         // Only show a gentle in-character cue if the LLM takes longer than 350ms (eliminates jarring flashing!)
-        const cueLine = THINKING_MICROCUES[(speaker.id + (state.match.day || 1)) % THINKING_MICROCUES.length];
+        const cueLine = typeof getPersonaThinkingCue === "function"
+          ? getPersonaThinkingCue(speaker, state.match.day)
+          : THINKING_MICROCUES[(speaker.id + (state.match.day || 1)) % THINKING_MICROCUES.length];
         cueTimer = setTimeout(function () {
           if (state.match.phase === "DAY_SPEECH" && state.activeSpeakerId === speaker.id && state.speakingInFlight) {
             syncSpeakerBannerVisuals(speaker, fmtSeatNum(speaker.id) + "號 · " + speaker.name, speaker.trait, false);

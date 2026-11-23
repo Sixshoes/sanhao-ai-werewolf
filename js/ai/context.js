@@ -738,18 +738,28 @@ function applySpeechInfluence(speaker, speechMeta) {
     if (claimedKeyNow && (claimedKeyNow === "seer" || claimedKeyNow === "witch" || claimedKeyNow === "hunter" || claimedKeyNow === "guard" || claimedKeyNow === "elder") && listenerEffRole === claimedKeyNow) {
       listener.suspicionMap[speaker.id] = 100;
     }
-    // Good AIs detect divisive/toxic wolf slips and raise suspicion on the speaker!
+    // v10.0 7-Dimension Persona Cognitive Modifiers (strictly Blind-View zero-leak!)
+    const pMods = typeof getPersonaSuspicionModifiers === "function"
+      ? getPersonaSuspicionModifiers(listener)
+      : {
+          credulity: listener.deductionStyle === "gullible" ? 1.45 : (listener.deductionStyle === "skeptical" ? 0.55 : 1.0),
+          grudgeBonus: 7,
+          toxicScale: 1.0,
+          skepticalSlipBonus: listener.deductionStyle === "skeptical" ? 14 : 0
+        };
+    // Good AIs detect divisive/toxic wolf slips and raise suspicion scaled by persona harmonySensitivity!
     if (listener.team === "good" && speechMeta.hasToxicSlip) {
-      listener.suspicionMap[speaker.id] = clamp((listener.suspicionMap[speaker.id] || 50) + toxicPenalty, 5, 96);
+      const scaledToxic = Math.round(toxicPenalty * pMods.toxicScale);
+      listener.suspicionMap[speaker.id] = clamp((listener.suspicionMap[speaker.id] || 50) + scaledToxic, 5, 96);
     }
-    // Seats explicitly placed into the speaker's wolf pit raise caution toward that speaker!
+    // Seats explicitly placed into the speaker's wolf pit raise caution scaled by persona grudgeMemory!
     if (listener.team === "good" && !speechMeta.claimSeer && (speechMeta.accuseId === listener.id || extraWolfPits.indexOf(listener.id) !== -1)) {
-      listener.suspicionMap[speaker.id] = clamp((listener.suspicionMap[speaker.id] || 50) + 7, 5, 96);
+      listener.suspicionMap[speaker.id] = clamp((listener.suspicionMap[speaker.id] || 50) + pMods.grudgeBonus, 5, 96);
     }
-    // Cognitive archetype weighting: Gullible AIs easily believe claims, Skeptical AIs verify critically!
-    const styleMul = (listener.deductionStyle === "gullible" ? 1.45 : (listener.deductionStyle === "skeptical" ? 0.55 : 1.0)) * diffCredMul;
-    if (listener.team === "good" && listener.deductionStyle === "skeptical" && speechMeta.claimSeer && speechMeta.hasToxicSlip) {
-      listener.suspicionMap[speaker.id] = clamp((listener.suspicionMap[speaker.id] || 50) + 14, 5, 96);
+    // Cognitive archetype weighting: high-credulity personas trust claims easily; analytical personas verify critically!
+    const styleMul = pMods.credulity * diffCredMul;
+    if (listener.team === "good" && pMods.skepticalSlipBonus > 0 && speechMeta.claimSeer && speechMeta.hasToxicSlip) {
+      listener.suspicionMap[speaker.id] = clamp((listener.suspicionMap[speaker.id] || 50) + pMods.skepticalSlipBonus, 5, 96);
     }
     if ((listener.suspicionMap[speaker.id] || 50) >= 95) return;
 

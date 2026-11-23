@@ -187,6 +187,16 @@ function renderSeatIntelPopover() {
     : "";
   el("intelSeatTitle").textContent = fmtSeatNum(s.id) + "號 " + s.name + (!s.alive ? "（已離席）" : "");
   el("intelSeatSub").textContent = (s.trait || "推理夥伴") + mateTag + roleTag + wolfGodTag + sweatTag;
+  const pBadgeEl = el("intelPersonaBadge");
+  const pProfIntel = typeof getPersonaProfile === "function" ? getPersonaProfile(s) : null;
+  if (pBadgeEl) {
+    if (pProfIntel && pProfIntel.registerBadge) {
+      pBadgeEl.textContent = pProfIntel.registerBadge + "｜" + pProfIntel.logicTags;
+      pBadgeEl.classList.remove("hidden");
+    } else {
+      pBadgeEl.classList.add("hidden");
+    }
+  }
 
   const attBox = el("intelAttitudeBox");
   if (state.match.started && s.alive) {
@@ -215,7 +225,9 @@ function renderSeatIntelPopover() {
 
   const qBox = el("intelQuoteBox");
   if (!state.match.started) {
-    qBox.textContent = "性格風格：「" + (s.trait || "觀察派") + "」—— 點下方「打個招呼」先跟這位夥伴暖身！";
+    qBox.textContent = (pProfIntel && pProfIntel.sampleQuote)
+      ? ("「" + pProfIntel.sampleQuote + "」")
+      : ("性格風格：「" + (s.trait || "觀察派") + "」—— 點下方「打個招呼」先跟這位夥伴暖身！");
   } else {
     const allEvs = (state.match.allSpeechEvents || []).filter(function (ev) { return ev.speakerId === s.id; });
     const latest = allEvs.length ? allEvs[allEvs.length - 1] : null;

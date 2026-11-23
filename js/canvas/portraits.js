@@ -6,19 +6,19 @@
 // ==================== PROCEDURAL VECTOR CHARACTER PORTRAIT ENGINE ====================
 // Harmonized Mountain Academy ceramic & linen color palette matching assets/portraits/*.jpg
 const CHAR_AVATAR_STYLES = {
-  "你":   { hair: "#32241d", hairHi: "#c99a4e", style: "layered",  outfit: "#574133", accent: "#c99a4e", acc: "scarf",    skin: "#f6d8bd", eye: "#3a251b", lash: "soft" },
-  "小澄": { hair: "#1d2638", hairHi: "#6d94ba", style: "sleek",    outfit: "#33587a", accent: "#e8decb", acc: "glasses",  skin: "#f5d7bd", eye: "#243044", lash: "clean" },
-  "暖暖": { hair: "#5a3825", hairHi: "#d4a657", style: "bob",      outfit: "#b8823c", accent: "#f3e6cc", acc: "ribbon",   skin: "#f8ddc6", eye: "#4c2f1f", lash: "curved" },
-  "阿松": { hair: "#3c4248", hairHi: "#9aa3ad", style: "tousled",  outfit: "#2d5a46", accent: "#88b39c", acc: "collar",   skin: "#edc8a8", eye: "#2c241d", lash: "clean" },
-  "星兒": { hair: "#3b2749", hairHi: "#b497c9", style: "twintail", outfit: "#7d5b86", accent: "#dfbe76", acc: "clip",     skin: "#f7dcc5", eye: "#46315e", lash: "curved" },
-  "小雲": { hair: "#331e28", hairHi: "#b5697a", style: "long",     outfit: "#363842", accent: "#8e3b49", acc: "turtle",   skin: "#f7dfd0", eye: "#3c212c", lash: "curved" },
-  "阿竹": { hair: "#202328", hairHi: "#5e938a", style: "sidepart", outfit: "#3b6660", accent: "#29343b", acc: "tie",      skin: "#f1d0b5", eye: "#25302f", lash: "clean" },
-  "晨晨": { hair: "#422b1f", hairHi: "#d6943c", style: "spiky",    outfit: "#9e4f2e", accent: "#d6943c", acc: "headband", skin: "#eec9a9", eye: "#3c2519", lash: "clean" },
-  "墨白": { hair: "#171a24", hairHi: "#6d7ba8", style: "sidepart", outfit: "#2c3852", accent: "#e8decb", acc: "collar",   skin: "#f3d7c0", eye: "#222940", lash: "clean" },
-  "晴嵐": { hair: "#4b2e23", hairHi: "#c99a6b", style: "long",     outfit: "#c0898e", accent: "#6eb59b", acc: "clip",     skin: "#f8dfd0", eye: "#543222", lash: "curved" },
-  "阿朗": { hair: "#36241b", hairHi: "#c89552", style: "sleek",    outfit: "#9d7443", accent: "#2d323b", acc: "tie",      skin: "#efccb0", eye: "#6b471f", lash: "clean" },
-  "柚子": { hair: "#8a5a2b", hairHi: "#e0b565", style: "bob",      outfit: "#7d9b58", accent: "#f6ecd2", acc: "clip",     skin: "#f8dfc8", eye: "#4b5e2b", lash: "curved" },
-  "主持": { hair: "#2b1f1a", hairHi: "#d4a657", style: "sleek",    outfit: "#4c7a69", accent: "#d4a657", acc: "halo",     skin: "#f8ddc4", eye: "#38261c", lash: "soft" }
+  "你":   { hair: "#32241d", hairHi: "#c99a4e", style: "layered",  outfit: "#574133", accent: "#c99a4e", acc: "scarf",        skin: "#f6d8bd", eye: "#3a251b", lash: "soft" },
+  "小澄": { hair: "#1d2638", hairHi: "#6d94ba", style: "sleek",    outfit: "#33587a", accent: "#e8decb", acc: "glasses",      skin: "#f5d7bd", eye: "#243044", lash: "clean" },
+  "暖暖": { hair: "#5a3825", hairHi: "#d4a657", style: "bob",      outfit: "#b8823c", accent: "#f3e6cc", acc: "ribbon",       skin: "#f8ddc6", eye: "#4c2f1f", lash: "curved" },
+  "阿松": { hair: "#4a525a", hairHi: "#b4bcc4", style: "tousled",  outfit: "#2d5a46", accent: "#88b39c", acc: "tang_collar",  skin: "#edc8a8", eye: "#2c241d", lash: "clean" },
+  "星兒": { hair: "#452a59", hairHi: "#c49ce0", style: "twintail", outfit: "#7d5b86", accent: "#dfbe76", acc: "star_clip",    skin: "#f7dcc5", eye: "#4c3269", lash: "curved" },
+  "小雲": { hair: "#331e28", hairHi: "#b5697a", style: "long",     outfit: "#363842", accent: "#8e3b49", acc: "turtle",       skin: "#f7dfd0", eye: "#3c212c", lash: "curved" },
+  "阿竹": { hair: "#202328", hairHi: "#5e938a", style: "sidepart", outfit: "#3b6660", accent: "#29343b", acc: "jade_pendant", skin: "#f1d0b5", eye: "#25302f", lash: "clean" },
+  "晨晨": { hair: "#422b1f", hairHi: "#d6943c", style: "spiky",    outfit: "#a84e2b", accent: "#e69230", acc: "headband",     skin: "#eec9a9", eye: "#3c2519", lash: "clean" },
+  "墨白": { hair: "#171a24", hairHi: "#6d7ba8", style: "sidepart", outfit: "#2c3852", accent: "#e8decb", acc: "ink_scroll",   skin: "#f3d7c0", eye: "#222940", lash: "clean" },
+  "晴嵐": { hair: "#4b2e23", hairHi: "#c99a6b", style: "long",     outfit: "#c68c92", accent: "#6eb59b", acc: "jade_hairpin", skin: "#f8dfd0", eye: "#543222", lash: "curved" },
+  "阿朗": { hair: "#36241b", hairHi: "#c89552", style: "sleek",    outfit: "#9d7443", accent: "#2d323b", acc: "gavel_brooch", skin: "#efccb0", eye: "#785020", lash: "clean" },
+  "柚子": { hair: "#94612e", hairHi: "#e6ba67", style: "bob",      outfit: "#7d9b58", accent: "#f6ecd2", acc: "yuzu_clip",    skin: "#f8dfc8", eye: "#4b5e2b", lash: "curved" },
+  "主持": { hair: "#2b1f1a", hairHi: "#d4a657", style: "sleek",    outfit: "#4c7a69", accent: "#d4a657", acc: "halo",         skin: "#f8ddc4", eye: "#38261c", lash: "soft" }
 };
 
 function getAvatarStyleForSeat(seat) {

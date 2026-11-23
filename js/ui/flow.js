@@ -252,16 +252,26 @@ const indieFlow = {
       b.classList.toggle("is-active", b.getAttribute("data-showcase-target") === tgt);
     });
     const titleEl = el("heroShowcaseTitle");
+    const bioEl = el("showcasePersonaBio");
     const resetBtn = el("btnResetHeroRig");
     if (tgt === "hero") {
       if (titleEl) titleEl.textContent = "清茗・雲茶書靈";
+      if (bioEl) bioEl.textContent = "🍃 雲起茶席說書主持｜點選下方 02～12 號可 360° 鑑賞全 11 位 AI 角色的 3D 造型與專屬語風（含文言文）！";
       const glbActive = Boolean(typeof stage3d !== "undefined" && stage3d.hero && stage3d.hero.visualMode === "glb" && stage3d.hero.customGlbRoot);
       if (resetBtn) resetBtn.classList.toggle("hidden", !glbActive);
     } else {
       const sid = parseInt(tgt, 10);
       const s = typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D().find(function (x) { return x.id === sid; }) : null;
       const slug = (typeof stage3dVrm !== "undefined" && s) ? stage3dVrm.getSeatModelSlug(s) : ("seat" + sid);
-      if (titleEl) titleEl.textContent = fmtSeatNum(sid) + "號 " + (s ? s.name : "") + "（可放入 " + slug + ".vrm）";
+      const pProfShow = (s && typeof getPersonaProfile === "function") ? getPersonaProfile(s) : null;
+      if (titleEl) {
+        titleEl.textContent = fmtSeatNum(sid) + "號 " + (s ? s.name : "") + (pProfShow && s && s.name !== "你" ? (" · " + pProfShow.registerBadge) : ("（可放入 " + slug + ".vrm）"));
+      }
+      if (bioEl) {
+        bioEl.textContent = (pProfShow && s && s.name !== "你")
+          ? (pProfShow.logicTags + "｜代表台詞：「" + pProfShow.sampleQuote + "」")
+          : "🎭 你的專屬玩家席位（可於主畫面或設定切換男／女 3D 模型與聲線）";
+      }
       const actor = (typeof stage3d !== "undefined" && stage3d.seats && stage3d.seats.slots) ? stage3d.seats.slots[sid] : null;
       if (resetBtn) resetBtn.classList.toggle("hidden", !(actor && actor.useVrm));
     }
@@ -537,6 +547,35 @@ const indieFlow = {
         if (typeof stage3d !== "undefined") stage3d.setHeroAction(act, 0);
       });
     });
+    if (el("btnShowcaseAuditionVoice")) {
+      el("btnShowcaseAuditionVoice").addEventListener("click", function () {
+        sound.unlock();
+        const tgt = (typeof stage3d !== "undefined" && stage3d.showcaseTarget) ? String(stage3d.showcaseTarget) : "hero";
+        if (tgt === "hero") {
+          const line = "歡迎蒞臨林美山雲起茶席！我是清茗，今晚且看諸位同窗如何明辨是非、說好話抓出酸民狼。";
+          if (typeof voice !== "undefined" && typeof voice.speakHost === "function") voice.speakHost(line, undefined, "normal");
+          if (typeof stage3d !== "undefined" && typeof stage3d.setHeroAction === "function") stage3d.setHeroAction("speak_gesture", 3200);
+          if (typeof showToast === "function") showToast("🎙 清茗：「" + line + "」", "emerald");
+          return;
+        }
+        const sid = parseInt(tgt, 10);
+        const s = typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D().find(function (x) { return x.id === sid; }) : null;
+        if (!s) return;
+        const pProf = typeof getPersonaProfile === "function" ? getPersonaProfile(s) : null;
+        const sample = (s.name === "你")
+          ? "我是書院推理夥伴，今晚一定細心傾聽每一句線索，帶領好人陣營獲勝！"
+          : ((pProf && pProf.sampleQuote) || "這局我們一起說好話、理性抓出酸民狼！");
+        if (typeof voice !== "undefined" && typeof voice.speak === "function") {
+          voice.speak(s.name, sample, undefined, "normal");
+        }
+        if (typeof stage3d !== "undefined" && typeof stage3d.setHeroAction === "function") {
+          stage3d.setHeroAction("speak_gesture", 3200);
+        }
+        if (typeof showToast === "function") {
+          showToast("🎙 " + s.name + "（" + ((pProf && pProf.registerBadge) || "角色語風") + "）：「" + sample + "」", "emerald");
+        }
+      });
+    }
     if (el("btnResetHeroRig")) {
       el("btnResetHeroRig").addEventListener("click", function () {
         sound.unlock();

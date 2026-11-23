@@ -446,14 +446,9 @@ function pokeSeatWithReaction(seatId) {
   sound.tone(600 + seatId * 28, 0.1, "triangle", 0.05, 0);
 
   const pInfo = AI_PERSONAS[seatId - 2];
-  const greetings = [
-    "嗨！準備好跟我一起推理抓酸民狼了嗎？",
-    "開局記得聽大家輪流發言分析喔，我眼神很準的！",
-    "這局我們一定要用說好話贏得勝利！",
-    "選好角色就按「開始對局」，我在圓桌等你！",
-    "偷偷告訴你，仔細比對每個人輪流發言與票型破綻最準喔！"
-  ];
-  const line = greetings[(seatId + Math.floor(Math.random() * greetings.length)) % greetings.length];
+  const line = (pInfo && typeof getPersonaLobbyGreeting === "function")
+    ? getPersonaLobbyGreeting(pInfo.name, seatId)
+    : "嗨！選好角色就按「開始對局」，我在圓桌等你一起抓酸民狼！";
   setSeatBubble(seatId, line, "trust", 4200);
   setSeatEmotion(seatId, "happy", 3200);
   spawnBurst(seatId, ["#fbbf24", "#34d399", "#fde68a"], 14, "petal");

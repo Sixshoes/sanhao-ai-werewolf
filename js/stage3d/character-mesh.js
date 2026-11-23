@@ -444,12 +444,48 @@ function build3DHairAndAccessories(headGroup, st, G, seatId) {
     const centerKnot = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 6), goldMat);
     centerKnot.position.set(0.34, 0.26, 0.18);
     headGroup.add(bowL, bowR, centerKnot);
-  } else if (st.acc === "clip") {
-    const pin = new THREE.Mesh(G.hairPin, goldMat);
-    pin.scale.set(1.35, 1.35, 0.45);
-    pin.position.set(0.28, 0.28, 0.26);
-    pin.rotation.z = 0.45;
-    headGroup.add(pin);
+  } else if (st.acc === "clip" || st.acc === "star_clip") {
+    // 星兒：金色五角星髮夾
+    const starGroup = new THREE.Group();
+    starGroup.position.set(0.28, 0.28, 0.26);
+    starGroup.rotation.z = 0.35;
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * Math.PI * 2;
+      const ray = new THREE.Mesh(G.hairPin, goldMat);
+      ray.scale.set(0.55, 1.15, 0.35);
+      ray.position.set(Math.cos(a) * 0.036, Math.sin(a) * 0.036, 0);
+      ray.rotation.z = a - Math.PI * 0.5;
+      starGroup.add(ray);
+    }
+    headGroup.add(starGroup);
+  } else if (st.acc === "jade_hairpin") {
+    // 晴嵐：青玉流蘇古風髮簪
+    const jadeMatH = makeAnimeToon(0x6ec7a5, { rimStrength: 0.65 });
+    const pinGrp = new THREE.Group();
+    pinGrp.position.set(0.32, 0.28, 0.14);
+    pinGrp.rotation.set(0.1, 0.2, -0.52);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.010, 0.42, 8), goldMat);
+    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.056, 10, 8), jadeMatH);
+    bead.position.y = 0.18;
+    const tassel = new THREE.Mesh(G.bowCone, jadeMatH);
+    tassel.scale.set(0.58, 1.35, 0.58);
+    tassel.position.set(0.07, 0.02, 0);
+    tassel.rotation.z = 0.52;
+    pinGrp.add(stem, bead, tassel);
+    headGroup.add(pinGrp);
+  } else if (st.acc === "yuzu_clip") {
+    // 柚子：金柚＋雙綠葉水果髮夾
+    const yzGrp = new THREE.Group();
+    yzGrp.position.set(0.29, 0.27, 0.25);
+    yzGrp.rotation.z = 0.25;
+    const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), makeAnimeToon(0xf4b938, { rimStrength: 0.5 }));
+    const leafMat = makeAnimeToon(0x4ca64c, { rimStrength: 0.45 });
+    const l1 = new THREE.Mesh(G.bowCone, leafMat);
+    l1.scale.set(0.42, 0.72, 0.35); l1.position.set(-0.052, 0.048, 0); l1.rotation.z = 0.85;
+    const l2 = new THREE.Mesh(G.bowCone, leafMat);
+    l2.scale.set(0.38, 0.62, 0.35); l2.position.set(-0.015, 0.068, 0); l2.rotation.z = 0.25;
+    yzGrp.add(fruit, l1, l2);
+    headGroup.add(yzGrp);
   } else if (st.acc === "headband") {
     const band = new THREE.Mesh(G.headband, accMat);
     band.rotation.x = Math.PI * 0.42;
@@ -466,7 +502,7 @@ function build3DHairAndAccessories(headGroup, st, G, seatId) {
     ], 0.040, 0.012, 1.5, accMat, 0.005));
     headGroup.add(bandTailPivot);
     swayHairParts.push({ pivot: bandTailPivot, baseZ: 0, baseX: 0, amp: 0.12, phase: seatId * 1.3 });
-  } else if (st.acc === "tie") {
+  } else if (st.acc === "tie" || st.acc === "jade_pendant") {
     // Scholar jade hair clasp for 阿竹
     const clasp = new THREE.Mesh(new THREE.OctahedronGeometry(0.062, 0), makeAnimeToon(0x7bc2a6, { rimStrength: 0.6 }));
     clasp.scale.set(1.4, 0.6, 0.5);
@@ -538,7 +574,7 @@ function build3DCharacterOutfit(figureGroup, st, robeMat, accentMat, G) {
     const pin = new THREE.Mesh(new THREE.OctahedronGeometry(0.04, 0), goldMat);
     pin.position.set(-0.18, 0.66, 0.27);
     figureGroup.add(tie, pin);
-  } else if (st.acc === "ribbon" || st.acc === "clip") {
+  } else if (st.acc === "ribbon" || st.acc === "clip" || st.acc === "star_clip" || st.acc === "jade_hairpin" || st.acc === "yuzu_clip") {
     // Double Satin Chest Ribbon Bow + Tea Brooch
     [-1, 1].forEach(function (side) {
       const wing = new THREE.Mesh(G.bowCone, accentMat);
@@ -550,13 +586,35 @@ function build3DCharacterOutfit(figureGroup, st, robeMat, accentMat, G) {
     const gem = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 6), goldMat);
     gem.position.set(0, 0.78, 0.30);
     figureGroup.add(gem);
-  } else if (st.acc === "tie") {
-    // Modern Hanfu Jade Seal Pendant at Waist
+  } else if (st.acc === "tie" || st.acc === "jade_pendant" || st.acc === "ink_scroll") {
+    // Modern Hanfu Cinnabar Seal / Jade Pendant at Waist + Mandarin Frog Buttons
     const seal = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.095, 0.032), makeAnimeToon(0xa63a2e, { rimStrength: 0.4 }));
     seal.position.set(0.15, 0.14, 0.28);
     const jade = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 6), makeAnimeToon(0x7bc2a6, { rimStrength: 0.6 }));
     jade.position.set(0.15, 0.06, 0.28);
     figureGroup.add(seal, jade);
+    if (st.acc === "ink_scroll") {
+      [0.72, 0.54, 0.38].forEach(function (fy) {
+        const frog = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.022, 0.025), accentMat);
+        frog.position.set(0, fy, 0.29);
+        figureGroup.add(frog);
+      });
+    }
+  } else if (st.acc === "tang_collar") {
+    // 阿松：墨綠立領盤扣唐裝
+    [0.74, 0.56, 0.38].forEach(function (fy) {
+      const knot = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.026, 0.028), accentMat);
+      knot.position.set(0, fy, 0.29);
+      figureGroup.add(knot);
+    });
+  } else if (st.acc === "gavel_brooch") {
+    // 阿朗：辯論社金色法槌桂冠胸章
+    const wreath = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.011, 8, 16), goldMat);
+    wreath.position.set(-0.17, 0.66, 0.28);
+    const gavel = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.075, 8), goldMat);
+    gavel.position.set(-0.17, 0.66, 0.29);
+    gavel.rotation.z = -0.55;
+    figureGroup.add(wreath, gavel);
   }
 
   // Seated Lower Legs & Shoes resting cleanly under table (relative to figureGroup y = 0.72)

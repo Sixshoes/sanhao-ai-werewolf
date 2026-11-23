@@ -25,20 +25,40 @@ const SEAT_MODEL_SLUGS = {
 };
 
 const VRM_IDLE_ARCHETYPES = {
-  "你": { breathFreq: 1.95, breathAmp: 0.016, spineLean: 0.01, headRollAmp: 0.020, headTiltBias: 0.0, idleHappy: 0.08, idleFun: 0.04, rDrop: 1.20, rFwd: 0.16, rBend: 0.64, lDrop: 1.20, lFwd: 0.16, lBend: 0.64, armSwayAmp: 0.018 },
-  "小澄": { breathFreq: 1.85, breathAmp: 0.014, spineLean: 0.03, headRollAmp: 0.016, headTiltBias: 0.025, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.18, rFwd: 0.20, rBend: 0.74, lDrop: 1.21, lFwd: 0.14, lBend: 0.62, armSwayAmp: 0.010 },
-  "暖暖": { breathFreq: 2.15, breathAmp: 0.020, spineLean: 0.01, headRollAmp: 0.040, headTiltBias: -0.02, idleHappy: 0.24, idleFun: 0.14, rDrop: 1.19, rFwd: 0.18, rBend: 0.70, lDrop: 1.19, lFwd: 0.18, lBend: 0.70, armSwayAmp: 0.024 },
-  "阿松": { breathFreq: 1.35, breathAmp: 0.018, spineLean: -0.015, headRollAmp: 0.012, headTiltBias: 0.0, idleHappy: 0.06, idleFun: 0.0, rDrop: 1.22, rFwd: 0.13, rBend: 0.58, lDrop: 1.22, lFwd: 0.13, lBend: 0.58, armSwayAmp: 0.010 },
-  "星兒": { breathFreq: 2.85, breathAmp: 0.024, spineLean: 0.02, headRollAmp: 0.055, headTiltBias: 0.03, idleHappy: 0.16, idleFun: 0.26, rDrop: 1.18, rFwd: 0.20, rBend: 0.76, lDrop: 1.20, lFwd: 0.15, lBend: 0.64, armSwayAmp: 0.032 },
-  "小雲": { breathFreq: 1.75, breathAmp: 0.016, spineLean: 0.02, headRollAmp: 0.032, headTiltBias: -0.035, idleHappy: 0.10, idleFun: 0.08, rDrop: 1.19, rFwd: 0.19, rBend: 0.72, lDrop: 1.21, lFwd: 0.15, lBend: 0.66, armSwayAmp: 0.018 },
-  "阿竹": { breathFreq: 1.60, breathAmp: 0.014, spineLean: 0.015, headRollAmp: 0.018, headTiltBias: 0.015, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.20, rFwd: 0.17, rBend: 0.70, lDrop: 1.20, lFwd: 0.16, lBend: 0.68, armSwayAmp: 0.014 },
-  "晨晨": { breathFreq: 2.35, breathAmp: 0.020, spineLean: 0.0, headRollAmp: 0.028, headTiltBias: 0.0, idleHappy: 0.12, idleFun: 0.10, rDrop: 1.20, rFwd: 0.16, rBend: 0.62, lDrop: 1.20, lFwd: 0.16, lBend: 0.62, armSwayAmp: 0.022 },
-  "墨白": { breathFreq: 1.45, breathAmp: 0.013, spineLean: 0.005, headRollAmp: 0.014, headTiltBias: 0.01, idleHappy: 0.02, idleFun: 0.0, rDrop: 1.21, rFwd: 0.15, rBend: 0.64, lDrop: 1.21, lFwd: 0.15, lBend: 0.64, armSwayAmp: 0.010 },
-  "晴嵐": { breathFreq: 1.80, breathAmp: 0.017, spineLean: 0.01, headRollAmp: 0.030, headTiltBias: -0.025, idleHappy: 0.18, idleFun: 0.08, rDrop: 1.19, rFwd: 0.18, rBend: 0.72, lDrop: 1.20, lFwd: 0.16, lBend: 0.68, armSwayAmp: 0.018 },
-  "阿朗": { breathFreq: 2.10, breathAmp: 0.018, spineLean: 0.025, headRollAmp: 0.022, headTiltBias: 0.015, idleHappy: 0.08, idleFun: 0.06, rDrop: 1.18, rFwd: 0.19, rBend: 0.68, lDrop: 1.20, lFwd: 0.15, lBend: 0.62, armSwayAmp: 0.020 },
-  "柚子": { breathFreq: 2.65, breathAmp: 0.022, spineLean: 0.015, headRollAmp: 0.048, headTiltBias: -0.02, idleHappy: 0.28, idleFun: 0.22, rDrop: 1.18, rFwd: 0.20, rBend: 0.74, lDrop: 1.19, lFwd: 0.18, lBend: 0.70, armSwayAmp: 0.030 },
-  default: { breathFreq: 2.05, breathAmp: 0.016, spineLean: 0.01, headRollAmp: 0.025, headTiltBias: 0.0, idleHappy: 0.05, idleFun: 0.0, rDrop: 1.20, rFwd: 0.16, rBend: 0.64, lDrop: 1.20, lFwd: 0.16, lBend: 0.64, armSwayAmp: 0.016 }
+  "你": { breathFreq: 1.95, breathAmp: 0.016, spineLean: 0.01, headRollAmp: 0.020, headTiltBias: 0.0, idleHappy: 0.08, idleFun: 0.04, rDrop: 1.20, rFwd: 0.16, rBend: 0.64, lDrop: 1.20, lFwd: 0.16, lBend: 0.64, armSwayAmp: 0.018, talkArmAmp: 1.00 },
+  "小澄": { breathFreq: 1.85, breathAmp: 0.014, spineLean: 0.03, headRollAmp: 0.016, headTiltBias: 0.025, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.18, rFwd: 0.20, rBend: 0.74, lDrop: 1.21, lFwd: 0.14, lBend: 0.62, armSwayAmp: 0.010, talkArmAmp: 0.92 },
+  "暖暖": { breathFreq: 2.15, breathAmp: 0.020, spineLean: 0.01, headRollAmp: 0.040, headTiltBias: -0.02, idleHappy: 0.26, idleFun: 0.16, rDrop: 1.19, rFwd: 0.18, rBend: 0.70, lDrop: 1.19, lFwd: 0.18, lBend: 0.70, armSwayAmp: 0.024, talkArmAmp: 0.90 },
+  "阿松": { breathFreq: 1.35, breathAmp: 0.018, spineLean: -0.015, headRollAmp: 0.012, headTiltBias: 0.0, idleHappy: 0.08, idleFun: 0.0, rDrop: 1.22, rFwd: 0.13, rBend: 0.58, lDrop: 1.22, lFwd: 0.13, lBend: 0.58, armSwayAmp: 0.010, talkArmAmp: 0.85 },
+  "星兒": { breathFreq: 2.85, breathAmp: 0.024, spineLean: 0.02, headRollAmp: 0.055, headTiltBias: 0.03, idleHappy: 0.18, idleFun: 0.28, rDrop: 1.18, rFwd: 0.20, rBend: 0.76, lDrop: 1.20, lFwd: 0.15, lBend: 0.64, armSwayAmp: 0.034, talkArmAmp: 1.35 },
+  "小雲": { breathFreq: 1.75, breathAmp: 0.016, spineLean: 0.02, headRollAmp: 0.024, headTiltBias: -0.030, idleHappy: 0.06, idleFun: 0.04, rDrop: 1.19, rFwd: 0.19, rBend: 0.72, lDrop: 1.21, lFwd: 0.15, lBend: 0.66, armSwayAmp: 0.016, talkArmAmp: 1.08 },
+  "阿竹": { breathFreq: 1.55, breathAmp: 0.014, spineLean: 0.015, headRollAmp: 0.018, headTiltBias: 0.015, idleHappy: 0.06, idleFun: 0.02, rDrop: 1.20, rFwd: 0.17, rBend: 0.70, lDrop: 1.20, lFwd: 0.16, lBend: 0.68, armSwayAmp: 0.014, talkArmAmp: 0.74 },
+  "晨晨": { breathFreq: 2.45, breathAmp: 0.022, spineLean: 0.0, headRollAmp: 0.034, headTiltBias: 0.0, idleHappy: 0.18, idleFun: 0.14, rDrop: 1.18, rFwd: 0.18, rBend: 0.64, lDrop: 1.18, lFwd: 0.18, lBend: 0.64, armSwayAmp: 0.028, talkArmAmp: 1.38 },
+  "墨白": { breathFreq: 1.32, breathAmp: 0.011, spineLean: 0.005, headRollAmp: 0.009, headTiltBias: 0.008, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.22, rFwd: 0.14, rBend: 0.62, lDrop: 1.22, lFwd: 0.14, lBend: 0.62, armSwayAmp: 0.007, talkArmAmp: 0.48 },
+  "晴嵐": { breathFreq: 1.65, breathAmp: 0.016, spineLean: 0.01, headRollAmp: 0.026, headTiltBias: -0.022, idleHappy: 0.20, idleFun: 0.10, rDrop: 1.19, rFwd: 0.18, rBend: 0.72, lDrop: 1.20, lFwd: 0.16, lBend: 0.68, armSwayAmp: 0.015, talkArmAmp: 0.68 },
+  "阿朗": { breathFreq: 2.15, breathAmp: 0.018, spineLean: 0.028, headRollAmp: 0.022, headTiltBias: 0.015, idleHappy: 0.06, idleFun: 0.06, rDrop: 1.18, rFwd: 0.20, rBend: 0.68, lDrop: 1.20, lFwd: 0.15, lBend: 0.62, armSwayAmp: 0.022, talkArmAmp: 1.26 },
+  "柚子": { breathFreq: 2.70, breathAmp: 0.023, spineLean: 0.015, headRollAmp: 0.050, headTiltBias: -0.02, idleHappy: 0.30, idleFun: 0.24, rDrop: 1.18, rFwd: 0.20, rBend: 0.74, lDrop: 1.19, lFwd: 0.18, lBend: 0.70, armSwayAmp: 0.032, talkArmAmp: 1.32 },
+  default: { breathFreq: 2.05, breathAmp: 0.016, spineLean: 0.01, headRollAmp: 0.025, headTiltBias: 0.0, idleHappy: 0.05, idleFun: 0.0, rDrop: 1.20, rFwd: 0.16, rBend: 0.64, lDrop: 1.20, lFwd: 0.16, lBend: 0.64, armSwayAmp: 0.016, talkArmAmp: 1.00 }
 };
+
+/**
+ * v10.0 全 11 位 AI 角色 VRM 外型對齊立繪配置表
+ * - 修正小澄性別穿幫（改用男體 VRM 骨架＋深藍髮衣＋頭骨掛載 3D 細框眼鏡）
+ * - 補齊 10/12 人局 4 位角色（墨白、晴嵐、阿朗、柚子）全 VRM 骨架＋材質重繪＋專屬 3D 頭飾／胸章
+ * - 校正既有角色髮色／衣色與專屬配件（星兒紫髮星夾、阿松銀鬢綠衣、阿竹墨黑青衫玉佩、晨晨橘頭帶等）
+ */
+const VRM_PERSONA_STYLING = Object.freeze({
+  "小澄": Object.freeze({ baseSlug: "azhu",        hairHex: "#1c283d", hairStr: 0.88, topsHex: "#31587d", topsStr: 0.82, neckHex: "#e8decb", eyeHex: "#24354d", vrmAcc: "glasses" }),
+  "暖暖": Object.freeze({ baseSlug: "nuannuan",    hairHex: "#623d26", hairStr: 0.45, topsHex: "#c2893b", topsStr: 0.76, neckHex: "#f3e6cc", eyeHex: "#523220", vrmAcc: "ribbon" }),
+  "阿松": Object.freeze({ baseSlug: "asong",       hairHex: "#5f6872", hairStr: 0.72, topsHex: "#2a5c46", topsStr: 0.76, neckHex: "#82ab95", eyeHex: "#30261d", vrmAcc: null }),
+  "星兒": Object.freeze({ baseSlug: "xinger",      hairHex: "#54366e", hairStr: 0.90, topsHex: "#876094", topsStr: 0.84, neckHex: "#e0be72", eyeHex: "#553b75", vrmAcc: "star_clip" }),
+  "小雲": Object.freeze({ baseSlug: "xiaoyun",     hairHex: "#3a1e2b", hairStr: 0.68, topsHex: "#2d303a", topsStr: 0.72, neckHex: "#943548", eyeHex: "#422130", vrmAcc: null }),
+  "阿竹": Object.freeze({ baseSlug: "azhu",        hairHex: "#1f242b", hairStr: 0.88, topsHex: "#35615b", topsStr: 0.78, neckHex: "#232a30", eyeHex: "#283635", vrmAcc: "jade_pendant" }),
+  "晨晨": Object.freeze({ baseSlug: "chenchen",    hairHex: "#573724", hairStr: 0.78, topsHex: "#b8552a", topsStr: 0.84, neckHex: "#e39c3e", eyeHex: "#42281a", vrmAcc: "headband" }),
+  "墨白": Object.freeze({ baseSlug: "chenchen",    hairHex: "#151923", hairStr: 0.88, topsHex: "#31405c", topsStr: 0.86, neckHex: "#ece2d0", eyeHex: "#242c47", vrmAcc: "ink_scroll" }),
+  "晴嵐": Object.freeze({ baseSlug: "player",      hairHex: "#523325", hairStr: 0.65, topsHex: "#c98f96", topsStr: 0.82, neckHex: "#f2e8dc", eyeHex: "#593524", vrmAcc: "jade_hairpin" }),
+  "阿朗": Object.freeze({ baseSlug: "player_male", hairHex: "#3a251b", hairStr: 0.76, topsHex: "#a37944", topsStr: 0.84, neckHex: "#f0eee8", eyeHex: "#7a511e", vrmAcc: "gavel_brooch" }),
+  "柚子": Object.freeze({ baseSlug: "nuannuan",    hairHex: "#a36c33", hairStr: 0.78, topsHex: "#829e5a", topsStr: 0.84, neckHex: "#f6efe0", eyeHex: "#4f642c", vrmAcc: "yuzu_clip" })
+});
 
 const stage3dVrm = {
   _scratch: null,
@@ -93,6 +113,235 @@ const stage3dVrm = {
     }
     inst.activeAction = null;
     inst.lastClipTime = null;
+  },
+
+  getPersonaStyling: function (personaName) {
+    if (!personaName) return null;
+    return VRM_PERSONA_STYLING[personaName] || null;
+  },
+
+  resolveVrmRigSlug: function (seatOrName) {
+    const slug = this.getSeatModelSlug(seatOrName);
+    const name = typeof seatOrName === "string"
+      ? seatOrName
+      : (seatOrName && seatOrName.name ? seatOrName.name : "");
+    if (name && VRM_PERSONA_STYLING[name] && VRM_PERSONA_STYLING[name].baseSlug) {
+      return VRM_PERSONA_STYLING[name].baseSlug;
+    }
+    return slug;
+  },
+
+  _recolorCache: {},
+
+  recolorVrmTextureMap: function (srcTex, targetHex, strength) {
+    if (!srcTex || !srcTex.image || !targetHex || typeof document === "undefined" || typeof THREE.CanvasTexture !== "function") {
+      return srcTex;
+    }
+    const img = srcTex.image;
+    const iw = img.naturalWidth || img.width || 0;
+    const ih = img.naturalHeight || img.height || 0;
+    if (iw < 4 || ih < 4) return srcTex;
+    const cacheKey = (srcTex.uuid || "tex") + "|" + targetHex + "|" + (strength || 0.8);
+    if (this._recolorCache[cacheKey]) return this._recolorCache[cacheKey];
+    try {
+      const hex = String(targetHex).replace("#", "");
+      const tr = parseInt(hex.slice(0, 2), 16) || 0;
+      const tg = parseInt(hex.slice(2, 4), 16) || 0;
+      const tb = parseInt(hex.slice(4, 6), 16) || 0;
+      const maxDim = 512;
+      const sc = Math.min(1, maxDim / Math.max(iw, ih));
+      const w = Math.max(16, Math.round(iw * sc));
+      const h = Math.max(16, Math.round(ih * sc));
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      const idata = ctx.getImageData(0, 0, w, h);
+      const d = idata.data;
+      const blend = clamp(Number(strength) || 0.8, 0.15, 0.96);
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] < 8) continue;
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        // Preserve anime highlights & strand shading while shifting hue cleanly into targetHex!
+        const lift = lum > 0.78 ? (0.85 + (lum - 0.78) * 2.1) : (0.36 + lum * 1.18);
+        const specBoost = lum > 0.84 ? ((lum - 0.84) * 260) : 0;
+        const nr = Math.min(255, tr * lift + specBoost);
+        const ng = Math.min(255, tg * lift + specBoost);
+        const nb = Math.min(255, tb * lift + specBoost);
+        d[i]     = Math.round(r * (1 - blend) + nr * blend);
+        d[i + 1] = Math.round(g * (1 - blend) + ng * blend);
+        d[i + 2] = Math.round(b * (1 - blend) + nb * blend);
+      }
+      ctx.putImageData(idata, 0, 0);
+      const outTex = new THREE.CanvasTexture(c);
+      outTex.flipY = srcTex.flipY;
+      outTex.wrapS = srcTex.wrapS;
+      outTex.wrapT = srcTex.wrapT;
+      if (THREE.sRGBEncoding !== undefined) outTex.encoding = THREE.sRGBEncoding;
+      outTex.needsUpdate = true;
+      this._recolorCache[cacheKey] = outTex;
+      return outTex;
+    } catch (e) {
+      return srcTex;
+    }
+  },
+
+  attachVrmPersonaAccessories: function (bones, personaName, isVrm0) {
+    const styling = this.getPersonaStyling(personaName);
+    if (!styling || !styling.vrmAcc || !bones || typeof THREE === "undefined") return null;
+    const acc = styling.vrmAcc;
+    const headBone = bones.head;
+    const chestBone = bones.upperChest || bones.chest || bones.spine;
+    const mounted = [];
+
+    // Auto-calibrate exact face/eye plane in headBone local space (millimeter-accurate on every VRM!)
+    let eyeY = 0.068;
+    let eyeZ = isVrm0 ? -0.048 : 0.048;
+    let fwdSign = isVrm0 ? -1 : 1;
+    let eyeHalf = 0.028;
+    if (headBone && bones.leftEye && bones.rightEye && typeof headBone.worldToLocal === "function" && typeof bones.leftEye.getWorldPosition === "function") {
+      const wL = new THREE.Vector3();
+      const wR = new THREE.Vector3();
+      bones.leftEye.getWorldPosition(wL);
+      bones.rightEye.getWorldPosition(wR);
+      const lLoc = headBone.worldToLocal(wL.clone());
+      const rLoc = headBone.worldToLocal(wR.clone());
+      eyeY = (lLoc.y + rLoc.y) * 0.5;
+      eyeZ = (lLoc.z + rLoc.z) * 0.5;
+      const dx = Math.abs(lLoc.x - rLoc.x);
+      if (dx > 0.012 && dx < 0.14) eyeHalf = dx * 0.5;
+      if (Math.abs(eyeZ) > 0.005) fwdSign = eyeZ < 0 ? -1 : 1;
+    }
+
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xebc167, roughness: 0.24, metalness: 0.82 });
+    const jadeMat = new THREE.MeshStandardMaterial({ color: 0x6ec7a5, roughness: 0.28, metalness: 0.18 });
+    const darkMetal = new THREE.MeshStandardMaterial({ color: 0x1c2536, roughness: 0.26, metalness: 0.78 });
+
+    if (acc === "glasses" && headBone) {
+      const gGrp = new THREE.Group();
+      const lensZ = eyeZ + fwdSign * 0.056;
+      const lensR = Math.max(0.019, eyeHalf * 0.76);
+      const rimGeo = new THREE.TorusGeometry(lensR, 0.0024, 8, 20);
+      const lensGeo = new THREE.CircleGeometry(lensR * 0.92, 16);
+      const lensMat = new THREE.MeshBasicMaterial({ color: 0xdcf7ff, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
+      [-1, 1].forEach(function (side) {
+        const rim = new THREE.Mesh(rimGeo, darkMetal);
+        rim.position.set(side * (eyeHalf * 1.10), eyeY, lensZ);
+        const lens = new THREE.Mesh(lensGeo, lensMat);
+        lens.position.set(side * (eyeHalf * 1.10), eyeY, lensZ);
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.0028, 0.0028, 0.095), darkMetal);
+        arm.position.set(side * (eyeHalf * 1.10 + lensR * 0.96), eyeY + 0.002, lensZ - fwdSign * 0.048);
+        gGrp.add(rim, lens, arm);
+      });
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(eyeHalf * 0.72, 0.0032, 0.0032), darkMetal);
+      bridge.position.set(0, eyeY + 0.003, lensZ + fwdSign * 0.002);
+      gGrp.add(bridge);
+      headBone.add(gGrp);
+      mounted.push(gGrp);
+    } else if (acc === "headband" && headBone) {
+      const bGrp = new THREE.Group();
+      const bandMat = new THREE.MeshStandardMaterial({ color: 0xe6912e, roughness: 0.55, metalness: 0.05 });
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.106, 0.013, 8, 28), bandMat);
+      band.rotation.x = Math.PI * 0.5;
+      band.position.set(0, eyeY + 0.048, eyeZ * 0.12);
+      band.scale.set(0.96, 1.06, 1.0);
+      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 6), bandMat);
+      knot.position.set(0, eyeY + 0.045, -fwdSign * 0.112);
+      bGrp.add(band, knot);
+      headBone.add(bGrp);
+      mounted.push(bGrp);
+    } else if (acc === "star_clip" && headBone) {
+      const sGrp = new THREE.Group();
+      sGrp.position.set(0.072, eyeY + 0.055, eyeZ + fwdSign * 0.036);
+      sGrp.rotation.set(0.15, fwdSign < 0 ? 0.5 : -0.5, -0.35);
+      for (let k = 0; k < 5; k++) {
+        const ang = (k / 5) * Math.PI * 2;
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.007, 0.022, 4), goldMat);
+        spike.position.set(Math.cos(ang) * 0.009, Math.sin(ang) * 0.009, 0);
+        spike.rotation.z = ang - Math.PI * 0.5;
+        sGrp.add(spike);
+      }
+      headBone.add(sGrp);
+      mounted.push(sGrp);
+    } else if (acc === "ribbon" && headBone) {
+      const rGrp = new THREE.Group();
+      const ribMat = new THREE.MeshStandardMaterial({ color: 0xe8c468, roughness: 0.45, metalness: 0.08 });
+      rGrp.position.set(0.082, eyeY + 0.048, eyeZ + fwdSign * 0.022);
+      rGrp.rotation.set(0.1, fwdSign < 0 ? 0.65 : -0.65, -0.3);
+      const wL = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.038, 6), ribMat);
+      wL.position.x = -0.016; wL.rotation.z = -Math.PI * 0.5;
+      const wR = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.038, 6), ribMat);
+      wR.position.x = 0.016; wR.rotation.z = Math.PI * 0.5;
+      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.010, 8, 6), goldMat);
+      rGrp.add(wL, wR, knot);
+      headBone.add(rGrp);
+      mounted.push(rGrp);
+    } else if (acc === "jade_hairpin" && headBone) {
+      // 晴嵐：青玉流蘇古風髮簪
+      const pGrp = new THREE.Group();
+      pGrp.position.set(0.082, eyeY + 0.056, eyeZ + fwdSign * 0.015);
+      pGrp.rotation.set(0.08, 0.25, -0.55);
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.0022, 0.115, 8), goldMat);
+      const bead = new THREE.Mesh(new THREE.SphereGeometry(0.014, 10, 8), jadeMat);
+      bead.position.y = 0.052;
+      const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.0085, 0.056, 8), jadeMat);
+      tassel.position.set(0.016, 0.008, 0);
+      tassel.rotation.z = 0.55;
+      pGrp.add(stem, bead, tassel);
+      headBone.add(pGrp);
+      mounted.push(pGrp);
+    } else if (acc === "yuzu_clip" && headBone) {
+      // 柚子：金柚果實＋雙翠綠葉髮夾
+      const yGrp = new THREE.Group();
+      yGrp.position.set(0.076, eyeY + 0.048, eyeZ + fwdSign * 0.035);
+      yGrp.rotation.set(0.12, fwdSign < 0 ? 0.52 : -0.52, -0.25);
+      const fruitMat = new THREE.MeshStandardMaterial({ color: 0xf4b938, roughness: 0.38, metalness: 0.08 });
+      const leafMat = new THREE.MeshStandardMaterial({ color: 0x4ca64c, roughness: 0.45 });
+      const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.013, 10, 8), fruitMat);
+      const leaf1 = new THREE.Mesh(new THREE.ConeGeometry(0.0065, 0.024, 5), leafMat);
+      leaf1.position.set(-0.012, 0.011, 0); leaf1.rotation.z = 0.75;
+      const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.006, 0.020, 5), leafMat);
+      leaf2.position.set(-0.004, 0.016, 0); leaf2.rotation.z = 0.25;
+      yGrp.add(fruit, leaf1, leaf2);
+      headBone.add(yGrp);
+      mounted.push(yGrp);
+    } else if (acc === "gavel_brooch" && chestBone) {
+      // 阿朗：辯論社金色法槌桂冠胸章
+      const gbGrp = new THREE.Group();
+      gbGrp.position.set(-0.058 * fwdSign, 0.045, fwdSign * 0.098);
+      const wreath = new THREE.Mesh(new THREE.TorusGeometry(0.019, 0.0032, 6, 16), goldMat);
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.0024, 0.0024, 0.028, 6), goldMat);
+      handle.rotation.z = -0.45;
+      const headG = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.0055, 0.018, 8), goldMat);
+      headG.position.set(0.006, 0.010, 0); headG.rotation.z = 1.1;
+      gbGrp.add(wreath, handle, headG);
+      chestBone.add(gbGrp);
+      mounted.push(gbGrp);
+    } else if (acc === "ink_scroll" && chestBone) {
+      // 墨白：青竹書法玉扣盤飾
+      const isGrp = new THREE.Group();
+      isGrp.position.set(0, 0.036, fwdSign * 0.104);
+      const cinnabar = new THREE.MeshStandardMaterial({ color: 0xa63529, roughness: 0.42 });
+      const seal = new THREE.Mesh(new THREE.BoxGeometry(0.020, 0.028, 0.008), cinnabar);
+      const cord = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.0025, 6, 14), goldMat);
+      cord.position.y = 0.016;
+      isGrp.add(seal, cord);
+      chestBone.add(isGrp);
+      mounted.push(isGrp);
+    } else if (acc === "jade_pendant" && chestBone) {
+      // 阿竹：書院青玉佩
+      const jpGrp = new THREE.Group();
+      jpGrp.position.set(0, 0.022, fwdSign * 0.106);
+      const disc = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.005, 8, 16), jadeMat);
+      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6), goldMat);
+      knot.position.y = 0.018;
+      jpGrp.add(disc, knot);
+      chestBone.add(jpGrp);
+      mounted.push(jpGrp);
+    }
+    return mounted.length ? mounted : null;
   },
 
   getSeatModelSlug: function (seatOrName) {
@@ -581,6 +830,10 @@ const stage3dVrm = {
     for (let si = 0; si < springBones.length; si++) {
       springBones[si].quatMeta = this.initBoneQuatData(springBones[si].obj);
     }
+    // v10.0 Mount precision persona 3D accessories (glasses, headband, star/yuzu clips, jade hairpin, gavel brooch) in T-pose!
+    if (o.personaName && typeof this.attachVrmPersonaAccessories === "function") {
+      this.attachVrmPersonaAccessories(bones, o.personaName, isVrm0);
+    }
 
     // CRITICAL STEP 3: Pose legs & arms using exact anatomical Model-Space quaternions (zero gimbal flip or VRM 1.0 twist!)
     if (mode === "seated") {
@@ -632,7 +885,8 @@ const stage3dVrm = {
       }
     });
 
-    // Upgrade VRM KHR_materials_unlit meshes to real-time Lit Cel Shading (sun/moon + spotlight + rim + candle bounce!)
+    // Upgrade VRM KHR_materials_unlit meshes to real-time Lit Cel Shading + v10.0 Persona Palette Recolor!
+    const personaStyling = o.personaName ? this.getPersonaStyling(o.personaName) : null;
     const tintMats = [];
     const celMats = [];
     const canCelUpgrade = Boolean(
@@ -640,6 +894,7 @@ const stage3dVrm = {
       typeof stage3dAnime.upgradeVrmMaterialToCel === "function" &&
       (typeof state === "undefined" || state.quality3D !== "eco")
     );
+    const selfLoader = this;
     if (typeof rawScene.traverse === "function") {
       rawScene.traverse(function (child) {
         if (!child || !child.isMesh) return;
@@ -664,10 +919,30 @@ const stage3dVrm = {
           const keepUnlitEye = /eyewhite|eyehighlight|eyeextra/i.test(tagStr);
           const isFaceMat = /face|skin|brow|mouth|eyeline|eyelash|iris/i.test(tagStr);
           const isHairMat = /hair/i.test(tagStr);
+          const isTopsMat = /tops|cloth/i.test(tagStr) && !/bottoms|shoes|accessoryneck/i.test(tagStr);
+          const isNeckMat = /accessoryneck/i.test(tagStr);
+          const isIrisMat = /eyeiris|iris/i.test(tagStr);
           if (isFaceMat) isFaceMesh = true;
           if (!isOutline) hasOutlineOnly = false;
           if (m.transparent && !m.alphaTest) m.alphaTest = 0.35;
           if (m.map && THREE.sRGBEncoding !== undefined) m.map.encoding = THREE.sRGBEncoding;
+
+          // v10.0 Luminance-preserving texture recolor so ALL 11 AI characters match their 2D portraits!
+          if (personaStyling && !isOutline && m.map) {
+            if (isHairMat && personaStyling.hairHex) {
+              m = m.clone ? m.clone() : m;
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.hairHex, personaStyling.hairStr || 0.82);
+            } else if (isTopsMat && personaStyling.topsHex) {
+              m = m.clone ? m.clone() : m;
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.topsHex, personaStyling.topsStr || 0.80);
+            } else if (isNeckMat && personaStyling.neckHex) {
+              m = m.clone ? m.clone() : m;
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.neckHex, 0.78);
+            } else if (isIrisMat && personaStyling.eyeHex) {
+              m = m.clone ? m.clone() : m;
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.eyeHex, 0.65);
+            }
+          }
 
           let finalMat = m;
           const isBasic = Boolean(m.isMeshBasicMaterial || m.type === "MeshBasicMaterial");
@@ -957,11 +1232,12 @@ const stage3dVrm = {
       lDrop = 0.92; lFwd = 0.46; lBend = 1.32;
     } else if (talking) {
       const talkAmp = clamp(o.mouthAmp || 0.4, 0.2, 1.0);
-      rDrop = 0.96 - talkAmp * 0.08;
-      rFwd = 0.38 + Math.sin(t * 7.2 + seed) * (0.12 + talkAmp * 0.08);
-      rBend = 1.05 + Math.cos(t * 6.5) * 0.14;
+      const tEnergy = arch.talkArmAmp !== undefined ? arch.talkArmAmp : 1.0;
+      rDrop = 0.96 - talkAmp * 0.08 * tEnergy;
+      rFwd = 0.34 + Math.sin(t * (6.2 + tEnergy * 1.4) + seed) * (0.11 + talkAmp * 0.08) * tEnergy;
+      rBend = 1.05 + Math.cos(t * 6.5) * 0.13 * tEnergy;
       lDrop = 1.02;
-      lFwd = 0.30 + Math.cos(t * 6.5 + seed) * 0.08;
+      lFwd = 0.28 + Math.cos(t * 6.2 + seed) * 0.08 * tEnergy;
       lBend = 0.98;
     } else if (sweating) {
       // Observable nervous fidget: subtly tense shoulders & restless hands

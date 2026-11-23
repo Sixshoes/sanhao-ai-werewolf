@@ -143,12 +143,17 @@ function chooseAiVoteTarget(voter, opts) {
       }
     } else {
       const twoSeerFocus = (seerClaimants.length >= 2 && candidatePool.some(function (t) { return t.claimedRole === "seer"; }));
+      const dayEvsVote = snap ? snap.daySpeechEvents : (state.match.daySpeechEvents || []);
+      const voteProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
+      const rallyWeight = voteProf ? Math.round(18 * (1 + voteProf.bandwagonBias * 0.45)) : 18;
       candidatePool.sort(function (a, b) {
         // Uniform low-harmony confusion jitter across ALL candidates (zero hidden team peeking!)
         const jA = hazeChaos ? Math.sin(self.id * 7 + a.id * 3) * hazeChaos : 0;
         const jB = hazeChaos ? Math.sin(self.id * 7 + b.id * 3) * hazeChaos : 0;
-        const pA = (self.publicVoteIntent === a.id ? 24 : 0) + (rallyId === a.id ? 18 : 0) + (twoSeerFocus && a.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50) + jA;
-        const pB = (self.publicVoteIntent === b.id ? 24 : 0) + (rallyId === b.id ? 18 : 0) + (twoSeerFocus && b.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50) + jB;
+        const persA = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, a, { daySpeechEvents: dayEvsVote }) : 0;
+        const persB = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, b, { daySpeechEvents: dayEvsVote }) : 0;
+        const pA = (self.publicVoteIntent === a.id ? 24 : 0) + (rallyId === a.id ? rallyWeight : 0) + (twoSeerFocus && a.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50) + persA + jA;
+        const pB = (self.publicVoteIntent === b.id ? 24 : 0) + (rallyId === b.id ? rallyWeight : 0) + (twoSeerFocus && b.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50) + persB + jB;
         return pB - pA;
       });
       if (candidatePool[0] && ((self.publicVoteIntent === candidatePool[0].id) || (rallyId === candidatePool[0].id) || ((self.suspicionMap && self.suspicionMap[candidatePool[0].id]) || 50) >= 48)) {

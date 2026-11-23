@@ -27,7 +27,7 @@ const VRM_PORTRAIT_ART_MAP = {
   "主持": "assets/portraits_vrm/qingming.jpg",
   "你": "assets/portraits_vrm/player.jpg",
   "你_男": "assets/portraits_vrm/player_male.jpg",
-  "小澄": "assets/portraits_vrm/xiaocheng.jpg",
+  "小澄": "assets/portraits/xiaocheng.jpg",
   "暖暖": "assets/portraits_vrm/nuannuan.jpg",
   "阿松": "assets/portraits_vrm/asong.jpg",
   "星兒": "assets/portraits_vrm/xinger.jpg",

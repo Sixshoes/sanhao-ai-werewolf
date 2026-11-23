@@ -8,34 +8,34 @@ const PERSONA_VOICE_PROFILES = {
   "主持":  { gender: "f", slot: 0, seatHint: 0, studioVoice: "Leda",       pitch: 0.99, basicPitch: 0.996, rateMul: 0.97 },
   "你":    { gender: "f", slot: 1, seatHint: 1, studioVoice: "Kore",       pitch: 1.00, basicPitch: 1.000, rateMul: 1.00 },
   "你_男": { gender: "m", slot: 0, seatHint: 1, studioVoice: "Puck",       pitch: 0.98, basicPitch: 0.994, rateMul: 1.00 },
-  "小澄":  { gender: "m", slot: 1, seatHint: 2, studioVoice: "Orus",       pitch: 0.98, basicPitch: 0.992, rateMul: 1.04 },
-  "暖暖":  { gender: "f", slot: 2, seatHint: 3, studioVoice: "Aoede",      pitch: 1.03, basicPitch: 1.012, rateMul: 0.96 },
+  "小澄":  { gender: "m", slot: 1, seatHint: 2, studioVoice: "Orus",       pitch: 0.98, basicPitch: 0.992, rateMul: 1.05 },
+  "暖暖":  { gender: "f", slot: 2, seatHint: 3, studioVoice: "Aoede",      pitch: 1.03, basicPitch: 1.012, rateMul: 0.95 },
   "阿松":  { gender: "m", slot: 2, seatHint: 4, studioVoice: "Charon",     pitch: 0.94, basicPitch: 0.980, rateMul: 0.93 },
-  "星兒":  { gender: "f", slot: 3, seatHint: 5, studioVoice: "Zephyr",     pitch: 1.05, basicPitch: 1.018, rateMul: 1.04 },
-  "小雲":  { gender: "f", slot: 4, seatHint: 6, studioVoice: "Callirrhoe", pitch: 1.01, basicPitch: 1.004, rateMul: 1.02 },
-  "阿竹":  { gender: "m", slot: 3, seatHint: 7,  studioVoice: "Fenrir",     pitch: 0.96, basicPitch: 0.986, rateMul: 0.95 },
-  "晨晨":  { gender: "m", slot: 4, seatHint: 8,  studioVoice: "Puck",       pitch: 1.00, basicPitch: 0.998, rateMul: 1.06 },
-  "墨白":  { gender: "m", slot: 5, seatHint: 9,  studioVoice: "Charon",     pitch: 0.93, basicPitch: 0.982, rateMul: 0.94 },
-  "晴嵐":  { gender: "f", slot: 5, seatHint: 10, studioVoice: "Leda",       pitch: 0.99, basicPitch: 0.996, rateMul: 0.95 },
-  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Orus",       pitch: 0.99, basicPitch: 0.995, rateMul: 1.05 },
-  "柚子":  { gender: "f", slot: 6, seatHint: 12, studioVoice: "Zephyr",     pitch: 1.06, basicPitch: 1.020, rateMul: 1.05 }
+  "星兒":  { gender: "f", slot: 3, seatHint: 5, studioVoice: "Zephyr",     pitch: 1.05, basicPitch: 1.018, rateMul: 1.06 },
+  "小雲":  { gender: "f", slot: 4, seatHint: 6, studioVoice: "Callirrhoe", pitch: 1.01, basicPitch: 1.004, rateMul: 1.03 },
+  "阿竹":  { gender: "m", slot: 3, seatHint: 7,  studioVoice: "Fenrir",     pitch: 0.96, basicPitch: 0.986, rateMul: 0.93 },
+  "晨晨":  { gender: "m", slot: 4, seatHint: 8,  studioVoice: "Puck",       pitch: 1.01, basicPitch: 0.998, rateMul: 1.08 },
+  "墨白":  { gender: "m", slot: 5, seatHint: 9,  studioVoice: "Charon",     pitch: 0.91, basicPitch: 0.978, rateMul: 0.89 },
+  "晴嵐":  { gender: "f", slot: 5, seatHint: 10, studioVoice: "Leda",       pitch: 0.99, basicPitch: 0.996, rateMul: 0.92 },
+  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Orus",       pitch: 0.99, basicPitch: 0.995, rateMul: 1.07 },
+  "柚子":  { gender: "f", slot: 6, seatHint: 12, studioVoice: "Zephyr",     pitch: 1.06, basicPitch: 1.020, rateMul: 1.07 }
 };
 
 const PERSONA_TTS_DIRECTIONS = {
   "主持":  "沉穩溫雅的台灣書院說書女聲，語氣端莊有韻味",
   "你":    "自然親切的台灣女大學生口語，清晰從容",
   "你_男": "自然沉穩的台灣男大學生口語，條理清晰",
-  "小澄":  "冷靜銳利、略帶數據分析感的台灣理工男大學生口語",
-  "暖暖":  "溫柔親切、語調輕軟帶笑意的台灣女大學生口語",
-  "阿松":  "沉穩厚實、不疾不徐、像登山社學長的台灣男聲",
-  "星兒":  "活潑靈動、帶點直覺驚嘆感的台灣女大學生口語",
-  "小雲":  "俐落果斷、像新聞查核社長的台灣知性女聲",
-  "阿竹":  "溫潤斯文、略帶書卷氣與停頓節奏的台灣男聲",
-  "晨晨":  "熱血爽朗、語速明快有朝氣的台灣陽光男大學生口語",
-  "墨白":  "低沉冷峻、字句精練沉著的台灣書法社長男聲",
-  "晴嵐":  "溫婉清雅、從容柔和卻有定見的台灣古箏社學姊女聲",
-  "阿朗":  "俐落鏗鏘、節奏鮮明具說服力的台灣辯論社主辯男聲",
-  "柚子":  "甜美元氣、輕快開朗帶點可愛驚嘆的台灣大學學妹女聲"
+  "小澄":  "冷靜銳利、節奏俐落像數據工程師分析報告的台灣理工男大生口語",
+  "暖暖":  "溫柔軟萌、帶甜美笑意與泡茶暖場感的台灣女大學生口語",
+  "阿松":  "沉穩厚實、豪爽帶台味山林老江湖氣息的登山社學長男聲",
+  "星兒":  "活潑靈動、帶中二占星驚嘆與綜藝感的台灣少女口語",
+  "小雲":  "俐落果斷、像新聞台事實查核主播的台灣知性女聲",
+  "阿竹":  "溫潤斯文、帶江南書院詩茶半文言韻味與從容停頓的男聲",
+  "晨晨":  "熱血爽朗、元氣十足像運動漫畫主角的陽光男大生口語",
+  "墨白":  "低沉冷峻、不疾不徐、如魏晉名士宣讀文言判詞般端重有威嚴的古風男聲",
+  "晴嵐":  "溫婉清雅、抑揚頓挫帶宋詞古箏雅韻、柔中帶剛的台灣學姊女聲",
+  "阿朗":  "俐落鏗鏘、字字清晰具法庭交叉質詢張力的台灣辯論社主辯男聲",
+  "柚子":  "甜美元氣、輕快活潑像烘焙點心社學妹的可愛台灣女聲"
 };
 
 const voice = {

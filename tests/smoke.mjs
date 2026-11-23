@@ -4056,4 +4056,105 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v9.3.1 (Seated VRM & Sculpted Skirt Drape Fix + Beginner Tutorial + UI Convergence + Anti-Cheat + 12p Table + Seated POV + Feedback) E2E smoke test PASSED!");
+// v10.0 PERSONA-OVERHAUL: All 11 AI Personas Complete (2D Portraits, 3D VRM Styling & Accessories, Literary/文言文 Registers, 7-Dim Blind Cognitive Divergence, Voice & Showcase)
+{
+  const v10Res = vm.runInContext(`(() => {
+    const names = AI_PERSONAS.map(p => p.name);
+    const all11 = names.length === 11;
+    const allProfilesOk = names.every(n => {
+      const p = PERSONA_COGNITIVE_PROFILES[n];
+      return Boolean(p && p.register && p.registerBadge && p.logicTags && p.sampleQuote && p.llmStyleRule &&
+        typeof p.credulity === "number" && typeof p.grudgeMemory === "number" &&
+        typeof p.harmonySensitivity === "number" && typeof p.bandwagonBias === "number" &&
+        typeof p.bluffBoldness === "number" && typeof p.godHideBias === "number");
+    });
+    const all3DStylingOk = names.every(n => {
+      const st = VRM_PERSONA_STYLING[n];
+      const av = CHAR_AVATAR_STYLES[n];
+      const idl = VRM_IDLE_ARCHETYPES[n];
+      const rigSlug = stage3dVrm.resolveVrmRigSlug({ name: n, id: 2 });
+      const manifest = stage3d.getDefaultStaticAvatarManifest().seatModels;
+      return Boolean(st && st.baseSlug && manifest[rigSlug] && av && av.acc && idl && typeof idl.talkArmAmp === "number");
+    });
+    // Xiaocheng gender fix: must resolve to male VRM rig ("azhu"), NEVER female chibi "xiaocheng", and VRM portrait map avoids old chibi JPG
+    const xiaochengFixed = stage3dVrm.resolveVrmRigSlug({ name: "小澄", id: 2 }) === "azhu" &&
+      VRM_PERSONA_STYLING["小澄"].vrmAcc === "glasses" &&
+      VRM_PORTRAIT_ART_MAP["小澄"] === "assets/portraits/xiaocheng.jpg";
+    // Expanded 10/12p characters all have valid VRM base rigs + signature accessories
+    const expandedVrmOk = ["墨白", "晴嵐", "阿朗", "柚子"].every(n => {
+      const rig = stage3dVrm.resolveVrmRigSlug({ name: n, id: 9 });
+      return Boolean(stage3d.getDefaultStaticAvatarManifest().seatModels[rig] && VRM_PERSONA_STYLING[n].vrmAcc);
+    });
+    const allVoiceOk = names.every(n => Boolean(PERSONA_VOICE_PROFILES[n] && PERSONA_TTS_DIRECTIONS[n]));
+
+    // Behavioral / Cognitive Divergence Checks (Zero-Leak Blind-View compliant)
+    const cognitiveDivergenceOk =
+      getPersonaSuspicionModifiers("暖暖").toxicScale > getPersonaSuspicionModifiers("墨白").toxicScale &&
+      getPersonaSuspicionModifiers("阿朗").grudgeBonus > getPersonaSuspicionModifiers("暖暖").grudgeBonus &&
+      getPersonaGodHideChance("墨白") > 0.7 && getPersonaGodHideChance("晨晨") < 0.2 &&
+      getPersonaWolfCounterChance("晨晨", "seer") > getPersonaWolfCounterChance("墨白", "seer") &&
+      getPersonaProfile("柚子").bandwagonBias > 0.5 && getPersonaProfile("墨白").bandwagonBias < -0.3;
+
+    // 11-Character Speech Uniqueness & Literary Register (文言文 / 樂府 / 詩茶 / 辯論) Verification
+    clearStepTimer();
+    el("selectModeCount").value = "12";
+    el("selectPreferredRole").value = "villager";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.day = 1;
+    state.match.phase = "DAY_SPEECH";
+    state.match.daySpeechEvents = [];
+    state.match.allSpeechEvents = [];
+    state.match.logs = [];
+
+    const openTexts = new Set();
+    let mobaiClassicalOk = false;
+    let qinglanGuzhengOk = false;
+    let azhuPoeticOk = false;
+    let alangDebateOk = false;
+    let mobaiLlmPromptOk = false;
+    state.match.seats.forEach(s => {
+      if (s.id === getPlayerId()) return;
+      s.role = "villager";
+      s.team = "good";
+      const sp = buildHeuristicAiSpeech(s);
+      openTexts.add(sp.text);
+      if (s.name === "墨白") {
+        mobaiClassicalOk = /[吾諸君乃此]/.test(sp.text) && !/超扯|哈哈|嗚哇/.test(sp.text);
+        const built = buildBlindGeminiSpeechPrompt(s, sp);
+        mobaiLlmPromptOk = Boolean(built && built.audit && built.audit.ok && built.prompt.includes("魏晉純文言判詞"));
+      }
+      if (s.name === "晴嵐") qinglanGuzhengOk = /妾身|晴嵐|清音|調弦|雅音/.test(sp.text);
+      if (s.name === "阿竹") azhuPoeticOk = /小生|阿竹|茶|同窗/.test(sp.text);
+      if (s.name === "阿朗") alangDebateOk = /辯|立論|質詢|證據|申論/.test(sp.text);
+    });
+    const all11UniqueSpeeches = openTexts.size === 11;
+
+    // Intel popover badge & Showcase persona dossier + audition UI
+    const mobaiSeat = state.match.seats.find(s => s.name === "墨白");
+    openSeatIntel(mobaiSeat.id);
+    const intelBadgeOk = el("intelPersonaBadge").textContent.includes("魏晉純文言判詞");
+    closeSeatIntel();
+
+    stage3d.showcaseTarget = "9";
+    indieFlow.syncShowcaseTargetUi();
+    const showcaseBioOk = el("showcasePersonaBio").textContent.length > 10;
+    el("btnShowcaseAuditionVoice").click();
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      all11, allProfilesOk, all3DStylingOk, xiaochengFixed, expandedVrmOk, allVoiceOk,
+      cognitiveDivergenceOk, all11UniqueSpeeches, mobaiClassicalOk, qinglanGuzhengOk,
+      azhuPoeticOk, alangDebateOk, mobaiLlmPromptOk, intelBadgeOk, showcaseBioOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v10Res)) {
+    if (!v) {
+      throw new Error("v10.0 PERSONA-OVERHAUL check failed for " + k + ": " + JSON.stringify(v10Res));
+    }
+  }
+}
+
+console.log("[OK] Full v10.0 (11-Persona Overhaul: Classical/Literary Registers, 7-Dim Blind Cognitive Logic, Unified VRM Styling & Accessories + Skirt Fix + Anti-Cheat) E2E smoke test PASSED!");

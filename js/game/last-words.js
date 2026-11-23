@@ -19,12 +19,14 @@ function buildAiLastWords(seat, mode) {
   if (typeof antiCheatMonitor !== "undefined" && self) {
     antiCheatMonitor.recordDecision("last_words", self.id, isFirstNight ? "首夜遺言" : "公投遺言");
   }
+  const lwText = typeof buildPersonaLastWordsText === "function" ? buildPersonaLastWordsText : null;
   if (self.role === "seer" && self.checkedHistory && self.checkedHistory.length > 0) {
     const chk = self.checkedHistory[self.checkedHistory.length - 1];
     const tSeat = readSeat(chk.targetId);
     const tLbl = labelOf(tSeat) || (fmtSeatNum(chk.targetId) + "號");
+    const customSeer = lwText && lwText(self, "seer", { isFirstNight: isFirstNight, tLbl: tLbl, isWolf: chk.isWolf });
     return {
-      text: (isFirstNight
+      text: customSeer || (isFirstNight
         ? ("各位好人注意！我是明心觀察員，首夜離席留遺言：昨晚我查證了 " + tLbl + "，確定他是" + (chk.isWolf ? "酸民狼！今天拜託直接集中投 " + tLbl + "！" : "善良的好夥伴，大家別投錯他！"))
         : ("我真的是明心觀察員！離場前提醒大家，我查證過 " + tLbl + " 確定是" + (chk.isWolf ? "酸民狼，明天一定要投他！" : "好夥伴，千萬別被帶風向！"))),
       claimRole: "seer",
@@ -34,10 +36,11 @@ function buildAiLastWords(seat, mode) {
   }
   if (self.role === "witch") {
     const sv = self.savedSeatId ? readSeat(self.savedSeatId) : null;
+    const customWitch = lwText && lwText(self, "witch", { isFirstNight: isFirstNight, tLbl: sv ? labelOf(sv) : "" });
     return {
-      text: sv
+      text: customWitch || (sv
         ? ("我亮滴水奉茶師留遺言！之前是我用暖心回甘茶護回 " + labelOf(sv) + "，他是鐵好人，剩下靠大家穩住邏輯抓狼！")
-        : (isFirstNight ? "好可惜我是滴水奉茶師首夜就暫離！大家務必仔細聽輪流發言、別被酸言帶風向！" : "我是滴水奉茶師竟然被投出去啦！大家記得回頭抓剛剛帶頭衝票的人！"),
+        : (isFirstNight ? "好可惜我是滴水奉茶師首夜就暫離！大家務必仔細聽輪流發言、別被酸言帶風向！" : "我是滴水奉茶師竟然被投出去啦！大家記得回頭抓剛剛帶頭衝票的人！")),
       claimRole: "witch",
       targetId: sv ? sv.id : null,
       isWolf: false
@@ -46,10 +49,11 @@ function buildAiLastWords(seat, mode) {
   if (self.role === "guard") {
     const gPrev = snap ? snap.lastGuardTargetId : ((typeof state !== "undefined" && state.match) ? state.match.lastGuardTargetId : null);
     const gSeat = gPrev ? readSeat(gPrev) : null;
+    const customGuard = lwText && lwText(self, "guard", { isFirstNight: isFirstNight, tLbl: gSeat ? labelOf(gSeat) : "" });
     return {
-      text: gSeat
+      text: customGuard || (gSeat
         ? ("我亮出護心守衛留遺言！上一晚我的護心結界剛守過 " + labelOf(gSeat) + "，奉茶師千萬別再對同位用藥撞破盾，剩下拜託大家穩住找狼！")
-        : "我是護心守衛先一步離席冷靜！好人記得注意誰在避談昨夜守護與救援視角，別被酸民狼混過去！",
+        : "我是護心守衛先一步離席冷靜！好人記得注意誰在避談昨夜守護與救援視角，別被酸民狼混過去！"),
       claimRole: "guard",
       targetId: gSeat ? gSeat.id : null,
       isWolf: false
@@ -59,8 +63,9 @@ function buildAiLastWords(seat, mode) {
     const aliveListH = (snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== self.id; })).slice();
     aliveListH.sort(function (a, b) { return ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50); });
     const hTop = aliveListH[0] || null;
+    const customHunter = lwText && lwText(self, "hunter", { isFirstNight: isFirstNight, tLbl: hTop ? labelOf(hTop) : "" });
     return {
-      text: "我亮直心糾察長留遺言！" + (hTop ? ("我覺得場上最可疑的是 " + labelOf(hTop) + "，") : "") + "大家一定要從這輪票型跟對跳邏輯抓出剩餘酸民狼！",
+      text: customHunter || ("我亮直心糾察長留遺言！" + (hTop ? ("我覺得場上最可疑的是 " + labelOf(hTop) + "，") : "") + "大家一定要從這輪票型跟對跳邏輯抓出剩餘酸民狼！"),
       claimRole: "hunter",
       targetId: hTop ? hTop.id : null,
       isWolf: hTop ? true : null
@@ -87,8 +92,9 @@ function buildAiLastWords(seat, mode) {
 
   if (!isFirstNight && votersAgainstMe.length > 0) {
     const callouts = votersAgainstMe.slice(0, 2).map(labelOf).join(" 跟 ");
+    const customVoted = lwText && lwText(self, "good_voted", { callouts: callouts });
     return {
-      text: "我真的是善良的好夥伴，被推上來太冤枉了！最後帶頭投我出去的 " + callouts + " 裡面極可能藏著酸民狼，拜託大家從這輪票型往回對齊狼坑！",
+      text: customVoted || ("我真的是善良的好夥伴，被推上來太冤枉了！最後帶頭投我出去的 " + callouts + " 裡面極可能藏著酸民狼，拜託大家從這輪票型往回對齊狼坑！"),
       claimRole: null,
       targetId: votersAgainstMe[0].id,
       isWolf: true
@@ -98,9 +104,10 @@ function buildAiLastWords(seat, mode) {
   const wolfTotalLw = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
   aliveOthers.sort(function (a, b) { return ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50); });
   const topSus = aliveOthers[0] || null;
+  const customNight1 = isFirstNight && lwText ? lwText(self, "good_night1", { wolfTotal: wolfTotalLw }) : null;
   return {
     text: isFirstNight
-      ? ("首夜倒牌好可惜！我是無辜好人，大家今天輪流發言時仔細聽誰語氣急著帶節奏，把 " + wolfTotalLw + " 隻酸民狼抓出來！")
+      ? (customNight1 || ("首夜倒牌好可惜！我是無辜好人，大家今天輪流發言時仔細聽誰語氣急著帶節奏，把 " + wolfTotalLw + " 隻酸民狼抓出來！"))
       : (flv ? flv.lastGood.replace(/^「|」$/g, "") : ("我是清白好人！離席前建議大家重點留意 " + (topSus ? labelOf(topSus) : "帶頭衝票的人") + "！")),
     claimRole: null,
     targetId: (!isFirstNight && topSus) ? topSus.id : null,
@@ -152,7 +159,9 @@ function applyLastWordsInfluence(seat, rawText, meta) {
         const seerVerifiedLock = (ai.role === "seer" && (ai.checkedHistory || []).some(function (c) { return c.targetId === targetId; }));
         const witchSavedLock = (ai.role === "witch" && ai.savedSeatId === targetId && isWolfClaim);
         if (seerVerifiedLock || witchSavedLock) return;
-        const styleMul = ai.deductionStyle === "gullible" ? 1.25 : (ai.deductionStyle === "skeptical" ? 0.7 : 1.0);
+        const styleMul = typeof getPersonaProfile === "function"
+          ? getPersonaProfile(ai).credulity
+          : (ai.deductionStyle === "gullible" ? 1.25 : (ai.deductionStyle === "skeptical" ? 0.7 : 1.0));
         ai.suspicionMap[targetId] = clamp((ai.suspicionMap[targetId] || 50) + Math.round(delta * styleMul), 5, 98);
       }
     });

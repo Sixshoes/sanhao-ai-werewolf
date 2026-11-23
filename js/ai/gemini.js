@@ -337,11 +337,13 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     : null;
   const self = (snap && snap.self) ? snap.self : speaker;
   const flvObj = PERSONA_FLAVORS[self.name] || {};
+  const pProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
   const flvBio = flvObj.bio ? flvObj.bio : self.trait;
   const vs = flvObj.voiceStyle || null;
-  const styleSamples = vs
-    ? ("【你的專屬口語口癖範例（務必融入台詞開頭與收尾）】：開場「" + (vs.lead || []).slice(0, 2).join(" / ") + "」｜反駁「" + (vs.rebutLead || []).slice(0, 1).join("") + "」｜收尾「" + (vs.signoff || []).slice(0, 1).join("") + "」。\n")
-    : "";
+  const styleSamples = (pProf ? ("【你的專屬語風定位：" + pProf.registerBadge + "｜" + pProf.logicTags + "】\n【最高優先角色語風指令】：" + pProf.llmStyleRule + "\n【你的招牌示範句】：「" + pProf.sampleQuote + "」\n") : "") +
+    (vs
+      ? ("【你的專屬開場與收尾口癖】：開場「" + (vs.lead || []).slice(0, 2).join(" / ") + "」｜反駁「" + (vs.rebutLead || []).slice(0, 1).join("") + "」｜收尾「" + (vs.signoff || []).slice(0, 1).join("") + "」。\n")
+      : "");
   const day = snap ? snap.day : state.match.day;
   const pidNow = snap ? snap.playerSeatId : getPlayerId();
   const publicLogs = snap ? snap.publicLogs : state.match.logs.filter(function (l) { return l.kind !== "secret"; });
@@ -485,7 +487,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "1. 【最高優先】必須嚴守今日發言時序並點好人坑與狼人坑！被前置位點進狼坑或指認時第一句必須回應；雙觀察員對跳時務必比較站 A 坑與站 B 坑分別在哪！\n" +
     "2. 【獨立綜合判斷】你完全不知道其他人的真實底牌（除同伴或觀察員親查對象外）！必須參考前面「所有」已發言者的話來綜合判斷誰在狼坑、誰在好人坑。\n" +
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
-    "4. 【嚴禁 AI 報告腔】禁止出現「根據上述資料」「綜上所述」「第一點、第二點」或系統旁白！要像台灣真人圍坐喝茶聊推理，自然接前一位的話回嘴或讚聲，用你的專屬口癖開場與俐落「過！」收尾。\n" +
+    "4. 【嚴禁 AI 報告腔・忠實演出角色語風】禁止出現「根據上述資料」「綜上所述」「第一點、第二點」或系統旁白！務必徹底以你的人設語風演出（若為文言文／雅言角色請全程維持典雅古韻，若為現代社團角色請自然使用專屬黑話與口癖），自然接前一位的話回嘴或讚聲，用專屬收尾俐落結束。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
     "6. 保持鮮明口語節奏（" + (totalSeatsNow >= 10 ? "50～90字" : "65～115字") + "、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
     '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":"seer"|"witch"|"hunter"|"guard"|"elder"|null,"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';

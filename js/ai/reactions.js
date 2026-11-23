@@ -9,6 +9,9 @@ function shouldWolfEmitToxicSlip(speaker, day, salt, panicBoost) {
   if (panicBoost) {
     rate = diff === "easy" ? 0.85 : (diff === "pro" ? 0.35 : 0.58);
   }
+  if (typeof getPersonaToxicSlipScale === "function") {
+    rate = clamp(rate * getPersonaToxicSlipScale(speaker), 0.08, 0.92);
+  }
   const roll = (((speaker.id * 41 + (day || 1) * 29 + (salt || 0) * 17) % 100) + 100) % 100;
   return (roll / 100) < rate;
 }
@@ -71,6 +74,14 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         || speaker.checkedHistory[speaker.checkedHistory.length - 1];
       const chkSeat = readSeat(focusChk.targetId);
       const chkLbl = chkSeat ? seatLabel(chkSeat) : (fmtSeatNum(focusChk.targetId) + "號");
+      const pkSeerTxt = typeof buildPersonaPkText === "function"
+        ? buildPersonaPkText(speaker, "seer", {
+            rebutLead: rebutLead,
+            rName: rName,
+            extraProof: "昨夜親驗 " + chkLbl + " 係" + (focusChk.isWolf ? "酸民狼" : "清白好人") + "，",
+            signoff: signoff
+          })
+        : null;
       return {
         targetId: rid,
         relationType: rid ? "suspect" : null,
@@ -83,7 +94,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         checkedWolfId: focusChk.isWolf ? focusChk.targetId : null,
         checkedGoodId: focusChk.isWolf ? null : focusChk.targetId,
         hasToxicSlip: false,
-        text: rebutLead + "平票 PK 我必須搶救清白！我是真正的明心觀察員，查證過 " + chkLbl + " 是" + (focusChk.isWolf ? "酸民狼" : "好夥伴") + "！把我投離席好人會失去查證視野，請非平票夥伴務必轉投 " + rName + "！" + signoff
+        text: pkSeerTxt || (rebutLead + "平票 PK 我必須搶救清白！我是真正的明心觀察員，查證過 " + chkLbl + " 是" + (focusChk.isWolf ? "酸民狼" : "好夥伴") + "！把我投離席好人會失去查證視野，請非平票夥伴務必轉投 " + rName + "！" + signoff)
       };
     }
     if (speaker.role === "witch") {
@@ -92,6 +103,9 @@ function tryDefendOrCounterClaim(speaker, ctx) {
       const svSeat = speaker.savedSeatId ? readSeat(speaker.savedSeatId) : null;
       const saveProof = svSeat ? ("之前晚上是我用暖心回甘茶護回 " + seatLabel(svSeat) + "，") : "";
       const vId = (svSeat && svSeat.alive && svSeat.id !== speaker.id) ? svSeat.id : null;
+      const pkWitchTxt = typeof buildPersonaPkText === "function"
+        ? buildPersonaPkText(speaker, "witch", { rebutLead: rebutLead, rName: rName, extraProof: saveProof, signoff: signoff })
+        : null;
       return {
         targetId: rid,
         relationType: rid ? "suspect" : null,
@@ -101,12 +115,15 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         wolfPits: pkWolfPits,
         goodPits: mergePits(vId, baseGoodIds, 2, rid),
         hasToxicSlip: false,
-        text: rebutLead + "進入平票 PK 我直接亮出滴水奉茶師底牌！" + saveProof + "好人千萬別在 PK 把核心神職投出去，對比兩邊發言誠懇度，請大家這輪集中把票投給 " + rName + "！" + signoff
+        text: pkWitchTxt || (rebutLead + "進入平票 PK 我直接亮出滴水奉茶師底牌！" + saveProof + "好人千萬別在 PK 把核心神職投出去，對比兩邊發言誠懇度，請大家這輪集中把票投給 " + rName + "！" + signoff)
       };
     }
     if (speaker.role === "hunter") {
       speaker.claimedRole = "hunter";
       speaker.hunterAnnounced = true;
+      const pkHunterTxt = typeof buildPersonaPkText === "function"
+        ? buildPersonaPkText(speaker, "hunter", { rebutLead: rebutLead, rName: rName, extraProof: "我是直心糾察長，離席必共鳴帶走 " + rName + "，", signoff: signoff })
+        : null;
       return {
         targetId: rid,
         relationType: rid ? "suspect" : null,
@@ -116,7 +133,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         wolfPits: pkWolfPits,
         goodPits: mergePits(null, baseGoodIds, 2, rid),
         hasToxicSlip: false,
-        text: rebutLead + "平票 PK 直接亮底牌提醒全場：我是直心糾察長！把我投出局不只少一張正氣票，我離席還會發動共鳴帶走 " + rName + "；反過來若大家把票集中在 " + rName + " 就能穩住局勢！" + signoff
+        text: pkHunterTxt || (rebutLead + "平票 PK 直接亮底牌提醒全場：我是直心糾察長！把我投出局不只少一張正氣票，我離席還會發動共鳴帶走 " + rName + "；反過來若大家把票集中在 " + rName + " 就能穩住局勢！" + signoff)
       };
     }
     if (speaker.role === "guard") {
@@ -124,6 +141,9 @@ function tryDefendOrCounterClaim(speaker, ctx) {
       const gLast = snap ? snap.lastGuardTargetId : state.match.lastGuardTargetId;
       const gSeat = gLast ? readSeat(gLast) : null;
       const gNote = gSeat ? ("昨晚我展開結界守護過 " + seatLabel(gSeat) + "，") : "每晚我都謹慎交錯守護避免同守破盾，";
+      const pkGuardTxt = typeof buildPersonaPkText === "function"
+        ? buildPersonaPkText(speaker, "guard", { rebutLead: rebutLead, rName: rName, extraProof: gNote, signoff: signoff })
+        : null;
       return {
         targetId: rid,
         relationType: rid ? "suspect" : null,
@@ -133,12 +153,16 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         wolfPits: pkWolfPits,
         goodPits: mergePits(gSeat && gSeat.alive && gSeat.id !== rid ? gSeat.id : null, baseGoodIds, 2, rid),
         hasToxicSlip: false,
-        text: rebutLead + "平票 PK 我直接拍出護心守衛底牌！" + gNote + "好人千萬別在 PK 把守衛投走讓神職裸奔，請大家這輪集中把票投給 " + rName + "！" + signoff
+        text: pkGuardTxt || (rebutLead + "平票 PK 我直接拍出護心守衛底牌！" + gNote + "好人千萬別在 PK 把守衛投走讓神職裸奔，請大家這輪集中把票投給 " + rName + "！" + signoff)
       };
     }
     if (speaker.isElder) {
       speaker.claimedRole = "elder";
       speaker.elderAnnounced = true;
+      const elderProof = speaker.elderShieldUsed ? "我已發動豁免盾確屬鐵好人，" : "我握有首次公投豁免盾，";
+      const pkElderTxt = typeof buildPersonaPkText === "function"
+        ? buildPersonaPkText(speaker, "elder", { rebutLead: rebutLead, rName: rName, extraProof: elderProof, signoff: signoff })
+        : null;
       return {
         targetId: rid,
         relationType: rid ? "suspect" : null,
@@ -148,11 +172,14 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         wolfPits: pkWolfPits,
         goodPits: mergePits(null, baseGoodIds, 2, rid),
         hasToxicSlip: false,
-        text: rebutLead + "平票 PK 我先亮清心長老底牌提醒全場：" + (speaker.elderShieldUsed ? "我已經發動過豁免盾是鐵好人一張，" : "我是擁有首次公投豁免護盾的清心長老，浪費這輪公投推我只會白耗一輪還害我失票！") + "請大家集中把票投給 " + rName + "！" + signoff
+        text: pkElderTxt || (rebutLead + "平票 PK 我先亮清心長老底牌提醒全場：" + (speaker.elderShieldUsed ? "我已經發動過豁免盾是鐵好人一張，" : "我是擁有首次公投豁免護盾的清心長老，浪費這輪公投推我只會白耗一輪還害我失票！") + "請大家集中把票投給 " + rName + "！" + signoff)
       };
     }
     if (speaker.team === "wolf") {
       const slipPk = wolfTactic === "deep_stealth" ? false : shouldWolfEmitToxicSlip(speaker, day, 9);
+      const pkWolfTxt = typeof buildPersonaPkText === "function"
+        ? buildPersonaPkText(speaker, "wolf", { rebutLead: rebutLead, rName: rName, extraProof: "", signoff: signoff })
+        : null;
       return {
         targetId: rid,
         relationType: rid ? "suspect" : null,
@@ -163,9 +190,12 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         wolfPits: pkWolfPits,
         goodPits: mergePits(null, baseGoodIds, 2, rid),
         hasToxicSlip: slipPk,
-        text: rebutLead + "進到平票 PK 我跟大家把話說清楚：我一直認真配合好人對齊視角，完全沒理由亂帶風向；反觀 " + rName + " 前面立場模糊又挑動對立，請還沒投票的好人夥伴看清差距、改投 " + rName + "！" + signoff
+        text: pkWolfTxt || (rebutLead + "進到平票 PK 我跟大家把話說清楚：我一直認真配合好人對齊視角，完全沒理由亂帶風向；反觀 " + rName + " 前面立場模糊又挑動對立，請還沒投票的好人夥伴看清差距、改投 " + rName + "！" + signoff)
       };
     }
+    const pkGoodTxt = typeof buildPersonaPkText === "function"
+      ? buildPersonaPkText(speaker, "good", { rebutLead: rebutLead, rName: rName, extraProof: "", signoff: signoff })
+      : null;
     return {
       targetId: rid,
       relationType: rid ? "suspect" : null,
@@ -174,7 +204,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
       wolfPits: pkWolfPits,
       goodPits: mergePits(null, baseGoodIds, 2, rid),
       hasToxicSlip: false,
-      text: rebutLead + "進到平票 PK 我再懇切申辯一次：我只是個始終講理、零挑撥的好夥伴，如果出局太冤枉了！比起我，" + rName + " 的發言破綻和站邊更讓人不放心，拜託好人把這輪關鍵票集中投給 " + rName + "！" + signoff
+      text: pkGoodTxt || (rebutLead + "進到平票 PK 我再懇切申辯一次：我只是個始終講理、零挑撥的好夥伴，如果出局太冤枉了！比起我，" + rName + " 的發言破綻和站邊更讓人不放心，拜託好人把這輪關鍵票集中投給 " + rName + "！" + signoff)
     };
   }
 
@@ -311,9 +341,12 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     const goodAllySpoken = spokenOthers.find(function (s) {
       return s.id !== pitCallerEv.speakerId && (speaker.suspicionMap[s.id] || 50) <= 46;
     });
-    const unspokenTail = unspokenOthers.length > 0
-      ? ("後置位 " + seatLabel(unspokenOthers[0]) + " 還沒發言，暫時留著待聽表水。")
-      : "";
+    const unspokenTail = typeof formatUnspokenNoteByPersona === "function"
+      ? formatUnspokenNoteByPersona(speaker, unspokenOthers, seatLabel)
+      : (unspokenOthers.length > 0
+        ? ("後置位 " + seatLabel(unspokenOthers[0]) + " 還沒發言，暫時留著待聽表水。")
+        : "");
+    const makePitTxt = typeof buildPersonaPitRebutText === "function" ? buildPersonaPitRebutText : null;
 
     if (speaker.team === "good") {
       if (speaker.role === "hunter" && !speaker.hunterAnnounced) {
@@ -330,7 +363,9 @@ function tryDefendOrCounterClaim(speaker, ctx) {
           wolfPits: mergePits(pitCallerEv.speakerId, baseWolfIds, 2, goodAllySpoken ? goodAllySpoken.id : null),
           goodPits: mergePits(goodAllySpoken ? goodAllySpoken.id : null, baseGoodIds, 2, pitCallerEv.speakerId),
           hasToxicSlip: false,
-          text: rebutLead + pitPhrase + "真是踩進鐵板了！我先亮明直心糾察長把自己摘出狼坑：如果有人硬推我離席，我一定直接共鳴帶走 " + accName + "！目前我看狼坑至少要檢視 " + accName + (secondSeat ? (" 跟 " + seatLabel(secondSeat)) : "") + "，" + signoff
+          text: makePitTxt
+            ? makePitTxt(speaker, "hunter", { rebutLead: rebutLead, accName: accName, secondLbl: secondSeat ? seatLabel(secondSeat) : "", signoff: signoff })
+            : (rebutLead + pitPhrase + "真是踩進鐵板了！我先亮明直心糾察長把自己摘出狼坑：如果有人硬推我離席，我一定直接共鳴帶走 " + accName + "！目前我看狼坑至少要檢視 " + accName + (secondSeat ? (" 跟 " + seatLabel(secondSeat)) : "") + "，" + signoff)
         };
       }
 
@@ -353,9 +388,11 @@ function tryDefendOrCounterClaim(speaker, ctx) {
           wolfPits: wPitsCalm,
           goodPits: mergePits(accIsSavedAlly ? pitCallerEv.speakerId : (goodAllySpoken ? goodAllySpoken.id : null), baseGoodIds, 2, realSus ? realSus.id : null),
           hasToxicSlip: false,
-          text: rebutLead + "先正面回應 " + pitPhrase + "：我自己知道我的底牌，我絕對不在狼坑裡，別因為誤解互相抗推！" +
-            (goodAllySpoken ? (seatLabel(goodAllySpoken) + " 比較像好人坑，") : "") +
-            (realSus ? ("真正該盯的狼坑反而是 " + seatLabel(realSus) + "。") : "大家聽完後置位表水再對齊狼坑。") + unspokenTail + signoff
+          text: makePitTxt
+            ? makePitTxt(speaker, "calm", { rebutLead: rebutLead, accName: accName, allyLbl: goodAllySpoken ? seatLabel(goodAllySpoken) : "", realSusLbl: realSus ? seatLabel(realSus) : "", unspokenTail: unspokenTail, signoff: signoff })
+            : (rebutLead + "先正面回應 " + pitPhrase + "：我自己知道我的底牌，我絕對不在狼坑裡，別因為誤解互相抗推！" +
+              (goodAllySpoken ? (seatLabel(goodAllySpoken) + " 比較像好人坑，") : "") +
+              (realSus ? ("真正該盯的狼坑反而是 " + seatLabel(realSus) + "。") : "大家聽完後置位表水再對齊狼坑。") + unspokenTail + signoff)
         };
       }
 
@@ -378,7 +415,9 @@ function tryDefendOrCounterClaim(speaker, ctx) {
           wolfPits: wPitsDw,
           goodPits: mergePits(cw.trustedSeer.id, baseGoodIds, 2, pitCallerEv.speakerId),
           hasToxicSlip: false,
-          text: rebutLead + pitPhrase + "，這我必須接招！我百分之百不在狼坑裡，剛好把雙觀察員盤清楚：站 " + standLbl + " 狼坑是 " + seatLabel(cw.fakeSeer) + cw2Lbl + "，站 " + rivalLbl + " 狼坑才變成 " + seatLabel(rw.fakeSeer) + rw2Lbl + "！你硬把我擠進狼坑反而像幫假牌墊坑，我先站邊 " + standLbl + "，反把 " + accName + " 打進狼坑！"
+          text: makePitTxt
+            ? makePitTxt(speaker, "dual", { rebutLead: rebutLead, accName: accName, standLbl: standLbl, rivalLbl: rivalLbl, fakeALbl: seatLabel(cw.fakeSeer) + cw2Lbl, fakeBLbl: seatLabel(rw.fakeSeer) + rw2Lbl, signoff: signoff })
+            : (rebutLead + pitPhrase + "，這我必須接招！我百分之百不在狼坑裡，剛好把雙觀察員盤清楚：站 " + standLbl + " 狼坑是 " + seatLabel(cw.fakeSeer) + cw2Lbl + "，站 " + rivalLbl + " 狼坑才變成 " + seatLabel(rw.fakeSeer) + rw2Lbl + "！你硬把我擠進狼坑反而像幫假牌墊坑，我先站邊 " + standLbl + "，反把 " + accName + " 打進狼坑！")
         };
       }
 
@@ -392,9 +431,11 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         wolfPits: wPitsDef,
         goodPits: mergePits(goodAllySpoken ? goodAllySpoken.id : null, baseGoodIds, 2, pitCallerEv.speakerId),
         hasToxicSlip: false,
-        text: rebutLead + pitPhrase + "，這裡我一定要講清楚：我全程理性找線索，根本不在狼坑裡！反而是 " + accName + " 沒實錘就急著把我劃進狼坑帶風向；若要我點坑，" +
-          (goodAllySpoken ? (seatLabel(goodAllySpoken) + " 先放好人坑，") : "") +
-          "我懷疑的狼坑是 " + pitNamesStr + "！" + unspokenTail + signoff
+        text: makePitTxt
+          ? makePitTxt(speaker, "good", { rebutLead: rebutLead, accName: accName, allyLbl: goodAllySpoken ? seatLabel(goodAllySpoken) : "", pitNamesStr: pitNamesStr, unspokenTail: unspokenTail, signoff: signoff })
+          : (rebutLead + pitPhrase + "，這裡我一定要講清楚：我全程理性找線索，根本不在狼坑裡！反而是 " + accName + " 沒實錘就急著把我劃進狼坑帶風向；若要我點坑，" +
+            (goodAllySpoken ? (seatLabel(goodAllySpoken) + " 先放好人坑，") : "") +
+            "我懷疑的狼坑是 " + pitNamesStr + "！" + unspokenTail + signoff)
       };
     } else {
       const spokenNonWolf = spokenOthers.filter(function (s) { return !s.isWolfMate && s.id !== pitCallerEv.speakerId; });
@@ -413,7 +454,9 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         wolfPits: wolfFakePits,
         goodPits: [],
         hasToxicSlip: wolfTactic === "deep_stealth" ? false : shouldWolfEmitToxicSlip(speaker, day, 3),
-        text: rebutLead + pitPhrase + "實在太草率了吧？我被 " + accName + " 硬塞進狼坑當替罪羊！依我看想混淆視聽的狼坑就是 " + accName + (secClause ? ("，" + secClause) : "") + "，這輪我先反點 " + accName + "！" + signoff
+        text: makePitTxt
+          ? makePitTxt(speaker, "wolf", { rebutLead: rebutLead, accName: accName, secClause: secClause, signoff: signoff })
+          : (rebutLead + pitPhrase + "實在太草率了吧？我被 " + accName + " 硬塞進狼坑當替罪羊！依我看想混淆視聽的狼坑就是 " + accName + (secClause ? ("，" + secClause) : "") + "，這輪我先反點 " + accName + "！" + signoff)
       };
     }
   }
@@ -467,7 +510,9 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     });
 
     if (!wolfTeamAlreadyCountered && godSeat && !godSeat.isWolfMate && ROLE_DEFS[claimedR]) {
-      const counterProb = claimedR === "seer" ? 0.78 : (claimedR === "witch" ? 0.45 : 0.35);
+      const counterProb = typeof getPersonaWolfCounterChance === "function"
+        ? getPersonaWolfCounterChance(speaker, claimedR)
+        : (claimedR === "seer" ? 0.78 : (claimedR === "witch" ? 0.45 : 0.35));
       const deterministicRoll = ((speaker.id * 37 + day * 19 + latestGodEv.speakerId * 13) % 100) / 100;
       if ((speaker.fakeSeer && claimedR === "seer") || deterministicRoll < counterProb) {
         speaker.claimedRole = claimedR;
@@ -571,8 +616,11 @@ function tryRoleSpecificSpeech(speaker, ctx) {
       ? ("先回應前置位 " + seatLabel(readSeat(wolfPitOnMe.speakerId)) + " 把我點進狼坑——你可把真正明心觀察員打進狼坑了！")
       : "";
 
-    // Strategic Hide Rule: If Day 1, only checked a Good seat, nobody claimed Seer yet, and nobody put me in a wolf pit -> hide role!
-    const shouldHideSeer = (day === 1 && !latest.isWolf && !priorFakeSeerEv && !wolfPitOnMe && speaker.claimedRole !== "seer" && speaker.deductionStyle === "skeptical");
+    // Strategic Hide Rule: driven by persona godHideBias (e.g., 墨白/晴嵐/小澄 prefer low-profile Day 1; 晨晨/星兒/柚子 reveal!)
+    const godHideScore = typeof getPersonaGodHideChance === "function"
+      ? getPersonaGodHideChance(speaker)
+      : (speaker.deductionStyle === "skeptical" ? 0.7 : 0.3);
+    const shouldHideSeer = (day === 1 && !latest.isWolf && !priorFakeSeerEv && !wolfPitOnMe && speaker.claimedRole !== "seer" && godHideScore >= 0.65);
     if (shouldHideSeer) {
       const watchSeat = unspokenOthers.find(function (s) { return s.id !== latest.targetId; }) || aliveOthers.find(function (s) { return s.id !== latest.targetId; });
       return {
@@ -907,7 +955,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
         wolfPits: [],
         goodPits: [],
         hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 7),
-        text: "我在起手位先起個頭，" + fill(flv.wolfFirst, { t: seatLabel(target) })
+        text: fill(flv.wolfFirst, { t: seatLabel(target) })
       };
     }
 
