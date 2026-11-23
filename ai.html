@@ -497,98 +497,75 @@
                   </div>
                 </div>
 
-                <!-- 4. ZERO-SCROLL HORIZONTAL 3-CARD PLAYER TURN DECK -->
+                <!-- 4. STREAMLINED 3-LAYER PLAYER TURN DECK (HEADER + 3 QUICK CARDS + CLEAN INPUT BAR + COLLAPSIBLE ADVANCED PIT DRAWER) -->
                 <div id="panelPlayerSpeech" class="hidden space-y-2">
                   <div class="flex items-center justify-between gap-2">
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span id="playerTurnHeading"
-                        class="font-serif-craft text-xs sm:text-sm font-bold text-emerald-300 truncate">輪到你陳詞</span>
-                      <span id="playerSpeechTargetLabel" class="text-[11px] text-slate-400 truncate hidden sm:inline">針對
-                        02號</span>
+                        class="font-serif-craft text-xs sm:text-sm font-bold text-emerald-300 truncate">輪到你發言</span>
+                      <span id="playerSpeechTargetLabel" class="text-[11px] text-slate-400 truncate hidden sm:inline">🎯 對象：02號</span>
                       <button id="btnCycleSpeechTarget" type="button" class="cta-ink text-[10px] px-2 py-0.5 shrink-0"
-                        title="快速輪換下方預設卡牌的點名對象 (快捷鍵 Tab)">換點名 ↻</button>
+                        title="輪換下方 3 張快捷發言卡的點名對象 (快捷鍵 Tab)">換人 ↻</button>
                       <span id="playerComboBonusHint" class="hidden text-[10px] text-amber-300 shrink-0"></span>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
                       <div id="playerTurnOrderStrip" class="hidden"></div>
                       <button id="btnToggleCustomSpeech" type="button"
-                        class="cta-link-quiet text-[10.5px] px-1.5 py-0.5"
-                        title="展開詳細三好語氣評分與多行自訂台詞區">自訂語氣 ▾</button>
+                        class="speech-adv-toggle text-[10.5px] px-2 py-0.5 shrink-0"
+                        title="展開進階盤坑、亮牌組句與試轉好話工具">🧩 盤坑／亮牌 ▾</button>
                     </div>
                   </div>
-                  <div id="playerTurnStepHint" class="player-turn-step-hint">👉 二選一發言：① 點下方「預設發言卡」秒出牌，或 ② 先圈立場座號再按「送出陳詞」</div>
+                  <div id="playerTurnStepHint" class="hidden"></div>
 
                   <div id="pinnedCluesTray" class="hidden flex items-center gap-1 flex-wrap"></div>
                   <div id="tableWindVaneSpeech"
                     class="hidden wind-vane-strip text-[10.5px] text-amber-200/90 bg-slate-950/60 border border-amber-400/30 rounded px-2 py-1 truncate">
                   </div>
 
-                  <!-- Per-Role Live Command Dashboard (Distinct for Wolf / Seer / Witch / Guard / Hunter / Elder / Villager) -->
-                  <div id="roleTurnDashboard" class="hidden role-turn-dashboard"></div>
+                  <!-- Hidden legacy duplicate dashboard (info already lives cleanly in bottom-left #cornerRoleTile) -->
+                  <div id="roleTurnDashboard" class="hidden"></div>
 
-                  <!-- 1-Click Multi-Pit Speech Composer (Good Pit Board vs Wolf Scheme Board) -->
-                  <div id="playerPitBuilder" class="pit-builder-box"></div>
-
-                  <!-- 3 Horizontal Action Cards Side-by-Side! -->
+                  <!-- 3 Horizontal Ready-Made Action Cards Side-by-Side (Primary 1-Click Speech!) -->
                   <div id="quickSpeechChips"></div>
 
-                  <!-- Sleek Single-Line Free Speech + Mic Voice Input + Instant Salty-to-Kind ×1.5 Crit -->
+                  <!-- Collapsible Advanced Pit Builder & Role Claim Drawer (Tucked away until clicked!) -->
+                  <div id="speechAdvancedDrawer" class="hidden speech-adv-drawer space-y-1.5">
+                    <div id="playerPitBuilder" class="pit-builder-box"></div>
+                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-700/50 text-[10px] text-slate-400">
+                      <span>點上方座號可自動組句，或試用 AI 語氣改寫：</span>
+                      <button id="btnQuickSpiceDemo" type="button"
+                        class="cta-ink cta-quiet px-2 py-0.5 text-[10px] shrink-0"
+                        title="填入一句吐槽範例，體驗『AI 轉好話 ×1.5 暴擊』說服力加成">🌶 試酸轉好</button>
+                    </div>
+                  </div>
+
+                  <!-- Clean Single-Line Free Speech + Mic Voice Input + Auto-Appearing Kindness Rewrite -->
                   <div class="free-speech-bar flex items-center gap-1.5">
                     <button id="btnMicVoiceSpeech" type="button"
                       class="cta-ink px-2 py-1.5 text-[11px] shrink-0"
                       title="開口說話輸入發言（瀏覽器原生繁中語音辨識，再按一次停止）">🎙️</button>
-                    <input id="quickFreeInput" type="text" placeholder="點上方座號組句、按 🎙️ 開口說，或直接輸入發言…"
+                    <input id="quickFreeInput" type="text" placeholder="點上方卡牌直接講，或自行輸入發言／按 🎙️ 開口說…"
                       class="flex-1 min-w-0 rounded px-2.5 py-1.5 text-xs border focus:outline-none focus:border-emerald-400" />
                     <span id="speechThreeGoodBadge" class="hidden speech-tg-badge shrink-0"></span>
-                    <button id="btnQuickSpiceDemo" type="button"
-                      class="cta-ink cta-quiet px-2 py-1.5 text-[10.5px] shrink-0"
-                      title="自動填入一句吐槽範例，讓你試按『AI 轉好話 ×1.5 暴擊』拿說服力加成！">🌶 試酸轉好</button>
                     <button id="btnQuickInlineRewrite" type="button"
                       class="hidden cta-brass px-2.5 py-1.5 text-[11px] shrink-0"
-                      title="把尖銳語氣改寫為溫和有力的三好推理，觸發 ×1.5 說服力暴擊！">AI 轉好話 ×1.5</button>
+                      title="把尖銳語氣改寫為溫和有力的三好推理，觸發 ×1.5 說服力暴擊！">✨ AI 轉好話 ×1.5</button>
                     <button id="btnQuickFreeSend" type="button"
                       class="cta-celadon px-3.5 py-1.5 text-xs shrink-0"
-                      title="將輸入欄內的發言對全場送出">送出陳詞</button>
+                      title="將輸入欄內的發言對全場送出">送出</button>
                   </div>
                   <div id="quickStancePills" class="hidden"></div>
 
-                  <!-- Optional Expandable NLP Meter Drawer -->
-                  <div id="customSpeechDrawer" class="hidden space-y-1.5 pt-2 border-t border-slate-700/70">
-                    <div class="flex items-center justify-between">
-                      <span id="nlpFeedbackBadge" class="text-[11px] text-emerald-300 font-bold">溫和有理</span>
-                      <button id="btnDemoToxicSample" type="button"
-                        class="cta-ink text-[10px] px-2 py-0.5">填入酸言測試</button>
-                    </div>
-                    <textarea id="playerSpeechInput" rows="2" placeholder="輸入自訂台詞，或點右上方填入酸言測試…"
-                      class="w-full rounded px-2.5 py-1.5 text-xs border focus:outline-none focus:border-emerald-400 resize-none"></textarea>
-                    <div class="grid grid-cols-3 gap-2 text-[10px]">
-                      <div>
-                        <div class="flex justify-between text-slate-400"><span>禮貌</span><span
-                            id="scoreKindWords">85%</span></div>
-                        <div class="h-1 bg-slate-800 rounded-full overflow-hidden">
-                          <div id="barKindWords" class="h-full bg-emerald-400" style="width:85%"></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div class="flex justify-between text-slate-400"><span>講理</span><span
-                            id="scoreGoodHeart">80%</span></div>
-                        <div class="h-1 bg-slate-800 rounded-full overflow-hidden">
-                          <div id="barGoodHeart" class="h-full bg-amber-400" style="width:80%"></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div class="flex justify-between text-slate-400"><span>線索</span><span
-                            id="scoreGoodDeed">75%</span></div>
-                        <div class="h-1 bg-slate-800 rounded-full overflow-hidden">
-                          <div id="barGoodDeed" class="h-full bg-sky-400" style="width:75%"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-1.5">
-                      <button id="btnRewriteKindness" type="button" class="cta-celadon py-1.5 px-2 text-xs">AI 轉好話
-                        (×1.5)</button>
-                      <button id="btnSubmitSpeech" type="button" class="cta-brass py-1.5 px-2 text-xs">送出自訂台詞</button>
-                    </div>
+                  <!-- Consolidated hidden compatibility bridge (merged into single .free-speech-bar) -->
+                  <div id="customSpeechDrawer" class="hidden" aria-hidden="true">
+                    <span id="nlpFeedbackBadge">溫和有理</span>
+                    <button id="btnDemoToxicSample" type="button">填入酸言測試</button>
+                    <textarea id="playerSpeechInput" rows="1"></textarea>
+                    <span id="scoreKindWords">85%</span><div id="barKindWords"></div>
+                    <span id="scoreGoodHeart">80%</span><div id="barGoodHeart"></div>
+                    <span id="scoreGoodDeed">75%</span><div id="barGoodDeed"></div>
+                    <button id="btnRewriteKindness" type="button">AI 轉好話 (×1.5)</button>
+                    <button id="btnSubmitSpeech" type="button">送出自訂台詞</button>
                   </div>
                 </div>
 

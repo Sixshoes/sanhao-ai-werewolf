@@ -154,73 +154,27 @@ function cycleWolfGodMark(seatId) {
   if (typeof renderSeatIntelPopover === "function") renderSeatIntelPopover();
 }
 
-function renderRoleTurnDashboard(player) {
+function renderRoleTurnDashboard() {
+  // Consolidated in v9.3: role abilities, check history & wolf mates already live permanently in bottom-left #cornerRoleTile!
   const dash = el("roleTurnDashboard");
-  if (!dash) return;
-  if (!state.match || !state.match.started || !player) {
+  if (dash) {
     dash.classList.add("hidden");
     dash.innerHTML = "";
-    return;
   }
-  const effKey = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(player) : player.role;
-  const guide = (typeof ROLE_GUIDES !== "undefined" && ROLE_GUIDES[effKey]) ? ROLE_GUIDES[effKey] : { icon: "📖", shortRole: "書院夥伴", themeClass: "role-theme-villager" };
-  const rDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(player) : null) || ROLE_DEFS[player.role] || { name: "書院生" };
-  const pid = getPlayerId();
-  let detailHtml = "";
+}
 
-  if (effKey === "seer") {
-    const hist = player.checkedHistory || [];
-    const histStr = hist.length > 0
-      ? hist.map(function (c) {
-        const cs = getSeat(c.targetId);
-        const cls = c.isWolf ? "is-danger" : "is-safe";
-        return '<span class="role-dash-pill ' + cls + '">' + escapeHtml(fmtSeatNum(c.targetId) + (cs ? cs.name : "") + (c.isWolf ? "＝狼" : "＝好人")) + "</span>";
-      }).join("")
-      : '<span class="role-dash-pill">尚無查驗紀錄</span>';
-    detailHtml = histStr + '<span class="role-dash-hint">可點下方「🔮 亮觀察員報驗」公開全查驗</span>';
-  } else if (effKey === "witch") {
-    const healOk = Boolean(state.match.witchPotions && state.match.witchPotions.heal);
-    const purifyOk = Boolean(state.match.witchPotions && state.match.witchPotions.purify);
-    const sv = player.savedSeatId ? getSeat(player.savedSeatId) : null;
-    detailHtml =
-      '<span class="role-dash-pill ' + (healOk ? "is-safe" : "is-used") + '">🍵 暖心茶：' + (healOk ? "可用" : "已奉") + "</span>" +
-      '<span class="role-dash-pill ' + (purifyOk ? "is-warn" : "is-used") + '">🍃 清心茶：' + (purifyOk ? "可用" : "已奉") + "</span>" +
-      (sv ? ('<span class="role-dash-pill is-safe">💧 銀水：' + escapeHtml(fmtSeatNum(sv.id) + sv.name) + "</span>") : "") +
-      '<span class="role-dash-hint">銀水遭疑時可一鍵作證</span>';
-  } else if (effKey === "guard") {
-    const lg = state.match.lastGuardTargetId ? getSeat(state.match.lastGuardTargetId) : null;
-    detailHtml =
-      '<span class="role-dash-pill is-safe">' + (lg ? escapeHtml("🛡️ 上晚守：" + fmtSeatNum(lg.id) + lg.name + "（今晚禁連守）") : "🛡️ 今晚可任守 1 席（含自己）") + "</span>" +
-      '<span class="role-dash-hint">建議低調防狼刀，留意勿與回甘茶同守破盾</span>';
-  } else if (effKey === "hunter") {
-    detailHtml =
-      '<span class="role-dash-pill is-safe">⚖️ 正氣共鳴：就緒</span>' +
-      '<span class="role-dash-hint">被投或遭迷霧離席可帶走 1 席（清心茶請離除外）</span>';
-  } else if (effKey === "elder") {
-    detailHtml = player.elderShieldUsed
-      ? '<span class="role-dash-pill is-warn">🌿 豁免已觸發（無投票權・保留發言帶隊）</span>'
-      : '<span class="role-dash-pill is-safe">🌿 豁免護盾：未觸發（首次公投免離席）</span><span class="role-dash-hint">可放心盤多位好人坑替神職扛壓</span>';
-  } else if (player.role === "wolf") {
-    const mates = state.match.seats.filter(function (s) { return s.id !== pid && s.role === "wolf"; });
-    const mateHtml = mates.length > 0
-      ? mates.map(function (m) {
-        return '<span class="role-dash-pill is-danger">🐺 同伴 ' + escapeHtml(fmtSeatNum(m.id) + m.name + (m.alive ? "" : "(離)")) + "</span>";
-      }).join("")
-      : '<span class="role-dash-pill is-danger">🐺 獨狼作戰</span>';
-    const wkPill = player.isWolfKing ? '<span class="role-dash-pill is-warn">👑 狼王：被投可反撲帶走1人</span>' : "";
-    detailHtml = mateHtml + wkPill + '<span class="role-dash-hint">不需點狼坑・選好人甩鍋／假保＋獵神筆記</span>';
-  } else {
-    const wolfN = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
-    detailHtml =
-      '<span class="role-dash-pill is-safe">📖 好人坑不限人數</span>' +
-      '<span class="role-dash-hint">本局共 ' + wolfN + " 名酸民狼・多保可信好夥伴縮窄狼坑</span>";
-  }
-
-  dash.className = "role-turn-dashboard " + guide.themeClass;
-  dash.innerHTML =
-    '<span class="role-dash-title">' + escapeHtml(guide.icon + " " + rDef.name) + "</span>" +
-    '<div class="role-dash-items">' + detailHtml + "</div>";
-  dash.classList.remove("hidden");
+function syncSpeechAdvancedToggleLabel(player) {
+  const btn = el("btnToggleCustomSpeech");
+  const drawer = el("speechAdvancedDrawer");
+  if (!btn) return;
+  const isWolf = Boolean(player && player.role === "wolf");
+  const isOpen = Boolean(drawer && !drawer.classList.contains("hidden"));
+  const d = (state.match && state.match.playerDraftPits) || { wolfIds: [], goodIds: [] };
+  const markCnt = (d.wolfIds ? d.wolfIds.length : 0) + (d.goodIds ? d.goodIds.length : 0);
+  const baseLbl = isWolf ? "🎭 佈局／獵神" : "🧩 盤坑／亮牌";
+  const countTag = markCnt > 0 ? (" (" + markCnt + ")") : "";
+  btn.textContent = baseLbl + countTag + (isOpen ? " ▴" : " ▾");
+  btn.classList.toggle("is-active", isOpen);
 }
 
 function createEmptyPlayerDraftPits() {
@@ -704,6 +658,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
     });
     box.appendChild(huntRow);
   }
+  syncSpeechAdvancedToggleLabel(player);
 }
 
 function preparePlayerSpeechPanel() {
@@ -723,16 +678,11 @@ function preparePlayerSpeechPanel() {
     ? pickedSeat
     : (inPk && pkRivalSeat && pkRivalSeat.alive ? pkRivalSeat : (aliveOthers[0] || { id: pid === 1 ? 2 : 1, name: "夥伴" }));
   if (el("playerTurnHeading")) {
-    el("playerTurnHeading").textContent = inPk ? "⚔️ 平票 PK 陳詞" : "輪到你陳詞";
-  }
-  if (el("playerTurnStepHint")) {
-    el("playerTurnStepHint").textContent = player.role === "wolf"
-      ? "👉 狼人發言：① 點下方「偽裝話術卡」秒出牌，或 ② 先點好人甩鍋／假保再按「送出陳詞」"
-      : "👉 二選一發言：① 點下方「預設發言卡」秒出牌，或 ② 先點座號圈好人／狼坑再按「送出陳詞」";
+    el("playerTurnHeading").textContent = inPk ? "⚔️ 平票 PK 發言" : "輪到你發言";
   }
   const tHintEl = el("playerSpeechTargetLabel");
   if (tHintEl) {
-    tHintEl.textContent = "🎯 針對：" + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name;
+    tHintEl.textContent = "🎯 對象：" + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name;
   }
   const cHintEl = el("playerComboBonusHint");
   if (cHintEl) {
@@ -756,6 +706,10 @@ function preparePlayerSpeechPanel() {
   renderRoleTurnDashboard(player);
   renderPlayerPitBuilder(slotView, dualWorlds);
   const isFreshTurn = prevTurnKey !== draftNow.turnKey;
+  if (isFreshTurn) {
+    if (el("speechAdvancedDrawer")) el("speechAdvancedDrawer").classList.add("hidden");
+  }
+  syncSpeechAdvancedToggleLabel(player);
   if (isFreshTurn && prevTurnKey) {
     if (el("quickFreeInput")) el("quickFreeInput").value = "";
     if (el("playerSpeechInput")) el("playerSpeechInput").value = "";

@@ -742,7 +742,12 @@ function bindSpeechInputEvents() {
   });
 
   el("btnToggleCustomSpeech").addEventListener("click", function () {
-    el("customSpeechDrawer").classList.toggle("hidden");
+    sound.unlock();
+    const adv = el("speechAdvancedDrawer");
+    if (adv) adv.classList.toggle("hidden");
+    if (typeof syncSpeechAdvancedToggleLabel === "function") {
+      syncSpeechAdvancedToggleLabel(typeof getPlayerSeat === "function" ? getPlayerSeat() : null);
+    }
   });
 
   el("btnDemoToxicSample").addEventListener("click", function () {

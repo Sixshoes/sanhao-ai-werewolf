@@ -4303,3 +4303,50 @@ body.craft-ui.theme-day .beginner-coach-banner {
   border-color: rgba(36, 106, 80, 0.45);
   color: #164e34;
 }
+
+/* ===== v9.3 STREAMLINED PLAYER SPEECH PANEL & COLLAPSIBLE ADVANCED PIT DRAWER (ZERO !important) ===== */
+.speech-adv-toggle {
+  border-radius: 999px;
+  font-weight: 700;
+  color: #fde68a;
+  background: rgba(212, 166, 87, 0.14);
+  border: 1px solid rgba(212, 166, 87, 0.45);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.speech-adv-toggle:hover,
+.speech-adv-toggle.is-active {
+  background: rgba(212, 166, 87, 0.28);
+  border-color: #f0c774;
+  color: #fff8eb;
+}
+
+.speech-adv-drawer {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(12, 17, 29, 0.62);
+  border: 1px solid rgba(212, 166, 87, 0.3);
+}
+
+.speech-adv-drawer.hidden {
+  display: none;
+}
+
+body.craft-ui.theme-day .speech-adv-toggle {
+  color: #6b4310;
+  background: rgba(250, 238, 208, 0.88);
+  border-color: rgba(168, 118, 46, 0.48);
+}
+
+body.craft-ui.theme-day .speech-adv-toggle:hover,
+body.craft-ui.theme-day .speech-adv-toggle.is-active {
+  background: rgba(245, 222, 168, 0.96);
+  border-color: #9a6823;
+  color: #422a0d;
+}
+
+body.craft-ui.theme-day .speech-adv-drawer {
+  background: rgba(250, 244, 232, 0.92);
+  border-color: rgba(140, 104, 60, 0.34);
+}

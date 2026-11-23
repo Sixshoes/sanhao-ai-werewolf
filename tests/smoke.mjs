@@ -3924,11 +3924,16 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       el("roleGuideBody").innerHTML.includes("四給錦囊");
     closeRoleGuidePopover();
 
-    // DAY_PLAYER_TURN shows plain step hint + compact Four-Givings fan
+    // DAY_PLAYER_TURN uses v9.3 streamlined 3-layer deck: roleTurnDashboard retired, speechAdvancedDrawer collapsed by default & toggles cleanly!
     state.match.phase = "DAY_PLAYER_TURN";
     preparePlayerSpeechPanel();
     updateAllUI();
-    const stepHintOk = el("playerTurnStepHint").textContent.includes("二選一發言");
+    const advCollapsedByDefault = el("speechAdvancedDrawer").classList.contains("hidden") && el("roleTurnDashboard").classList.contains("hidden") && el("customSpeechDrawer").classList.contains("hidden");
+    el("btnToggleCustomSpeech").click();
+    const advExpandedOnClick = !el("speechAdvancedDrawer").classList.contains("hidden") && el("btnToggleCustomSpeech").classList.contains("is-active");
+    el("btnToggleCustomSpeech").click();
+    const advCollapsedAgain = el("speechAdvancedDrawer").classList.contains("hidden");
+    const stepHintOk = advCollapsedByDefault && advExpandedOnClick && advCollapsedAgain;
     const compactFanOk = el("cornerFourGDeck").classList.contains("is-compact-fan");
 
     clearStepTimer();
