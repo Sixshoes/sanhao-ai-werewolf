@@ -4,7 +4,7 @@
  * - 核心網頁與腳本採 Network-First（離線自動降級快取）
  * - /api/* 即時動態端點永不快取
  */
-const CACHE_NAME = "sanhao-tea-v11.1";
+const CACHE_NAME = "sanhao-tea-v11.2";
 const IMMUTABLE_RE = /\/(assets\/(models\/.*\.vrm|portraits|portraits_vrm|sky|textures)|js\/vendor)\//i;
 
 self.addEventListener("install", function () {

@@ -777,6 +777,7 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
         alive: true,
         sleeping: false,
         talking: isTalking,
+        hasActiveSpeaker: Boolean(!isShowcase && state.match && state.match.started && state.activeSpeakerId),
         mouthAmp: mouthAmp,
         vowels: heroVowels,
         emotion: act === "celebrate" ? "happy" : (act === "gasp_react" ? "shock" : (act === "welcome_bow" ? "happy" : "neutral")),

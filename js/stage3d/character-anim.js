@@ -460,7 +460,8 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       while (diff < -Math.PI) diff += Math.PI * 2;
       targetHeadYaw = clamp(diff * (lookSeatId === activeFocusSeatId ? 0.85 : 1.0), -0.85, 0.85);
     } else {
-      targetHeadYaw = Math.sin(t * 0.8 + s.id * 1.4) * 0.14;
+      targetHeadYaw = Math.sin(t * 0.52 + s.id * 1.9) * 0.30 + Math.cos(t * 0.24 + s.id * 2.7) * 0.14;
+      targetHeadPitch = Math.sin(t * 0.68 + s.id * 1.3) * 0.06;
     }
     actor.headYaw += (targetHeadYaw - actor.headYaw) * 0.14;
     actor.headPitch += (targetHeadPitch - actor.headPitch) * 0.14;
@@ -642,6 +643,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     if (actor.vrmMountGroup && actor.useVrm) {
       actor.vrmMountGroup.scale.setScalar(phys.scale);
       actor.vrmMountGroup.position.y = Math.max(0, -phys.oy * 0.012);
+      actor.vrmMountGroup.rotation.z = phys.tilt * 0.28;
     }
 
     // Secondary mountain-breeze physics on sculpted anime hair locks & headband ribbons (sculpt fallback only)
@@ -684,13 +686,14 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       const scTalking = isTalkingNow || scAct === "speak_gesture";
       const isSweatingVrm = Boolean(state.match && state.match.started && s.alive && (state.match.microPulseRevealed || s.sweatExposed) && s.microPulse >= 60);
       const spSusVal = (s.suspicionMap && state.activeSpeakerId) ? (s.suspicionMap[state.activeSpeakerId] || 50) : 50;
+      const isDebateListening = Boolean(p === "DAY_SPEECH" || p === "SHERIFF_ELECTION" || p === "LAST_WORDS_SPEECH");
       const isListeningCurious = Boolean(
         s.alive && !isSpeaking && !isBeingAccusedNow && !isBeingVouchedNow &&
-        p === "DAY_SPEECH" && state.activeSpeakerId && (spSusVal >= 58 || ((s.id + (state.match ? state.match.day : 1)) % 4 === 0))
+        isDebateListening && state.activeSpeakerId && (spSusVal >= 58 || ((s.id + (state.match ? state.match.day : 1)) % 4 === 0))
       );
       const isListeningAgree = Boolean(
         s.alive && !isSpeaking && !isBeingAccusedNow && !isListeningCurious &&
-        p === "DAY_SPEECH" && state.activeSpeakerId && spSusVal <= 42
+        isDebateListening && state.activeSpeakerId && spSusVal <= 44
       );
       stage3dVrm.updateVrmAvatar(actor.vrmAvatar, {
         tSec: t,
@@ -700,6 +703,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         alive: s.alive || isSpeaking,
         sleeping: f.night && !isSelected && !isWolfNightMate,
         talking: scTalking,
+        isFloorHolder: isSpeaking,
         sweating: isSweatingVrm,
         mouthAmp: isTalkingNow ? liveAmp : (scAct === "speak_gesture" ? 0.52 : 0),
         vowels: liveVowels,

@@ -556,6 +556,53 @@ vm.runInContext(`
       throw new Error("Warm persona idleHappy blend did not activate for 暖暖! happyAmt=" + clipAv.happyAmt);
     }
     stage3dVrm.stopVrmClip(clipAv);
+
+    // P3-3 (v11.2): Living Full-Body VRM Choreography (Staggered Tea-Table Idle Fidgets, 4-Beat Debate Arms, Seated Leg Micro-Rhythm & Host Guiding)
+    const livingRig = buildFullRigForGeomCheck(false);
+    const livingAv = stage3dVrm.prepareLoadedAvatar(livingRig.gltf, { mode: "seated", targetHeight: 2.10, baseY: 0, personaName: "星兒" });
+    const archXingLive = stage3dVrm.getIdleArchetype("星兒", 3.4);
+    const seenIdleNames = new Set();
+    let sawActiveWeight = false;
+    for (let ts = 0; ts < 40; ts += 0.5) {
+      const actInfo = stage3dVrm.computeLivingIdleAction(ts, 3.4, archXingLive);
+      if (actInfo && actInfo.name) seenIdleNames.add(actInfo.name);
+      if (actInfo && actInfo.weight > 0.85) sawActiveWeight = true;
+    }
+    if (seenIdleNames.size < 3 || !sawActiveWeight) {
+      throw new Error("v11.2 Living idle scheduler failed to cycle >=3 distinct actions with full blend weight!");
+    }
+    // Verify multi-beat speaking produces real visible arm & spine motion across beats AND stays anatomically grounded!
+    const armQuatBeat0 = new THREE.Quaternion();
+    const armQuatBeat2 = new THREE.Quaternion();
+    for (let st = 0; st < 20; st++) {
+      stage3dVrm.updateVrmAvatar(livingAv, { tSec: 0.4 + st * 0.03, seed: 1.7, personaName: "星兒", alive: true, talking: true, isFloorHolder: true, mouthAmp: 0.72, headYaw: 0.25, headPitch: 0 });
+    }
+    armQuatBeat0.copy(livingRig.bones.rightUpperArm.quaternion);
+    for (let st = 0; st < 25; st++) {
+      stage3dVrm.updateVrmAvatar(livingAv, { tSec: 4.1 + st * 0.03, seed: 1.7, personaName: "星兒", alive: true, talking: true, isFloorHolder: true, mouthAmp: 0.72, headYaw: -0.20, headPitch: 0 });
+    }
+    armQuatBeat2.copy(livingRig.bones.rightUpperArm.quaternion);
+    if (armQuatBeat0.angleTo(armQuatBeat2) < 0.12) {
+      throw new Error("v11.2 Multi-beat speaking choreography did not produce distinct arm poses across phrases! angle=" + armQuatBeat0.angleTo(armQuatBeat2).toFixed(3));
+    }
+    // Verify seated legs stay strictly forward & chair-safe even during lively lower-leg rhythm!
+    livingAv.root.updateMatrixWorld(true);
+    const qThighLive = new THREE.Quaternion();
+    livingRig.bones.leftUpperLeg.getWorldQuaternion(qThighLive);
+    const thighLiveWorld = new THREE.Vector3(0, -1, 0).applyQuaternion(qThighLive);
+    if (thighLiveWorld.z < 0.78) {
+      throw new Error("v11.2 Seated leg micro-rhythm broke forward thigh safety bound! z=" + thighLiveWorld.z.toFixed(2));
+    }
+    // Verify standing host Qingming actively gestures when guiding an active speaker
+    const hostRig = buildFullRigForGeomCheck(false);
+    const hostAv = stage3dVrm.prepareLoadedAvatar(hostRig.gltf, { mode: "standing", targetHeight: 2.14, baseY: 0.08 });
+    const hostRestArm = hostRig.bones.rightUpperArm.quaternion.clone();
+    for (let st = 0; st < 25; st++) {
+      stage3dVrm.updateVrmAvatar(hostAv, { tSec: 2.2 + st * 0.04, seed: 0.5, alive: true, talking: false, hasActiveSpeaker: true, headYaw: 0.35, headPitch: 0.06 });
+    }
+    if (hostRestArm.angleTo(hostRig.bones.rightUpperArm.quaternion) < 0.18) {
+      throw new Error("v11.2 Standing host Qingming guiding gesture too static! angle=" + hostRestArm.angleTo(hostRig.bones.rightUpperArm.quaternion).toFixed(3));
+    }
   `, realThreeCtx);
 }
 
