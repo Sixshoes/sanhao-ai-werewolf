@@ -1145,7 +1145,9 @@ const stage3dVrm = {
         });
 
         child.material = isArr ? nextMats : nextMats[0];
-        child.castShadow = !hasOutlineOnly;
+        // Skip shadow casting on high-poly VRM face/hair/facial-detail submeshes (saves ~118 skinned shadow draw calls & ~300k shadow tris/frame while Body + chair contact shadow stay crisp!)
+        const isSkipShadowMesh = /face|hair|eyelash|eyebrow|brow|eyewhite|eyehighlight|eyeextra|eyeiris|iris|mouth|teeth|tongue|blush|highlight|glass|lens/i.test(childName + " " + origMats.map(function (mm) { return mm && mm.name ? mm.name : ""; }).join(" "));
+        child.castShadow = !hasOutlineOnly && !isSkipShadowMesh;
         child.receiveShadow = !isFaceMesh && !allUnlitBasic;
         child.frustumCulled = false;
       });

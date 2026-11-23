@@ -364,7 +364,6 @@ body.hero-showcase-active #dragGestureHint {
   border: 1px solid rgba(206, 170, 108, 0.3);
   border-left: 3px solid rgba(206, 170, 108, 0.55);
   box-shadow: inset 0 1px 0 rgba(250, 232, 194, 0.08), 0 4px 14px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(8px);
   transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), background 0.18s ease, border-color 0.18s ease, box-shadow 0.2s ease;
   cursor: pointer;
 }
@@ -409,8 +408,7 @@ body.hero-showcase-active #dragGestureHint {
   position: fixed;
   inset: 0;
   z-index: 36;
-  background: rgba(10, 8, 6, 0.58);
-  backdrop-filter: blur(4px);
+  background: rgba(10, 8, 6, 0.72);
   display: flex;
   justify-content: flex-start;
 }
@@ -494,8 +492,7 @@ body.hero-showcase-active #dragGestureHint {
   position: fixed;
   inset: 0;
   z-index: 65;
-  background: radial-gradient(ellipse at 50% 45%, rgba(28, 20, 14, 0.78) 0%, rgba(8, 6, 5, 0.88) 100%);
-  backdrop-filter: blur(6px);
+  background: radial-gradient(ellipse at 50% 45%, rgba(28, 20, 14, 0.84) 0%, rgba(8, 6, 5, 0.92) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1272,7 +1269,6 @@ body.hero-showcase-active #dragGestureHint {
   border-radius: 8px;
   background: var(--surface-panel-grad);
   border: 1px solid var(--border-accent);
-  backdrop-filter: blur(14px);
   box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 8px 24px rgba(0, 0, 0, 0.28);
   opacity: 0.92;
   transition: opacity 0.18s ease;
@@ -1289,7 +1285,6 @@ body.hero-showcase-active #dragGestureHint {
   background: var(--surface-panel-grad);
   border: 1px solid var(--border-card);
   border-radius: 7px;
-  backdrop-filter: blur(12px);
   overflow: hidden;
   opacity: 0.84;
   box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 6px 18px rgba(0, 0, 0, 0.22);
@@ -1346,7 +1341,6 @@ body.hero-showcase-active #dragGestureHint {
   background: var(--surface-panel-grad);
   color: var(--text-main);
   border: 1px solid var(--border-card);
-  backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 6px 18px rgba(0, 0, 0, 0.25);
   transition: border-color 0.16s ease, background 0.16s ease, transform 0.12s ease, color 0.16s ease, box-shadow 0.16s ease;
   cursor: pointer;
@@ -1469,7 +1463,6 @@ body.screen-ingame #focalCenterCard {
   border: 1px solid var(--border-accent);
   border-top: 2px solid var(--accent-gold);
   box-shadow: var(--shadow-focal), inset 0 0 0 1px var(--border-inner-highlight);
-  backdrop-filter: blur(16px);
 }
 
 body.screen-ingame #focalCenterCard::before,
@@ -1504,8 +1497,7 @@ body.screen-ingame.phase-pick-seat #focalCenterCard {
 body.screen-gameover #controlDeck {
   inset: 0;
   bottom: 0;
-  background: rgba(10, 8, 6, 0.72);
-  backdrop-filter: blur(6px);
+  background: rgba(10, 8, 6, 0.80);
   justify-content: center;
   padding: 20px;
 }
@@ -1914,7 +1906,6 @@ body.craft-ui .turn-chip.is-speaking {
   border-radius: 9px;
   background: var(--surface-panel-grad);
   border: 1px solid var(--border-accent);
-  backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 10px 26px rgba(0, 0, 0, 0.36);
 }
 
@@ -2146,7 +2137,6 @@ body.craft-ui.theme-day #spotlightTraitTag {
   background: var(--surface-panel-grad);
   border: 1px solid var(--border-accent);
   border-left: 3.5px solid var(--role-accent, var(--accent-gold));
-  backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 10px 24px rgba(0, 0, 0, 0.32);
   transition: border-color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
   display: flex;
@@ -2354,7 +2344,6 @@ body.craft-ui.theme-day .lotus-petal-svg.is-lit {
   background: var(--surface-elevated);
   border: 1px solid var(--border-accent);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.48), inset 0 1px 0 var(--border-inner-highlight);
-  backdrop-filter: blur(14px);
   opacity: 0;
   transform: translateY(8px) scale(0.96);
   transform-origin: bottom right;
@@ -2499,9 +2488,8 @@ body.craft-ui.theme-day .lotus-petal-svg.is-lit {
   width: 100%;
   padding: 12px 16px;
   border-radius: 6px;
-  background: rgba(18, 14, 11, 0.88);
+  background: rgba(18, 14, 11, 0.94);
   border: 1px solid rgba(212, 166, 87, 0.42);
-  backdrop-filter: blur(12px);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.56);
   color: #efe7d8;
 }
@@ -2700,7 +2688,6 @@ body.craft-ui.theme-day .clue-token.clue-caught {
   border-top: 2px solid var(--accent-gold);
   border-radius: 8px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.48), inset 0 1px 0 var(--border-inner-highlight);
-  backdrop-filter: blur(14px);
   display: flex;
   flex-direction: column;
   gap: 9px;
@@ -3033,10 +3020,9 @@ body.craft-ui.theme-day .intel-skill-btn.is-jade {
   padding: 3px 9px;
   border-radius: 3px;
   font-size: 10px;
-  background: rgba(18, 14, 11, 0.62);
-  border: 1px solid rgba(206, 170, 108, 0.2);
+  background: rgba(18, 14, 11, 0.82);
+  border: 1px solid rgba(206, 170, 108, 0.24);
   color: #cbbda7;
-  backdrop-filter: blur(6px);
 }
 
 body.screen-title #dragGestureHint {
@@ -3065,8 +3051,7 @@ body.craft-ui.theme-day #voteFlightBanner {
 }
 
 .craft-modal-backdrop {
-  background: rgba(10, 8, 6, 0.78);
-  backdrop-filter: blur(6px);
+  background: rgba(10, 8, 6, 0.84);
 }
 
 .craft-modal-box {
@@ -3224,7 +3209,6 @@ body.fx-pacing-fast #dramaticCutIn.is-active.cutin-hold {
   border-top: 2px solid rgba(242, 212, 156, 0.86);
   border-bottom: 2px solid rgba(242, 212, 156, 0.86);
   box-shadow: inset 0 0 0 3px rgba(242, 212, 156, 0.16), 0 16px 38px rgba(0, 0, 0, 0.62);
-  backdrop-filter: blur(10px);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.62);
 }
 
@@ -3541,12 +3525,11 @@ body.fx-pacing-fast #dramaticCutIn.is-active.cutin-hold {
   gap: 6px;
   padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(18, 14, 11, 0.86);
+  background: rgba(18, 14, 11, 0.92);
   border: 1px solid rgba(212, 166, 87, 0.45);
   color: #fde68a;
   font-size: 11px;
   font-weight: 700;
-  backdrop-filter: blur(8px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
@@ -3659,7 +3642,7 @@ body.screen-ingame #dragGestureHint {
 }
 
 body.screen-ingame.phase-listening #seatButtonStrip {
-  opacity: 0.72;
+  opacity: 0.94;
   transition: opacity 0.2s ease;
 }
 
@@ -3668,7 +3651,7 @@ body.screen-ingame.phase-listening #seatButtonStrip:hover {
 }
 
 body.screen-ingame.phase-listening .corner-role-tile {
-  opacity: 0.76;
+  opacity: 0.92;
   transition: opacity 0.2s ease;
 }
 
@@ -3677,7 +3660,7 @@ body.screen-ingame.phase-listening .corner-role-tile:hover {
 }
 
 body.screen-ingame.phase-listening .corner-hand-fan {
-  opacity: 0.7;
+  opacity: 0.88;
   transform: translateY(4px) scale(0.95);
   transition: opacity 0.22s ease, transform 0.22s ease;
 }
@@ -3901,7 +3884,6 @@ body.craft-ui.theme-day .vote-row-out {
   background: linear-gradient(90deg, rgba(28, 20, 14, 0.92), rgba(74, 24, 20, 0.92), rgba(28, 20, 14, 0.92));
   border: 1.5px solid rgba(245, 194, 102, 0.72);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.52);
-  backdrop-filter: blur(8px);
   pointer-events: none;
   max-width: min(92vw, 440px);
   animation: pkDuelEnter 0.38s cubic-bezier(0.2, 1.24, 0.36, 1) both;
@@ -4951,7 +4933,6 @@ body.craft-ui.theme-day .three-good-guide-line.is-awakened {
   background: rgba(15, 23, 42, 0.96);
   border: 1px solid rgba(251, 191, 36, 0.55);
   color: #f1f5f9;
-  backdrop-filter: blur(14px);
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.58);
   pointer-events: auto;
 }
@@ -5526,9 +5507,8 @@ body.craft-ui.theme-day .tut-tip-bar {
   font-weight: 700;
   letter-spacing: 0.06em;
   color: #fbecc8;
-  background: linear-gradient(135deg, rgba(36, 26, 18, 0.9) 0%, rgba(22, 16, 12, 0.86) 100%);
+  background: linear-gradient(135deg, rgba(36, 26, 18, 0.94) 0%, rgba(22, 16, 12, 0.92) 100%);
   border: 1px solid rgba(212, 166, 87, 0.62);
-  backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 rgba(255, 240, 206, 0.18), 0 8px 22px rgba(0, 0, 0, 0.36);
   cursor: pointer;
   transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.18s ease, color 0.16s ease;

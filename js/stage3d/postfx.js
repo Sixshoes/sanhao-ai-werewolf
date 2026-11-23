@@ -17,7 +17,9 @@ function build3DPostFx(renderer, scene, camera, opts) {
   }
 
   try {
+    if (opts && opts.isSoftwareRenderer) return null;
     const preferLightweight = Boolean(opts && opts.preferLightweight);
+    const isWindowsAngle = Boolean(opts && opts.isWindowsAngle);
     const w = 1280;
     const h = 720;
     const isWebGL2 = Boolean(renderer.capabilities && renderer.capabilities.isWebGL2);
@@ -26,7 +28,8 @@ function build3DPostFx(renderer, scene, camera, opts) {
 
     let rt = null;
     let isMsaa = false;
-    if (!preferLightweight && isWebGL2 && typeof THREE.WebGLMultisampleRenderTarget === "function") {
+    // Skip WebGL2 MSAA HalfFloat FBO on Windows ANGLE D3D11 & iGPUs (avoids costly D3D11 MSAA16F Resolve stalls; gradePass FXAA smooths edges in 1 pass!)
+    if (!preferLightweight && !isWindowsAngle && isWebGL2 && typeof THREE.WebGLMultisampleRenderTarget === "function") {
       try {
         const gl = typeof renderer.getContext === "function" ? renderer.getContext() : null;
         let msaaHalfFloatOk = false;
@@ -60,8 +63,8 @@ function build3DPostFx(renderer, scene, camera, opts) {
     const renderPass = new THREE.RenderPass(scene, camera);
     composer.addPass(renderPass);
 
-    const bloomW = Math.max(128, Math.floor(w * 0.5));
-    const bloomH = Math.max(128, Math.floor(h * 0.5));
+    const bloomW = Math.min(640, Math.max(128, Math.floor(w * 0.45)));
+    const bloomH = Math.min(360, Math.max(128, Math.floor(h * 0.45)));
     const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(bloomW, bloomH), 0.22, 0.42, 1.10);
     composer.addPass(bloomPass);
 
@@ -153,7 +156,10 @@ function build3DPostFx(renderer, scene, camera, opts) {
         const effDpr = dpr || 1;
         if (typeof composer.setPixelRatio === "function") composer.setPixelRatio(effDpr);
         composer.setSize(width, height);
-        bloomPass.setSize(Math.max(128, Math.floor(width * 0.5)), Math.max(128, Math.floor(height * 0.5)));
+        bloomPass.setSize(
+          Math.min(640, Math.max(128, Math.floor(width * 0.45))),
+          Math.min(360, Math.max(128, Math.floor(height * 0.45)))
+        );
         if (gradePass.uniforms && gradePass.uniforms.uTexelSize && gradePass.uniforms.uTexelSize.value) {
           gradePass.uniforms.uTexelSize.value.set(1 / Math.max(1, width * effDpr), 1 / Math.max(1, height * effDpr));
         }

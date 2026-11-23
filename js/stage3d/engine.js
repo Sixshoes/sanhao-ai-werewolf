@@ -10,6 +10,11 @@
 const stage3d = {
   ready: false,
   failed: false,
+  isIntegratedGpu: false,
+  isSoftwareRenderer: false,
+  isWindowsAngle: false,
+  gpuRendererStr: "",
+  gpuShortLabel: "",
   renderer: null,
   scene: null,
   camera: null,
@@ -122,25 +127,53 @@ const stage3d = {
     return state.viewMode === "3d" && this.ready && !this.failed;
   },
 
-  detectIntegratedGpu: function (renderer) {
-    try {
-      const gl = renderer && typeof renderer.getContext === "function" ? renderer.getContext() : null;
-      if (!gl || typeof gl.getExtension !== "function") return false;
-      const dbg = gl.getExtension("WEBGL_debug_renderer_info");
-      if (!dbg) return false;
-      const info = String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "");
-      return /intel.*(uhd|hd graphics|iris)|swiftshader|llvmpipe|microsoft basic render/i.test(info);
-    } catch (e) {
-      return false;
+  detectGpuProfile: function (renderer, overrideInfo) {
+    let info = typeof overrideInfo === "string" ? overrideInfo : "";
+    if (!info) {
+      try {
+        const gl = renderer && typeof renderer.getContext === "function" ? renderer.getContext() : null;
+        if (gl && typeof gl.getExtension === "function") {
+          const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+          if (dbg) info = String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "");
+        }
+      } catch (e) { }
     }
+    const isSoftware = /swiftshader|llvmpipe|softpipe|software|microsoft basic render|\bwarp\b/i.test(info);
+    const isIntegrated = isSoftware || /intel.*(uhd|hd graphics|iris)|radeon\(tm\) graphics|amd radeon graphics|vega \d/i.test(info);
+    const isWinUa = typeof navigator !== "undefined" && /windows/i.test(String(navigator.userAgent || ""));
+    const isWindowsAngle = /angle\s*\(.*direct3d/i.test(info) || (isWinUa && !/apple/i.test(info));
+    let shortLabel = isSoftware ? "CPU 軟體渲染（請開硬體加速）" : (isIntegrated ? "內顯最佳化" : "獨立/標準顯卡");
+    if (!isSoftware && info) {
+      const mGpu = info.match(/(RTX\s*\d{3,4}(?:\s*(?:Ti|SUPER))?|GTX\s*\d{3,4}(?:\s*(?:Ti|SUPER))?|RX\s*\d{3,4}(?:\s*XTX?)?|Arc\s*[A-Z]\d{3}|Apple\s*M\d(?:\s*(?:Pro|Max|Ultra))?|Apple\s*GPU|Intel\(?R?\)?\s*(?:UHD|HD|Iris)\s*[A-Za-z0-9 ]{0,12})/i);
+      if (mGpu && mGpu[1]) shortLabel = mGpu[1].replace(/\s+/g, " ").trim();
+    }
+    return {
+      rendererStr: info,
+      shortLabel: shortLabel,
+      isSoftwareRenderer: isSoftware,
+      isIntegratedGpu: isIntegrated,
+      isWindowsAngle: isWindowsAngle
+    };
+  },
+
+  detectIntegratedGpu: function (renderer) {
+    return this.detectGpuProfile(renderer).isIntegratedGpu;
   },
 
   getTargetDpr: function (quality) {
     const q = quality === "eco" ? "eco" : (quality === "balanced" ? "balanced" : "high");
-    const cap = this.isIntegratedGpu
-      ? (q === "eco" ? 0.9 : (q === "balanced" ? 1.0 : 1.25))
-      : (q === "eco" ? 1.0 : (q === "balanced" ? 1.25 : 1.5));
+    const cap = this.isSoftwareRenderer
+      ? 0.85
+      : (this.isIntegratedGpu
+        ? (q === "eco" ? 0.9 : (q === "balanced" ? 1.0 : 1.25))
+        : (q === "eco" ? 1.0 : (q === "balanced" ? 1.25 : 1.5)));
     return Math.min(window.devicePixelRatio || 1, cap);
+  },
+
+  getOverlayDpr: function () {
+    const q = (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high";
+    const cap = this.isSoftwareRenderer ? 1.0 : ((this.isIntegratedGpu || q === "eco") ? 1.25 : 1.5);
+    return Math.min((typeof window !== "undefined" && window.devicePixelRatio) ? window.devicePixelRatio : 1, cap);
   },
 
   init: function () {
@@ -158,13 +191,25 @@ const stage3d = {
         alpha: false,
         powerPreference: "high-performance"
       });
-      this.isIntegratedGpu = this.detectIntegratedGpu(renderer);
-      if (this.isIntegratedGpu && !this._manualQualityLock && !state.qualityUserChosen && state.quality3D === "high") {
+      const gpuProf = this.detectGpuProfile(renderer);
+      this.gpuRendererStr = gpuProf.rendererStr;
+      this.gpuShortLabel = gpuProf.shortLabel;
+      this.isSoftwareRenderer = gpuProf.isSoftwareRenderer;
+      this.isWindowsAngle = gpuProf.isWindowsAngle;
+      this.isIntegratedGpu = gpuProf.isIntegratedGpu;
+      if (this.isSoftwareRenderer && !this._manualQualityLock && !state.qualityUserChosen) {
+        state.quality3D = "eco";
+        setTimeout(function () {
+          if (typeof showToast === "function") {
+            showToast("偵測到瀏覽器目前以 CPU 軟體渲染 3D，已自動切為省電流暢；建議於瀏覽器設定開啟「圖形加速」以發揮顯卡效能！", "warn");
+          }
+        }, 1600);
+      } else if (this.isIntegratedGpu && !this._manualQualityLock && !state.qualityUserChosen && state.quality3D === "high") {
         state.quality3D = "balanced";
       }
       renderer.setPixelRatio(this.getTargetDpr(state.quality3D));
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = this.isIntegratedGpu && THREE.PCFShadowMap !== undefined
+      renderer.shadowMap.enabled = !this.isSoftwareRenderer;
+      renderer.shadowMap.type = (this.isIntegratedGpu || this.isWindowsAngle) && THREE.PCFShadowMap !== undefined
         ? THREE.PCFShadowMap
         : THREE.PCFSoftShadowMap;
       renderer.outputEncoding = THREE.sRGBEncoding;
@@ -192,7 +237,11 @@ const stage3d = {
       this.hero = typeof buildHeroCharacter === "function" ? buildHeroCharacter(scene) : null;
       this.fx = build3DEffects(scene);
       this.postfx = typeof build3DPostFx === "function"
-        ? build3DPostFx(renderer, scene, camera, { preferLightweight: this.isIntegratedGpu })
+        ? build3DPostFx(renderer, scene, camera, {
+          preferLightweight: this.isIntegratedGpu,
+          isWindowsAngle: this.isWindowsAngle,
+          isSoftwareRenderer: this.isSoftwareRenderer
+        })
         : null;
       this.fpHandsGroup = this.buildFirstPersonHands(scene);
       this.ready = true;
@@ -225,10 +274,10 @@ const stage3d = {
     const isBal = q === "balanced";
     const dpr = this.getTargetDpr(q);
     this.renderer.setPixelRatio(dpr);
-    this.renderer.shadowMap.enabled = !isEco;
+    this.renderer.shadowMap.enabled = !isEco && !this.isSoftwareRenderer;
     this.renderer.shadowMap.autoUpdate = false;
     if (this.renderer.shadowMap.enabled) this.renderer.shadowMap.needsUpdate = true;
-    if (this.env && this.env.dirLight) this.env.dirLight.castShadow = !isEco;
+    if (this.env && this.env.dirLight) this.env.dirLight.castShadow = !isEco && !this.isSoftwareRenderer;
     if (this.env && this.env.fireflyPoints) this.env.fireflyPoints.visible = q === "high";
     if (this.env && this.env.celestialWisps) this.env.celestialWisps.visible = !isEco;
     if (this.env && this.env.teaSteamPoints) this.env.teaSteamPoints.visible = !isEco;
@@ -245,7 +294,8 @@ const stage3d = {
       const baseLbl = isEco ? "省電流暢" : (isBal ? "均衡畫質" : "極致畫質");
       qBtn.textContent = baseLbl;
       const fpsTag = (this._perfEmaMs && this._perfEmaMs > 1) ? (" · " + Math.min(60, Math.round(1000 / this._perfEmaMs)) + " FPS") : "";
-      const perfStr = (this.isIntegratedGpu ? "內顯最佳化" : "獨立/標準顯卡") + "｜" + baseLbl + fpsTag;
+      const gpuLbl = this.gpuShortLabel || (this.isIntegratedGpu ? "內顯最佳化" : "獨立/標準顯卡");
+      const perfStr = gpuLbl + "｜" + baseLbl + fpsTag;
       qBtn.title = perfStr;
       const perfLine = el("gpuPerfStatusLine");
       if (perfLine) perfLine.textContent = "⚡ 3D 狀態：" + perfStr;
@@ -1598,14 +1648,17 @@ const stage3d = {
     if (typeof document === "undefined" || document.visibilityState !== "hidden") {
       if (this._perfLastMs) {
         const dt = nowMs - this._perfLastMs;
-        if (dt > 0 && dt < 120) {
-          this._perfEmaMs = this._perfEmaMs ? (this._perfEmaMs * 0.92 + dt * 0.08) : dt;
+        // Track up to 650ms frames (down to ~1.5 FPS) so severely lagging / SwiftShader PCs still auto-downgrade smoothly!
+        if (dt > 0 && dt < 650) {
+          const sampleDt = Math.min(dt, 250);
+          this._perfEmaMs = this._perfEmaMs ? (this._perfEmaMs * 0.90 + sampleDt * 0.10) : sampleDt;
           if (!this._fpsLabelLastMs || nowMs - this._fpsLabelLastMs > 1200) {
             this._fpsLabelLastMs = nowMs;
             if (this._perfEmaMs > 1) {
               const qNow = state.quality3D === "eco" ? "省電流暢" : (state.quality3D === "balanced" ? "均衡畫質" : "極致畫質");
               const fpsVal = Math.min(60, Math.round(1000 / this._perfEmaMs));
-              const perfStr = (this.isIntegratedGpu ? "內顯最佳化" : "獨立/標準顯卡") + "｜" + qNow + " · " + fpsVal + " FPS";
+              const gpuLbl = this.gpuShortLabel || (this.isIntegratedGpu ? "內顯最佳化" : "獨立/標準顯卡");
+              const perfStr = gpuLbl + "｜" + qNow + " · " + fpsVal + " FPS";
               const qBtnLive = el("btnToggle3DQuality");
               if (qBtnLive) qBtnLive.title = perfStr;
               const perfLine = el("gpuPerfStatusLine");
@@ -1613,8 +1666,8 @@ const stage3d = {
             }
           }
           if (!this._manualQualityLock && state.quality3D !== "eco" && this._perfEmaMs > 44) {
-            this._perfSlowMs = (this._perfSlowMs || 0) + dt;
-            if (this._perfSlowMs > 3200) {
+            this._perfSlowMs = (this._perfSlowMs || 0) + sampleDt;
+            if (this._perfSlowMs > 2400) {
               state.quality3D = (state.quality3D === "high") ? "balanced" : "eco";
               this.applyQualityMode();
               this._perfSlowMs = 0;
@@ -1629,7 +1682,7 @@ const stage3d = {
               }
             }
           } else {
-            this._perfSlowMs = Math.max(0, (this._perfSlowMs || 0) - dt * 0.5);
+            this._perfSlowMs = Math.max(0, (this._perfSlowMs || 0) - sampleDt * 0.5);
           }
         }
       }
@@ -1640,7 +1693,7 @@ const stage3d = {
     const p = state.match.phase;
     const night = isNightPhase(p) || (p === "GAME_OVER" && state.match.winner === "wolf");
     const daylight = state.match.started && !night && p !== "LOBBY";
-    const dpr = Math.min(window.devicePixelRatio || 1, this.isIntegratedGpu ? 1.25 : 2);
+    const dpr = this.getOverlayDpr();
 
     const f = {
       nowMs: nowMs,
@@ -1695,6 +1748,7 @@ const stage3d = {
 
     const usePostFxNow = Boolean(
       this.postfx &&
+      !this.isSoftwareRenderer &&
       state.quality3D !== "eco" &&
       (!this.isIntegratedGpu || state.quality3D === "high")
     );

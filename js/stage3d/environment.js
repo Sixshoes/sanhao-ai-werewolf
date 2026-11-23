@@ -607,7 +607,6 @@ function buildTabletopTeaSet(woodMat) {
   ].forEach(function (cp) {
     const aromaCup = new THREE.Mesh(new THREE.CylinderGeometry(0.056, 0.042, 0.072, 12), cupPorcelain);
     aromaCup.position.set(cp[0], 0.072, cp[1]);
-    aromaCup.castShadow = true;
     teaSet.add(aromaCup);
   });
 
@@ -644,7 +643,6 @@ function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex) {
     culm.position.set(st.ox + st.leanX * st.h * 0.4, st.h * 0.5, st.oz + st.leanZ * st.h * 0.4);
     culm.rotation.z = -st.leanX;
     culm.rotation.x = st.leanZ;
-    culm.castShadow = true;
     g.add(culm);
 
     for (let ni = 1; ni <= 4; ni++) {
@@ -728,7 +726,6 @@ function buildBlossomTree(x, y, z, scaleMul, kind, woodTex, blossomTex) {
     seg.position.set((s.x0 + s.x1) * 0.5, (s.y0 + s.y1) * 0.5, (s.z0 + s.z1) * 0.5);
     seg.rotation.z = -Math.atan2(dx, dy);
     seg.rotation.x = Math.atan2(dz, dy);
-    seg.castShadow = true;
     g.add(seg);
   });
 
@@ -816,7 +813,6 @@ function buildMossyCliffBoulder(x, y, z, sx, sy, sz, rotY, stoneTex) {
   const rock = new THREE.Mesh(rockGeo, rockMat);
   rock.scale.set(sx, sy, sz);
   rock.receiveShadow = true;
-  rock.castShadow = true;
   g.add(rock);
   g.position.set(x, y, z);
   g.rotation.y = rotY || 0;
@@ -1767,7 +1763,6 @@ function buildTabletopAcademyProps(woodMat, env) {
     new THREE.MeshStandardMaterial({ color: 0x6ec9ae, roughness: 0.18, metalness: 0.08 })
   );
   jadeWeight.position.set(-0.20, 0.024, 0.0);
-  jadeWeight.castShadow = true;
   const inkstone = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.026, 0.10), slateMat);
   inkstone.position.set(0.18, 0.018, -0.04);
   const brush = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.011, 0.26, 6), woodMat);
@@ -1796,7 +1791,6 @@ function buildTabletopAcademyProps(woodMat, env) {
   ].forEach(function (pc) {
     const cakeGrp = new THREE.Group();
     const cake = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.052, 0.032, 10), pc[4]);
-    cake.castShadow = true;
     const stamp = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.006, 6), brassMat);
     stamp.position.y = 0.018;
     cakeGrp.add(cake, stamp);

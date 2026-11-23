@@ -5243,6 +5243,15 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const chipNodes = (el("quickSpeechChips") && el("quickSpeechChips").children) || [];
     const day1CardNoPrevRoundOk = chipNodes.length > 0 && chipNodes.every(c => !String(c.innerHTML || c.textContent || "").includes("前面幾輪"));
 
+    // 10. v13.4 Windows WebGL / ANGLE / SwiftShader perf hardening checks
+    const pSoft = stage3d.detectGpuProfile(null, "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)))");
+    const pRtx5080 = stage3d.detectGpuProfile(null, "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)");
+    const pIntel = stage3d.detectGpuProfile(null, "ANGLE (Intel, Intel(R) UHD Graphics 770 Direct3D11 vs_5_0 ps_5_0)");
+    const gpuDetectSwiftShaderOk = Boolean(pSoft.isSoftwareRenderer && pSoft.isIntegratedGpu);
+    const gpuDetectRtx5080AngleOk = Boolean(!pRtx5080.isSoftwareRenderer && !pRtx5080.isIntegratedGpu && pRtx5080.isWindowsAngle && pRtx5080.shortLabel === "RTX 5080");
+    const gpuDetectIntelIgpuOk = Boolean(!pIntel.isSoftwareRenderer && pIntel.isIntegratedGpu && pIntel.isWindowsAngle);
+    const overlayDprCapOk = typeof stage3d.getOverlayDpr === "function" && stage3d.getOverlayDpr() <= 1.5;
+
     return {
       nightHidesStepNextOk,
       lobby12Ok,
@@ -5255,13 +5264,22 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       personaEqDistinctOk,
       livePillOnOk,
       livePillOffOk,
-      day1CardNoPrevRoundOk
+      day1CardNoPrevRoundOk,
+      gpuDetectSwiftShaderOk,
+      gpuDetectRtx5080AngleOk,
+      gpuDetectIntelIgpuOk,
+      overlayDprCapOk
     };
   })()`, ctx);
   for (const [k, v] of Object.entries(v132Res)) {
     if (!v) {
       throw new Error("v13.2 QA BUGFIX check failed for " + k + ": " + JSON.stringify(v132Res));
     }
+  }
+  const themeCssRaw = fs.readFileSync(path.join(ROOT, "css/theme.css"), "utf8");
+  const compCssRaw = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  if (/backdrop-filter\s*:\s*blur\(/i.test(themeCssRaw) || /backdrop-filter\s*:\s*blur\(/i.test(compCssRaw)) {
+    throw new Error("Windows WebGL perf guard failed: backdrop-filter: blur(...) found in css/theme.css or css/components.css!");
   }
 }
 

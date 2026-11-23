@@ -135,7 +135,7 @@ body.theme-day {
 
   --shadow-card: 0 10px 28px rgba(72, 48, 20, 0.12);
   --shadow-focal: 0 16px 36px rgba(72, 48, 20, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.88);
-  --surface-panel-grad: linear-gradient(168deg, rgba(254, 251, 244, 0.98) 0%, rgba(248, 241, 227, 0.97) 65%, rgba(240, 230, 210, 0.98) 100%);
+  --surface-panel-grad: linear-gradient(168deg, #fefbf4 0%, #f8f1e3 65%, #f0e6d2 100%);
   --gold-foil-grad: linear-gradient(135deg, #d8a956 0%, #a56e23 55%, #7c4d11 100%);
   --frame-ornament: rgba(158, 106, 38, 0.52);
   --card-sheen: rgba(255, 255, 255, 0.58);
@@ -241,7 +241,6 @@ body.theme-day #worldSkyBackdrop::after {
 body.craft-ui header {
   background-color: var(--surface-header);
   border-bottom: 1px solid var(--border-header);
-  backdrop-filter: blur(12px);
 }
 
 body.craft-ui.theme-day header {

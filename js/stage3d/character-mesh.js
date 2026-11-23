@@ -791,7 +791,6 @@ function create3DSeatActor(seat) {
   [-0.38, 0.38].forEach(function (sx) {
     const sp = new THREE.Mesh(G.chairSpindle, chairWoodMat);
     sp.position.set(sx, 1.14, -0.39);
-    sp.castShadow = true;
     chairGroup.add(sp);
   });
 
@@ -944,21 +943,18 @@ function create3DSeatActor(seat) {
   ]);
   plaqueMesh.position.set(0, 0.10, 0);
   plaqueMesh.rotation.x = -0.58;
-  plaqueMesh.castShadow = true;
   tablePropGroup.add(plaqueMesh);
 
   const candleGroup = new THREE.Group();
   candleGroup.position.set(0.52, 0, -0.04);
   const brassMat = new THREE.MeshStandardMaterial({ color: 0xc89232, roughness: 0.24, metalness: 0.86 });
   const candleHolder = new THREE.Mesh(G.candleHolder, brassMat);
-  candleHolder.castShadow = true;
   const WaxMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
   const candleStick = new THREE.Mesh(
     G.candleStick,
     new WaxMatCtor({ color: 0xfef3d4, emissive: 0xffb347, emissiveIntensity: 0.14, roughness: 0.42, metalness: 0.02, clearcoat: 0.35 })
   );
   candleStick.position.y = hasLatheHelper() ? 0.095 : 0.20;
-  candleStick.castShadow = true;
   const candleWick = new THREE.Mesh(G.candleWick, new THREE.MeshStandardMaterial({ color: 0x261a12, roughness: 0.9 }));
   candleWick.position.y = 0.365;
   const candleFlame = new THREE.Group();
@@ -1008,7 +1004,6 @@ function create3DSeatActor(seat) {
   saucer.receiveShadow = true;
   const teacup = new THREE.Mesh(G.teacup, celadonMat);
   teacup.position.y = 0.022;
-  teacup.castShadow = true;
   const teaLiquid = new THREE.Mesh(
     new THREE.CircleGeometry(0.082, 12),
     new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.1, metalness: 0.2 })
@@ -1037,7 +1032,6 @@ function create3DSeatActor(seat) {
     new THREE.MeshBasicMaterial({ map: cardFront.tex }),
     cardEdgeMat, cardEdgeMat
   ]);
-  idCardMesh.castShadow = true;
   const idCardHit = new THREE.Mesh(G.idCardHit, new THREE.MeshBasicMaterial({ visible: false }));
   idCardPivot.add(idCardMesh, idCardHit);
   idCardPivot.visible = false;
