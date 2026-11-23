@@ -133,7 +133,7 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode) {
   const isGen3 = modelId.indexOf("gemini-3") === 0;
   const genCfg = {
     temperature: 0.78,
-    maxOutputTokens: isGen3 ? (jsonMode ? 1536 : 1024) : (jsonMode ? 1024 : 640)
+    maxOutputTokens: isGen3 ? (jsonMode ? 3072 : 1536) : (jsonMode ? 1280 : 768)
   };
   if (isGen3) {
     genCfg.thinkingConfig = { thinkingLevel: "LOW" };

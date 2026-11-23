@@ -78,6 +78,10 @@ function startDayDiscussion(dawnVoiceLine, opts) {
     const goFirstSpeaker = function () {
       if (kickedOff || state.match.phase !== "DAY_SPEECH") return;
       kickedOff = true;
+      if (state.stepTimer) {
+        clearTimeout(state.stepTimer);
+        state.stepTimer = null;
+      }
       state.stepTimer = setTimeout(advanceSpeechQueue, 360);
     };
     voice.speakHost(dawnVoiceLine, goFirstSpeaker, "host_dawn");
@@ -193,14 +197,14 @@ function prefetchNextAiSpeech() {
   m._prefetchedSpeech = entry;
 
   const runDispatch = (typeof orchestrator !== "undefined" && typeof orchestrator.dispatchAgent === "function")
-    ? orchestrator.dispatchAgent("PersonaAgent", { speaker: nextSeat, fallbackMeta: fallbackMeta }).then(function (dispatched) {
+    ? orchestrator.dispatchAgent("PersonaAgent", { speaker: nextSeat, fallbackMeta: fallbackMeta, deferSeatMutation: true }).then(function (dispatched) {
         if (!dispatched || !dispatched.epochValid || !orchestrator.isEpochValid(ep)) return null;
         return dispatched.generated || fallbackMeta;
       })
     : tryGenerateGeminiAiSpeech(nextSeat, fallbackMeta).then(function (liveRes) {
         const liveTxt = typeof liveRes === "string" ? liveRes : (liveRes && liveRes.text);
         if (liveTxt) {
-          if (typeof syncGeminiSpeechMeta === "function") syncGeminiSpeechMeta(nextSeat, fallbackMeta, liveRes);
+          if (typeof syncGeminiSpeechMeta === "function") syncGeminiSpeechMeta(nextSeat, fallbackMeta, liveRes, { deferSeatMutation: true });
           else fallbackMeta.text = liveTxt;
           fallbackMeta.text = String(fallbackMeta.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
         }
@@ -228,6 +232,7 @@ const THINKING_MICROCUES = [
 
 async function executeAiTurnSpeech(speaker) {
   if (state.speakingInFlight) return;
+  const turnSeq = (state._speechTurnSeq = (state._speechTurnSeq || 0) + 1);
   state.speakingInFlight = true;
   state.currentTurnSpoken = true;
   stopTypewriterOnly();
@@ -255,7 +260,7 @@ async function executeAiTurnSpeech(speaker) {
           ? getPersonaThinkingCue(speaker, state.match.day)
           : THINKING_MICROCUES[(speaker.id + (state.match.day || 1)) % THINKING_MICROCUES.length];
         cueTimer = setTimeout(function () {
-          if (state.match.phase === "DAY_SPEECH" && state.activeSpeakerId === speaker.id && state.speakingInFlight) {
+          if (state._speechTurnSeq === turnSeq && state.match.phase === "DAY_SPEECH" && state.activeSpeakerId === speaker.id && state.speakingInFlight) {
             syncSpeakerBannerVisuals(speaker, fmtSeatNum(speaker.id) + "號 · " + speaker.name, speaker.trait, false);
             updateSpotlightBox(fmtSeatNum(speaker.id) + "號 · " + speaker.name, speaker.trait, cueLine);
           }
@@ -268,7 +273,7 @@ async function executeAiTurnSpeech(speaker) {
       } else {
         generated = buildHeuristicAiSpeech(speaker);
         if (typeof orchestrator !== "undefined" && typeof orchestrator.dispatchAgent === "function") {
-          const dispatched = await orchestrator.dispatchAgent("PersonaAgent", { speaker: speaker, fallbackMeta: generated });
+          const dispatched = await orchestrator.dispatchAgent("PersonaAgent", { speaker: speaker, fallbackMeta: generated, deferSeatMutation: true });
           if (!dispatched || !dispatched.epochValid || !orchestrator.isEpochValid(ep)) {
             return;
           }
@@ -278,7 +283,7 @@ async function executeAiTurnSpeech(speaker) {
           const liveTxt = typeof liveRes === "string" ? liveRes : (liveRes && liveRes.text);
           if (liveTxt) {
             if (typeof syncGeminiSpeechMeta === "function") {
-              syncGeminiSpeechMeta(speaker, generated, liveRes);
+              syncGeminiSpeechMeta(speaker, generated, liveRes, { deferSeatMutation: true });
             } else {
               generated.text = liveTxt;
             }
@@ -289,9 +294,17 @@ async function executeAiTurnSpeech(speaker) {
     }
   } finally {
     if (cueTimer) clearTimeout(cueTimer);
-    state.speakingInFlight = false;
+    if (state._speechTurnSeq === turnSeq) state.speakingInFlight = false;
   }
-  if (state.match.phase !== "DAY_SPEECH" || state.activeSpeakerId !== speaker.id || !speaker.alive) return;
+  if (state._speechTurnSeq !== turnSeq || state.match.phase !== "DAY_SPEECH" || state.activeSpeakerId !== speaker.id || !speaker.alive) return;
+
+  // Commit deferred role claim right on this seat's actual speaking turn (never prematurely during background prefetch!)
+  const committedClaim = generated.claimSeer ? "seer" : (generated.claimRole || null);
+  if (committedClaim) {
+    if (committedClaim === "seer" || !speaker.claimedRole || speaker.claimedRole === committedClaim) {
+      speaker.claimedRole = committedClaim;
+    }
+  }
 
   sound.playSpeak();
 

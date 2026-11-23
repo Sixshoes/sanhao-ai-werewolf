@@ -376,7 +376,7 @@ const orchestrator = {
         const liveTxt = typeof liveRes === "string" ? liveRes : (liveRes && liveRes.text);
         if (liveTxt) {
           if (typeof syncGeminiSpeechMeta === "function") {
-            syncGeminiSpeechMeta(speaker, generated, liveRes);
+            syncGeminiSpeechMeta(speaker, generated, liveRes, { deferSeatMutation: Boolean(p.deferSeatMutation) });
           } else {
             generated.text = liveTxt;
           }

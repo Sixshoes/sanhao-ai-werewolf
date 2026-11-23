@@ -353,8 +353,14 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
   const contraTriggers = activeContraRec
     ? ["硬打", "自稱", "假冒", "冒充", "力挺", "洗白", "投出去", "站邊", "護航", "點進狼坑", "明心觀察員", "滴水奉茶師", "直心糾察長", "狼坑"]
     : [];
+  const seatNameAlt = ((state.match && Array.isArray(state.match.seats) ? state.match.seats.map(function (s) { return s.name; }) : [])
+    .concat(["晨晨", "小雲", "阿竹", "柚子", "晴嵐", "阿松", "小澄", "墨白", "暖暖", "星兒", "阿朗", "玩家你", "玩家", "你"]))
+    .filter(function (nm, idx, arr) { return nm && arr.indexOf(nm) === idx; })
+    .sort(function (a, b) { return b.length - a.length; })
+    .map(function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); })
+    .join("|");
   const combinedPattern = new RegExp(
-    "((?:1[0-2]|0?[1-9])號(?:[\\u4e00-\\u9fff]{1,2})?|" +
+    "((?:1[0-2]|0?[1-9])號(?:\\s?(?:" + seatNameAlt + "))?|" +
     uniqueToxic.map(function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|") + "|" +
     roleWords.join("|") + ")",
     "g"
@@ -610,6 +616,7 @@ function startSpotlightTypewriter(opts) {
   if (pEl) {
     pEl.classList.remove("typing-cursor", "spotlight-fade-in");
     renderInteractiveSpotlightText(cleanText, speaker, false);
+    pEl.scrollTop = 0;
     if (typeof pEl.offsetWidth === "number") void pEl.offsetWidth;
     pEl.classList.add("spotlight-fade-in");
   }

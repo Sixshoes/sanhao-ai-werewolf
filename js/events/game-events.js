@@ -513,22 +513,27 @@ function bindIntelAndDetectiveEvents() {
         const rec = new SpeechRec();
         rec.lang = "zh-TW";
         rec.interimResults = true;
-        rec.continuous = false;
+        rec.continuous = true;
         activeRec = rec;
         isListening = true;
         const btn = el("btnMicVoiceSpeech");
         btn.classList.add("is-listening");
         btn.textContent = "⏹";
         if (typeof sound.playTableReactionSfx === "function") sound.playTableReactionSfx("mic_on");
-        showToast("🎙️ 正在聆聽你的推理發言（說完停頓或再按一次結束）…", "emerald");
+        showToast("🎙️ 正在聆聽長段推理發言（支援多句停頓，說完按 ⏹ 結束）…", "emerald");
         const basePrefix = (el("quickFreeInput") && el("quickFreeInput").value.trim()) ? (el("quickFreeInput").value.trim() + " ") : "";
+        let committedText = "";
         rec.onresult = function (ev) {
-          let transcript = "";
+          let finalChunk = "";
+          let interimChunk = "";
           for (let i = 0; i < ev.results.length; i++) {
-            transcript += ev.results[i][0].transcript;
+            const seg = ev.results[i][0] ? ev.results[i][0].transcript : "";
+            if (ev.results[i].isFinal) finalChunk += seg;
+            else interimChunk += seg;
           }
+          committedText = finalChunk;
           if (el("quickFreeInput")) {
-            el("quickFreeInput").value = (basePrefix + transcript).trim();
+            el("quickFreeInput").value = (basePrefix + committedText + interimChunk).trim();
             if (typeof refreshQuickFreeInputHint === "function") refreshQuickFreeInputHint();
           }
         };

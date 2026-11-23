@@ -496,20 +496,33 @@ const voice = {
     });
   },
 
-  // Split long Mandarin text into natural breathing clauses (protecting seat numbers + names & short endings!)
+  // Split long Mandarin text into safe <=22-char breathing clauses (defeats Chrome Web Speech ~14s remote cutoff & preserves zero truncation!)
   splitMandarinClauses: function (cleanText) {
-    const pieces = cleanText.match(/[^，。！？；：…]+[，。！？；：…]?/g) || [cleanText];
+    const rawPieces = String(cleanText || "").match(/[^，。！？；：…,\.!?;:\n]+[，。！？；：…,\.!?;:\n]?/g) || [String(cleanText || "")];
+    const pieces = [];
+    rawPieces.forEach(function (part) {
+      let s = part.trim();
+      if (!s) return;
+      // Hard-split any unpunctuated run > 22 chars so Chrome Web Speech never hangs or drops long text
+      while (s.length > 22) {
+        let cut = 20;
+        const spIdx = s.lastIndexOf(" ", 21);
+        if (spIdx >= 10) cut = spIdx + 1;
+        pieces.push(s.slice(0, cut).trim());
+        s = s.slice(cut).trim();
+      }
+      if (s) pieces.push(s);
+    });
     const chunks = [];
     let buf = "";
-    pieces.forEach(function (part) {
-      const p = part.trim();
+    pieces.forEach(function (p) {
       if (!p) return;
       const isTinyTail = p.length <= 4 && /^(過|先過|好了|對吧|喔|耶|吧|呢)[。！？]?$/.test(p);
       if (!buf) {
         buf = p;
-      } else if (isTinyTail && buf.length <= 28) {
+      } else if (isTinyTail && (buf.length + p.length) <= 26) {
         buf += p;
-      } else if ((buf.length + p.length) <= 24 && !/[。！？…]$/.test(buf)) {
+      } else if ((buf.length + p.length) <= 22 && !/[。！？…!?]$/.test(buf)) {
         buf += p;
       } else {
         chunks.push(buf);
@@ -581,6 +594,10 @@ const voice = {
       clearTimeout(this.clauseTimer);
       this.clauseTimer = null;
     }
+    if (this.clauseWatchdogTimer) {
+      clearTimeout(this.clauseWatchdogTimer);
+      this.clauseWatchdogTimer = null;
+    }
   },
 
   stop: function () {
@@ -643,6 +660,7 @@ const voice = {
         this.activeAudioNode = null;
       } else if (this.isSupported()) {
         if (this.watchdogTimer) { clearTimeout(this.watchdogTimer); this.watchdogTimer = null; }
+        if (this.clauseWatchdogTimer) { clearTimeout(this.clauseWatchdogTimer); this.clauseWatchdogTimer = null; }
         if (this.clauseTimer) { clearTimeout(this.clauseTimer); this.clauseTimer = null; }
         try { window.speechSynthesis.pause(); } catch (e) {}
       }
@@ -908,11 +926,12 @@ const voice = {
           (!this.localNeuralPending[ck] && controller) ? controller.signal : null,
           ""
         );
+        const neuralTimeoutMs = clamp(11500 + cleanText.length * 60, 12000, 24000);
         const timeoutPromise = new Promise(function (resolve) {
           timer = setTimeout(function () {
             if (controller) controller.abort();
             resolve(null);
-          }, 11500);
+          }, neuralTimeoutMs);
         });
         audioBuf = await Promise.race([fetchPromise, timeoutPromise]);
         if (timer) clearTimeout(timer);
@@ -1004,7 +1023,8 @@ const voice = {
     const taggedTranscript = this.injectGeminiVocalTags(cleanText, effKey, mood || "normal");
 
     const controller = new AbortController();
-    const timer = setTimeout(function () { controller.abort(); }, 9500);
+    const geminiTtsTimeoutMs = clamp(10000 + cleanText.length * 75, 11000, 24000);
+    const timer = setTimeout(function () { controller.abort(); }, geminiTtsTimeoutMs);
     try {
       let audioBytes = null;
       // Route through local disk-caching proxy (/api/tts/gemini -> .tts_cache/gem_*.wav) when server.py is active!
@@ -1270,7 +1290,8 @@ const voice = {
         } catch (e) {}
       }, 8500);
 
-      const totalEstMs = Math.min(28000, Math.max(3600, Math.round((clean.length * 360) / baseRate) + clauses.length * 240 + 1400));
+      // Scale global ceiling generously up to 95s + per-clause watchdog so long AI speeches NEVER cut off mid-sentence!
+      const totalEstMs = Math.min(95000, Math.max(8000, Math.round((clean.length * 460) / baseRate) + clauses.length * 420 + 4000));
       this._resumeWatchdogMs = totalEstMs;
       this._resumeWatchdogFinish = finishOnce;
       this.watchdogTimer = setTimeout(function () {
@@ -1280,6 +1301,10 @@ const voice = {
       let idx = 0;
       function speakNextClause() {
         if (seq !== self.utteranceSeq) return;
+        if (self.clauseWatchdogTimer) {
+          clearTimeout(self.clauseWatchdogTimer);
+          self.clauseWatchdogTimer = null;
+        }
         if (self.paused) {
           self._resumePendingClause = speakNextClause;
           return;
@@ -1318,8 +1343,14 @@ const voice = {
         utter.volume = effVol;
         self.activeUtterance = utter;
 
+        let clauseDone = false;
         const onClauseDone = function () {
-          if (seq !== self.utteranceSeq) return;
+          if (clauseDone || seq !== self.utteranceSeq) return;
+          clauseDone = true;
+          if (self.clauseWatchdogTimer) {
+            clearTimeout(self.clauseWatchdogTimer);
+            self.clauseWatchdogTimer = null;
+          }
           if (idx >= clauses.length) {
             finishOnce();
             return;
@@ -1330,10 +1361,17 @@ const voice = {
         };
         utter.onend = onClauseDone;
         utter.onerror = onClauseDone;
+        const clauseMaxMs = Math.max(4800, Math.round((clause.length * 460) / cRate) + 3400);
+        self.clauseWatchdogTimer = setTimeout(function () {
+          if (!self.paused && !clauseDone && seq === self.utteranceSeq) {
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+            onClauseDone();
+          }
+        }, clauseMaxMs);
         try {
           window.speechSynthesis.speak(utter);
         } catch (e) {
-          finishOnce();
+          onClauseDone();
         }
       }
 

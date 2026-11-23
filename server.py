@@ -377,7 +377,7 @@ def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeo
     is_gen3 = safe_model.startswith("gemini-3")
     gen_cfg = {
         "temperature": 0.78,
-        "maxOutputTokens": (1536 if json_mode else 1024) if is_gen3 else (1024 if json_mode else 640),
+        "maxOutputTokens": (3072 if json_mode else 1536) if is_gen3 else (1280 if json_mode else 768),
     }
     if is_gen3:
         gen_cfg["thinkingConfig"] = {"thinkingLevel": "LOW"}
@@ -758,8 +758,8 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         if not text:
             self.send_json(400, {"ok": False, "error": "Empty text"})
             return
-        if len(text) > 480:
-            text = text[:480]
+        if len(text) > 900:
+            text = text[:900]
         v_safe = voice_name if voice_name in ALLOWED_GEMINI_VOICES else "Kore"
         key = "gem_" + hashlib.sha256(f"{v_safe}|{style_prompt}|{text}".encode("utf-8")).hexdigest()[:24]
         wav_path = CACHE_DIR / f"{key}.wav"

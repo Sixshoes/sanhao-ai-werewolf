@@ -5271,6 +5271,23 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     state.geminiApiKey = prevKey135;
     state.localLlmModel = prevLoc135;
 
+    // 12. v13.6 Gemini truncated JSON salvage, exact persona pill match, long TTS clause split, & prefetch non-mutation
+    const truncParsed = parseGeminiStructuredSpeech('{"text":"欸等一下，3號剛才講的話超怪，我先點3號！","accuseId":3');
+    const brokenJsonNull = parseGeminiStructuredSpeech('{"accuseId": 3, "wolfPits": [3');
+    const jsonSalvageOk = Boolean(truncParsed && truncParsed.parsedJson && truncParsed.text.includes("3號剛才") && !truncParsed.text.includes("{") && brokenJsonNull === null);
+    renderInteractiveSpotlightText("我覺得3號剛才講了5號阿松很怪", state.match.seats[0], false);
+    const spotHtml136 = String((el("spotlightText") && el("spotlightText").innerHTML) || "");
+    const seatPillExactOk = spotHtml136.includes(">3號</span>剛才") && spotHtml136.includes(">5號阿松</span>");
+    const longUnpunct = "這是一段故意完全沒有標點符號用來測試瀏覽器語音長句子會不會在十四秒被卡斷的超長繁體中文狼人殺推理測試發言內容確認每個切片都不超過二十二個字元而且一個字都不會漏掉";
+    const split136 = voice.splitMandarinClauses(longUnpunct);
+    const longTtsClauseOk = split136.length >= 4 && split136.every(c => c.length <= 22) && split136.join("") === longUnpunct;
+    const spPrefTest = state.match.seats[1];
+    const origClaimPref = spPrefTest.claimedRole;
+    spPrefTest.claimedRole = null;
+    syncGeminiSpeechMeta(spPrefTest, { text: "fallback" }, { parsedJson: true, text: "我是觀察員", claimRole: "seer", accuseId: null, vouchId: null }, { deferSeatMutation: true });
+    const prefetchNoMutateOk = spPrefTest.claimedRole === null;
+    spPrefTest.claimedRole = origClaimPref;
+
     return {
       nightHidesStepNextOk,
       lobby12Ok,
@@ -5290,7 +5307,11 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       overlayDprCapOk,
       cloudProxyOnOk,
       cloudProxyCooldownOk,
-      cloudProxyOptOutOk
+      cloudProxyOptOutOk,
+      jsonSalvageOk,
+      seatPillExactOk,
+      longTtsClauseOk,
+      prefetchNoMutateOk
     };
   })()`, ctx);
   for (const [k, v] of Object.entries(v132Res)) {

@@ -185,7 +185,7 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
   const isGen34 = modelId && (modelId.indexOf("gemini-3") === 0 || modelId.indexOf("gemini-4") === 0);
   const genCfg = {
-    maxOutputTokens: isGen34 ? ((opts && opts.jsonMode) ? 2048 : 1536) : ((opts && opts.jsonMode) ? 1024 : 640)
+    maxOutputTokens: isGen34 ? ((opts && opts.jsonMode) ? 3072 : 2048) : ((opts && opts.jsonMode) ? 1280 : 768)
   };
   if (!modelId || modelId.indexOf("gemini-4") !== 0) {
     genCfg.temperature = 0.78;
@@ -289,6 +289,34 @@ async function callGeminiText(promptText, opts) {
   return null;
 }
 
+function normalizeGeminiSpeechText(txt) {
+  let s = String(txt || "")
+    .replace(/\\n/g, " ")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*\n]+)\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^[#>\-•\s]+/g, "")
+    .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "")
+    .replace(/（[^）]*）/g, "")
+    .replace(/\([^)]*\)/g, "")
+    .replace(/^["「『]+|["」』]+$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  // Gracefully trim rambling > 145-char LLM paragraphs at a natural sentence boundary so UI & TTS stay crisp
+  if (s.length > 145) {
+    const windowStr = s.slice(0, 145);
+    const lastStop = Math.max(windowStr.lastIndexOf("。"), windowStr.lastIndexOf("！"), windowStr.lastIndexOf("？"));
+    if (lastStop >= 55) {
+      s = windowStr.slice(0, lastStop + 1);
+    } else {
+      const lastComma = Math.max(windowStr.lastIndexOf("，"), windowStr.lastIndexOf("；"));
+      s = (lastComma >= 65 ? windowStr.slice(0, lastComma) : windowStr.slice(0, 138)) + "。";
+    }
+  }
+  return s;
+}
+
 function parseGeminiStructuredSpeech(rawText) {
   const raw = String(rawText || "").trim();
   if (!raw) return null;
@@ -300,32 +328,36 @@ function parseGeminiStructuredSpeech(rawText) {
     const fb = raw.indexOf("{");
     const lb = raw.lastIndexOf("}");
     if (fb !== -1 && lb > fb) candidate = raw.slice(fb, lb + 1);
+    else if (fb !== -1) candidate = raw.slice(fb);
   }
+  const maxSeats = (typeof state !== "undefined" && state.match && state.match.totalSeats) ? state.match.totalSeats : 8;
+  const normId = function (val) {
+    if (val === null || val === undefined || val === "") return null;
+    const n = parseInt(val, 10);
+    return (Number.isFinite(n) && n >= 1 && n <= maxSeats) ? n : null;
+  };
+  const normIdArr = function (arr, maxLen) {
+    if (!Array.isArray(arr)) return null;
+    const out = [];
+    arr.forEach(function (item) {
+      const id = normId(item);
+      if (id && out.indexOf(id) === -1 && out.length < (maxLen || 3)) out.push(id);
+    });
+    return out;
+  };
+  const emoAllow = ["calm", "sharp", "warm", "urgent", "defensive"];
+
   if (candidate.charAt(0) === "{" && candidate.charAt(candidate.length - 1) === "}") {
     try {
       const obj = JSON.parse(candidate);
       if (obj && typeof obj.text === "string" && obj.text.trim()) {
-        const maxSeats = (typeof state !== "undefined" && state.match && state.match.totalSeats) ? state.match.totalSeats : 8;
-        const normId = function (val) {
-          if (val === null || val === undefined || val === "") return null;
-          const n = parseInt(val, 10);
-          return (Number.isFinite(n) && n >= 1 && n <= maxSeats) ? n : null;
-        };
-        const normIdArr = function (arr, maxLen) {
-          if (!Array.isArray(arr)) return null;
-          const out = [];
-          arr.forEach(function (item) {
-            const id = normId(item);
-            if (id && out.indexOf(id) === -1 && out.length < (maxLen || 3)) out.push(id);
-          });
-          return out;
-        };
+        const cleanText = normalizeGeminiSpeechText(obj.text);
+        if (!cleanText) return null;
         const cr = (obj.claimRole === "seer" || obj.claimRole === "witch" || obj.claimRole === "hunter" || obj.claimRole === "guard" || obj.claimRole === "elder") ? obj.claimRole : null;
-        const emoAllow = ["calm", "sharp", "warm", "urgent", "defensive"];
         const emo = (typeof obj.emotion === "string" && emoAllow.indexOf(obj.emotion) !== -1) ? obj.emotion : null;
         return {
           parsedJson: true,
-          text: obj.text.trim(),
+          text: cleanText,
           accuseId: normId(obj.accuseId),
           vouchId: normId(obj.vouchId),
           claimRole: cr,
@@ -337,9 +369,43 @@ function parseGeminiStructuredSpeech(rawText) {
       }
     } catch (e) {}
   }
+
+  // Salvage clean speech text from truncated or slightly malformed JSON (NEVER leak raw {"text":...} to the UI!)
+  const looksLikeJson = /^\s*[\{\[]/.test(candidate) || /"(?:text|accuseId|vouchId|wolfPits|claimRole)"\s*:/.test(raw);
+  if (looksLikeJson) {
+    const tMatch = raw.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)/);
+    if (tMatch && tMatch[1]) {
+      let salvaged = tMatch[1]
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, "\\")
+        .replace(/\\n/g, " ");
+      salvaged = normalizeGeminiSpeechText(salvaged);
+      if (salvaged.length >= 6) {
+        const accM = raw.match(/"accuseId"\s*:\s*(\d+)/);
+        const vchM = raw.match(/"vouchId"\s*:\s*(\d+)/);
+        const clM = raw.match(/"claimRole"\s*:\s*"(seer|witch|hunter|guard|elder)"/);
+        const emoM = raw.match(/"emotion"\s*:\s*"(calm|sharp|warm|urgent|defensive)"/);
+        return {
+          parsedJson: true,
+          text: salvaged,
+          accuseId: accM ? normId(accM[1]) : null,
+          vouchId: vchM ? normId(vchM[1]) : null,
+          claimRole: clM ? clM[1] : null,
+          wolfPits: null,
+          goodPits: null,
+          standWithSeerId: null,
+          emotion: emoM ? emoM[1] : null
+        };
+      }
+    }
+    return null;
+  }
+
+  const plainClean = normalizeGeminiSpeechText(raw);
+  if (!plainClean) return null;
   return {
     parsedJson: false,
-    text: raw,
+    text: plainClean,
     accuseId: null,
     vouchId: null,
     claimRole: null,
@@ -350,13 +416,14 @@ function parseGeminiStructuredSpeech(rawText) {
   };
 }
 
-function syncGeminiSpeechMeta(speaker, generated, liveRes) {
+function syncGeminiSpeechMeta(speaker, generated, liveRes, opts) {
   if (!speaker || !generated || !liveRes) return generated;
+  const deferSeatMutation = Boolean(opts && opts.deferSeatMutation);
   if (typeof liveRes === "string") {
-    generated.text = liveRes;
+    generated.text = normalizeGeminiSpeechText(liveRes) || generated.text;
     return generated;
   }
-  if (liveRes.text) generated.text = liveRes.text;
+  if (liveRes.text) generated.text = normalizeGeminiSpeechText(liveRes.text) || generated.text;
   if (!liveRes.parsedJson) {
     return (typeof sanitizeSpeechMeta === "function") ? sanitizeSpeechMeta(speaker, generated) : generated;
   }
@@ -400,10 +467,10 @@ function syncGeminiSpeechMeta(speaker, generated, liveRes) {
     if (liveRes.claimRole === "seer") {
       generated.claimSeer = true;
       generated.claimRole = "seer";
-      speaker.claimedRole = "seer";
+      if (!deferSeatMutation) speaker.claimedRole = "seer";
     } else if (!speaker.claimedRole || speaker.claimedRole === liveRes.claimRole) {
       generated.claimRole = liveRes.claimRole;
-      speaker.claimedRole = liveRes.claimRole;
+      if (!deferSeatMutation) speaker.claimedRole = liveRes.claimRole;
     }
   }
   if (Array.isArray(liveRes.wolfPits)) generated.wolfPits = liveRes.wolfPits;
@@ -601,7 +668,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
     "4. 【嚴禁 AI 機器味與朗讀播報腔・像真實台灣人圍桌講話】禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或誇張卡通口號！現代角色請務必用台灣真人圓桌聊天碎句口語（可自然穿插「欸等一下」「老實說吼」「不是啊你看」「我剛聽下來覺得」等呼吸短句，只有墨白、晴嵐、阿竹保持古風或詩茶雅韻），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感），自然接前一位的話回嘴或讚聲，用專屬收尾結束。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
-    "6. 保持鮮明口語節奏（" + (totalSeatsNow >= 10 ? "50～88字" : "60～105字") + "、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
+    "6. 【嚴格控制字數與純口語格式】整段台詞必須為單一段落、嚴格控制在 " + (totalSeatsNow >= 10 ? "50～85字" : "55～95字") + "（切勿長篇大論、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
     '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":"seer"|"witch"|"hunter"|"guard"|"elder"|null,"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
 
   const audit = typeof auditLlmPromptLeak === "function"
