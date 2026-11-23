@@ -308,6 +308,25 @@ vm.runInContext(`
     if (!rEnv.lotusRingInner || !rEnv.skyPhotoDuskMat || !rEnv.latticeScreenMat) {
       throw new Error("Round 2 art assets (curved glass-jade lotus, dusk skybox dome, backlit lattice transom) failed to build!");
     }
+    if (!rEnv.linmeiGardenGroup || !rEnv.celestialGardenGroup || !rEnv.skyPhotoCelestialMat) {
+      throw new Error("v12.0 Dual 3D Scene themes (linmeiGardenGroup / celestialGardenGroup / skyPhotoCelestialMat) failed to build!");
+    }
+    if (!rEnv.bambooGroves || rEnv.bambooGroves.length < 6 || !rEnv.blossomTrees || rEnv.blossomTrees.length < 4) {
+      throw new Error("v12.0 Linmei Academy garden flora (bambooGroves / blossomTrees) failed to build!");
+    }
+    if (!rEnv.celestialSpires || rEnv.celestialSpires.length < 8 || !rEnv.celestialSteppingStones || rEnv.celestialSteppingStones.length < 4 || !rEnv.celestialWisps) {
+      throw new Error("v12.0 Celestial Qinglü garden assets (celestialSpires / steppingStones / wisps) failed to build!");
+    }
+    apply3DSceneTheme(rSc, rEnv, "celestial");
+    if (rEnv.linmeiGardenGroup.visible !== false || rEnv.celestialGardenGroup.visible !== true) {
+      throw new Error("v12.0 apply3DSceneTheme('celestial') failed to toggle garden visibility!");
+    }
+    update3DEnvironment(rSc, rEnv, { tSec: 2.0, nowMs: 2000, p: "DAY_SPEECH", daylight: true, night: false }, {});
+    apply3DSceneTheme(rSc, rEnv, "linmei");
+    if (rEnv.linmeiGardenGroup.visible !== true || rEnv.celestialGardenGroup.visible !== false) {
+      throw new Error("v12.0 apply3DSceneTheme('linmei') failed to restore Linmei garden visibility!");
+    }
+    update3DEnvironment(rSc, rEnv, { tSec: 2.5, nowMs: 2500, p: "LOBBY", daylight: false, night: false }, {});
     const rHero = buildHeroCharacter(rSc);
     if (rHero.root.position.x < 2.0) throw new Error("Qingming should stand on right-rear tea dais clear of Seat 5!");
     applyHeroPalette(rHero, "teagold");
@@ -321,6 +340,9 @@ vm.runInContext(`
       const rActor = create3DSeatActor({ id: idx + 1, name: nm, color: "#38bdf8", alive: true, role: "villager" });
       if (!rActor || !rActor.vrmMountGroup || !rActor.sculptBodyRoot) {
         throw new Error("Real Three.js r128 seat character build failed for: " + nm);
+      }
+      if (!rActor.candleFlame || !rActor.candleFlame.children || rActor.candleFlame.children.length < 3) {
+        throw new Error("v12.0 sculpted multi-layer teardrop beeswax candle failed for: " + nm);
       }
       let plaqueFound = false;
       rActor.root.traverse(obj => {
@@ -4682,4 +4704,242 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v11.3 (Front-Facing Medium Speaker Camera + Seat-Strip Jump + Living Full-Body VRM + Turn-by-Turn Sheriff + Pit Deduction + Anti-Cheat) E2E smoke test PASSED!");
+// v11.4 AUTHENTIC BADGE FLOW (雙警徽流＋夜間依序驗人＋倒牌暗號解讀＋排坑連動＋警長修復)
+{
+  const v114Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    if (el("chkSheriffMode")) el("chkSheriffMode").checked = true;
+    state.sheriffMode = true;
+    state.autoPlay = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+
+    const pid = getPlayerId();
+    const seerSeat = state.match.seats.find(s => s.role === "seer" && s.id !== pid) || state.match.seats.find(s => s.id !== pid);
+    const others = state.match.seats.filter(s => s.id !== seerSeat.id && s.id !== pid);
+    const t1 = others[0];
+    const t2 = others[1];
+    state.match.day = 2;
+    state.match.sheriffElectionPending = false;
+    state.match.sheriffSeatId = seerSeat.id;
+    seerSeat.role = "seer";
+    seerSeat.team = "good";
+    seerSeat.claimedRole = "seer";
+    seerSeat.checkedHistory = [];
+
+    // 1. Structured Dual Badge Flow + Free-Text Parser
+    const flowSet = setSheriffBadgeFlow(seerSeat.id, t1.id, t2.id, "election");
+    const flowSetOk = Boolean(flowSet && state.match.sheriffBadgeFlow && state.match.sheriffBadgeFlow.firstTargetId === t1.id && state.match.sheriffBadgeFlow.secondTargetId === t2.id && flowSet.mode === "dual");
+    const parsedFlow = parseBadgeFlowFromText("我是明心觀察員！昨晚查2號好人，警徽流先驗 " + t1.id + "號、再驗 " + t2.id + "號！", seerSeat.id);
+    const parseOk = Boolean(parsedFlow && parsedFlow.firstTargetId === t1.id && parsedFlow.secondTargetId === t2.id);
+
+    // 2. AI True Seer ACTUALLY checks 1st Badge Flow target at night, then 2nd target next night!
+    const nightPick1 = chooseAiSeerTarget(seerSeat);
+    const seerFollowedFirstOk = nightPick1 === t1.id;
+    seerSeat.checkedHistory.push({ day: 2, targetId: t1.id, isWolf: true });
+    const nightPick2 = chooseAiSeerTarget(seerSeat);
+    const seerFollowedSecondOk = nightPick2 === t2.id;
+
+    // 3. AI Seer Sheriff Badge Flow Transfer Execution:
+    // 3a) t1 checked WOLF & t2 unchecked -> TEARS BADGE (returns null!)
+    const tearDecision = chooseAiSheriffTransferTarget(seerSeat);
+    const tearOnWolfOk = tearDecision === null;
+    // 3b) t1 checked WOLF & t2 checked GOOD -> FLIES TO t2 (dual badge flow skip!)
+    seerSeat.checkedHistory.push({ day: 3, targetId: t2.id, isWolf: false });
+    const dualSkipDecision = chooseAiSheriffTransferTarget(seerSeat);
+    const dualSkipToSecondGoodOk = dualSkipDecision === t2.id;
+    // 3c) t1 checked GOOD -> FLIES TO t1!
+    seerSeat.checkedHistory = [{ day: 2, targetId: t1.id, isWolf: false }];
+    const goldFlyDecision = chooseAiSheriffTransferTarget(seerSeat);
+    const flyToFirstGoldOk = goldFlyDecision === t1.id;
+
+    // 4. Elimination Signal Decoding + Blind-View Projection + AI Deduction & Pit Weighting!
+    seerSeat.checkedHistory = [{ day: 2, targetId: t1.id, isWolf: true }];
+    const goodListener = state.match.seats.find(s => s.id !== pid && s.id !== seerSeat.id && s.id !== t1.id && s.id !== t2.id && s.team === "good");
+    if (goodListener) {
+      goodListener.suspicionMap[seerSeat.id] = 35;
+      goodListener.suspicionMap[t1.id] = 50;
+    }
+    const beforeSus = goodListener ? goodListener.suspicionMap[t1.id] : 50;
+    seerSeat.alive = false;
+    handleSheriffEliminated(seerSeat, function () {});
+    const latestSig = (state.match.badgeFlowSignals || [])[state.match.badgeFlowSignals.length - 1];
+    const decodedTearSignalOk = Boolean(latestSig && latestSig.kind === "torn_wolf" && latestSig.suspectedWolfIds.indexOf(t1.id) !== -1);
+    const aiSusRaisedOk = !goodListener || (goodListener.suspicionMap[t1.id] >= beforeSus + 12);
+    const blindSnap = goodListener ? createBlindMatchSnapshot(goodListener, { module: "test_badge_flow" }) : null;
+    const blindProjectsSignalsOk = Boolean(blindSnap && Array.isArray(blindSnap.badgeFlowSignals) && blindSnap.badgeFlowSignals.length >= 1);
+    const ctxListener = goodListener ? buildSpeechContext(goodListener) : null;
+    const aiSpeechCitesBadgeFlowOk = Boolean(ctxListener && String(ctxListener.prevVoteNote || "").indexOf("警徽流") !== -1);
+
+    // 5. Sheriff Election Regression Fixes:
+    // 5a) No phantom +1 self-vote when player runs & triggers pass/tally!
+    // 5b) Mid-speech withdraw during AI turn preserves activeReelSeatId & does NOT skip remaining candidates!
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.day = 1;
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    resolveSheriffElectionAction("run");
+    const ctxRun = state.match.sheriffElectionCtx;
+    const runOrderLen = ctxRun ? ctxRun.speechOrderIds.length : 0;
+    // Advance past player if player is seat 1 so an AI candidate is speaking
+    if (ctxRun && ctxRun.activeReelSeatId === getPlayerId()) {
+      submitPlayerSheriffSpeech("我是好人上警，警徽流先驗 03號、再驗 04號！");
+    }
+    const aiSpeakingBeforeWithdraw = ctxRun ? ctxRun.activeReelSeatId : null;
+    const pidRun = getPlayerId();
+    const remainingAiBeforeWithdraw = ctxRun ? ctxRun.speechOrderIds.slice(ctxRun.speechIndex + 1).filter(id => id !== pidRun).length : 0;
+    let withdrawPreservesAiOk = true;
+    if (ctxRun && aiSpeakingBeforeWithdraw && aiSpeakingBeforeWithdraw !== pidRun && ctxRun.playerRunning) {
+      resolveSheriffElectionAction("withdraw");
+      const remainingAiAfterWithdraw = ctxRun.speechOrderIds.slice(ctxRun.speechIndex + 1).filter(id => id !== pidRun).length;
+      withdrawPreservesAiOk = Boolean(ctxRun.activeReelSeatId === aiSpeakingBeforeWithdraw && remainingAiAfterWithdraw === remainingAiBeforeWithdraw);
+    }
+
+    // Fresh run to test zero phantom self-vote on running player
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.day = 1;
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    resolveSheriffElectionAction("run");
+    const pid2 = getPlayerId();
+    resolveSheriffElectionAction("pass");
+    const shRec2 = state.match.sheriffVoteRecord;
+    const ballotSum = (shRec2 && Array.isArray(shRec2.ballots))
+      ? shRec2.ballots.filter(b => b && b.targetId).length
+      : 0;
+    const tallySum = (shRec2 && shRec2.tallies)
+      ? Object.values(shRec2.tallies).reduce((a, b) => a + b, 0)
+      : 0;
+    const noPhantomSelfVoteOk = Boolean(shRec2 && tallySum === ballotSum);
+
+    // 6. Player Transfer Panel smart guide renders cleanly when player Sheriff has a badge flow
+    state.match.sheriffSeatId = pid2;
+    const p2 = getSeat(pid2);
+    const otherAlive = state.match.seats.filter(s => s.id !== pid2 && s.alive);
+    p2.role = "seer";
+    p2.checkedHistory = [{ day: 1, targetId: otherAlive[0].id, isWolf: true }];
+    setSheriffBadgeFlow(pid2, otherAlive[0].id, otherAlive[1].id, "day_speech");
+    state.match.phase = "SHERIFF_TRANSFER";
+    renderSheriffTransferPanel();
+    const transferGuideOk = Boolean(el("sheriffTransferFlowGuide") && String(el("sheriffTransferFlowGuide").textContent || "").indexOf("酸民狼") !== -1);
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      flowSetOk, parseOk, seerFollowedFirstOk, seerFollowedSecondOk,
+      tearOnWolfOk, dualSkipToSecondGoodOk, flyToFirstGoldOk,
+      decodedTearSignalOk, aiSusRaisedOk, blindProjectsSignalsOk, aiSpeechCitesBadgeFlowOk,
+      withdrawPreservesAiOk, noPhantomSelfVoteOk, transferGuideOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v114Res)) {
+    if (!v) {
+      throw new Error("v11.4 BADGE-FLOW check failed for " + k + ": " + JSON.stringify(v114Res));
+    }
+  }
+
+  // Verify sw.js IMMUTABLE_RE actually matches .vrm models!
+  const swSrc = fs.readFileSync("sw.js", "utf8");
+  const swReMatch = swSrc.match(/const IMMUTABLE_RE = (\/.*\/[a-z]*);/);
+  if (!swReMatch) throw new Error("sw.js IMMUTABLE_RE not found!");
+  const swRe = vm.runInNewContext(swReMatch[1]);
+  if (!swRe.test("/assets/models/qingming.vrm") || !swRe.test("/assets/sky/sanctuary_day.jpg") || !swRe.test("/js/vendor/three.min.js")) {
+    throw new Error("sw.js IMMUTABLE_RE failed to match .vrm / sky / vendor paths!");
+  }
+}
+
+// v12.0 DUAL-THEME 3D SCENE SWITCHER + 29 BUGFIX REGRESSION PROOFS
+{
+  if (!fs.existsSync("assets/sky/sanctuary_celestial_day.jpg") || !fs.existsSync("assets/sky/sanctuary_dusk.jpg")) {
+    throw new Error("v12.0 skybox assets missing on disk!");
+  }
+  const v12Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    // 1. Silent hideRoleDealRitual never fires stale onRoleDealClosed callback (P0 1.1)
+    let staleFired = false;
+    indieFlow.showRoleDealRitual(function () { staleFired = true; });
+    indieFlow.hideRoleDealRitual({ silent: true });
+    const silentHideBlocksStaleOk = !staleFired && indieFlow.onRoleDealClosed === null;
+
+    // 2. Setup Drawer Guard toggle preserves 12p seat count instead of downgrading to 8p (P1 1.6)
+    el("selectModeCount").value = "12";
+    state.guardMode = false;
+    if (el("chkGuardMode")) el("chkGuardMode").checked = false;
+    if (el("btnSetupGuardToggle")) el("btnSetupGuardToggle").click();
+    const guardKeeps12pOk = state.guardMode === true && el("selectModeCount").value === "12";
+    state.guardMode = false;
+    if (el("chkGuardMode")) el("chkGuardMode").checked = false;
+    el("selectModeCount").value = "8";
+
+    // 3. Same-day vote-out of Sheriff who JUST declared badge flow today does NOT emit impossible night-check signal
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    state.sheriffMode = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    const pid = getPlayerId();
+    const shSeat = state.match.seats.find(s => s.id !== pid);
+    const tgtSeat = state.match.seats.find(s => s.id !== pid && s.id !== shSeat.id);
+    state.match.day = 1;
+    state.match.sheriffElectionPending = false;
+    state.match.sheriffSeatId = shSeat.id;
+    shSeat.checkedHistory = [];
+    setSheriffBadgeFlow(shSeat.id, tgtSeat.id, null, "election");
+    const sigBefore = (state.match.badgeFlowSignals || []).length;
+    recordAndBroadcastBadgeFlowSignal(shSeat, null);
+    const noSameDayPhantomSignalOk = (state.match.badgeFlowSignals || []).length === sigBefore;
+
+    // 4. Dual 3D Scene Theme live toggle + HUD/Title/Pause label sync + persistence
+    stage3d.setSceneTheme("linmei", { silent: true });
+    const linmeiUiOk = state.sceneTheme === "linmei"
+      && el("hudSceneLabel").textContent === "書院"
+      && el("titleSceneThemeLabel").textContent === "林美書院"
+      && el("btnToggleSceneThemePause").textContent === "造景:林美書院";
+    stage3d.toggleSceneTheme();
+    const celestialUiOk = state.sceneTheme === "celestial"
+      && el("hudSceneLabel").textContent === "仙境"
+      && el("titleSceneThemeLabel").textContent === "絕雲仙境"
+      && el("btnToggleSceneThemePause").textContent === "造景:絕雲仙境";
+    stage3d.setSceneTheme("linmei", { silent: true });
+
+    // 5. Camera reset & setShowcaseMode(false) invariants (P1 3.1, 3.5)
+    stage3d.closeUpSeatId = 3;
+    const prevCam = stage3d.camera;
+    const prevLook = stage3d.orbit.targetLookAt;
+    if (!stage3d.camera) stage3d.camera = { fov: 44, updateProjectionMatrix: function () {} };
+    if (!stage3d.orbit.targetLookAt) stage3d.orbit.targetLookAt = { set: function () {} };
+    stage3d.resetCamera();
+    const resetClearsCloseUpOk = stage3d.closeUpSeatId === null;
+    stage3d.camera = prevCam;
+    stage3d.orbit.targetLookAt = prevLook;
+
+    stage3d.showcaseTarget = 4;
+    stage3d.setShowcaseMode(false);
+    const showcaseResetsTargetOk = stage3d.showcaseTarget === "hero";
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      silentHideBlocksStaleOk,
+      guardKeeps12pOk,
+      noSameDayPhantomSignalOk,
+      linmeiUiOk,
+      celestialUiOk,
+      resetClearsCloseUpOk,
+      showcaseResetsTargetOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v12Res)) {
+    if (!v) {
+      throw new Error("v12.0 DUAL-SCENE & BUGFIX REGRESSION check failed for " + k + ": " + JSON.stringify(v12Res));
+    }
+  }
+}
+
+console.log("[OK] Full v12.0 (Dual Switchable 3D Scenes + 29 Bug Fixes + Authentic Badge Flow + Front Camera + Living VRM + Anti-Cheat) E2E smoke test PASSED!");

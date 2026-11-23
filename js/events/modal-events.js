@@ -4,7 +4,8 @@
 "use strict";
 
 function hasBlockingModalOpen() {
-  const modalIds = ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalFeedback", "modalPauseMenu", "heroSheetLightbox", "setupDrawer", "roleDealOverlay"];
+  if (typeof stage3d !== "undefined" && stage3d.showcaseMode) return true;
+  const modalIds = ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalFeedback", "modalPauseMenu", "heroSheetLightbox", "heroShowcaseOverlay", "setupDrawer", "roleDealOverlay"];
   return modalIds.some(function (mid) {
     const m = el(mid);
     return Boolean(m && m.classList && !m.classList.contains("hidden"));
@@ -75,6 +76,13 @@ function bindModalEvents() {
         } else {
           indieFlow.hideRoleDealRitual();
         }
+        return;
+      }
+    }
+    if ((ev.key === "j" || ev.key === "J") && state.match.started && typeof indieFlow !== "undefined") {
+      const jModQuick = el("modalJournal");
+      if (jModQuick && !jModQuick.classList.contains("hidden")) {
+        jModQuick.classList.add("hidden");
         return;
       }
     }
@@ -177,7 +185,8 @@ function bindModalEvents() {
       selectSeat(seatKeyMap[ev.key]);
     }
     else if (ev.key === "p" || ev.key === "P") {
-      if (state.match.started && el("btnPauseVoice") && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH")) {
+      const shSpeechNow = Boolean(state.match.phase === "SHERIFF_ELECTION" && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech");
+      if (state.match.started && el("btnPauseVoice") && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH" || shSpeechNow)) {
         el("btnPauseVoice").click();
       }
     }

@@ -438,10 +438,11 @@ function inspectSeatMicroExpression(seatId) {
   spawnBeam(pid, target.id, "#fbbf24", "emote", 720);
   nudgeSeat(target.id, { scale: 1.12, vScale: 0.14 });
   if (typeof stage3d !== "undefined" && stage3d.isActive()) {
-    stage3d.focusSeatCloseUp(target.id);
+    if (typeof stage3d.jumpToSeatFront === "function") stage3d.jumpToSeatFront(target.id);
+    else stage3d.focusSeatCloseUp(target.id);
     if (typeof orchestrator !== "undefined" && typeof orchestrator.schedule === "function") {
       orchestrator.schedule("micro_cam", function () {
-        if (typeof stage3d !== "undefined" && stage3d.isActive()) stage3d.clearCloseUp();
+        if (typeof stage3d !== "undefined" && stage3d.isActive() && !state.intelSeatId) stage3d.clearCloseUp();
       }, 2100);
     }
   }

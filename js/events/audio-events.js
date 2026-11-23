@@ -275,7 +275,7 @@ function bindAudioVoiceEvents() {
     if (!voice.enabled) {
       voice.stop();
       maybeScheduleAutoAdvanceAfterSpeech();
-    } else if ((state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH") && state.typewriter.fullText) {
+    } else if ((state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH" || (state.match.phase === "SHERIFF_ELECTION" && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech")) && state.typewriter.fullText) {
       const sp = getSeat(state.activeSpeakerId);
       if (voice.canSpeak()) {
         voice.speakCharacter(sp, state.typewriter.fullText, "normal", function () {

@@ -639,11 +639,23 @@ function tryRoleSpecificSpeech(speaker, ctx) {
 
     speaker.claimedRole = "seer";
     const checkedIdsAll = speaker.checkedHistory.map(function (c) { return c.targetId; });
-    const nextPlan = aliveOthers.find(function (s) { return checkedIdsAll.indexOf(s.id) === -1 && s.id !== latest.targetId; });
+    const uncheckedAlive = aliveOthers.filter(function (s) { return checkedIdsAll.indexOf(s.id) === -1 && s.id !== latest.targetId; });
+    const nextPlan = uncheckedAlive[0] || aliveOthers.find(function (s) { return s.id !== latest.targetId; }) || null;
+    const nextPlan2 = uncheckedAlive.find(function (s) { return nextPlan && s.id !== nextPlan.id; }) || null;
+    const isSpeakerSheriff = Boolean(snap && snap.sheriffSeatId === speaker.id);
+    if (isSpeakerSheriff && nextPlan && typeof setSheriffBadgeFlow === "function") {
+      setSheriffBadgeFlow(speaker.id, nextPlan.id, nextPlan2 ? nextPlan2.id : null, "day_speech");
+    }
     const fakeSeerSeat = priorFakeSeerEv ? readSeat(priorFakeSeerEv.speakerId) : null;
     const fakeSeerAlive = Boolean(fakeSeerSeat && fakeSeerSeat.alive && fakeSeerSeat.id !== speaker.id);
     const fakeCallout = priorFakeSeerEv ? ("剛才前置位 " + seatLabel(fakeSeerSeat) + " 根本是在冒充明心觀察員騙人，") : "";
-    const planNote = nextPlan ? ("今晚我計畫再去查驗 " + seatLabel(nextPlan) + " 幫大家把關！") : "";
+    const planNote = nextPlan
+      ? (isSpeakerSheriff
+        ? (nextPlan2
+          ? ("今晚更新雙警徽流：先驗 " + seatLabel(nextPlan) + "、再驗 " + seatLabel(nextPlan2) + "（我若倒牌，徽給" + fmtSeatNum(nextPlan.id) + "號即金水、飛" + fmtSeatNum(nextPlan2.id) + "號或撕徽即查殺）！")
+          : ("今晚警徽流鎖定 " + seatLabel(nextPlan) + "（我若倒牌，徽給他即金水、撕徽即查殺）！"))
+        : ("今晚我計畫再去查驗 " + seatLabel(nextPlan) + " 幫大家把關！"))
+      : "";
     const checkedGoods = aliveChecks.filter(function (c) { return !c.isWolf; }).map(function (c) { return c.targetId; });
     const checkedWolves = aliveChecks.filter(function (c) { return c.isWolf; }).map(function (c) { return c.targetId; });
 
@@ -733,6 +745,15 @@ function tryRoleSpecificSpeech(speaker, ctx) {
         speaker.fakeCheckedIds.push(frameTarget.id);
       }
       const secondFrame = nonWolves.find(function (s) { return s.id !== frameTarget.id; });
+      const isFakeWolfSheriff = Boolean(snap && snap.sheriffSeatId === speaker.id);
+      let fakeFlowTail = "";
+      if (isFakeWolfSheriff && secondFrame && typeof setSheriffBadgeFlow === "function") {
+        const fakeFlow2 = aliveOthers.find(function (s) { return s.id !== frameTarget.id && s.id !== secondFrame.id; }) || null;
+        setSheriffBadgeFlow(speaker.id, secondFrame.id, fakeFlow2 ? fakeFlow2.id : null, "day_speech");
+        fakeFlowTail = fakeFlow2
+          ? ("今晚我的警徽流改留先驗 " + seatLabel(secondFrame) + "、再驗 " + seatLabel(fakeFlow2) + "，大家放心看我手勢！")
+          : ("今晚我的警徽流鎖定 " + seatLabel(secondFrame) + "！");
+      }
       return {
         targetId: frameTarget.id,
         relationType: "suspect",
@@ -746,7 +767,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
         checkedWolfId: frameTarget.id,
         checkedGoodId: null,
         hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 2),
-        text: fill(flv.fakeSeer, { t: seatLabel(frameTarget) })
+        text: fill(flv.fakeSeer, { t: seatLabel(frameTarget) }) + fakeFlowTail
       };
     }
   }

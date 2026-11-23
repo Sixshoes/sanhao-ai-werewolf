@@ -230,9 +230,11 @@ const stage3d = {
     if (this.renderer.shadowMap.enabled) this.renderer.shadowMap.needsUpdate = true;
     if (this.env && this.env.dirLight) this.env.dirLight.castShadow = !isEco;
     if (this.env && this.env.fireflyPoints) this.env.fireflyPoints.visible = q === "high";
+    if (this.env && this.env.celestialWisps) this.env.celestialWisps.visible = !isEco;
     if (this.env && this.env.teaSteamPoints) this.env.teaSteamPoints.visible = !isEco;
     if (this.env && this.env.petalGroup) this.env.petalGroup.visible = q === "high";
     if (this.env && this.env.godRaysGroup) this.env.godRaysGroup.visible = !isEco;
+    if (typeof this.syncSceneThemeUi === "function") this.syncSceneThemeUi();
     if (this.postfx) {
       const c = el("canvasStageWrap") || el("canvasContainer");
       const r = c ? c.getBoundingClientRect() : { width: 800, height: 450 };
@@ -264,6 +266,61 @@ const stage3d = {
       eco: "已切換為 3D「省電流暢」模式"
     };
     showToast(toastMap[state.quality3D] || toastMap.high, "emerald");
+  },
+
+  syncSceneThemeUi: function () {
+    const isCel = state.sceneTheme === "celestial";
+    const hudLbl = el("hudSceneLabel");
+    if (hudLbl) hudLbl.textContent = isCel ? "仙境" : "書院";
+    const hudBtn = el("btnToggleSceneThemeHud");
+    if (hudBtn) {
+      hudBtn.classList.toggle("is-active", isCel);
+      hudBtn.title = isCel
+        ? "目前造景：空靈青綠山水仙境（點擊切換至林美山雅致書院）"
+        : "目前造景：林美山雅致書院（點擊切換至空靈青綠山水仙境）";
+    }
+    const titleLbl = el("titleSceneThemeLabel");
+    if (titleLbl) titleLbl.textContent = isCel ? "絕雲仙境" : "林美書院";
+    const titleBtn = el("btnTitleSceneTheme");
+    if (titleBtn) {
+      titleBtn.classList.toggle("is-celestial", isCel);
+      titleBtn.title = isCel
+        ? "目前造景：空靈青綠山水仙境（點擊切換回林美書院）"
+        : "目前造景：林美山雅致書院（點擊切換為空靈青綠仙境）";
+    }
+    const pauseBtn = el("btnToggleSceneThemePause");
+    if (pauseBtn) {
+      pauseBtn.textContent = isCel ? "造景:絕雲仙境" : "造景:林美書院";
+      pauseBtn.classList.toggle("is-accent", isCel);
+    }
+  },
+
+  setSceneTheme: function (themeKey, opts) {
+    const next = themeKey === "celestial" ? "celestial" : "linmei";
+    state.sceneTheme = next;
+    if (this.scene && this.env && typeof apply3DSceneTheme === "function") {
+      apply3DSceneTheme(this.scene, this.env, next);
+    }
+    this.syncSceneThemeUi();
+    saveUserPrefs();
+    if (!opts || !opts.silent) {
+      if (typeof sound !== "undefined" && typeof sound.tone === "function") {
+        sound.tone(next === "celestial" ? 659.25 : 523.25, 0.14, "sine", 0.06, 0);
+        sound.tone(next === "celestial" ? 880 : 659.25, 0.20, "triangle", 0.05, 0.07);
+      }
+      if (typeof showToast === "function") {
+        showToast(
+          next === "celestial"
+            ? "已切換 3D 造景：空靈青綠山水仙境（浮空翠峰＋靈氣雲嵐）"
+            : "已切換 3D 造景：林美山雅致書院（翠竹林＋暖黃桂花與山櫻）",
+          "emerald"
+        );
+      }
+    }
+  },
+
+  toggleSceneTheme: function () {
+    this.setSceneTheme(state.sceneTheme === "celestial" ? "linmei" : "celestial");
   },
 
   raycastIdCard: function (clientX, clientY) {
@@ -342,6 +399,10 @@ const stage3d = {
 
   focusSeatCloseUp: function (seatId) {
     if (!this.isActive() || !this.seats || !this.seats.anchors[seatId]) return;
+    if (this.camPreset === "firstperson") {
+      this.glanceAtSeatInFirstPerson(seatId);
+      return;
+    }
     if (this.closeUpSeatId === seatId) {
       this.closeUpSeatId = null;
       this.orbit.userOverrideUntil = 0;
@@ -516,6 +577,7 @@ const stage3d = {
       if (this.hero && typeof triggerHeroAction === "function") triggerHeroAction(this.hero, "welcome_bow", 0);
       sound.playBlessing();
     } else {
+      this.showcaseTarget = "hero";
       this.resetCamera();
     }
     this.resize();
@@ -549,7 +611,7 @@ const stage3d = {
 
   setHeroAction: function (actionName, durationMs) {
     const tgt = this.showcaseTarget || "hero";
-    if (tgt !== "hero" && this.seats && this.seats.slots && this.seats.slots[tgt]) {
+    if (this.showcaseMode && tgt !== "hero" && this.seats && this.seats.slots && this.seats.slots[tgt]) {
       const actor = this.seats.slots[tgt];
       actor.showcaseAction = actionName === "idle_breathe" ? "" : (actionName || "");
       actor.showcaseActionUntil = durationMs ? (performance.now() + durationMs) : 0;
@@ -561,8 +623,8 @@ const stage3d = {
         celebrate: "laugh",
         idle_breathe: "neutral"
       };
-      if (typeof triggerSeatEmotion === "function") {
-        triggerSeatEmotion(tgt, emoMap[actionName] || "neutral", durationMs || 2600);
+      if (typeof setSeatEmotion === "function") {
+        setSeatEmotion(tgt, emoMap[actionName] || "neutral", durationMs || 2600);
       }
       if (typeof nudgeSeat === "function") {
         nudgeSeat(tgt, { scale: 1.09, vScale: 0.08 });
@@ -1035,6 +1097,7 @@ const stage3d = {
 
   setCameraPreset: function (preset) {
     this.camPreset = (preset === "firstperson" || preset === "overview") ? preset : "cinema";
+    this.closeUpSeatId = null;
     this.orbit.userOverrideUntil = 0;
     this.orbit.fpTargetYaw = 0;
     this.orbit.fpTargetPitch = -0.10;
@@ -1181,6 +1244,7 @@ const stage3d = {
   },
 
   resetCamera: function () {
+    this.closeUpSeatId = null;
     this.orbit.userOverrideUntil = 0;
     this.orbit.targetYaw = 0;
     this.orbit.targetPitch = this.camPreset === "overview" ? 0.96 : 0.52;
@@ -1529,7 +1593,7 @@ const stage3d = {
     const p = state.match.phase;
     const night = isNightPhase(p) || (p === "GAME_OVER" && state.match.winner === "wolf");
     const daylight = state.match.started && !night && p !== "LOBBY";
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, this.isIntegratedGpu ? 1.25 : 2);
 
     const f = {
       nowMs: nowMs,
@@ -1629,7 +1693,7 @@ function draw3DOverlayHud(ctx, f, coords) {
     const sx = node.x;
     const sy = node.y;
     const drawR = node.r;
-    const isSpeaking = (((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN") && s.alive) || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id;
+    const isSpeaking = (((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "SHERIFF_ELECTION") && s.alive) || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id;
     const isSelected = Boolean(inMatch && isPickPhase && state.selectedSeatId === s.id);
     const isSheriff = Boolean(inMatch && !state.match.sheriffElectionPending && s.alive && state.match.sheriffSeatId === s.id);
     const sheriffPrefix = isSheriff ? "👑 " : "";

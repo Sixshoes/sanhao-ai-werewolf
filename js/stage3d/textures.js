@@ -120,8 +120,10 @@ const stage3dTextures = {
   clearVrmPortrait: function (personaKey) {
     if (!personaKey) return;
     delete this.vrmPortraitUrls[personaKey];
-    if (personaKey === "你" && this.vrmPortraitUrls) {
-      delete this.vrmPortraitUrls["你_男"];
+    if (this.vrmPortraitImages) delete this.vrmPortraitImages[personaKey];
+    if (personaKey === "你") {
+      if (this.vrmPortraitUrls) delete this.vrmPortraitUrls["你_男"];
+      if (this.vrmPortraitImages) delete this.vrmPortraitImages["你_男"];
     }
   },
 
@@ -674,6 +676,238 @@ const stage3dTextures = {
     const tex = new THREE.CanvasTexture(c);
     tex.encoding = THREE.sRGBEncoding;
     this.cache.pineNeedle = tex;
+    return tex;
+  },
+
+  createBambooLeafTexture: function () {
+    if (this.cache.bambooLeaf) return this.cache.bambooLeaf;
+    const size = 192;
+    const c = document.createElement("canvas");
+    c.width = size;
+    c.height = size;
+    const ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, size, size);
+
+    // Delicate arched bamboo twig + layered lance-shaped jade leaves
+    ctx.strokeStyle = "#3f6a3c";
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.moveTo(96, 176);
+    ctx.quadraticCurveTo(92, 110, 102, 40);
+    ctx.stroke();
+
+    const leaves = [
+      [96, 146, -0.78, 52, 10, "#2f6b47"],
+      [96, 142, 0.72, 50, 10, "#3d8256"],
+      [94, 118, -1.05, 58, 11, "#4d9864"],
+      [96, 114, 0.96, 56, 11, "#397a50"],
+      [96, 90, -0.68, 60, 11, "#62b176"],
+      [98, 86, 0.65, 58, 11, "#4c9862"],
+      [99, 62, -0.42, 54, 10, "#79c88a"],
+      [101, 58, 0.44, 52, 10, "#5ea872"],
+      [102, 42, 0.04, 46, 9, "#8cd89a"]
+    ];
+    leaves.forEach(function (lf) {
+      ctx.save();
+      ctx.translate(lf[0], lf[1]);
+      ctx.rotate(lf[2]);
+      ctx.fillStyle = lf[5];
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(lf[4], -lf[3] * 0.48, 0, -lf[3]);
+      ctx.quadraticCurveTo(-lf[4], -lf[3] * 0.48, 0, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(218, 252, 224, 0.35)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(0, -3);
+      ctx.lineTo(0, -lf[3] * 0.85);
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    this.cache.bambooLeaf = tex;
+    return tex;
+  },
+
+  createBlossomClusterTexture: function (kind) {
+    const key = "blossom_" + (kind || "sakura");
+    if (this.cache[key]) return this.cache[key];
+    const size = 192;
+    const c = document.createElement("canvas");
+    c.width = size;
+    c.height = size;
+    const ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, size, size);
+
+    const isOsmanthus = kind === "osmanthus";
+    // Subtle dark-jade leaves tucked behind blossoms
+    for (let li = 0; li < 7; li++) {
+      const ang = (li / 7) * Math.PI * 2 + 0.3;
+      const lx = 96 + Math.cos(ang) * 44;
+      const ly = 96 + Math.sin(ang) * 38;
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(ang);
+      ctx.fillStyle = isOsmanthus ? "#2f6142" : "#3a6b4c";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 24, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Painterly blossom clusters (Osmanthus warm honey-gold vs Mountain Sakura blush-pink)
+    const count = isOsmanthus ? 26 : 18;
+    for (let bi = 0; bi < count; bi++) {
+      const rad = 14 + ((bi * 31) % 58);
+      const ang = bi * 2.39996;
+      const bx = 96 + Math.cos(ang) * rad;
+      const by = 96 + Math.sin(ang) * rad * 0.86;
+      const r = isOsmanthus ? (8 + (bi % 4) * 2.2) : (12 + (bi % 4) * 3.2);
+      const pal = isOsmanthus
+        ? (bi % 3 === 0 ? "#fde68a" : (bi % 2 === 0 ? "#fbbf24" : "#f59e0b"))
+        : (bi % 3 === 0 ? "#fff1f2" : (bi % 2 === 0 ? "#fbcfe8" : "#f9a8d4"));
+      ctx.fillStyle = pal;
+      const petals = isOsmanthus ? 4 : 5;
+      for (let pi = 0; pi < petals; pi++) {
+        const pa = (pi / petals) * Math.PI * 2 + bi * 0.4;
+        ctx.beginPath();
+        ctx.ellipse(bx + Math.cos(pa) * r * 0.52, by + Math.sin(pa) * r * 0.52, r * 0.56, r * 0.42, pa, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = isOsmanthus ? "#fffbeb" : "#fde68a";
+      ctx.beginPath();
+      ctx.arc(bx, by, r * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    this.cache[key] = tex;
+    return tex;
+  },
+
+  createCalligraphyScrollTexture: function () {
+    if (this.cache.calligraphyScroll) return this.cache.calligraphyScroll;
+    const w = 512;
+    const h = 256;
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext("2d");
+
+    // Warm aged Xuan-paper gradient + antique silk brocade borders
+    const bg = ctx.createLinearGradient(0, 0, w, h);
+    bg.addColorStop(0, "#f7eed8");
+    bg.addColorStop(0.5, "#efe2c3");
+    bg.addColorStop(1, "#e5d3ac");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = "#c9a66b";
+    ctx.fillRect(0, 0, 26, h);
+    ctx.fillRect(w - 26, 0, 26, h);
+    ctx.strokeStyle = "rgba(120, 74, 28, 0.45)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(32, 14, w - 64, h - 28);
+
+    // Subtle ink-wash mountain horizon along bottom of scroll
+    ctx.fillStyle = "rgba(68, 86, 98, 0.14)";
+    ctx.beginPath();
+    ctx.moveTo(36, h - 18);
+    ctx.quadraticCurveTo(130, h - 98, 230, h - 52);
+    ctx.quadraticCurveTo(340, h - 118, w - 36, h - 42);
+    ctx.lineTo(w - 36, h - 18);
+    ctx.closePath();
+    ctx.fill();
+
+    // Calligraphic Three-Goodness inscription
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#261912";
+    ctx.font = "900 44px 'Noto Serif TC', 'Songti TC', serif";
+    ctx.fillText("存好心・說好話・做好事", w * 0.5, h * 0.45);
+    ctx.fillStyle = "rgba(62, 42, 28, 0.72)";
+    ctx.font = "700 20px 'Noto Serif TC', serif";
+    ctx.fillText("林美山雲起茶席", w * 0.5, h * 0.72);
+
+    // Vermilion seal chop
+    ctx.fillStyle = "#b92c22";
+    ctx.fillRect(w - 92, h - 78, 34, 34);
+    ctx.fillStyle = "#fff7eb";
+    ctx.font = "900 22px 'Noto Serif TC', serif";
+    ctx.fillText("善", w - 75, h - 60);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    this.cache.calligraphyScroll = tex;
+    return tex;
+  },
+
+  createBalustradeLatticeTexture: function () {
+    if (this.cache.balustradeLattice) return this.cache.balustradeLattice;
+    const w = 256;
+    const h = 128;
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, w, h);
+
+    // Carved walnut East-Asian openwork fretwork railing (回字雲紋欄杆)
+    ctx.strokeStyle = "#4d2b18";
+    ctx.lineWidth = 10;
+    ctx.strokeRect(5, 5, w - 10, h - 10);
+    ctx.strokeStyle = "#693b21";
+    ctx.lineWidth = 6;
+    ctx.strokeRect(18, 18, w - 36, h - 36);
+    // Vertical carved mullions & geometric fret squares
+    const panels = 4;
+    const pw = (w - 36) / panels;
+    for (let i = 0; i < panels; i++) {
+      const px = 18 + i * pw;
+      ctx.strokeRect(px + 6, 26, pw - 12, h - 52);
+      ctx.strokeStyle = "#b88a44";
+      ctx.lineWidth = 2.6;
+      ctx.strokeRect(px + 14, 34, pw - 28, h - 68);
+      ctx.strokeStyle = "#693b21";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(px + pw * 0.5, 18);
+      ctx.lineTo(px + pw * 0.5, 34);
+      ctx.moveTo(px + pw * 0.5, h - 34);
+      ctx.lineTo(px + pw * 0.5, h - 18);
+      ctx.stroke();
+    }
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    this.cache.balustradeLattice = tex;
+    return tex;
+  },
+
+  createCelestialSunGlowTexture: function () {
+    if (this.cache.celestialSunGlow) return this.cache.celestialSunGlow;
+    const size = 256;
+    const c = document.createElement("canvas");
+    c.width = size;
+    c.height = size;
+    const ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, size, size);
+    const g = ctx.createRadialGradient(size * 0.5, size * 0.5, 4, size * 0.5, size * 0.5, size * 0.5);
+    g.addColorStop(0.0, "rgba(255, 255, 245, 1.0)");
+    g.addColorStop(0.18, "rgba(255, 244, 200, 0.88)");
+    g.addColorStop(0.42, "rgba(253, 214, 130, 0.38)");
+    g.addColorStop(0.72, "rgba(251, 185, 92, 0.10)");
+    g.addColorStop(1.0, "rgba(251, 185, 92, 0.0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    this.cache.celestialSunGlow = tex;
     return tex;
   },
 

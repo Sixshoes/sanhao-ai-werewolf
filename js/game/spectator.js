@@ -320,6 +320,9 @@ function toggleSpectatorFastForward() {
   }
   state.spectatorFastForward = !state.spectatorFastForward;
   if (state.spectatorFastForward) {
+    if (typeof state._preSpectatorAutoPlay !== "boolean") {
+      state._preSpectatorAutoPlay = Boolean(state.autoPlay);
+    }
     state.autoPlay = true;
     if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     showToast("⚡ 已開啟 2× 觀戰快進，自動加速推進至結局！", "emerald");
@@ -336,6 +339,10 @@ function toggleSpectatorFastForward() {
       return true;
     }
   } else {
+    if (typeof state._preSpectatorAutoPlay === "boolean") {
+      state.autoPlay = state._preSpectatorAutoPlay;
+      state._preSpectatorAutoPlay = null;
+    }
     showToast("已關閉 2× 觀戰快進，恢復正常語速。", "gold");
   }
   updateAllUI();
@@ -372,7 +379,7 @@ function renderSpectatorGuessPanel() {
   const progress = document.createElement("span");
   progress.className = "text-[10px] text-slate-400 shrink-0";
   if (mode === "wolf_hunt") {
-    progress.textContent = "已選 " + g.wolfIds.length + "/2";
+    progress.textContent = "已選 " + g.wolfIds.length + "/" + wNeed;
   } else {
     const keys = getActiveGodRoleKeys();
     const filled = keys.filter(function (k) { return Boolean(g.godRoles[k]); }).length;

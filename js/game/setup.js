@@ -21,6 +21,14 @@ function startGuidedBeginnerMatch() {
 function startNewGame() {
   sound.unlock();
   clearStepTimer();
+  if (typeof indieFlow !== "undefined" && typeof indieFlow.hideRoleDealRitual === "function") {
+    indieFlow.hideRoleDealRitual({ silent: true });
+  }
+  if (state.spectatorFastForward && typeof state._preSpectatorAutoPlay === "boolean") {
+    state.autoPlay = state._preSpectatorAutoPlay;
+    state._preSpectatorAutoPlay = null;
+  }
+  state.spectatorFastForward = false;
   if (typeof orchestrator !== "undefined") orchestrator.beginNewEpoch("start_match");
 
   let count = parseInt(el("selectModeCount").value, 10) || 6;
@@ -252,6 +260,9 @@ function startNewGame() {
     sheriffElectionPending: Boolean(sheriffSeatId),
     sheriffElectionCtx: null,
     sheriffVoteRecord: null,
+    sheriffBadgeFlow: null,
+    sheriffBadgeFlowsBySeat: {},
+    badgeFlowSignals: [],
     sheriffOrderCtx: null,
     pendingVotedHunterId: null,
     pendingSheriffTransfer: null,

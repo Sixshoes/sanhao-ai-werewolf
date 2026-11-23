@@ -221,12 +221,20 @@ function renderNightRoleTipStrip(p, pSelf) {
   let tone = "is-good";
   if (p === "NIGHT_SEER") {
     const hist = pSelf.checkedHistory || [];
-    text = hist.length > 0
-      ? ("🔮 明心查驗本（請勿重複查）：" + hist.map(function (c) {
+    const pidNow = getPlayerId();
+    const myFlow = (state.match.sheriffBadgeFlow && state.match.sheriffBadgeFlow.ownerId === pidNow)
+      ? state.match.sheriffBadgeFlow
+      : ((state.match.sheriffBadgeFlowsBySeat && state.match.sheriffBadgeFlowsBySeat[pidNow]) || null);
+    const flowTip = (myFlow && myFlow.firstTargetId && typeof formatBadgeFlowSummary === "function")
+      ? ("👑 你的警徽流：" + formatBadgeFlowSummary(myFlow))
+      : "";
+    const histTip = hist.length > 0
+      ? ("🔮 已驗（勿重驗）：" + hist.map(function (c) {
         const cs = getSeat(c.targetId);
         return fmtSeatNum(c.targetId) + (cs ? cs.name : "") + "=" + (c.isWolf ? "酸民狼" : "好人");
       }).join(" ｜ "))
       : "";
+    text = [flowTip, histTip].filter(Boolean).join(" ∥ ");
   } else if (p === "NIGHT_WITCH") {
     const healOk = Boolean(state.match.witchPotions && state.match.witchPotions.heal);
     const purOk = Boolean(state.match.witchPotions && state.match.witchPotions.purify);
@@ -501,11 +509,78 @@ function renderSheriffTransferPanel() {
   if (!box) return;
   box.innerHTML = "";
   const pid = getPlayerId();
+  const pSeat = getPlayerSeat();
+  const m = state.match || {};
+  const myFlow = (m.sheriffBadgeFlow && m.sheriffBadgeFlow.ownerId === pid)
+    ? m.sheriffBadgeFlow
+    : ((m.sheriffBadgeFlowsBySeat && m.sheriffBadgeFlowsBySeat[pid]) || null);
+  const f1 = myFlow ? myFlow.firstTargetId : null;
+  const f2 = myFlow ? myFlow.secondTargetId : null;
+  const isSeerP = Boolean(pSeat && pSeat.role === "seer");
+  const getMyChk = function (sid) {
+    if (!isSeerP || !Array.isArray(pSeat.checkedHistory)) return null;
+    return pSeat.checkedHistory.slice().reverse().find(function (c) { return c && c.targetId === sid; }) || null;
+  };
+  const f1Chk = f1 ? getMyChk(f1) : null;
+  const f2Chk = f2 ? getMyChk(f2) : null;
+
+  const guideEl = el("sheriffTransferFlowGuide");
+  if (guideEl) {
+    if (myFlow && f1 && typeof formatBadgeFlowSummary === "function") {
+      const f1Lbl = typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(f1) : (fmtSeatNum(f1) + "號");
+      const f2Lbl = f2 ? (typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(f2) : (fmtSeatNum(f2) + "號")) : "";
+      const hasNightElapsedP = (m.day || 1) > (myFlow.dayDeclared || 1);
+      let guideText = hasNightElapsedP
+        ? ("👑 警徽流傳訊指南【" + formatBadgeFlowSummary(myFlow) + "】：飛給警1（" + f1Lbl + "）⇒ 全場解讀為金水；" +
+          (f2Lbl ? ("跳飛警2（" + f2Lbl + "）⇒ 報 " + f1Lbl + " 疑查殺、" + f2Lbl + " 金水；") : "") +
+          "直接撕徽 ⇒ 報 " + f1Lbl + " 高度疑為查殺！")
+        : ("👑 你今日才剛宣告警徽流【" + formatBadgeFlowSummary(myFlow) + "】、尚未經過夜晚查驗，請直接將警徽移交給你信任的存活夥伴或當場撕毀。");
+      let guideTone = "";
+      if (isSeerP && f1Chk) {
+        if (f1Chk.isWolf) {
+          guideTone = " is-wolf-alert";
+          guideText = "⚠️ 你昨夜查驗第一警徽流 " + f1Lbl + " 為【鍵盤酸民狼】！建議按下方「撕毀警徽」或改飛 " + (f2Lbl && f2Chk && !f2Chk.isWolf ? f2Lbl : "已驗好人") + "，將查殺暗號傳給全場！";
+        } else {
+          guideTone = " is-good-alert";
+          guideText = "✨ 你昨夜查驗第一警徽流 " + f1Lbl + " 為【書院好夥伴（金水）】！直接將警徽飛給 " + f1Lbl + "，即可向全場亮出警徽流金水認證！";
+        }
+      }
+      guideEl.textContent = guideText;
+      guideEl.className = "badge-flow-guide text-left" + guideTone;
+    } else {
+      guideEl.classList.add("hidden");
+    }
+  }
+
+  const shatterBtn = el("btnShatterSheriffBadge");
+  if (shatterBtn) {
+    if (f1) {
+      const f1LblS = typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(f1) : (fmtSeatNum(f1) + "號");
+      shatterBtn.textContent = "✕ 撕毀警徽（警徽流暗號：報 " + f1LblS + " 疑為查殺）";
+    } else {
+      shatterBtn.textContent = "✕ 撕毀警徽（本局不再有警長）";
+    }
+  }
+
   getAliveSeats().filter(function (s) { return s.id !== pid; }).forEach(function (s) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "cta-brass py-1.5 px-2.5 text-xs";
-    btn.textContent = "👑 交給 " + fmtSeatNum(s.id) + "號 " + s.name;
+    const chk = getMyChk(s.id);
+    let tagSuffix = "";
+    let cls = "cta-brass py-1.5 px-2.5 text-xs";
+    if (s.id === f1) {
+      if (chk && !chk.isWolf) { tagSuffix = "〔警1★金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-xs"; }
+      else if (chk && chk.isWolf) { tagSuffix = "〔警1⚠查殺〕"; cls = "cta-ink py-1.5 px-2.5 text-xs"; }
+      else { tagSuffix = "〔警1・報金水〕"; }
+    } else if (s.id === f2) {
+      if (chk && !chk.isWolf) { tagSuffix = "〔警2★金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-xs"; }
+      else { tagSuffix = "〔警2・跳飛〕"; }
+    } else if (chk && !chk.isWolf) {
+      tagSuffix = "〔已驗金水〕";
+      cls = "cta-celadon py-1.5 px-2.5 text-xs";
+    }
+    btn.className = cls;
+    btn.textContent = "👑 交給 " + fmtSeatNum(s.id) + "號 " + s.name + tagSuffix;
     btn.addEventListener("click", function () {
       if (typeof resolvePlayerSheriffTransfer === "function") resolvePlayerSheriffTransfer(s.id);
     });
@@ -613,7 +688,10 @@ function renderSheriffElectionPanel() {
         const badgeHtml = sp.tag
           ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold ' + (isClash ? "bg-rose-500/30 text-rose-200" : (isSeer ? "bg-violet-500/30 text-violet-200" : "bg-amber-500/25 text-amber-200")) + '">' + escapeHtml(sp.tag) + "</span>")
           : "";
-        row.innerHTML = badgeHtml + '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("👑 " + playerNumTag() + " 你") : (fmtSeatNum(sp.id) + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
+        const bfChipHtml = (sp.badgeFlow && sp.badgeFlow.firstTargetId && typeof formatBadgeFlowSummary === "function")
+          ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 border border-amber-400/40 text-amber-200">警徽流：' + escapeHtml(formatBadgeFlowSummary(sp.badgeFlow)) + "</span>")
+          : "";
+        row.innerHTML = badgeHtml + bfChipHtml + '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("👑 " + playerNumTag() + " 你") : (fmtSeatNum(sp.id) + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
         cBox.appendChild(row);
       });
     }
@@ -623,12 +701,64 @@ function renderSheriffElectionPanel() {
   const pTurnBox = el("sheriffPlayerTurnBox");
   if (pTurnBox) {
     pTurnBox.classList.toggle("hidden", !isPlayerSpeechNow);
+    const bfBar = el("sheriffPlayerBadgeFlowBar");
+    if (bfBar && isPlayerSpeechNow) {
+      bfBar.innerHTML = "";
+      const draftBf = ctx.playerBadgeFlowDraft || { firstTargetId: null, secondTargetId: null };
+      const aliveOtherSeats = getAliveSeats().filter(function (s) { return s.id !== pid; });
+      const lblBf = document.createElement("span");
+      lblBf.className = "font-bold shrink-0";
+      lblBf.textContent = "👑 雙警徽流設定：";
+      bfBar.appendChild(lblBf);
+
+      const mkSel = function (selName, placeholder, curVal, excludeId, onChangeFn) {
+        const sel = document.createElement("select");
+        sel.className = "badge-flow-select";
+        sel.name = selName;
+        sel.setAttribute("aria-label", placeholder);
+        const emptyOpt = document.createElement("option");
+        emptyOpt.value = "";
+        emptyOpt.textContent = placeholder;
+        sel.appendChild(emptyOpt);
+        aliveOtherSeats.forEach(function (s) {
+          if (excludeId && s.id === excludeId) return;
+          const op = document.createElement("option");
+          op.value = String(s.id);
+          op.textContent = fmtSeatNum(s.id) + "號 " + s.name;
+          if (curVal === s.id) op.selected = true;
+          sel.appendChild(op);
+        });
+        sel.addEventListener("change", function () {
+          sound.unlock();
+          onChangeFn(parseInt(sel.value, 10) || null);
+        });
+        return sel;
+      };
+      const sel1 = mkSel("electionBadgeFlow1", "第一警徽流（不留）", draftBf.firstTargetId, null, function (v1) {
+        const next2 = (draftBf.secondTargetId && draftBf.secondTargetId !== v1) ? draftBf.secondTargetId : null;
+        if (typeof setPlayerSheriffDraftBadgeFlow === "function") setPlayerSheriffDraftBadgeFlow(v1, next2);
+      });
+      const arrow = document.createElement("span");
+      arrow.textContent = "→";
+      arrow.className = "opacity-75 font-bold";
+      const sel2 = mkSel("electionBadgeFlow2", "第二警徽流（選填）", draftBf.secondTargetId, draftBf.firstTargetId, function (v2) {
+        if (typeof setPlayerSheriffDraftBadgeFlow === "function") setPlayerSheriffDraftBadgeFlow(draftBf.firstTargetId, v2);
+      });
+      const hintBf = document.createElement("span");
+      hintBf.className = "text-[10px] opacity-80";
+      hintBf.textContent = "（倒牌：徽給先位＝金水｜跳飛／撕徽＝查殺）";
+      bfBar.appendChild(sel1);
+      bfBar.appendChild(arrow);
+      bfBar.appendChild(sel2);
+      bfBar.appendChild(hintBf);
+    }
+
     const chipsBox = el("sheriffPlayerQuickChips");
     if (isPlayerSpeechNow && chipsBox) {
       chipsBox.innerHTML = "";
       const qOpts = (Array.isArray(ctx.playerQuickOptions) && ctx.playerQuickOptions.length)
         ? ctx.playerQuickOptions
-        : (typeof buildPlayerSheriffQuickOptions === "function" ? buildPlayerSheriffQuickOptions(pSeat) : []);
+        : (typeof buildPlayerSheriffQuickOptions === "function" ? buildPlayerSheriffQuickOptions(pSeat, ctx.playerBadgeFlowDraft) : []);
       qOpts.forEach(function (opt) {
         const card = document.createElement("button");
         card.type = "button";
@@ -637,7 +767,7 @@ function renderSheriffElectionPanel() {
           '<div class="text-[11px] font-bold text-amber-200">' + escapeHtml(opt.title) + '</div>' +
           '<div class="text-[10px] text-slate-300 line-clamp-2 mt-0.5">' + escapeHtml(opt.text) + '</div>';
         card.addEventListener("click", function () {
-          if (typeof submitPlayerSheriffSpeech === "function") submitPlayerSheriffSpeech(opt.text);
+          if (typeof submitPlayerSheriffSpeech === "function") submitPlayerSheriffSpeech(opt.text, opt.badgeFlow || null);
         });
         chipsBox.appendChild(card);
       });

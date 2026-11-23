@@ -64,17 +64,49 @@ const stage3dCharGeos = {
       ], 14);
       this.candleHolder = new THREE.LatheGeometry([
         new THREE.Vector2(0.01, 0.0),
-        new THREE.Vector2(0.145, 0.0),
-        new THREE.Vector2(0.125, 0.03),
-        new THREE.Vector2(0.068, 0.05),
-        new THREE.Vector2(0.088, 0.10),
-        new THREE.Vector2(0.078, 0.11)
+        new THREE.Vector2(0.158, 0.0),
+        new THREE.Vector2(0.142, 0.025),
+        new THREE.Vector2(0.108, 0.042),
+        new THREE.Vector2(0.056, 0.055),
+        new THREE.Vector2(0.098, 0.092),
+        new THREE.Vector2(0.118, 0.115),
+        new THREE.Vector2(0.082, 0.108)
+      ], 18);
+      // Close-up grade beeswax candle pillar with soft melted wax drip collar
+      this.candleStick = new THREE.LatheGeometry([
+        new THREE.Vector2(0.01, 0.0),
+        new THREE.Vector2(0.072, 0.0),
+        new THREE.Vector2(0.068, 0.12),
+        new THREE.Vector2(0.074, 0.21),
+        new THREE.Vector2(0.066, 0.255),
+        new THREE.Vector2(0.058, 0.275),
+        new THREE.Vector2(0.036, 0.262),
+        new THREE.Vector2(0.01, 0.260)
+      ], 16);
+      // Sculpted organic teardrop flame (zero sharp geometric cone!)
+      this.candleFlame = new THREE.LatheGeometry([
+        new THREE.Vector2(0.004, 0.0),
+        new THREE.Vector2(0.032, 0.024),
+        new THREE.Vector2(0.046, 0.062),
+        new THREE.Vector2(0.038, 0.108),
+        new THREE.Vector2(0.020, 0.146),
+        new THREE.Vector2(0.002, 0.172)
       ], 14);
+      this.candleFlameCore = new THREE.LatheGeometry([
+        new THREE.Vector2(0.002, 0.008),
+        new THREE.Vector2(0.020, 0.032),
+        new THREE.Vector2(0.024, 0.064),
+        new THREE.Vector2(0.012, 0.102),
+        new THREE.Vector2(0.001, 0.118)
+      ], 10);
     } else {
       this.torso = new THREE.CylinderGeometry(0.30, 0.36, 0.90, 14);
       this.lapSkirt = new THREE.CylinderGeometry(0.28, 0.44, 0.38, 14);
       this.teacup = new THREE.CylinderGeometry(0.095, 0.068, 0.13, 12);
       this.candleHolder = new THREE.CylinderGeometry(0.12, 0.14, 0.08, 12);
+      this.candleStick = new THREE.CylinderGeometry(0.065, 0.075, 0.28, 10);
+      this.candleFlame = new THREE.ConeGeometry(0.048, 0.16, 8);
+      this.candleFlameCore = new THREE.ConeGeometry(0.026, 0.10, 6);
     }
 
     // Seated lower body (thighs resting forward on cushion, shins dropping to courtyard stone, sculpted boots)
@@ -115,8 +147,8 @@ const stage3dCharGeos = {
     this.haloRing = new THREE.RingGeometry(0.56, 0.66, 28);
     this.hitCyl = new THREE.CylinderGeometry(0.76, 0.76, 2.55, 10);
     this.plaqueBox = new THREE.BoxGeometry(0.78, 0.28, 0.048);
-    this.candleStick = new THREE.CylinderGeometry(0.065, 0.075, 0.28, 10);
-    this.candleFlame = new THREE.ConeGeometry(0.055, 0.16, 8);
+    this.candleWick = new THREE.CylinderGeometry(0.005, 0.006, 0.032, 5);
+    this.candleHalo = new THREE.SphereGeometry(0.092, 10, 8);
     this.candleHit = new THREE.CylinderGeometry(0.16, 0.16, 0.52, 8);
     this.sheriffCrown = new THREE.ConeGeometry(0.036, 0.11, 5);
     this.sheriffRing = new THREE.TorusGeometry(0.125, 0.018, 8, 22);
@@ -916,18 +948,38 @@ function create3DSeatActor(seat) {
 
   const candleGroup = new THREE.Group();
   candleGroup.position.set(0.52, 0, -0.04);
-  const brassMat = new THREE.MeshStandardMaterial({ color: 0xc28b2c, roughness: 0.24, metalness: 0.85 });
+  const brassMat = new THREE.MeshStandardMaterial({ color: 0xc89232, roughness: 0.24, metalness: 0.86 });
   const candleHolder = new THREE.Mesh(G.candleHolder, brassMat);
   candleHolder.castShadow = true;
-  const candleStick = new THREE.Mesh(G.candleStick, new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.58 }));
-  candleStick.position.y = 0.20;
+  const WaxMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+  const candleStick = new THREE.Mesh(
+    G.candleStick,
+    new WaxMatCtor({ color: 0xfef3d4, emissive: 0xffb347, emissiveIntensity: 0.14, roughness: 0.42, metalness: 0.02, clearcoat: 0.35 })
+  );
+  candleStick.position.y = hasLatheHelper() ? 0.095 : 0.20;
   candleStick.castShadow = true;
-  const candleFlame = new THREE.Mesh(G.candleFlame, new THREE.MeshBasicMaterial({ color: 0xfde047 }));
-  candleFlame.position.y = 0.42;
+  const candleWick = new THREE.Mesh(G.candleWick, new THREE.MeshStandardMaterial({ color: 0x261a12, roughness: 0.9 }));
+  candleWick.position.y = 0.365;
+  const candleFlame = new THREE.Group();
+  candleFlame.position.y = 0.372;
+  const flameOuter = new THREE.Mesh(
+    G.candleFlame,
+    new THREE.MeshBasicMaterial({ color: 0xffa826, transparent: true, opacity: 0.86 })
+  );
+  const flameCore = new THREE.Mesh(
+    G.candleFlameCore,
+    new THREE.MeshBasicMaterial({ color: 0xfffbe6 })
+  );
+  const flameHalo = new THREE.Mesh(
+    G.candleHalo,
+    new THREE.MeshBasicMaterial({ color: 0xffbe4d, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  flameHalo.position.y = 0.075;
+  candleFlame.add(flameOuter, flameCore, flameHalo);
   const candleGlowMat = new THREE.MeshBasicMaterial({
     map: stage3dTextures.createCandleGlowTexture(),
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.58,
     blending: THREE.AdditiveBlending,
     depthWrite: false
   });
@@ -937,7 +989,7 @@ function create3DSeatActor(seat) {
   const candleHit = new THREE.Mesh(G.candleHit, new THREE.MeshBasicMaterial({ visible: false }));
   candleHit.position.y = 0.28;
   candleHit.userData = { candleSeatId: seat.id };
-  candleGroup.add(candleHolder, candleStick, candleFlame, candleGlow, candleHit);
+  candleGroup.add(candleHolder, candleStick, candleWick, candleFlame, candleGlow, candleHit);
   tablePropGroup.add(candleGroup);
 
   const teaGroup = new THREE.Group();

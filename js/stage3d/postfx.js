@@ -167,7 +167,8 @@ function build3DPostFx(renderer, scene, camera, opts) {
         const p = f.p;
         const isVote = (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT");
         const mood = f.daylight ? (isVote ? "vote" : "day") : (f.night ? "night" : "twilight");
-        const harmBoost = harmony >= 85 ? 0.05 : 0;
+        const isCelestial = Boolean(typeof state !== "undefined" && state.sceneTheme === "celestial");
+        const harmBoost = (harmony >= 85 ? 0.05 : 0) + (isCelestial ? 0.04 : 0);
 
         let tStrength = 0.22;
         let tThresh = 1.08;
@@ -179,11 +180,18 @@ function build3DPostFx(renderer, scene, camera, opts) {
         let sx = 0.005, sy = 0.006, sz = 0.011;
 
         if (mood === "day") {
-          tStrength = 0.11; tThresh = 1.26; tExp = 0.96;
-          tContrast = 1.07; tVig = 0.10;
-          rx = 1.02; gy = 1.01; bz = 0.98;
-          stx = 0.96; sty = 0.99; stz = 1.03;
-          sx = 0.004; sy = 0.005; sz = 0.008;
+          tStrength = isCelestial ? 0.16 : 0.12;
+          tThresh = isCelestial ? 1.18 : 1.24;
+          tExp = isCelestial ? 0.99 : 0.97;
+          tContrast = 1.06;
+          tVig = isCelestial ? 0.08 : 0.10;
+          rx = isCelestial ? 1.00 : 1.03;
+          gy = isCelestial ? 1.03 : 1.01;
+          bz = isCelestial ? 1.02 : 0.97;
+          stx = isCelestial ? 0.93 : 0.96;
+          sty = isCelestial ? 1.01 : 0.99;
+          stz = isCelestial ? 1.05 : 1.03;
+          sx = 0.004; sy = 0.006; sz = 0.009;
         } else if (mood === "vote") {
           tStrength = 0.27; tThresh = 1.02; tExp = 1.04;
           tContrast = 1.08; tVig = 0.18;

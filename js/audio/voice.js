@@ -368,7 +368,8 @@ const voice = {
     const hBars = document.getElementById("headerVoiceBars");
     if (hBars) hBars.classList.toggle("playing", active && this.enabled);
     const sWave = document.getElementById("speakerVoiceWave");
-    if (sWave && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH")) {
+    const inSheriffSpeech = Boolean(state.match.phase === "SHERIFF_ELECTION" && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech");
+    if (sWave && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH" || inSheriffSpeech)) {
       sWave.classList.toggle("playing", active || state.typewriter.active);
     }
   },
@@ -445,6 +446,8 @@ const voice = {
         try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); } catch (e) {}
         this.activeAudioNode = null;
       } else if (this.isSupported()) {
+        if (this.watchdogTimer) { clearTimeout(this.watchdogTimer); this.watchdogTimer = null; }
+        if (this.clauseTimer) { clearTimeout(this.clauseTimer); this.clauseTimer = null; }
         try { window.speechSynthesis.pause(); } catch (e) {}
       }
       if (typeof state !== "undefined" && state.stepTimer) {
@@ -463,6 +466,11 @@ const voice = {
       } else if (this.isSupported()) {
         try { window.speechSynthesis.resume(); } catch (e) {}
         this.setVisualSpeaking(true);
+        if (typeof this._resumePendingClause === "function") {
+          const fnResume = this._resumePendingClause;
+          this._resumePendingClause = null;
+          fnResume();
+        }
       }
       return false;
     }
@@ -850,20 +858,26 @@ const voice = {
         if (typeof onDone === "function") onDone();
       };
 
-      // Prevent desktop Chrome from pausing utterances
+      // Prevent desktop Chrome from pausing utterances (NEVER forcibly unpause when user explicitly paused!)
       this.keepAliveTimer = setInterval(function () {
-        if (seq !== self.utteranceSeq) return;
+        if (seq !== self.utteranceSeq || self.paused) return;
         try {
           if (window.speechSynthesis.paused) window.speechSynthesis.resume();
         } catch (e) {}
       }, 8500);
 
       const totalEstMs = Math.min(28000, Math.max(3600, Math.round((clean.length * 360) / baseRate) + clauses.length * 240 + 1400));
-      this.watchdogTimer = setTimeout(finishOnce, totalEstMs);
+      this.watchdogTimer = setTimeout(function () {
+        if (!self.paused) finishOnce();
+      }, totalEstMs);
 
       let idx = 0;
       function speakNextClause() {
         if (seq !== self.utteranceSeq) return;
+        if (self.paused) {
+          self._resumePendingClause = speakNextClause;
+          return;
+        }
         if (idx >= clauses.length) {
           finishOnce();
           return;

@@ -189,7 +189,7 @@ function syncSpeechAdvancedToggleLabel(player) {
 }
 
 function createEmptyPlayerDraftPits() {
-  return { wolfIds: [], goodIds: [], claimRole: null, standSeerId: null, evidenceClueId: null, turnKey: "" };
+  return { wolfIds: [], goodIds: [], claimRole: null, standSeerId: null, evidenceClueId: null, badgeFlowFirstId: null, badgeFlowSecondId: null, turnKey: "" };
 }
 
 function ensurePlayerDraftPits(seedIfNewTurn) {
@@ -324,6 +324,18 @@ function composePlayerPitSpeechText() {
       }
       parts.push("狼坑目前點進 " + fmtList(d.wolfIds) + shReason + "，邏輯最讓人起疑，建議今天集中檢視並優先公投 " + fmtSeatNum(d.wolfIds[0]) + "號！");
     }
+  }
+
+  if (d.badgeFlowFirstId && getSeat(d.badgeFlowFirstId) && getSeat(d.badgeFlowFirstId).alive) {
+    const f1s = getSeat(d.badgeFlowFirstId);
+    const f2s = (d.badgeFlowSecondId && d.badgeFlowSecondId !== d.badgeFlowFirstId) ? getSeat(d.badgeFlowSecondId) : null;
+    const f1Str = fmtSeatNum(f1s.id) + "號" + f1s.name;
+    const f2Str = (f2s && f2s.alive) ? (fmtSeatNum(f2s.id) + "號" + f2s.name) : "";
+    parts.push(
+      f2Str
+        ? (" 今晚警徽流改留先驗 " + f1Str + "、再驗 " + f2Str + "（我若倒牌，徽給" + fmtSeatNum(f1s.id) + "號即金水、飛" + fmtSeatNum(f2s.id) + "號或撕徽即查殺）！")
+        : (" 今晚警徽流鎖定 " + f1Str + "（我若倒牌，徽給他即金水、撕徽即查殺）！")
+    );
   }
 
   return parts.join("").trim();
@@ -534,28 +546,48 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   const shRefStrip = el("pitSheriffRefStrip");
   if (shRefStrip) {
     shRefStrip.innerHTML = "";
-    if (shRec) {
+    const activeBf = state.match.sheriffBadgeFlow || null;
+    const bfSigs = Array.isArray(state.match.badgeFlowSignals) ? state.match.badgeFlowSignals : [];
+    const latestSig = bfSigs.length > 0 ? bfSigs[bfSigs.length - 1] : null;
+    if (shRec || activeBf || latestSig) {
       shRefStrip.classList.remove("hidden");
-      const shGroups = {};
-      (shRec.ballots || []).forEach(function (b) {
-        if (b && b.voterId && b.targetId) {
-          if (!shGroups[b.targetId]) shGroups[b.targetId] = [];
-          shGroups[b.targetId].push(fmtSeatNum(b.voterId));
-        }
-      });
-      const shParts = (shRec.candidateIds || []).map(function (cid) {
-        const cs = getSeat(cid);
-        const voters = shGroups[cid] || [];
-        const cTag = (cid === shRec.winnerId ? "👑" : "") + fmtSeatNum(cid) + (cs ? (cid === pid ? "你" : cs.name) : "號");
-        return cTag + (voters.length ? ("←" + voters.join(",")) : "(無警下票)");
-      });
-      const withPart = (shRec.withdrawnIds || []).length
-        ? ("｜退水：" + shRec.withdrawnIds.map(function (wid) { return fmtSeatNum(wid) + "號"; }).join("、"))
-        : "";
+      const pieces = [];
+      if (shRec) {
+        const shGroups = {};
+        (shRec.ballots || []).forEach(function (b) {
+          if (b && b.voterId && b.targetId) {
+            if (!shGroups[b.targetId]) shGroups[b.targetId] = [];
+            shGroups[b.targetId].push(fmtSeatNum(b.voterId));
+          }
+        });
+        const shParts = (shRec.candidateIds || []).map(function (cid) {
+          const cs = getSeat(cid);
+          const voters = shGroups[cid] || [];
+          const cTag = (cid === shRec.winnerId ? "👑" : "") + fmtSeatNum(cid) + (cs ? (cid === pid ? "你" : cs.name) : "號");
+          return cTag + (voters.length ? ("←" + voters.join(",")) : "(無警下票)");
+        });
+        const withPart = (shRec.withdrawnIds || []).length
+          ? ("｜退水：" + shRec.withdrawnIds.map(function (wid) { return fmtSeatNum(wid) + "號"; }).join("、"))
+          : "";
+        pieces.push("👑 警長票型參考：" + (shParts.join(" ｜ ") || "直接推舉") + withPart);
+      }
       const txtSpan = document.createElement("span");
-      txtSpan.className = "truncate font-semibold";
-      txtSpan.textContent = "👑 警長票型參考：" + (shParts.join(" ｜ ") || "直接推舉") + withPart;
+      txtSpan.className = "pit-sheriff-text";
+      txtSpan.textContent = pieces.join(" ∥ ") || "👑 警徽流資訊";
       shRefStrip.appendChild(txtSpan);
+      if (activeBf && activeBf.firstTargetId && typeof formatBadgeFlowSummary === "function") {
+        const owLbl = typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(activeBf.ownerId) : (fmtSeatNum(activeBf.ownerId) + "號");
+        const bfPill = document.createElement("span");
+        bfPill.className = "pit-bf-pill shrink-0";
+        bfPill.textContent = "🧭 警徽流(" + owLbl + ")：" + formatBadgeFlowSummary(activeBf);
+        shRefStrip.appendChild(bfPill);
+      }
+      if (latestSig && latestSig.headline) {
+        const sigPill = document.createElement("span");
+        sigPill.className = "pit-bf-pill shrink-0";
+        sigPill.textContent = latestSig.headline;
+        shRefStrip.appendChild(sigPill);
+      }
       const openBtn = document.createElement("button");
       openBtn.type = "button";
       openBtn.className = "cta-ink text-[10px] px-2 py-0.5 shrink-0";
@@ -567,6 +599,67 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
       shRefStrip.appendChild(openBtn);
     } else {
       shRefStrip.classList.add("hidden");
+    }
+  }
+
+  // Interactive Daytime Badge-Flow Updater Bar (for alive Sheriff or Seer claimants!)
+  const bfBar = el("pitBadgeFlowBar");
+  if (bfBar) {
+    bfBar.innerHTML = "";
+    const isPlayerSheriffNow = Boolean(state.match.sheriffSeatId === pid);
+    const showDayBf = Boolean(
+      (state.sheriffMode || state.match.sheriffSeatId) &&
+      (isPlayerSheriffNow || player.role === "seer" || d.claimRole === "seer")
+    );
+    if (showDayBf) {
+      bfBar.classList.remove("hidden");
+      const bfLbl = document.createElement("span");
+      bfLbl.className = "font-bold shrink-0";
+      bfLbl.textContent = isPlayerSheriffNow ? "👑 留／改今晚警徽流：" : "🔮 預告警徽流：";
+      bfBar.appendChild(bfLbl);
+
+      const mkDayBfSel = function (selName, ph, curVal, exclId, onChg) {
+        const sel = document.createElement("select");
+        sel.className = "badge-flow-select";
+        sel.name = selName;
+        sel.setAttribute("aria-label", ph);
+        const op0 = document.createElement("option");
+        op0.value = "";
+        op0.textContent = ph;
+        sel.appendChild(op0);
+        aliveOthers.forEach(function (s) {
+          if (exclId && s.id === exclId) return;
+          const op = document.createElement("option");
+          op.value = String(s.id);
+          op.textContent = fmtSeatNum(s.id) + "號 " + s.name;
+          if (curVal === s.id) op.selected = true;
+          sel.appendChild(op);
+        });
+        sel.addEventListener("change", function () {
+          sound.unlock();
+          onChg(parseInt(sel.value, 10) || null);
+        });
+        return sel;
+      };
+      const s1 = mkDayBfSel("dayBadgeFlow1", "第一警徽流（不改）", d.badgeFlowFirstId, null, function (v1) {
+        d.badgeFlowFirstId = v1;
+        if (!v1 || d.badgeFlowSecondId === v1) d.badgeFlowSecondId = null;
+        syncDraftSpeechToInput();
+        renderPlayerPitBuilder();
+      });
+      const arr = document.createElement("span");
+      arr.textContent = "→";
+      arr.className = "opacity-75 font-bold";
+      const s2 = mkDayBfSel("dayBadgeFlow2", "第二警徽流（選填）", d.badgeFlowSecondId, d.badgeFlowFirstId, function (v2) {
+        d.badgeFlowSecondId = v2;
+        syncDraftSpeechToInput();
+        renderPlayerPitBuilder();
+      });
+      bfBar.appendChild(s1);
+      bfBar.appendChild(arr);
+      bfBar.appendChild(s2);
+    } else {
+      bfBar.classList.add("hidden");
     }
   }
 
@@ -1247,6 +1340,22 @@ function submitPlayerSpeech() {
   };
   state.match.daySpeechEvents.push(plEvObj);
   state.match.allSpeechEvents.push(plEvObj);
+
+  // Commit player's daytime Badge Flow declaration (explicit picker OR parsed from speech text!)
+  if (typeof setSheriffBadgeFlow === "function") {
+    let dayFlow = null;
+    if (draft.badgeFlowFirstId) {
+      dayFlow = setSheriffBadgeFlow(pid, draft.badgeFlowFirstId, draft.badgeFlowSecondId, "day_speech");
+    } else if (typeof parseBadgeFlowFromText === "function") {
+      const parsedDayFlow = parseBadgeFlowFromText(text, pid);
+      if (parsedDayFlow && parsedDayFlow.firstTargetId) {
+        dayFlow = setSheriffBadgeFlow(pid, parsedDayFlow.firstTargetId, parsedDayFlow.secondTargetId, "day_speech");
+      }
+    }
+    if (dayFlow && typeof formatBadgeFlowSummary === "function") {
+      showToast("👑 已更新公開警徽流：" + formatBadgeFlowSummary(dayFlow), "gold");
+    }
+  }
   plWolfPits.forEach(function (wpId) {
     if (wpId && wpId !== pid && wpId !== accuseId) {
       const wpSeat = getSeat(wpId);
@@ -1436,6 +1545,8 @@ function submitPlayerSpeech() {
   if (el("quickFreeInput")) el("quickFreeInput").value = "";
   if (el("btnQuickFreeSend")) el("btnQuickFreeSend").textContent = "陳詞";
   refreshQuickFreeInputHint();
+  if (typeof closeSeatIntel === "function") closeSeatIntel();
+  if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
   state.match.phase = "DAY_SPEECH";
   state.activeSpeakerId = pid;
   updateAllUI();

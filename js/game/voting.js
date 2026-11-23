@@ -872,6 +872,220 @@ function useFourGConvenience() {
   updateAllUI();
 }
 
+// ==================== AUTHENTIC BADGE FLOW ENGINE (警徽流核心引擎) ====================
+function getSeatFlowLabel(seatId) {
+  if (!seatId) return "";
+  const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+  const s = getSeat(seatId);
+  if (!s) return fmtSeatNum(seatId) + "號";
+  return fmtSeatNum(s.id) + "號" + (s.id === pid ? "你" : s.name);
+}
+
+function formatBadgeFlowSummary(flow) {
+  if (!flow || !flow.firstTargetId) return "";
+  const fLbl = getSeatFlowLabel(flow.firstTargetId);
+  if (flow.secondTargetId && flow.secondTargetId !== flow.firstTargetId) {
+    return "先 " + fLbl + " → 後 " + getSeatFlowLabel(flow.secondTargetId);
+  }
+  return "鎖定 " + fLbl;
+}
+
+function setSheriffBadgeFlow(ownerId, firstTargetId, secondTargetId, sourceTag) {
+  const m = state.match;
+  if (!m || !ownerId) return null;
+  if (!m.sheriffBadgeFlowsBySeat || typeof m.sheriffBadgeFlowsBySeat !== "object") {
+    m.sheriffBadgeFlowsBySeat = {};
+  }
+  const fId = parseInt(firstTargetId, 10) || null;
+  let sId = parseInt(secondTargetId, 10) || null;
+  const fSeat = fId ? getSeat(fId) : null;
+  const sSeat = sId ? getSeat(sId) : null;
+  const validFirst = (fSeat && fSeat.alive && fSeat.id !== ownerId) ? fSeat.id : null;
+  const validSecond = (sSeat && sSeat.alive && sSeat.id !== ownerId && sSeat.id !== validFirst) ? sSeat.id : null;
+  if (!validFirst) {
+    if (sourceTag === "clear") {
+      delete m.sheriffBadgeFlowsBySeat[ownerId];
+      if (m.sheriffBadgeFlow && m.sheriffBadgeFlow.ownerId === ownerId) {
+        m.sheriffBadgeFlow = null;
+      }
+    }
+    return null;
+  }
+  const ownerSeat = getSeat(ownerId);
+  const flow = {
+    ownerId: ownerId,
+    dayDeclared: m.day || 1,
+    firstTargetId: validFirst,
+    secondTargetId: validSecond,
+    mode: validSecond ? "dual" : "single",
+    claimedRole: ownerSeat ? (ownerSeat.claimedRole || null) : null,
+    updatedFrom: sourceTag || "speech"
+  };
+  m.sheriffBadgeFlowsBySeat[ownerId] = flow;
+  if (m.sheriffSeatId === ownerId && !m.sheriffElectionPending) {
+    m.sheriffBadgeFlow = flow;
+  }
+  return flow;
+}
+
+function parseBadgeFlowFromText(rawText, ownerId) {
+  const text = String(rawText || "");
+  if (!text) return null;
+  const maxSeats = (state.match && state.match.totalSeats) ? state.match.totalSeats : 12;
+  // Prefer substring after explicit badge-flow / next-check cue so night-1 check target isn't mistaken as flow!
+  const cueIdx = text.search(/警徽流|警徽先|先驗|今晚驗|今晚先驗|今晚查|今晚優先|優先查|優先驗|改留/);
+  if (cueIdx === -1) return null;
+  const tail = text.slice(cueIdx);
+  const matches = tail.match(/(?:1[0-2]|0?[1-9])\s*號/g) || [];
+  const picked = [];
+  matches.forEach(function (tok) {
+    const n = parseInt(tok, 10);
+    if (n >= 1 && n <= maxSeats && n !== ownerId && picked.indexOf(n) === -1) {
+      const s = getSeat(n);
+      if (s && s.alive) picked.push(n);
+    }
+  });
+  if (picked.length === 0) return null;
+  return { firstTargetId: picked[0], secondTargetId: picked[1] || null };
+}
+
+function decodeSheriffBadgeFlowSignal(deadSheriff, transferTargetId, flow) {
+  if (!deadSheriff || !flow || !flow.firstTargetId) return null;
+  const m = state.match || {};
+  const ownerLbl = getSeatFlowLabel(deadSheriff.id);
+  const firstId = flow.firstTargetId;
+  const secondId = (flow.secondTargetId && flow.secondTargetId !== firstId) ? flow.secondTargetId : null;
+  const firstSeat = getSeat(firstId);
+  const secondSeat = secondId ? getSeat(secondId) : null;
+  const firstAlive = Boolean(firstSeat && firstSeat.alive);
+  const secondAlive = Boolean(secondSeat && secondSeat.alive);
+  const firstLbl = getSeatFlowLabel(firstId);
+  const secondLbl = secondId ? getSeatFlowLabel(secondId) : "";
+  const flowBracket = "【" + formatBadgeFlowSummary(flow) + "】";
+
+  let kind = "external_transfer";
+  const verifiedGoodIds = [];
+  const suspectedWolfIds = [];
+  let headline = "";
+  let detail = "";
+
+  if (transferTargetId && transferTargetId === firstId) {
+    kind = "first_good";
+    if (firstAlive) verifiedGoodIds.push(firstId);
+    headline = "👑 警徽流解讀：" + firstLbl + " 獲金水認證！";
+    detail = ownerLbl + " 離席前留警徽流" + flowBracket + "，倒牌後直接將警徽飛給 " + firstLbl + " ⇒ 全場解讀：" + firstLbl + " 驗出偏金水好人！";
+  } else if (transferTargetId && secondId && transferTargetId === secondId) {
+    if (firstAlive) {
+      kind = "first_wolf_second_good";
+      if (secondAlive) verifiedGoodIds.push(secondId);
+      suspectedWolfIds.push(firstId);
+      headline = "⚡ 雙警徽流暗號：" + firstLbl + " 疑查殺、" + secondLbl + " 獲金水！";
+      detail = ownerLbl + " 留雙警徽流" + flowBracket + "，倒牌後跳過 " + firstLbl + " 將警徽飛給 " + secondLbl + " ⇒ 全場解讀：" + firstLbl + " 查殺嫌疑大增、" + secondLbl + " 偏金水接棒！";
+    } else {
+      kind = "first_good";
+      if (secondAlive) verifiedGoodIds.push(secondId);
+      headline = "👑 警徽流備案：" + secondLbl + " 獲金水接棒！";
+      detail = ownerLbl + " 原第一警徽流 " + firstLbl + " 已離席，倒牌後依序將警徽飛給第二警徽流 " + secondLbl + " ⇒ 全場解讀：" + secondLbl + " 偏金水好人！";
+    }
+  } else if (!transferTargetId) {
+    kind = "torn_wolf";
+    if (firstAlive) suspectedWolfIds.push(firstId);
+    else if (secondAlive) suspectedWolfIds.push(secondId);
+    const focusLbl = firstAlive ? firstLbl : (secondAlive ? secondLbl : firstLbl);
+    headline = "💥 撕警徽流暗號：" + focusLbl + " 高度疑為查殺狼坑！";
+    detail = ownerLbl + " 留警徽流" + flowBracket + "後當場撕毀警徽 ⇒ 全場解讀：昨夜查驗 " + focusLbl + " 踩到酸民狼，寧願撕徽也不讓 1.5 票落入狼手！";
+  } else {
+    kind = "external_transfer";
+    const heirLbl = getSeatFlowLabel(transferTargetId);
+    const heirSeat = getSeat(transferTargetId);
+    if (heirSeat && heirSeat.alive) verifiedGoodIds.push(transferTargetId);
+    if (firstAlive) suspectedWolfIds.push(firstId);
+    headline = "🧭 警徽外飛暗號：" + heirLbl + " 託付接棒、" + (firstAlive ? (firstLbl + " 疑踩查殺！") : "延續好人視角！");
+    detail = ownerLbl + " 原留警徽流" + flowBracket + "，離席時改飛外置位 " + heirLbl + " ⇒ 全場解讀：" + heirLbl + " 較獲信任" + (firstAlive ? ("，原警徽流首選 " + firstLbl + " 未獲徽疑為查殺！") : "！");
+  }
+
+  return {
+    day: m.day || 1,
+    ownerId: deadSheriff.id,
+    transferTargetId: transferTargetId || null,
+    firstTargetId: firstId,
+    secondTargetId: secondId,
+    kind: kind,
+    verifiedGoodIds: verifiedGoodIds,
+    suspectedWolfIds: suspectedWolfIds,
+    headline: headline,
+    detail: detail
+  };
+}
+
+function recordAndBroadcastBadgeFlowSignal(deadSheriff, heirSeat) {
+  const m = state.match;
+  if (!m || !deadSheriff) return null;
+  const activeFlow = (m.sheriffBadgeFlow && m.sheriffBadgeFlow.ownerId === deadSheriff.id)
+    ? m.sheriffBadgeFlow
+    : ((m.sheriffBadgeFlowsBySeat && m.sheriffBadgeFlowsBySeat[deadSheriff.id]) || null);
+
+  // Outgoing Sheriff's flow has now resolved — clear active flow until new Sheriff declares one
+  if (m.sheriffBadgeFlow && m.sheriffBadgeFlow.ownerId === deadSheriff.id) {
+    m.sheriffBadgeFlow = null;
+  }
+  if (!activeFlow || !activeFlow.firstTargetId) return null;
+
+  // Temporal authenticity: only decode as a night-check Badge Flow signal if at least 1 night passed since declaration
+  // (or deadSheriff actually checked firstTargetId), preventing impossible "checked last night" alerts on same-day vote-out!
+  const hasElapsedNight = (m.day || 1) > (activeFlow.dayDeclared || 1);
+  const deadCheckedFirst = Boolean(
+    Array.isArray(deadSheriff.checkedHistory) &&
+    deadSheriff.checkedHistory.some(function (c) { return c && c.targetId === activeFlow.firstTargetId; })
+  );
+  if (!hasElapsedNight && !deadCheckedFirst) return null;
+
+  const sig = decodeSheriffBadgeFlowSignal(deadSheriff, heirSeat ? heirSeat.id : null, activeFlow);
+  if (!sig) return null;
+  if (!Array.isArray(m.badgeFlowSignals)) m.badgeFlowSignals = [];
+  m.badgeFlowSignals.push(sig);
+
+  // Strictly Blind-View-Safe AI suspicion update: each Good AI weighs the signal ONLY by its own trust in deadSheriff!
+  const pid = getPlayerId();
+  getAliveSeats().forEach(function (ai) {
+    if (ai.id === pid || ai.team !== "good" || !ai.suspicionMap) return;
+    const ownerSus = ai.suspicionMap[deadSheriff.id] || 50;
+    if (ownerSus >= 68) return; // AI already doubted deadSheriff (e.g. suspected fake Seer) — does not blindly obey!
+    const trustScale = ownerSus <= 40 ? 1.15 : (ai.deductionStyle === "skeptical" ? 0.72 : 1.0);
+    sig.verifiedGoodIds.forEach(function (gid) {
+      if (gid === ai.id) return;
+      const checkedWolf = (ai.role === "seer") && (ai.checkedHistory || []).some(function (c) { return c.targetId === gid && c.isWolf; });
+      if (!checkedWolf) {
+        ai.suspicionMap[gid] = clamp((ai.suspicionMap[gid] || 50) - Math.round(15 * trustScale), 5, 96);
+      }
+    });
+    sig.suspectedWolfIds.forEach(function (wid) {
+      if (wid === ai.id) return;
+      const checkedGood = (ai.role === "seer") && (ai.checkedHistory || []).some(function (c) { return c.targetId === wid && !c.isWolf; });
+      const witchSaved = (ai.role === "witch" && ai.savedSeatId === wid);
+      if (!checkedGood && !witchSaved) {
+        ai.suspicionMap[wid] = clamp((ai.suspicionMap[wid] || 50) + Math.round(18 * trustScale), 5, 96);
+      }
+    });
+  });
+
+  sig.verifiedGoodIds.forEach(function (gid) {
+    if (typeof spawnFx === "function") spawnFx(gid, "👑 警徽流金水!", "#34d399", { durationMs: 1850 });
+  });
+  sig.suspectedWolfIds.forEach(function (wid) {
+    if (typeof spawnFx === "function") spawnFx(wid, "⚡ 警徽流查殺疑雲!", "#f43f5e", { durationMs: 1850 });
+    if (typeof spawnBeam === "function") spawnBeam(deadSheriff.id, wid, "#f43f5e", "clash", 900);
+  });
+
+  triggerCutIn(sig.headline, sig.detail, sig.suspectedWolfIds.length > 0 ? "crimson" : "gold", 2100);
+  addLog({
+    kind: "blessing",
+    title: sig.headline,
+    text: sig.detail
+  });
+  return sig;
+}
+
 function chooseAiSheriffTransferTarget(deadSheriff) {
   const snap = typeof createBlindMatchSnapshot === "function"
     ? createBlindMatchSnapshot(deadSheriff, { module: "sheriff_transfer" })
@@ -880,9 +1094,87 @@ function chooseAiSheriffTransferTarget(deadSheriff) {
   const alivePool = snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== deadSheriff.id; });
   if (!alivePool.length) return null;
 
+  const findAlive = function (id) {
+    return id ? (alivePool.find(function (s) { return s.id === id; }) || null) : null;
+  };
+  const flow = (snap && snap.sheriffBadgeFlow && snap.sheriffBadgeFlow.ownerId === self.id)
+    ? snap.sheriffBadgeFlow
+    : ((snap && snap.sheriffBadgeFlowsBySeat && snap.sheriffBadgeFlowsBySeat[self.id]) || null);
+
   let pick = null;
+  let decisionReason = "";
+
+  // 1. True Seer Sheriff: authentically execute declared single/dual Badge Flow code!
+  if (self.role === "seer") {
+    const chks = Array.isArray(self.checkedHistory) ? self.checkedHistory : [];
+    const getChk = function (tid) {
+      return chks.slice().reverse().find(function (c) { return c && c.targetId === tid; }) || null;
+    };
+    const aliveVerifiedGood = chks.slice().reverse()
+      .filter(function (c) { return c && !c.isWolf; })
+      .map(function (c) { return findAlive(c.targetId); })
+      .find(Boolean) || null;
+
+    if (flow && flow.firstTargetId) {
+      const fSeat = findAlive(flow.firstTargetId);
+      const sSeat = findAlive(flow.secondTargetId);
+      const fChk = getChk(flow.firstTargetId);
+      const sChk = flow.secondTargetId ? getChk(flow.secondTargetId) : null;
+      if (fSeat && fChk && !fChk.isWolf) {
+        pick = fSeat;
+        decisionReason = "警徽流金水飛徽 " + fSeat.id + "號";
+      } else if (fChk && fChk.isWolf) {
+        // First badge-flow target was checked WOLF! Fly to verified 2nd gold, external gold, or TEAR!
+        if (sSeat && sChk && !sChk.isWolf) {
+          pick = sSeat;
+          decisionReason = "雙警徽流跳飛金水 " + sSeat.id + "號";
+        } else if (aliveVerifiedGood && aliveVerifiedGood.id !== flow.firstTargetId) {
+          pick = aliveVerifiedGood;
+          decisionReason = "警徽外飛金水 " + aliveVerifiedGood.id + "號（首選查殺）";
+        } else {
+          pick = null;
+          decisionReason = "撕毀警徽報 " + flow.firstTargetId + "號查殺";
+        }
+      } else if (sSeat && sChk && !sChk.isWolf) {
+        pick = sSeat;
+        decisionReason = "備案警徽流飛徽 " + sSeat.id + "號";
+      } else if (aliveVerifiedGood) {
+        pick = aliveVerifiedGood;
+        decisionReason = "移交已驗金水 " + aliveVerifiedGood.id + "號";
+      }
+    } else if (aliveVerifiedGood) {
+      pick = aliveVerifiedGood;
+      decisionReason = "移交已驗金水 " + aliveVerifiedGood.id + "號";
+    }
+    if (decisionReason) {
+      if (typeof antiCheatMonitor !== "undefined" && self) {
+        antiCheatMonitor.recordDecision("sheriff_transfer", self.id, decisionReason);
+      }
+      return pick ? pick.id : null;
+    }
+  }
+
+  // 2. Wolf Sheriff: keep 1.5 votes in Wolf hands (preferring Wolf mate in badge flow for fake-gold cover!), or tear if last wolf!
   if (self.role === "wolf") {
-    pick = alivePool.find(function (s) { return snap ? s.isWolfMate : (s.role === "wolf"); }) || null;
+    const wolfMates = alivePool.filter(function (s) { return snap ? s.isWolfMate : (s.role === "wolf"); });
+    if (flow && flow.firstTargetId) {
+      pick = wolfMates.find(function (s) { return s.id === flow.firstTargetId; }) || null;
+    }
+    if (!pick && flow && flow.secondTargetId) {
+      pick = wolfMates.find(function (s) { return s.id === flow.secondTargetId; }) || null;
+    }
+    if (!pick && wolfMates.length > 0) {
+      pick = wolfMates[0];
+    }
+    if (typeof antiCheatMonitor !== "undefined" && self) {
+      antiCheatMonitor.recordDecision("sheriff_transfer", self.id, pick ? ("移交同伴 " + pick.id + "號") : "撕毀警徽");
+    }
+    return pick ? pick.id : null;
+  }
+
+  // 3. Good non-Seer Sheriff: prefer Witch's silver water, then lowest-suspicion seat (< 58), else tear
+  if (self.role === "witch" && self.savedSeatId) {
+    pick = findAlive(self.savedSeatId);
   }
   if (!pick) {
     const trusted = alivePool.slice().sort(function (a, b) {
@@ -925,6 +1217,7 @@ function handleSheriffEliminated(deadSheriff, onDone) {
       triggerCutIn("💥 警徽撕毀！", fmtSeatNum(deadSheriff.id) + "號警長選擇當場撕毀警徽，本局不設警長。", "crimson");
       addLog({ kind: "dawn", title: "💥 警徽作廢：" + fmtSeatNum(deadSheriff.id) + "號離席並撕毀警徽！", text: "" });
     }
+    recordAndBroadcastBadgeFlowSignal(deadSheriff, pick);
     updateAllUI();
     doneCb();
     return;
@@ -934,15 +1227,17 @@ function handleSheriffEliminated(deadSheriff, onDone) {
   state.match.pendingSheriffTransfer = { deadId: deadSheriff.id, onDone: doneCb };
   state.match.phase = "SHERIFF_TRANSFER";
   updateAllUI();
-  voice.speakHost("你是本局警長，離席前請選擇將警徽移交給哪一位存活夥伴，或直接撕毀警徽。");
+  voice.speakHost("你是本局警長，離席前請依你的警徽流決定將警徽移交給哪一位存活夥伴，或當場撕毀警徽傳遞查殺訊號。");
 }
 
 function resolvePlayerSheriffTransfer(targetSeatId) {
   sound.unlock();
   const pending = state.match && state.match.pendingSheriffTransfer;
   const pid = getPlayerId();
+  const deadPlayer = getSeat(pid);
+  let heir = null;
   if (targetSeatId) {
-    const heir = getSeat(targetSeatId);
+    heir = getSeat(targetSeatId);
     if (!heir || !heir.alive || heir.id === pid) return;
     state.match.sheriffSeatId = heir.id;
     state.match.stats.sheriffPassed = (state.match.stats.sheriffPassed || 0) + 1;
@@ -956,6 +1251,9 @@ function resolvePlayerSheriffTransfer(targetSeatId) {
     state.match.stats.sheriffPassed = (state.match.stats.sheriffPassed || 0) + 1;
     triggerCutIn("💥 警徽已撕毀！", "你決定當場撕毀警徽，本局不留 1.5 票權。", "crimson");
     addLog({ kind: "dawn", title: "💥 警徽作廢：你已當場撕毀警徽！", text: "" });
+  }
+  if (deadPlayer) {
+    recordAndBroadcastBadgeFlowSignal(deadPlayer, heir);
   }
   state.match.pendingSheriffTransfer = null;
   if (pending && typeof pending.onDone === "function") {
@@ -1032,9 +1330,7 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
   const self = (snap && snap.self) ? snap.self : cand;
   const others = snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== cand.id; });
   const focusSeat = others[0] || null;
-  const nextSeat = others[1] || null;
   const focus = focusSeat ? (fmtSeatNum(focusSeat.id) + "號" + focusSeat.name) : "前排席位";
-  const next = nextSeat ? (fmtSeatNum(nextSeat.id) + "號" + nextSeat.name) : "後置位";
   // Zero-Leak: Candidate ONLY observes prior speeches already spoken on the stand — NEVER peeks at future candidates' hidden role or fakeSeer!
   const priorList = Array.isArray(priorSpeechesArg) ? priorSpeechesArg : [];
   const priorSeerSpeech = priorList.find(function (sp) {
@@ -1049,8 +1345,33 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
   const checkLbl = seerCheckTarget ? (fmtSeatNum(seerCheckTarget.id) + "號" + seerCheckTarget.name) : focus;
   const checkVerdict = lastChk ? (lastChk.isWolf ? "偏狼坑" : "偏金水") : "偏金水";
 
+  // Select two distinct unchecked alive seats for authentic Dual Badge Flow (第一警徽流 → 第二警徽流)!
+  const checkedIdSet = {};
+  if (self.role === "seer" && Array.isArray(self.checkedHistory)) {
+    self.checkedHistory.forEach(function (c) { if (c && c.targetId) checkedIdSet[c.targetId] = true; });
+  } else if (seerCheckTarget) {
+    checkedIdSet[seerCheckTarget.id] = true;
+  }
+  const flowPool = others.filter(function (s) {
+    if (!s || !s.alive || s.id === self.id || checkedIdSet[s.id]) return false;
+    if (priorSeerSpeech && s.id === priorSeerSpeech.id) return false;
+    return true;
+  });
+  const flowFirst = flowPool[0] || others.find(function (s) { return s && s.id !== (seerCheckTarget ? seerCheckTarget.id : -1); }) || others[0] || null;
+  const flowSecond = flowPool.find(function (s) { return flowFirst && s.id !== flowFirst.id; })
+    || others.find(function (s) { return flowFirst && s.id !== flowFirst.id && s.id !== (seerCheckTarget ? seerCheckTarget.id : -1); })
+    || null;
+  const flowFirstLbl = flowFirst ? (fmtSeatNum(flowFirst.id) + "號" + flowFirst.name) : "前排未驗位";
+  const flowSecondLbl = flowSecond ? (fmtSeatNum(flowSecond.id) + "號" + flowSecond.name) : "";
+  const flowPhrase = flowSecond
+    ? ("雙警徽流先驗 " + flowFirstLbl + "、再驗 " + flowSecondLbl + "（我若倒牌，徽給" + fmtSeatNum(flowFirst.id) + "號即金水、飛" + fmtSeatNum(flowSecond.id) + "號或撕徽即查殺）")
+    : ("警徽流鎖定 " + flowFirstLbl + "（倒牌徽給他即金水、撕徽即查殺）");
+  const badgeFlowObj = (isSeerClaim && flowFirst)
+    ? { firstTargetId: flowFirst.id, secondTargetId: flowSecond ? flowSecond.id : null }
+    : null;
+
   if (typeof antiCheatMonitor !== "undefined" && self) {
-    antiCheatMonitor.recordDecision("sheriff_speech", self.id, isSeerClaim ? "警上報觀察員" : "警上競選表態");
+    antiCheatMonitor.recordDecision("sheriff_speech", self.id, isSeerClaim ? "警上報觀察員＋留警徽流" : "警上競選表態");
   }
 
   if (isSeerClaim) {
@@ -1060,14 +1381,16 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
         tag: "⚡ 對跳明心",
         tone: "clash",
         rivalId: priorSeerSpeech.id,
-        text: "「等等！" + rLbl + " 你居然敢跟我對跳明心？！全場聽好，我才是真明心！昨晚我查了 " + checkLbl + "（" + checkVerdict + "），警徽流先驗 " + next + "，敢跟我拍到底我就直接出你！」"
+        badgeFlow: badgeFlowObj,
+        text: "「等等！" + rLbl + " 你居然敢跟我對跳明心？！全場聽好，我才是真明心！昨晚查了 " + checkLbl + "（" + checkVerdict + "），" + flowPhrase + "，敢跟我拍到底我就直接出你！」"
       };
     }
     return {
       tag: "🔮 強拍明心",
       tone: "seer",
       rivalId: null,
-      text: "「我先拍明心身分拿警徽！昨晚查了 " + checkLbl + "（" + checkVerdict + "），今晚警徽流鎖定 " + next + "！等等誰敢上警跟我對跳，直接標記悍跳狼！」"
+      badgeFlow: badgeFlowObj,
+      text: "「我先拍明心身分拿警徽！昨晚查了 " + checkLbl + "（" + checkVerdict + "），" + flowPhrase + "！等等誰敢對跳直接標記悍跳狼！」"
     };
   }
 
@@ -1090,6 +1413,7 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
       tag: "🛡️ 穩健控場",
       tone: "bold",
       rivalId: null,
+      badgeFlow: null,
       text: personaLines[self.name] || "「我是理性帶隊派，警徽交給我能幫忙鎖定焦點與節奏、末置位穩穩歸票！」"
     };
   }
@@ -1097,38 +1421,54 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
     tag: "🔥 強勢上警",
     tone: "bold",
     rivalId: priorSeerSpeech ? priorSeerSpeech.id : null,
+    badgeFlow: null,
     text: personaLines[self.name] || "「我說話講邏輯不情緒化，給我警徽我會在末置位整理正反兩邊坑位，公平歸票！」"
   };
 }
 
-function buildPlayerSheriffQuickOptions(player) {
+function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
   const pid = getPlayerId();
   const others = getAliveSeats().filter(function (s) { return s.id !== pid; });
   const focus = others[0] ? (fmtSeatNum(others[0].id) + "號" + others[0].name) : "前置位";
-  const next = others[1] ? (fmtSeatNum(others[1].id) + "號" + others[1].name) : "後置位";
+  const chk = (player && player.role === "seer" && player.checkedHistory && player.checkedHistory.length > 0)
+    ? player.checkedHistory[player.checkedHistory.length - 1]
+    : null;
+  const uncheckedPool = others.filter(function (s) { return !chk || s.id !== chk.targetId; });
+  const defaultFirst = (draftFlowArg && draftFlowArg.firstTargetId && getSeat(draftFlowArg.firstTargetId))
+    ? getSeat(draftFlowArg.firstTargetId)
+    : (uncheckedPool[0] || others[0] || null);
+  const defaultSecond = (draftFlowArg && draftFlowArg.secondTargetId && draftFlowArg.secondTargetId !== (defaultFirst ? defaultFirst.id : -1) && getSeat(draftFlowArg.secondTargetId))
+    ? getSeat(draftFlowArg.secondTargetId)
+    : (draftFlowArg && draftFlowArg.explicit ? null : (uncheckedPool.find(function (s) { return defaultFirst && s.id !== defaultFirst.id; }) || others[1] || null));
+  const f1Lbl = defaultFirst ? (fmtSeatNum(defaultFirst.id) + "號" + defaultFirst.name) : "前排席位";
+  const f2Lbl = defaultSecond ? (fmtSeatNum(defaultSecond.id) + "號" + defaultSecond.name) : "";
+  const flowDualText = defaultSecond
+    ? ("雙警徽流先驗 " + f1Lbl + "、再驗 " + f2Lbl + "（倒牌徽給" + fmtSeatNum(defaultFirst.id) + "號即金水、飛" + fmtSeatNum(defaultSecond.id) + "號或撕徽即查殺）")
+    : ("警徽流先看 " + f1Lbl + "（倒牌徽給他即金水、撕徽即查殺）");
+  const flowObj = defaultFirst ? { firstTargetId: defaultFirst.id, secondTargetId: defaultSecond ? defaultSecond.id : null } : null;
 
   if (player && player.role === "seer") {
-    const chk = (player.checkedHistory && player.checkedHistory.length > 0)
-      ? player.checkedHistory[player.checkedHistory.length - 1]
-      : null;
     const cs = chk ? getSeat(chk.targetId) : null;
     const chkStr = (chk && cs)
       ? ("昨晚查驗 " + fmtSeatNum(cs.id) + "號" + cs.name + " 是" + (chk.isWolf ? "酸民狼（查殺）" : "書院好夥伴（金水）"))
       : ("我手握昨晚查驗真相");
     return [
       {
-        title: "🔮 強拍明心報驗",
+        title: "🔮 強拍明心＋雙警徽流",
         tag: "明心直拍",
-        text: "我是真正的明心觀察員！" + chkStr + "，今晚警徽流先看 " + next + "，請警下好夥伴把警徽投給我帶隊！"
+        badgeFlow: flowObj,
+        text: "我是真正的明心觀察員！" + chkStr + "，今晚" + flowDualText + "，請警下好夥伴把警徽投給我帶隊！"
       },
       {
-        title: "👑 穩健報警徽流",
+        title: "👑 穩健報警徽流＋看票型",
         tag: "警徽流",
-        text: "我起跳明心觀察員來拿警徽，" + chkStr + "。如果警上有人對跳，待會看清誰衝票再排坑，請信任我投我當警長！"
+        badgeFlow: flowObj,
+        text: "我起跳明心觀察員拿警徽，" + chkStr + "；警徽流鎖定 " + f1Lbl + (f2Lbl ? (" 接續 " + f2Lbl) : "") + "。若警上有人對跳，待會看警下衝票就能排坑！"
       },
       {
         title: "🌿 先隱藏身分聽局",
         tag: "觀察風向",
+        badgeFlow: null,
         text: "我先上警聽一圈大家的態度與警下票型，暫時不急著亮底牌，警徽交給我我會在末置位客觀歸票！"
       }
     ];
@@ -1138,18 +1478,21 @@ function buildPlayerSheriffQuickOptions(player) {
     const goodLbl = goodPick ? (fmtSeatNum(goodPick.id) + "號" + goodPick.name) : focus;
     return [
       {
-        title: "🎭 悍跳明心搶警徽",
+        title: "🎭 悍跳明心＋假警徽流",
         tag: "悍跳施壓",
-        text: "全場聽好，我才是這局真正的明心觀察員！昨晚查了 " + goodLbl + " 偏金水，警徽流先看 " + next + "，誰敢對跳直接標記狼坑！"
+        badgeFlow: flowObj,
+        text: "全場聽好，我才是這局真正的明心觀察員！昨晚查了 " + goodLbl + " 偏金水，" + flowDualText + "，誰敢對跳直接標記狼坑！"
       },
       {
         title: "👑 穩健帶隊拉票",
         tag: "節奏掌控",
+        badgeFlow: null,
         text: "我上警是想幫好人穩住第一天節奏，待會誰在警下衝票、誰發言前後矛盾，我會在末置位一條條整理清楚！"
       },
       {
         title: "🔥 試探壓場詐身分",
         tag: "詐身分",
+        badgeFlow: null,
         text: "我先上警給警上施壓看看誰會心虛，如果真有強明心我待會再決定退不退水，大家先仔細聽後置位表水！"
       }
     ];
@@ -1158,16 +1501,19 @@ function buildPlayerSheriffQuickOptions(player) {
     {
       title: "👑 理性帶隊爭警徽",
       tag: "邏輯控場",
-      text: "我是好人視角上警，警徽給我我會在末置位幫大家整理警上發言與警下票型，一起把真正藏在裡面的酸民狼排出來！"
+      badgeFlow: flowObj,
+      text: "我是好人視角上警，警徽給我我會在末置位幫大家整理發言與票型；若不慎離席，警徽會優先託付給 " + f1Lbl + (f2Lbl ? (" 或 " + f2Lbl) : "") + "！"
     },
     {
       title: "🛡️ 壓場查核對跳位",
       tag: "查核真偽",
-      text: "我上警是為了近距離檢視警上每個人的說法，若出現雙明心對跳，我會把兩邊的警下票型攤開來對照，請支持我！"
+      badgeFlow: null,
+      text: "我上警是為了近距離檢視警上每個人的說法，若出現雙明心對跳，我會把兩邊的警下票型與警徽流攤開來對照，請支持我！"
     },
     {
       title: "🌿 詐後置位看反應",
       tag: "試探後置",
+      badgeFlow: null,
       text: "我先舉手上警聽聽大家怎麼站邊、看後置位誰最慌張，等會再決定要競選到底還是退水回警下投票！"
     }
   ];
@@ -1204,6 +1550,7 @@ function triggerSheriffDoubleSeerClashDrama(sA, sB, ctx) {
 
 function startSheriffElection(onDone) {
   const m = state.match;
+  if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
   if (!m || !m.started || !state.sheriffMode || !m.sheriffElectionPending || m.day !== 1) {
     if (m) m.sheriffElectionPending = false;
     if (typeof onDone === "function") onDone();
@@ -1220,8 +1567,11 @@ function startSheriffElection(onDone) {
       const autoSpeeches = [];
       cands.forEach(function (c) {
         const built = buildSheriffCandidateLine(c, autoSpeeches);
-        autoSpeeches.push({ id: c.id, name: c.name, tag: built.tag, tone: built.tone, rivalId: built.rivalId, text: built.text });
+        autoSpeeches.push({ id: c.id, name: c.name, tag: built.tag, tone: built.tone, rivalId: built.rivalId, badgeFlow: built.badgeFlow || null, text: built.text });
         if (built.tone === "seer" || built.tone === "clash") c.claimedRole = "seer";
+        if (built.badgeFlow && built.badgeFlow.firstTargetId) {
+          setSheriffBadgeFlow(c.id, built.badgeFlow.firstTargetId, built.badgeFlow.secondTargetId, "election");
+        }
       });
       const candIds = cands.map(function (c) { return c.id; });
       const counts = {};
@@ -1254,10 +1604,16 @@ function startSheriffElection(onDone) {
     }
     if (fallbackWinner) {
       m.sheriffSeatId = fallbackWinner.id;
+      if (m.sheriffBadgeFlowsBySeat && m.sheriffBadgeFlowsBySeat[fallbackWinner.id]) {
+        m.sheriffBadgeFlow = m.sheriffBadgeFlowsBySeat[fallbackWinner.id];
+      }
       const pidAuto = getPlayerId();
+      const autoFlowStr = (m.sheriffBadgeFlow && m.sheriffBadgeFlow.ownerId === fallbackWinner.id)
+        ? ("｜警徽流：" + formatBadgeFlowSummary(m.sheriffBadgeFlow))
+        : "";
       addLog({
         kind: "blessing",
-        title: "👑 警長誕生：" + fmtSeatNum(fallbackWinner.id) + "號 " + (fallbackWinner.id === pidAuto ? "你" : fallbackWinner.name) + " 當選本局警長（1.5票＆末置位歸票權）！",
+        title: "👑 警長誕生：" + fmtSeatNum(fallbackWinner.id) + "號 " + (fallbackWinner.id === pidAuto ? "你" : fallbackWinner.name) + " 當選本局警長（1.5票＆末置位歸票權" + autoFlowStr + "）！",
         text: ""
       });
     } else {
@@ -1284,6 +1640,7 @@ function startSheriffElection(onDone) {
     speeches: [],
     spokenSpeeches: [],
     playerQuickOptions: [],
+    playerBadgeFlowDraft: { firstTargetId: null, secondTargetId: null, explicit: false },
     dramaEvents: dramaEvents,
     withdrawnIds: [],
     hasDoubleSeerClash: false,
@@ -1386,13 +1743,24 @@ function advanceSheriffSpeechTurn() {
   }
 
   if (candId === pid) {
-    ctx.playerQuickOptions = buildPlayerSheriffQuickOptions(cand);
+    // Initialize smart default badge-flow draft (2 unchecked alive seats) for player's stand speech picker
+    const othersP = getAliveSeats().filter(function (s) { return s.id !== pid; });
+    const chkP = (cand.role === "seer" && Array.isArray(cand.checkedHistory) && cand.checkedHistory.length > 0)
+      ? cand.checkedHistory[cand.checkedHistory.length - 1]
+      : null;
+    const unchkP = othersP.filter(function (s) { return !chkP || s.id !== chkP.targetId; });
+    const d1 = unchkP[0] || othersP[0] || null;
+    const d2 = unchkP.find(function (s) { return d1 && s.id !== d1.id; }) || othersP.find(function (s) { return d1 && s.id !== d1.id; }) || null;
+    if (!ctx.playerBadgeFlowDraft || !ctx.playerBadgeFlowDraft.explicit) {
+      ctx.playerBadgeFlowDraft = { firstTargetId: d1 ? d1.id : null, secondTargetId: d2 ? d2.id : null, explicit: false };
+    }
+    ctx.playerQuickOptions = buildPlayerSheriffQuickOptions(cand, ctx.playerBadgeFlowDraft);
     const inp = el("sheriffPlayerInput");
     if (inp) inp.value = "";
     sound.tone(660, 0.09, "triangle", 0.05, 0);
     updateAllUI();
     if (typeof voice !== "undefined" && voice.canSpeak()) {
-      voice.speakHost("輪到" + pid + "號你進行警上發言，請選擇競選宣言或自行輸入！");
+      voice.speakHost("輪到" + pid + "號你進行警上發言，可選擇警徽流並發表競選宣言！");
     }
     return true;
   }
@@ -1404,6 +1772,7 @@ function advanceSheriffSpeechTurn() {
     tag: built.tag,
     tone: built.tone,
     rivalId: built.rivalId,
+    badgeFlow: built.badgeFlow || null,
     text: built.text
   };
   ctx.spokenSpeeches.push(spObj);
@@ -1411,6 +1780,9 @@ function advanceSheriffSpeechTurn() {
 
   if (built.tone === "seer" || built.tone === "clash") {
     cand.claimedRole = "seer";
+    if (built.badgeFlow && built.badgeFlow.firstTargetId) {
+      setSheriffBadgeFlow(cand.id, built.badgeFlow.firstTargetId, built.badgeFlow.secondTargetId, "election");
+    }
     if (built.tone === "clash") {
       const firstSeer = ctx.spokenSpeeches.find(function (sp) {
         return sp.id !== cand.id && (sp.tone === "seer" || sp.tone === "clash");
@@ -1448,7 +1820,25 @@ function advanceSheriffSpeechTurn() {
   return true;
 }
 
-function submitPlayerSheriffSpeech(rawText) {
+function setPlayerSheriffDraftBadgeFlow(firstTargetId, secondTargetId) {
+  const m = state.match;
+  const ctx = m ? m.sheriffElectionCtx : null;
+  const pSeat = getPlayerSeat();
+  if (!m || !ctx || m.phase !== "SHERIFF_ELECTION") return null;
+  const pid = getPlayerId();
+  const fId = parseInt(firstTargetId, 10) || null;
+  let sId = parseInt(secondTargetId, 10) || null;
+  if (fId === pid) return null;
+  if (sId === pid || sId === fId) sId = null;
+  ctx.playerBadgeFlowDraft = { firstTargetId: fId, secondTargetId: sId, explicit: true };
+  if (pSeat) {
+    ctx.playerQuickOptions = buildPlayerSheriffQuickOptions(pSeat, ctx.playerBadgeFlowDraft);
+  }
+  updateAllUI();
+  return ctx.playerBadgeFlowDraft;
+}
+
+function submitPlayerSheriffSpeech(rawText, explicitFlowArg) {
   sound.unlock();
   const m = state.match;
   const ctx = m ? m.sheriffElectionCtx : null;
@@ -1482,12 +1872,29 @@ function submitPlayerSheriffSpeech(rawText) {
       tag = "🔮 強拍明心";
     }
   }
+  // Extract or adopt declared Badge Flow (explicit card/picker flow OR parsed from free-text!)
+  let flowUsed = null;
+  if (explicitFlowArg && explicitFlowArg.firstTargetId) {
+    flowUsed = setSheriffBadgeFlow(pid, explicitFlowArg.firstTargetId, explicitFlowArg.secondTargetId, "election");
+  } else {
+    const parsedFlow = parseBadgeFlowFromText(cleanText, pid);
+    if (parsedFlow && parsedFlow.firstTargetId) {
+      flowUsed = setSheriffBadgeFlow(pid, parsedFlow.firstTargetId, parsedFlow.secondTargetId, "election");
+    } else if (ctx.playerBadgeFlowDraft && ctx.playerBadgeFlowDraft.explicit && ctx.playerBadgeFlowDraft.firstTargetId) {
+      flowUsed = setSheriffBadgeFlow(pid, ctx.playerBadgeFlowDraft.firstTargetId, ctx.playerBadgeFlowDraft.secondTargetId, "election");
+      const summary = formatBadgeFlowSummary(flowUsed);
+      if (summary && cleanText.indexOf("警徽流") === -1) {
+        cleanText = cleanText.replace(/[。！!]+$/, "") + "，警徽流留" + summary + "！";
+      }
+    }
+  }
   const spObj = {
     id: pid,
     name: "你",
     tag: tag,
     tone: tone,
     rivalId: rivalId,
+    badgeFlow: flowUsed ? { firstTargetId: flowUsed.firstTargetId, secondTargetId: flowUsed.secondTargetId } : null,
     text: "「" + cleanText.replace(/^「|」$/g, "") + "」"
   };
   ctx.spokenSpeeches.push(spObj);
@@ -1498,7 +1905,7 @@ function submitPlayerSheriffSpeech(rawText) {
   addLog({
     kind: "system",
     speakerId: pid,
-    title: "👑 警上發言・" + playerNumTag() + " 你（" + tag + "）",
+    title: "👑 警上發言・" + playerNumTag() + " 你（" + tag + (flowUsed ? ("｜警徽流：" + formatBadgeFlowSummary(flowUsed)) : "") + "）",
     text: cleanText.replace(/^「|」$/g, "")
   });
   if (typeof setSeatBubble === "function") setSeatBubble(pid, cleanText.slice(0, 26) + (cleanText.length > 26 ? "…" : ""), "trust", 3800);
@@ -1569,10 +1976,15 @@ function finalizeSheriffElectionWinner(chosenCandId) {
         if (pLine.tone === "seer") c.claimedRole = "seer";
       } else {
         const built = buildSheriffCandidateLine(c, ctx.spokenSpeeches);
-        const spObj = { id: c.id, name: c.name, tag: built.tag, tone: built.tone, rivalId: built.rivalId, text: built.text };
+        const spObj = { id: c.id, name: c.name, tag: built.tag, tone: built.tone, rivalId: built.rivalId, badgeFlow: built.badgeFlow || null, text: built.text };
         ctx.spokenSpeeches.push(spObj);
         ctx.speeches.push(spObj);
-        if (built.tone === "seer" || built.tone === "clash") c.claimedRole = "seer";
+        if (built.tone === "seer" || built.tone === "clash") {
+          c.claimedRole = "seer";
+          if (built.badgeFlow && built.badgeFlow.firstTargetId) {
+            setSheriffBadgeFlow(c.id, built.badgeFlow.firstTargetId, built.badgeFlow.secondTargetId, "election");
+          }
+        }
       }
     }
   });
@@ -1587,51 +1999,43 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     voteRecords[c.id] = [];
   });
 
+  const isPlayerUnderVoter = Boolean(getPlayerSeat() && getPlayerSeat().alive && !ctx.playerRunning && ctx.candidateIds.indexOf(pid) === -1);
+  const playerVotedCand = (chosenCandId && chosenCandId !== pid && isPlayerUnderVoter && cands.some(function (c) { return c.id === chosenCandId; }))
+    ? chosenCandId
+    : null;
+  const tiePreferId = (chosenCandId && cands.some(function (c) { return c.id === chosenCandId; })) ? chosenCandId : null;
+  const sortByTally = function (a, b) {
+    const diff = (counts[b.id] || 0) - (counts[a.id] || 0);
+    if (diff !== 0) return diff;
+    if (tiePreferId) {
+      if (a.id === tiePreferId) return -1;
+      if (b.id === tiePreferId) return 1;
+    }
+    return a.id - b.id;
+  };
+
   if (cands.length === 0) {
     winner = getAliveSeats()[0] || null;
-  } else if (chosenCandId && cands.some(function (c) { return c.id === chosenCandId; })) {
-    if (cands.length === 1) {
-      winner = cands[0];
-      counts[winner.id] = 1;
-      if (chosenCandId !== pid) {
-        ballots.push({ voterId: pid, targetId: chosenCandId, weight: 1 });
-        voteRecords[chosenCandId].push(playerNumTag() + "你");
-      }
-    } else {
-      counts[chosenCandId] = (counts[chosenCandId] || 0) + 1;
-      if (chosenCandId !== pid) {
-        ballots.push({ voterId: pid, targetId: chosenCandId, weight: 1 });
-        voteRecords[chosenCandId].push(playerNumTag() + "你");
-        if (typeof spawnBeam === "function") spawnBeam(pid, chosenCandId, "#fbbf24", "vote");
-      }
-      getAliveSeats().forEach(function (s) {
-        if (s.id === pid || ctx.candidateIds.indexOf(s.id) !== -1) return;
-        const pickId = chooseAiSheriffElectionVote(s, ctx.candidateIds, standSpeeches, false);
-        if (pickId) {
-          counts[pickId] = (counts[pickId] || 0) + 1;
-          ballots.push({ voterId: s.id, targetId: pickId, weight: 1 });
-          voteRecords[pickId].push(fmtSeatNum(s.id) + s.name);
-          if (typeof spawnBeam === "function") spawnBeam(s.id, pickId, "#fbbf24", "vote");
-        } else {
-          ballots.push({ voterId: s.id, targetId: null, weight: 0 });
-        }
-      });
-      winner = cands.slice().sort(function (a, b) {
-        const diff = (counts[b.id] || 0) - (counts[a.id] || 0);
-        if (diff !== 0) return diff;
-        if (b.id === chosenCandId) return 1;
-        if (a.id === chosenCandId) return -1;
-        return a.id - b.id;
-      })[0];
+  } else if (cands.length === 1) {
+    winner = cands[0];
+    if (playerVotedCand) {
+      counts[playerVotedCand] = 1;
+      ballots.push({ voterId: pid, targetId: playerVotedCand, weight: 1 });
+      voteRecords[playerVotedCand].push(playerNumTag() + "你");
     }
   } else {
-    const pAliveUnder = Boolean(getPlayerSeat() && getPlayerSeat().alive && !ctx.playerRunning && ctx.candidateIds.indexOf(pid) === -1);
-    if (pAliveUnder) {
+    if (playerVotedCand) {
+      counts[playerVotedCand] = (counts[playerVotedCand] || 0) + 1;
+      ballots.push({ voterId: pid, targetId: playerVotedCand, weight: 1 });
+      voteRecords[playerVotedCand].push(playerNumTag() + "你");
+      if (typeof spawnBeam === "function") spawnBeam(pid, playerVotedCand, "#fbbf24", "vote");
+    } else if (isPlayerUnderVoter) {
       ballots.push({ voterId: pid, targetId: null, weight: 0 });
     }
+    const aiUsePlayerBonus = Boolean(ctx.playerRunning || !playerVotedCand);
     getAliveSeats().forEach(function (s) {
       if (s.id === pid || ctx.candidateIds.indexOf(s.id) !== -1) return;
-      const pickId = chooseAiSheriffElectionVote(s, ctx.candidateIds, standSpeeches, true);
+      const pickId = chooseAiSheriffElectionVote(s, ctx.candidateIds, standSpeeches, aiUsePlayerBonus);
       if (pickId) {
         counts[pickId] = (counts[pickId] || 0) + 1;
         ballots.push({ voterId: s.id, targetId: pickId, weight: 1 });
@@ -1641,7 +2045,7 @@ function finalizeSheriffElectionWinner(chosenCandId) {
         ballots.push({ voterId: s.id, targetId: null, weight: 0 });
       }
     });
-    winner = cands.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); })[0];
+    winner = cands.slice().sort(sortByTally)[0];
   }
 
   const seerClaimIds = standSpeeches
@@ -1675,8 +2079,8 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     });
   }
 
-  const sortedCands = cands.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); });
-  const runnerUp = sortedCands.length >= 2 ? sortedCands[1] : null;
+  const sortedCands = cands.slice().sort(sortByTally);
+  const runnerUp = sortedCands.find(function (c) { return !winner || c.id !== winner.id; }) || null;
   const margin = (winner && runnerUp) ? ((counts[winner.id] || 0) - (counts[runnerUp.id] || 0)) : 2;
   const isCloseCall = Boolean(runnerUp && margin <= 1.2);
   const tallySummary = sortedCands.map(function (c) {
@@ -1689,11 +2093,17 @@ function finalizeSheriffElectionWinner(chosenCandId) {
   m.sheriffElectionCtx = null;
   if (winner) {
     m.sheriffSeatId = winner.id;
+    if (m.sheriffBadgeFlowsBySeat && m.sheriffBadgeFlowsBySeat[winner.id]) {
+      m.sheriffBadgeFlow = m.sheriffBadgeFlowsBySeat[winner.id];
+    }
     m.stats.sheriffPassed = (m.stats.sheriffPassed || 0) + 1;
     if (winner.id === pid && ctx.playerRunning) {
       m.stats.sheriffDramaWins = (m.stats.sheriffDramaWins || 0) + 1;
     }
     const wLbl = winner.id === pid ? (playerNumTag() + " 你") : (fmtSeatNum(winner.id) + "號 " + winner.name);
+    const activeFlowNote = (m.sheriffBadgeFlow && m.sheriffBadgeFlow.ownerId === winner.id)
+      ? ("｜警徽流：" + formatBadgeFlowSummary(m.sheriffBadgeFlow))
+      : "";
     sound.playBlessing();
     if (typeof spawnBurst === "function") spawnBurst(winner.id, ["#fbbf24", "#fde68a", "#ffffff"], 26, "star");
     if (typeof spawnFx === "function") spawnFx(winner.id, isCloseCall ? "👑 險勝奪徽!" : "👑 當選警長!", "#fbbf24", { scale: 1.2, durationMs: 1700 });
@@ -1710,13 +2120,13 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     }
     triggerCutIn(
       isCloseCall ? "👑 驚險奪下警徽！" : "👑 警長誕生！",
-      wLbl + (isCloseCall ? " 以些微差距驚險當選警長！" : " 獲全場擁戴當選警長（1.5票歸票＋末置位發言權）！"),
+      wLbl + (isCloseCall ? " 以些微差距驚險當選警長！" : " 獲全場擁戴當選警長（1.5票歸票＋末置位發言權）！") + activeFlowNote,
       "gold",
       1700
     );
     addLog({
       kind: "blessing",
-      title: "👑 競選開票：" + wLbl + (isCloseCall ? " 驚險當選本局警長！" : " 高票當選本局警長！"),
+      title: "👑 競選開票：" + wLbl + (isCloseCall ? " 驚險當選本局警長！" : " 高票當選本局警長！") + activeFlowNote,
       text: tallySummary ? ("【警下票型・已納入排坑】" + tallySummary) : ""
     });
   }
@@ -1740,14 +2150,19 @@ function playSheriffStageReel(startIdx) {
 
 function resolveSheriffElectionAction(actionOrVoteId) {
   sound.unlock();
-  clearStepTimer();
-  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
-  state.activeSpeakerId = null;
   const m = state.match;
   const ctx = m ? m.sheriffElectionCtx : null;
   if (!m || !ctx || m.phase !== "SHERIFF_ELECTION") return false;
   const pid = getPlayerId();
   const pSeat = getPlayerSeat();
+  const withdrawingDuringAiSpeech = Boolean(
+    actionOrVoteId === "withdraw" && ctx.stage === "speech" && ctx.activeReelSeatId && ctx.activeReelSeatId !== pid
+  );
+  if (!withdrawingDuringAiSpeech) {
+    clearStepTimer();
+    if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
+    state.activeSpeakerId = null;
+  }
 
   if (actionOrVoteId === "listen") {
     if (ctx.stage !== "signup") return false;
@@ -1806,13 +2221,21 @@ function resolveSheriffElectionAction(actionOrVoteId) {
   if (actionOrVoteId === "withdraw") {
     if (!ctx.playerRunning) return false;
     const wasPlayerTurn = Boolean(ctx.stage === "speech" && ctx.activeReelSeatId === pid);
+    const oldOrder = Array.isArray(ctx.speechOrderIds) ? ctx.speechOrderIds : [];
+    const oldPidIdx = oldOrder.indexOf(pid);
     ctx.playerRunning = false;
     ctx.playerWithdrew = true;
-    ctx.activeReelSeatId = null;
+    if (wasPlayerTurn) {
+      ctx.activeReelSeatId = null;
+    }
     ctx.candidateIds = ctx.candidateIds.filter(function (id) { return id !== pid; });
-    ctx.speechOrderIds = (ctx.speechOrderIds || []).filter(function (id) { return id !== pid; });
+    ctx.speechOrderIds = oldOrder.filter(function (id) { return id !== pid; });
+    if (oldPidIdx !== -1 && typeof ctx.speechIndex === "number" && oldPidIdx <= ctx.speechIndex) {
+      ctx.speechIndex = Math.max(-1, ctx.speechIndex - 1);
+    }
     ctx.speeches = (ctx.speeches || []).filter(function (sp) { return sp.id !== pid; });
     ctx.spokenSpeeches = (ctx.spokenSpeeches || []).filter(function (sp) { return sp.id !== pid; });
+    if (m.sheriffBadgeFlowsBySeat) delete m.sheriffBadgeFlowsBySeat[pid];
     if (!Array.isArray(ctx.withdrawnIds)) ctx.withdrawnIds = [];
     if (ctx.withdrawnIds.indexOf(pid) === -1) ctx.withdrawnIds.push(pid);
     if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
@@ -1826,7 +2249,6 @@ function resolveSheriffElectionAction(actionOrVoteId) {
     sound.tone(420, 0.12, "sine", 0.05, 0);
     addLog({ kind: "system", title: "🏳 你華麗退水回到警下，稍後可參與警下投票決選。", text: "" });
     if (wasPlayerTurn) {
-      ctx.speechIndex = Math.max(-1, (ctx.speechIndex || 0) - 1);
       advanceSheriffSpeechTurn();
     } else {
       updateAllUI();
@@ -1853,13 +2275,14 @@ function resolveSheriffElectionAction(actionOrVoteId) {
 
 function startSheriffOrderPick(arg) {
   const m = state.match;
+  if (!m || !m.started || m.phase === "GAME_OVER") return false;
   const sh = (m && m.sheriffSeatId) ? getSeat(m.sheriffSeatId) : null;
   const onPicked = typeof arg === "function"
     ? arg
     : function (dir) {
       startDayDiscussion(typeof arg === "string" ? arg : "", dir ? { forcedDir: dir } : undefined);
     };
-  if (!m || !m.started || !state.sheriffMode || !sh || !sh.alive || sh.id !== getPlayerId() || state.autoPlay) {
+  if (!state.sheriffMode || !sh || !sh.alive || sh.id !== getPlayerId() || state.autoPlay) {
     onPicked(null);
     return false;
   }

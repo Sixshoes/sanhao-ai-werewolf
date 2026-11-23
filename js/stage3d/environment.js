@@ -76,7 +76,7 @@ function build3DEnvironmentMap(renderer, scene, env) {
     const isFileProto = typeof window !== "undefined" && window.location && window.location.protocol === "file:";
     if (!isFileProto && typeof THREE.TextureLoader === "function") {
       const loader = new THREE.TextureLoader();
-      loader.load("assets/sky/sanctuary_day.jpg", function (tex) {
+      loader.load("assets/sky/sanctuary_day.jpg?v=12", function (tex) {
         tex.encoding = THREE.sRGBEncoding;
         tex.mapping = THREE.EquirectangularReflectionMapping;
         env.skyPhotoDayMat.map = tex;
@@ -84,10 +84,27 @@ function build3DEnvironmentMap(renderer, scene, env) {
         env.hasPhotoDay = true;
         try {
           env.iblDayTex = pmrem.fromEquirectangular(tex).texture;
-          if (env.moodKey === "day" || env.moodKey === "vote") scene.environment = env.iblDayTex;
+          if ((env.moodKey === "day" || env.moodKey === "vote") && env.sceneThemeKey !== "celestial") {
+            scene.environment = env.iblDayTex;
+          }
         } catch (e) {}
       });
-      loader.load("assets/sky/sanctuary_night.jpg", function (tex) {
+      loader.load("assets/sky/sanctuary_celestial_day.jpg?v=12", function (tex) {
+        tex.encoding = THREE.sRGBEncoding;
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        if (env.skyPhotoCelestialMat) {
+          env.skyPhotoCelestialMat.map = tex;
+          env.skyPhotoCelestialMat.needsUpdate = true;
+        }
+        env.hasPhotoCelestial = true;
+        try {
+          env.iblCelestialTex = pmrem.fromEquirectangular(tex).texture;
+          if (env.sceneThemeKey === "celestial" && env.moodKey === "day") {
+            scene.environment = env.iblCelestialTex;
+          }
+        } catch (e) {}
+      });
+      loader.load("assets/sky/sanctuary_night.jpg?v=12", function (tex) {
         tex.encoding = THREE.sRGBEncoding;
         tex.mapping = THREE.EquirectangularReflectionMapping;
         env.skyPhotoNightMat.map = tex;
@@ -100,7 +117,7 @@ function build3DEnvironmentMap(renderer, scene, env) {
           }
         } catch (e) {}
       });
-      loader.load("assets/sky/sanctuary_dusk.jpg", function (tex) {
+      loader.load("assets/sky/sanctuary_dusk.jpg?v=12", function (tex) {
         tex.encoding = THREE.sRGBEncoding;
         tex.mapping = THREE.EquirectangularReflectionMapping;
         if (env.skyPhotoDuskMat) {
@@ -141,23 +158,30 @@ function build3DSkyAndLights(scene, env) {
   env.skyPhotoNightMat = new THREE.MeshBasicMaterial({
     color: 0xffffff, transparent: true, opacity: 0.0, side: THREE.BackSide, fog: false, depthWrite: false
   });
-  env.skyPhotoNightMesh = new THREE.Mesh(new THREE.SphereGeometry(62, 32, 22), env.skyPhotoNightMat);
-  env.skyPhotoNightMesh.position.y = -6.0;
+  env.skyPhotoNightMesh = new THREE.Mesh(new THREE.SphereGeometry(62.5, 36, 24), env.skyPhotoNightMat);
+  env.skyPhotoNightMesh.position.y = -1.8;
   scene.add(env.skyPhotoNightMesh);
 
   env.skyPhotoDuskMat = new THREE.MeshBasicMaterial({
     color: 0xffffff, transparent: true, opacity: 0.0, side: THREE.BackSide, fog: false, depthWrite: false
   });
-  env.skyPhotoDuskMesh = new THREE.Mesh(new THREE.SphereGeometry(61, 32, 22), env.skyPhotoDuskMat);
-  env.skyPhotoDuskMesh.position.y = -6.5;
+  env.skyPhotoDuskMesh = new THREE.Mesh(new THREE.SphereGeometry(61.5, 36, 24), env.skyPhotoDuskMat);
+  env.skyPhotoDuskMesh.position.y = -1.8;
   scene.add(env.skyPhotoDuskMesh);
 
   env.skyPhotoDayMat = new THREE.MeshBasicMaterial({
     color: 0xffffff, transparent: true, opacity: 0.0, side: THREE.BackSide, fog: false, depthWrite: false
   });
-  env.skyPhotoDayMesh = new THREE.Mesh(new THREE.SphereGeometry(60, 32, 22), env.skyPhotoDayMat);
-  env.skyPhotoDayMesh.position.y = -6.0;
+  env.skyPhotoDayMesh = new THREE.Mesh(new THREE.SphereGeometry(60.5, 36, 24), env.skyPhotoDayMat);
+  env.skyPhotoDayMesh.position.y = -1.8;
   scene.add(env.skyPhotoDayMesh);
+
+  env.skyPhotoCelestialMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 0.0, side: THREE.BackSide, fog: false, depthWrite: false
+  });
+  env.skyPhotoCelestialMesh = new THREE.Mesh(new THREE.SphereGeometry(59.6, 36, 24), env.skyPhotoCelestialMat);
+  env.skyPhotoCelestialMesh.position.y = -1.6;
+  scene.add(env.skyPhotoCelestialMesh);
 
   scene.fog = new THREE.FogExp2(0x0b1024, 0.015);
 
@@ -203,11 +227,15 @@ function build3DSkyAndLights(scene, env) {
   env.speakerSpot.target = env.spotTarget;
   scene.add(env.speakerSpot);
 
+  const coneTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createGodRayTexture === "function")
+    ? stage3dTextures.createGodRayTexture()
+    : null;
   const coneGeo = new THREE.ConeGeometry(1.7, 9.6, 24, 1, true);
   coneGeo.translate(0, -4.8, 0);
   env.spotCone = new THREE.Mesh(
     coneGeo,
     new THREE.MeshBasicMaterial({
+      map: coneTex,
       color: 0xfde047,
       transparent: true,
       opacity: 0.0,
@@ -219,26 +247,56 @@ function build3DSkyAndLights(scene, env) {
   env.spotCone.position.set(0, 9.6, 0);
   scene.add(env.spotCone);
 
-  // 3. Celestial Bodies (Sun + Moon + Soft Bokeh Starfield)
+  // 3. Celestial Bodies (Soft Painterly Radial-Glow Sun & Moon + Soft Bokeh Starfield)
+  const celGlowTex = typeof stage3dTextures.createCelestialSunGlowTexture === "function"
+    ? stage3dTextures.createCelestialSunGlowTexture()
+    : bokehTex;
   const sunGroup = new THREE.Group();
-  sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(2.2, 20, 16), new THREE.MeshBasicMaterial({ color: 0xfef08a, fog: false })));
+  sunGroup.add(new THREE.Mesh(
+    new THREE.SphereGeometry(1.55, 20, 16),
+    new THREE.MeshBasicMaterial({ color: 0xfff8dc, transparent: true, opacity: 0.92, fog: false })
+  ));
   const sunHalo = new THREE.Mesh(
-    new THREE.RingGeometry(2.55, 3.8, 32),
-    new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.35, side: THREE.DoubleSide, fog: false })
+    new THREE.PlaneGeometry(11.5, 11.5),
+    new THREE.MeshBasicMaterial({
+      map: celGlowTex,
+      color: 0xffe4a0,
+      transparent: true,
+      opacity: 0.62,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      fog: false
+    })
   );
   sunGroup.add(sunHalo);
   sunGroup.position.set(17, 17, -28);
+  sunGroup.lookAt(0, 2, 0);
   scene.add(sunGroup);
   env.sunMesh = sunGroup;
   env.sunHalo = sunHalo;
 
   const moonGroup = new THREE.Group();
-  moonGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.85, 20, 16), new THREE.MeshBasicMaterial({ color: 0xe0e7ff, fog: false })));
   moonGroup.add(new THREE.Mesh(
-    new THREE.RingGeometry(2.15, 3.05, 32),
-    new THREE.MeshBasicMaterial({ color: 0xa78bfa, transparent: true, opacity: 0.28, side: THREE.DoubleSide, fog: false })
+    new THREE.SphereGeometry(1.42, 20, 16),
+    new THREE.MeshBasicMaterial({ color: 0xf0f4ff, transparent: true, opacity: 0.94, fog: false })
   ));
+  const moonHalo = new THREE.Mesh(
+    new THREE.PlaneGeometry(9.6, 9.6),
+    new THREE.MeshBasicMaterial({
+      map: celGlowTex,
+      color: 0xbecbff,
+      transparent: true,
+      opacity: 0.44,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      fog: false
+    })
+  );
+  moonGroup.add(moonHalo);
   moonGroup.position.set(-16, 16.5, -28);
+  moonGroup.lookAt(0, 2, 0);
   scene.add(moonGroup);
   env.moonGroup = moonGroup;
 
@@ -270,9 +328,10 @@ function build3DSkyAndLights(scene, env) {
   scene.add(env.starPoints);
 }
 
-function createSculptedMountainRing(innerR, outerR, maxHeight, mat, seedShift) {
+function createSculptedMountainRing(innerR, outerR, maxHeight, mat, seedShift, baseY) {
   const angSeg = 84;
   const radSeg = 9;
+  const yFloor = typeof baseY === "number" ? baseY : -3.8;
   const verts = [];
   const colors = [];
   const indices = [];
@@ -293,11 +352,11 @@ function createSculptedMountainRing(innerR, outerR, maxHeight, mat, seedShift) {
         0.28 * Math.sin(ang * 3 + seedShift) +
         0.16 * Math.cos(ang * 7 - seedShift * 1.4) +
         0.10 * Math.sin(ang * 13 + rt * 4.5);
-      const y = -3.8 + Math.max(0.06, ridge) * radProfile * seaNotch * maxHeight;
+      const y = yFloor + Math.max(0.06, ridge) * radProfile * seaNotch * maxHeight;
       verts.push(Math.cos(ang) * rad, y, Math.sin(ang) * rad);
 
       // Qinglü Shan-Shui Height Vertex Coloring (deep indigo valley -> celadon mid-slope -> luminous mist peak!)
-      const hNorm = clamp((y + 3.8) / Math.max(1, maxHeight * 0.85), 0, 1);
+      const hNorm = clamp((y - yFloor) / Math.max(1, maxHeight * 0.85), 0, 1);
       const cr = 0.44 + hNorm * 0.54;
       const cg = 0.58 + hNorm * 0.40;
       const cb = 0.68 + hNorm * 0.32;
@@ -543,14 +602,337 @@ function buildTabletopTeaSet(woodMat) {
   return teaSet;
 }
 
+function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex) {
+  const g = new THREE.Group();
+  const culmMat = new THREE.MeshStandardMaterial({ color: 0x3b7a4f, roughness: 0.42, metalness: 0.06 });
+  const nodeMat = new THREE.MeshStandardMaterial({ color: 0xc2d8a4, roughness: 0.52, metalness: 0.04 });
+  const leafMat = bambooLeafTex
+    ? new THREE.MeshStandardMaterial({
+        map: bambooLeafTex,
+        color: 0xdffce6,
+        alphaTest: 0.28,
+        transparent: true,
+        roughness: 0.72,
+        side: THREE.DoubleSide
+      })
+    : new THREE.MeshStandardMaterial({ color: 0x4ca66a, roughness: 0.78, side: THREE.DoubleSide });
+
+  const canopy = new THREE.Group();
+  const leafGeo = new THREE.PlaneGeometry(1.55, 1.55);
+  const stalks = [
+    { ox: 0.0, oz: 0.0, h: 5.8, r: 0.056, leanX: 0.05, leanZ: 0.04 },
+    { ox: 0.34, oz: 0.18, h: 4.9, r: 0.046, leanX: 0.09, leanZ: -0.05 },
+    { ox: -0.30, oz: 0.24, h: 5.3, r: 0.050, leanX: -0.08, leanZ: 0.07 },
+    { ox: 0.16, oz: -0.32, h: 4.5, r: 0.042, leanX: 0.06, leanZ: -0.08 },
+    { ox: -0.24, oz: -0.22, h: 6.1, r: 0.054, leanX: -0.05, leanZ: -0.06 }
+  ];
+  stalks.forEach(function (st, si) {
+    const culm = new THREE.Mesh(new THREE.CylinderGeometry(st.r * 0.72, st.r, st.h, 7), culmMat);
+    culm.position.set(st.ox + st.leanX * st.h * 0.4, st.h * 0.5, st.oz + st.leanZ * st.h * 0.4);
+    culm.rotation.z = -st.leanX;
+    culm.rotation.x = st.leanZ;
+    culm.castShadow = true;
+    g.add(culm);
+
+    for (let ni = 1; ni <= 4; ni++) {
+      const ny = st.h * (ni / 5);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(st.r * (1.02 - ni * 0.05), 0.010, 5, 10), nodeMat);
+      ring.rotation.x = Math.PI * 0.5;
+      ring.position.set(st.ox + st.leanX * ny * 0.8, ny, st.oz + st.leanZ * ny * 0.8);
+      g.add(ring);
+    }
+
+    // Layered crossed bamboo foliage sprays crowning upper culms
+    for (let li = 0; li < 2; li++) {
+      const ly = st.h * (0.72 + li * 0.22);
+      const lx = st.ox + st.leanX * ly * 0.82;
+      const lz = st.oz + st.leanZ * ly * 0.82;
+      for (let ci = 0; ci < 2; ci++) {
+        const sprig = new THREE.Mesh(leafGeo, leafMat);
+        sprig.position.set(lx, ly, lz);
+        sprig.rotation.set(-0.22 + li * 0.12, si * 1.15 + ci * Math.PI * 0.5 + li * 0.5, (ci === 0 ? 0.18 : -0.18));
+        sprig.scale.setScalar(0.86 + (si % 3) * 0.14);
+        canopy.add(sprig);
+      }
+    }
+  });
+
+  g.add(canopy);
+  g.position.set(x, y, z);
+  g.scale.setScalar(scaleMul || 1);
+  return { group: g, canopy: canopy };
+}
+
+function buildBlossomTree(x, y, z, scaleMul, kind, woodTex, blossomTex) {
+  const g = new THREE.Group();
+  const isOsm = kind === "osmanthus";
+  const barkMat = new THREE.MeshStandardMaterial({
+    map: woodTex ? woodTex.map : null,
+    bumpMap: woodTex ? woodTex.bump : null,
+    bumpScale: 0.07,
+    color: isOsm ? 0x452d1d : 0x3b2320,
+    roughness: 0.90,
+    metalness: 0.02
+  });
+  const coreMat = new THREE.MeshStandardMaterial({
+    color: isOsm ? 0xb47b1e : 0xc47b93,
+    roughness: 0.82,
+    metalness: 0.02
+  });
+  const sprigMatShade = blossomTex
+    ? new THREE.MeshStandardMaterial({
+        map: blossomTex,
+        color: isOsm ? 0xdec07a : 0xe2b8c7,
+        emissive: isOsm ? 0x523106 : 0x451a2a,
+        emissiveIntensity: 0.14,
+        alphaTest: 0.22,
+        transparent: true,
+        roughness: 0.78,
+        side: THREE.DoubleSide
+      })
+    : coreMat;
+  const sprigMat = blossomTex
+    ? new THREE.MeshStandardMaterial({
+        map: blossomTex,
+        color: isOsm ? 0xfff3cc : 0xfff5f8,
+        emissive: isOsm ? 0x6b4308 : 0x5c2438,
+        emissiveIntensity: 0.18,
+        alphaTest: 0.22,
+        transparent: true,
+        roughness: 0.70,
+        side: THREE.DoubleSide
+      })
+    : coreMat;
+
+  const trunkSegs = [
+    { x0: 0, y0: 0, z0: 0, x1: 0.18, y1: 1.45, z1: 0.10, rBot: 0.20, rTop: 0.14 },
+    { x0: 0.18, y0: 1.40, z0: 0.10, x1: -0.06, y1: 2.95, z1: -0.04, rBot: 0.14, rTop: 0.095 }
+  ];
+  trunkSegs.forEach(function (s) {
+    const dx = s.x1 - s.x0, dy = s.y1 - s.y0, dz = s.z1 - s.z0;
+    const len = Math.hypot(dx, dy, dz);
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(s.rTop, s.rBot, len, 8), barkMat);
+    seg.position.set((s.x0 + s.x1) * 0.5, (s.y0 + s.y1) * 0.5, (s.z0 + s.z1) * 0.5);
+    seg.rotation.z = -Math.atan2(dx, dy);
+    seg.rotation.x = Math.atan2(dz, dy);
+    seg.castShadow = true;
+    g.add(seg);
+  });
+
+  if (typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function") {
+    [
+      [new THREE.Vector3(0.14, 1.95, 0.08), new THREE.Vector3(0.75, 2.45, 0.36), new THREE.Vector3(1.22, 2.75, 0.52)],
+      [new THREE.Vector3(0.06, 2.35, 0.02), new THREE.Vector3(-0.62, 2.80, -0.28), new THREE.Vector3(-1.12, 3.12, -0.44)],
+      [new THREE.Vector3(-0.04, 2.80, -0.02), new THREE.Vector3(0.32, 3.35, -0.34), new THREE.Vector3(0.72, 3.65, -0.48)]
+    ].forEach(function (pts) {
+      const curve = new THREE.QuadraticBezierCurve3(pts[0], pts[1], pts[2]);
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 6, 0.048, 5, false), barkMat));
+    });
+  }
+
+  const canopy = new THREE.Group();
+  const sprigGeo = new THREE.PlaneGeometry(1.85, 1.58);
+  [
+    [1.18, 2.86, 0.48, 1.05],
+    [-1.08, 3.22, -0.42, 1.10],
+    [0.68, 3.74, -0.46, 0.96],
+    [-0.08, 3.92, 0.14, 1.24],
+    [-0.36, 3.30, 0.66, 0.92]
+  ].forEach(function (cl, idx) {
+    // Pure layered painterly blossom sprigs (shaded inner + sunlit outer; zero solid geometric sphere blobs!)
+    for (let si = 0; si < 3; si++) {
+      const sa = (si / 3) * Math.PI * 2 + idx * 0.85;
+      const inSp = new THREE.Mesh(sprigGeo, sprigMatShade);
+      inSp.position.set(cl[0] + Math.cos(sa) * cl[3] * 0.16, cl[1] - 0.12 + (si % 2) * 0.08, cl[2] + Math.sin(sa) * cl[3] * 0.16);
+      inSp.rotation.set(-0.22 + si * 0.18, sa + 0.5, (si % 2 ? 0.22 : -0.22));
+      inSp.scale.setScalar(cl[3] * 0.78);
+      canopy.add(inSp);
+    }
+    for (let pi = 0; pi < 5; pi++) {
+      const pa = (pi / 5) * Math.PI * 2 + idx * 0.7;
+      const sp = new THREE.Mesh(sprigGeo, sprigMat);
+      sp.position.set(cl[0] + Math.cos(pa) * cl[3] * 0.34, cl[1] + (pi % 2 ? 0.16 : -0.04), cl[2] + Math.sin(pa) * cl[3] * 0.34);
+      sp.rotation.set(-0.34 + (pi % 3) * 0.18, pa, (pi % 2 ? 0.16 : -0.16));
+      sp.scale.setScalar(cl[3] * 0.88);
+      canopy.add(sp);
+    }
+  });
+
+  g.add(canopy);
+  g.position.set(x, y, z);
+  g.scale.setScalar(scaleMul || 1);
+  return { group: g, canopy: canopy, kind: kind };
+}
+
+function buildMossyCliffBoulder(x, y, z, sx, sy, sz, rotY, stoneTex) {
+  const g = new THREE.Group();
+  // Single unified organic vertex-colored granite-to-moss rock (zero intersecting shell Z-fighting from overhead views!)
+  const rockGeo = typeof THREE.DodecahedronGeometry === "function"
+    ? new THREE.DodecahedronGeometry(1.0, 2)
+    : new THREE.SphereGeometry(1.0, 12, 10);
+  if (rockGeo.attributes && rockGeo.attributes.position) {
+    const pos = rockGeo.attributes.position;
+    const cols = new Float32Array(pos.count * 3);
+    const seed = (x * 0.7 + z * 1.1);
+    for (let i = 0; i < pos.count; i++) {
+      const vx = pos.getX(i);
+      const vy = pos.getY(i);
+      const vz = pos.getZ(i);
+      const bump = 1.0 + 0.09 * Math.sin(vx * 3.4 + seed) * Math.cos(vz * 3.1 - seed) + 0.05 * Math.sin(vy * 5.2 + vx * 2.7);
+      pos.setXYZ(i, vx * bump, vy * bump, vz * bump);
+      // Smoothly blend dark mountain granite on flanks -> velvety Linmei emerald moss on upper facets
+      const mossMix = clamp((vy - 0.14) / 0.58, 0, 1);
+      const sr = 0.34, sg = 0.40, sb = 0.45;
+      const mr = 0.25, mg = 0.46, mb = 0.32;
+      cols[i * 3] = sr + (mr - sr) * mossMix;
+      cols[i * 3 + 1] = sg + (mg - sg) * mossMix;
+      cols[i * 3 + 2] = sb + (mb - sb) * mossMix;
+    }
+    pos.needsUpdate = true;
+    rockGeo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
+    if (typeof rockGeo.computeVertexNormals === "function") rockGeo.computeVertexNormals();
+  }
+  const rockMat = new THREE.MeshStandardMaterial({
+    map: stoneTex ? stoneTex.map : null,
+    bumpMap: stoneTex ? stoneTex.bump : null,
+    bumpScale: 0.05,
+    vertexColors: true,
+    roughness: 0.92,
+    metalness: 0.03
+  });
+  const rock = new THREE.Mesh(rockGeo, rockMat);
+  rock.scale.set(sx, sy, sz);
+  rock.receiveShadow = true;
+  rock.castShadow = true;
+  g.add(rock);
+  g.position.set(x, y, z);
+  g.rotation.y = rotY || 0;
+  return g;
+}
+
+function createCelestialSpireMaterial(env) {
+  if (typeof THREE.ShaderMaterial === "function") {
+    env.celestialSpireUniforms = {
+      uTime: { value: 0 },
+      uTopColor: { value: new THREE.Color(0x1f7268) },
+      uMidColor: { value: new THREE.Color(0x2d5e7a) },
+      uMistColor: { value: new THREE.Color(0xe2f6f8) },
+      uRimColor: { value: new THREE.Color(0xffe9b0) }
+    };
+    return new THREE.ShaderMaterial({
+      uniforms: env.celestialSpireUniforms,
+      transparent: true,
+      depthWrite: true,
+      vertexShader: [
+        "varying float vLocalY;",
+        "varying vec3 vWorldNormal;",
+        "varying vec3 vWorldPos;",
+        "void main() {",
+        "  vLocalY = position.y;",
+        "  vec4 wp = modelMatrix * vec4(position, 1.0);",
+        "  vWorldPos = wp.xyz;",
+        "  vWorldNormal = normalize(mat3(modelMatrix) * normal);",
+        "  gl_Position = projectionMatrix * viewMatrix * wp;",
+        "}"
+      ].join("\n"),
+      fragmentShader: [
+        "uniform float uTime;",
+        "uniform vec3 uTopColor;",
+        "uniform vec3 uMidColor;",
+        "uniform vec3 uMistColor;",
+        "uniform vec3 uRimColor;",
+        "varying float vLocalY;",
+        "varying vec3 vWorldNormal;",
+        "varying vec3 vWorldPos;",
+        "void main() {",
+        "  float h = clamp(vLocalY + 0.5, 0.0, 1.0);",
+        "  vec3 col = mix(uMistColor, uMidColor, smoothstep(0.08, 0.52, h));",
+        "  col = mix(col, uTopColor, smoothstep(0.50, 0.92, h));",
+        "  vec3 V = normalize(cameraPosition - vWorldPos);",
+        "  float fresnel = pow(clamp(1.0 - max(dot(normalize(vWorldNormal), V), 0.0), 0.0, 1.0), 2.6);",
+        "  float sunGlow = max(dot(normalize(vWorldNormal), normalize(vec3(0.45, 0.72, -0.52))), 0.0);",
+        "  col += uRimColor * (fresnel * 0.34 + sunGlow * 0.16) * smoothstep(0.20, 0.85, h);",
+        "  float mistWave = 0.04 * sin(vWorldPos.x * 0.25 + uTime * 0.4);",
+        "  float alpha = smoothstep(-0.46 + mistWave, 0.14 + mistWave, vLocalY);",
+        "  gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.96));",
+        "}"
+      ].join("\n")
+    });
+  }
+  return new THREE.MeshStandardMaterial({
+    color: 0x2a6e68,
+    roughness: 0.86,
+    metalness: 0.06,
+    transparent: true,
+    opacity: 0.88
+  });
+}
+
+function buildCelestialKarstSpire(x, y, z, rTop, rBot, height, spireMat, woodTex, hasBonsai, seedIdx) {
+  const g = new THREE.Group();
+  // Unit-height geometry (-0.5..+0.5) scaled by height so ShaderMaterial mist-fade works cleanly for any tallness!
+  const spireGeo = new THREE.CylinderGeometry(rTop, rBot, 1.0, 7, 5);
+  if (spireGeo.attributes && spireGeo.attributes.position) {
+    const pos = spireGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const vx = pos.getX(i);
+      const vy = pos.getY(i);
+      const vz = pos.getZ(i);
+      const ang = Math.atan2(vz, vx);
+      const crag = 1.0 + 0.18 * Math.sin(ang * 3 + seedIdx * 1.7 + vy * 5.0) + 0.10 * Math.cos(ang * 5 - vy * 7.0);
+      const capNarrow = vy > 0.42 ? 0.88 : 1.0;
+      pos.setXYZ(i, vx * crag * capNarrow, vy, vz * crag * capNarrow);
+    }
+    pos.needsUpdate = true;
+    if (typeof spireGeo.computeVertexNormals === "function") spireGeo.computeVertexNormals();
+  }
+  const rockMesh = new THREE.Mesh(spireGeo, spireMat);
+  rockMesh.scale.set(1, height, 1);
+  g.add(rockMesh);
+
+  if (hasBonsai) {
+    const bonsai = buildMountainPineTree(0, height * 0.48, 0, 0.44, woodTex);
+    g.add(bonsai);
+  }
+  g.position.set(x, y, z);
+  return g;
+}
+
+function buildFloatingSteppingStone(x, y, z, rotY, stoneTex, goldMat) {
+  const g = new THREE.Group();
+  const jadeStoneMat = new THREE.MeshStandardMaterial({
+    map: stoneTex ? stoneTex.map : null,
+    bumpMap: stoneTex ? stoneTex.bump : null,
+    bumpScale: 0.035,
+    color: 0xa7d9cc,
+    roughness: 0.56,
+    metalness: 0.12
+  });
+  const slab = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.64, 0.34, 8), jadeStoneMat);
+  slab.receiveShadow = true;
+  const underTrim = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.026, 6, 16), goldMat);
+  underTrim.rotation.x = Math.PI * 0.5;
+  underTrim.position.y = -0.14;
+  const crystalBase = new THREE.Mesh(
+    new THREE.ConeGeometry(0.46, 0.58, 6),
+    new THREE.MeshStandardMaterial({ color: 0x3b7d75, roughness: 0.65, metalness: 0.18 })
+  );
+  crystalBase.rotation.x = Math.PI;
+  crystalBase.position.y = -0.44;
+  g.add(slab, underTrim, crystalBase);
+  g.position.set(x, y, z);
+  g.rotation.y = rotY || 0;
+  return g;
+}
+
 function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   const bokehTex = stage3dTextures.createGlowParticleTexture();
 
-  // 4. Layered Qinglü Shan-Shui Mountain Peaks embracing the coastal valley toward Guishan Island!
-  env.mtnMatBack = new THREE.MeshStandardMaterial({ color: 0x263854, roughness: 0.94, metalness: 0.04, vertexColors: true });
-  env.mtnMatFront = new THREE.MeshStandardMaterial({ color: 0x324a64, roughness: 0.90, metalness: 0.06, vertexColors: true });
-  scene.add(createSculptedMountainRing(19.5, 35.0, 7.4, env.mtnMatFront, 0.4));
-  scene.add(createSculptedMountainRing(33.0, 52.0, 11.2, env.mtnMatBack, 2.3));
+  // 4. Softened Lower Foothill Silhouettes framing the Pacific coast without blocking the 360° skybox horizon!
+  env.mtnMatBack = new THREE.MeshStandardMaterial({ color: 0x263854, roughness: 0.94, metalness: 0.04, vertexColors: true, transparent: true, opacity: 0.72 });
+  env.mtnMatFront = new THREE.MeshStandardMaterial({ color: 0x324a64, roughness: 0.90, metalness: 0.06, vertexColors: true, transparent: true, opacity: 0.74 });
+  scene.add(createSculptedMountainRing(19.5, 35.0, 2.8, env.mtnMatFront, 0.4, -5.2));
+  scene.add(createSculptedMountainRing(33.0, 52.0, 4.8, env.mtnMatBack, 2.3, -5.4));
 
   // Soft Translucent Distant Pacific Sea-Shimmer (radial alpha fade so photographic cloud sea glows cleanly!)
   env.oceanBumpTex = stage3dTextures.createWaterBumpTexture();
@@ -620,12 +1002,20 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   oceanMesh.receiveShadow = true;
   scene.add(oceanMesh);
 
-  // 5. Mountain Courtyard Ground + Stepped Octagonal Academy Stone Terrace
-  env.groundMat = new THREE.MeshStandardMaterial({ color: 0x121a2d, roughness: 0.94, metalness: 0.05 });
-  const groundDisk = new THREE.Mesh(new THREE.CylinderGeometry(18.5, 19.8, 1.4, 24), env.groundMat);
-  groundDisk.position.y = -0.94;
+  // 5. Sculpted Mossy Cliff Skirt + Stepped Octagonal Academy Stone Terrace (shrunk so sea of clouds opens right past the cliff edge!)
+  env.groundMat = new THREE.MeshStandardMaterial({
+    map: stone.map,
+    bumpMap: stone.bump,
+    bumpScale: 0.055,
+    color: 0x223836,
+    roughness: 0.94,
+    metalness: 0.04
+  });
+  const groundDisk = new THREE.Mesh(new THREE.CylinderGeometry(9.4, 11.4, 1.4, 24), env.groundMat);
+  groundDisk.position.y = -0.82;
   groundDisk.receiveShadow = true;
   scene.add(groundDisk);
+  env.groundDisk = groundDisk;
 
   env.terraceMat = new THREE.MeshStandardMaterial({
     map: stone.map,
@@ -654,11 +1044,10 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   tailHill.scale.set(1.5, 0.44, 0.68);
   tailHill.position.set(-5.6, -0.05, -0.15);
   const waterlineMist = new THREE.Mesh(
-    new THREE.RingGeometry(5.2, 9.4, 28),
-    new THREE.MeshBasicMaterial({ color: 0xdbeafe, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false })
+    new THREE.PlaneGeometry(17.5, 9.2),
+    new THREE.MeshBasicMaterial({ map: stage3dTextures.createCloudTexture(), color: 0xdbeafe, transparent: true, opacity: 0.14, side: THREE.DoubleSide, depthWrite: false })
   );
   waterlineMist.rotation.x = -Math.PI * 0.5;
-  waterlineMist.scale.set(1.35, 0.58, 1.0);
   waterlineMist.position.y = 0.05;
   const guishanBeacon = new THREE.Mesh(
     new THREE.SphereGeometry(0.28, 10, 8),
@@ -892,12 +1281,19 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     post.castShadow = true;
     lg.add(post);
 
-    // Sculpted Dougong (斗拱) stepped timber bracket capital supporting eaves
+    // Sculpted Dougong (斗拱) stepped timber bracket capital + carved Queti (雀替) wing brackets
     const douLower = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.42), woodDarkMat);
     douLower.position.y = 4.62;
     const douUpper = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.11, 0.52), goldAccentMat);
     douUpper.position.y = 4.75;
     lg.add(douLower, douUpper);
+    [-1, 1].forEach(function (sideDir) {
+      const quetiMain = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.09), woodDarkMat);
+      quetiMain.position.set(sideDir * 0.34, 4.44, 0);
+      const quetiTrim = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.09, 0.11), goldAccentMat);
+      quetiTrim.position.set(sideDir * 0.28, 4.33, 0);
+      lg.add(quetiMain, quetiTrim);
+    });
 
     const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.85), woodDarkMat);
     arm.position.set(0, 4.25, -0.4);
@@ -932,6 +1328,20 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
 
   // Carved Wooden Balustrades, White-Plaster Academy Plinths & Swept Backdrop Flying Eaves (leaves +Z camera bays open!)
   const hasTube = typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function";
+  const balLatticeTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createBalustradeLatticeTexture === "function")
+    ? stage3dTextures.createBalustradeLatticeTexture()
+    : null;
+  const balLatticeMat = balLatticeTex
+    ? new THREE.MeshStandardMaterial({
+        map: balLatticeTex,
+        color: 0xf4e3c8,
+        alphaTest: 0.25,
+        transparent: true,
+        roughness: 0.56,
+        metalness: 0.14,
+        side: THREE.DoubleSide
+      })
+    : null;
   for (let bi = 0; bi < 8; bi++) {
     // Bay 1 (Front South between li=1 and li=2) stays completely open gateway for uncluttered camera approach
     if (bi === 1) continue;
@@ -942,7 +1352,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     const span = Math.hypot(pB.x - pA.x, pB.z - pA.z);
     const yaw = Math.atan2(pB.x - pA.x, pB.z - pA.z);
 
-    // Low white-plaster courtyard curb + walnut railing (skip front-side entrance bays 0 and 2 so view feels inviting)
+    // Low white-plaster courtyard curb + carved walnut fretwork balustrade + lotus-bud newel caps (skip front entrance bays 0 and 2)
     if (bi >= 3 || bi === 7) {
       const bayGrp = new THREE.Group();
       bayGrp.position.set(midX, 0, midZ);
@@ -954,12 +1364,30 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
       const topRail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, span - 0.25), woodDarkMat);
       topRail.position.y = 0.96;
       topRail.castShadow = true;
-      bayGrp.add(lowWall, topRail);
+      const botRail = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.05, span - 0.36), woodDarkMat);
+      botRail.position.y = 0.31;
+      bayGrp.add(lowWall, topRail, botRail);
 
-      [-0.3, 0, 0.3].forEach(function (frac) {
+      if (balLatticeMat) {
+        const fretPanel = new THREE.Mesh(new THREE.PlaneGeometry(span - 0.54, 0.60), balLatticeMat);
+        fretPanel.rotation.y = Math.PI * 0.5;
+        fretPanel.position.y = 0.63;
+        bayGrp.add(fretPanel);
+      }
+
+      [-0.36, 0, 0.36].forEach(function (frac) {
         const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.68, 6), woodDarkMat);
         sp.position.set(0, 0.60, frac * (span - 0.5));
         bayGrp.add(sp);
+        if (frac !== 0) {
+          const capCollar = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.012, 5, 10), goldAccentMat);
+          capCollar.rotation.x = Math.PI * 0.5;
+          capCollar.position.set(0, 1.01, frac * (span - 0.5));
+          const lotusBud = new THREE.Mesh(new THREE.SphereGeometry(0.062, 8, 6), stonePlinthMat);
+          lotusBud.scale.set(1, 1.24, 1);
+          lotusBud.position.set(0, 1.08, frac * (span - 0.5));
+          bayGrp.add(capCollar, lotusBud);
+        }
       });
       proceduralPavilionGroup.add(bayGrp);
     }
@@ -1040,6 +1468,138 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     scene.add(pine);
     env.pineTrees.push({ group: pine, canopy: pine.userData ? pine.userData.canopy : null, phase: idx * 1.45 });
   });
+
+  // 6B. Dual Switchable Garden Themes!
+  // Theme A: 林美山雅致書院風 (Linmei Academy — Swaying Jade Bamboo Groves + Osmanthus & Mountain Sakura + Mossy Cliff Boulders)
+  const linmeiGardenGroup = new THREE.Group();
+  const bambooLeafTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createBambooLeafTexture === "function")
+    ? stage3dTextures.createBambooLeafTexture()
+    : null;
+  const osmanthusTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createBlossomClusterTexture === "function")
+    ? stage3dTextures.createBlossomClusterTexture("osmanthus")
+    : null;
+  const sakuraTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createBlossomClusterTexture === "function")
+    ? stage3dTextures.createBlossomClusterTexture("sakura")
+    : null;
+
+  [
+    [-9.8, -0.42, 3.6, 1.08],
+    [9.9, -0.42, 3.2, 1.06],
+    [-10.8, -0.52, -0.8, 1.22],
+    [10.9, -0.52, -1.2, 1.18],
+    [-5.8, -0.60, -9.8, 1.25],
+    [6.2, -0.60, -9.6, 1.22]
+  ].forEach(function (bg, idx) {
+    const grove = buildBambooGrove(bg[0], bg[1], bg[2], bg[3], bambooLeafTex);
+    linmeiGardenGroup.add(grove.group);
+    env.bambooGroves.push({ group: grove.group, canopy: grove.canopy, phase: idx * 1.12 });
+  });
+
+  [
+    [-9.2, -0.45, -6.2, 1.18, "osmanthus", osmanthusTex],
+    [9.4, -0.45, -6.4, 1.22, "sakura", sakuraTex],
+    [8.8, -0.42, 5.2, 1.04, "osmanthus", osmanthusTex],
+    [-8.9, -0.42, 5.4, 1.02, "sakura", sakuraTex]
+  ].forEach(function (bt, idx) {
+    const tree = buildBlossomTree(bt[0], bt[1], bt[2], bt[3], bt[4], wood, bt[5]);
+    linmeiGardenGroup.add(tree.group);
+    env.blossomTrees.push({ group: tree.group, canopy: tree.canopy, kind: bt[4], phase: idx * 1.55 });
+  });
+
+  [
+    [-9.4, -0.55, 2.2, 1.35, 0.72, 1.05, 0.4],
+    [9.3, -0.55, 1.9, 1.25, 0.68, 1.12, -0.6],
+    [-9.8, -0.60, -4.8, 1.48, 0.84, 1.20, 1.1],
+    [9.9, -0.60, -5.0, 1.42, 0.80, 1.18, -0.9],
+    [-6.6, -0.62, -8.8, 1.55, 0.86, 1.16, 0.3],
+    [6.8, -0.62, -8.7, 1.46, 0.78, 1.24, -1.2],
+    [-0.6, -0.65, -10.0, 1.62, 0.76, 1.08, 0.2],
+    [2.4, -0.62, -9.8, 1.22, 0.64, 0.98, 0.85]
+  ].forEach(function (br) {
+    linmeiGardenGroup.add(buildMossyCliffBoulder(br[0], br[1], br[2], br[3], br[4], br[5], br[6], stone));
+  });
+  scene.add(linmeiGardenGroup);
+  env.linmeiGardenGroup = linmeiGardenGroup;
+
+  // Theme B: 空靈青綠山水仙境風 (Celestial Qinglü Wonderland — Floating Karst Spires + Jade Stepping Stones + Cloud Ribbon + Spirit Wisps)
+  const celestialGardenGroup = new THREE.Group();
+  const spireMat = createCelestialSpireMaterial(env);
+  env.celestialSpireMat = spireMat;
+  [
+    [-19.5, 1.2, -16.5, 1.55, 2.8, 16.5, true],
+    [-12.5, 2.6, -24.0, 1.85, 3.4, 21.0, true],
+    [0.8, 3.2, -28.5, 2.1, 3.8, 23.5, true],
+    [13.8, 1.8, -22.5, 1.65, 3.1, 18.5, false],
+    [22.5, 0.8, -14.0, 1.50, 2.7, 16.0, true],
+    [-25.5, 0.4, -3.5, 1.75, 3.0, 15.8, false],
+    [26.2, 0.6, -2.0, 1.68, 2.9, 15.2, true],
+    [-22.0, -0.4, 11.5, 1.45, 2.6, 13.8, false],
+    [21.8, -0.2, 12.2, 1.40, 2.5, 13.4, false],
+    [-6.5, 4.2, -33.0, 2.35, 4.2, 26.0, false]
+  ].forEach(function (sp, idx) {
+    const spire = buildCelestialKarstSpire(sp[0], sp[1], sp[2], sp[3], sp[4], sp[5], spireMat, wood, sp[6], idx);
+    celestialGardenGroup.add(spire);
+    env.celestialSpires.push({ group: spire, baseY: sp[1], phase: idx * 0.88, amp: 0.24 + (idx % 3) * 0.11 });
+  });
+
+  [
+    [-10.2, 0.06, 2.6, 0.3],
+    [10.4, 0.12, 2.4, -0.4],
+    [-10.8, 0.28, -3.8, 0.9],
+    [10.8, 0.22, -4.0, -0.8],
+    [-6.0, 0.38, -9.6, 0.2],
+    [6.2, 0.34, -9.5, -0.25]
+  ].forEach(function (st, idx) {
+    const stoneMesh = buildFloatingSteppingStone(st[0], st[1], st[2], st[3], stone, goldAccentMat);
+    celestialGardenGroup.add(stoneMesh);
+    env.celestialSteppingStones.push({ group: stoneMesh, baseY: st[1], phase: idx * 1.15 });
+  });
+
+  const celCloudTex = stage3dTextures.createCloudTexture();
+  const celCloudRibbon = new THREE.Mesh(
+    new THREE.CylinderGeometry(14.6, 16.8, 3.4, 32, 1, true),
+    new THREE.MeshBasicMaterial({
+      map: celCloudTex,
+      color: 0xe0f7fa,
+      transparent: true,
+      opacity: 0.22,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    })
+  );
+  celCloudRibbon.position.y = -1.15;
+  celestialGardenGroup.add(celCloudRibbon);
+  env.celestialCloudRibbon = celCloudRibbon;
+
+  const wispCount = 32;
+  const wispPos = new Float32Array(wispCount * 3);
+  for (let wi = 0; wi < wispCount; wi++) {
+    const ang = (wi / wispCount) * Math.PI * 2 + (wi % 3) * 0.22;
+    const rad = 7.4 + (wi % 6) * 2.1;
+    const wy = -0.6 + (wi % 7) * 0.95;
+    wispPos[wi * 3] = Math.cos(ang) * rad;
+    wispPos[wi * 3 + 1] = wy;
+    wispPos[wi * 3 + 2] = Math.sin(ang) * rad;
+    env.celestialWispMeta.push({ ang: ang, rad: rad, y0: wy, speed: 0.28 + (wi % 4) * 0.08, phase: wi * 0.72 });
+  }
+  const wispGeo = new THREE.BufferGeometry();
+  wispGeo.setAttribute("position", new THREE.BufferAttribute(wispPos, 3));
+  env.celestialWisps = new THREE.Points(
+    wispGeo,
+    new THREE.PointsMaterial({
+      color: 0xa7f3d0,
+      map: bokehTex,
+      size: 0.44,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    })
+  );
+  celestialGardenGroup.add(env.celestialWisps);
+  celestialGardenGroup.visible = false;
+  scene.add(celestialGardenGroup);
+  env.celestialGardenGroup = celestialGardenGroup;
 
   // 7. Lacquered Clearcoat Walnut Round Table + Artisan Yixing Teapot & Academy Life Props
   // Round table geometry lives in env.tableScaleGroup so 6/8/10/12-seat modes scale X/Z cleanly without stretching inner tea props!
@@ -1152,45 +1712,81 @@ function buildTabletopAcademyProps(woodMat, env) {
   censer.position.set(1.18, 1.085, -0.44);
   propsGroup.add(censer);
 
-  // 2. Unrolled Academy Scroll, Jade Weight & Inkstone
+  // 2. Unrolled Academy Calligraphy Scroll, Brass Rollers, Celadon Jade Weight & Inkstone
   const scrollGrp = new THREE.Group();
+  const scrollTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createCalligraphyScrollTexture === "function")
+    ? stage3dTextures.createCalligraphyScrollTexture()
+    : null;
   const paper = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.012, 0.32), scrollMat);
   paper.position.y = 0.008;
   paper.receiveShadow = true;
+  scrollGrp.add(paper);
+  if (scrollTex) {
+    const scrollArt = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.56, 0.30),
+      new THREE.MeshStandardMaterial({ map: scrollTex, roughness: 0.72, metalness: 0.02 })
+    );
+    scrollArt.rotation.x = -Math.PI * 0.5;
+    scrollArt.position.y = 0.0155;
+    scrollArt.receiveShadow = true;
+    scrollGrp.add(scrollArt);
+  }
   const rodGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.38, 8);
-  const rodL = new THREE.Mesh(rodGeo, woodMat);
-  rodL.rotation.x = Math.PI * 0.5;
-  rodL.position.set(-0.29, 0.022, 0);
-  const rodR = new THREE.Mesh(rodGeo, woodMat);
-  rodR.rotation.x = Math.PI * 0.5;
-  rodR.position.set(0.29, 0.022, 0);
+  const rodCapGeo = new THREE.CylinderGeometry(0.026, 0.026, 0.028, 8);
+  [-0.29, 0.29].forEach(function (rx) {
+    const rod = new THREE.Mesh(rodGeo, woodMat);
+    rod.rotation.x = Math.PI * 0.5;
+    rod.position.set(rx, 0.022, 0);
+    scrollGrp.add(rod);
+    [-0.195, 0.195].forEach(function (rz) {
+      const cap = new THREE.Mesh(rodCapGeo, brassMat);
+      cap.rotation.x = Math.PI * 0.5;
+      cap.position.set(rx, 0.022, rz);
+      scrollGrp.add(cap);
+    });
+  });
+  // Sculpted Celadon Jade Paperweight Bar anchoring the left scroll margin
+  const jadeWeight = new THREE.Mesh(
+    new THREE.BoxGeometry(0.036, 0.018, 0.22),
+    new THREE.MeshStandardMaterial({ color: 0x6ec9ae, roughness: 0.18, metalness: 0.08 })
+  );
+  jadeWeight.position.set(-0.20, 0.024, 0.0);
+  jadeWeight.castShadow = true;
   const inkstone = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.026, 0.10), slateMat);
   inkstone.position.set(0.18, 0.018, -0.04);
   const brush = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.011, 0.26, 6), woodMat);
   brush.rotation.z = Math.PI * 0.5;
   brush.rotation.y = 0.32;
-  brush.position.set(-0.04, 0.022, 0.04);
-  scrollGrp.add(paper, rodL, rodR, inkstone, brush);
+  brush.position.set(-0.04, 0.022, 0.06);
+  scrollGrp.add(jadeWeight, inkstone, brush);
   scrollGrp.position.set(0.86, 1.085, 0.80);
   scrollGrp.rotation.y = -0.48;
   propsGroup.add(scrollGrp);
 
-  // 3. Osmanthus Tea Pastry Celadon Dish
+  // 3. Osmanthus & Sakura Floral Wagashi Celadon Dish (gold-rimmed saucer + fluted floral cakes!)
   const plateGrp = new THREE.Group();
-  const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.17, 0.030, 16), celadonMat);
+  const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.17, 0.030, 18), celadonMat);
   dish.position.y = 0.015;
   dish.receiveShadow = true;
-  plateGrp.add(dish);
+  const dishRim = new THREE.Mesh(new THREE.TorusGeometry(0.238, 0.007, 6, 24), brassMat);
+  dishRim.rotation.x = Math.PI * 0.5;
+  dishRim.position.y = 0.030;
+  plateGrp.add(dish, dishRim);
+  const sakuraPastryMat = new THREE.MeshStandardMaterial({ color: 0xf7c5d2, roughness: 0.58 });
   [
-    [-0.06, 0.042, -0.04, 0.15],
-    [0.07, 0.042, -0.03, -0.25],
-    [0.0, 0.042, 0.07, 0.42]
+    [-0.068, 0.044, -0.045, 0.15, pastryMat],
+    [0.072, 0.044, -0.035, -0.25, sakuraPastryMat],
+    [0.0, 0.044, 0.074, 0.42, pastryMat]
   ].forEach(function (pc) {
-    const cake = new THREE.Mesh(new THREE.BoxGeometry(0.082, 0.038, 0.082), pastryMat);
-    cake.position.set(pc[0], pc[1], pc[2]);
-    cake.rotation.y = pc[3];
+    const cakeGrp = new THREE.Group();
+    const cake = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.052, 0.032, 10), pc[4]);
     cake.castShadow = true;
-    plateGrp.add(cake);
+    const stamp = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.006, 6), brassMat);
+    stamp.position.y = 0.018;
+    cakeGrp.add(cake, stamp);
+    cakeGrp.position.set(pc[0], pc[1], pc[2]);
+    cakeGrp.rotation.y = pc[3];
+    plateGrp.add(cakeGrp);
   });
   plateGrp.position.set(-0.90, 1.085, 0.82);
   propsGroup.add(plateGrp);
@@ -1544,12 +2140,15 @@ function build3DEnvironment(scene, renderer) {
 
   const env = {
     moodKey: "",
+    sceneThemeKey: "",
     dawnSweep: 0,
     hasPhotoDay: false,
+    hasPhotoCelestial: false,
     hasPhotoDusk: false,
     hasPhotoNight: false,
     iblDefaultTex: null,
     iblDayTex: null,
+    iblCelestialTex: null,
     iblDuskTex: null,
     iblNightTex: null,
     skyCanvas: null,
@@ -1557,9 +2156,11 @@ function build3DEnvironment(scene, renderer) {
     skyTex: null,
     skyMesh: null,
     skyPhotoDayMat: null,
+    skyPhotoCelestialMat: null,
     skyPhotoDuskMat: null,
     skyPhotoNightMat: null,
     skyPhotoDayMesh: null,
+    skyPhotoCelestialMesh: null,
     skyPhotoDuskMesh: null,
     skyPhotoNightMesh: null,
     latticeScreenMat: null,
@@ -1572,6 +2173,17 @@ function build3DEnvironment(scene, renderer) {
     teaSteamPoints: null,
     teaSteamMeta: [],
     proceduralPavilionGroup: null,
+    linmeiGardenGroup: null,
+    celestialGardenGroup: null,
+    bambooGroves: [],
+    blossomTrees: [],
+    celestialSpires: [],
+    celestialSteppingStones: [],
+    celestialCloudRibbon: null,
+    celestialWisps: null,
+    celestialWispMeta: [],
+    celestialSpireMat: null,
+    celestialSpireUniforms: null,
     lanternHaloMat: null,
     incenseEmberMat: null,
     lanterns: [],
@@ -1632,30 +2244,61 @@ function build3DEnvironment(scene, renderer) {
   build3DPavilionAndTable(scene, env, wood, stone, feltTex);
   build3DLotusAndAtmosphere(scene, env);
   build3DEnvironmentMap(renderer, scene, env);
+  apply3DSceneTheme(scene, env, (typeof state !== "undefined" && state.sceneTheme === "celestial") ? "celestial" : "linmei");
   return env;
+}
+
+function apply3DSceneTheme(scene, env, themeKey) {
+  if (!env) return;
+  const tk = themeKey === "celestial" ? "celestial" : "linmei";
+  env.sceneThemeKey = tk;
+  const isCel = tk === "celestial";
+  if (env.linmeiGardenGroup) env.linmeiGardenGroup.visible = !isCel;
+  if (env.celestialGardenGroup) env.celestialGardenGroup.visible = isCel;
+
+  if (env.petals && env.petals.length) {
+    for (let pi = 0; pi < env.petals.length; pi++) {
+      const pt = env.petals[pi];
+      if (!pt || !pt.mesh || !pt.mesh.material || !pt.mesh.material.color) continue;
+      if (isCel) {
+        pt.mesh.material.color.setHex(pi % 3 === 0 ? 0xfef08a : (pi % 2 === 0 ? 0x99f6e4 : 0xe0f2fe));
+      } else {
+        const isBamboo = (pi % 3) !== 0;
+        pt.mesh.material.color.setHex(isBamboo ? 0x6ee7b7 : (pi % 2 === 0 ? 0xfde68a : 0xfecdd3));
+      }
+    }
+  }
+  apply3DMoodPalette(scene, env, env.moodKey || "twilight");
 }
 
 function apply3DMoodPalette(scene, env, moodKey) {
   const g = env.skyCtx;
   const grad = g.createLinearGradient(0, 0, 0, 256);
+  const isCel = env.sceneThemeKey === "celestial";
   if (moodKey === "day") {
-    // Luminous Genshin Liyue Jueyun Karst Morning Sky & Teal Mountains
-    grad.addColorStop(0, "#1da1f2");
-    grad.addColorStop(0.42, "#7dd3fc");
-    grad.addColorStop(0.75, "#e0f7fa");
+    // Luminous Morning Sky — Linmei Yilan Teal-Gold vs Celestial Qinglü Jade-Mist
+    grad.addColorStop(0, isCel ? "#0ea5c6" : "#1da1f2");
+    grad.addColorStop(0.42, isCel ? "#67e8f9" : "#7dd3fc");
+    grad.addColorStop(0.75, isCel ? "#d8fcf6" : "#e0f7fa");
     grad.addColorStop(1, "#fef3c7");
-    env.targetColors.fog.setHex(0xcbeefd);
-    env.targetColors.hemiSky.setHex(0xbae6fd);
-    env.targetColors.hemiGnd.setHex(0xe5c185);
+    env.targetColors.fog.setHex(isCel ? 0xc2f0ea : 0xcbeefd);
+    env.targetColors.hemiSky.setHex(isCel ? 0xa7f3d0 : 0xbae6fd);
+    env.targetColors.hemiGnd.setHex(isCel ? 0xd9c698 : 0xe5c185);
     env.targetColors.dir.setHex(0xfffbeb);
-    env.targetColors.rim.setHex(0xfef08a);
+    env.targetColors.rim.setHex(isCel ? 0x99f6e4 : 0xfef08a);
     env.targetColors.table.setHex(0xffc366);
     env.targetColors.lotus.setHex(0xfbbf24);
-    env.targetColors.cloud.setHex(0xfffdf5);
-    env.mtnMatBack.color.setHex(0x528d88);
-    env.mtnMatFront.color.setHex(0x3a6f6b);
-    env.groundMat.color.setHex(0x3b6355);
-    env.terraceMat.color.setHex(0xf3efe4);
+    env.targetColors.cloud.setHex(isCel ? 0xf0fdfa : 0xfffdf5);
+    env.mtnMatBack.color.setHex(isCel ? 0x3b8c84 : 0x528d88);
+    env.mtnMatFront.color.setHex(isCel ? 0x266b66 : 0x3a6f6b);
+    env.groundMat.color.setHex(isCel ? 0x2d665c : 0x3b6355);
+    env.terraceMat.color.setHex(isCel ? 0xeef5f0 : 0xf3efe4);
+    if (env.celestialSpireUniforms) {
+      env.celestialSpireUniforms.uTopColor.value.setHex(0x1f7a6c);
+      env.celestialSpireUniforms.uMidColor.value.setHex(0x2c6882);
+      env.celestialSpireUniforms.uMistColor.value.setHex(0xe6faf8);
+      env.celestialSpireUniforms.uRimColor.value.setHex(0xfff0b8);
+    }
     if (env.oceanUniforms) {
       env.oceanUniforms.uDeepColor.value.setHex(0x136386);
       env.oceanUniforms.uShallowColor.value.setHex(0x3ba9cc);
@@ -1664,15 +2307,17 @@ function apply3DMoodPalette(scene, env, moodKey) {
       env.oceanMat.color.setHex(0x1b8cb3);
     }
     if (env.skyPhotoDayMat && env.skyPhotoDayMat.color) env.skyPhotoDayMat.color.setHex(0xffffff);
-    env.fireflyPoints.material.color.setHex(0xfef08a);
-    if (env.iblDayTex) scene.environment = env.iblDayTex;
+    if (env.skyPhotoCelestialMat && env.skyPhotoCelestialMat.color) env.skyPhotoCelestialMat.color.setHex(0xffffff);
+    env.fireflyPoints.material.color.setHex(isCel ? 0x99f6e4 : 0xfef08a);
+    if (isCel && env.iblCelestialTex) scene.environment = env.iblCelestialTex;
+    else if (env.iblDayTex) scene.environment = env.iblDayTex;
   } else if (moodKey === "vote") {
     // Dramatic Liyue Crimson-Amber Dusk
     grad.addColorStop(0, "#4c1d24");
     grad.addColorStop(0.45, "#b44a38");
     grad.addColorStop(0.80, "#f59e0b");
     grad.addColorStop(1, "#fde68a");
-    env.targetColors.fog.setHex(0x7c2d23);
+    env.targetColors.fog.setHex(isCel ? 0x6b3234 : 0x7c2d23);
     env.targetColors.hemiSky.setHex(0xfdba74);
     env.targetColors.hemiGnd.setHex(0x9a3412);
     env.targetColors.dir.setHex(0xfde68a);
@@ -1684,6 +2329,12 @@ function apply3DMoodPalette(scene, env, moodKey) {
     env.mtnMatFront.color.setHex(0x6e2e32);
     env.groundMat.color.setHex(0x3b1e24);
     env.terraceMat.color.setHex(0xcab2a6);
+    if (env.celestialSpireUniforms) {
+      env.celestialSpireUniforms.uTopColor.value.setHex(0x583b44);
+      env.celestialSpireUniforms.uMidColor.value.setHex(0x7c403c);
+      env.celestialSpireUniforms.uMistColor.value.setHex(0xffd9be);
+      env.celestialSpireUniforms.uRimColor.value.setHex(0xffc978);
+    }
     if (env.oceanUniforms) {
       env.oceanUniforms.uDeepColor.value.setHex(0x471d2e);
       env.oceanUniforms.uShallowColor.value.setHex(0x9e4338);
@@ -1693,6 +2344,7 @@ function apply3DMoodPalette(scene, env, moodKey) {
     }
     if (env.skyPhotoDayMat && env.skyPhotoDayMat.color) env.skyPhotoDayMat.color.setHex(0xffcfb8);
     if (env.skyPhotoDuskMat && env.skyPhotoDuskMat.color) env.skyPhotoDuskMat.color.setHex(0xffb8a0);
+    if (env.skyPhotoCelestialMat && env.skyPhotoCelestialMat.color) env.skyPhotoCelestialMat.color.setHex(0xffc8a8);
     env.fireflyPoints.material.color.setHex(0xfdba74);
     if (env.iblDuskTex) scene.environment = env.iblDuskTex;
     else if (env.iblDayTex) scene.environment = env.iblDayTex;
@@ -1702,18 +2354,24 @@ function apply3DMoodPalette(scene, env, moodKey) {
     grad.addColorStop(0.48, "#1b285c");
     grad.addColorStop(0.84, "#2f3e78");
     grad.addColorStop(1, "#1b2652");
-    env.targetColors.fog.setHex(0x1b2756);
-    env.targetColors.hemiSky.setHex(0x7c8cf8);
+    env.targetColors.fog.setHex(isCel ? 0x162b4f : 0x1b2756);
+    env.targetColors.hemiSky.setHex(isCel ? 0x67a8e8 : 0x7c8cf8);
     env.targetColors.hemiGnd.setHex(0x282654);
     env.targetColors.dir.setHex(0xd4d2ff);
-    env.targetColors.rim.setHex(0x7dd3fc);
+    env.targetColors.rim.setHex(isCel ? 0x5eead4 : 0x7dd3fc);
     env.targetColors.table.setHex(0xa78bfa);
     env.targetColors.lotus.setHex(0xa78bfa);
-    env.targetColors.cloud.setHex(0x7f8fe6);
+    env.targetColors.cloud.setHex(isCel ? 0x70a8cc : 0x7f8fe6);
     env.mtnMatBack.color.setHex(0x1e2b58);
     env.mtnMatFront.color.setHex(0x273869);
     env.groundMat.color.setHex(0x172044);
     env.terraceMat.color.setHex(0xa3acd1);
+    if (env.celestialSpireUniforms) {
+      env.celestialSpireUniforms.uTopColor.value.setHex(0x1b3a5c);
+      env.celestialSpireUniforms.uMidColor.value.setHex(0x254b6e);
+      env.celestialSpireUniforms.uMistColor.value.setHex(0x7caad0);
+      env.celestialSpireUniforms.uRimColor.value.setHex(0x93e6dc);
+    }
     if (env.oceanUniforms) {
       env.oceanUniforms.uDeepColor.value.setHex(0x0c1b3b);
       env.oceanUniforms.uShallowColor.value.setHex(0x234a7d);
@@ -1721,26 +2379,32 @@ function apply3DMoodPalette(scene, env, moodKey) {
     } else if (env.oceanMat && env.oceanMat.color) {
       env.oceanMat.color.setHex(0x173766);
     }
-    env.fireflyPoints.material.color.setHex(0xd8b4fe);
+    env.fireflyPoints.material.color.setHex(isCel ? 0x99f6e4 : 0xd8b4fe);
     if (env.iblNightTex) scene.environment = env.iblNightTex;
   } else {
-    // Breathtaking Liyue Golden Hour Twilight (Title Screen & Courtyard Gathering)
-    grad.addColorStop(0, "#1c3566");
-    grad.addColorStop(0.44, "#4b5f9e");
-    grad.addColorStop(0.78, "#d9895b");
+    // Breathtaking Golden Hour Twilight (Linmei Academy) vs Ethereal Qinglü Dawn-Mist Twilight (Celestial)
+    grad.addColorStop(0, isCel ? "#16466b" : "#1c3566");
+    grad.addColorStop(0.44, isCel ? "#38849e" : "#4b5f9e");
+    grad.addColorStop(0.78, isCel ? "#98d4cc" : "#d9895b");
     grad.addColorStop(1, "#fde68a");
-    env.targetColors.fog.setHex(0x2a3b68);
-    env.targetColors.hemiSky.setHex(0x9cb4ff);
-    env.targetColors.hemiGnd.setHex(0x523b38);
+    env.targetColors.fog.setHex(isCel ? 0x2c566e : 0x2a3b68);
+    env.targetColors.hemiSky.setHex(isCel ? 0x9fe6e0 : 0x9cb4ff);
+    env.targetColors.hemiGnd.setHex(isCel ? 0x3b4a4c : 0x523b38);
     env.targetColors.dir.setHex(0xffe8a3);
-    env.targetColors.rim.setHex(0xfdcb82);
+    env.targetColors.rim.setHex(isCel ? 0x99f6e4 : 0xfdcb82);
     env.targetColors.table.setHex(0xffbe5c);
     env.targetColors.lotus.setHex(0xfbbf24);
-    env.targetColors.cloud.setHex(0xdbeafe);
-    env.mtnMatBack.color.setHex(0x2f4d6d);
-    env.mtnMatFront.color.setHex(0x3a6278);
-    env.groundMat.color.setHex(0x20324a);
-    env.terraceMat.color.setHex(0xc8d2e3);
+    env.targetColors.cloud.setHex(isCel ? 0xd8f8f5 : 0xdbeafe);
+    env.mtnMatBack.color.setHex(isCel ? 0x295c68 : 0x2f4d6d);
+    env.mtnMatFront.color.setHex(isCel ? 0x2f6c72 : 0x3a6278);
+    env.groundMat.color.setHex(isCel ? 0x1e3f44 : 0x20324a);
+    env.terraceMat.color.setHex(isCel ? 0xd4e4e2 : 0xc8d2e3);
+    if (env.celestialSpireUniforms) {
+      env.celestialSpireUniforms.uTopColor.value.setHex(0x1f6e68);
+      env.celestialSpireUniforms.uMidColor.value.setHex(0x2e6480);
+      env.celestialSpireUniforms.uMistColor.value.setHex(0xd4f0f4);
+      env.celestialSpireUniforms.uRimColor.value.setHex(0xffe6a8);
+    }
     if (env.oceanUniforms) {
       env.oceanUniforms.uDeepColor.value.setHex(0x123154);
       env.oceanUniforms.uShallowColor.value.setHex(0x356991);
@@ -1749,8 +2413,10 @@ function apply3DMoodPalette(scene, env, moodKey) {
       env.oceanMat.color.setHex(0x1b4c73);
     }
     if (env.skyPhotoDuskMat && env.skyPhotoDuskMat.color) env.skyPhotoDuskMat.color.setHex(0xffffff);
-    env.fireflyPoints.material.color.setHex(0xfef08a);
-    if (env.iblDuskTex) scene.environment = env.iblDuskTex;
+    if (env.skyPhotoCelestialMat && env.skyPhotoCelestialMat.color) env.skyPhotoCelestialMat.color.setHex(0xdcecf5);
+    env.fireflyPoints.material.color.setHex(isCel ? 0xa7f3d0 : 0xfef08a);
+    if (isCel && env.iblCelestialTex) scene.environment = env.iblCelestialTex;
+    else if (env.iblDuskTex) scene.environment = env.iblDuskTex;
     else if (env.iblNightTex) scene.environment = env.iblNightTex;
   }
   g.fillStyle = grad;
@@ -1786,7 +2452,16 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   }
   if (env.terraceMesh) env.terraceMesh.scale.set(psNow, 1, psNow);
   if (env.terraceTrim) env.terraceTrim.scale.set(psNow, psNow, 1);
+  if (env.groundDisk) env.groundDisk.scale.set(psNow, 1, psNow);
   if (env.proceduralPavilionGroup) env.proceduralPavilionGroup.scale.set(psNow, 1, psNow);
+  if (env.linmeiGardenGroup) env.linmeiGardenGroup.scale.set(psNow, 1, psNow);
+  if (env.celestialGardenGroup) env.celestialGardenGroup.scale.set(psNow, 1, psNow);
+
+  const desiredTheme = (typeof state !== "undefined" && state.sceneTheme === "celestial") ? "celestial" : "linmei";
+  if (env.sceneThemeKey !== desiredTheme) {
+    apply3DSceneTheme(scene, env, desiredTheme);
+  }
+  const isCelestialTheme = env.sceneThemeKey === "celestial";
 
   if (env.moodKey !== moodKey) {
     if (env.moodKey === "night" && moodKey === "day") {
@@ -1798,16 +2473,22 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   }
 
   if (env.skyPhotoDayMat && env.skyPhotoNightMat) {
-    const useDuskNow = Boolean(env.hasPhotoDusk && (moodKey === "twilight" || moodKey === "vote"));
-    const targetDayOp = (env.hasPhotoDay && f.daylight && !useDuskNow) ? (isVote ? 0.62 : 0.98) : 0.0;
-    const targetDuskOp = useDuskNow ? (isVote ? 0.94 : 0.98) : 0.0;
-    const targetNightOp = (env.hasPhotoNight && !f.daylight && !useDuskNow) ? 0.96 : 0.0;
-    env.skyPhotoDayMat.opacity += (targetDayOp - env.skyPhotoDayMat.opacity) * 0.05;
-    if (env.skyPhotoDuskMat) env.skyPhotoDuskMat.opacity += (targetDuskOp - env.skyPhotoDuskMat.opacity) * 0.05;
-    env.skyPhotoNightMat.opacity += (targetNightOp - env.skyPhotoNightMat.opacity) * 0.05;
-    env.skyPhotoDayMesh.rotation.y = t * 0.004;
-    if (env.skyPhotoDuskMesh) env.skyPhotoDuskMesh.rotation.y = t * 0.0035;
-    env.skyPhotoNightMesh.rotation.y = t * 0.003;
+    const useCelestialSky = Boolean(isCelestialTheme && env.hasPhotoCelestial && moodKey !== "night");
+    const useDuskNow = Boolean(!useCelestialSky && env.hasPhotoDusk && (moodKey === "twilight" || moodKey === "vote"));
+    const targetCelOp = useCelestialSky ? (moodKey === "vote" ? 0.62 : (moodKey === "twilight" ? 0.90 : 0.98)) : 0.0;
+    const targetDayOp = (!useCelestialSky && env.hasPhotoDay && f.daylight && !useDuskNow) ? (isVote ? 0.62 : 0.98) : 0.0;
+    const targetDuskOp = useDuskNow ? (isVote ? 0.94 : 0.98) : (useCelestialSky && moodKey === "vote" && env.hasPhotoDusk ? 0.38 : 0.0);
+    const targetNightOp = (env.hasPhotoNight && moodKey === "night") ? 0.96 : 0.0;
+    env.skyPhotoDayMat.opacity += (targetDayOp - env.skyPhotoDayMat.opacity) * 0.08;
+    if (env.skyPhotoCelestialMat) env.skyPhotoCelestialMat.opacity += (targetCelOp - env.skyPhotoCelestialMat.opacity) * 0.08;
+    if (env.skyPhotoDuskMat) env.skyPhotoDuskMat.opacity += (targetDuskOp - env.skyPhotoDuskMat.opacity) * 0.08;
+    env.skyPhotoNightMat.opacity += (targetNightOp - env.skyPhotoNightMat.opacity) * 0.08;
+    // Gently anchor sky domes so directional sunlight stays aligned with the painted sky sun!
+    const skyDrift = Math.sin(t * 0.03) * 0.015;
+    env.skyPhotoDayMesh.rotation.y = skyDrift;
+    if (env.skyPhotoCelestialMesh) env.skyPhotoCelestialMesh.rotation.y = skyDrift;
+    if (env.skyPhotoDuskMesh) env.skyPhotoDuskMesh.rotation.y = skyDrift;
+    env.skyPhotoNightMesh.rotation.y = skyDrift * 0.8;
   }
 
   if (env.dawnSweep > 0.005) env.dawnSweep *= 0.965;
@@ -1926,6 +2607,56 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
       }
     }
   }
+  if (!isCelestialTheme) {
+    if (env.bambooGroves && env.bambooGroves.length) {
+      for (let bi = 0; bi < env.bambooGroves.length; bi++) {
+        const bg = env.bambooGroves[bi];
+        if (bg.canopy) {
+          bg.canopy.rotation.z = Math.sin(t * 1.25 * windBoost + bg.phase) * 0.045 * windBoost;
+          bg.canopy.rotation.x = Math.cos(t * 0.92 * windBoost + bg.phase) * 0.028 * windBoost;
+        }
+      }
+    }
+    if (env.blossomTrees && env.blossomTrees.length) {
+      for (let ti = 0; ti < env.blossomTrees.length; ti++) {
+        const bt = env.blossomTrees[ti];
+        if (bt.canopy) {
+          bt.canopy.rotation.z = Math.sin(t * 1.05 * windBoost + bt.phase) * 0.036 * windBoost;
+          bt.canopy.rotation.x = Math.cos(t * 0.82 * windBoost + bt.phase) * 0.022 * windBoost;
+        }
+      }
+    }
+  } else {
+    if (env.celestialSpireUniforms && env.celestialSpireUniforms.uTime) {
+      env.celestialSpireUniforms.uTime.value = t;
+    }
+    if (env.celestialSpires && env.celestialSpires.length) {
+      for (let si = 0; si < env.celestialSpires.length; si++) {
+        const sp = env.celestialSpires[si];
+        sp.group.position.y = sp.baseY + Math.sin(t * 0.42 + sp.phase) * sp.amp;
+      }
+    }
+    if (env.celestialSteppingStones && env.celestialSteppingStones.length) {
+      for (let sti = 0; sti < env.celestialSteppingStones.length; sti++) {
+        const st = env.celestialSteppingStones[sti];
+        st.group.position.y = st.baseY + Math.sin(t * 0.85 + st.phase) * 0.085;
+      }
+    }
+    if (env.celestialCloudRibbon) {
+      env.celestialCloudRibbon.rotation.y = -t * 0.016;
+      env.celestialCloudRibbon.material.opacity = f.night ? 0.14 : 0.24;
+    }
+    if (env.celestialWisps && env.celestialWisps.visible && env.celestialWispMeta && env.celestialWispMeta.length) {
+      const wAttr = env.celestialWisps.geometry.attributes.position;
+      for (let wi = 0; wi < env.celestialWispMeta.length; wi++) {
+        const wm = env.celestialWispMeta[wi];
+        const ang = wm.ang + t * 0.08 * wm.speed;
+        const wy = ((wm.y0 + t * wm.speed * 0.72 + 1.2) % 7.4) - 0.8;
+        wAttr.setXYZ(wi, Math.cos(ang) * wm.rad, wy, Math.sin(ang) * wm.rad);
+      }
+      wAttr.needsUpdate = true;
+    }
+  }
   if (env.incenseEmberMat) {
     env.incenseEmberMat.emissiveIntensity = 0.85 + Math.sin(t * 3.4) * 0.25;
   }
@@ -1981,13 +2712,16 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   if (env.godRays && env.godRays.length && (!env.godRaysGroup || env.godRaysGroup.visible)) {
     const isFpCam = Boolean(typeof stage3d !== "undefined" && stage3d.camPreset === "firstperson");
     const rayMoodMul = (f.night || isFpCam) ? 0.0 : (isVote ? 0.92 : (f.daylight ? 1.0 : 0.72));
+    const themeRayMul = isCelestialTheme ? 1.45 : 1.0;
     const breezeRayMul = isClearBreeze ? 1.42 : (isToxicHaze ? 0.35 : 1.0);
     for (let ri = 0; ri < env.godRays.length; ri++) {
       const gr = env.godRays[ri];
-      const targetOp = gr.baseOp * rayMoodMul * breezeRayMul * (0.85 + Math.sin(t * 0.7 + gr.phase) * 0.15);
+      const targetOp = gr.baseOp * rayMoodMul * themeRayMul * breezeRayMul * (0.85 + Math.sin(t * 0.7 + gr.phase) * 0.15);
       gr.mat.opacity += (targetOp - gr.mat.opacity) * 0.06;
       gr.mesh.visible = gr.mat.opacity > 0.005;
-      gr.mesh.material.color.setHex(isVote ? 0xfdba74 : (isClearBreeze ? 0xfff3b0 : (f.daylight ? 0xfff7d6 : 0xffdf9e)));
+      gr.mesh.material.color.setHex(
+        isVote ? 0xfdba74 : (isCelestialTheme ? 0xdffcf2 : (isClearBreeze ? 0xfff3b0 : (f.daylight ? 0xfff7d6 : 0xffdf9e)))
+      );
     }
   }
   if (env.petals && env.petals.length && (!env.petalGroup || env.petalGroup.visible)) {
@@ -2020,7 +2754,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   // Volumetric Spotlight tracking Active Speaker / Target
   let spotAnchor = null;
   let spotColorHex = 0xfde047;
-  if ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId) {
+  if ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH" || p === "SHERIFF_ELECTION") && state.activeSpeakerId) {
     spotAnchor = seatAnchors[state.activeSpeakerId] || null;
     spotColorHex = 0xfde047;
   } else if (f.night && state.selectedSeatId) {
@@ -2040,7 +2774,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
 
     env.spotCone.position.set(env.currentSpotPos.x, 9.6, env.currentSpotPos.z);
     env.spotCone.material.color.setHex(spotColorHex);
-    env.spotCone.material.opacity += ((f.daylight ? 0.045 : 0.18) - env.spotCone.material.opacity) * 0.12;
+    env.spotCone.material.opacity += ((f.daylight ? 0.025 : 0.16) - env.spotCone.material.opacity) * 0.12;
   } else {
     env.speakerSpot.intensity += (0 - env.speakerSpot.intensity) * 0.1;
     env.spotCone.material.opacity += (0 - env.spotCone.material.opacity) * 0.1;

@@ -383,6 +383,34 @@ function renderVoteSheetIntoBody() {
     '</div>';
   }
 
+  const activeBfModal = state.match.sheriffBadgeFlow || null;
+  const bfSigsModal = Array.isArray(state.match.badgeFlowSignals) ? state.match.badgeFlowSignals : [];
+  if (activeBfModal || bfSigsModal.length > 0) {
+    let bfBodyHtml = "";
+    if (activeBfModal && activeBfModal.firstTargetId && typeof formatBadgeFlowSummary === "function") {
+      const owLblM = typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(activeBfModal.ownerId) : (fmtSeatNum(activeBfModal.ownerId) + "號");
+      bfBodyHtml += '<div class="bf-modal-active">' +
+        '<div><span class="font-black">目前生效警徽流（' + escapeHtml(owLblM) + '）：</span>' +
+        escapeHtml(formatBadgeFlowSummary(activeBfModal)) + '</div>' +
+        '<div class="text-[10.5px] opacity-80 mt-0.5">規則暗號：倒牌後徽飛第一順位＝金水｜跳飛第二順位或外飛＝第一順位疑查殺｜撕毀警徽＝報查殺！</div>' +
+      '</div>';
+    }
+    bfSigsModal.forEach(function (sig) {
+      const isAlert = Array.isArray(sig.suspectedWolfIds) && sig.suspectedWolfIds.length > 0;
+      bfBodyHtml += '<div class="' + (isAlert ? 'bf-modal-sig-wolf' : 'bf-modal-sig-good') + '">' +
+        '<div class="font-black">' + escapeHtml(sig.headline || "警徽流暗號解讀") + ' <span class="text-[10px] font-normal opacity-80">（第 ' + (sig.day || 1) + ' 天）</span></div>' +
+        '<div class="text-[10.5px] opacity-90 mt-0.5">' + escapeHtml(sig.detail || "") + '</div>' +
+      '</div>';
+    });
+    html += '<div class="bf-modal-card space-y-2">' +
+      '<div class="bf-modal-head">' +
+        '<span class="text-xs font-black">🧭 警徽流追蹤 ＆ 暗號解讀</span>' +
+        '<span class="text-[10px] font-bold opacity-80">' + (bfSigsModal.length ? ("已解讀 " + bfSigsModal.length + " 條暗號") : "進行中") + '</span>' +
+      '</div>' +
+      bfBodyHtml +
+    '</div>';
+  }
+
   html += '<div class="space-y-2.5">';
   html += '<div class="flex items-center justify-between">' +
     '<h4 class="text-xs font-black tracking-wide text-amber-300">歷輪公投票型（依被投對象歸類）</h4>' +

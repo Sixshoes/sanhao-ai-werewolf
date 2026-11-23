@@ -132,6 +132,19 @@ const stage3dVrm = {
   },
 
   _recolorCache: {},
+  _recolorCacheKeys: [],
+
+  clearRecolorCache: function () {
+    const self = this;
+    Object.keys(this._recolorCache || {}).forEach(function (k) {
+      const tex = self._recolorCache[k];
+      if (tex && typeof tex.dispose === "function") {
+        try { tex.dispose(); } catch (e) {}
+      }
+    });
+    this._recolorCache = {};
+    this._recolorCacheKeys = [];
+  },
 
   recolorVrmTextureMap: function (srcTex, targetHex, strength) {
     if (!srcTex || !srcTex.image || !targetHex || typeof document === "undefined" || typeof THREE.CanvasTexture !== "function") {
@@ -182,6 +195,18 @@ const stage3dVrm = {
       if (THREE.sRGBEncoding !== undefined) outTex.encoding = THREE.sRGBEncoding;
       outTex.needsUpdate = true;
       this._recolorCache[cacheKey] = outTex;
+      if (!Array.isArray(this._recolorCacheKeys)) this._recolorCacheKeys = [];
+      this._recolorCacheKeys.push(cacheKey);
+      while (this._recolorCacheKeys.length > 36) {
+        const oldestKey = this._recolorCacheKeys.shift();
+        if (oldestKey && oldestKey !== cacheKey && this._recolorCache[oldestKey]) {
+          const oldTex = this._recolorCache[oldestKey];
+          if (oldTex && typeof oldTex.dispose === "function") {
+            try { oldTex.dispose(); } catch (e) {}
+          }
+          delete this._recolorCache[oldestKey];
+        }
+      }
       return outTex;
     } catch (e) {
       return srcTex;

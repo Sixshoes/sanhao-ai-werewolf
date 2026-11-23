@@ -148,6 +148,7 @@ const indieFlow = {
   },
 
   showRoleDealRitual: function (roleKey) {
+    this.onRoleDealClosed = null;
     const ov = el("roleDealOverlay");
     const pSelf = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
     const effKey = (pSelf && typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(pSelf) : null) || roleKey;
@@ -225,7 +226,8 @@ const indieFlow = {
     }, Math.round(1350 * clamp(pacingMul, 0.7, 1.3)));
   },
 
-  hideRoleDealRitual: function () {
+  hideRoleDealRitual: function (opts) {
+    const silent = Boolean(opts && opts.silent);
     if (this.dealTimer) {
       clearTimeout(this.dealTimer);
       this.dealTimer = null;
@@ -251,7 +253,7 @@ const indieFlow = {
     }
     const pendingCb = this.onRoleDealClosed;
     this.onRoleDealClosed = null;
-    if (typeof pendingCb === "function") pendingCb();
+    if (!silent && typeof pendingCb === "function") pendingCb();
   },
 
   cycleSmartView: function () {
@@ -426,7 +428,10 @@ const indieFlow = {
         if (rk === "guard") {
           state.guardMode = true;
           if (el("chkGuardMode")) el("chkGuardMode").checked = true;
-          if (el("selectModeCount")) el("selectModeCount").value = "8";
+          if (el("selectModeCount") && parseInt(el("selectModeCount").value, 10) < 8) {
+            el("selectModeCount").value = "8";
+            el("selectModeCount").dispatchEvent(new Event("change"));
+          }
           if (typeof saveUserPrefs === "function") saveUserPrefs();
         } else if (rk === "hunter") {
           if (el("selectModeCount") && parseInt(el("selectModeCount").value, 10) < 8) {
@@ -475,7 +480,7 @@ const indieFlow = {
         const nextGuard = el("chkGuardMode") ? !el("chkGuardMode").checked : !state.guardMode;
         state.guardMode = nextGuard;
         if (el("chkGuardMode")) el("chkGuardMode").checked = nextGuard;
-        if (nextGuard && el("selectModeCount")) {
+        if (nextGuard && el("selectModeCount") && parseInt(el("selectModeCount").value, 10) < 8) {
           el("selectModeCount").value = "8";
           el("selectModeCount").dispatchEvent(new Event("change"));
         } else if (!nextGuard && el("selectPreferredRole") && el("selectPreferredRole").value === "guard") {
@@ -671,7 +676,7 @@ const indieFlow = {
           ? "我是書院推理夥伴，今晚一定細心傾聽每一句線索，帶領好人陣營獲勝！"
           : ((pProf && pProf.sampleQuote) || "這局我們一起說好話、理性抓出酸民狼！");
         if (typeof voice !== "undefined" && typeof voice.speak === "function") {
-          voice.speak(s.name, sample, undefined, "normal");
+          voice.speak(s.name, sample, "normal", undefined);
         }
         if (typeof stage3d !== "undefined" && typeof stage3d.setHeroAction === "function") {
           stage3d.setHeroAction("speak_gesture", 3200);

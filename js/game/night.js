@@ -7,9 +7,13 @@ function scheduleNightStep(fn, ms) {
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   const waitMs = ff ? Math.min(ms, 180) : ms;
   const wrapped = function () {
+    if (!state.match || !state.match.started || state.match.phase === "LOBBY" || state.match.phase === "GAME_OVER") return;
     const dealOv = el("roleDealOverlay");
     if (dealOv && !dealOv.classList.contains("hidden") && typeof indieFlow !== "undefined") {
-      indieFlow.onRoleDealClosed = function () { fn(); };
+      indieFlow.onRoleDealClosed = function () {
+        if (!state.match || !state.match.started || state.match.phase === "LOBBY" || state.match.phase === "GAME_OVER") return;
+        fn();
+      };
       return;
     }
     fn();
@@ -169,6 +173,7 @@ function applyWolfNightTactic(tacticKey) {
 function proceedToNightWolf() {
   clearStepTimer();
   state.selectedSeatId = null;
+  if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
   state.match.phase = "NIGHT_WOLF";
   if (typeof orchestrator !== "undefined") orchestrator.emit("phase:changed", { phase: "NIGHT_WOLF", day: state.match.day });
   updateAllUI();
@@ -275,6 +280,23 @@ function chooseAiSeerTarget(seerSeat) {
   const pool = aliveOthers.filter(function (s) { return checkedIds.indexOf(s.id) === -1; });
   const candidates = (pool.length > 0 ? pool : aliveOthers).slice();
   if (!candidates.length) return null;
+
+  // Authentic Badge Flow Execution: True AI Seer prioritizes their own declared 1st -> 2nd Badge Flow target!
+  const ownFlow = (snap && snap.sheriffBadgeFlow && snap.sheriffBadgeFlow.ownerId === self.id)
+    ? snap.sheriffBadgeFlow
+    : ((snap && snap.sheriffBadgeFlowsBySeat && snap.sheriffBadgeFlowsBySeat[self.id]) || null);
+  if (ownFlow) {
+    const flowIds = [ownFlow.firstTargetId, ownFlow.secondTargetId].filter(Boolean);
+    for (let fi = 0; fi < flowIds.length; fi++) {
+      const fHit = pool.find(function (s) { return s.id === flowIds[fi]; });
+      if (fHit) {
+        if (typeof antiCheatMonitor !== "undefined" && self) {
+          antiCheatMonitor.recordDecision("night_seer", self.id, "依警徽流查驗 " + fHit.id + "號");
+        }
+        return fHit.id;
+      }
+    }
+  }
   const sProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
   const pubEvsS = snap ? snap.allSpeechEvents : [];
   candidates.sort(function (a, b) {
@@ -295,6 +317,7 @@ function chooseAiSeerTarget(seerSeat) {
 
 function proceedToNightSeer() {
   clearStepTimer();
+  if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
   state.match.phase = "NIGHT_SEER";
   if (typeof orchestrator !== "undefined") orchestrator.emit("phase:changed", { phase: "NIGHT_SEER", day: state.match.day });
   state.selectedSeatId = null;
@@ -362,6 +385,7 @@ function chooseAiWitchNightAction(witchSeat) {
 
 function proceedToNightWitch() {
   clearStepTimer();
+  if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
   state.match.phase = "NIGHT_WITCH";
   if (typeof orchestrator !== "undefined") orchestrator.emit("phase:changed", { phase: "NIGHT_WITCH", day: state.match.day });
   state.selectedSeatId = null;
@@ -405,6 +429,7 @@ function proceedToNightWitch() {
 // ==================== DAWN & HUNTER ====================
 function resolveDawn() {
   clearStepTimer();
+  if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
   state.activeBubble = null;
   sound.playDawn();
   if (typeof orchestrator !== "undefined") orchestrator.emit("phase:changed", { phase: "DAWN_RESOLVE", day: state.match.day });
@@ -787,7 +812,9 @@ function resumeAfterHunter() {
     const ico = isSelfWK ? "🐺" : "⚖️";
     const shotHeadline = (shot && shot.hunterId === getPlayerId())
       ? (ico + " 你已發動" + actText + "，帶走 " + fmtSeatNum(shot.targetId) + "號 " + shot.targetName + "！")
-      : (playerNumTag() + " 你已發動" + actText + "並離席");
+      : ((shot && shot.hunterId)
+        ? (ico + " 你已遭 " + fmtSeatNum(shot.hunterId) + "號 " + shot.hunterName + " " + actText + "帶走離席！")
+        : (playerNumTag() + " 你已發動" + actText + "並離席"));
     state.voteResultPayload = {
       headline: shotHeadline,
       lastWord: "",

@@ -477,8 +477,13 @@ body.hero-showcase-active #dragGestureHint {
 }
 
 @keyframes dealBackdropIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .deal-ritual-stage {
@@ -494,6 +499,7 @@ body.hero-showcase-active #dragGestureHint {
     opacity: 0;
     transform: translateY(34px) scale(0.88);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -552,9 +558,11 @@ body.hero-showcase-active #dragGestureHint {
     opacity: 0.95;
     transform: scale(0.34);
   }
+
   55% {
     opacity: 0.55;
   }
+
   100% {
     opacity: 0;
     transform: scale(2.45);
@@ -588,18 +596,77 @@ body.hero-showcase-active #dragGestureHint {
   box-shadow: 0 0 10px rgba(226, 91, 78, 0.85);
 }
 
-.deal-spark:nth-child(1)  { --sp-ang: 0deg;   --sp-dist: 195px; --sp-delay: 0.02s; }
-.deal-spark:nth-child(2)  { --sp-ang: 30deg;  --sp-dist: 215px; --sp-delay: 0.05s; }
-.deal-spark:nth-child(3)  { --sp-ang: 60deg;  --sp-dist: 180px; --sp-delay: 0.01s; }
-.deal-spark:nth-child(4)  { --sp-ang: 90deg;  --sp-dist: 225px; --sp-delay: 0.06s; }
-.deal-spark:nth-child(5)  { --sp-ang: 120deg; --sp-dist: 188px; --sp-delay: 0.03s; }
-.deal-spark:nth-child(6)  { --sp-ang: 150deg; --sp-dist: 210px; --sp-delay: 0.04s; }
-.deal-spark:nth-child(7)  { --sp-ang: 180deg; --sp-dist: 192px; --sp-delay: 0.02s; }
-.deal-spark:nth-child(8)  { --sp-ang: 210deg; --sp-dist: 218px; --sp-delay: 0.05s; }
-.deal-spark:nth-child(9)  { --sp-ang: 240deg; --sp-dist: 182px; --sp-delay: 0.01s; }
-.deal-spark:nth-child(10) { --sp-ang: 270deg; --sp-dist: 220px; --sp-delay: 0.06s; }
-.deal-spark:nth-child(11) { --sp-ang: 300deg; --sp-dist: 190px; --sp-delay: 0.03s; }
-.deal-spark:nth-child(12) { --sp-ang: 330deg; --sp-dist: 208px; --sp-delay: 0.04s; }
+.deal-spark:nth-child(1) {
+  --sp-ang: 0deg;
+  --sp-dist: 195px;
+  --sp-delay: 0.02s;
+}
+
+.deal-spark:nth-child(2) {
+  --sp-ang: 30deg;
+  --sp-dist: 215px;
+  --sp-delay: 0.05s;
+}
+
+.deal-spark:nth-child(3) {
+  --sp-ang: 60deg;
+  --sp-dist: 180px;
+  --sp-delay: 0.01s;
+}
+
+.deal-spark:nth-child(4) {
+  --sp-ang: 90deg;
+  --sp-dist: 225px;
+  --sp-delay: 0.06s;
+}
+
+.deal-spark:nth-child(5) {
+  --sp-ang: 120deg;
+  --sp-dist: 188px;
+  --sp-delay: 0.03s;
+}
+
+.deal-spark:nth-child(6) {
+  --sp-ang: 150deg;
+  --sp-dist: 210px;
+  --sp-delay: 0.04s;
+}
+
+.deal-spark:nth-child(7) {
+  --sp-ang: 180deg;
+  --sp-dist: 192px;
+  --sp-delay: 0.02s;
+}
+
+.deal-spark:nth-child(8) {
+  --sp-ang: 210deg;
+  --sp-dist: 218px;
+  --sp-delay: 0.05s;
+}
+
+.deal-spark:nth-child(9) {
+  --sp-ang: 240deg;
+  --sp-dist: 182px;
+  --sp-delay: 0.01s;
+}
+
+.deal-spark:nth-child(10) {
+  --sp-ang: 270deg;
+  --sp-dist: 220px;
+  --sp-delay: 0.06s;
+}
+
+.deal-spark:nth-child(11) {
+  --sp-ang: 300deg;
+  --sp-dist: 190px;
+  --sp-delay: 0.03s;
+}
+
+.deal-spark:nth-child(12) {
+  --sp-ang: 330deg;
+  --sp-dist: 208px;
+  --sp-delay: 0.04s;
+}
 
 #roleDealOverlay.is-revealed .deal-spark {
   animation: dealSparkBurst 0.88s cubic-bezier(0.16, 1, 0.3, 1) var(--sp-delay) forwards;
@@ -610,10 +677,12 @@ body.hero-showcase-active #dragGestureHint {
     opacity: 0;
     transform: rotate(var(--sp-ang)) translateX(18px) scale(0.4);
   }
+
   20% {
     opacity: 1;
     transform: rotate(var(--sp-ang)) translateX(74px) scale(1.25);
   }
+
   100% {
     opacity: 0;
     transform: rotate(var(--sp-ang)) translateX(var(--sp-dist)) scale(0.15);
@@ -653,12 +722,15 @@ body.hero-showcase-active #dragGestureHint {
   0% {
     transform: rotateY(194deg) translateY(-6px) scale(1.03);
   }
+
   42% {
     transform: rotateY(88deg) translateY(-14px) scale(1.07);
   }
+
   78% {
     transform: rotateY(-5deg) translateY(-2px) scale(1.015);
   }
+
   100% {
     transform: rotateY(0deg) translateY(0) scale(1);
   }
@@ -721,10 +793,33 @@ body.hero-showcase-active #dragGestureHint {
   pointer-events: none;
 }
 
-.deal-back-corner.is-tl { top: 8px; left: 8px; border-top-width: 2px; border-left-width: 2px; }
-.deal-back-corner.is-tr { top: 8px; right: 8px; border-top-width: 2px; border-right-width: 2px; }
-.deal-back-corner.is-bl { bottom: 8px; left: 8px; border-bottom-width: 2px; border-left-width: 2px; }
-.deal-back-corner.is-br { bottom: 8px; right: 8px; border-bottom-width: 2px; border-right-width: 2px; }
+.deal-back-corner.is-tl {
+  top: 8px;
+  left: 8px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.deal-back-corner.is-tr {
+  top: 8px;
+  right: 8px;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+
+.deal-back-corner.is-bl {
+  bottom: 8px;
+  left: 8px;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+
+.deal-back-corner.is-br {
+  bottom: 8px;
+  right: 8px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
 
 .deal-back-eyebrow {
   font-family: var(--font-display);
@@ -833,18 +928,41 @@ body.hero-showcase-active #dragGestureHint {
 }
 
 @keyframes dealSealBreath {
-  0%, 100% { opacity: 0.55; transform: scale(0.96); }
-  50% { opacity: 1; transform: scale(1.08); }
+
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
 }
 
 @keyframes dealSealOrbit {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes dealPromptPulse {
-  0%, 100% { opacity: 0.65; transform: translateY(0); }
-  50% { opacity: 1; transform: translateY(-2px); }
+
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
 }
 
 /* Front Face: Existing Role Card Scroll */
@@ -898,10 +1016,12 @@ body.hero-showcase-active #dragGestureHint {
     opacity: 0;
     transform: scale(1.65) rotate(-14deg);
   }
+
   68% {
     opacity: 1;
     transform: scale(0.94) rotate(2deg);
   }
+
   100% {
     opacity: 1;
     transform: scale(1) rotate(0deg);
@@ -913,6 +1033,7 @@ body.hero-showcase-active #dragGestureHint {
     opacity: 0;
     transform: translateY(10px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -941,10 +1062,14 @@ body.hero-showcase-active #dragGestureHint {
 }
 
 @keyframes foilSweep {
-  0%, 30% {
+
+  0%,
+  30% {
     transform: translateX(-60%);
   }
-  75%, 100% {
+
+  75%,
+  100% {
     transform: translateX(460%);
   }
 }
@@ -1395,10 +1520,36 @@ body.screen-gameover #focalCenterCard {
 
 #speakerPortraitImg.vn-bust-img {
   width: 106px;
-  height: 118px;
-  margin-top: -22px;
+  height: 112px;
+  margin-top: -8px;
   object-fit: cover;
   object-position: center 16%;
+}
+
+#detectiveMarkRow {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+#detectiveMarkRow::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .stepper-action-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .stepper-action-row #detectiveMarkRow {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .stepper-action-row #btnStepNext {
+    margin-left: auto;
+  }
 }
 
 @keyframes speakerAuraPulse {
@@ -1418,14 +1569,31 @@ body.screen-gameover #focalCenterCard {
 }
 
 @keyframes portraitBreathe {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-2.5px) scale(1.018); }
+
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-2.5px) scale(1.018);
+  }
 }
 
 @keyframes portraitShockMicro {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-2px) rotate(-0.8deg); }
-  75% { transform: translateX(2px) rotate(0.8deg); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-2px) rotate(-0.8deg);
+  }
+
+  75% {
+    transform: translateX(2px) rotate(0.8deg);
+  }
 }
 
 #speakerPortraitImg.portrait-speaking-breathe {
@@ -1482,6 +1650,7 @@ body.screen-gameover #focalCenterCard {
     animation: none;
     transform: rotateY(0deg);
   }
+
   .deal-burst-ring,
   .deal-spark,
   .deal-back-seal-halo,
@@ -3968,6 +4137,7 @@ body.craft-ui.theme-day .target-react-card {
     opacity: 0;
     transform: translateX(10px) scale(0.92);
   }
+
   100% {
     opacity: 1;
     transform: translateX(0) scale(1);
@@ -4111,10 +4281,12 @@ body.fx-pacing-fast .play-card-btn.is-card-casting {
     transform: translateY(0) scale(1);
     filter: brightness(1);
   }
+
   42% {
     transform: translateY(-10px) scale(1.045);
     filter: brightness(1.22);
   }
+
   100% {
     transform: translateY(-6px) scale(1.02);
     filter: brightness(1.08);
@@ -4213,14 +4385,15 @@ body.fx-pacing-fast .play-card-btn.is-card-casting {
   #inGameTopHud {
     padding: max(8px, env(safe-area-inset-top)) 8px 6px;
     gap: 6px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    row-gap: 6px;
   }
 
   #inGameTopHud .hud-pill-shell {
     padding: 5px 8px;
     gap: 6px;
-    min-width: 0;
-    flex: 1 1 auto;
+    min-width: 112px;
+    flex: 1 1 118px;
     flex-wrap: nowrap;
     overflow: hidden;
   }
@@ -4228,20 +4401,48 @@ body.fx-pacing-fast .play-card-btn.is-card-casting {
   #bannerHeadline,
   #roundTitle,
   #hudAutoLabel,
-  #hudViewLabel {
+  #hudViewLabel,
+  #hudSceneLabel {
+    display: none;
+  }
+
+  #inGameTopHud .harmony-track {
     display: none;
   }
 
   #inGameTopHud .hud-icon-btn {
-    min-height: 40px;
-    padding: 6px 9px;
+    min-height: 36px;
+    padding: 5px 8px;
     font-size: 11px;
   }
 
   #inGameTopHud .hud-rail-btn {
-    min-width: 36px;
-    min-height: 38px;
-    padding: 6px;
+    min-width: 32px;
+    min-height: 36px;
+    padding: 5px;
+  }
+
+  #speakerActiveBanner {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    align-items: center;
+  }
+
+  #speakerActiveBanner > div:first-child {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .spotlight-quiet-tools {
+    width: 100%;
+    justify-content: flex-end;
+    opacity: 0.94;
+  }
+
+  .spotlight-quiet-tools .cta-ink {
+    min-height: 26px;
+    padding: 2px 7px;
+    font-size: 10.5px;
   }
 
   #canvasStageWrap {
@@ -4810,10 +5011,12 @@ body.craft-ui.theme-day .vote-goodwill-badge.is-hint {
     transform: translateY(-10px) scale(1.04);
     box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
   }
+
   55% {
     transform: translateY(-28px) scale(1.12);
     box-shadow: 0 0 28px rgba(52, 211, 153, 0.85), 0 0 14px rgba(251, 191, 36, 0.9);
   }
+
   100% {
     transform: translateY(-22px) scale(1.06);
     box-shadow: 0 0 18px rgba(251, 191, 36, 0.55);
@@ -5019,12 +5222,19 @@ body.craft-ui.theme-day .tut-tip-bar {
   color: #5e3b0f;
 }
 
-/* ===== TOP-RIGHT USER FEEDBACK ENTRY & MODAL (ZERO !important, FULL RWD + DAYLIGHT PARITY) ===== */
-.title-feedback-btn {
+/* ===== TOP-RIGHT USER FEEDBACK & SCENE SWITCHER ENTRY (ZERO !important, FULL RWD + DAYLIGHT PARITY) ===== */
+.title-top-actions {
   position: absolute;
   top: max(14px, env(safe-area-inset-top));
   right: max(16px, env(safe-area-inset-right));
   z-index: 26;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-feedback-btn,
+.title-scene-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -5039,16 +5249,37 @@ body.craft-ui.theme-day .tut-tip-bar {
   backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 rgba(255, 240, 206, 0.18), 0 8px 22px rgba(0, 0, 0, 0.36);
   cursor: pointer;
-  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.18s ease;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.18s ease, color 0.16s ease;
 }
 
-.title-feedback-btn:hover {
+.title-scene-btn {
+  border-color: rgba(110, 231, 183, 0.52);
+  color: #d1fae5;
+  background: linear-gradient(135deg, rgba(16, 44, 38, 0.9) 0%, rgba(12, 26, 28, 0.86) 100%);
+}
+
+.title-scene-btn.is-celestial {
+  border-color: rgba(125, 211, 252, 0.68);
+  color: #e0f2fe;
+  background: linear-gradient(135deg, rgba(18, 56, 72, 0.92) 0%, rgba(16, 36, 52, 0.88) 100%);
+  box-shadow: inset 0 1px 0 rgba(224, 242, 254, 0.25), 0 8px 22px rgba(20, 120, 140, 0.32);
+}
+
+.title-feedback-btn:hover,
+.title-scene-btn:hover {
   transform: translateY(-1px);
   border-color: #f0c774;
   background: linear-gradient(135deg, rgba(56, 39, 25, 0.95) 0%, rgba(30, 22, 15, 0.92) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 242, 210, 0.28), 0 10px 26px rgba(180, 125, 42, 0.32);
 }
 
+.title-scene-btn:hover {
+  border-color: #6ee7b7;
+  background: linear-gradient(135deg, rgba(22, 68, 62, 0.95) 0%, rgba(15, 38, 44, 0.92) 100%);
+}
+
+body.screen-ingame .title-top-actions,
+body.hero-showcase-active .title-top-actions,
 body.screen-ingame .title-feedback-btn,
 body.hero-showcase-active .title-feedback-btn {
   display: none;
@@ -5153,8 +5384,9 @@ body.hero-showcase-active .title-feedback-btn {
 }
 
 @media (max-width: 767px) {
-  .title-feedback-btn {
-    padding: 7px 11px;
+  .title-feedback-btn,
+  .title-scene-btn {
+    padding: 7px 10px;
     font-size: 11px;
   }
 
@@ -5163,12 +5395,24 @@ body.hero-showcase-active .title-feedback-btn {
   }
 }
 
-/* Daylight Xuan-Paper Theme Parity for User Feedback */
-body.craft-ui.theme-day .title-feedback-btn {
+/* Daylight Xuan-Paper Theme Parity for User Feedback & Scene Switcher */
+body.craft-ui.theme-day .title-feedback-btn,
+body.craft-ui.theme-day .title-scene-btn {
   color: #5d3b10;
   background: rgba(252, 246, 234, 0.92);
   border-color: rgba(168, 118, 46, 0.56);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 6px 18px rgba(72, 48, 20, 0.18);
+}
+
+body.craft-ui.theme-day .title-scene-btn {
+  color: #165947;
+  border-color: rgba(34, 128, 100, 0.48);
+}
+
+body.craft-ui.theme-day .title-scene-btn.is-celestial {
+  color: #0e5a74;
+  border-color: rgba(14, 116, 144, 0.56);
+  background: rgba(236, 250, 252, 0.94);
 }
 
 body.craft-ui.theme-day .hud-feedback-btn {
@@ -5585,9 +5829,12 @@ body.craft-ui.theme-day .beginner-coach-banner {
 
 /* ===== v9.3 + v11.1 PROMINENT PIT DEDUCTION CTA, SHERIFF ORDER & BALLOT STRIP (ZERO !important) ===== */
 @keyframes pitCtaGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 2px 10px rgba(212, 166, 87, 0.28), inset 0 1px 0 rgba(255, 248, 225, 0.22);
   }
+
   50% {
     box-shadow: 0 3px 16px rgba(245, 158, 11, 0.52), 0 0 0 2px rgba(251, 191, 36, 0.26), inset 0 1px 0 rgba(255, 248, 225, 0.34);
   }
@@ -5664,6 +5911,131 @@ body.craft-ui.theme-day .beginner-coach-banner {
 
 .pit-sheriff-strip.hidden {
   display: none;
+}
+
+.pit-sheriff-text {
+  flex: 1 1 260px;
+  min-width: min(220px, 100%);
+  line-height: 1.38;
+  font-weight: 600;
+}
+
+.badge-flow-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(120, 74, 18, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.36);
+  font-size: 10.5px;
+  color: #fef3c7;
+}
+
+.badge-flow-bar.hidden {
+  display: none;
+}
+
+.badge-flow-select {
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: #fef3c7;
+  outline: none;
+}
+
+.badge-flow-select:focus {
+  border-color: #fbbf24;
+}
+
+.badge-flow-guide {
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: rgba(180, 118, 38, 0.16);
+  border: 1px solid rgba(251, 191, 36, 0.46);
+  font-size: 11px;
+  line-height: 1.45;
+  color: #fef3c7;
+}
+
+.badge-flow-guide.is-wolf-alert {
+  background: rgba(190, 24, 93, 0.2);
+  border-color: rgba(251, 113, 133, 0.58);
+  color: #ffe4e6;
+}
+
+.badge-flow-guide.is-good-alert {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(52, 211, 153, 0.54);
+  color: #d1fae5;
+}
+
+.seat-pill-badge.badge-flow {
+  background: rgba(245, 158, 11, 0.24);
+  border-color: rgba(251, 191, 36, 0.55);
+  color: #fde68a;
+}
+
+.bf-modal-card {
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(251, 191, 36, 0.42);
+  color: #fef3c7;
+}
+
+.bf-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(251, 191, 36, 0.24);
+}
+
+.bf-modal-active {
+  border-radius: 12px;
+  padding: 9px 11px;
+  background: rgba(180, 118, 38, 0.18);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  font-size: 11.5px;
+  color: #fef3c7;
+}
+
+.bf-modal-sig-wolf {
+  border-radius: 12px;
+  padding: 9px 11px;
+  background: rgba(136, 19, 55, 0.42);
+  border: 1px solid rgba(251, 113, 133, 0.55);
+  font-size: 11.5px;
+  color: #ffe4e6;
+}
+
+.bf-modal-sig-good {
+  border-radius: 12px;
+  padding: 9px 11px;
+  background: rgba(6, 78, 59, 0.42);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  font-size: 11.5px;
+  color: #d1fae5;
+}
+
+.pit-bf-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.22);
+  border: 1px solid rgba(251, 191, 36, 0.48);
+  color: #fde68a;
 }
 
 .pit-chip-sh-tag {
@@ -5762,6 +6134,76 @@ body.craft-ui.theme-day .pit-sheriff-strip {
   color: #5c370c;
 }
 
+body.craft-ui.theme-day .badge-flow-bar {
+  background: rgba(254, 243, 199, 0.82);
+  border-color: rgba(180, 118, 38, 0.45);
+  color: #5c370c;
+}
+
+body.craft-ui.theme-day .badge-flow-select {
+  background: rgba(255, 252, 245, 0.95);
+  border-color: rgba(180, 118, 38, 0.52);
+  color: #422006;
+}
+
+body.craft-ui.theme-day .badge-flow-guide {
+  background: rgba(254, 243, 199, 0.92);
+  border-color: rgba(180, 118, 38, 0.55);
+  color: #422006;
+}
+
+body.craft-ui.theme-day .badge-flow-guide.is-wolf-alert {
+  background: rgba(255, 228, 230, 0.94);
+  border-color: rgba(225, 29, 72, 0.5);
+  color: #881337;
+}
+
+body.craft-ui.theme-day .badge-flow-guide.is-good-alert {
+  background: rgba(209, 250, 229, 0.92);
+  border-color: rgba(5, 150, 105, 0.5);
+  color: #064e3b;
+}
+
+body.craft-ui.theme-day .seat-pill-badge.badge-flow {
+  background: rgba(254, 243, 199, 0.95);
+  border-color: rgba(180, 118, 38, 0.58);
+  color: #78350f;
+}
+
+body.craft-ui.theme-day .bf-modal-card {
+  background: rgba(250, 244, 232, 0.96);
+  border-color: rgba(180, 118, 38, 0.48);
+  color: #422006;
+}
+
+body.craft-ui.theme-day .bf-modal-head {
+  border-bottom-color: rgba(180, 118, 38, 0.28);
+}
+
+body.craft-ui.theme-day .bf-modal-active {
+  background: rgba(254, 243, 199, 0.92);
+  border-color: rgba(180, 118, 38, 0.52);
+  color: #422006;
+}
+
+body.craft-ui.theme-day .bf-modal-sig-wolf {
+  background: rgba(255, 228, 230, 0.96);
+  border-color: rgba(225, 29, 72, 0.52);
+  color: #881337;
+}
+
+body.craft-ui.theme-day .bf-modal-sig-good {
+  background: rgba(209, 250, 229, 0.95);
+  border-color: rgba(5, 150, 105, 0.5);
+  color: #064e3b;
+}
+
+body.craft-ui.theme-day .pit-bf-pill {
+  background: rgba(254, 243, 199, 0.95);
+  border-color: rgba(180, 118, 38, 0.54);
+  color: #78350f;
+}
+
 body.craft-ui.theme-day .pit-chip-sh-tag {
   background: rgba(217, 119, 6, 0.14);
   border-color: rgba(180, 118, 38, 0.42);
@@ -5797,6 +6239,7 @@ body.craft-ui.theme-day .speech-adv-drawer {
     opacity: 0.25;
     transform: translateY(2px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

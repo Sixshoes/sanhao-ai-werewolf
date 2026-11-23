@@ -287,10 +287,16 @@ function bindCanvasEvents() {
         if (stage3d.camPreset === "firstperson") {
           stage3d.glanceAtSeatInFirstPerson(hitNode.id);
           stage3d.orbit.fpFovOffset = -7;
+          openSeatIntel(hitNode.id);
         } else {
+          const exitingCloseUp = stage3d.closeUpSeatId === hitNode.id;
           stage3d.focusSeatCloseUp(hitNode.id);
+          if (exitingCloseUp) {
+            closeSeatIntel();
+          } else {
+            openSeatIntel(hitNode.id);
+          }
         }
-        openSeatIntel(hitNode.id);
       } else {
         stage3d.clearCloseUp();
         stage3d.resetCamera();
@@ -323,6 +329,18 @@ function bindCanvasEvents() {
       if (typeof stage3d !== "undefined") stage3d.toggleQualityMode();
     });
   }
+
+  ["btnToggleSceneThemeHud", "btnTitleSceneTheme", "btnToggleSceneThemePause"].forEach(function (btnId) {
+    const btnEl = el(btnId);
+    if (btnEl) {
+      btnEl.addEventListener("click", function () {
+        sound.unlock();
+        if (typeof stage3d !== "undefined" && typeof stage3d.toggleSceneTheme === "function") {
+          stage3d.toggleSceneTheme();
+        }
+      });
+    }
+  });
 
   if (el("btnReset3DCam")) {
     el("btnReset3DCam").addEventListener("click", function () {

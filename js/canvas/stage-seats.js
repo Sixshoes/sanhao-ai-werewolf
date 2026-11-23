@@ -93,7 +93,7 @@ function drawStageSeats(ctx, f, coords) {
   }
 
   // 5.5 Focused Stage Spotlight Cone & Directional Tether UNDER Active Speaker Seat!
-  if ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId) {
+  if ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH" || p === "SHERIFF_ELECTION") && state.activeSpeakerId) {
     const spNode = coords.find(function (c) { return c.id === state.activeSpeakerId; });
     if (spNode && (spNode.seat.alive || p === "LAST_WORDS_SPEECH")) {
       ctx.save();
@@ -155,7 +155,7 @@ function drawStageSeats(ctx, f, coords) {
     const isSelected = state.selectedSeatId === s.id;
     const isHovered = state.hoverSeatId === s.id && s.alive;
     const isDragSnap = state.dragAction.active && state.dragAction.snapId === s.id;
-    const isSpeaking = (((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN") && s.alive) || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id;
+    const isSpeaking = (((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "SHERIFF_ELECTION") && s.alive) || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id;
 
     // Update elastic spring-damper physics for this seat!
     const phys = ensureSeatPhys(s.id);

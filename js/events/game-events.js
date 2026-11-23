@@ -12,19 +12,29 @@ function resetMatchToLobby() {
   }
   state.speakingInFlight = false;
   state.currentTurnSpoken = false;
+  if (state.spectatorFastForward && typeof state._preSpectatorAutoPlay === "boolean") {
+    state.autoPlay = state._preSpectatorAutoPlay;
+    state._preSpectatorAutoPlay = null;
+  }
   state.spectatorFastForward = false;
   if (typeof clearCutInQueue === "function") clearCutInQueue();
   state.voteFlight = null;
   state.lastWordsCtx = null;
   if (el("voteFlightBanner")) el("voteFlightBanner").classList.add("hidden");
   if (typeof indieFlow !== "undefined" && typeof indieFlow.hideRoleDealRitual === "function") {
-    indieFlow.hideRoleDealRitual();
+    indieFlow.hideRoleDealRitual({ silent: true });
   }
   state.match.started = false;
   state.match.phase = "LOBBY";
   state.match.day = 0;
   state.match.playerSeatId = 1;
   state.match.sheriffSeatId = null;
+  state.match.sheriffElectionCtx = null;
+  state.match.sheriffVoteRecord = null;
+  state.match.sheriffBadgeFlow = null;
+  state.match.sheriffBadgeFlowsBySeat = {};
+  state.match.badgeFlowSignals = [];
+  state.match.pendingSheriffTransfer = null;
   state.match.goodwillVoteBonus = false;
   state.match.convenienceRallyTargetId = null;
   state.match.clearBreezeUsedDay = 0;
@@ -1105,6 +1115,14 @@ function bindNightVoteAndFourGEvents() {
     el("btnSheriffPlayerSend").addEventListener("click", function () {
       const inp = el("sheriffPlayerInput");
       if (typeof submitPlayerSheriffSpeech === "function") submitPlayerSheriffSpeech(inp ? inp.value : "");
+    });
+  }
+  if (el("sheriffPlayerInput")) {
+    el("sheriffPlayerInput").addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" && !ev.shiftKey) {
+        ev.preventDefault();
+        if (typeof submitPlayerSheriffSpeech === "function") submitPlayerSheriffSpeech(el("sheriffPlayerInput").value);
+      }
     });
   }
   if (el("btnSheriffWithdraw")) {

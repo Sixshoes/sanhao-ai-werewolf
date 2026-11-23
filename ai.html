@@ -104,15 +104,24 @@
             </div>
           </div>
 
-          <!-- TITLE SCREEN FLOATING TOP-RIGHT FEEDBACK BUTTON -->
-          <button id="btnTitleFeedback" type="button" class="title-feedback-btn" title="提交試玩心得或問題回報給作者">
-            <svg class="svg-ic" viewBox="0 0 24 24">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              <line x1="9" y1="9" x2="15" y2="9" />
-              <line x1="9" y1="13" x2="13" y2="13" />
-            </svg>
-            <span>使用反饋</span>
-          </button>
+          <!-- TITLE SCREEN FLOATING TOP-RIGHT QUICK BAR (SCENE SWITCHER + FEEDBACK) -->
+          <div class="title-top-actions">
+            <button id="btnTitleSceneTheme" type="button" class="title-scene-btn" title="切換 3D 古亭造景：林美書院 ⇄ 絕雲仙境">
+              <svg class="svg-ic" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 18l5-8 4 5 3-4 6 7H3z" />
+                <circle cx="17.5" cy="6.5" r="2" />
+              </svg>
+              <span id="titleSceneThemeLabel">林美書院</span>
+            </button>
+            <button id="btnTitleFeedback" type="button" class="title-feedback-btn" title="提交試玩心得或問題回報給作者">
+              <svg class="svg-ic" viewBox="0 0 24 24">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                <line x1="9" y1="9" x2="15" y2="9" />
+                <line x1="9" y1="13" x2="13" y2="13" />
+              </svg>
+              <span>使用反饋</span>
+            </button>
+          </div>
 
           <!-- MINIMAL FLOATING IN-GAME TOP HUD (LEFT: CHAPTER + HARMONY | RIGHT: COMPACT CONTROLS + FEEDBACK) -->
           <div id="inGameTopHud" class="hidden">
@@ -169,6 +178,14 @@
                     <circle cx="12" cy="12" r="3" />
                   </svg>
                   <span id="hudViewLabel">運鏡</span>
+                </button>
+                <button id="btnToggleSceneThemeHud" type="button" class="hud-rail-btn"
+                  title="切換 3D 古亭造景：林美書院 ⇄ 絕雲仙境">
+                  <svg class="svg-ic" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 18l5-8 4 5 3-4 6 7H3z" />
+                    <circle cx="17.5" cy="6.5" r="2" />
+                  </svg>
+                  <span id="hudSceneLabel">書院</span>
                 </button>
                 <button id="btnQuickVoiceHud" type="button" class="hud-rail-btn" title="開關語音播報 (快捷鍵 V)">
                   <span id="headerVoiceBars" class="eq-bars"><span></span><span></span><span></span></span>
@@ -446,7 +463,7 @@
                     </div>
                   </div>
 
-                  <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/70">
+                  <div class="stepper-action-row flex items-center justify-between gap-2 pt-1 border-t border-slate-800/70">
                     <div id="detectiveMarkRow" class="flex items-center gap-1.5 flex-1 min-w-0">
                       <button id="btnMarkGood" type="button"
                         class="cta-ink py-1 px-2.5 text-[11px] shrink-0"
@@ -536,6 +553,7 @@
                   <!-- Collapsible Advanced Pit Builder & Role Claim Drawer (Tucked away until clicked!) -->
                   <div id="speechAdvancedDrawer" class="hidden speech-adv-drawer space-y-1.5">
                     <div id="pitSheriffRefStrip" class="hidden pit-sheriff-strip"></div>
+                    <div id="pitBadgeFlowBar" class="hidden badge-flow-bar"></div>
                     <div id="playerPitBuilder" class="pit-builder-box"></div>
                     <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-700/50 text-[10px] text-slate-400">
                       <span>點上方座號可自動組句，或試用 AI 語氣改寫：</span>
@@ -643,6 +661,7 @@
                   <div id="sheriffTransferHeadline"
                     class="font-serif-craft text-xs sm:text-sm font-bold text-amber-300"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>警長離席，請選擇接棒警徽的存活夥伴，或當場撕毀警徽
                   </div>
+                  <div id="sheriffTransferFlowGuide" class="hidden badge-flow-guide text-left"></div>
                   <div id="sheriffTransferButtons" class="flex items-center justify-center gap-1.5 flex-wrap"></div>
                   <button id="btnShatterSheriffBadge" type="button" class="cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>撕毀警徽（本局不再有警長）</button>
                 </div>
@@ -657,6 +676,7 @@
                   <div id="sheriffElectionCandidates" class="space-y-1 text-left max-h-[128px] overflow-y-auto custom-scroll"></div>
                   <div id="sheriffPlayerTurnBox" class="hidden space-y-1.5 text-left rounded p-2 border border-amber-400/40 bg-amber-500/10">
                     <div class="text-[11px] font-bold text-amber-200"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>輪到你警上發言（選一張競選宣言或自行輸入）：</div>
+                    <div id="sheriffPlayerBadgeFlowBar" class="badge-flow-bar"></div>
                     <div id="sheriffPlayerQuickChips" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
                     <div class="flex items-center gap-1.5">
                       <input id="sheriffPlayerInput" type="text" placeholder="輸入你的上警宣言與警徽流…"
@@ -1091,6 +1111,7 @@
           </button>
           <button id="btnToggle3D" type="button" class="pause-action-btn">3D舞台</button>
           <button id="btnToggle3DQuality" type="button" class="pause-action-btn">極致畫質</button>
+          <button id="btnToggleSceneThemePause" type="button" class="pause-action-btn">造景:林美書院</button>
           <button id="btnToggleFxPacing" type="button" class="pause-action-btn">演出:沉穩</button>
           <button id="btnAutoPlayToggle" type="button" class="pause-action-btn">自動:關</button>
           <button id="btnReset3DCam" type="button" class="pause-action-btn">重置鏡頭</button>

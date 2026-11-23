@@ -383,6 +383,43 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
       })
     : null;
 
+  const _freezeBadgeFlow = function (bf) {
+    if (!bf || !bf.ownerId) return null;
+    return Object.freeze({
+      ownerId: bf.ownerId,
+      dayDeclared: bf.dayDeclared || 1,
+      firstTargetId: bf.firstTargetId || null,
+      secondTargetId: bf.secondTargetId || null,
+      mode: bf.secondTargetId ? "dual" : "single",
+      claimedRole: bf.claimedRole || null,
+      updatedFrom: bf.updatedFrom || "election"
+    });
+  };
+  const sheriffBadgeFlow = _freezeBadgeFlow(m.sheriffBadgeFlow);
+  const sheriffBadgeFlowsBySeat = {};
+  if (m.sheriffBadgeFlowsBySeat && typeof m.sheriffBadgeFlowsBySeat === "object") {
+    Object.keys(m.sheriffBadgeFlowsBySeat).forEach(function (k) {
+      const fz = _freezeBadgeFlow(m.sheriffBadgeFlowsBySeat[k]);
+      if (fz) sheriffBadgeFlowsBySeat[k] = fz;
+    });
+  }
+  const badgeFlowSignals = Array.isArray(m.badgeFlowSignals)
+    ? m.badgeFlowSignals.map(function (sig) {
+        return Object.freeze({
+          day: sig.day || 1,
+          ownerId: sig.ownerId || null,
+          transferTargetId: sig.transferTargetId || null,
+          firstTargetId: sig.firstTargetId || null,
+          secondTargetId: sig.secondTargetId || null,
+          kind: sig.kind || "external_transfer",
+          verifiedGoodIds: Array.isArray(sig.verifiedGoodIds) ? sig.verifiedGoodIds.slice() : [],
+          suspectedWolfIds: Array.isArray(sig.suspectedWolfIds) ? sig.suspectedWolfIds.slice() : [],
+          headline: sig.headline || "",
+          detail: sig.detail || ""
+        });
+      })
+    : [];
+
   // Legal role-gated private match fields
   const rawPlayerSeat = (m.seats || []).find(function (s) { return s.id === pid; }) || null;
   const wolfPackHasPlayer = Boolean(viewerIsWolf && rawPlayerSeat && rawPlayerSeat.role === "wolf");
@@ -465,6 +502,9 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     publicLogs: publicLogs,
     voteHistory: voteHistory,
     sheriffVoteRecord: sheriffVoteRecord,
+    sheriffBadgeFlow: sheriffBadgeFlow,
+    sheriffBadgeFlowsBySeat: Object.freeze(sheriffBadgeFlowsBySeat),
+    badgeFlowSignals: badgeFlowSignals,
     getObservableHeatOnSeat: getObservableHeatOnSeat
   });
 }

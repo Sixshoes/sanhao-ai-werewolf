@@ -453,6 +453,23 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
       : "（直接推舉）";
     sheriffVoteArchive = "【第1天警長競選與警下票型（排坑必考）】：警上候選：" + shCandStr + shWithStr + "｜警下投票：" + shBallotStr + "\n";
   }
+  const bfActivePrompt = snap ? snap.sheriffBadgeFlow : null;
+  const bfSigsPrompt = (snap && Array.isArray(snap.badgeFlowSignals)) ? snap.badgeFlowSignals : [];
+  if (bfActivePrompt || bfSigsPrompt.length > 0) {
+    const bfLines = [];
+    if (bfActivePrompt && bfActivePrompt.firstTargetId) {
+      const bfOw = readSeat(bfActivePrompt.ownerId);
+      const bf1 = readSeat(bfActivePrompt.firstTargetId);
+      const bf2 = bfActivePrompt.secondTargetId ? readSeat(bfActivePrompt.secondTargetId) : null;
+      bfLines.push("現任警長 " + (bfOw ? (fmtSeatNum(bfOw.id) + "號") : "") + " 公開警徽流：先驗 " + (bf1 ? (fmtSeatNum(bf1.id) + "號") : "") + (bf2 ? (" → 再驗 " + fmtSeatNum(bf2.id) + "號") : "") + "（倒牌徽給先位即金水、跳飛或撕徽即查殺）");
+    }
+    bfSigsPrompt.forEach(function (sig) {
+      if (sig && sig.detail) bfLines.push("第" + (sig.day || 1) + "天暗號解讀：" + sig.detail);
+    });
+    if (bfLines.length > 0) {
+      sheriffVoteArchive += "【公開警徽流宣告與暗號解讀（務必結合站邊判斷）】：\n- " + bfLines.join("\n- ") + "\n";
+    }
+  }
   const fgNotes = [];
   if (snap && Array.isArray(snap.fourGJoySuspects) && snap.fourGJoySuspects.length > 0) {
     fgNotes.push("給歡喜曾笑僵對象：" + snap.fourGJoySuspects.map(function (id) { return fmtSeatNum(id) + "號"; }).join("＋"));

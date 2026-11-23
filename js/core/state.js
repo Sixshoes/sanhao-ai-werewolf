@@ -13,6 +13,7 @@ const state = {
   hidePlayerRole: false,
   showRelationsOnCanvas: true,
   viewMode: "3d",
+  sceneTheme: "linmei", // "linmei" (林美山雅致書院風) | "celestial" (空靈青綠山水仙境風)
   quality3D: "high",
   qualityUserChosen: false,
   fxPacing: "cinematic", // "cinematic" (沉穩儀式感) | "fast" (快節奏)
@@ -103,6 +104,10 @@ const state = {
     sheriffRallyUsedDay: 0,
     sheriffElectionPending: false,
     sheriffElectionCtx: null,
+    sheriffVoteRecord: null,
+    sheriffBadgeFlow: null,
+    sheriffBadgeFlowsBySeat: {},
+    badgeFlowSignals: [],
     sheriffOrderCtx: null,
     pendingVotedHunterId: null,
     pendingSheriffTransfer: null,
@@ -165,6 +170,7 @@ function saveUserPrefs() {
       autoPlay: Boolean(state.autoPlay),
       showRelations: Boolean(state.showRelationsOnCanvas),
       viewMode: state.viewMode === "2d" ? "2d" : "3d",
+      sceneTheme: state.sceneTheme === "celestial" ? "celestial" : "linmei",
       quality3D: (state.quality3D === "eco" || state.quality3D === "balanced") ? state.quality3D : "high",
       qualityUserChosen: Boolean(state.qualityUserChosen),
       fxPacing: state.fxPacing === "fast" ? "fast" : "cinematic",
@@ -204,6 +210,7 @@ function loadUserPrefs() {
     if (typeof p.autoPlay === "boolean") state.autoPlay = p.autoPlay;
     if (typeof p.showRelations === "boolean") state.showRelationsOnCanvas = p.showRelations;
     if (p.viewMode === "2d" || p.viewMode === "3d") state.viewMode = p.viewMode;
+    if (p.sceneTheme === "linmei" || p.sceneTheme === "celestial") state.sceneTheme = p.sceneTheme;
     if (p.quality3D === "high" || p.quality3D === "balanced" || p.quality3D === "eco") state.quality3D = p.quality3D;
     if (typeof p.qualityUserChosen === "boolean") state.qualityUserChosen = p.qualityUserChosen;
     if (p.fxPacing === "fast" || p.fxPacing === "cinematic") state.fxPacing = p.fxPacing;
@@ -275,6 +282,9 @@ function syncPrefsToControls() {
   if (el("btnToggleSubtitleSize")) {
     el("btnToggleSubtitleSize").textContent = state.subtitleLarge ? "大字" : "字級";
     el("btnToggleSubtitleSize").classList.toggle("is-active", Boolean(state.subtitleLarge));
+  }
+  if (typeof stage3d !== "undefined" && typeof stage3d.syncSceneThemeUi === "function") {
+    stage3d.syncSceneThemeUi();
   }
   if (el("selectAiDifficulty")) el("selectAiDifficulty").value = state.aiDifficulty || "normal";
   if (el("selectRuleDepth")) el("selectRuleDepth").value = state.ruleDepth || "full";

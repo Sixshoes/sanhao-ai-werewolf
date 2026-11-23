@@ -151,6 +151,18 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
       if (b && b.voterId && b.targetId) shVotedForMap[b.voterId] = b.targetId;
     });
   }
+  const bfSignals = Array.isArray(snap.badgeFlowSignals) ? snap.badgeFlowSignals : [];
+  const bfGoodMap = {};
+  const bfWolfMap = {};
+  bfSignals.forEach(function (sig) {
+    if (!sig || !sig.ownerId) return;
+    const ownerSus = (self && self.suspicionMap && typeof self.suspicionMap[sig.ownerId] === "number")
+      ? self.suspicionMap[sig.ownerId]
+      : 50;
+    if (ownerSus >= 68) return; // Only weigh badge-flow signals from Sheriffs this AI did not already brand as fake!
+    (sig.verifiedGoodIds || []).forEach(function (gid) { bfGoodMap[gid] = sig; });
+    (sig.suspectedWolfIds || []).forEach(function (wid) { bfWolfMap[wid] = sig; });
+  });
 
   // Identify alive Seer claimants in strict chronological order of claiming
   const seerClaimants = [];
@@ -329,6 +341,12 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
         if (shRec && shWithdrawnIds.indexOf(c.id) !== -1) {
           pitScore += 6;
         }
+        if (bfWolfMap[c.id]) {
+          pitScore += 22;
+          reasons.push("警徽流暗號直指查殺");
+        } else if (bfGoodMap[c.id]) {
+          pitScore -= 16;
+        }
         if (self && self.suspicionMap) {
           pitScore += Math.round(((self.suspicionMap[c.id] || 50) - 44) * 0.45);
         }
@@ -475,6 +493,8 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
         }
       }
       if (shWithdrawnIds.indexOf(seatId) !== -1) delta += 6;
+      if (bfWolfMap[seatId]) delta += 22;
+      else if (bfGoodMap[seatId]) delta -= 16;
       return delta;
     };
     const susCands = aliveSeats.filter(function (s) {
@@ -697,6 +717,43 @@ function buildSpeechContext(speaker) {
           : ("參考剛才警長競選票型，" + seatLabel(svSeat) + " 在警下把票投給 " + seatLabel(stSeat) + "，等下排坑會把這張票型一併納入比對！");
       }
     }
+  }
+  const bfSignalsCtx = (snap && Array.isArray(snap.badgeFlowSignals)) ? snap.badgeFlowSignals : [];
+  const latestBfSig = bfSignalsCtx.length > 0 ? bfSignalsCtx[bfSignalsCtx.length - 1] : null;
+  let badgeFlowNote = "";
+  let badgeFlowSuspect = null;
+  if (latestBfSig && latestBfSig.day >= Math.max(1, day - 1)) {
+    const ownerSeatBf = getBlindSeat(latestBfSig.ownerId);
+    const ownerTrusted = !speaker.suspicionMap || (speaker.suspicionMap[latestBfSig.ownerId] || 50) < 68;
+    const susIdBf = (latestBfSig.suspectedWolfIds || []).find(function (id) {
+      const s = getBlindSeat(id);
+      return Boolean(s && s.alive && s.id !== speaker.id && !(speaker.role === "wolf" && s.isWolfMate));
+    });
+    const goodIdBf = (latestBfSig.verifiedGoodIds || []).find(function (id) {
+      const s = getBlindSeat(id);
+      return Boolean(s && s.alive && s.id !== speaker.id);
+    });
+    if (ownerSeatBf && ownerTrusted) {
+      if (susIdBf) {
+        badgeFlowSuspect = getBlindSeat(susIdBf);
+        badgeFlowNote = latestBfSig.kind === "torn_wolf"
+          ? ("看昨夜警徽流暗號：" + seatLabel(ownerSeatBf) + " 留了先驗 " + seatLabel(badgeFlowSuspect) + " 卻選擇當場撕毀警徽，這等於直接報 " + seatLabel(badgeFlowSuspect) + " 查殺狼坑！")
+          : ("看昨夜警徽流暗號：" + seatLabel(ownerSeatBf) + " 跳過第一警徽流 " + seatLabel(badgeFlowSuspect) + (goodIdBf ? (" 改把警徽飛給 " + seatLabel(getBlindSeat(goodIdBf))) : "") + "，這訊號直指 " + seatLabel(badgeFlowSuspect) + " 嫌疑最大！");
+      } else if (goodIdBf) {
+        const gSeatBf = getBlindSeat(goodIdBf);
+        badgeFlowNote = "看昨夜警徽流暗號：" + seatLabel(ownerSeatBf) + " 離席後把警徽飛給第一警徽流 " + seatLabel(gSeatBf) + "，若認他真明心，" + seatLabel(gSeatBf) + " 就是警徽流金水好人坑！";
+      }
+    } else if (ownerSeatBf && !ownerTrusted && (goodIdBf || susIdBf)) {
+      const refSeat = getBlindSeat(goodIdBf || susIdBf);
+      badgeFlowNote = "雖然 " + seatLabel(ownerSeatBf) + " 透過警徽流放了訊號給 " + seatLabel(refSeat) + "，但我原本就懷疑他可能是悍跳位，警徽流要搭配全場票型反推！";
+    }
+  }
+  if (badgeFlowNote && latestBfSig && latestBfSig.day === day) {
+    prevVoteNote = badgeFlowNote;
+    if (badgeFlowSuspect) prevVoteSuspect = badgeFlowSuspect;
+  } else if (!prevVoteNote && badgeFlowNote) {
+    prevVoteNote = badgeFlowNote;
+    if (!prevVoteSuspect && badgeFlowSuspect) prevVoteSuspect = badgeFlowSuspect;
   }
   if (!prevVoteNote && sheriffVoteNote) prevVoteNote = sheriffVoteNote;
   if (!prevVoteSuspect && sheriffVoteSuspect) prevVoteSuspect = sheriffVoteSuspect;

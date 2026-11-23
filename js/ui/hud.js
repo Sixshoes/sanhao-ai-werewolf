@@ -241,8 +241,11 @@ function renderSeatStrip() {
 
   seats.forEach(function (s) {
     const isSelected = state.selectedSeatId === s.id;
-    const isSpeaking = state.match.started && (p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id;
+    const shSpeechActive = Boolean(p === "SHERIFF_ELECTION" && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech" && state.match.sheriffElectionCtx.activeReelSeatId === s.id);
+    const isSpeaking = state.match.started && ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id || shSpeechActive);
     const isSheriff = Boolean(state.match.started && !state.match.sheriffElectionPending && s.alive && state.match.sheriffSeatId === s.id);
+    const bfActiveHud = (state.match.started && state.match.sheriffBadgeFlow) ? state.match.sheriffBadgeFlow : ((p === "NIGHT_SEER" && pSelf && pSelf.role === "seer" && state.match.sheriffBadgeFlowsBySeat) ? state.match.sheriffBadgeFlowsBySeat[pid] : null);
+    const bfSlotTag = (bfActiveHud && s.alive) ? (bfActiveHud.firstTargetId === s.id ? "警1" : (bfActiveHud.secondTargetId === s.id ? "警2" : "")) : "";
     const mark = state.playerMarks[s.id] || null;
     const isWolfPlayerStrip = Boolean(state.match.started && pSelf && pSelf.role === "wolf" && !state.hidePlayerRole);
     const isWolfMateSeat = Boolean(isWolfPlayerStrip && s.role === "wolf" && s.id !== pid);
@@ -331,6 +334,9 @@ function renderSeatStrip() {
     } else if (isSpeaking) {
       badgeText = "語";
       badgeKind = "speak";
+    } else if (bfSlotTag && (p === "NIGHT_SEER" || (!mark && !isWolfMateSeat))) {
+      badgeText = bfSlotTag;
+      badgeKind = "flow";
     } else if (mark === "wolf") {
       badgeText = isWolfPlayerStrip ? "甩" : "疑";
       badgeKind = "wolf";

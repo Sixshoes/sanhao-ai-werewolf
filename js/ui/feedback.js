@@ -384,8 +384,13 @@ async function submitUserFeedback() {
     sound.tone(660, 0.08, "triangle", 0.05, 0);
   }
   if (typeof showToast === "function") {
+    const anonHost = typeof isAnonymousReviewHost === "function" && isAnonymousReviewHost();
     showToast(
-      delivery.delivered ? "💌 感謝你的反饋，已成功送達開發者！" : "💌 反饋已整理完成，點「送至 GitHub」或「複製貼給作者」即可回傳！",
+      delivery.delivered
+        ? "💌 感謝你的反饋，已成功送達開發者！"
+        : (anonHost
+          ? "💌 反饋已整理完成，點「複製貼給作者」即可回傳！"
+          : "💌 反饋已整理完成，點「送至 GitHub」或「複製貼給作者」即可回傳！"),
       "emerald"
     );
   }
