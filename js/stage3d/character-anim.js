@@ -378,7 +378,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     const isSelected = state.selectedSeatId === s.id;
     const isHovered = state.hoverSeatId === s.id && s.alive;
     const isDragSnap = state.dragAction.active && state.dragAction.snapId === s.id;
-    const isSpeaking = (((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN") && s.alive) || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id;
+    const isSpeaking = (((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "SHERIFF_ELECTION") && s.alive) || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id;
     const isSilentSpeechWindow = Boolean(state.activeSpeechAnimUntil && nowMs < state.activeSpeechAnimUntil);
     const isTalkingNow = isSpeaking && Boolean(state.typewriter.active || voice.speaking || isSilentSpeechWindow);
     const isVotingNow = (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT") && s.alive;

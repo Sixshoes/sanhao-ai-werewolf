@@ -1302,7 +1302,7 @@ const stage3d = {
           o.targetRadius = 11.8 + largeTableR;
           o.targetLookAt.set(0, 0.56, 0.32);
         }
-      } else if ((p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId && this.seats.anchors[state.activeSpeakerId]) {
+      } else if ((p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH" || p === "SHERIFF_ELECTION") && state.activeSpeakerId && this.seats.anchors[state.activeSpeakerId]) {
         const spPos = this.seats.anchors[state.activeSpeakerId].worldPos;
         const dayEvs = (state.match && state.match.daySpeechEvents) || [];
         const latestEv = dayEvs.length ? dayEvs[dayEvs.length - 1] : null;

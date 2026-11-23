@@ -142,6 +142,15 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
   const allEvs = (snap.allSpeechEvents && snap.allSpeechEvents.length) ? snap.allSpeechEvents : (snap.daySpeechEvents || []);
   const dayEvs = snap.daySpeechEvents || [];
   const voteHist = snap.voteHistory || [];
+  const shRec = snap.sheriffVoteRecord || null;
+  const shVotedForMap = {};
+  const shSeerClaimIds = (shRec && Array.isArray(shRec.seerClaimIds)) ? shRec.seerClaimIds : [];
+  const shWithdrawnIds = (shRec && Array.isArray(shRec.withdrawnIds)) ? shRec.withdrawnIds : [];
+  if (shRec && Array.isArray(shRec.ballots)) {
+    shRec.ballots.forEach(function (b) {
+      if (b && b.voterId && b.targetId) shVotedForMap[b.voterId] = b.targetId;
+    });
+  }
 
   // Identify alive Seer claimants in strict chronological order of claiming
   const seerClaimants = [];
@@ -309,6 +318,17 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
           pitScore += 14;
           reasons.push("前輪投票針對觀察員");
         }
+        if (shRec && shVotedForMap[c.id]) {
+          if (shVotedForMap[c.id] === fake.id) {
+            pitScore += 24;
+            reasons.push("警長投票衝票給對跳位");
+          } else if (shVotedForMap[c.id] === trusted.id) {
+            pitScore -= 12;
+          }
+        }
+        if (shRec && shWithdrawnIds.indexOf(c.id) !== -1) {
+          pitScore += 6;
+        }
         if (self && self.suspicionMap) {
           pitScore += Math.round(((self.suspicionMap[c.id] || 50) - 44) * 0.45);
         }
@@ -440,14 +460,31 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
   } else {
     Object.keys(legalKnownWolf).forEach(function (k) { pushGenWolf(snap.getSeat(parseInt(k, 10))); });
     // Ranked spoken + known suspicious candidates
+    const sheriffPitDelta = function (seatId) {
+      if (!shRec) return 0;
+      let delta = 0;
+      const shTgtId = shVotedForMap[seatId];
+      if (shTgtId) {
+        const shTgtObj = snap.getSeat(shTgtId);
+        if (legalKnownWolf[shTgtId] || contraMap[shTgtId] || toxicMap[shTgtId] || (shTgtObj && !shTgtObj.alive && shTgtObj.outReason === "投票出局")) {
+          delta += 18;
+        } else if (shRec.winnerId && shTgtId !== shRec.winnerId && shSeerClaimIds.length >= 2 && shSeerClaimIds.indexOf(shTgtId) !== -1) {
+          delta += 10;
+        } else if (legalKnownGood[shTgtId] || (uncontestedSeer && shTgtId === uncontestedSeer.id)) {
+          delta -= 10;
+        }
+      }
+      if (shWithdrawnIds.indexOf(seatId) !== -1) delta += 6;
+      return delta;
+    };
     const susCands = aliveSeats.filter(function (s) {
       if (self && s.id === self.id) return false;
       if (self && self.role === "wolf" && wolfTeamMap[s.id]) return false;
       if (legalKnownGood[s.id]) return false;
       return true;
     }).sort(function (a, b) {
-      const aBoost = (toxicMap[a.id] ? 14 : 0) + (contraMap[a.id] ? 18 : 0) + (spokenSet[a.id] ? 6 : 0);
-      const bBoost = (toxicMap[b.id] ? 14 : 0) + (contraMap[b.id] ? 18 : 0) + (spokenSet[b.id] ? 6 : 0);
+      const aBoost = (toxicMap[a.id] ? 14 : 0) + (contraMap[a.id] ? 18 : 0) + (spokenSet[a.id] ? 6 : 0) + sheriffPitDelta(a.id);
+      const bBoost = (toxicMap[b.id] ? 14 : 0) + (contraMap[b.id] ? 18 : 0) + (spokenSet[b.id] ? 6 : 0) + sheriffPitDelta(b.id);
       const aVal = (self && self.suspicionMap ? (self.suspicionMap[a.id] || 50) : 50) + aBoost;
       const bVal = (self && self.suspicionMap ? (self.suspicionMap[b.id] || 50) : 50) + bBoost;
       return bVal - aVal;
@@ -627,6 +664,43 @@ function buildSpeechContext(speaker) {
     }
   }
 
+  const shRecCtx = snap ? snap.sheriffVoteRecord : null;
+  let sheriffVoteNote = "";
+  let sheriffVoteSuspect = null;
+  if (shRecCtx && Array.isArray(shRecCtx.ballots) && shRecCtx.ballots.length > 0) {
+    const aliveIdsNow = (snap ? snap.aliveSeats : getAliveSeats()).map(function (s) { return s.id; });
+    const shBallotsLive = shRecCtx.ballots.filter(function (b) {
+      return b && b.voterId && b.targetId && b.voterId !== speaker.id && aliveIdsNow.indexOf(b.voterId) !== -1;
+    });
+    const shSeers = Array.isArray(shRecCtx.seerClaimIds) ? shRecCtx.seerClaimIds : [];
+    const shRivalTarget = shSeers.find(function (cid) { return cid !== speaker.id && cid !== shRecCtx.winnerId; })
+      || (shRecCtx.candidateIds || []).find(function (cid) { return cid !== speaker.id && cid !== shRecCtx.winnerId; })
+      || shRecCtx.winnerId;
+    const pickBallot = function (matchRival) {
+      return shBallotsLive.find(function (b) {
+        if (speaker.role === "wolf") {
+          const bs = getBlindSeat(b.voterId);
+          if (bs && bs.isWolfMate) return false;
+        }
+        return matchRival ? (shRivalTarget && b.targetId === shRivalTarget) : true;
+      });
+    };
+    const shPicked = pickBallot(true) || pickBallot(false);
+    if (shPicked) {
+      const svSeat = getBlindSeat(shPicked.voterId);
+      const stSeat = getBlindSeat(shPicked.targetId);
+      if (svSeat && stSeat) {
+        sheriffVoteSuspect = svSeat;
+        const isClashVote = shSeers.length >= 2 && shSeers.indexOf(stSeat.id) !== -1;
+        sheriffVoteNote = isClashVote
+          ? ("比對剛才警長票型，" + seatLabel(svSeat) + " 在雙明心對跳下把警徽投給 " + seatLabel(stSeat) + "，這張警下衝票得先納入排坑考量！")
+          : ("參考剛才警長競選票型，" + seatLabel(svSeat) + " 在警下把票投給 " + seatLabel(stSeat) + "，等下排坑會把這張票型一併納入比對！");
+      }
+    }
+  }
+  if (!prevVoteNote && sheriffVoteNote) prevVoteNote = sheriffVoteNote;
+  if (!prevVoteSuspect && sheriffVoteSuspect) prevVoteSuspect = sheriffVoteSuspect;
+
   const seerWolfOnMe = dayEvents.find(function (ev) { return ev.checkedWolfId === speaker.id && ev.speakerId !== speaker.id; });
   const wolfPitCallersOnMe = dayEvents.filter(function (ev) {
     if (!ev || ev.speakerId === speaker.id) return false;
@@ -700,6 +774,8 @@ function buildSpeechContext(speaker) {
     priorSpeechesAll: priorSpeechesAll,
     prevVoteNote: prevVoteNote,
     prevVoteSuspect: prevVoteSuspect,
+    sheriffVoteNote: sheriffVoteNote,
+    sheriffVoteSuspect: sheriffVoteSuspect,
     seerWolfOnMe: seerWolfOnMe,
     accuseOnMe: accuseOnMe,
     wolfPitCallersOnMe: wolfPitCallersOnMe,

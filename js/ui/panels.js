@@ -4,7 +4,11 @@
 "use strict";
 
 function syncFocalCardChrome(p) {
-  const showSpotlight = (p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH");
+  const shCtxSpot = (p === "SHERIFF_ELECTION" && state.match) ? state.match.sheriffElectionCtx : null;
+  const showSheriffSpotlight = Boolean(
+    shCtxSpot && shCtxSpot.stage === "speech" && shCtxSpot.activeReelSeatId && shCtxSpot.activeReelSeatId !== getPlayerId()
+  );
+  const showSpotlight = (p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH" || showSheriffSpotlight);
   el("spotlightStageBox").classList.toggle("hidden", !showSpotlight);
   const waitRow = el("stepperWaitRow");
   if (waitRow) waitRow.classList.toggle("hidden", showSpotlight);
@@ -21,7 +25,7 @@ function syncFocalCardChrome(p) {
 
   const focalCard = el("focalCenterCard");
   if (focalCard) {
-    const spNow = (p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH") ? getSeat(state.activeSpeakerId) : null;
+    const spNow = (p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH" || showSheriffSpotlight) ? getSeat(state.activeSpeakerId) : null;
     focalCard.style.borderColor = spNow ? spNow.color : "";
   }
 
@@ -29,6 +33,8 @@ function syncFocalCardChrome(p) {
   if (dragHint) {
     if (!state.match.started || p === "LOBBY") {
       dragHint.textContent = "拖曳空地 360° 環視山城｜點擊角色、桌心蓮花或遠方龜山島互動";
+    } else if (p === "SHERIFF_ELECTION") {
+      dragHint.textContent = "上警競選：依座號輪流發言拉票，選完後警下投票結果將自動納入排坑考量";
     } else if (p === "DAY_VOTE") {
       dragHint.textContent = "點選席間座位，或直接從頭像拖線至可疑對象立即投出公投票";
     } else if (p === "NIGHT_GUARD") {
@@ -515,6 +521,58 @@ function renderSheriffElectionPanel() {
   const pid = getPlayerId();
   const pSeat = getPlayerSeat();
   const pAlive = Boolean(pSeat && pSeat.alive);
+  const stage = ctx.stage || "signup";
+  const orderIds = (Array.isArray(ctx.speechOrderIds) && ctx.speechOrderIds.length > 0)
+    ? ctx.speechOrderIds
+    : (ctx.candidateIds || []);
+  const spokenList = Array.isArray(ctx.spokenSpeeches) ? ctx.spokenSpeeches : (ctx.speeches || []);
+  const spokenMap = {};
+  spokenList.forEach(function (sp) { if (sp && sp.id) spokenMap[sp.id] = sp; });
+  const withdrawnIds = Array.isArray(ctx.withdrawnIds) ? ctx.withdrawnIds : [];
+
+  const headEl = el("sheriffElectionHeadline");
+  if (headEl) {
+    if (stage === "signup") {
+      headEl.textContent = "👑 第一天上警競選・決定上警或警下聽選";
+    } else if (stage === "speech") {
+      const idxHuman = Math.min(orderIds.length, Math.max(1, (ctx.speechIndex || 0) + 1));
+      headEl.textContent = "👑 警上輪流發言（第 " + idxHuman + " / " + Math.max(1, orderIds.length) + " 位）";
+    } else {
+      headEl.textContent = "🗳 警上發言完畢・請警下投票（結果納入排坑）";
+    }
+  }
+
+  const stripEl = el("sheriffOrderStrip");
+  if (stripEl) {
+    stripEl.innerHTML = "";
+    orderIds.forEach(function (cid) {
+      const cs = getSeat(cid);
+      if (!cs) return;
+      const isSp = stage === "speech" && ctx.activeReelSeatId === cid;
+      const isDone = Boolean(spokenMap[cid]) && !isSp;
+      const pill = document.createElement("span");
+      pill.className = "sheriff-order-pill" + (isSp ? " is-speaking" : (isDone ? " is-done" : ""));
+      const nm = cid === pid ? (fmtSeatNum(cid) + "你") : (fmtSeatNum(cid) + cs.name);
+      pill.textContent = (isSp ? "🎙 " : (isDone ? "✓ " : "")) + nm;
+      stripEl.appendChild(pill);
+    });
+    withdrawnIds.forEach(function (wid) {
+      const ws = getSeat(wid);
+      if (!ws) return;
+      const pill = document.createElement("span");
+      pill.className = "sheriff-order-pill is-withdrawn";
+      pill.textContent = fmtSeatNum(wid) + (wid === pid ? "你" : ws.name) + "(退水)";
+      stripEl.appendChild(pill);
+    });
+  }
+
+  const moodBadgeSh = el("speakerMoodBadge");
+  if (moodBadgeSh) {
+    moodBadgeSh.textContent = stage === "speech"
+      ? (ctx.activeReelSeatId === pid ? "輪到你警上" : "警上發言")
+      : (stage === "vote" ? "警下投票" : "上警競選");
+  }
+
   const cBox = el("sheriffElectionCandidates");
   if (cBox) {
     cBox.innerHTML = "";
@@ -524,40 +582,72 @@ function renderSheriffElectionPanel() {
       dramaBanner.textContent = ctx.dramaEvents[0];
       cBox.appendChild(dramaBanner);
     }
-    ctx.speeches.forEach(function (sp) {
-      const row = document.createElement("div");
-      const isClash = sp.tone === "clash";
-      const isSeer = sp.tone === "seer";
-      const isActiveReel = ctx.activeReelSeatId === sp.id;
-      row.className = "rounded px-2 py-1.5 text-[11px] transition " + (isActiveReel
-        ? "bg-amber-500/25 border border-amber-300 text-amber-50"
-        : (isClash
-          ? "bg-rose-950/55 border border-rose-400/45 text-rose-50"
-          : (isSeer
-            ? "bg-indigo-950/55 border border-violet-400/40 text-slate-100"
-            : "bg-slate-900/55 border border-amber-400/25 text-slate-200")));
-      const badgeHtml = sp.tag
-        ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold ' + (isClash ? "bg-rose-500/30 text-rose-200" : (isSeer ? "bg-violet-500/30 text-violet-200" : "bg-amber-500/25 text-amber-200")) + '">' + escapeHtml(sp.tag) + "</span>")
-        : "";
-      row.innerHTML = badgeHtml + '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("👑 " + playerNumTag() + " 你") : (fmtSeatNum(sp.id) + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
-      cBox.appendChild(row);
-    });
-    if (ctx.speeches.length >= 2) {
-      const reelBtn = document.createElement("button");
-      reelBtn.type = "button";
-      reelBtn.className = "cta-ink py-1 px-2.5 text-[11px] mt-1";
-      reelBtn.textContent = ctx.activeReelSeatId ? "🎙 正在輪播候選人語音喊話…" : "🎙 播放警上候選人輪流語音喊話";
-      reelBtn.disabled = Boolean(ctx.activeReelSeatId);
-      reelBtn.addEventListener("click", function () {
-        if (typeof playSheriffStageReel === "function") playSheriffStageReel(0);
+    if (stage === "signup") {
+      const rosterRow = document.createElement("div");
+      rosterRow.className = "flex items-center flex-wrap gap-1.5 px-1 py-1";
+      (ctx.candidateIds || []).forEach(function (cid) {
+        const cs = getSeat(cid);
+        if (!cs || !cs.alive) return;
+        const badge = document.createElement("span");
+        badge.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 border border-amber-400/45 text-amber-100";
+        badge.textContent = "👑 " + fmtSeatNum(cid) + "號 " + (cid === pid ? "你" : cs.name) + "（待發言）";
+        rosterRow.appendChild(badge);
       });
-      cBox.appendChild(reelBtn);
+      cBox.appendChild(rosterRow);
+    } else {
+      const visibleRecap = (stage === "speech" && ctx.activeReelSeatId && ctx.activeReelSeatId !== pid)
+        ? spokenList.filter(function (sp) { return sp.id !== ctx.activeReelSeatId; })
+        : spokenList;
+      visibleRecap.forEach(function (sp) {
+        const row = document.createElement("div");
+        const isClash = sp.tone === "clash";
+        const isSeer = sp.tone === "seer";
+        const isActiveNow = stage === "speech" && ctx.activeReelSeatId === sp.id;
+        row.className = "rounded px-2 py-1 text-[11px] transition " + (isActiveNow
+          ? "bg-amber-500/25 border border-amber-300 text-amber-50"
+          : (isClash
+            ? "bg-rose-950/55 border border-rose-400/45 text-rose-50"
+            : (isSeer
+              ? "bg-indigo-950/55 border border-violet-400/40 text-slate-100"
+              : "bg-slate-900/55 border border-amber-400/25 text-slate-200")));
+        const badgeHtml = sp.tag
+          ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold ' + (isClash ? "bg-rose-500/30 text-rose-200" : (isSeer ? "bg-violet-500/30 text-violet-200" : "bg-amber-500/25 text-amber-200")) + '">' + escapeHtml(sp.tag) + "</span>")
+          : "";
+        row.innerHTML = badgeHtml + '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("👑 " + playerNumTag() + " 你") : (fmtSeatNum(sp.id) + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
+        cBox.appendChild(row);
+      });
     }
   }
+
+  const isPlayerSpeechNow = Boolean(stage === "speech" && ctx.activeReelSeatId === pid && pAlive);
+  const pTurnBox = el("sheriffPlayerTurnBox");
+  if (pTurnBox) {
+    pTurnBox.classList.toggle("hidden", !isPlayerSpeechNow);
+    const chipsBox = el("sheriffPlayerQuickChips");
+    if (isPlayerSpeechNow && chipsBox) {
+      chipsBox.innerHTML = "";
+      const qOpts = (Array.isArray(ctx.playerQuickOptions) && ctx.playerQuickOptions.length)
+        ? ctx.playerQuickOptions
+        : (typeof buildPlayerSheriffQuickOptions === "function" ? buildPlayerSheriffQuickOptions(pSeat) : []);
+      qOpts.forEach(function (opt) {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "play-card-btn is-compact-card text-left";
+        card.innerHTML =
+          '<div class="text-[11px] font-bold text-amber-200">' + escapeHtml(opt.title) + '</div>' +
+          '<div class="text-[10px] text-slate-300 line-clamp-2 mt-0.5">' + escapeHtml(opt.text) + '</div>';
+        card.addEventListener("click", function () {
+          if (typeof submitPlayerSheriffSpeech === "function") submitPlayerSheriffSpeech(opt.text);
+        });
+        chipsBox.appendChild(card);
+      });
+    }
+  }
+
   const vBox = el("sheriffElectionVoteRow");
   if (vBox) {
     vBox.innerHTML = "";
-    const canVoteUnder = pAlive && !ctx.playerRunning;
+    const canVoteUnder = Boolean(stage === "vote" && pAlive && !ctx.playerRunning);
     vBox.classList.toggle("hidden", !canVoteUnder);
     if (canVoteUnder) {
       ctx.candidateIds.forEach(function (cid) {
@@ -566,7 +656,7 @@ function renderSheriffElectionPanel() {
         if (!cs || !cs.alive) return;
         const vb = document.createElement("button");
         vb.type = "button";
-        vb.className = "cta-celadon py-1 px-2.5 text-[11px]";
+        vb.className = "cta-celadon py-1.5 px-3 text-xs";
         vb.textContent = "👑 投給 " + fmtSeatNum(cid) + "號 " + cs.name;
         vb.addEventListener("click", function () {
           if (typeof resolveSheriffElectionAction === "function") resolveSheriffElectionAction(cid);
@@ -575,14 +665,37 @@ function renderSheriffElectionPanel() {
       });
     }
   }
+
   if (el("btnSheriffRun")) {
-    el("btnSheriffRun").classList.toggle("hidden", !pAlive || Boolean(ctx.playerRunning || ctx.playerWithdrew));
+    el("btnSheriffRun").classList.toggle("hidden", stage !== "signup" || !pAlive || Boolean(ctx.playerRunning || ctx.playerWithdrew));
+  }
+  if (el("btnSheriffStartSpeech")) {
+    el("btnSheriffStartSpeech").classList.toggle("hidden", stage !== "signup");
+  }
+  const nextSpBtn = el("btnSheriffNextSpeech");
+  if (nextSpBtn) {
+    const showNextSp = Boolean(stage === "speech" && !isPlayerSpeechNow);
+    nextSpBtn.classList.toggle("hidden", !showNextSp);
+    if (showNextSp) {
+      const remainingAfter = orderIds.slice((ctx.speechIndex || 0) + 1).filter(function (cid) {
+        const cs = getSeat(cid);
+        return Boolean(cs && cs.alive && ctx.candidateIds.indexOf(cid) !== -1);
+      }).length;
+      const lbl = remainingAfter === 0 ? "進入警下投票 →" : "下一位候選人 →";
+      nextSpBtn.innerHTML = escapeHtml(lbl) + ' <kbd class="ui-kbd ml-1">Space</kbd>';
+    }
   }
   if (el("btnSheriffWithdraw")) {
-    el("btnSheriffWithdraw").classList.toggle("hidden", !pAlive || !ctx.playerRunning);
+    el("btnSheriffWithdraw").classList.toggle("hidden", !pAlive || !ctx.playerRunning || stage === "signup");
   }
   if (el("btnSheriffPass")) {
-    el("btnSheriffPass").textContent = ctx.playerRunning ? "📣 維持上警・開始決選" : "🪑 警下開票／自動決選";
+    if (stage === "vote") {
+      el("btnSheriffPass").textContent = ctx.playerRunning ? "📣 維持上警・開始開票" : "🪑 棄票／自動開票";
+    } else if (stage === "speech") {
+      el("btnSheriffPass").textContent = "略過剩餘發言・直接開票";
+    } else {
+      el("btnSheriffPass").textContent = "略過發言・直接決選";
+    }
   }
 }
 

@@ -441,6 +441,18 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   const sheriffLine = (shSeat && shSeat.alive)
     ? ("本局警長（1.5票＆末置位歸票權）：" + fmtSeatNum(shSeat.id) + "號" + (shSeat.id === pidNow ? "玩家你" : shSeat.name) + (shSeat.id === self.id ? "（就是你本人，務必在末置位歸總全場坑位）" : "") + "；")
     : "目前場上無警長；";
+  const shRecPrompt = snap ? snap.sheriffVoteRecord : null;
+  let sheriffVoteArchive = "";
+  if (shRecPrompt) {
+    const shCandStr = (shRecPrompt.candidateIds || []).map(function (id) { return fmtSeatNum(id) + "號"; }).join("、") || "無";
+    const shWithStr = (shRecPrompt.withdrawnIds || []).length
+      ? ("｜退水：" + shRecPrompt.withdrawnIds.map(function (id) { return fmtSeatNum(id) + "號"; }).join("、"))
+      : "";
+    const shBallotStr = (shRecPrompt.ballots || []).length
+      ? shRecPrompt.ballots.map(function (b) { return b.voterId + "號→" + (b.targetId ? (b.targetId + "號") : "棄票"); }).join("｜")
+      : "（直接推舉）";
+    sheriffVoteArchive = "【第1天警長競選與警下票型（排坑必考）】：警上候選：" + shCandStr + shWithStr + "｜警下投票：" + shBallotStr + "\n";
+  }
   const fgNotes = [];
   if (snap && Array.isArray(snap.fourGJoySuspects) && snap.fourGJoySuspects.length > 0) {
     fgNotes.push("給歡喜曾笑僵對象：" + snap.fourGJoySuspects.map(function (id) { return fmtSeatNum(id) + "號"; }).join("＋"));
@@ -480,11 +492,12 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "【當前局勢情報】：第 " + day + " 天白天｜昨夜結果：" + (lastCas.length > 0 ? (lastCas.map(function (id) { return id + "號離席"; }).join("、")) : "平安夜無人離席") + "｜" + sheriffLine + (fgNotes.length ? ("公開茶席線索（" + fgNotes.join("、") + "）｜") : "") + "在場座位：" + aliveList + "\n" +
     aowuEndgameNote + "\n" +
     "【場上已宣稱身分】：" + claimsSummary + "\n" +
+    sheriffVoteArchive +
     "【前 1 至 " + Math.max(0, day - 1) + " 輪完整歷史發言與票型檔案】：\n" + priorRoundsArchive + "\n" +
     "【今天（第 " + day + " 輪）到目前為止的真實發言逐字稿】：\n" + transcript + "\n" +
     "【本輪基礎戰術參考】（請結合上方真實逐字稿與身分攻略靈活發揮）：" + fallbackText + "\n" +
     "嚴格規則：\n" +
-    "1. 【最高優先】必須嚴守今日發言時序並點好人坑與狼人坑！被前置位點進狼坑或指認時第一句必須回應；雙觀察員對跳時務必比較站 A 坑與站 B 坑分別在哪！\n" +
+    "1. 【最高優先】必須嚴守今日發言時序並點好人坑與狼人坑！被前置位點進狼坑或指認時第一句必須回應；雙觀察員對跳時務必比較站 A 坑與站 B 坑分別在哪；若本局有警長票型，務必把警下投票與退水行為納入排坑理由！\n" +
     "2. 【獨立綜合判斷】你完全不知道其他人的真實底牌（除同伴或觀察員親查對象外）！必須參考前面「所有」已發言者的話來綜合判斷誰在狼坑、誰在好人坑。\n" +
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
     "4. 【嚴禁 AI 機器味與報告腔・忠實演出角色語風】禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或系統旁白！控制語氣克制自然，整段發言最多使用 1 個驚嘆號（優先使用「，」「。」「？」「……」），務必徹底以真人書院夥伴或古風文言演出，自然接前一位的話回嘴或讚聲，用專屬收尾俐落結束。\n" +

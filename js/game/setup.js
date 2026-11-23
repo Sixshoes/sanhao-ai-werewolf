@@ -251,6 +251,7 @@ function startNewGame() {
     sheriffRallyUsedDay: 0,
     sheriffElectionPending: Boolean(sheriffSeatId),
     sheriffElectionCtx: null,
+    sheriffVoteRecord: null,
     sheriffOrderCtx: null,
     pendingVotedHunterId: null,
     pendingSheriffTransfer: null,

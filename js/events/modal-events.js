@@ -109,6 +109,11 @@ function bindModalEvents() {
         el("btnVoteResultNext").click();
         return;
       }
+      if (state.match.phase === "SHERIFF_ELECTION" && el("btnSheriffNextSpeech") && !el("btnSheriffNextSpeech").classList.contains("hidden")) {
+        ev.preventDefault();
+        el("btnSheriffNextSpeech").click();
+        return;
+      }
       if (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH" || state.match.phase === "HUNTER_RESOLVE") {
         ev.preventDefault();
         el("btnStepNext").click();
@@ -117,6 +122,11 @@ function bindModalEvents() {
     }
     if (ev.key === "Enter") {
       const phNow = state.match && state.match.phase;
+      if (phNow === "SHERIFF_ELECTION" && el("btnSheriffNextSpeech") && !el("btnSheriffNextSpeech").classList.contains("hidden")) {
+        ev.preventDefault();
+        el("btnSheriffNextSpeech").click();
+        return;
+      }
       if (phNow === "NIGHT_SEER" && state.seerReveal && el("btnSeerRevealContinue")) {
         ev.preventDefault();
         el("btnSeerRevealContinue").click();

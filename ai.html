@@ -459,6 +459,8 @@
                         title="把他的立場存成重點便條，輪到你發言時一鍵引用"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-3.5L7 20V4z"/></svg>記重點</button>
                       <button id="btnMicroInspect" type="button" class="cta-ink cta-quiet py-1 px-2 text-[11px] shrink-0"
                         title="每日限次偵測目前發言者的心虛緊張值，幫你判斷是否在說謊"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>看心虛</button>
+                      <button id="btnOpenPitSheet" type="button" class="pit-quick-btn py-1 px-2.5 text-[11px] shrink-0"
+                        title="開啟警長與歷輪公投票型手札，對照誰投誰來精準排坑"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg>票型排坑</button>
                       <span id="tableMomentumText"
                         class="hidden"></span>
                     </div>
@@ -514,8 +516,8 @@
                     <div class="flex items-center gap-1.5 shrink-0">
                       <div id="playerTurnOrderStrip" class="hidden"></div>
                       <button id="btnToggleCustomSpeech" type="button"
-                        class="speech-adv-toggle text-[10.5px] px-2 py-0.5 shrink-0"
-                        title="展開進階盤坑、亮牌組句與試轉好話工具"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg>盤坑／亮牌 ▾</button>
+                        class="speech-adv-toggle speech-pit-cta shrink-0"
+                        title="展開排坑與亮牌組句面板（結合警長票型點選狼坑／好人坑）"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg>排坑／亮牌 ▾</button>
                     </div>
                   </div>
                   <div id="playerTurnStepHint" class="hidden"></div>
@@ -533,6 +535,7 @@
 
                   <!-- Collapsible Advanced Pit Builder & Role Claim Drawer (Tucked away until clicked!) -->
                   <div id="speechAdvancedDrawer" class="hidden speech-adv-drawer space-y-1.5">
+                    <div id="pitSheriffRefStrip" class="hidden pit-sheriff-strip"></div>
                     <div id="playerPitBuilder" class="pit-builder-box"></div>
                     <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-700/50 text-[10px] text-slate-400">
                       <span>點上方座號可自動組句，或試用 AI 語氣改寫：</span>
@@ -644,16 +647,30 @@
                   <button id="btnShatterSheriffBadge" type="button" class="cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>撕毀警徽（本局不再有警長）</button>
                 </div>
 
-                <!-- 5E. FAST SHERIFF ELECTION (上警競選 & 警徽流) -->
+                <!-- 5E. TURN-BY-TURN SHERIFF ELECTION (上警輪流發言 & 警下投票決選) -->
                 <div id="panelSheriffElection" class="hidden space-y-2 text-center msg-enter">
-                  <div id="sheriffElectionHeadline"
-                    class="font-serif-craft text-xs sm:text-sm font-bold text-amber-300"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>上警競選・警長擁有 1.5 票歸票權與末置位發言權</div>
-                  <div id="sheriffElectionCandidates" class="space-y-1 text-left max-h-[120px] overflow-y-auto custom-scroll"></div>
+                  <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <div id="sheriffElectionHeadline"
+                      class="font-serif-craft text-xs sm:text-sm font-bold text-amber-300 text-left"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>上警競選・輪流發言拉票</div>
+                    <div id="sheriffOrderStrip" class="flex items-center gap-1 flex-wrap justify-end"></div>
+                  </div>
+                  <div id="sheriffElectionCandidates" class="space-y-1 text-left max-h-[128px] overflow-y-auto custom-scroll"></div>
+                  <div id="sheriffPlayerTurnBox" class="hidden space-y-1.5 text-left rounded p-2 border border-amber-400/40 bg-amber-500/10">
+                    <div class="text-[11px] font-bold text-amber-200"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>輪到你警上發言（選一張競選宣言或自行輸入）：</div>
+                    <div id="sheriffPlayerQuickChips" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
+                    <div class="flex items-center gap-1.5">
+                      <input id="sheriffPlayerInput" type="text" placeholder="輸入你的上警宣言與警徽流…"
+                        class="flex-1 min-w-0 rounded px-2.5 py-1.5 text-xs border focus:outline-none focus:border-amber-400" />
+                      <button id="btnSheriffPlayerSend" type="button" class="cta-brass px-3 py-1.5 text-xs shrink-0">送出警上發言</button>
+                    </div>
+                  </div>
                   <div id="sheriffElectionVoteRow" class="flex items-center justify-center gap-1.5 flex-wrap"></div>
                   <div id="sheriffElectionBtnRow" class="flex items-center justify-center gap-2 flex-wrap">
                     <button id="btnSheriffRun" type="button" class="cta-brass py-1.5 px-3 text-xs"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M7.5 10.5L12 6l4.5 4.5M5 19h14"/></svg>我要上警競選</button>
+                    <button id="btnSheriffStartSpeech" type="button" class="cta-celadon py-1.5 px-3 text-xs">警下聽選（開始輪流發言）</button>
+                    <button id="btnSheriffNextSpeech" type="button" class="hidden cta-brass py-1.5 px-4 text-xs">下一位候選人 → <kbd class="ui-kbd ml-1">Space</kbd></button>
                     <button id="btnSheriffWithdraw" type="button" class="hidden cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-muted" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v18M6 4h11l-2.5 4.2L17 12.5H6"/></svg>退水退出</button>
-                    <button id="btnSheriffPass" type="button" class="cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><polygon points="15.5 8.5 13.4 13.4 8.5 15.5 10.6 10.6 15.5 8.5"/></svg>警下聽選／自動決選</button>
+                    <button id="btnSheriffPass" type="button" class="cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><polygon points="15.5 8.5 13.4 13.4 8.5 15.5 10.6 10.6 15.5 8.5"/></svg>略過發言・直接決選</button>
                   </div>
                 </div>
 

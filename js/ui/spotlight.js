@@ -85,13 +85,22 @@ function maybeScheduleAutoAdvanceAfterSpeech() {
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   if (!state.autoPlay && !ff) return;
   if (voice && voice.paused) return;
-  if (state.match.phase !== "DAY_SPEECH" && state.match.phase !== "LAST_WORDS_SPEECH") return;
+  const pNow = state.match.phase;
+  const isSheriffSpeechAuto = Boolean(
+    pNow === "SHERIFF_ELECTION" &&
+    state.match.sheriffElectionCtx &&
+    state.match.sheriffElectionCtx.stage === "speech" &&
+    state.match.sheriffElectionCtx.activeReelSeatId &&
+    state.match.sheriffElectionCtx.activeReelSeatId !== getPlayerId()
+  );
+  if (pNow !== "DAY_SPEECH" && pNow !== "LAST_WORDS_SPEECH" && !isSheriffSpeechAuto) return;
   if (state.typewriter.active || voice.speaking) return;
   if (state.stepTimer) clearTimeout(state.stepTimer);
   const pauseMs = ff ? 260 : (voice.canSpeak() ? 950 : (state.typewriter.holdMs || 2400));
   state.stepTimer = setTimeout(function () {
     if (voice && voice.paused) return;
     if (state.match.phase === "LAST_WORDS_SPEECH") advanceLastWordsQueue();
+    else if (state.match.phase === "SHERIFF_ELECTION" && typeof advanceSheriffSpeechTurn === "function") advanceSheriffSpeechTurn();
     else advanceSpeechQueue();
   }, pauseMs);
 }

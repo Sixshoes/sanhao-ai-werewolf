@@ -170,10 +170,21 @@ function syncSpeechAdvancedToggleLabel(player) {
   const isWolf = Boolean(player && player.role === "wolf");
   const isOpen = Boolean(drawer && !drawer.classList.contains("hidden"));
   const d = (state.match && state.match.playerDraftPits) || { wolfIds: [], goodIds: [] };
-  const markCnt = (d.wolfIds ? d.wolfIds.length : 0) + (d.goodIds ? d.goodIds.length : 0);
-  const baseLbl = isWolf ? "🎭 佈局／獵神" : "🧩 盤坑／亮牌";
-  const countTag = markCnt > 0 ? (" (" + markCnt + ")") : "";
-  btn.textContent = baseLbl + countTag + (isOpen ? " ▴" : " ▾");
+  const wLen = d.wolfIds ? d.wolfIds.length : 0;
+  const gLen = d.goodIds ? d.goodIds.length : 0;
+  const baseLbl = isWolf ? "佈局／獵神" : "排坑／亮牌";
+  let countTag = "";
+  if (wLen > 0 || gLen > 0) {
+    countTag = isWolf
+      ? (" (" + (wLen ? (wLen + "甩") : "") + (wLen && gLen ? "·" : "") + (gLen ? (gLen + "保") : "") + ")")
+      : (" (" + (gLen ? (gLen + "好") : "") + (gLen && wLen ? "·" : "") + (wLen ? (wLen + "狼") : "") + ")");
+  }
+  const textLabel = baseLbl + countTag + (isOpen ? " ▴" : " ▾");
+  if (typeof shIcon === "function") {
+    btn.innerHTML = shIcon(isWolf ? "mask" : "puzzle", "gold") + escapeHtml(textLabel);
+  } else {
+    btn.textContent = (isWolf ? "🎭 " : "🧩 ") + textLabel;
+  }
   btn.classList.toggle("is-active", isOpen);
 }
 
@@ -298,7 +309,20 @@ function composePlayerPitSpeechText() {
       parts.push("好人坑我先放 " + fmtList(d.goodIds) + (d.goodIds.length >= 3 ? (" 等 " + d.goodIds.length + " 位（立場較真誠）；") : "（立場較真誠）；"));
     }
     if (d.wolfIds.length > 0) {
-      parts.push("狼坑目前點進 " + fmtList(d.wolfIds) + "，邏輯最讓人起疑，建議今天集中檢視並優先公投 " + fmtSeatNum(d.wolfIds[0]) + "號！");
+      let shReason = "";
+      const shRec = state.match.sheriffVoteRecord || null;
+      if (shRec) {
+        const w0 = d.wolfIds[0];
+        const w0Seat = getSeat(w0);
+        const w0Ballot = (shRec.ballots || []).find(function (b) { return b && b.voterId === w0 && b.targetId; });
+        if (w0Ballot && w0Seat) {
+          const bt = getSeat(w0Ballot.targetId);
+          shReason = "（且他在警長競選時警下投給 " + fmtSeatNum(w0Ballot.targetId) + "號" + (bt ? bt.name : "") + "，票型值得重點比對）";
+        } else if (Array.isArray(shRec.withdrawnIds) && shRec.withdrawnIds.indexOf(w0) !== -1) {
+          shReason = "（且他在警上突然退水，動機值得檢視）";
+        }
+      }
+      parts.push("狼坑目前點進 " + fmtList(d.wolfIds) + shReason + "，邏輯最讓人起疑，建議今天集中檢視並優先公投 " + fmtSeatNum(d.wolfIds[0]) + "號！");
     }
   }
 
@@ -499,6 +523,53 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   box.classList.toggle("is-wolf-board", isWolfPlayer);
   box.classList.toggle("is-good-board", !isWolfPlayer);
 
+  // Sheriff election ballot quick-reference strip (rendered in sibling #pitSheriffRefStrip so _children[0]/[1] stay invariant!)
+  const shRec = state.match.sheriffVoteRecord || null;
+  const shVotedMap = {};
+  if (shRec && Array.isArray(shRec.ballots)) {
+    shRec.ballots.forEach(function (b) {
+      if (b && b.voterId && b.targetId) shVotedMap[b.voterId] = b.targetId;
+    });
+  }
+  const shRefStrip = el("pitSheriffRefStrip");
+  if (shRefStrip) {
+    shRefStrip.innerHTML = "";
+    if (shRec) {
+      shRefStrip.classList.remove("hidden");
+      const shGroups = {};
+      (shRec.ballots || []).forEach(function (b) {
+        if (b && b.voterId && b.targetId) {
+          if (!shGroups[b.targetId]) shGroups[b.targetId] = [];
+          shGroups[b.targetId].push(fmtSeatNum(b.voterId));
+        }
+      });
+      const shParts = (shRec.candidateIds || []).map(function (cid) {
+        const cs = getSeat(cid);
+        const voters = shGroups[cid] || [];
+        const cTag = (cid === shRec.winnerId ? "👑" : "") + fmtSeatNum(cid) + (cs ? (cid === pid ? "你" : cs.name) : "號");
+        return cTag + (voters.length ? ("←" + voters.join(",")) : "(無警下票)");
+      });
+      const withPart = (shRec.withdrawnIds || []).length
+        ? ("｜退水：" + shRec.withdrawnIds.map(function (wid) { return fmtSeatNum(wid) + "號"; }).join("、"))
+        : "";
+      const txtSpan = document.createElement("span");
+      txtSpan.className = "truncate font-semibold";
+      txtSpan.textContent = "👑 警長票型參考：" + (shParts.join(" ｜ ") || "直接推舉") + withPart;
+      shRefStrip.appendChild(txtSpan);
+      const openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.className = "cta-ink text-[10px] px-2 py-0.5 shrink-0";
+      openBtn.textContent = "完整票型 ↗";
+      openBtn.addEventListener("click", function () {
+        sound.unlock();
+        if (typeof openVoteSheetModal === "function") openVoteSheetModal();
+      });
+      shRefStrip.appendChild(openBtn);
+    } else {
+      shRefStrip.classList.add("hidden");
+    }
+  }
+
   // _children[0]: Primary seat targeting row (Wolf: Framing/Fake-Vouch on good seats ONLY; Good: Unlimited Good-Pit + Wolf-Pit)
   const seatRow = document.createElement("div");
   seatRow.className = "pit-seat-row";
@@ -508,7 +579,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
     lbl.textContent = "🎭 甩鍋／假保：";
   } else {
     const wolfTotal = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
-    lbl.textContent = "好人盤坑 (" + d.goodIds.length + "好·" + d.wolfIds.length + "/" + wolfTotal + "狼)：";
+    lbl.textContent = "好人排坑 (" + d.goodIds.length + "好·" + d.wolfIds.length + "/" + wolfTotal + "狼)：";
   }
   seatRow.appendChild(lbl);
 
@@ -523,6 +594,19 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
       ? "點1下設為甩鍋目標・點2下假保拉票・點3下清除（狼同伴已自動排除）"
       : "點1下標狼坑・點2下標好人坑（好人坑不限人數！）・點3下清除";
     chip.textContent = fmtSeatNum(s.id) + s.name;
+    if (shRec) {
+      let shMicro = "";
+      if (shRec.winnerId === s.id) shMicro = "👑警長";
+      else if (shVotedMap[s.id]) shMicro = "投" + fmtSeatNum(shVotedMap[s.id]) + "警";
+      else if ((shRec.withdrawnIds || []).indexOf(s.id) !== -1) shMicro = "退水";
+      else if ((shRec.candidateIds || []).indexOf(s.id) !== -1) shMicro = "警上";
+      if (shMicro) {
+        const shTag = document.createElement("span");
+        shTag.className = "pit-chip-sh-tag";
+        shTag.textContent = shMicro;
+        chip.appendChild(shTag);
+      }
+    }
     if (isWolf || isGood) {
       const bdg = document.createElement("span");
       bdg.className = "pit-chip-badge";

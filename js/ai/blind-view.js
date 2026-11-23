@@ -301,6 +301,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
       detectedContradictions: [],
       publicLogs: [],
       voteHistory: [],
+      sheriffVoteRecord: null,
       getObservableHeatOnSeat: function () { return 40; }
     };
   }
@@ -364,6 +365,23 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
       outId: vh.outId || null
     };
   });
+
+  const sheriffVoteRecord = m.sheriffVoteRecord
+    ? Object.freeze({
+        day: m.sheriffVoteRecord.day || 1,
+        kind: "sheriff",
+        candidateIds: Array.isArray(m.sheriffVoteRecord.candidateIds) ? m.sheriffVoteRecord.candidateIds.slice() : [],
+        withdrawnIds: Array.isArray(m.sheriffVoteRecord.withdrawnIds) ? m.sheriffVoteRecord.withdrawnIds.slice() : [],
+        seerClaimIds: Array.isArray(m.sheriffVoteRecord.seerClaimIds) ? m.sheriffVoteRecord.seerClaimIds.slice() : [],
+        winnerId: m.sheriffVoteRecord.winnerId || null,
+        ballots: Array.isArray(m.sheriffVoteRecord.ballots)
+          ? m.sheriffVoteRecord.ballots.map(function (b) {
+              return { voterId: b.voterId, targetId: b.targetId || null, weight: b.weight || 0 };
+            })
+          : [],
+        tallies: Object.assign({}, m.sheriffVoteRecord.tallies || {})
+      })
+    : null;
 
   // Legal role-gated private match fields
   const rawPlayerSeat = (m.seats || []).find(function (s) { return s.id === pid; }) || null;
@@ -446,6 +464,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     detectedContradictions: detectedContradictions,
     publicLogs: publicLogs,
     voteHistory: voteHistory,
+    sheriffVoteRecord: sheriffVoteRecord,
     getObservableHeatOnSeat: getObservableHeatOnSeat
   });
 }

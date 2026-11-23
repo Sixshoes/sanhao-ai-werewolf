@@ -5583,22 +5583,130 @@ body.craft-ui.theme-day .beginner-coach-banner {
   color: #164e34;
 }
 
-/* ===== v9.3 STREAMLINED PLAYER SPEECH PANEL & COLLAPSIBLE ADVANCED PIT DRAWER (ZERO !important) ===== */
-.speech-adv-toggle {
-  border-radius: 999px;
-  font-weight: 700;
-  color: #fde68a;
-  background: rgba(212, 166, 87, 0.14);
-  border: 1px solid rgba(212, 166, 87, 0.45);
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+/* ===== v9.3 + v11.1 PROMINENT PIT DEDUCTION CTA, SHERIFF ORDER & BALLOT STRIP (ZERO !important) ===== */
+@keyframes pitCtaGlow {
+  0%, 100% {
+    box-shadow: 0 2px 10px rgba(212, 166, 87, 0.28), inset 0 1px 0 rgba(255, 248, 225, 0.22);
+  }
+  50% {
+    box-shadow: 0 3px 16px rgba(245, 158, 11, 0.52), 0 0 0 2px rgba(251, 191, 36, 0.26), inset 0 1px 0 rgba(255, 248, 225, 0.34);
+  }
 }
 
-.speech-adv-toggle:hover,
+.speech-adv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #fff6dc;
+  background: linear-gradient(135deg, rgba(180, 96, 28, 0.88) 0%, rgba(146, 64, 14, 0.92) 55%, rgba(124, 45, 18, 0.92) 100%);
+  border: 1.5px solid rgba(251, 191, 36, 0.82);
+  box-shadow: 0 2px 10px rgba(212, 166, 87, 0.32), inset 0 1px 0 rgba(255, 248, 225, 0.24);
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.speech-adv-toggle.speech-pit-cta:not(.is-active) {
+  animation: pitCtaGlow 2.4s ease-in-out infinite;
+}
+
+.speech-adv-toggle:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.95) 0%, rgba(180, 83, 9, 0.96) 100%);
+  border-color: #fde68a;
+  color: #ffffff;
+}
+
 .speech-adv-toggle.is-active {
-  background: rgba(212, 166, 87, 0.28);
-  border-color: #f0c774;
-  color: #fff8eb;
+  background: linear-gradient(135deg, rgba(212, 166, 87, 0.34) 0%, rgba(180, 118, 38, 0.42) 100%);
+  border-color: #fcd34d;
+  color: #fffbeb;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
+}
+
+.pit-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+  font-weight: 800;
+  color: #fef3c7;
+  background: linear-gradient(135deg, rgba(161, 98, 7, 0.56) 0%, rgba(120, 53, 15, 0.68) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.68);
+  box-shadow: 0 1px 6px rgba(212, 166, 87, 0.22);
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.pit-quick-btn:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(202, 138, 4, 0.72) 0%, rgba(146, 64, 14, 0.82) 100%);
+  border-color: #fde68a;
+}
+
+.pit-sheriff-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(180, 118, 38, 0.2) 0%, rgba(30, 41, 59, 0.65) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.44);
+  font-size: 10.5px;
+  color: #fef3c7;
+}
+
+.pit-sheriff-strip.hidden {
+  display: none;
+}
+
+.pit-chip-sh-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(251, 191, 36, 0.18);
+  border: 1px solid rgba(251, 191, 36, 0.36);
+  color: #fde68a;
+}
+
+.sheriff-order-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.65);
+  color: #cbd5e1;
+}
+
+.sheriff-order-pill.is-speaking {
+  border-color: #fbbf24;
+  background: rgba(245, 158, 11, 0.28);
+  color: #fffbeb;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.32);
+}
+
+.sheriff-order-pill.is-done {
+  border-color: rgba(52, 211, 153, 0.45);
+  background: rgba(16, 185, 129, 0.16);
+  color: #a7f3d0;
+}
+
+.sheriff-order-pill.is-withdrawn {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.45);
+  color: #94a3b8;
+  text-decoration: line-through;
 }
 
 .speech-adv-drawer {
@@ -5613,16 +5721,69 @@ body.craft-ui.theme-day .beginner-coach-banner {
 }
 
 body.craft-ui.theme-day .speech-adv-toggle {
-  color: #6b4310;
-  background: rgba(250, 238, 208, 0.88);
-  border-color: rgba(168, 118, 46, 0.48);
+  color: #fffaf0;
+  background: linear-gradient(135deg, #b85c1c 0%, #9a3e14 100%);
+  border-color: #7c2d12;
+  box-shadow: 0 2px 10px rgba(154, 62, 20, 0.28), inset 0 1px 0 rgba(255, 248, 230, 0.3);
 }
 
-body.craft-ui.theme-day .speech-adv-toggle:hover,
+body.craft-ui.theme-day .speech-adv-toggle:not(.is-active) .sh-ico {
+  color: #fff6dc;
+}
+
+body.craft-ui.theme-day .speech-adv-toggle:hover {
+  background: linear-gradient(135deg, #c96822 0%, #a84517 100%);
+  border-color: #6b250e;
+  color: #ffffff;
+}
+
 body.craft-ui.theme-day .speech-adv-toggle.is-active {
-  background: rgba(245, 222, 168, 0.96);
-  border-color: #9a6823;
-  color: #422a0d;
+  background: linear-gradient(135deg, #e7c98a 0%, #d8ae62 100%);
+  border-color: #8c5a18;
+  color: #3a2208;
+  box-shadow: 0 1px 8px rgba(140, 90, 24, 0.22);
+}
+
+body.craft-ui.theme-day .pit-quick-btn {
+  color: #5c3308;
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.96) 0%, rgba(246, 217, 152, 0.94) 100%);
+  border-color: rgba(168, 102, 24, 0.68);
+  box-shadow: 0 1px 5px rgba(146, 84, 18, 0.16);
+}
+
+body.craft-ui.theme-day .pit-quick-btn:hover {
+  background: linear-gradient(135deg, rgba(253, 230, 138, 0.98) 0%, rgba(240, 198, 114, 0.96) 100%);
+  border-color: #8c4f12;
+}
+
+body.craft-ui.theme-day .pit-sheriff-strip {
+  background: linear-gradient(90deg, rgba(254, 243, 199, 0.9) 0%, rgba(250, 244, 232, 0.92) 100%);
+  border-color: rgba(180, 118, 38, 0.48);
+  color: #5c370c;
+}
+
+body.craft-ui.theme-day .pit-chip-sh-tag {
+  background: rgba(217, 119, 6, 0.14);
+  border-color: rgba(180, 118, 38, 0.42);
+  color: #854d0e;
+}
+
+body.craft-ui.theme-day .sheriff-order-pill {
+  background: rgba(250, 244, 232, 0.88);
+  border-color: rgba(140, 104, 60, 0.34);
+  color: #4b3a28;
+}
+
+body.craft-ui.theme-day .sheriff-order-pill.is-speaking {
+  background: rgba(253, 230, 138, 0.92);
+  border-color: #b46918;
+  color: #422006;
+}
+
+body.craft-ui.theme-day .sheriff-order-pill.is-done {
+  background: rgba(209, 250, 229, 0.88);
+  border-color: rgba(16, 128, 88, 0.45);
+  color: #065f46;
 }
 
 body.craft-ui.theme-day .speech-adv-drawer {

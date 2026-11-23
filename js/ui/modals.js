@@ -291,11 +291,102 @@ function renderVoteSheetIntoBody() {
     html += '</div>';
   }
 
-  // SECTION 1: GROUPED VOTE HISTORY CARDS (Easy 1-second scan!)
+  // SECTION 1: SHERIFF ELECTION BALLOTS + GROUPED VOTE HISTORY CARDS (Easy 1-second scan!)
+  const shVoteRec = state.match.sheriffVoteRecord || null;
+  if (shVoteRec) {
+    const shWinnerSeat = shVoteRec.winnerId ? getSeat(shVoteRec.winnerId) : null;
+    const shWinnerLbl = shWinnerSeat
+      ? (fmtSeatNum(shWinnerSeat.id) + "號 " + (shWinnerSeat.id === getPlayerId() ? "你" : shWinnerSeat.name))
+      : "未產生";
+    const shCandHtml = (shVoteRec.candidateIds || []).map(function (cid) {
+      const cs = getSeat(cid);
+      const isWin = cid === shVoteRec.winnerId;
+      const isSeerStand = (shVoteRec.seerClaimIds || []).indexOf(cid) !== -1;
+      return '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-bold border ' +
+        (isWin ? 'bg-amber-500/25 text-amber-200 border-amber-400/60' : 'bg-slate-800/90 text-slate-200 border-slate-700') +
+        '">' + (isWin ? '👑 ' : '') + fmtSeatNum(cid) + ' ' + escapeHtml(cs ? (cid === getPlayerId() ? "你" : cs.name) : '') + (isSeerStand ? '・跳明心' : '') + '</span>';
+    }).join("");
+    const shWithHtml = (shVoteRec.withdrawnIds || []).length > 0
+      ? ('<div class="flex items-center flex-wrap gap-1.5 text-[10.5px]"><span class="font-bold text-slate-400">警上退水：</span>' +
+          shVoteRec.withdrawnIds.map(function (wid) {
+            const ws = getSeat(wid);
+            return '<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">' + fmtSeatNum(wid) + ' ' + escapeHtml(ws ? (wid === getPlayerId() ? "你" : ws.name) : '') + '</span>';
+          }).join("") + '</div>')
+      : "";
+    const shGrouped = {};
+    const shAbstainers = [];
+    (shVoteRec.ballots || []).forEach(function (b) {
+      if (!b || !b.voterId) return;
+      if (!b.targetId) {
+        shAbstainers.push(b.voterId);
+      } else {
+        if (!shGrouped[b.targetId]) shGrouped[b.targetId] = [];
+        shGrouped[b.targetId].push(b.voterId);
+      }
+    });
+    const shTargetRows = Object.keys(shGrouped).map(function (tid) {
+      const idNum = parseInt(tid, 10);
+      const countVal = (shVoteRec.tallies && typeof shVoteRec.tallies[idNum] === "number") ? Math.round(shVoteRec.tallies[idNum] * 10) / 10 : shGrouped[tid].length;
+      return { targetId: idNum, voters: shGrouped[tid], count: countVal };
+    }).sort(function (a, b) { return b.count - a.count; });
+
+    let shBallotRowsHtml = "";
+    if (shTargetRows.length === 0) {
+      shBallotRowsHtml = '<div class="rounded-xl px-2.5 py-2 bg-slate-900/80 border border-amber-400/20 text-[11px] text-slate-300">本局警長由單一候選或快速開票直接誕生，無警下分票紀錄。</div>';
+    } else {
+      const shVoterTotal = Math.max(1, (shVoteRec.ballots || []).length);
+      shTargetRows.forEach(function (item) {
+        const ts = getSeat(item.targetId);
+        const isWin = item.targetId === shVoteRec.winnerId;
+        const barPct = Math.max(14, Math.round((item.voters.length / shVoterTotal) * 100));
+        const vChips = item.voters.map(function (vid) {
+          const vs = getSeat(vid);
+          const isMe = vid === getPlayerId();
+          return '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold border ' +
+            (isMe ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/45' : 'bg-slate-800/90 text-slate-200 border-slate-700') +
+            '">' + fmtSeatNum(vid) + ' ' + escapeHtml(vs ? (isMe ? "你" : vs.name) : '') + '</span>';
+        }).join("");
+        shBallotRowsHtml += '<div class="rounded-xl p-2.5 border ' + (isWin ? 'bg-amber-500/12 border-amber-400/45' : 'bg-slate-900/90 border-slate-800') + '">' +
+          '<div class="flex items-center justify-between gap-2 mb-1">' +
+            '<div class="flex items-center gap-2 min-w-0">' +
+              '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-black shrink-0 ' + (isWin ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-200 border border-slate-700') + '">' + fmtSeatNum(item.targetId) + '</span>' +
+              '<span class="text-xs font-black ' + (isWin ? 'text-amber-100' : 'text-slate-100') + '">' + escapeHtml(ts ? (item.targetId === getPlayerId() ? "你" : ts.name) : '') + '</span>' +
+              (isWin ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-200">當選警長</span>' : '') +
+            '</div>' +
+            '<span class="text-xs font-black text-amber-300 shrink-0">' + item.count + ' 票</span>' +
+          '</div>' +
+          '<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-1.5">' +
+            '<div class="h-full rounded-full ' + (isWin ? 'bg-amber-400' : 'bg-sky-400/75') + '" style="width:' + barPct + '%"></div>' +
+          '</div>' +
+          '<div class="flex items-center flex-wrap gap-1.5"><span class="text-[10px] font-bold text-slate-400 mr-0.5">警下投給他：</span>' + vChips + '</div>' +
+        '</div>';
+      });
+    }
+    if (shAbstainers.length > 0) {
+      const shAbsChips = shAbstainers.map(function (vid) {
+        const vs = getSeat(vid);
+        return '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-900 text-slate-400 border border-slate-800">' + fmtSeatNum(vid) + ' ' + escapeHtml(vs ? (vid === getPlayerId() ? "你" : vs.name) : '') + '</span>';
+      }).join("");
+      shBallotRowsHtml += '<div class="rounded-xl px-2.5 py-1.5 bg-slate-950/60 border border-slate-800/80 flex items-center flex-wrap gap-1.5">' +
+        '<span class="text-[10px] font-bold text-slate-400 mr-1">警下棄票：</span>' + shAbsChips +
+      '</div>';
+    }
+
+    html += '<div class="rounded-2xl p-3 bg-amber-500/10 border border-amber-400/45 space-y-2">' +
+      '<div class="flex items-center justify-between flex-wrap gap-1.5 pb-1.5 border-b border-amber-400/25">' +
+        '<span class="text-xs font-black text-amber-200">👑 第 ' + (shVoteRec.day || 1) + ' 天・警長競選票型（排坑重點依據）</span>' +
+        '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/25 text-amber-100 border border-amber-400/50">警長：' + escapeHtml(shWinnerLbl) + '</span>' +
+      '</div>' +
+      '<div class="flex items-center flex-wrap gap-1.5 text-[10.5px]"><span class="font-bold text-amber-200/80">警上候選：</span>' + shCandHtml + '</div>' +
+      shWithHtml +
+      '<div class="space-y-1.5">' + shBallotRowsHtml + '</div>' +
+    '</div>';
+  }
+
   html += '<div class="space-y-2.5">';
   html += '<div class="flex items-center justify-between">' +
     '<h4 class="text-xs font-black tracking-wide text-amber-300">歷輪公投票型（依被投對象歸類）</h4>' +
-    '<span class="text-[11px] text-slate-400">' + (state.match.voteHistory.length ? ("共 " + state.match.voteHistory.length + " 次開票") : "尚未開票") + '</span>' +
+    '<span class="text-[11px] text-slate-400">' + (state.match.voteHistory.length ? ("共 " + state.match.voteHistory.length + " 次開票") : "尚未公投開票") + '</span>' +
     '</div>';
 
   if (state.match.voteHistory.length === 0) {

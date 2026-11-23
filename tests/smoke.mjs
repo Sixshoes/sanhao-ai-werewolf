@@ -4392,4 +4392,145 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v11.0 Public Release 1.0 (3D Proportions + Multi-Joint VRM + Wax-Seal Card Flip Ritual + Calm HUD + Vercel Blind-Review + Anti-Cheat) E2E smoke test PASSED!");
+// v11.1 SHERIFF TURN-BY-TURN SPEECH + SHERIFF BALLOT PIT DEDUCTION + PROMINENT PIT CTA
+{
+  const pitCtaHtmlOk = html.includes('id="btnOpenPitSheet"') && html.includes('id="pitSheriffRefStrip"') && html.includes('class="speech-adv-toggle speech-pit-cta shrink-0"') && html.includes('id="btnSheriffNextSpeech"');
+  const pitCtaCssOk = compCss.includes("pitCtaGlow") && compCss.includes(".pit-quick-btn") && compCss.includes(".pit-sheriff-strip") && compCss.includes(".sheriff-order-pill");
+  if (!pitCtaHtmlOk || !pitCtaCssOk) {
+    throw new Error("v11.1 STATIC CHECK FAILED: " + JSON.stringify({ pitCtaHtmlOk, pitCtaCssOk }));
+  }
+
+  const v111Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    el("chkSheriffMode").checked = true;
+    state.autoPlay = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+
+    const pid = getPlayerId();
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    const signupStageOk = state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "signup"
+      && !el("btnSheriffStartSpeech").classList.contains("hidden")
+      && el("sheriffElectionVoteRow").classList.contains("hidden")
+      && el("spotlightStageBox").classList.contains("hidden");
+
+    // Player runs on stand -> clockwise turn-by-turn speeches (AI spotlight + player campaign box) -> vote stage
+    resolveSheriffElectionAction("run");
+    const ctxRun = state.match.sheriffElectionCtx;
+    const orderSortedOk = Boolean(ctxRun && ctxRun.stage === "speech" && ctxRun.speechOrderIds.includes(pid)
+      && ctxRun.speechOrderIds.every((id, i, arr) => i === 0 || arr[i - 1] < id));
+
+    let sawAiSpotlight = false;
+    let sawPlayerBox = false;
+    let safety = 0;
+    while (state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech" && safety < 12) {
+      safety += 1;
+      if (state.match.sheriffElectionCtx.activeReelSeatId === pid) {
+        if (!el("sheriffPlayerTurnBox").classList.contains("hidden")) sawPlayerBox = true;
+        submitPlayerSheriffSpeech("我上警理性帶隊，待會一起看警下票型排坑！");
+      } else {
+        if (!el("spotlightStageBox").classList.contains("hidden")) sawAiSpotlight = true;
+        advanceSheriffSpeechTurn();
+      }
+    }
+    const reachedVoteStageOk = Boolean(state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "vote");
+    resolveSheriffElectionAction("pass");
+
+    // Under-stand listening & voting path -> persists structured sheriffVoteRecord
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pid2 = getPlayerId();
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    resolveSheriffElectionAction("listen");
+    let safety2 = 0;
+    while (state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech" && safety2 < 10) {
+      safety2 += 1;
+      advanceSheriffSpeechTurn();
+    }
+    const voteRowVisibleAfterSpeeches = !el("sheriffElectionVoteRow").classList.contains("hidden");
+    const firstCandId = state.match.sheriffElectionCtx.candidateIds[0];
+    resolveSheriffElectionAction(firstCandId);
+    const shRec = state.match.sheriffVoteRecord;
+    const recordSavedOk = Boolean(shRec && shRec.kind === "sheriff" && shRec.winnerId && Array.isArray(shRec.ballots)
+      && shRec.ballots.some(b => b.voterId === pid2 && b.targetId === firstCandId));
+
+    // Blind-view zero-leak exposure + AI pit deduction scoring + Day 1 speech context + Gemini prompt + Vote Sheet
+    const aiOther = getAliveSeats().find(s => s.id !== pid2);
+    const violBefore = antiCheatMonitor.stats.violationsBlocked;
+    const snapSh = createBlindMatchSnapshot(aiOther, { module: "v111_test" });
+    const blindHasRecOk = Boolean(snapSh && snapSh.sheriffVoteRecord && snapSh.sheriffVoteRecord.winnerId === shRec.winnerId)
+      && antiCheatMonitor.stats.violationsBlocked === violBefore;
+
+    const speechCtxDay1 = buildSpeechContext(aiOther);
+    const day1SheriffNoteOk = Boolean(speechCtxDay1 && speechCtxDay1.sheriffVoteNote && speechCtxDay1.sheriffVoteNote.includes("警長"));
+
+    const builtPrompt = buildBlindGeminiSpeechPrompt(aiOther, { text: "先聽發言" });
+    const geminiHasSheriffBallotsOk = Boolean(builtPrompt && builtPrompt.audit && builtPrompt.audit.ok
+      && builtPrompt.prompt.includes("【第1天警長競選與警下票型（排坑必考）】"));
+
+    renderVoteSheetIntoBody();
+    const voteSheetHasSheriffOk = el("voteSheetBody").innerHTML.includes("警長競選票型");
+
+    // Dual-Seer Sheriff ballot pit scoring test: voter who backed rival Seer gets prioritized into wolfPits
+    const seatsAlive = getAliveSeats().filter(s => s.id !== pid2);
+    const sA = seatsAlive[0], sB = seatsAlive[1], sVoter = seatsAlive[2];
+    sA.claimedRole = "seer";
+    sB.claimedRole = "seer";
+    state.match.sheriffVoteRecord = {
+      day: 1,
+      kind: "sheriff",
+      candidateIds: [sA.id, sB.id],
+      withdrawnIds: [],
+      seerClaimIds: [sA.id, sB.id],
+      winnerId: sA.id,
+      ballots: [{ voterId: sVoter.id, targetId: sB.id, weight: 1 }],
+      tallies: { [sA.id]: 3, [sB.id]: 1 }
+    };
+    const slotDual = buildTableSlotAndWorldAnalysis(sA);
+    const dualWorldSheriffPitOk = Boolean(slotDual && slotDual.dualSeerWorlds && slotDual.dualSeerWorlds.worldA
+      && slotDual.dualSeerWorlds.worldA.secondWolf && slotDual.dualSeerWorlds.worldA.secondWolf.id === sVoter.id
+      && slotDual.dualSeerWorlds.worldA.secondReason.includes("警長投票"));
+
+    // Prominent pit CTA + Pit Builder sheriff strip & composed speech integration
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    updateAllUI();
+    const pitBtnProminentOk = el("btnToggleCustomSpeech").innerHTML.includes("排坑／亮牌");
+    const sheriffStripVisibleOk = !el("pitSheriffRefStrip").classList.contains("hidden")
+      && el("pitSheriffRefStrip")._children.some(c => c.textContent && c.textContent.includes("警長票型參考"));
+    togglePlayerDraftSeatPit(sVoter.id);
+    const composedPitHasSheriffOk = composePlayerPitSpeechText().includes("警長競選");
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      signupStageOk,
+      orderSortedOk,
+      sawAiSpotlight,
+      sawPlayerBox,
+      reachedVoteStageOk,
+      voteRowVisibleAfterSpeeches,
+      recordSavedOk,
+      blindHasRecOk,
+      day1SheriffNoteOk,
+      geminiHasSheriffBallotsOk,
+      voteSheetHasSheriffOk,
+      dualWorldSheriffPitOk,
+      pitBtnProminentOk,
+      sheriffStripVisibleOk,
+      composedPitHasSheriffOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v111Res)) {
+    if (!v) {
+      throw new Error("v11.1 SHERIFF-TURN & PIT-DEDUCTION check failed for " + k + ": " + JSON.stringify(v111Res));
+    }
+  }
+}
+
+console.log("[OK] Full v11.1 (Turn-by-Turn Sheriff Speech + Sheriff Ballot Pit Deduction + Prominent Pit CTA + Multi-Joint VRM + Wax-Seal Ritual + Anti-Cheat) E2E smoke test PASSED!");

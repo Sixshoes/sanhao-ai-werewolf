@@ -79,6 +79,7 @@ function resetMatchToLobby() {
   state.match.lastGuardTargetId = null;
   state.match.sheriffElectionPending = false;
   state.match.sheriffElectionCtx = null;
+  state.match.sheriffVoteRecord = null;
   state.match.sheriffOrderCtx = null;
   state.match.fourGHopePair = null;
   state.match.activeDirectorEvent = null;
@@ -551,6 +552,16 @@ function bindIntelAndDetectiveEvents() {
     el("btnMicroInspect").addEventListener("click", function () {
       if (state.activeSpeakerId && typeof inspectSeatMicroExpression === "function") {
         inspectSeatMicroExpression(state.activeSpeakerId);
+      }
+    });
+  }
+  if (el("btnOpenPitSheet")) {
+    el("btnOpenPitSheet").addEventListener("click", function () {
+      sound.unlock();
+      if (typeof openVoteSheetModal === "function") {
+        openVoteSheetModal();
+      } else if (typeof indieFlow !== "undefined" && typeof indieFlow.openJournal === "function") {
+        indieFlow.openJournal("vote");
       }
     });
   }
@@ -1078,6 +1089,22 @@ function bindNightVoteAndFourGEvents() {
   if (el("btnSheriffRun")) {
     el("btnSheriffRun").addEventListener("click", function () {
       if (typeof resolveSheriffElectionAction === "function") resolveSheriffElectionAction("run");
+    });
+  }
+  if (el("btnSheriffStartSpeech")) {
+    el("btnSheriffStartSpeech").addEventListener("click", function () {
+      if (typeof resolveSheriffElectionAction === "function") resolveSheriffElectionAction("listen");
+    });
+  }
+  if (el("btnSheriffNextSpeech")) {
+    el("btnSheriffNextSpeech").addEventListener("click", function () {
+      if (typeof advanceSheriffSpeechTurn === "function") advanceSheriffSpeechTurn();
+    });
+  }
+  if (el("btnSheriffPlayerSend")) {
+    el("btnSheriffPlayerSend").addEventListener("click", function () {
+      const inp = el("sheriffPlayerInput");
+      if (typeof submitPlayerSheriffSpeech === "function") submitPlayerSheriffSpeech(inp ? inp.value : "");
     });
   }
   if (el("btnSheriffWithdraw")) {
