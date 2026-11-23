@@ -132,7 +132,7 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode) {
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
   const isGen3 = modelId.indexOf("gemini-3") === 0;
   const genCfg = {
-    temperature: 0.78,
+    temperature: 0.52,
     maxOutputTokens: isGen3 ? (jsonMode ? 3072 : 1536) : (jsonMode ? 1280 : 768)
   };
   if (isGen3) {

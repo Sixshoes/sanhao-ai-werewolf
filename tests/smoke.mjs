@@ -2591,6 +2591,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     });
     const cbAfter = buildPriorCallbackPhrase(pXing, state.match.daySpeechEvents, s => "0" + s.id + "號");
 
+    getSeat(2).claimedRole = "seer";
     const parsedMeta = parseGeminiStructuredSpeech(JSON.stringify({
       text: "04號剛才視角縮得很緊，我先接手這張好人盤面。",
       wolfPits: [4, 7],
@@ -5284,8 +5285,16 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const spPrefTest = state.match.seats[1];
     const origClaimPref = spPrefTest.claimedRole;
     spPrefTest.claimedRole = null;
-    const prefSynced = syncGeminiSpeechMeta(spPrefTest, { text: "fallback" }, { parsedJson: true, text: "信 03號 狼坑是01跟04，今晚必驗03", claimRole: "seer", standWithSeerId: spPrefTest.id, accuseId: null, vouchId: null }, { deferSeatMutation: true });
+    const prefSynced = syncGeminiSpeechMeta(spPrefTest, { text: "fallback", claimSeer: true, claimRole: "seer" }, { parsedJson: true, text: "信 03號 狼坑是01跟04，今晚必驗03", claimRole: "seer", standWithSeerId: spPrefTest.id, accuseId: null, vouchId: null }, { deferSeatMutation: true });
     const prefetchNoMutateOk = spPrefTest.claimedRole === null && prefSynced.standWithSeerId === null && prefSynced.text.includes("1號跟4號") && prefSynced.text.includes("必驗3號");
+    // v13.8 Guardrail checks: unauthorized role claim, non-seer standWith, checking rival Seer, hallucinated votes, wolf self-outing, & unspoken fabrication
+    const unauthSynced = syncGeminiSpeechMeta(spPrefTest, { text: "fallback" }, { parsedJson: true, text: "大家好", claimRole: "seer", standWithSeerId: state.match.seats[3].id, accuseId: null, vouchId: null }, { deferSeatMutation: true });
+    const blockUnauthClaimMetaOk = unauthSynced.claimRole === null && !unauthSynced.claimSeer && unauthSynced.standWithSeerId === null;
+    const blockUnauthTextOk = !validateGeminiSpeechReality(spPrefTest, { text: "fallback" }, { text: "其實我是明心觀察員，我昨晚驗了3號是好人！" }, { seats: [], voteHistory: [] }).ok;
+    const blockRivalCheckOk = !validateGeminiSpeechReality(spPrefTest, { text: "fallback", claimSeer: true, claimRole: "seer" }, { text: "今晚我必驗3號確認身份" }, { seats: [{ id: 3, alive: true, claimedRole: "seer" }], voteHistory: [{ day: 1 }] }).ok;
+    const blockFakeVoteOk = !validateGeminiSpeechReality(spPrefTest, { text: "fallback" }, { text: "剛剛4號衝票太明顯了" }, { seats: [], voteHistory: [], sheriffVoteRecord: null }).ok;
+    const blockWolfSelfOutOk = !validateGeminiSpeechReality({ id: 2, role: "wolf", claimedRole: null }, { text: "fallback" }, { text: "其實我是酸民狼，我的狼同伴是4號" }, { seats: [], voteHistory: [{ day: 1 }] }).ok;
+    const blockUnspokenFabOk = !validateGeminiSpeechReality(spPrefTest, { text: "fallback" }, { text: "剛才8號講得超怪，我覺得他很可疑" }, { day: 1, seats: [{ id: 8, alive: true }], publicLogs: [], voteHistory: [{ day: 1 }] }).ok;
     const ttsZeroPadOk = voice.formatMandarinText("今晚必驗03，狼坑01跟04。") === "今晚必驗3號，狼坑1號跟4號。";
     spPrefTest.claimedRole = origClaimPref;
 
@@ -5313,6 +5322,12 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       seatPillExactOk,
       longTtsClauseOk,
       prefetchNoMutateOk,
+      blockUnauthClaimMetaOk,
+      blockUnauthTextOk,
+      blockRivalCheckOk,
+      blockFakeVoteOk,
+      blockWolfSelfOutOk,
+      blockUnspokenFabOk,
       ttsZeroPadOk
     };
   })()`, ctx);

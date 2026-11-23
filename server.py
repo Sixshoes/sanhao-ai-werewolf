@@ -376,7 +376,7 @@ def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeo
     safe_model = model_id if model_id in ALLOWED_PROXY_GEMINI_MODELS else "gemini-3.8-flash"
     is_gen3 = safe_model.startswith("gemini-3")
     gen_cfg = {
-        "temperature": 0.78,
+        "temperature": 0.52,
         "maxOutputTokens": (3072 if json_mode else 1536) if is_gen3 else (1280 if json_mode else 768),
     }
     if is_gen3:

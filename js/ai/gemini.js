@@ -188,7 +188,7 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
     maxOutputTokens: isGen34 ? ((opts && opts.jsonMode) ? 3072 : 2048) : ((opts && opts.jsonMode) ? 1280 : 768)
   };
   if (!modelId || modelId.indexOf("gemini-4") !== 0) {
-    genCfg.temperature = 0.78;
+    genCfg.temperature = 0.52;
   }
   if (isGen34) {
     genCfg.thinkingConfig = { thinkingLevel: "LOW" };
@@ -418,6 +418,88 @@ function parseGeminiStructuredSpeech(rawText) {
   };
 }
 
+function getAllowedGeminiClaimRole(speaker, fallbackMeta) {
+  if (!speaker) return null;
+  const fbClaim = fallbackMeta ? (fallbackMeta.claimSeer ? "seer" : (fallbackMeta.claimRole || null)) : null;
+  if (fbClaim) return fbClaim;
+  if (speaker.claimedRole) return speaker.claimedRole;
+  // Never let villagers or stealth wolves spontaneously hallucinate God-role claims!
+  return null;
+}
+
+function validateGeminiSpeechReality(speaker, fallbackMeta, parsed, snap) {
+  if (!parsed || !parsed.text || !speaker) return { ok: false, reason: "empty" };
+  const txt = String(parsed.text);
+  const allowedClaim = getAllowedGeminiClaimRole(speaker, fallbackMeta);
+
+  // 1. Block unauthorized God-role claims or hallucinated Seer checks by non-claiming seats
+  if (!allowedClaim) {
+    if (/(?:我是|我這真|我跳|亮出|亮明).{0,4}(?:明心觀察員|觀察員|預言家|滴水奉茶師|奉茶師|直心糾察長|糾察長|護心守衛|守衛|清心長老)/.test(txt)) {
+      return { ok: false, reason: "unauthorized_role_claim" };
+    }
+    if (/(?:我昨晚|昨晚我).{0,4}(?:親驗|查驗|驗了|驗過|護回|救了|守了)/.test(txt)) {
+      return { ok: false, reason: "hallucinated_night_action" };
+    }
+  } else if (allowedClaim === "seer") {
+    // Block logical blunder: Seer claiming they will check a rival counter-claiming Seer tonight
+    const rivalSeers = (snap && Array.isArray(snap.seats) ? snap.seats : [])
+      .filter(function (s) { return s.alive && s.id !== speaker.id && s.claimedRole === "seer"; })
+      .map(function (s) { return s.id; });
+    for (let i = 0; i < rivalSeers.length; i++) {
+      const rid = rivalSeers[i];
+      const checkRivalRe = new RegExp("(?:今晚|明天|下晚|晚點|必驗|去驗|再驗).{0,5}(?:0?" + rid + "號|" + rid + "(?=[，。！？、\\s]|$))");
+      if (checkRivalRe.test(txt)) {
+        return { ok: false, reason: "check_rival_seer_blunder" };
+      }
+    }
+  }
+
+  // 2. Block hallucinating vote-pushing ("衝票") when zero votes (neither public vote nor sheriff ballot) exist yet
+  const hasAnyBallots = Boolean(
+    (snap && Array.isArray(snap.voteHistory) && snap.voteHistory.length > 0) ||
+    (snap && snap.sheriffVoteRecord && Array.isArray(snap.sheriffVoteRecord.ballots) && snap.sheriffVoteRecord.ballots.length > 0)
+  );
+  if (!hasAnyBallots && /衝票|跟票|分票|票型/.test(txt)) {
+    return { ok: false, reason: "hallucinated_vote_history" };
+  }
+
+  // 3. Block wolf self-outing / leaking wolf team identity in public speech
+  if (speaker.role === "wolf") {
+    if (/(?:其實我是|我就是|我們是|身為).{0,3}(?:酸民狼|狼人|流言首領|狼隊)|(?:我的狼同伴|我們狼隊|狼隊友)/.test(txt)) {
+      return { ok: false, reason: "wolf_self_outing" };
+    }
+  }
+
+  // 4. Block fabricating what an unspoken seat "just said" today (chronological grounding)
+  if (snap && Array.isArray(snap.seats)) {
+    const dayNow = snap.day || 1;
+    const spokenToday = {};
+    (snap.publicLogs || []).forEach(function (l) {
+      if (l && l.day === dayNow && l.kind === "speech" && l.speakerId) {
+        spokenToday[l.speakerId] = true;
+      }
+    });
+    for (let i = 0; i < snap.seats.length; i++) {
+      const s = snap.seats[i];
+      if (!s || s.id === speaker.id) continue;
+      if (s.alive && !spokenToday[s.id]) {
+        const fabRe = new RegExp("(?:剛才|剛剛|聽完).{0,3}0?" + s.id + "號|0?" + s.id + "號.{0,3}(?:剛才說|剛剛說|剛才講|剛剛講|剛才點|剛剛點|剛才打|剛才保|剛才跳|剛才發言)");
+        if (fabRe.test(txt)) {
+          return { ok: false, reason: "fabricated_unspoken_speech" };
+        }
+      }
+      if (!s.alive && allowedClaim === "seer") {
+        const deadCheckRe = new RegExp("(?:今晚|明天|下晚|晚點|必驗|去驗|再驗).{0,5}(?:0?" + s.id + "號|" + s.id + "(?=[，。！？、\\s]|$))");
+        if (deadCheckRe.test(txt)) {
+          return { ok: false, reason: "check_dead_seat_blunder" };
+        }
+      }
+    }
+  }
+
+  return { ok: true, reason: "" };
+}
+
 function syncGeminiSpeechMeta(speaker, generated, liveRes, opts) {
   if (!speaker || !generated || !liveRes) return generated;
   const deferSeatMutation = Boolean(opts && opts.deferSeatMutation);
@@ -441,7 +523,12 @@ function syncGeminiSpeechMeta(speaker, generated, liveRes, opts) {
     return true;
   };
 
-  if (liveRes.accuseId !== null && canTarget(liveRes.accuseId, true)) {
+  const lockedTrueSeerWolf = (speaker.role === "seer" && generated.checkedWolfId && canTarget(generated.checkedWolfId, true))
+    ? generated.checkedWolfId
+    : null;
+  if (lockedTrueSeerWolf) {
+    generated.accuseId = lockedTrueSeerWolf;
+  } else if (liveRes.accuseId !== null && canTarget(liveRes.accuseId, true)) {
     if (generated.accuseId !== liveRes.accuseId) {
       generated.checkedWolfId = undefined;
     }
@@ -465,22 +552,33 @@ function syncGeminiSpeechMeta(speaker, generated, liveRes, opts) {
     generated.relationType = "trust";
   }
 
-  if (liveRes.claimRole) {
-    if (liveRes.claimRole === "seer") {
+  // Strictly lock role claims to engine-authorized claims only (zero spontaneous villager / stealth-wolf role-claim chaos!)
+  const allowedClaim = getAllowedGeminiClaimRole(speaker, generated);
+  if (allowedClaim) {
+    if (allowedClaim === "seer") {
       generated.claimSeer = true;
       generated.claimRole = "seer";
       if (!deferSeatMutation) speaker.claimedRole = "seer";
-    } else if (!speaker.claimedRole || speaker.claimedRole === liveRes.claimRole) {
-      generated.claimRole = liveRes.claimRole;
-      if (!deferSeatMutation) speaker.claimedRole = liveRes.claimRole;
+    } else {
+      generated.claimRole = allowedClaim;
+      if (!deferSeatMutation) speaker.claimedRole = allowedClaim;
     }
+  } else {
+    generated.claimSeer = false;
+    generated.claimRole = null;
   }
-  if (Array.isArray(liveRes.wolfPits)) generated.wolfPits = liveRes.wolfPits;
-  if (Array.isArray(liveRes.goodPits)) generated.goodPits = liveRes.goodPits;
+
+  if (Array.isArray(liveRes.wolfPits)) {
+    generated.wolfPits = liveRes.wolfPits.filter(function (id) { return canTarget(id, true); });
+  }
+  if (Array.isArray(liveRes.goodPits)) {
+    generated.goodPits = liveRes.goodPits.filter(function (id) { return canTarget(id, false); });
+  }
   if (generated.claimSeer || generated.claimRole === "seer") {
     generated.standWithSeerId = null;
   } else if (liveRes.standWithSeerId && liveRes.standWithSeerId !== speaker.id && canTarget(liveRes.standWithSeerId, false)) {
-    generated.standWithSeerId = liveRes.standWithSeerId;
+    const swSeat = syncSnap ? syncSnap.getSeat(liveRes.standWithSeerId) : (typeof getSeat === "function" ? getSeat(liveRes.standWithSeerId) : null);
+    generated.standWithSeerId = (swSeat && swSeat.claimedRole === "seer") ? liveRes.standWithSeerId : null;
   } else if (generated.standWithSeerId === speaker.id) {
     generated.standWithSeerId = null;
   }
@@ -652,13 +750,37 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   const lastCas = (snap && Array.isArray(snap.lastNightCasualties)) ? snap.lastNightCasualties : [];
   const totalSeatsNow = snap ? snap.totalSeats : ((state.match && state.match.totalSeats) || 8);
   const fallbackText = (fallbackMeta && fallbackMeta.text) ? fallbackMeta.text : "";
+  const lockedClaim = getAllowedGeminiClaimRole(speaker, fallbackMeta);
+  const lockedClaimRoleDef = lockedClaim && ROLE_DEFS[lockedClaim] ? ROLE_DEFS[lockedClaim].name : null;
+  const unspokenNums = (snap ? snap.aliveSeats : getAliveSeats())
+    .filter(function (s) { return s.id !== self.id && spokenIds.indexOf(s.id) === -1; })
+    .map(function (s) { return s.id + "號"; });
+  const hasVoteArchiveNow = Boolean(
+    (voteHist && voteHist.length > 0) ||
+    (shRecPrompt && Array.isArray(shRecPrompt.ballots) && shRecPrompt.ballots.length > 0)
+  );
+  const lockedDirective =
+    "【本輪最高鎖定規則（絕對禁止違背或編造）】\n" +
+    "- 亮牌權限：" + (lockedClaimRoleDef
+      ? ("你本輪【必須且僅能】以「" + lockedClaimRoleDef + "」身分發言（JSON claimRole 固定填 \"" + lockedClaim + "\"）；絕不可改跳別的職能，也不可捏造未發生的查驗／救援。")
+      : ("你本輪【嚴禁】自稱或冒充任何神職（禁止說自己是觀察員／奉茶師／糾察長／守衛／長老，也禁止說昨晚驗人／救人／守人；JSON claimRole 必須填 null）！")) + "\n" +
+    "- 本輪推薦立場骨架：" +
+      (fallbackMeta && fallbackMeta.accuseId ? ("主要懷疑並傾向投 " + fallbackMeta.accuseId + "號；") : "") +
+      (fallbackMeta && fallbackMeta.vouchId ? ("傾向信任力挺 " + fallbackMeta.vouchId + "號；") : "") +
+      "請順著這套合乎盤面的邏輯骨架，用活生生的角色口語回應前面剛才發過言的人（特別是玩家「你」的真實發言），不要推翻既定事實！\n" +
+    (self.role === "seer" && fallbackMeta && fallbackMeta.checkedWolfId
+      ? ("- 真觀察員查殺鎖定：你親查出 " + fallbackMeta.checkedWolfId + "號是酸民狼，本輪必須明確報查殺並把 " + fallbackMeta.checkedWolfId + "號點進狼坑！\n")
+      : "") +
+    "- 今日尚未發言座位：" + (unspokenNums.length ? unspokenNums.join("、") : "無（你是最後一位）") + "（嚴禁評論未發言者的發言或編造其話語）。\n" +
+    (!hasVoteArchiveNow ? "- 目前全場尚未進行過任何投票，嚴禁提及「衝票、跟票、票型」！\n" : "");
 
   const prompt =
     "你正在參與林美山書院茶席推理遊戲《三好AI狼人殺》（融入存好心、說好話、做好事理念，以理性防制網路酸言與假訊息取代傳統陰暗衝突，所有「出局」改為請離席冷靜）。\n" +
-    "你扮演：" + fmtSeatNum(self.id) + "號「" + self.name + "」。個性鮮明設定：" + flvBio + "。\n" +
+    "你扮演：" + self.id + "號「" + self.name + "」。個性鮮明設定：" + flvBio + "。\n" +
     styleSamples +
     mindDesc + "。\n" +
     secretIntel + "\n" +
+    lockedDirective +
     pkHint +
     (pitContextNote ? (pitContextNote + "\n") : "") +
     ledgerNote +
@@ -669,15 +791,15 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     sheriffVoteArchive +
     "【前 1 至 " + Math.max(0, day - 1) + " 輪完整歷史發言與票型檔案】：\n" + priorRoundsArchive + "\n" +
     "【今天（第 " + day + " 輪）到目前為止的真實發言逐字稿】：\n" + transcript + "\n" +
-    "【本輪基礎戰術參考】（請結合上方真實逐字稿與身分攻略靈活發揮）：" + fallbackText + "\n" +
+    "【本輪基礎戰術參考】（請保留核心邏輯，但改成自然不套版的真人即興口語）：" + fallbackText + "\n" +
     "嚴格規則：\n" +
-    "1. 【最高優先】必須嚴守今日發言時序並點好人坑與狼人坑！被前置位點進狼坑或指認時第一句必須回應；雙觀察員對跳時務必比較站 A 坑與站 B 坑分別在哪；若你自己就是跳明心觀察員且已有對跳對手，對方在你眼中已確定是假冒酸民狼，絕對不可說「今晚再去驗對跳觀察員」，警徽流只能驗其他未驗的中立位（且你自己跳觀察員時 JSON 的 standWithSeerId 必為 null）；若本局有警長票型，務必把警下投票與退水行為納入排坑理由！\n" +
+    "1. 【最高優先】嚴守上方【本輪最高鎖定規則】與今日發言時序！被前置位點進狼坑或指認時第一句必須回應；雙觀察員對跳時務必比較站 A 坑與站 B 坑；若你自己就是跳明心觀察員且已有對跳對手，對方在你眼中已是定狼，絕對不可說「今晚再去驗對跳觀察員」，警徽流只能驗其他未驗的中立位（且你自己跳觀察員時 JSON 的 standWithSeerId 必為 null）！\n" +
     "2. 【獨立綜合判斷】你完全不知道其他人的真實底牌（除同伴或觀察員親查對象外）！必須參考前面「所有」已發言者的話來綜合判斷誰在狼坑、誰在好人坑。\n" +
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
     "4. 【嚴禁 AI 機器味與朗讀播報腔・像真實台灣人圍桌講話】提到座位請一律寫自然中文「1號」「3號」「11號」（禁止寫前導零 01、03 或省略號字）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或誇張卡通口號！現代角色請務必用台灣真人圓桌聊天碎句口語（可自然穿插「欸等一下」「老實說吼」「不是啊你看」「我剛聽下來覺得」等呼吸短句，只有墨白、晴嵐、阿竹保持古風或詩茶雅韻），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感），自然接前一位的話回嘴或讚聲，用專屬收尾結束。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
     "6. 【嚴格控制字數與純口語格式】整段台詞必須為單一段落、嚴格控制在 " + (totalSeatsNow >= 10 ? "50～85字" : "55～95字") + "（切勿長篇大論、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
-    '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":"seer"|"witch"|"hunter"|"guard"|"elder"|null,"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
+    '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":' + (lockedClaim ? ('"' + lockedClaim + '"') : 'null') + ',"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員且你本人非觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
 
   const audit = typeof auditLlmPromptLeak === "function"
     ? auditLlmPromptLeak(snap, secretIntel, prompt)
@@ -693,7 +815,12 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
   }
   const rawOut = await callGeminiText(built.prompt, { jsonMode: true });
   const parsed = rawOut ? parseGeminiStructuredSpeech(rawOut) : null;
-  if (parsed && parsed.text && typeof voice !== "undefined" && voice.localNeuralAvailable && typeof voice.prefetchFreeLocalNeural === "function") {
+  if (!parsed) return null;
+  const check = validateGeminiSpeechReality(speaker, fallbackMeta, parsed, built.snap);
+  if (!check.ok) {
+    return null;
+  }
+  if (parsed.text && typeof voice !== "undefined" && voice.localNeuralAvailable && typeof voice.prefetchFreeLocalNeural === "function") {
     voice.prefetchFreeLocalNeural(speaker.name, parsed.text, "normal");
   }
   return parsed;
