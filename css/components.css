@@ -1685,54 +1685,62 @@ body.craft-ui.theme-day .craft-toast {
 }
 
 #dramaticCutIn.is-active {
-  animation: cutInSweep 1.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: cutInSweep 2.05s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 #dramaticCutIn.is-active.cutin-hold {
-  animation: cutInSweepHold 2.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: cutInSweepHold 2.90s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+body.fx-pacing-fast #dramaticCutIn.is-active {
+  animation-duration: 1.25s;
+}
+
+body.fx-pacing-fast #dramaticCutIn.is-active.cutin-hold {
+  animation-duration: 2.05s;
 }
 
 @keyframes cutInSweep {
   0% {
     opacity: 0;
-    transform: translateY(-50%) skewY(-1.8deg) scaleY(0.18) translateX(-12%);
+    transform: translateY(-50%) skewY(-1.8deg) scaleY(0.18) translateX(-10%);
   }
 
-  16% {
+  13% {
     opacity: 1;
     transform: translateY(-50%) skewY(-1.8deg) scaleY(1.02) translateX(0);
   }
 
-  74% {
+  79% {
     opacity: 1;
     transform: translateY(-50%) skewY(-1.8deg) scaleY(1) translateX(0);
   }
 
   100% {
     opacity: 0;
-    transform: translateY(-50%) skewY(-1.8deg) scaleY(0.32) translateX(10%);
+    transform: translateY(-50%) skewY(-1.8deg) scaleY(0.32) translateX(8%);
   }
 }
 
 @keyframes cutInSweepHold {
   0% {
     opacity: 0;
-    transform: translateY(-50%) skewY(-1.8deg) scaleY(0.18) translateX(-12%);
+    transform: translateY(-50%) skewY(-1.8deg) scaleY(0.18) translateX(-10%);
   }
 
-  10% {
+  9% {
     opacity: 1;
     transform: translateY(-50%) skewY(-1.8deg) scaleY(1.02) translateX(0);
   }
 
-  84% {
+  86% {
     opacity: 1;
     transform: translateY(-50%) skewY(-1.8deg) scaleY(1) translateX(0);
   }
 
   100% {
     opacity: 0;
-    transform: translateY(-50%) skewY(-1.8deg) scaleY(0.32) translateX(10%);
+    transform: translateY(-50%) skewY(-1.8deg) scaleY(0.32) translateX(8%);
   }
 }
 
@@ -2823,5 +2831,292 @@ body.craft-ui.theme-day .matrix-seat-card {
 @media (max-width: 720px) {
   .target-react-card {
     display: none;
+  }
+}
+
+/* ===== v7.0 CEREMONIAL CARD CASTING, VISUAL POLISH & 3-TIER RWD (DESKTOP / TABLET / MOBILE) ===== */
+button,
+.play-card-btn,
+.fourg-card,
+.seat-pill-btn,
+.hud-icon-btn,
+.hud-rail-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.play-card-btn {
+  transition: transform 0.22s cubic-bezier(0.22, 1.28, 0.36, 1), box-shadow 0.22s ease, border-color 0.22s ease, opacity 0.2s ease;
+}
+
+@media (hover: hover) {
+  .play-card-btn:hover:not(:disabled):not(.is-card-dimmed) {
+    transform: translateY(-4px) scale(1.015);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.36), 0 0 0 1px rgba(242, 212, 156, 0.55);
+  }
+}
+
+.play-card-btn.is-card-casting {
+  animation: cardCastLift 0.44s cubic-bezier(0.18, 1.22, 0.32, 1) forwards;
+  border-color: rgba(251, 191, 36, 0.95);
+  box-shadow: 0 0 26px rgba(251, 191, 36, 0.52), 0 14px 30px rgba(0, 0, 0, 0.48);
+  z-index: 5;
+  pointer-events: none;
+}
+
+body.fx-pacing-fast .play-card-btn.is-card-casting {
+  animation-duration: 0.18s;
+}
+
+.play-card-btn.is-card-dimmed {
+  opacity: 0.38;
+  transform: scale(0.95);
+  pointer-events: none;
+}
+
+@keyframes cardCastLift {
+  0% {
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+  42% {
+    transform: translateY(-10px) scale(1.045);
+    filter: brightness(1.22);
+  }
+  100% {
+    transform: translateY(-6px) scale(1.02);
+    filter: brightness(1.08);
+  }
+}
+
+#spotlightText {
+  line-height: 1.62;
+  letter-spacing: 0.015em;
+}
+
+#roleDealCardBox {
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(242, 212, 156, 0.45);
+}
+
+/* Desktop Widescreen Refinement (>= 1200px) */
+@media (min-width: 1200px) {
+  body.screen-ingame #focalCenterCard {
+    max-width: 780px;
+  }
+
+  #quickSpeechChips {
+    gap: 10px;
+  }
+
+  .play-card-btn.is-compact-card {
+    padding: 10px 12px;
+    min-height: 76px;
+  }
+}
+
+/* Tablet Portrait & Landscape (768px ~ 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  #inGameTopHud {
+    padding: max(10px, env(safe-area-inset-top)) 14px 6px;
+    gap: 8px;
+  }
+
+  body.screen-ingame #controlDeck {
+    padding: 8px 14px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .hud-icon-btn,
+  .hud-rail-btn,
+  .seat-pill-btn,
+  .cta-cinnabar,
+  .cta-brass,
+  .cta-celadon,
+  .cta-ink {
+    min-height: 44px;
+  }
+
+  .play-card-btn.is-compact-card {
+    min-height: 74px;
+    padding: 9px 11px;
+  }
+
+  #setupDrawer,
+  #journalDrawer,
+  #pauseDrawer {
+    width: min(460px, 86vw);
+    max-width: 86vw;
+  }
+
+  #matrixSheetBody {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Tablet Portrait (768px ~ 834px): generous 3D stage height above touch deck */
+@media (min-width: 768px) and (max-width: 834px) and (orientation: portrait) {
+  #canvasStageWrap {
+    height: 56dvh;
+    min-height: 380px;
+  }
+}
+
+/* Tablet Landscape Short Height: preserve >= 62% 3D stage height */
+@media (min-width: 768px) and (max-width: 1199px) and (max-height: 820px) {
+  body.screen-ingame #controlDeck {
+    padding-top: 4px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .seat-pill-btn {
+    min-height: 36px;
+    padding: 4px 8px;
+  }
+}
+
+/* Touch Devices: hide desktop <kbd> badges for cleaner touch layout */
+@media (pointer: coarse) {
+  .ui-kbd {
+    display: none;
+  }
+}
+
+/* Mobile Dedicated Layout (<= 767px) with Safe Area, Single-Row HUD & Snap Card Fan */
+@media (max-width: 767px) {
+  #inGameTopHud {
+    padding: max(8px, env(safe-area-inset-top)) 8px 6px;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  #inGameTopHud .hud-pill-shell {
+    padding: 5px 8px;
+    gap: 6px;
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  #bannerHeadline,
+  #roundTitle,
+  #hudAutoLabel,
+  #hudViewLabel {
+    display: none;
+  }
+
+  #inGameTopHud .hud-icon-btn {
+    min-height: 40px;
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+
+  #inGameTopHud .hud-rail-btn {
+    min-width: 36px;
+    min-height: 38px;
+    padding: 6px;
+  }
+
+  #canvasStageWrap {
+    height: 48dvh;
+    min-height: 270px;
+  }
+
+  body.screen-ingame #controlDeck {
+    padding: 6px 8px max(14px, env(safe-area-inset-bottom));
+  }
+
+  #seatButtonStrip:not(.hidden) {
+    scroll-snap-type: x proximity;
+    padding: 4px 2px 6px;
+  }
+
+  .seat-pill-btn {
+    scroll-snap-align: start;
+    min-height: 42px;
+    padding: 6px 11px;
+    font-size: 11.5px;
+  }
+
+  .cta-cinnabar,
+  .cta-brass,
+  .cta-celadon,
+  .cta-ink {
+    min-height: 44px;
+    font-size: 12.5px;
+  }
+
+  /* Thumb-friendly horizontal snap swipe deck for 3 player strategy cards */
+  #quickSpeechChips {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 8px;
+    padding: 2px 2px 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  #quickSpeechChips::-webkit-scrollbar {
+    display: none;
+  }
+
+  #quickSpeechChips .play-card-btn {
+    flex: 0 0 82%;
+    min-height: 78px;
+    padding: 10px 12px;
+    scroll-snap-align: center;
+  }
+
+  #spotlightText {
+    font-size: 14px;
+    line-height: 1.62;
+  }
+
+  /* Keep character intel popover safely centered inside mobile viewport */
+  #seatIntelPopover {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: calc(100vw - 20px);
+    transform: none;
+  }
+
+  /* Bottom-sheet feel for drawers & modals on phones */
+  #setupDrawer,
+  #journalDrawer,
+  #pauseDrawer {
+    width: 100vw;
+    max-width: 100vw;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .craft-modal-box {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: 88dvh;
+    overflow-y: auto;
+    border-radius: 14px;
+  }
+
+  .cutin-band {
+    padding: 10px 14px;
+  }
+}
+
+/* Short Landscape Phone Layout */
+@media (max-height: 500px) and (orientation: landscape) {
+  #canvasStageWrap {
+    height: 62dvh;
+    min-height: 200px;
+  }
+
+  body.screen-ingame #controlDeck {
+    padding: 4px 10px max(6px, env(safe-area-inset-bottom));
+  }
+
+  #speakerPortraitImg.vn-bust-img {
+    width: 54px;
+    height: 54px;
   }
 }

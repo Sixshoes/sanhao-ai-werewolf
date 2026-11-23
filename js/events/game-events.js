@@ -202,6 +202,16 @@ function bindMatchFlowEvents() {
     updateAllUI();
   });
 
+  if (el("btnToggleFxPacing")) {
+    el("btnToggleFxPacing").addEventListener("click", function () {
+      sound.unlock();
+      state.fxPacing = state.fxPacing === "fast" ? "cinematic" : "fast";
+      if (typeof syncPrefsToControls === "function") syncPrefsToControls();
+      if (typeof saveUserPrefs === "function") saveUserPrefs();
+      showToast(state.fxPacing === "fast" ? "⚡ 已切換為「快節奏」演出模式" : "✨ 已切換為「沉穩儀式感」演出模式（卡片與特效停留更從容）", "emerald");
+    });
+  }
+
   el("btnAutoPlayToggle").addEventListener("click", function () {
     state.autoPlay = !state.autoPlay;
     el("btnAutoPlayToggle").textContent = "自動:" + (state.autoPlay ? "開" : "關");

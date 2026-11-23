@@ -5,13 +5,15 @@
 
 function spawnFx(seatId, text, color, opts) {
   const node = state.seatCoords.find(function (c) { return c.id === seatId; });
+  const mul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
+  const baseDur = (opts && opts.durationMs) ? Math.max(opts.durationMs, 1750) : 1950;
   state.fxPopups.push({
     x: node ? node.x : 220,
     y: node ? (node.y - 24) : 140,
     text: text,
     color: color || "#fde68a",
     born: performance.now(),
-    duration: (opts && opts.durationMs) || 1350,
+    duration: Math.round(baseDur * mul),
     scale: (opts && opts.scale) || 1
   });
 }
@@ -52,13 +54,14 @@ function getSeatEmotion(seatId, nowMs) {
 }
 
 function spawnRipple(x, y, color, maxR) {
+  const mul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
   state.ripples.push({
     x: x,
     y: y,
     color: color || "#fbbf24",
-    maxR: maxR || 54,
+    maxR: maxR || 58,
     born: performance.now(),
-    ttl: 580
+    ttl: Math.round(840 * mul)
   });
   if (state.ripples.length > 16) state.ripples.shift();
 }
@@ -68,23 +71,24 @@ function spawnBurst(seatId, color, count, style) {
   const node = state.seatCoords.find(function (c) { return c.id === seatId; });
   if (!node) return;
   const n = count || 18;
+  const mul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
   const palette = Array.isArray(color) ? color : [color || "#fbbf24", "#fde68a", "#ffffff"];
   const now = performance.now();
   for (let i = 0; i < n; i++) {
     const ang = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.45;
-    const spd = (style === "spark" ? 3.2 : 1.9) + Math.random() * (style === "spark" ? 4.4 : 3.2);
+    const spd = (style === "spark" ? 2.8 : 1.65) + Math.random() * (style === "spark" ? 3.8 : 2.7);
     state.burstParticles.push({
       x: node.x,
       y: node.y,
       vx: Math.cos(ang) * spd,
-      vy: Math.sin(ang) * spd - (style === "petal" ? 1.4 : 0.6),
-      size: (style === "petal" ? 4.2 : 2.8) + Math.random() * 2.8,
+      vy: Math.sin(ang) * spd - (style === "petal" ? 1.3 : 0.55),
+      size: (style === "petal" ? 4.4 : 3.0) + Math.random() * 2.8,
       rot: Math.random() * Math.PI * 2,
-      vRot: (Math.random() - 0.5) * 0.24,
+      vRot: (Math.random() - 0.5) * 0.2,
       color: palette[i % palette.length],
       style: style || "star",
       born: now,
-      ttl: 760 + Math.random() * 440
+      ttl: Math.round((1080 + Math.random() * 540) * mul)
     });
   }
   if (state.burstParticles.length > 140) {
@@ -102,14 +106,20 @@ function showCutInNow(item) {
   }
   const t = item.title || "";
   const s = item.sub || "";
+  const mul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
+  const isMajor = Boolean(
+    (item.durationMs && item.durationMs >= 2000) ||
+    /勝利|正氣共鳴|反撲|對跳|豁免|警長|覺醒/.test(t)
+  );
   if (el("cutInTitle")) el("cutInTitle").textContent = t;
   if (el("cutInSub")) el("cutInSub").textContent = s;
-  box.className = "cutin-" + (item.theme || "gold") + ((item.durationMs && item.durationMs >= 2000) ? " cutin-hold" : "");
+  box.className = "cutin-" + (item.theme || "gold") + (isMajor ? " cutin-hold" : "");
   void box.offsetWidth;
   box.classList.add("is-active");
   state.cutInActive = true;
   state.cutInCurrentKey = t + "|" + s;
-  state.cutInTimer = setTimeout(advanceCutInQueue, item.durationMs || 1450);
+  const durMs = Math.round((isMajor ? Math.max(item.durationMs || 2850, 2850) : Math.max(item.durationMs || 2150, 2100)) * mul);
+  state.cutInTimer = setTimeout(advanceCutInQueue, durMs);
 }
 
 function advanceCutInQueue() {
@@ -499,10 +509,17 @@ function showToast(message, tone) {
   }
   const div = document.createElement("div");
   const toneCls = tone === "warn" ? "toast-warn" : (tone === "emerald" ? "toast-jade" : "toast-gold");
-  div.className = "craft-toast pointer-events-auto px-3 py-2 text-xs font-medium msg-enter " + toneCls;
+  div.className = "craft-toast pointer-events-auto cursor-pointer px-3.5 py-2.5 text-xs font-medium msg-enter " + toneCls;
   div.textContent = message;
-  container.appendChild(div);
-  setTimeout(function () {
+  div.title = "點擊可立即關閉";
+  const removeSelf = function () {
     if (div.parentNode) div.parentNode.removeChild(div);
-  }, 2800);
+  };
+  if (typeof div.addEventListener === "function") {
+    div.addEventListener("click", removeSelf);
+  }
+  container.appendChild(div);
+  const mul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
+  const readMs = Math.round(clamp(2800 + String(message || "").length * 55, 3400, 5000) * mul);
+  setTimeout(removeSelf, readMs);
 }

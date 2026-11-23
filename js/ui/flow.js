@@ -123,16 +123,17 @@ const indieFlow = {
       sound.playCardRustle();
     }
     const self = this;
+    const pacingMul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
     if (typeof stage3d !== "undefined" && stage3d.isActive()) {
       state.cardPeek3D = true;
       this.cardPeekTimer = setTimeout(function () {
         self.cardPeekTimer = null;
         state.cardPeek3D = false;
-      }, 1650);
+      }, Math.round(2800 * pacingMul));
     }
     this.dealTimer = setTimeout(function () {
       self.hideRoleDealRitual();
-    }, 2100);
+    }, Math.round(3600 * pacingMul));
   },
 
   hideRoleDealRitual: function () {

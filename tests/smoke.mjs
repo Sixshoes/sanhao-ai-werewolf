@@ -3427,13 +3427,15 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const has4NewChars = ["墨白", "晴嵐", "阿朗", "柚子"].every(n => m12Names.includes(n));
 
     // 5. Plan 1 UI components in 12-player context: stance strip, target reaction card, table matrix & quote rebuttal
-    const s10 = getSeat(10);
-    const s12 = getSeat(12);
+    const qId = getPlayerId() === 10 ? 11 : 10;
+    const tId = getPlayerId() === 12 ? 10 : 12;
+    const s10 = getSeat(qId);
+    const s12 = getSeat(tId);
     const fakeEv = {
-      day: 1, speakerId: 10, speakerName: s10.name,
-      claimRole: "seer", accuseId: 12, vouchId: 2,
-      wolfPits: [12, 11], goodPits: [2],
-      rawText: "我是明心觀察員，昨晚查驗 12號 是酸民狼，02號 是好人金水！"
+      day: 1, speakerId: qId, speakerName: s10.name,
+      claimRole: "seer", accuseId: tId, vouchId: 2,
+      wolfPits: [tId, qId === 11 ? 10 : 11], goodPits: [2],
+      rawText: "我是明心觀察員，昨晚查驗 " + tId + "號 是酸民狼，02號 是好人金水！"
     };
     state.match.daySpeechEvents = state.match.daySpeechEvents || [];
     state.match.allSpeechEvents = state.match.allSpeechEvents || [];
@@ -3441,11 +3443,11 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     state.match.allSpeechEvents.push(fakeEv);
     renderSpeakerStanceStrip(s10, fakeEv);
     const stanceText = (el("speakerStanceStrip")._children || []).map(c => c.textContent || "").join(" ");
-    const stanceOk = !el("speakerStanceStrip").classList.contains("hidden") && stanceText.includes("12") && !/01[0-2]/.test(stanceText);
+    const stanceOk = !el("speakerStanceStrip").classList.contains("hidden") && stanceText.includes(String(tId)) && !/01[0-2]/.test(stanceText);
 
     renderTargetReactionCard(s10, fakeEv);
     const reactBadge = el("targetReactBadge").textContent || "";
-    const reactOk = !el("spotlightTargetReact").classList.contains("hidden") && reactBadge.includes("12") && !/01[0-2]/.test(reactBadge);
+    const reactOk = !el("spotlightTargetReact").classList.contains("hidden") && reactBadge.includes(String(tId)) && !/01[0-2]/.test(reactBadge);
 
     renderTableMatrixIntoBody();
     const matrixChildren = el("matrixSheetBody")._children || [];
@@ -3453,8 +3455,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const matrixOk = matrixChildren.length === 12 && !/01[0-2]/.test(matrixHtml);
 
     state.match.phase = "DAY_PLAYER_TURN";
-    quoteSpeechForRebuttal(10, fakeEv.rawText);
-    const quoteOk = el("quickFreeInput").value.includes("10號") && !el("quickFreeInput").value.includes("010號");
+    quoteSpeechForRebuttal(qId, fakeEv.rawText);
+    const quoteOk = el("quickFreeInput").value.includes(qId + "號") && !el("quickFreeInput").value.includes("0" + qId + "號");
 
     renderSeatStrip();
     const strip12Ok = (el("seatButtonStrip")._children || []).length === 12;
@@ -3514,6 +3516,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const directElderOk = state.match.totalSeats === 10 && Boolean(getPlayerSeat() && getPlayerSeat().isElder && getSeatEffectiveRoleKey(getPlayerSeat()) === "elder");
     const v61AchOk = Array.isArray(ACHIEVEMENT_DEFS) && ACHIEVEMENT_DEFS.length >= 20;
     const prefetchFnOk = typeof prefetchNextAiSpeech === "function" && typeof isPrefetchedAiSpeechReady === "function";
+    const fxPacingOk = typeof getFxPacingMul === "function" && getFxPacingMul() === 1.0 && Boolean(el("btnToggleFxPacing"));
+    state.fxPacing = "fast";
+    const fxPacingFastOk = getFxPacingMul() < 0.8;
+    state.fxPacing = "cinematic";
 
     clearStepTimer();
     resetMatchToLobby();
@@ -3526,7 +3532,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       wolfHuddleOk,
       v6SheriffOk: shStarted && shReelOk && shRunOk && shWithdrawOk && shPassOk,
       ledgerOk, coachOk,
-      v61Ok: matrixFlipOk && directWkOk && directElderOk && v61AchOk && prefetchFnOk
+      v61Ok: matrixFlipOk && directWkOk && directElderOk && v61AchOk && prefetchFnOk && fxPacingOk && fxPacingFastOk
     };
   })()`, ctx);
 
@@ -3537,4 +3543,4 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v6.1 (6/8/10/12p + Direct WolfKing/Elder + Matrix Flip Alerts + 20 Badges + Live FPS + iGPU 3D) E2E smoke test PASSED!");
+console.log("[OK] Full v7.0 (Visual Polish + Ceremonial Card/FX Pacing + Desktop/Tablet/Mobile RWD + Zero-Wait LLM) E2E smoke test PASSED!");

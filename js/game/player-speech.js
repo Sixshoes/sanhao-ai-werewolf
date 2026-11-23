@@ -754,13 +754,42 @@ function preparePlayerSpeechPanel() {
       '</div>' +
       '<div class="text-[11px] font-bold leading-snug line-clamp-2">' + escapeHtml(item.label.replace(/^【[^】]+】/, "")) + '</div>';
     btn.addEventListener("click", function () {
+      if (chipsBox._cardCasting) return;
+      chipsBox._cardCasting = true;
       state.match.rewriteCritReady = false;
       state.match.pendingEvidenceTargetId = item.isEvidenceCard ? item.evidenceTargetId : null;
       state.match.pendingEvidenceClueId = item.isEvidenceCard ? item.evidenceClueId : null;
       if (typeof createEmptyPlayerDraftPits === "function") state.match.playerDraftPits = createEmptyPlayerDraftPits();
       el("playerSpeechInput").value = item.text;
       addThreeGoodPoint(item.isEvidenceCard ? "heart" : item.tgKind, item.tgTag);
-      submitPlayerSpeech();
+
+      // Ceremonial card-play anticipation beat so cards lift & shimmer before launching!
+      if (btn.classList) btn.classList.add("is-card-casting");
+      if (typeof chipsBox.querySelectorAll === "function") {
+        chipsBox.querySelectorAll(".play-card-btn").forEach(function (sib) {
+          if (sib !== btn && sib.classList) sib.classList.add("is-card-dimmed");
+        });
+      }
+      if (typeof sound !== "undefined" && typeof sound.tone === "function") {
+        sound.tone(587, 0.08, "triangle", 0.06, 0);
+        sound.tone(880, 0.14, "triangle", 0.05, 0.07);
+      }
+      if (typeof spawnBurst === "function") {
+        spawnBurst(getPlayerId(), ["#fbbf24", "#fde68a", "#ffffff"], 12, "star");
+      }
+      const isRealBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
+      const castDelay = !isRealBrowserUi ? 0 : ((typeof state !== "undefined" && (state.autoPlay || state.fxPacing === "fast")) ? 160 : 420);
+      if (castDelay <= 0) {
+        chipsBox._cardCasting = false;
+        submitPlayerSpeech();
+      } else {
+        setTimeout(function () {
+          chipsBox._cardCasting = false;
+          if (state.match && state.match.phase === "DAY_PLAYER_TURN") {
+            submitPlayerSpeech();
+          }
+        }, castDelay);
+      }
     });
     chipsBox.appendChild(btn);
   });

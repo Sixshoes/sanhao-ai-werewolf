@@ -15,6 +15,7 @@ const state = {
   viewMode: "3d",
   quality3D: "high",
   qualityUserChosen: false,
+  fxPacing: "cinematic", // "cinematic" (沉穩儀式感) | "fast" (快節奏)
   playerGender: "f", // "f" | "m" (1-click player voice & VRM avatar toggle)
   portraitStyle: "painted", // "painted" (Studio ink cinema art) | "vrm3d" (3D VRM portrait)
   cardPeek3D: false,
@@ -164,6 +165,7 @@ function saveUserPrefs() {
       viewMode: state.viewMode === "2d" ? "2d" : "3d",
       quality3D: (state.quality3D === "eco" || state.quality3D === "balanced") ? state.quality3D : "high",
       qualityUserChosen: Boolean(state.qualityUserChosen),
+      fxPacing: state.fxPacing === "fast" ? "fast" : "cinematic",
       playerGender: state.playerGender === "m" ? "m" : "f",
       portraitStyle: state.portraitStyle === "vrm3d" ? "vrm3d" : "painted",
       portraitPrefVersion: 2,
@@ -202,6 +204,7 @@ function loadUserPrefs() {
     if (p.viewMode === "2d" || p.viewMode === "3d") state.viewMode = p.viewMode;
     if (p.quality3D === "high" || p.quality3D === "balanced" || p.quality3D === "eco") state.quality3D = p.quality3D;
     if (typeof p.qualityUserChosen === "boolean") state.qualityUserChosen = p.qualityUserChosen;
+    if (p.fxPacing === "fast" || p.fxPacing === "cinematic") state.fxPacing = p.fxPacing;
     if (p.playerGender === "m" || p.playerGender === "f") state.playerGender = p.playerGender;
     if ((p.portraitPrefVersion >= 2) && (p.portraitStyle === "vrm3d" || p.portraitStyle === "painted")) state.portraitStyle = p.portraitStyle;
     if (p.aiDifficulty === "easy" || p.aiDifficulty === "normal" || p.aiDifficulty === "pro") state.aiDifficulty = p.aiDifficulty;
@@ -219,6 +222,10 @@ function syncPrefsToControls() {
   if (el("muteToggleLabel")) el("muteToggleLabel").textContent = sound.muted ? "音效:關" : "音效:開";
   else if (el("btnToggleMute")) el("btnToggleMute").textContent = sound.muted ? "音效:關" : "音效:開";
   if (el("btnAutoPlayToggle")) el("btnAutoPlayToggle").textContent = "自動:" + (state.autoPlay ? "開" : "關");
+  if (el("btnToggleFxPacing")) el("btnToggleFxPacing").textContent = state.fxPacing === "fast" ? "演出:快節奏" : "演出:沉穩";
+  if (typeof document !== "undefined" && document.body) {
+    document.body.classList.toggle("fx-pacing-fast", state.fxPacing === "fast");
+  }
   if (el("btnToggleGraphOverlay")) el("btnToggleGraphOverlay").textContent = "連線：" + (state.showRelationsOnCanvas ? "開" : "關");
   const bgmPct = Math.round(clamp(sound.bgmVol, 0, 1) * 100);
   const sfxPct = Math.round(clamp(sound.sfxVol, 0, 1) * 100);
@@ -448,6 +455,10 @@ function getSeatRoleDef(seat) {
 
 function canSeatTriggerShot(seat) {
   return Boolean(seat && (seat.role === "hunter" || seat.isWolfKing));
+}
+
+function getFxPacingMul() {
+  return (typeof state !== "undefined" && state.fxPacing === "fast") ? 0.65 : 1.0;
 }
 
 function fmtSeatNum(id) {
