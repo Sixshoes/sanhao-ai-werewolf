@@ -73,6 +73,7 @@ function startDayDiscussion(dawnVoiceLine, opts) {
   }
   if (dawnVoiceLine && voice.canSpeak() && !ff) {
     syncSpeakerBannerVisuals(null, "主持播報 · 天亮結果", "第 " + state.match.day + " 天", false);
+    updateSpotlightBox("主持播報 · 天亮結果", "第 " + state.match.day + " 天", dawnVoiceLine);
     let kickedOff = false;
     const goFirstSpeaker = function () {
       if (kickedOff || state.match.phase !== "DAY_SPEECH") return;
@@ -366,6 +367,9 @@ async function executeAiTurnSpeech(speaker) {
       const rivalClaimant = sameClaimants.find(function (c) { return c.id !== speaker.id; });
       if (rivalClaimant) {
         spawnBeam(speaker.id, rivalClaimant.id, "#fbbf24", "clash", 760);
+        if (typeof voice !== "undefined" && typeof voice.triggerSeatBackchannel === "function") {
+          voice.triggerSeatBackchannel(rivalClaimant.id, "clash", 620);
+        }
       }
     } else if (generated.claimSeer || generated.claimRole) {
       spawnFx(speaker.id, "亮出" + rTitle + "身分!", "#fde68a");

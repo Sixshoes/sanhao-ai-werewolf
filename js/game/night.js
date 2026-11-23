@@ -258,8 +258,9 @@ function chooseAiWolfTarget(goodTargets, opts) {
     }
     const nonHunters = goodTargets.filter(function (s) { return s.claimedRole !== "hunter"; });
     const smartPool = nonHunters.length > 0 ? nonHunters : goodTargets;
-    const shId = snap ? snap.sheriffSeatId : state.match.sheriffSeatId;
-    const sheriffTarget = smartPool.find(function (s) { return s.id === shId; });
+    const shPending = snap ? snap.sheriffElectionPending : state.match.sheriffElectionPending;
+    const shId = shPending ? null : (snap ? snap.sheriffSeatId : state.match.sheriffSeatId);
+    const sheriffTarget = shId ? smartPool.find(function (s) { return s.id === shId; }) : null;
     if (sheriffTarget && rand() < 0.75) return sheriffTarget;
     const shieldTarget = smartPool.find(function (s) { return s.trustShield; });
     if (shieldTarget && rand() < 0.65) return shieldTarget;
@@ -590,7 +591,10 @@ function resolveDawn() {
   function continueAfterDawnSheriff() {
     if (checkAndHandleGameOver()) return;
     if (hunterTriggeredSeat) {
-      voice.speakHost(dawnVoiceLine + "直心糾察長發動正氣共鳴，請選擇一人一同離席冷靜。", undefined, "host_dawn");
+      const ffHunterDawn = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+      if (!ffHunterDawn) {
+        voice.speakHost(dawnVoiceLine + "直心糾察長發動正氣共鳴，請選擇一人一同離席冷靜。", undefined, "host_dawn");
+      }
       triggerHunterResonance(hunterTriggeredSeat, "AFTER_DAWN");
       return;
     }

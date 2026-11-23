@@ -99,7 +99,7 @@ function collectFeedbackDiagnostics() {
     : "未開局或已遮蔽";
 
   return {
-    version: "v12.3 (公測 1.0)",
+    version: "v13.2 (公測 2.0)",
     timestamp: new Date().toISOString(),
     started: Boolean(m.started),
     phase: String(m.phase || "LOBBY"),

@@ -1031,9 +1031,9 @@ function recordAndBroadcastBadgeFlowSignal(deadSheriff, heirSeat) {
   }
   if (!activeFlow || !activeFlow.firstTargetId) return null;
 
-  // Temporal & Role authenticity: only decode as a night-check Badge Flow signal if deadSheriff claimed/is Seer
-  // AND at least 1 night passed since declaration (or deadSheriff actually checked firstTargetId).
-  const isSeerClaimOrRole = Boolean(deadSheriff.role === "seer" || deadSheriff.claimedRole === "seer");
+  // Temporal & Role authenticity: only decode as a night-check Badge Flow signal if deadSheriff publicly claimed Seer
+  // AND at least 1 night passed since declaration (or deadSheriff actually checked firstTargetId). Never leak an unclaimed Seer!
+  const isSeerClaimOrRole = Boolean(deadSheriff.claimedRole === "seer");
   if (!isSeerClaimOrRole) return null;
   const hasElapsedNight = (m.day || 1) > (activeFlow.dayDeclared || 1);
   const deadCheckedFirst = Boolean(
@@ -1599,6 +1599,7 @@ function startSheriffElection(onDone) {
         });
         fallbackWinner = cands.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); })[0] || fallbackWinner;
       } else {
+        fallbackWinner = cands[0];
         counts[cands[0].id] = 1;
       }
       const seerIdsAuto = autoSpeeches.filter(function (sp) { return sp.tone === "seer" || sp.tone === "clash"; }).map(function (sp) { return sp.id; });
@@ -2144,11 +2145,17 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.triggerCameraPunch === "function") {
       stage3d.triggerCameraPunch(winner.id, { fov: 37, durationMs: 1300 });
     }
+    const shortTallyCutIn = sortedCands.slice(0, 3).map(function (c) {
+      const nm = c.id === pid ? (playerNumTag() + "你") : (fmtSeatNum(c.id) + c.name);
+      return nm + " " + (Math.round((counts[c.id] || 0) * 10) / 10) + "票";
+    }).join(" · ");
+    const cutInBase = wLbl + (isCloseCall ? " 險勝當選警長（1.5票＋末置位歸票）" : " 當選本局警長（1.5票＋末置位歸票）");
+    const cutInSubText = [cutInBase, shortTallyCutIn ? ("開票：" + shortTallyCutIn) : "", activeFlowNote.replace(/^｜/, "")].filter(Boolean).join(" ｜ ");
     triggerCutIn(
-      isCloseCall ? "👑 驚險奪下警徽！" : "👑 警長誕生！",
-      wLbl + (isCloseCall ? " 以些微差距驚險當選警長！" : " 獲全場擁戴當選警長（1.5票歸票＋末置位發言權）！") + activeFlowNote,
+      isCloseCall ? "👑 驚險奪下警徽" : "👑 警長誕生",
+      cutInSubText,
       "gold",
-      1700
+      2200
     );
     addLog({
       kind: "blessing",

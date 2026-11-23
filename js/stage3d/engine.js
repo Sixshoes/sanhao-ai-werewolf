@@ -360,16 +360,16 @@ const stage3d = {
     const seatDist = Math.hypot(wp.x, wp.z) || 4.44;
     const isInspect = style === "inspect";
     const isDramatic = style === "dramatic";
-    // Position camera strictly IN FRONT OF the character, clearing the central lotus (r≈0.65) across 6/8/10/12-seat tables!
-    const maxSafeR = Math.max(2.65, seatDist - 1.05);
-    const desiredR = isInspect ? 3.16 : (isDramatic ? 3.16 : 3.40);
+    // Position camera cleanly IN FRONT OF & SLIGHTLY ABOVE tabletop props (clearing lotus, teacup & candle across 6/8/10/12-seat tables!)
+    const maxSafeR = Math.max(2.75, seatDist - 0.96);
+    const desiredR = isInspect ? 3.26 : (isDramatic ? 3.30 : 3.52);
     const radius = Math.min(desiredR, maxSafeR);
-    const pitch = isInspect ? 0.14 : (isDramatic ? 0.15 : 0.17);
-    // Subtle ±6°..±8° three-quarter offset gives rich 3D facial depth instead of a flat mugshot
-    const angleOffset = (seatId % 2 === 0 ? 1 : -1) * (isInspect ? 0.11 : 0.14);
-    // Aim lookAt slightly below chest so face & gesturing upper body sit cleanly ABOVE the bottom dialogue card!
+    const pitch = isInspect ? 0.19 : (isDramatic ? 0.20 : 0.22);
+    // Subtle ±6°..±7.5° three-quarter offset gives rich 3D facial depth without foreground prop intrusion
+    const angleOffset = (seatId % 2 === 0 ? 1 : -1) * (isInspect ? 0.10 : 0.12);
+    // Aim lookAt lower in world Y so the speaker's head & upper torso sit prominently in the upper open viewport ABOVE #controlDeck!
     const headY = (hp && typeof hp.y === "number" && hp.y > 1.2) ? hp.y : 2.10;
-    const lookY = clamp(isInspect ? (headY - 0.72) : (headY - 0.80), 1.18, 1.52);
+    const lookY = clamp(isInspect ? (headY - 0.80) : (headY - 0.92), 1.08, 1.46);
     const fov = isInspect ? 39 : (isDramatic ? 38 : 40);
     return {
       yaw: frontYaw + angleOffset,
@@ -1422,10 +1422,11 @@ const stage3d = {
           isFrontShot = true;
         }
       } else if (this.camPreset === "overview") {
-        o.targetYaw = Math.sin(f.tSec * 0.08) * 0.12;
-        o.targetPitch = 0.96;
-        o.targetRadius = 12.8 + largeTableR * 1.15;
-        o.targetLookAt.set(0, 1.0, 0);
+        // Offset bird's-eye target forward (+Z) so the entire 8/10/12-seat round table sits cleanly ABOVE #controlDeck!
+        o.targetYaw = Math.sin(f.tSec * 0.08) * 0.10;
+        o.targetPitch = 1.03;
+        o.targetRadius = 13.8 + largeTableR * 1.48;
+        o.targetLookAt.set(0, 0.72, 1.55 + largeTableR * 0.42);
       } else if (!state.match.started || p === "LOBBY") {
         // Theatrical Indie Title Screen Framing: gentle sweep showing intimate table + Qingming + layered mountains & Guishan Island
         o.targetYaw = -0.18 + Math.sin(f.tSec * 0.14) * 0.24;
@@ -1712,6 +1713,36 @@ function draw3DOverlayHud(ctx, f, coords) {
   const isOver = p === "GAME_OVER";
   const inMatch = Boolean(state.match && state.match.started && !isOver);
   const isPickPhase = (p === "NIGHT_GUARD" || p === "NIGHT_SEER" || p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "HUNTER_TRIGGER" || p === "DAY_VOTE" || p === "DAY_PLAYER_TURN");
+  const activelyVoicing = Boolean((state.typewriter && state.typewriter.active) || (typeof voice !== "undefined" && voice.speaking));
+
+  // Measure live HUD top/bottom safe bounds relative to canvas so 3D nameplates NEVER collide with #inGameTopHud or bleed behind #controlDeck!
+  let topSafeY = 56 * dpr;
+  let bottomSafeY = f.h - 10 * dpr;
+  if (typeof document !== "undefined") {
+    const cvEl = el("sanctuaryCanvas");
+    const cvRect = cvEl && typeof cvEl.getBoundingClientRect === "function" ? cvEl.getBoundingClientRect() : null;
+    if (cvRect && cvRect.height > 80) {
+      const topHudEl = el("inGameTopHud");
+      if (topHudEl && !topHudEl.classList.contains("hidden") && typeof topHudEl.getBoundingClientRect === "function") {
+        const tr = topHudEl.getBoundingClientRect();
+        if (tr.height > 0 && tr.bottom > cvRect.top) {
+          topSafeY = Math.max(topSafeY, Math.min(f.h * 0.36, (tr.bottom - cvRect.top + 8) * dpr));
+        }
+      }
+      const deckEl = el("controlDeck");
+      if (deckEl && inMatch && typeof deckEl.getBoundingClientRect === "function") {
+        const dr = deckEl.getBoundingClientRect();
+        if (dr.height > 0 && dr.top > cvRect.top + 80 && dr.top < cvRect.bottom - 16) {
+          bottomSafeY = Math.max(topSafeY + 42 * dpr, (dr.top - cvRect.top - 8) * dpr);
+        }
+      }
+    }
+  }
+
+  const ROLE_SHORT_3D = {
+    seer: "觀察員", witch: "奉茶師", hunter: "糾察長", guard: "守衛",
+    elder: "長老", villager: "書院生", wolf: "酸民狼", wolf_king: "流言首領"
+  };
 
   const sorted = coords.slice().sort(function (a, b) { return (b.zDepth || 0) - (a.zDepth || 0); });
   const plates = [];
@@ -1733,7 +1764,7 @@ function draw3DOverlayHud(ctx, f, coords) {
     const wolfGodKey3D = (isWolfViewer3D && !isWolfMate3D && state.match.wolfGodMarks) ? state.match.wolfGodMarks[s.id] : "";
     const wolfGodLabel3D = (wolfGodKey3D && typeof getWolfGodMarkDef === "function") ? getWolfGodMarkDef(wolfGodKey3D).label : "";
 
-    // Handcrafted lacquer & antique-gold floating tablet above 3D head
+    // Handcrafted lacquer & antique-gold floating tablet above 3D head (ALWAYS preserves seat number & name!)
     let topTag = "";
     let topBg = "rgba(22, 17, 13, 0.9)";
     let topBorder = "rgba(212, 166, 87, 0.55)";
@@ -1742,61 +1773,64 @@ function draw3DOverlayHud(ctx, f, coords) {
     let prio = 1;
     const sRoleDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : null) || ROLE_DEFS[s.role];
     const sShortTag = (s.id !== getPlayerId() && typeof getPersonaShortTag === "function") ? getPersonaShortTag(s) : "";
+    const sCompactName = s.id === getPlayerId() ? "你" : s.name;
     const sNameTag = s.id === getPlayerId() ? "你" : (s.name + (sShortTag ? ("·" + sShortTag) : ""));
     if (isSpeaking) {
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sNameTag + (!s.alive ? "｜遺言中" : "｜發言中");
-      topBg = "rgba(166, 50, 38, 0.94)";
+      const spSuffix = !s.alive ? "｜遺言中" : (activelyVoicing || p === "DAY_PLAYER_TURN" ? "｜發言中" : "｜已講畢");
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sNameTag + spSuffix;
+      topBg = activelyVoicing || p === "DAY_PLAYER_TURN" ? "rgba(166, 50, 38, 0.94)" : "rgba(58, 42, 26, 0.92)";
       topBorder = s.color || "rgba(242, 212, 156, 0.85)";
       topFg = "#fbf5ea";
       prio = 4;
     } else if (!s.alive) {
-      topTag = showTruth && sRoleDef ? ("離席・" + sRoleDef.name) : "已離席";
+      topTag = showTruth && sRoleDef ? (fmtSeatNum(s.id) + " " + sCompactName + "｜" + (ROLE_SHORT_3D[s.role] || sRoleDef.name)) : (fmtSeatNum(s.id) + " " + sCompactName + "｜離席");
       topBorder = "rgba(148, 134, 114, 0.35)";
       topFg = "#a89d8b";
     } else if (showTruth && sRoleDef) {
-      topTag = sheriffPrefix + sRoleDef.name;
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + "｜" + sRoleDef.name;
       topBg = s.role === "wolf" ? "rgba(154, 44, 34, 0.94)" : "rgba(33, 94, 73, 0.94)";
       topBorder = "rgba(242, 212, 156, 0.6)";
       topFg = "#fbf5ea";
       prio = 3;
     } else if (isSelected) {
-      topTag = sheriffPrefix + "✦ 已鎖定・" + fmtSeatNum(s.id) + " " + s.name;
+      topTag = sheriffPrefix + "✦ " + fmtSeatNum(s.id) + " " + sCompactName + "｜已鎖定";
       topBg = "rgba(166, 50, 38, 0.94)";
       topBorder = "rgba(250, 224, 156, 0.9)";
       topFg = "#fff8eb";
       prio = 4;
     } else if (isWolfMate3D) {
-      topTag = sheriffPrefix + "🐺 同伴・" + fmtSeatNum(s.id) + s.name;
+      topTag = sheriffPrefix + "🐺 " + fmtSeatNum(s.id) + " " + sCompactName + "｜同伴";
       topBg = "rgba(136, 28, 38, 0.92)";
       topBorder = "rgba(251, 113, 133, 0.78)";
       topFg = "#ffe4e6";
       prio = 3;
     } else if (state.match.started && s.id !== getPlayerId() && (state.match.microPulseRevealed || s.sweatExposed)) {
-      topTag = sheriffPrefix + "心虛 " + s.microPulse + "%";
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + "｜心虛" + s.microPulse + "%";
       topBg = s.microPulse >= 60 ? "rgba(154, 44, 34, 0.92)" : "rgba(33, 94, 73, 0.92)";
       topBorder = "rgba(242, 212, 156, 0.5)";
       topFg = "#fbf5ea";
       prio = 2;
     } else if (s.claimedRole && ROLE_DEFS[s.claimedRole]) {
-      topTag = sheriffPrefix + "自稱・" + ROLE_DEFS[s.claimedRole].name;
+      const cShort = ROLE_SHORT_3D[s.claimedRole] || ROLE_DEFS[s.claimedRole].name;
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + "｜自稱" + cShort;
       topBg = "rgba(120, 78, 24, 0.92)";
       topBorder = "rgba(242, 212, 156, 0.65)";
       topFg = "#fbf5ea";
       prio = 3;
     } else if (wolfGodLabel3D) {
-      topTag = sheriffPrefix + "🔍 " + wolfGodLabel3D + "・" + fmtSeatNum(s.id) + s.name;
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + "｜🔍" + wolfGodLabel3D;
       topBg = "rgba(120, 72, 18, 0.92)";
       topBorder = "rgba(251, 191, 36, 0.78)";
       topFg = "#fef3c7";
       prio = 2;
     } else if (mark === "wolf") {
-      topTag = sheriffPrefix + (isWolfViewer3D ? "甩鍋・" : "存疑・") + fmtSeatNum(s.id) + s.name;
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + (isWolfViewer3D ? "｜甩鍋" : "｜存疑");
       topBg = "rgba(154, 44, 34, 0.9)";
       topBorder = "rgba(232, 140, 128, 0.65)";
       topFg = "#fbf5ea";
       prio = 2;
     } else if (mark === "good") {
-      topTag = sheriffPrefix + (isWolfViewer3D ? "假保・" : "認同・") + fmtSeatNum(s.id) + s.name;
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + (isWolfViewer3D ? "｜假保" : "｜認同");
       topBg = "rgba(33, 94, 73, 0.9)";
       topBorder = "rgba(126, 196, 166, 0.65)";
       topFg = "#fbf5ea";
@@ -1832,8 +1866,12 @@ function draw3DOverlayHud(ctx, f, coords) {
       const ttw = ctx.measureText(topTag).width;
       const tW = ttw + (isSubtleNameplate ? 10 : 16) * dpr;
       const tH = (isSubtleNameplate ? 14.5 : 18) * dpr;
+      const rawY = sy - drawR * 0.44 - tH - 3 * dpr;
+      // Hide low-priority subtle nameplates whose character sits buried behind the bottom #controlDeck so zero labels bleed through chips!
+      if (isSubtleNameplate && prio <= 1 && rawY > bottomSafeY + 24 * dpr) return;
+      const maxPlateY = Math.max(topSafeY, bottomSafeY - tH);
       const baseX = clamp(sx, tW * 0.5 + 6 * dpr, Math.max(tW * 0.5 + 6 * dpr, f.w - tW * 0.5 - 6 * dpr));
-      const baseY = clamp(sy - drawR * 0.44 - tH - 3 * dpr, 48 * dpr, Math.max(48 * dpr, f.h - tH - 8 * dpr));
+      const baseY = clamp(rawY, topSafeY, maxPlateY);
       plates.push({
         seatId: s.id, anchorX: sx, anchorY: sy - drawR * 0.35,
         x: baseX, y: baseY, origY: baseY, w: tW, h: tH,
@@ -1843,7 +1881,37 @@ function draw3DOverlayHud(ctx, f, coords) {
     }
   });
 
-  // 3-pass Screen-Space AABB Anti-Overlap Solver (prevents 8-player back-row nameplate collisions!)
+  // Subtle identity nameplate for standing Academy Tea Host「清茗」so players immediately recognize her!
+  if (typeof stage3d !== "undefined" && stage3d.hero && stage3d.hero.root && stage3d.hero.root.visible && !stage3d.showcaseMode && stage3d.camera && typeof THREE !== "undefined") {
+    const hp = stage3d.hero.root.position;
+    const hostHead = new THREE.Vector3(hp.x, hp.y + 2.38, hp.z);
+    hostHead.project(stage3d.camera);
+    if (hostHead.z > -1 && hostHead.z < 1 && Math.abs(hostHead.x) < 0.94 && Math.abs(hostHead.y) < 0.94) {
+      const hx = (hostHead.x * 0.5 + 0.5) * f.w;
+      const hy = (-hostHead.y * 0.5 + 0.5) * f.h;
+      const hFont = "600 " + Math.round(8.5 * dpr) + "px 'Noto Serif TC', 'Noto Sans TC', serif";
+      const hTag = "茶席主持・清茗";
+      ctx.font = hFont;
+      const hW = ctx.measureText(hTag).width + 12 * dpr;
+      const hH = 14 * dpr;
+      if (hy >= topSafeY - 8 * dpr && hy <= bottomSafeY - hH) {
+        plates.push({
+          seatId: 0, anchorX: hx, anchorY: hy + hH,
+          x: clamp(hx, hW * 0.5 + 6 * dpr, Math.max(hW * 0.5 + 6 * dpr, f.w - hW * 0.5 - 6 * dpr)),
+          y: clamp(hy - hH * 0.5, topSafeY, Math.max(topSafeY, bottomSafeY - hH)),
+          origY: clamp(hy - hH * 0.5, topSafeY, Math.max(topSafeY, bottomSafeY - hH)),
+          w: hW, h: hH,
+          topTag: hTag,
+          topBg: "rgba(38, 28, 16, 0.76)",
+          topBorder: "rgba(212, 166, 87, 0.55)",
+          topFg: "#f5dfac",
+          font: hFont, isSubtle: true, prio: 0
+        });
+      }
+    }
+  }
+
+  // 3-pass Screen-Space AABB Anti-Overlap Solver (strictly bounded inside HUD safe zone!)
   const padX = 4 * dpr;
   const padY = 3 * dpr;
   for (let iter = 0; iter < 3; iter++) {
@@ -1857,7 +1925,7 @@ function draw3DOverlayHud(ctx, f, coords) {
           const pushUp = (a.prio >= b.prio) ? b : a;
           const fixed = (pushUp === b) ? a : b;
           const dirY = (pushUp.y <= fixed.y) ? -1 : 1;
-          pushUp.y = clamp(pushUp.y + dirY * (overlapY + 2 * dpr), 42 * dpr, Math.max(42 * dpr, f.h - pushUp.h - 8 * dpr));
+          pushUp.y = clamp(pushUp.y + dirY * (overlapY + 2 * dpr), topSafeY, Math.max(topSafeY, bottomSafeY - pushUp.h));
         }
       }
     }

@@ -214,6 +214,11 @@ function renderSeatStrip() {
   if (!strip) return;
   strip.innerHTML = "";
   const lobbyCount = typeof getLobbySeatCount === "function" ? getLobbySeatCount() : ((el("selectModeCount") && parseInt(el("selectModeCount").value, 10)) || 8);
+  const lobbySumEl = el("lobbySeatSummary");
+  if (lobbySumEl) {
+    const cntWord = lobbyCount === 12 ? "十二" : (lobbyCount === 10 ? "十" : (lobbyCount === 6 ? "六" : "八"));
+    lobbySumEl.textContent = "存好心明辨真偽，說好話凝聚共識。與" + cntWord + "位書院夥伴圍坐茶席，在三好與四給間識破挑撥迷霧。";
+  }
   const seats = state.match.started ? state.match.seats : Array.from({ length: lobbyCount }, function (_, idx) {
     const n = idx + 1;
     const pInfo = n === 1 ? null : (AI_PERSONAS[n - 2] || AI_PERSONAS[0]);
@@ -351,12 +356,13 @@ function renderSeatStrip() {
       btn.appendChild(bdg);
     }
 
+    const seatShortcutLbl = s.id === 10 ? "0" : (s.id === 11 ? "-" : (s.id === 12 ? "=" : String(s.id)));
     btn.title = s.id + "號 " + (s.id === pid ? "你" : s.name) +
       (isWolfMateSeat ? "（🐺 狼隊同伴）" : (wolfGodMarkTag ? ("（🔍 獵神：" + wolfGodMarkTag + "）") : "")) +
       (canConfirmThisSeat
         ? "（再點一下立即確認）"
         : (s.alive
-          ? ((s.isElder && s.voteDisabled) ? "（已亮牌清心長老・無投票權）" : ("（點擊跳到他面前檢視／鎖定，快捷鍵 " + s.id + "）"))
+          ? ((s.isElder && s.voteDisabled) ? "（已亮牌清心長老・無投票權）" : ("（點擊跳到他面前檢視／鎖定，快捷鍵 " + seatShortcutLbl + "）"))
           : (s.outReason === "正氣共鳴請離"
             ? "（遭直心糾察長正氣共鳴帶走・點擊查看）"
             : (s.outReason === "流言反撲請離" ? "（遭流言首領最後帶風向帶走・點擊查看）" : "（已離席・點擊查看）"))));

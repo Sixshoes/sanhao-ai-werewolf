@@ -326,7 +326,7 @@ function toggleSpectatorFastForward() {
     state.autoPlay = true;
     if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     showToast("⚡ 已開啟 2× 觀戰快進，自動加速推進至結局！", "emerald");
-    if (state.match && state.match.phase === "DAY_SPEECH") {
+    if (state.match && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH")) {
       if (state.typewriter && state.typewriter.active && typeof completeCurrentTypewriter === "function") {
         completeCurrentTypewriter(true);
       } else if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {

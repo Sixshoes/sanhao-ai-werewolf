@@ -22,26 +22,75 @@ const PERSONA_VOICE_PROFILES = {
 };
 
 const PERSONA_TTS_DIRECTIONS = {
-  "主持":  "沉穩溫雅的台灣書院說書女聲，語氣端莊有韻味",
-  "你":    "自然親切的台灣女大學生口語，清晰從容",
-  "你_男": "自然沉穩的台灣男大學生口語，條理清晰",
-  "小澄":  "冷靜銳利、節奏俐落像數據工程師分析報告的台灣理工男大生口語",
-  "暖暖":  "溫柔軟萌、帶甜美笑意與泡茶暖場感的台灣女大學生口語",
-  "阿松":  "沉穩厚實、豪爽帶台味山林老江湖氣息的登山社學長男聲",
-  "星兒":  "活潑靈動、帶中二占星驚嘆與綜藝感的台灣少女口語",
-  "小雲":  "俐落果斷、像新聞台事實查核主播的台灣知性女聲",
-  "阿竹":  "溫潤斯文、帶江南書院詩茶半文言韻味與從容停頓的男聲",
-  "晨晨":  "熱血爽朗、元氣十足像運動漫畫主角的陽光男大生口語",
-  "墨白":  "低沉冷峻、不疾不徐、如魏晉名士宣讀文言判詞般端重有威嚴的古風男聲",
-  "晴嵐":  "溫婉清雅、抑揚頓挫帶宋詞古箏雅韻、柔中帶剛的台灣學姊女聲",
-  "阿朗":  "俐落鏗鏘、字字清晰具法庭交叉質詢張力的台灣辯論社主辯男聲",
-  "柚子":  "甜美元氣、輕快活潑像烘焙點心社學妹的可愛台灣女聲"
+  "主持":  "沉穩溫雅的台灣書院說書女聲，語氣端莊自然，像真實茶席主持人近距離引導，避免機械播音腔",
+  "你":    "自然親切的台灣女大學生日常對話口吻，呼吸自然、不字正腔圓唸稿",
+  "你_男": "自然沉穩的台灣男大學生日常口語，吐字輕鬆真實、條理分明",
+  "小澄":  "冷靜銳利的台灣資工系男大生自然口語，先沉思半拍再俐落切入重點，不帶播音腔",
+  "暖暖":  "溫柔親切、帶淺淺笑意與呼吸氣音的台灣女大生日常聊天語氣",
+  "阿松":  "渾厚接地氣、帶台灣山林老學長江湖人情味與鬆弛幽默感的成熟男聲",
+  "星兒":  "靈動直覺、像綜藝圓桌現場突然眼睛一亮的台灣少女真實口語",
+  "小雲":  "俐落清晰、在茶桌上翻看筆記冷靜追問細節的台灣知性學姊口吻",
+  "阿竹":  "溫潤從容、帶江南書院茶人雅韻與舒緩呼吸停頓的青年男聲",
+  "晨晨":  "爽朗直率、像球社隊長在圓桌直接表態的陽光台灣男大生口吻",
+  "墨白":  "低沉冷峻、胸腔共鳴渾厚、如魏晉名士從容落筆判詞般古雅端重的男聲",
+  "晴嵐":  "溫婉清雅、帶宋詞古箏柔韻與輕柔氣息、柔中帶剛的古典學姊女聲",
+  "阿朗":  "節奏明快、重音鮮明、像辯論社主辯現場反問質詢的台灣男大生聲線",
+  "柚子":  "甜美元氣、輕快自然像點心社學妹在圓桌分享直覺的台灣少女口語"
+};
+
+// 圓桌聽眾臨場微插話台詞庫（純依公開發言點名／對跳／保人觸發，零底牌洩漏，固定短句 100% 命中快取）
+const PERSONA_BACKCHANNEL_CLIPS = {
+  "小澄": { accuse: ["等一下，這對不上吧…", "先看證據好嗎。"], vouch: ["嗯，時間線對了。"], clash: ["等一下，雙邊邏輯要重盤！"] },
+  "暖暖": { accuse: ["咦？怎麼會懷疑我…", "先別急著誤會嘛…"], vouch: ["嗯嗯，謝謝相信我～"], clash: ["哇…兩邊都跳出來了耶…"] },
+  "阿松": { accuse: ["喂喂，這帽子扣太快了吧…", "老松可沒問題啊。"], vouch: ["哈哈，算你內行。"], clash: ["喔？這下有好戲看囉。"] },
+  "星兒": { accuse: ["蛤？才不是我咧！", "咦？這直覺歪掉了吧！"], vouch: ["耶！你懂我！"], clash: ["哇塞，真假對跳耶！"] },
+  "小雲": { accuse: ["等一下，這指控沒根據。", "我記的時間不是這樣。"], vouch: ["嗯，查核無誤。"], clash: ["慢著，兩邊說詞先記下來。"] },
+  "阿竹": { accuse: ["且慢，此言差矣…", "莫急著定罪呀。"], vouch: ["承蒙信重。"], clash: ["且看兩邊如何分說。"] },
+  "晨晨": { accuse: ["欸不是吧，打錯人了啦！", "喂！看清楚再投啊！"], vouch: ["謝啦好兄弟！"], clash: ["正面對決了是不是！"] },
+  "墨白": { accuse: ["荒謬。", "無稽之談。"], vouch: ["善。"], clash: ["真偽立判。"] },
+  "晴嵐": { accuse: ["且慢定論呀…", "此話未免太急了…"], vouch: ["多謝明鑒。"], clash: ["弦音相衝，且細聽之。"] },
+  "阿朗": { accuse: ["我方提出異議！", "請問證據在哪？"], vouch: ["論點成立。"], clash: ["進入交叉對質！"] },
+  "柚子": { accuse: ["咦～冤枉柚子了啦！", "蛤？不是我呀！"], vouch: ["嘿嘿謝謝你！"], clash: ["哇！兩個人撞身分了！"] }
+};
+
+// 內建「清茗主持人」高品質預生成神經語音包（0ms 零等待秒播，純靜態 GitHub Pages／Vercel／離線皆可直接發聲！）
+const HOST_VOICE_PACK_MAP = {
+  "天黑請閉眼，山城入夜，請各位靜待神秘行動。": "assets/voice_pack/host_night_intro.mp3",
+  "第1晚，天黑請靜心。": "assets/voice_pack/host_n1_quiet.mp3",
+  "第2晚，天黑請靜心。": "assets/voice_pack/host_n2_quiet.mp3",
+  "第3晚，天黑請靜心。": "assets/voice_pack/host_n3_quiet.mp3",
+  "第4晚，天黑請靜心。": "assets/voice_pack/host_n4_quiet.mp3",
+  "第1晚，天黑請靜心。護心守衛請選擇今晚要守護的座位。": "assets/voice_pack/host_n1_guard.mp3",
+  "第2晚，天黑請靜心。護心守衛請選擇今晚要守護的座位。": "assets/voice_pack/host_n2_guard.mp3",
+  "第1晚，天黑請靜心。鍵盤酸民狼請選擇今晚散播迷霧的對象。": "assets/voice_pack/host_n1_wolf.mp3",
+  "第2晚，天黑請靜心。鍵盤酸民狼請選擇今晚散播迷霧的對象。": "assets/voice_pack/host_n2_wolf.mp3",
+  "第1晚，天黑請靜心。明心觀察員請點擊外圍座位查證身分。": "assets/voice_pack/host_n1_seer.mp3",
+  "第2晚，天黑請靜心。明心觀察員請點擊外圍座位查證身分。": "assets/voice_pack/host_n2_seer.mp3",
+  "滴水奉茶師請睜眼，要端出清心醒神茶請可疑者離席冷靜嗎？": "assets/voice_pack/host_witch_ask.mp3",
+  "第1天，天亮請睜眼！昨晚是平安夜，沒有人出局，現在開始輪流發言。": "assets/voice_pack/host_d1_peace.mp3",
+  "第2天，天亮請睜眼！昨晚是平安夜，沒有人出局，現在開始輪流發言。": "assets/voice_pack/host_d2_peace.mp3",
+  "輪到1號你發言了，請選擇卡牌表態。": "assets/voice_pack/host_turn_p1.mp3",
+  "全員發言結束，請點擊外圍座位投票抓狼。": "assets/voice_pack/host_vote_open.mp3",
+  "全員發言結束，開始計票。": "assets/voice_pack/host_vote_count.mp3",
+  "開票完成，本輪平票沒有人出局，請點擊進入夜晚。": "assets/voice_pack/host_vote_tie_none.mp3",
+  "平票對決拉票結束，依凹嗚規則由非平票玩家進行決選投票！": "assets/voice_pack/host_pk_vote.mp3",
+  "警上輪流發言結束！請警下夥伴投票選出本局警長！": "assets/voice_pack/host_sheriff_vote.mp3",
+  "警上輪流發言結束！你是警上候選人，請點擊開始警下開票決選！": "assets/voice_pack/host_sheriff_cand.mp3",
+  "請警長指定今日發言順序，順時針或逆時針！": "assets/voice_pack/host_sheriff_order.mp3",
+  "你是本局警長，離席前請依你的警徽流決定將警徽移交給哪一位存活夥伴，或當場撕毀警徽傳遞查殺訊號。": "assets/voice_pack/host_sheriff_pass.mp3",
+  "昨晚你首夜離席，請發表首夜遺言留下線索給好人夥伴。": "assets/voice_pack/host_lw_night1.mp3",
+  "你已高票離席，請發表最後遺言，場上玩家會記住你的線索。": "assets/voice_pack/host_lw_vote.mp3",
+  "遺言結束，你可以選擇直接結束看底牌，或繼續往下看觀戰。": "assets/voice_pack/host_lw_done.mp3",
+  "對局提前結束，全員底牌揭曉！": "assets/voice_pack/host_gameover_early.mp3"
 };
 
 const voice = {
   enabled: true,
   mode: "hybrid", // "hybrid" (自然人聲＋角色樂音簽名), "tts" (純淨自然人聲), "cozy" (療癒原音樂音)
-  accentMode: "anime", // "anime" (動漫角色專屬聲線) | "tw" (純台灣腔)
+  accentMode: "anime", // "anime" (12角色聲線差異最大化) | "tw" (純台灣腔＋共振峰拉開)
+  enginePref: "auto", // "auto" (有金鑰優先 Gemini 3.8 氣口演技，無金鑰免費神經) | "local" ($0 免費神經) | "gemini" (Gemini 3.8 TTS)
+  liveBackchannel: true, // 圓桌被點名／對跳臨場立體聲微插話
+  humanBreath: true, // 真人開口微換氣與無縫呼吸銜接
   selectedVoiceUri: "auto",
   primed: false,
   speaking: false,
@@ -64,9 +113,12 @@ const voice = {
   keepAliveTimer: null,
   clauseTimer: null,
   studioCache: {},
+  hostPackCache: {},
   localNeuralCache: {},
   localNeuralPending: {},
   lastSpokenPayload: null,
+  _lastBackchannelAt: 0,
+  _lastBackchannelTurnKey: "",
 
   resolvePersonaKey: function (personaName) {
     if (personaName === "你" && typeof state !== "undefined" && state.playerGender === "m") {
@@ -129,7 +181,7 @@ const voice = {
   },
 
   canSpeak: function () {
-    return this.enabled && (this.mode === "tts" || this.mode === "hybrid") && this.volume > 0.02 && (this.isSupported() || this.localNeuralAvailable || Boolean(typeof state !== "undefined" && state.geminiApiKey));
+    return this.enabled && (this.mode === "tts" || this.mode === "hybrid") && this.volume > 0.02 && (this.isSupported() || this.localNeuralAvailable || Boolean(typeof sound !== "undefined" && sound.ctx) || Boolean(typeof state !== "undefined" && state.geminiApiKey));
   },
 
   getModeLabel: function () {
@@ -176,12 +228,14 @@ const voice = {
       const lbl = document.getElementById("voiceEngineStatusLabel");
       const hintBox = document.getElementById("voiceQualityHintBox");
       if (lbl) {
+        const hasGemKey = Boolean(typeof state !== "undefined" && state.geminiApiKey);
+        const useGemFirst = hasGemKey && this.enginePref !== "local";
         if (this.mode === "cozy") {
           lbl.textContent = "目前：12角色療癒原音樂音（零機械感・3D定位）";
+        } else if (useGemFirst) {
+          lbl.textContent = "✨ Gemini 3.8 真人氣口演技（12 位真人級聲線" + (this.localNeuralAvailable ? "・含硬碟快取）" : "）");
         } else if (this.localNeuralAvailable) {
-          lbl.textContent = "✨ 免費動漫多角色神經配音已連線（12 位真人級聲線・$0）";
-        } else if (typeof state !== "undefined" && state.geminiApiKey) {
-          lbl.textContent = "已連線 Gemini Studio 12 位真人級配音";
+          lbl.textContent = "✨ v13 擬真多角色神經配音已連線（12 位真人級聲線・逐句韻律・$0）";
         } else if (bestScore >= 150) {
           lbl.textContent = "✨ 免費神經聲線：" + zh[0].name.split(" ")[0];
         } else if (bestScore >= 130) {
@@ -283,6 +337,7 @@ const voice = {
       .replace(/\b4G\b/gi, "四給")
       .replace(/3好/g, "三好")
       .replace(/[×xX]\s*1\.5/g, "一點五倍")
+      .replace(/平票\s*PK/gi, "平票對決")
       .replace(/\bPK\b/gi, "平票對決")
       .replace(/\bVS\.?\b/gi, "對決")
       .replace(/\bAI\b/g, "A I")
@@ -291,12 +346,59 @@ const voice = {
       .replace(/→/g, "投給")
       .replace(/[「」『』【】]/g, "")
       .replace(/[｜|·・—]/g, "，")
+      .replace(/：(?=\S)/g, "，")
       .replace(/(?<!，)(我是明心觀察員|我是滴水奉茶師|我是護心守衛|我是直心糾察長)/g, "，$1")
       .replace(/…+/g, "…")
       .replace(/，{2,}/g, "，")
       .replace(/^，+/, "")
       .replace(/\s+/g, " ")
+      .replace(/([\u4e00-\u9fff，。！？])\s+(?=[\u4e00-\u9fff])/g, "$1")
       .trim();
+  },
+
+  trimAudioBufferSilence: function (audioBuf) {
+    if (!audioBuf || !sound || !sound.ctx || typeof audioBuf.getChannelData !== "function" || typeof sound.ctx.createBuffer !== "function") {
+      return audioBuf;
+    }
+    try {
+      const ch0 = audioBuf.getChannelData(0);
+      const total = ch0 ? ch0.length : 0;
+      const sr = audioBuf.sampleRate || 24000;
+      if (!total || total < sr * 0.16) return audioBuf;
+      const thresh = 0.0038;
+      let start = 0;
+      while (start < total && Math.abs(ch0[start]) < thresh) start++;
+      let end = total - 1;
+      while (end > start && Math.abs(ch0[end]) < thresh) end--;
+      if (start >= end) return audioBuf;
+
+      // Keep a natural 11ms acoustic margin & apply a 5ms cosine micro-fade so splices never click or pop
+      const pad = Math.floor(sr * 0.011);
+      const cutStart = Math.max(0, start - pad);
+      const cutEnd = Math.min(total, end + pad + 1);
+      const newLen = cutEnd - cutStart;
+      if (newLen >= total - Math.floor(sr * 0.018) || newLen < Math.floor(sr * 0.08)) {
+        return audioBuf;
+      }
+      const nCh = audioBuf.numberOfChannels || 1;
+      const trimmed = sound.ctx.createBuffer(nCh, newLen, sr);
+      const fadeSamples = Math.min(Math.floor(sr * 0.005), Math.floor(newLen * 0.12));
+      for (let c = 0; c < nCh; c++) {
+        const srcData = audioBuf.getChannelData(c);
+        const dstData = trimmed.getChannelData(c);
+        for (let i = 0; i < newLen; i++) {
+          dstData[i] = srcData[cutStart + i];
+        }
+        for (let f = 0; f < fadeSamples; f++) {
+          const w = 0.5 - 0.5 * Math.cos((Math.PI * f) / fadeSamples);
+          dstData[f] *= w;
+          dstData[newLen - 1 - f] *= w;
+        }
+      }
+      return trimmed;
+    } catch (e) {
+      return audioBuf;
+    }
   },
 
   splitTwoStageStream: function (cleanText) {
@@ -315,6 +417,83 @@ const voice = {
     const first = cleanText.slice(0, bestSplit).trim();
     const rest = cleanText.slice(bestSplit).trim();
     return (first && rest) ? [first, rest] : [cleanText];
+  },
+
+  // Build a 1~3 beat human prosody arc: unhurried opening -> energized core/question -> grounded signoff!
+  splitExpressiveSpeechArc: function (cleanText, mood) {
+    if (!cleanText) return [];
+    if (cleanText.length <= 26 || mood === "host_night" || mood === "host_dawn") {
+      return [{ text: cleanText, role: "", pauseAfterMs: 0, rateNudge: 1.0, detuneNudge: 0 }];
+    }
+    const rawClauses = cleanText.match(/[^，。！？；…]+[，。！？；…]?/g) || [cleanText];
+    if (rawClauses.length <= 1) {
+      return [{ text: cleanText, role: "", pauseAfterMs: 0, rateNudge: 1.0, detuneNudge: 0 }];
+    }
+    // Group clauses into up to 3 natural dramatic beats (open / core / close)
+    const groups = [];
+    let cur = "";
+    for (let i = 0; i < rawClauses.length; i++) {
+      const piece = rawClauses[i].trim();
+      if (!piece) continue;
+      if (!cur) {
+        cur = piece;
+      } else if (groups.length === 0 && (cur.length + piece.length) <= 26 && !/[。！？]$/.test(cur)) {
+        cur += piece;
+      } else if (groups.length === 1 && i < rawClauses.length - 1 && (cur.length + piece.length) <= 36 && !/[。！？]$/.test(cur)) {
+        cur += piece;
+      } else if (groups.length >= 2) {
+        cur += piece;
+      } else {
+        groups.push(cur);
+        cur = piece;
+      }
+    }
+    if (cur) {
+      if (groups.length > 0 && cur.length <= 5) {
+        groups[groups.length - 1] += cur;
+      } else {
+        groups.push(cur);
+      }
+    }
+    if (groups.length === 1) {
+      return [{ text: groups[0], role: "", pauseAfterMs: 0, rateNudge: 1.0, detuneNudge: 0 }];
+    }
+    return groups.map(function (seg, idx) {
+      const isFirst = idx === 0;
+      const isLast = idx === groups.length - 1;
+      const hasQuestion = /[？?]/.test(seg);
+      const hasCallout = /([1-9]|1[0-2]|一|二|三|四|五|六|七|八|九|十|十一|十二)號|酸民狼|觀察員|奉茶師|守衛|糾察長|異議/.test(seg);
+      const hasSignoff = /(過[。！？]?$|公決之|明鑒|裁決)/.test(seg);
+      let role = "pivot";
+      let rateNudge = 1.0;
+      let detuneNudge = 0;
+      if (isFirst) {
+        role = (mood === "rebut" || mood === "panic") ? "climax" : "open";
+        rateNudge = role === "open" ? 0.97 : 1.03;
+        detuneNudge = role === "open" ? -10 : 12;
+      } else if (isLast && hasSignoff && seg.length <= 24) {
+        role = "close";
+        rateNudge = 0.95;
+        detuneNudge = -16;
+      } else if (hasQuestion) {
+        role = "question";
+        rateNudge = 1.02;
+        detuneNudge = 16;
+      } else if (hasCallout || mood === "accuse" || mood === "claim_seer") {
+        role = "climax";
+        rateNudge = 1.035;
+        detuneNudge = 14;
+      }
+      const endsMajor = /[。！？…]$/.test(seg);
+      const pauseAfterMs = isLast ? 0 : (endsMajor ? 128 : 88);
+      return {
+        text: seg,
+        role: role,
+        pauseAfterMs: pauseAfterMs,
+        rateNudge: rateNudge,
+        detuneNudge: detuneNudge
+      };
+    });
   },
 
   // Split long Mandarin text into natural breathing clauses (protecting seat numbers + names & short endings!)
@@ -453,8 +632,11 @@ const voice = {
         try { window.speechSynthesis.pause(); } catch (e) {}
       }
       if (typeof state !== "undefined" && state.stepTimer) {
-        clearTimeout(state.stepTimer);
-        state.stepTimer = null;
+        const phPause = state.match ? state.match.phase : "";
+        if (phPause === "DAY_SPEECH" || phPause === "LAST_WORDS_SPEECH" || phPause === "SHERIFF_ELECTION") {
+          clearTimeout(state.stepTimer);
+          state.stepTimer = null;
+        }
       }
       this.setVisualSpeaking(false);
       this.syncPauseButtonUi();
@@ -465,21 +647,24 @@ const voice = {
       if (this.pauseMeta && this.pauseMeta.audioBuf && sound.ctx) {
         const pm = this.pauseMeta;
         this.playBufferedStudioAudio(pm.seq, pm.audioBuf, pm.onDone, Object.assign({}, pm.opts, { startOffset: pm.offset || 0 }));
-      } else if (this.isSupported()) {
+      } else if (this.isSupported() && (this.activeUtterance || typeof this._resumePendingClause === "function")) {
         try { window.speechSynthesis.resume(); } catch (e) {}
         this.setVisualSpeaking(true);
         if (typeof this._resumeWatchdogFinish === "function") {
           const fnFinish = this._resumeWatchdogFinish;
           const selfResume = this;
+          const resumeMs = Math.max(12000, this._resumeWatchdogMs || 22000);
           this.watchdogTimer = setTimeout(function () {
             if (!selfResume.paused) fnFinish();
-          }, 16000);
+          }, resumeMs);
         }
         if (typeof this._resumePendingClause === "function") {
           const fnResume = this._resumePendingClause;
           this._resumePendingClause = null;
           fnResume();
         }
+      } else if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
+        maybeScheduleAutoAdvanceAfterSpeech();
       }
       return false;
     }
@@ -498,17 +683,32 @@ const voice = {
       sound.applyPersonaVoiceChain(pKey, (opts && opts.mood) || "normal", opts && opts.seatId);
     }
 
-    // Differentiate Taiwan-accent YunJheNeural male voices subtly via Web Audio playbackRate!
+    // Differentiate voices (especially Taiwan-accent YunJheNeural which ignores server rate/pitch) via Web Audio playbackRate + detune!
     let twTrim = 1.0;
-    if (this.accentMode === "tw" && typeof PERSONA_AUDIO_EQ !== "undefined" && PERSONA_AUDIO_EQ[pKey] && PERSONA_AUDIO_EQ[pKey].twRateMul) {
-      twTrim = PERSONA_AUDIO_EQ[pKey].twRateMul;
+    let baseDetune = 0;
+    const eqCfg = (typeof PERSONA_AUDIO_EQ !== "undefined" && PERSONA_AUDIO_EQ[pKey]) ? PERSONA_AUDIO_EQ[pKey] : null;
+    if (eqCfg) {
+      if (this.accentMode === "tw") {
+        twTrim = eqCfg.twRateMul || 1.0;
+        baseDetune = eqCfg.twDetuneCents || 0;
+      } else {
+        twTrim = eqCfg.animeRateMul || 1.0;
+        baseDetune = eqCfg.detuneCents || 0;
+      }
     }
+    const isYunJheFixed = Boolean(pKey === "阿松" || (this.accentMode === "tw" && (pKey === "你_男" || pKey === "小澄" || pKey === "阿竹" || pKey === "晨晨" || pKey === "墨白" || pKey === "阿朗")));
+    const userRateBlend = isYunJheFixed ? clamp(1.0 + (this.rate - 0.96) * 0.55, 0.94, 1.15) : (this.rate >= 1.15 ? 1.05 : 1.0);
+    const rateNudge = (opts && typeof opts.rateNudge === "number") ? opts.rateNudge : 1.0;
+    const detuneNudge = (opts && typeof opts.detuneNudge === "number") ? opts.detuneNudge : 0;
     const pbRate = skipRateAdjust
-      ? clamp(twTrim * (this.rate >= 1.15 ? 1.06 : 1.0), 0.90, 1.24)
-      : clamp(this.rate * twTrim, 0.90, 1.26);
+      ? clamp(twTrim * rateNudge * userRateBlend, 0.88, 1.24)
+      : clamp(this.rate * twTrim * rateNudge, 0.88, 1.26);
 
     src.buffer = audioBuf;
     src.playbackRate.value = pbRate;
+    if (src.detune && (baseDetune || detuneNudge)) {
+      try { src.detune.value = clamp(baseDetune + detuneNudge, -135, 135); } catch (e) {}
+    }
     vGain.gain.value = clamp(this.volume, 0, 1);
 
     // Route through Broadcast Vocal Chain (Per-Persona EQ + Presence + De-Ess + Compressor + 3D Spatial Panner + Live Lip-Sync Analyser!)
@@ -537,6 +737,9 @@ const voice = {
       this.setVisualSpeaking(false);
       this.syncPauseButtonUi();
       return true;
+    }
+    if (this.humanBreath && startOffset === 0 && !(opts && opts.skipPreBreath) && pKey !== "主持" && typeof sound.playPreSpeechBreath === "function") {
+      sound.playPreSpeechBreath(pKey, (opts && opts.mood) || "normal", opts && opts.seatId);
     }
     this.activeAudioNode = src;
     this.activeAudioGain = vGain;
@@ -568,7 +771,7 @@ const voice = {
     return true;
   },
 
-  _fetchLocalNeuralAudio: function (cacheKey, effKey, cleanText, mood, signal) {
+  _fetchLocalNeuralAudio: function (cacheKey, effKey, cleanText, mood, signal, clauseRole) {
     if (this.localNeuralCache[cacheKey]) return Promise.resolve(this.localNeuralCache[cacheKey]);
     if (this.localNeuralPending[cacheKey]) return this.localNeuralPending[cacheKey];
     const self = this;
@@ -580,7 +783,9 @@ const voice = {
         text: cleanText,
         rate: this.rate,
         mood: mood || "normal",
-        accent: this.accentMode || "anime"
+        accent: this.accentMode || "anime",
+        clauseRole: clauseRole || "",
+        naturalize: true
       })
     };
     if (signal) reqOpts.signal = signal;
@@ -591,11 +796,12 @@ const voice = {
           ? sound.ctx.decodeAudioData(arrBuf.slice(0))
           : null;
       })
-      .then(function (audioBuf) {
+      .then(function (rawBuf) {
         delete self.localNeuralPending[cacheKey];
-        if (!audioBuf) return null;
+        if (!rawBuf) return null;
+        const audioBuf = self.trimAudioBufferSilence(rawBuf);
         const keys = Object.keys(self.localNeuralCache);
-        if (keys.length > 56) delete self.localNeuralCache[keys[0]];
+        if (keys.length > 72) delete self.localNeuralCache[keys[0]];
         self.localNeuralCache[cacheKey] = audioBuf;
         return audioBuf;
       })
@@ -604,9 +810,46 @@ const voice = {
         return null;
       });
     const pKeys = Object.keys(this.localNeuralPending);
-    if (pKeys.length > 32) delete this.localNeuralPending[pKeys[0]];
+    if (pKeys.length > 36) delete this.localNeuralPending[pKeys[0]];
     this.localNeuralPending[cacheKey] = pendingPromise;
     return pendingPromise;
+  },
+
+  playBundledHostClip: async function (seq, cleanText, mood, onDone, opts) {
+    const packUrl = HOST_VOICE_PACK_MAP[cleanText];
+    if (!packUrl || !sound || !sound.ctx || typeof fetch !== "function") return false;
+    if (typeof window !== "undefined" && window.location && !/^https?:$/.test(window.location.protocol)) return false;
+    try {
+      let audioBuf = this.hostPackCache[packUrl] || null;
+      if (!audioBuf) {
+        const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+        const fetchTimer = ctrl ? setTimeout(function () { ctrl.abort(); }, 4500) : null;
+        const res = await fetch(packUrl, ctrl ? { signal: ctrl.signal } : undefined);
+        if (fetchTimer) clearTimeout(fetchTimer);
+        if (!res || !res.ok) return false;
+        const arrBuf = await res.arrayBuffer();
+        if (!arrBuf || arrBuf.byteLength < 256 || !sound.ctx) return false;
+        const rawDecoded = await sound.ctx.decodeAudioData(arrBuf.slice(0));
+        if (!rawDecoded) return false;
+        audioBuf = this.trimAudioBufferSilence(rawDecoded);
+        const hKeys = Object.keys(this.hostPackCache);
+        if (hKeys.length > 36) delete this.hostPackCache[hKeys[0]];
+        this.hostPackCache[packUrl] = audioBuf;
+      }
+      if (!audioBuf || seq !== this.utteranceSeq) return false;
+      const playOpts = {
+        // Pack is pre-rendered at natural host pace; never re-speed via playbackRate (would shift pitch)
+        skipRateAdjust: true,
+        personaKey: "主持",
+        mood: mood || "normal",
+        seatId: 0,
+        onAudioReady: opts && opts.onAudioReady,
+        skipPreBreath: true
+      };
+      return this.playBufferedStudioAudio(seq, audioBuf, onDone, playOpts);
+    } catch (e) {
+      return false;
+    }
   },
 
   prefetchFreeLocalNeural: function (personaName, rawText, mood) {
@@ -614,173 +857,271 @@ const voice = {
     const effKey = this.resolvePersonaKey(personaName);
     const cleanText = this.formatMandarinText(rawText);
     if (!cleanText) return;
-    const cacheKey = effKey + "|" + this.accentMode + "|" + Math.round(this.rate * 100) + "|" + (mood || "normal") + "|" + cleanText;
+    if (effKey === "主持" && HOST_VOICE_PACK_MAP[cleanText]) {
+      // Preload bundled host MP3 into RAM for 0ms playback!
+      const url = HOST_VOICE_PACK_MAP[cleanText];
+      if (!this.hostPackCache[url] && typeof fetch === "function") {
+        const self = this;
+        fetch(url)
+          .then(function (r) { return r && r.ok ? r.arrayBuffer() : null; })
+          .then(function (ab) { return (ab && ab.byteLength >= 256 && sound.ctx) ? sound.ctx.decodeAudioData(ab.slice(0)) : null; })
+          .then(function (dec) { if (dec) self.hostPackCache[url] = self.trimAudioBufferSilence(dec); })
+          .catch(function () {});
+      }
+      return;
+    }
+    // Single-pass seamless cache key (matches playFreeLocalNeuralTts 1-to-1 for zero splice hiccups & 100% prefetch hit!)
+    const cacheKey = effKey + "|" + this.accentMode + "|" + Math.round(this.rate * 100) + "|" + (mood || "normal") + "||" + cleanText;
     if (this.localNeuralCache[cacheKey] || this.localNeuralPending[cacheKey]) return;
-    this._fetchLocalNeuralAudio(cacheKey, effKey, cleanText, mood, null);
+    this._fetchLocalNeuralAudio(cacheKey, effKey, cleanText, mood || "normal", null, "");
   },
 
   playFreeLocalNeuralTts: async function (seq, personaName, cleanText, mood, onDone, opts) {
     if (!this.localNeuralAvailable || !sound.ctx) return false;
     const effKey = this.resolvePersonaKey(personaName);
-    const segments = this.splitTwoStageStream(cleanText);
-    const makeKey = function (segText) {
-      return effKey + "|" + voice.accentMode + "|" + Math.round(voice.rate * 100) + "|" + (mood || "normal") + "|" + segText;
-    };
+    if (!cleanText) return false;
 
-    const fetchWithTimeout = async function (segText, timeoutMs) {
-      const ck = makeKey(segText);
-      if (voice.localNeuralCache[ck]) return voice.localNeuralCache[ck];
+    // Single-pass seamless neural synthesis: preserves natural cross-clause co-articulation with zero pitch/speed seam jumps!
+    const ck = effKey + "|" + this.accentMode + "|" + Math.round(this.rate * 100) + "|" + (mood || "normal") + "||" + cleanText;
+    let audioBuf = this.localNeuralCache[ck] || null;
+    if (!audioBuf) {
       const controller = typeof AbortController === "function" ? new AbortController() : null;
       let timer = null;
       try {
-        const fetchPromise = voice._fetchLocalNeuralAudio(
-          ck, effKey, segText, mood,
-          (!voice.localNeuralPending[ck] && controller) ? controller.signal : null
+        const fetchPromise = this._fetchLocalNeuralAudio(
+          ck, effKey, cleanText, mood || "normal",
+          (!this.localNeuralPending[ck] && controller) ? controller.signal : null,
+          ""
         );
         const timeoutPromise = new Promise(function (resolve) {
           timer = setTimeout(function () {
             if (controller) controller.abort();
             resolve(null);
-          }, timeoutMs || 11000);
+          }, 11500);
         });
-        const buf = await Promise.race([fetchPromise, timeoutPromise]);
+        audioBuf = await Promise.race([fetchPromise, timeoutPromise]);
         if (timer) clearTimeout(timer);
-        return buf;
       } catch (e) {
         if (timer) clearTimeout(timer);
-        return null;
-      }
-    };
-
-    // Fast two-stage streaming: synthesize & play opening clause immediately while prefetching rest in parallel!
-    const seg1 = segments[0];
-    const seg2 = segments.length > 1 ? segments[1] : null;
-    if (seg2) {
-      const ck2 = makeKey(seg2);
-      if (!this.localNeuralCache[ck2] && !this.localNeuralPending[ck2]) {
-        this._fetchLocalNeuralAudio(ck2, effKey, seg2, mood, null);
+        return false;
       }
     }
+    if (!audioBuf || seq !== this.utteranceSeq) return false;
 
-    const buf1 = await fetchWithTimeout(seg1, 10000);
-    if (!buf1 || seq !== this.utteranceSeq) return false;
-
-    const estTotalMs = seg2
-      ? Math.round((buf1.duration * (cleanText.length / Math.max(1, seg1.length))) * 1000)
-      : Math.round(buf1.duration * 1000);
-    const playOpts1 = {
+    const playOpts = {
       skipRateAdjust: true,
       personaKey: effKey,
       mood: mood || "normal",
       seatId: opts && opts.seatId,
       onAudioReady: opts && opts.onAudioReady,
-      totalDurationHintMs: estTotalMs,
-      keepSeqOpen: Boolean(seg2)
+      totalDurationHintMs: Math.round(audioBuf.duration * 1000)
     };
+    return this.playBufferedStudioAudio(seq, audioBuf, onDone, playOpts);
+  },
 
-    if (!seg2) {
-      return this.playBufferedStudioAudio(seq, buf1, onDone, playOpts1);
+  injectGeminiVocalTags: function (cleanText, effKey, mood) {
+    // Official Gemini 3.8 TTS inline angle-bracket human vocal bursts (<breath>, <sigh>, <chuckle>, <gasp>, <short pause>)
+    let s = String(cleanText || "").trim();
+    if (!s) return s;
+    if (mood === "panic") {
+      s = "<breath> " + s;
+    } else if (mood === "rebut") {
+      s = "<gasp> " + s;
+    } else if (mood === "last_words") {
+      s = "<sigh> <short pause> " + s;
+    } else if ((mood === "happy" || mood === "trust") && (effKey === "暖暖" || effKey === "柚子")) {
+      s = "<chuckle> " + s;
+    } else if (effKey === "墨白" || effKey === "阿松") {
+      s = "<breath> " + s;
     }
+    // Insert a subtle <short pause> right before dramatic verdict / vote callout if long enough
+    if (s.length >= 28) {
+      s = s.replace(/(這輪|因此|所以|結論是|請諸君|請全場)/, "<short pause> $1");
+    }
+    return s;
+  },
 
-    const self = this;
-    return this.playBufferedStudioAudio(seq, buf1, function () {
-      if (seq !== self.utteranceSeq) return;
-      fetchWithTimeout(seg2, 10000).then(function (buf2) {
-        if (seq !== self.utteranceSeq) return;
-        if (!buf2) {
-          self.utteranceSeq += 1;
-          self.setVisualSpeaking(false);
-          if (typeof onDone === "function") onDone();
-          return;
-        }
-        const playOpts2 = {
-          skipRateAdjust: true,
-          personaKey: effKey,
-          mood: mood || "normal",
-          seatId: opts && opts.seatId,
-          skipTypewriterSync: true
-        };
-        if (typeof syncTypewriterToAudioDuration === "function") {
-          syncTypewriterToAudioDuration(buf2.duration * 1000);
-        }
-        self.playBufferedStudioAudio(seq, buf2, onDone, playOpts2);
-      });
-    }, playOpts1);
+  decodeGeminiAudioBytes: async function (bytes) {
+    if (!bytes || bytes.byteLength < 128 || !sound.ctx) return null;
+    const isRiffWav = bytes.byteLength > 44 &&
+      bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+    if (isRiffWav && typeof sound.ctx.decodeAudioData === "function") {
+      try {
+        const decoded = await sound.ctx.decodeAudioData(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+        if (decoded) return this.trimAudioBufferSilence(decoded);
+      } catch (e) {}
+    }
+    // Fallback for headerless 24kHz 16-bit little-endian linear PCM (audio/l16)
+    const pcmOffset = isRiffWav ? 44 : 0;
+    const view = new DataView(bytes.buffer, bytes.byteOffset + pcmOffset, bytes.byteLength - pcmOffset);
+    const samples = Math.floor(view.byteLength / 2);
+    if (samples <= 0) return null;
+    const audioBuf = sound.ctx.createBuffer(1, samples, 24000);
+    const ch = audioBuf.getChannelData(0);
+    for (let i = 0; i < samples; i++) {
+      ch[i] = view.getInt16(i * 2, true) / 32768;
+    }
+    return this.trimAudioBufferSilence(audioBuf);
   },
 
   playGeminiStudioTts: async function (seq, profile, cleanText, mood, onDone, opts) {
     if (!state.geminiApiKey || !sound.ctx) return false;
     const voiceName = profile.studioVoice || "Kore";
     const effKey = (opts && opts.personaKey) ? opts.personaKey : this.activePersonaName;
-    const cacheKey = voiceName + ":" + (mood || "normal") + ":" + cleanText;
+    const cacheKey = voiceName + ":" + effKey + ":" + (mood || "normal") + ":" + (this.rate >= 1.18 ? "f2" : (this.rate >= 1.06 ? "f1" : "n")) + ":" + cleanText;
     if (this.studioCache[cacheKey]) {
-      return this.playBufferedStudioAudio(seq, this.studioCache[cacheKey], onDone, opts);
+      return this.playBufferedStudioAudio(seq, this.studioCache[cacheKey], onDone, Object.assign({}, opts, { skipPreBreath: true, skipRateAdjust: true }));
     }
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent";
+    const baseDir = PERSONA_TTS_DIRECTIONS[effKey] || "自然親切的台灣年輕人日常口語";
+    const moodDirMap = {
+      panic: "略帶緊張急促與真實換氣感，急著替自己澄清",
+      accuse: "語氣堅定有張力、重音落在關鍵疑點上，像真人圓桌推理對質",
+      claim_seer: "語氣鄭重篤定、亮出底牌號召全場信任",
+      rebut: "語氣果決反擊、直接點破對方矛盾",
+      trust: "語氣溫和真誠、像對夥伴點頭肯定",
+      happy: "語氣輕快自然、帶著淺淺笑意",
+      last_words: "語氣沉靜略帶感慨、像離席前的真心叮嚀",
+      host_night: "語氣低沉溫潤、營造靜謐山城夜色",
+      host_dawn: "語氣清朗明快、揭曉天亮結果"
+    };
+    const paceDir = this.rate >= 1.18 ? "；整體語速明顯輕快緊湊" : (this.rate >= 1.06 ? "；語速略快自然" : "");
+    const stylePrompt = baseDir + "；" + (moodDirMap[mood] || "自然流暢像圍坐木桌泡茶聊天，有真實抑揚頓挫與呼吸感") + paceDir;
+    const taggedTranscript = this.injectGeminiVocalTags(cleanText, effKey, mood || "normal");
+
     const controller = new AbortController();
-    const timer = setTimeout(function () { controller.abort(); }, 8500);
+    const timer = setTimeout(function () { controller.abort(); }, 9500);
     try {
-      const baseDir = PERSONA_TTS_DIRECTIONS[effKey] || "自然親切的台灣年輕人口語";
-      const moodDirMap = {
-        panic: "語氣略帶緊張急促、防守心虛",
-        accuse: "語氣堅定犀利、帶有質詢與說服力",
-        claim_seer: "語氣鄭重果決、亮明身分號召全場",
-        rebut: "語氣急轉反駁、直指對方邏輯漏洞",
-        trust: "語氣溫和真誠、展現信任與善意",
-        happy: "語氣輕快開朗、帶著微笑",
-        last_words: "語氣略微不捨沉靜、像臨走前的誠懇叮嚀",
-        host_night: "語氣低沉神祕、營造夜晚靜謐氛圍",
-        host_dawn: "語氣清朗明快、揭曉天亮結果"
-      };
-      const moodDir = moodDirMap[mood] || "語氣自然流暢、像圍坐喝茶聊天";
-      const styledText = "（請以「" + baseDir + "，" + moodDir + "」演繹以下繁體中文台詞，直接唸出內容不要唸括號指令）：" + cleanText;
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": state.geminiApiKey
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: styledText }] }],
-          generationConfig: {
-            responseModalities: ["AUDIO"],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: voiceName }
+      let audioBytes = null;
+      // Route through local disk-caching proxy (/api/tts/gemini -> .tts_cache/gem_*.wav) when server.py is active!
+      if (this.localNeuralAvailable) {
+        const proxyRes = await fetch("/api/tts/gemini", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": state.geminiApiKey
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            voice: voiceName,
+            style: stylePrompt,
+            text: taggedTranscript
+          })
+        });
+        if (proxyRes && proxyRes.ok) {
+          const arrBuf = await proxyRes.arrayBuffer();
+          if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
+        }
+      }
+      // Pure-static cloud fallback: call official Gemini 3.8 TTS Interactions API directly
+      if (!audioBytes) {
+        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": state.geminiApiKey
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: "gemini-3.8-flash-tts",
+            store: false,
+            input: [{
+              type: "user_input",
+              content: [{
+                type: "text",
+                text: taggedTranscript,
+                annotations: [{
+                  type: "speech_metadata",
+                  style: stylePrompt
+                }]
+              }]
+            }],
+            response_format: { type: "audio" },
+            generation_config: {
+              speech_config: [{ voice: voiceName }]
+            }
+          })
+        });
+        if (res && res.ok) {
+          const data = await res.json();
+          let b64 = null;
+          const steps = (data && Array.isArray(data.steps)) ? data.steps : [];
+          for (let si = steps.length - 1; si >= 0 && !b64; si--) {
+            if (steps[si] && steps[si].type === "model_output" && Array.isArray(steps[si].content)) {
+              for (let ci = steps[si].content.length - 1; ci >= 0; ci--) {
+                const blk = steps[si].content[ci];
+                if (blk && blk.type === "audio" && blk.data) { b64 = blk.data; break; }
               }
             }
           }
-        })
-      });
-      clearTimeout(timer);
-      if (!res.ok || seq !== this.utteranceSeq) return false;
-      const data = await res.json();
-      const inlineData = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].inlineData;
-      if (!inlineData || !inlineData.data || seq !== this.utteranceSeq) return false;
-
-      // Decode 24kHz 16-bit PCM into Web Audio Buffer for crystal-clear playback!
-      const rawBin = atob(inlineData.data);
-      const len = rawBin.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) bytes[i] = rawBin.charCodeAt(i);
-      const view = new DataView(bytes.buffer);
-      const samples = Math.floor(len / 2);
-      const audioBuf = sound.ctx.createBuffer(1, samples, 24000);
-      const ch = audioBuf.getChannelData(0);
-      for (let i = 0; i < samples; i++) {
-        ch[i] = view.getInt16(i * 2, true) / 32768;
+          if (!b64 && data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].inlineData) {
+            b64 = data.candidates[0].content.parts[0].inlineData.data;
+          }
+          if (b64) {
+            const rawBin = atob(b64);
+            audioBytes = new Uint8Array(rawBin.length);
+            for (let i = 0; i < rawBin.length; i++) audioBytes[i] = rawBin.charCodeAt(i);
+          }
+        }
       }
-      if (cleanText.length <= 40) {
+      clearTimeout(timer);
+      if (!audioBytes || seq !== this.utteranceSeq) return false;
+      const audioBuf = await this.decodeGeminiAudioBytes(audioBytes);
+      if (!audioBuf || seq !== this.utteranceSeq) return false;
+      if (cleanText.length <= 96) {
         const keys = Object.keys(this.studioCache);
-        if (keys.length > 24) delete this.studioCache[keys[0]];
+        if (keys.length > 32) delete this.studioCache[keys[0]];
         this.studioCache[cacheKey] = audioBuf;
       }
-      return this.playBufferedStudioAudio(seq, audioBuf, onDone, opts);
+      // Gemini 3.8 TTS already renders natural <breath> inline, so skip synthetic pre-breath!
+      return this.playBufferedStudioAudio(seq, audioBuf, onDone, Object.assign({}, opts, { skipPreBreath: true, skipRateAdjust: true }));
     } catch (e) {
       clearTimeout(timer);
       return false;
     }
+  },
+
+  triggerSeatBackchannel: function (seatId, kind, delayMs) {
+    // Non-interrupting spatialized roundtable vocal interjection (100% public-event driven, zero hidden-role leak!)
+    if (!this.enabled || !this.liveBackchannel || this.paused || this.mode === "cozy") return false;
+    if (!this.localNeuralAvailable || !sound || !sound.ctx || sound.muted || this.volume < 0.08) return false;
+    if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
+    if (typeof state === "undefined" || !state.match || !state.match.started) return false;
+    const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+    if (!seatId || seatId === pid || seatId === state.activeSpeakerId) return false;
+    const seat = typeof getSeat === "function" ? getSeat(seatId) : null;
+    if (!seat || !seat.alive) return false;
+
+    const turnKey = (state.match.day || 0) + ":" + (state.activeSpeakerId || 0) + ":" + (state.match.daySpeechEvents ? state.match.daySpeechEvents.length : 0);
+    const now = Date.now();
+    if (this._lastBackchannelTurnKey === turnKey || (now - this._lastBackchannelAt) < 2600) return false;
+    const bank = PERSONA_BACKCHANNEL_CLIPS[seat.name];
+    const list = bank && (bank[kind] || bank.accuse);
+    if (!list || !list.length) return false;
+
+    this._lastBackchannelTurnKey = turnKey;
+    this._lastBackchannelAt = now;
+    const pickIdx = ((seat.id * 7 + (state.match.day || 1) * 3 + (state.activeSpeakerId || 1)) % list.length + list.length) % list.length;
+    const phrase = list[pickIdx];
+    const effKey = seat.name;
+    const mood = kind === "vouch" ? "trust" : (kind === "clash" ? "rebut" : "panic");
+    const ck = effKey + "|" + this.accentMode + "|" + Math.round(this.rate * 100) + "|" + mood + "|backchannel|" + phrase;
+    const self = this;
+
+    // Fetch immediately in background while delaying playback by ~720ms so it lands naturally after speaker's opening clause!
+    const audioPromise = this._fetchLocalNeuralAudio(ck, effKey, phrase, mood, null, "backchannel");
+    const waitMs = clamp(typeof delayMs === "number" ? delayMs : 760, 320, 1600);
+    setTimeout(function () {
+      if (!self.enabled || !self.liveBackchannel || self.paused || !self.speaking) return;
+      if (!state.match || state.match.phase !== "DAY_SPEECH") return;
+      audioPromise.then(function (buf) {
+        if (!buf || !self.enabled || self.paused || !self.speaking) return;
+        const eq = (typeof PERSONA_AUDIO_EQ !== "undefined" && PERSONA_AUDIO_EQ[effKey]) ? PERSONA_AUDIO_EQ[effKey] : null;
+        const pbRate = self.accentMode === "tw" && eq ? (eq.twRateMul || 1.0) : 1.02;
+        const detune = eq ? (self.accentMode === "tw" ? (eq.twDetuneCents || 0) : (eq.detuneCents || 0)) : 0;
+        sound.playBackchannelBuffer(buf, seat.id, effKey, pbRate, detune);
+      });
+    }, waitMs);
+    return true;
   },
 
   speak: function (personaName, rawText, mood, onDone, opts) {
@@ -820,21 +1161,51 @@ const voice = {
       onAudioReady: opts && opts.onAudioReady
     };
 
-    // Priority 1 (100% Free $0): Local Neural Voice Server (server.py + Microsoft Edge Neural voices!)
-    if (this.localNeuralAvailable && sound.ctx) {
+    // Priority 0: Pre-generated Qingming Host Neural Voice Pack (0ms instant studio playback even offline / on GitHub Pages!)
+    const useBundledHost = Boolean(effKey === "主持" && HOST_VOICE_PACK_MAP[clean] && sound && sound.ctx && !(state.geminiApiKey && this.enginePref === "gemini"));
+    if (useBundledHost) {
       this.setVisualSpeaking(true);
-      this.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
-        if (ok || seq !== self.utteranceSeq) return;
+      this.playBundledHostClip(seq, clean, mood || "normal", onDone, forwardOpts).then(function (okHost) {
+        if (okHost || seq !== self.utteranceSeq) return;
+        if (self.localNeuralAvailable && sound.ctx) {
+          self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
+            if (ok2 || seq !== self.utteranceSeq) return;
+            if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
+            self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
+          });
+          return;
+        }
         if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
         self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
       });
       return;
     }
 
-    // Priority 2 (Optional): If user voluntarily connected their own Gemini API Key
-    if (state.geminiApiKey && sound.ctx) {
+    // Dual-Track Priority Router (v13.1):
+    // - If user connected Gemini API key AND enginePref !== "local": run Gemini 3.8 Flash TTS (with .tts_cache disk caching!) -> seamless fallback to $0 Local Neural -> Browser TTS!
+    // - Otherwise: run $0 Free Local Neural (multi-clause prosody arc + silence trim) -> Gemini fallback -> Browser TTS!
+    const wantGeminiFirst = Boolean(state.geminiApiKey && sound.ctx && this.enginePref !== "local");
+    if (wantGeminiFirst) {
       this.setVisualSpeaking(true);
       this.playGeminiStudioTts(seq, profile, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
+        if (ok || seq !== self.utteranceSeq) return;
+        if (self.localNeuralAvailable && sound.ctx) {
+          self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
+            if (ok2 || seq !== self.utteranceSeq) return;
+            if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
+            self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
+          });
+          return;
+        }
+        if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
+        self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
+      });
+      return;
+    }
+
+    if (this.localNeuralAvailable && sound.ctx) {
+      this.setVisualSpeaking(true);
+      this.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
         if (ok || seq !== self.utteranceSeq) return;
         if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
         self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
@@ -885,6 +1256,7 @@ const voice = {
       }, 8500);
 
       const totalEstMs = Math.min(28000, Math.max(3600, Math.round((clean.length * 360) / baseRate) + clauses.length * 240 + 1400));
+      this._resumeWatchdogMs = totalEstMs;
       this._resumeWatchdogFinish = finishOnce;
       this.watchdogTimer = setTimeout(function () {
         if (!self.paused) finishOnce();
@@ -958,6 +1330,9 @@ const voice = {
         speakNextClause();
       }
     } catch (e) {
+      this.utteranceSeq += 1;
+      this.clearTimers();
+      this.activeUtterance = null;
       this.setVisualSpeaking(false);
       if (typeof onDone === "function") setTimeout(onDone, 0);
     }

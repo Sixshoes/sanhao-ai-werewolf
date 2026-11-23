@@ -4,20 +4,20 @@
 "use strict";
 
 const PERSONA_AUDIO_EQ = {
-  "主持":  { lowFreq: 190, lowGain: 1.0,  midFreq: 950,  midGain: 0.4,  presFreq: 3000, presGain: 0.6, highFreq: 6800, highGain: -1.0, revSend: 0.14, gainTrim: 0.98, twRateMul: 1.00 },
-  "你":    { lowFreq: 200, lowGain: 0.6,  midFreq: 1000, midGain: 0.2,  presFreq: 3100, presGain: 0.8, highFreq: 6600, highGain: -0.8, revSend: 0.04, gainTrim: 1.00, twRateMul: 1.00 },
-  "你_男": { lowFreq: 185, lowGain: 0.8,  midFreq: 860,  midGain: 0.4,  presFreq: 2800, presGain: 0.8, highFreq: 6400, highGain: -1.0, revSend: 0.05, gainTrim: 1.01, twRateMul: 1.00 },
-  "小澄":  { lowFreq: 215, lowGain: -1.2, midFreq: 1180, midGain: 0.9,  presFreq: 3500, presGain: 1.6, highFreq: 6800, highGain: -0.5, revSend: 0.04, gainTrim: 0.98, twRateMul: 1.045 },
-  "暖暖":  { lowFreq: 220, lowGain: 0.8,  midFreq: 920,  midGain: 0.3,  presFreq: 2900, presGain: 0.5, highFreq: 7500, highGain: 0.9,  revSend: 0.07, gainTrim: 0.96, twRateMul: 0.98 },
-  "阿松":  { lowFreq: 165, lowGain: 2.2,  midFreq: 640,  midGain: 0.9,  presFreq: 2400, presGain: 0.4, highFreq: 5500, highGain: -1.6, revSend: 0.06, gainTrim: 1.04, twRateMul: 0.935 },
-  "星兒":  { lowFreq: 230, lowGain: -0.8, midFreq: 1150, midGain: 0.3,  presFreq: 3900, presGain: 1.2, highFreq: 7600, highGain: 0.8,  revSend: 0.05, gainTrim: 0.95, twRateMul: 1.04 },
-  "小雲":  { lowFreq: 215, lowGain: -0.5, midFreq: 1050, midGain: 0.6,  presFreq: 2800, presGain: 1.3, highFreq: 6400, highGain: -1.0, revSend: 0.04, gainTrim: 0.99, twRateMul: 1.02 },
-  "阿竹":  { lowFreq: 195, lowGain: 1.1,  midFreq: 720,  midGain: 1.2,  presFreq: 2700, presGain: 0.4, highFreq: 6000, highGain: -1.2, revSend: 0.09, gainTrim: 1.00, twRateMul: 0.965 },
-  "晨晨":  { lowFreq: 210, lowGain: 0.3,  midFreq: 1080, midGain: 0.8,  presFreq: 3650, presGain: 1.8, highFreq: 7200, highGain: -0.2, revSend: 0.05, gainTrim: 1.02, twRateMul: 1.06 },
-  "墨白":  { lowFreq: 155, lowGain: 2.5,  midFreq: 580,  midGain: 0.8,  presFreq: 2250, presGain: 0.5, highFreq: 5200, highGain: -1.8, revSend: 0.08, gainTrim: 1.03, twRateMul: 0.92 },
-  "晴嵐":  { lowFreq: 205, lowGain: 0.7,  midFreq: 960,  midGain: 0.5,  presFreq: 2950, presGain: 0.7, highFreq: 6900, highGain: -0.4, revSend: 0.08, gainTrim: 0.98, twRateMul: 0.96 },
-  "阿朗":  { lowFreq: 190, lowGain: -0.4, midFreq: 1140, midGain: 1.1,  presFreq: 3450, presGain: 1.9, highFreq: 6700, highGain: -0.4, revSend: 0.04, gainTrim: 1.02, twRateMul: 1.055 },
-  "柚子":  { lowFreq: 240, lowGain: -0.9, midFreq: 1220, midGain: 0.4,  presFreq: 4050, presGain: 1.3, highFreq: 7800, highGain: 1.0,  revSend: 0.05, gainTrim: 0.96, twRateMul: 1.05 }
+  "主持":  { lowFreq: 185, lowGain: 1.2,  midFreq: 880,  midGain: 0.6,  presFreq: 2850, presGain: 0.5, highFreq: 5900, highGain: -1.8, revSend: 0.16, gainTrim: 0.99, animeRateMul: 1.00,  twRateMul: 1.00,  detuneCents: -8,  twDetuneCents: -10, breathFreq: 1220, breathDur: 0.125 },
+  "你":    { lowFreq: 205, lowGain: 0.7,  midFreq: 980,  midGain: 0.4,  presFreq: 3000, presGain: 0.7, highFreq: 6100, highGain: -1.6, revSend: 0.09, gainTrim: 1.00, animeRateMul: 1.00,  twRateMul: 1.00,  detuneCents: 6,   twDetuneCents: 10,  breathFreq: 1380, breathDur: 0.105 },
+  "你_男": { lowFreq: 180, lowGain: 1.1,  midFreq: 820,  midGain: 0.6,  presFreq: 2700, presGain: 0.7, highFreq: 5800, highGain: -1.8, revSend: 0.10, gainTrim: 1.01, animeRateMul: 1.00,  twRateMul: 1.00,  detuneCents: -6,  twDetuneCents: -8,  breathFreq: 1080, breathDur: 0.110 },
+  "小澄":  { lowFreq: 220, lowGain: -1.6, midFreq: 1240, midGain: 1.3,  presFreq: 3400, presGain: 1.4, highFreq: 6150, highGain: -1.5, revSend: 0.08, gainTrim: 0.99, animeRateMul: 1.045, twRateMul: 1.055, detuneCents: 26,  twDetuneCents: 52,  breathFreq: 1320, breathDur: 0.092 },
+  "暖暖":  { lowFreq: 225, lowGain: 1.0,  midFreq: 910,  midGain: 0.5,  presFreq: 2800, presGain: 0.4, highFreq: 6500, highGain: -0.9, revSend: 0.12, gainTrim: 0.97, animeRateMul: 0.99,  twRateMul: 0.975, detuneCents: 14,  twDetuneCents: 22,  breathFreq: 1480, breathDur: 0.120 },
+  "阿松":  { lowFreq: 155, lowGain: 2.8,  midFreq: 590,  midGain: 1.4,  presFreq: 2300, presGain: 0.3, highFreq: 5200, highGain: -2.4, revSend: 0.13, gainTrim: 1.05, animeRateMul: 0.935, twRateMul: 0.925, detuneCents: -46, twDetuneCents: -68, breathFreq: 960,  breathDur: 0.135 },
+  "星兒":  { lowFreq: 235, lowGain: -0.9, midFreq: 1180, midGain: 0.5,  presFreq: 3550, presGain: 0.9, highFreq: 6600, highGain: -1.1, revSend: 0.10, gainTrim: 0.96, animeRateMul: 1.015, twRateMul: 1.045, detuneCents: 28,  twDetuneCents: 46,  breathFreq: 1620, breathDur: 0.090 },
+  "小雲":  { lowFreq: 210, lowGain: -0.6, midFreq: 1060, midGain: 0.9,  presFreq: 2950, presGain: 1.1, highFreq: 5900, highGain: -1.7, revSend: 0.09, gainTrim: 1.00, animeRateMul: 1.01,  twRateMul: 1.025, detuneCents: -10, twDetuneCents: -24, breathFreq: 1360, breathDur: 0.095 },
+  "阿竹":  { lowFreq: 188, lowGain: 1.5,  midFreq: 700,  midGain: 1.4,  presFreq: 2580, presGain: 0.3, highFreq: 5550, highGain: -2.1, revSend: 0.15, gainTrim: 1.01, animeRateMul: 0.985, twRateMul: 0.955, detuneCents: -18, twDetuneCents: -38, breathFreq: 1050, breathDur: 0.132 },
+  "晨晨":  { lowFreq: 205, lowGain: 0.5,  midFreq: 1120, midGain: 1.0,  presFreq: 3450, presGain: 1.4, highFreq: 6300, highGain: -1.3, revSend: 0.10, gainTrim: 1.02, animeRateMul: 1.02,  twRateMul: 1.070, detuneCents: 26,  twDetuneCents: 68,  breathFreq: 1280, breathDur: 0.088 },
+  "墨白":  { lowFreq: 148, lowGain: 3.0,  midFreq: 540,  midGain: 1.4,  presFreq: 2180, presGain: 0.4, highFreq: 5000, highGain: -2.5, revSend: 0.16, gainTrim: 1.04, animeRateMul: 0.97,  twRateMul: 0.905, detuneCents: -38, twDetuneCents: -92, breathFreq: 890,  breathDur: 0.148 },
+  "晴嵐":  { lowFreq: 200, lowGain: 1.2,  midFreq: 870,  midGain: 0.9,  presFreq: 2740, presGain: 0.5, highFreq: 6150, highGain: -1.5, revSend: 0.15, gainTrim: 0.99, animeRateMul: 0.975, twRateMul: 0.955, detuneCents: -20, twDetuneCents: -30, breathFreq: 1320, breathDur: 0.136 },
+  "阿朗":  { lowFreq: 192, lowGain: -0.5, midFreq: 1160, midGain: 1.3,  presFreq: 3380, presGain: 1.5, highFreq: 6050, highGain: -1.5, revSend: 0.09, gainTrim: 1.02, animeRateMul: 1.02,  twRateMul: 1.050, detuneCents: 14,  twDetuneCents: 34,  breathFreq: 1240, breathDur: 0.090 },
+  "柚子":  { lowFreq: 245, lowGain: -1.0, midFreq: 1280, midGain: 0.7,  presFreq: 3720, presGain: 1.1, highFreq: 6850, highGain: -0.7, revSend: 0.10, gainTrim: 0.97, animeRateMul: 1.03,  twRateMul: 1.055, detuneCents: 36,  twDetuneCents: 64,  breathFreq: 1680, breathDur: 0.094 }
 };
 
 const sound = {
@@ -37,6 +37,7 @@ const sound = {
   voiceAnalyserData: null,
   voiceFreqData: null,
   voiceOutGain: null,
+  voiceRoomConv: null,
   cozyMouthPulse: 0,
   reverb: null,
   muted: false,
@@ -119,7 +120,10 @@ const sound = {
         this.voiceOutGain.gain.value = 0.92;
 
         this.voiceRevSend = this.ctx.createGain();
-        this.voiceRevSend.gain.value = 0.08;
+        this.voiceRevSend.gain.value = 0.11;
+        this.voiceRoomConv = this.buildWoodenPavilionImpulse(0.36);
+        const voiceRoomReturn = this.ctx.createGain();
+        voiceRoomReturn.gain.value = 0.52;
 
         this.voiceBus.connect(this.voiceLowShelf);
         this.voiceLowShelf.connect(this.voiceMidPeak);
@@ -135,7 +139,9 @@ const sound = {
         }
         this.voiceOutGain.connect(this.comp);
         this.voiceOutGain.connect(this.voiceRevSend);
-        this.voiceRevSend.connect(this.reverb);
+        this.voiceRevSend.connect(this.voiceRoomConv);
+        this.voiceRoomConv.connect(voiceRoomReturn);
+        voiceRoomReturn.connect(this.comp);
 
         this.comp.connect(this.analyser);
         this.analyser.connect(this.ctx.destination);
@@ -153,6 +159,149 @@ const sound = {
     }
     this.updateEqIndicator();
     voice.unlock();
+  },
+
+  buildWoodenPavilionImpulse: function (seconds) {
+    // Near-field walnut tea table & cedar pavilion early-reflection impulse (replaces hollow 2.1s hall echo on voices)
+    const conv = this.ctx.createConvolver();
+    const rate = this.ctx.sampleRate;
+    const length = Math.max(256, Math.floor(rate * (seconds || 0.36)));
+    const impulse = this.ctx.createBuffer(2, length, rate);
+    const earlyTapsMs = [
+      [7.4, 0.36, 0.32],   // Walnut tabletop bounce (~1.25m path diff)
+      [13.8, 0.24, 0.28],  // Wooden floorboards
+      [20.6, 0.19, 0.14],  // Left cypress pillar
+      [27.9, 0.14, 0.20],  // Right lattice screen
+      [36.5, 0.12, 0.12]   // Raftered cedar roof
+    ];
+    for (let ch = 0; ch < 2; ch++) {
+      const buf = impulse.getChannelData(ch);
+      let lp = 0;
+      for (let i = 0; i < length; i++) {
+        const t = i / length;
+        // Warm, intimate wood-absorbed diffuse tail (-60dB in ~0.34s)
+        const env = Math.pow(1 - t, 4.4);
+        const raw = (Math.random() * 2 - 1) * env * 0.14;
+        lp = lp * 0.78 + raw * 0.22;
+        buf[i] = lp;
+      }
+      for (let k = 0; k < earlyTapsMs.length; k++) {
+        const tap = earlyTapsMs[k];
+        const idx = Math.floor((tap[0] / 1000) * rate);
+        if (idx > 1 && idx + 3 < length) {
+          const amp = tap[ch + 1];
+          buf[idx - 1] += amp * 0.25;
+          buf[idx] += amp * 0.55;
+          buf[idx + 1] += amp * 0.20;
+        }
+      }
+    }
+    conv.buffer = impulse;
+    return conv;
+  },
+
+  playPreSpeechBreath: function (personaKey, mood, seatId) {
+    if (this.muted || !this.ctx || typeof voice === "undefined" || voice.volume < 0.06) return;
+    if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return;
+    try {
+      const eq = PERSONA_AUDIO_EQ[personaKey] || PERSONA_AUDIO_EQ["暖暖"];
+      const rate = this.ctx.sampleRate;
+      const isUrgent = mood === "panic" || mood === "rebut" || mood === "claim_seer";
+      const isSlow = mood === "last_words" || mood === "host_night";
+      const dur = clamp((eq.breathDur || 0.11) * (isUrgent ? 0.80 : (isSlow ? 1.24 : 1.0)), 0.065, 0.18);
+      const frames = Math.max(64, Math.floor(rate * dur));
+      const bBuf = this.ctx.createBuffer(1, frames, rate);
+      const data = bBuf.getChannelData(0);
+      let prev = 0;
+      for (let i = 0; i < frames; i++) {
+        const u = i / frames;
+        // Natural human inhalation envelope: soft rise to 35%, gentle taper before vocal onset
+        const env = Math.sin(Math.PI * Math.pow(u, 0.78));
+        const white = (Math.random() * 2 - 1);
+        prev = prev * 0.62 + white * 0.38;
+        data[i] = prev * env;
+      }
+      const src = this.ctx.createBufferSource();
+      src.buffer = bBuf;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = (eq.breathFreq || 1250) * (isUrgent ? 1.12 : 1.0);
+      bp.Q.value = 1.65;
+      const g = this.ctx.createGain();
+      const baseAmp = isUrgent ? 0.015 : (isSlow ? 0.013 : 0.010);
+      g.gain.value = clamp(baseAmp * voice.volume, 0.001, 0.020);
+      src.connect(bp);
+      if (typeof this.ctx.createStereoPanner === "function" && seatId && typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.computeSeatPan === "function") {
+        const panNode = this.ctx.createStereoPanner();
+        panNode.pan.value = clamp(stage3d.computeSeatPan(seatId) * 0.64, -0.75, 0.75);
+        bp.connect(panNode);
+        panNode.connect(g);
+      } else {
+        bp.connect(g);
+      }
+      g.connect(this.comp || this.ctx.destination);
+      if (this.voiceRoomConv) {
+        const rSend = this.ctx.createGain();
+        rSend.gain.value = 0.18;
+        g.connect(rSend);
+        rSend.connect(this.voiceRoomConv);
+      }
+      src.start();
+    } catch (e) {}
+  },
+
+  playBackchannelBuffer: function (audioBuf, seatId, personaKey, pbRate, detuneCents) {
+    if (this.muted || !this.ctx || !audioBuf || typeof voice === "undefined" || voice.volume < 0.05) return false;
+    try {
+      if (this.ctx.state === "suspended" && typeof this.ctx.resume === "function") {
+        this.ctx.resume().catch(function () {});
+      }
+      const eq = PERSONA_AUDIO_EQ[personaKey] || PERSONA_AUDIO_EQ["暖暖"];
+      const src = this.ctx.createBufferSource();
+      src.buffer = audioBuf;
+      src.playbackRate.value = clamp(pbRate || 1.0, 0.88, 1.24);
+      if (src.detune && typeof detuneCents === "number") {
+        src.detune.value = clamp(detuneCents, -140, 140);
+      }
+      // Subtle off-axis tabletop distance warmth so listener interjection never masks main speaker
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 4300;
+      const bodyEq = this.ctx.createBiquadFilter();
+      bodyEq.type = "peaking";
+      bodyEq.frequency.value = eq.midFreq || 950;
+      bodyEq.Q.value = 1.0;
+      bodyEq.gain.value = eq.midGain || 0.5;
+      const g = this.ctx.createGain();
+      g.gain.value = clamp(voice.volume * 0.36 * (eq.gainTrim || 1.0), 0.04, 0.44);
+
+      src.connect(bodyEq);
+      bodyEq.connect(lp);
+      if (typeof this.ctx.createStereoPanner === "function") {
+        const panNode = this.ctx.createStereoPanner();
+        let panVal = (((seatId || 2) % 2 === 0) ? -0.48 : 0.48);
+        if (seatId && typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.computeSeatPan === "function") {
+          panVal = clamp(stage3d.computeSeatPan(seatId) * 0.86, -0.82, 0.82);
+          if (Math.abs(panVal) < 0.16) panVal = panVal >= 0 ? 0.24 : -0.24;
+        }
+        panNode.pan.value = panVal;
+        lp.connect(panNode);
+        panNode.connect(g);
+      } else {
+        lp.connect(g);
+      }
+      g.connect(this.comp || this.ctx.destination);
+      if (this.voiceRoomConv) {
+        const rSend = this.ctx.createGain();
+        rSend.gain.value = 0.22;
+        g.connect(rSend);
+        rSend.connect(this.voiceRoomConv);
+      }
+      src.start();
+      return true;
+    } catch (e) {
+      return false;
+    }
   },
 
   buildHallReverb: function (seconds) {
@@ -194,18 +343,20 @@ const sound = {
       }
       if (this.voiceMidPeak) {
         this.voiceMidPeak.frequency.setTargetAtTime(eq.midFreq, now, 0.04);
+        this.voiceMidPeak.Q.setTargetAtTime(1.15, now, 0.04);
         this.voiceMidPeak.gain.setTargetAtTime(eq.midGain, now, 0.04);
       }
       if (this.voicePresence) {
         this.voicePresence.frequency.setTargetAtTime(eq.presFreq, now, 0.04);
-        this.voicePresence.gain.setTargetAtTime(eq.presGain + (mood === "accuse" ? 0.9 : 0), now, 0.04);
+        const moodLift = (mood === "accuse" || mood === "rebut" || mood === "claim_seer") ? 0.65 : (mood === "last_words" ? -0.45 : 0);
+        this.voicePresence.gain.setTargetAtTime(eq.presGain + moodLift, now, 0.04);
       }
       if (this.voiceDeEss) {
         this.voiceDeEss.frequency.setTargetAtTime(eq.highFreq, now, 0.04);
         this.voiceDeEss.gain.setTargetAtTime(eq.highGain, now, 0.04);
       }
       if (this.voiceRevSend) {
-        const rev = mood === "host_night" ? Math.max(0.26, eq.revSend) : (mood === "last_words" ? Math.max(0.14, eq.revSend) : eq.revSend);
+        const rev = mood === "host_night" ? Math.max(0.24, eq.revSend) : (mood === "last_words" ? Math.max(0.18, eq.revSend) : eq.revSend);
         this.voiceRevSend.gain.setTargetAtTime(rev, now, 0.04);
       }
       if (this.voiceOutGain) {

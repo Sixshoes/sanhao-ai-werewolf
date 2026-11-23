@@ -24,8 +24,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.56,
     godHideBias: 0.72,
     talkCadence: 1.05,
-    sampleQuote: "我把前面幾位的時間點對了一遍，前後完全兜不攏。先照證據投這張，別被帶偏了，過。",
-    llmStyleRule: "使用冷靜俐落的台灣資工系學長口吻（常帶『對一下時間線、前後兜不攏、用排除法看、講重點、票型對照、先過』），克制不煽情；嚴禁使用『邏輯閉環、高置信度、異常值、行為向量、算力、載入模型』等生硬機器詞彙。"
+    sampleQuote: "欸等一下，我剛順了一遍大家講的時間點，這邊前後根本兜不起來啊…照刪去法看這輪我先投這張喔，過。",
+    llmStyleRule: "使用真實自然的台灣資工系男大生日常聊天口吻（常帶『欸等一下、我剛順了一遍、前後兜不攏耶、照刪去法看、先這樣，過』），短句自然呼吸停頓，像朋友圍桌推理；嚴禁使用『邏輯閉環、高置信度、異常值、行為向量、算力、載入模型』或演講稿腔。"
   }),
   "暖暖": Object.freeze({
     register: "warm",
@@ -41,8 +41,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.42,
     godHideBias: 0.28,
     talkCadence: 0.88,
-    sampleQuote: "先喝口熱茶別動氣嘛～暖暖最怕大家兇巴巴吵架了，如果誰一直刺刺地挑撥，只好先請他去旁邊喝花茶冷靜囉。",
-    llmStyleRule: "溫柔軟萌、愛用泡茶暖場哄人（常帶『熱茶、別動氣嘛、暖暖好擔心、喝花茶冷靜』）；抽到酸民狼時要展現笑裡藏刀的反差萌，用最甜的語氣補最狠的刀。"
+    sampleQuote: "欸大家先喝口熱茶別吵架嘛…可是老實說，剛剛聽那樣刺刺的口氣心裡有點毛毛的耶，這輪只好先請他去旁邊冷靜一下囉。",
+    llmStyleRule: "使用溫柔自然的台灣女大生日常聊天語氣（常帶『欸大家先別急嘛、老實說心裡有點毛毛的、先喝口茶慢慢講』），自然親切不誇張；抽到酸民狼時用最柔和客氣的口吻默默推人。"
   }),
   "阿松": Object.freeze({
     register: "mountain",
@@ -58,8 +58,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.50,
     godHideBias: 0.55,
     talkCadence: 0.82,
-    sampleQuote: "老松爬林美山三十年，雲海嵐氣看多了。誰一開口就在放山霧迷魂陣我一眼就懂，咱們不繞山路，直接抓狼。",
-    llmStyleRule: "自稱『老松』，充滿台灣登山老學長的豪爽江湖味，愛用『爬山、看雲海、走稜線、山嵐、龜山島日出、老江湖』等山林比喻，講話接地氣又帶幽默。"
+    sampleQuote: "欸老松講句實在話吼，剛剛聽半天都在繞圈子沒講重點，聽起來超心虛啊，這輪大家別分票直接抓狼啦，過。",
+    llmStyleRule: "自稱『老松』，充滿台灣登山社老學長接地氣的自然聊天味（常帶『欸老松講句實在話吼、別繞圈子啦、我看人很準的』），鬆弛自然像真人長輩學長聊天，不喊生硬口號。"
   }),
   "星兒": Object.freeze({
     register: "astro",
@@ -75,8 +75,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.80,
     godHideBias: 0.15,
     talkCadence: 1.28,
-    sampleQuote: "欸等等，我今天的水逆直覺突然大響，剛聽那段整個起雞皮疙瘩耶，這股氣場絕對藏著酸民狼。",
-    llmStyleRule: "活潑帶點神祕感的占星社女生口吻（常帶『水逆、星盤、第六感、起雞皮疙瘩、氣場不對』），生動輕快，注意自然口語、不要每句都塞滿驚嘆號。"
+    sampleQuote: "欸等一下啦…你們剛聽那段不會覺得哪裡怪怪的嗎？我聽完真的起雞皮疙瘩耶，直覺他超像在演的，過。",
+    llmStyleRule: "直覺敏銳的台灣女大生自然聊天口吻（常帶『欸等一下啦、不會覺得怪怪的嗎、聽完起雞皮疙瘩耶、我直覺超在意』），像真實朋友圓桌聊天，禁止『緊急星訊廣播、星盤左線』等中二播報口號。"
   }),
   "小雲": Object.freeze({
     register: "press",
@@ -92,8 +92,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.68,
     godHideBias: 0.62,
     talkCadence: 1.10,
-    sampleQuote: "我翻了一下剛才記的逐字筆記，前後說法明顯有時間差，這種帶風向的話術瞞不過查核。",
-    llmStyleRule: "犀利校園新聞查核社長口吻（常帶『逐字筆記、消息來源、時間差、查核對照、頭版點名』），追查前後矛盾不留情面、語氣乾脆冷靜。"
+    sampleQuote: "欸慢著，我剛邊聽邊記了一下喔，前面講的跟剛剛講的根本對不起來啊，這很明顯在帶風向吧？",
+    llmStyleRule: "邊聽邊記筆記的台灣新聞社學姊自然口吻（常帶『欸慢著、我剛記了一下喔、前後對不起來啊、你的根據在哪』），敏銳直接但像真人口語，禁止『事實查核報告出爐、頭版快訊』等新聞播報腔。"
   }),
   "阿竹": Object.freeze({
     register: "poetic",
@@ -126,8 +126,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.92,
     godHideBias: 0.10,
     talkCadence: 1.32,
-    sampleQuote: "兄弟們這波看清楚了，剛才那段發言破綻大得像漏防空檔，不直接抄截投出去對不起全場，衝了！",
-    llmStyleRule: "熱血球社隊長口吻（常帶『兄弟們、防守破綻、抄截快攻、正面對決、衝了』），爽朗直來直往、有球友講義氣的語感。"
+    sampleQuote: "欸不是啊兄弟們，剛剛那段破綻也太大了吧，講話一直閃重點還想帶節奏，這不直接投出去說不過去吧！",
+    llmStyleRule: "爽朗直率的台灣運動系男大生自然口語（常帶『欸兄弟們、不是啊、破綻很大耶、講話乾脆一點』），像真實朋友同桌討論，禁止『絕殺灌籃、神聖進球』等誇張卡通口號。"
   }),
   "墨白": Object.freeze({
     register: "classical",
@@ -177,8 +177,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.88,
     godHideBias: 0.48,
     talkCadence: 1.20,
-    sampleQuote: "我方提出異議。請問對方辯友，您既拿不出實質佐證又意圖偷換概念，舉證責任完全失守，請全場評審本輪裁決。",
-    llmStyleRule: "犀利辯論社主辯／法庭交叉質詢口吻（常帶『我方提出異議、請問對方辯友、舉證責任、偷換概念、結辯陳詞、全場評審裁決』），字字鏗鏘、擅長反問壓制。"
+    sampleQuote: "欸等一下，這邏輯說不通吧？連半點實際證據都沒拿出來就急著扣帽子，這輪照證據看我建議先投他，過。",
+    llmStyleRule: "犀利但自然的台灣辯論社男大生日常口語（常帶『欸等一下、這證據在哪、邏輯說不通吧、別偷換概念、照證據投』），擅長反問抓漏洞但像真人對話，禁止『正方一辯登場、立論甲立論乙』等生硬演講稿。"
   }),
   "柚子": Object.freeze({
     register: "pastry",
@@ -194,8 +194,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.52,
     godHideBias: 0.20,
     talkCadence: 1.24,
-    sampleQuote: "咦～等等唷，剛剛那段聽起來像沒烤熟的舒芙蕾一樣軟趴趴又空心耶，柚子想先把這盤烤焦的嫌疑端下桌。",
-    llmStyleRule: "元氣點心社學妹口吻，愛用烘焙甜點比喻推理（常帶『舒芙蕾塌掉、烤焦、沒發酵、糖霜、剛出爐、咦～等等唷』），語氣活潑自然、充滿朝氣。"
+    sampleQuote: "咦…等一下喔，剛剛聽那段怎麼空空的像塌掉的舒芙蕾一樣沒重點呀，柚子覺得怪怪的，這輪我先投他喔。",
+    llmStyleRule: "親切自然的台灣點心社學妹口語（常帶『咦…等一下喔、怎麼聽起來空空的、我覺得怪怪的耶』，偶爾點綴自然甜點比喻），禁止『叮咚烤箱計時器大響、雙重試吃開始』等卡通旁白。"
   })
 });
 
@@ -450,52 +450,52 @@ function buildPersonaDualSeerText(speaker, data) {
   }
   if (reg === "data") {
     return leadPrefix +
-      "分兩條線看：站 " + sALbl + "，那 " + sBLbl + " 必佔一狼" + aSecondStr + aConflict + "；" +
-      "改站 " + sBLbl + "，則換 " + sALbl + " 必佔一狼" + bSecondStr + bConflict + "。" +
-      "把兩邊說詞核對完，我站邊 " + trustedLbl + "，" + goodSideText +
-      "這輪先出 " + fakeLbl + "。" + unspokenNote + signoffPhrase;
+      "分兩邊順一下喔，如果站 " + sALbl + "，那 " + sBLbl + " 一定是一隻狼" + aSecondStr + aConflict + "，" +
+      "如果改站 " + sBLbl + "，就換成 " + sALbl + " 是狼" + bSecondStr + bConflict + "。" +
+      "我剛把兩邊講的話對完，我覺得 " + trustedLbl + " 比較合理先站他這邊，" + goodSideText +
+      "這輪我們先投 " + fakeLbl + " 喔。" + unspokenNote + signoffPhrase;
   }
   if (reg === "debate") {
     return leadPrefix +
-      "立論甲：若站 " + sALbl + "，則 " + sBLbl + " 構成核心狼坑" + aSecondStr + aConflict + "；" +
-      "立論乙：若站 " + sBLbl + "，則 " + sALbl + " 必為偽證狼" + bSecondStr + bConflict + "。" +
-      "舉證優劣立判！我方站邊 " + trustedLbl + "，" + goodSideText +
-      "請評審團本輪集中票出 " + fakeLbl + "！" + unspokenNote + signoffPhrase;
+      "直接比對兩邊證據喔，站 " + sALbl + " 的話狼坑就在 " + sBLbl + aSecondStr + aConflict + "，" +
+      "反過來站 " + sBLbl + " 的話狼坑就變成 " + sALbl + bSecondStr + bConflict + "。" +
+      "看下來誰的立論比較穩很明顯吧，我站邊 " + trustedLbl + "，" + goodSideText +
+      "這輪建議大家集中先出 " + fakeLbl + "。" + unspokenNote + signoffPhrase;
   }
   if (reg === "astro") {
     return leadPrefix +
-      "星盤左線：站 " + sALbl + " 的話 " + sBLbl + " 鐵定黑化進狼坑" + aSecondStr + aConflict + "；" +
-      "星盤右線：改站 " + sBLbl + " 就換 " + sALbl + " 紅燈爆表" + bSecondStr + bConflict + "！" +
-      "我的第六感全力指向站邊 " + trustedLbl + "，" + goodSideText +
-      "快一起把假牌 " + fakeLbl + " 封印出局！" + unspokenNote + signoffPhrase;
+      "我們兩邊對一下喔，如果站 " + sALbl + " 的話那 " + sBLbl + " 就一定在狼坑裡" + aSecondStr + aConflict + "，" +
+      "如果改站 " + sBLbl + " 就變成 " + sALbl + " 在演戲" + bSecondStr + bConflict + "。" +
+      "老實說我直覺比較相信 " + trustedLbl + " 耶，" + goodSideText +
+      "這輪我們先把假跳的 " + fakeLbl + " 投出去吧！" + unspokenNote + signoffPhrase;
   }
   if (reg === "sport") {
     return leadPrefix +
-      "戰術盤開展！站 " + sALbl + " 那 " + sBLbl + " 絕對是對面狼坑" + aSecondStr + aConflict + "；" +
-      "換站 " + sBLbl + " 就變 " + sALbl + " 假跳穿幫" + bSecondStr + bConflict + "！" +
-      "這波我看準了直接站邊 " + trustedLbl + "，" + goodSideText +
-      "全隊衝鋒先把 " + fakeLbl + " 灌出場！" + unspokenNote + signoffPhrase;
+      "兩邊攤開來看很清楚啊，站 " + sALbl + " 那 " + sBLbl + " 絕對是對面狼坑" + aSecondStr + aConflict + "，" +
+      "換站 " + sBLbl + " 就變 " + sALbl + " 假跳穿幫" + bSecondStr + bConflict + "。" +
+      "這波我聽下來直接站邊 " + trustedLbl + " 啦，" + goodSideText +
+      "大家票集中先把 " + fakeLbl + " 送出去！" + unspokenNote + signoffPhrase;
   }
   if (reg === "mountain") {
     return leadPrefix +
-      "山路分兩岔：站 " + sALbl + "，那 " + sBLbl + " 肯定藏狼坑" + aSecondStr + aConflict + "；" +
-      "改站 " + sBLbl + "，那 " + sALbl + " 就成了冒牌貨" + bSecondStr + bConflict + "。" +
-      "老松走這條路不會錯，我站邊 " + trustedLbl + "，" + goodSideText +
-      "這輪直接請 " + fakeLbl + " 下山吹風！" + unspokenNote + signoffPhrase;
+      "這兩條路算一下就懂啦，站 " + sALbl + "，那 " + sBLbl + " 肯定藏狼坑" + aSecondStr + aConflict + "，" +
+      "改站 " + sBLbl + "，那 " + sALbl + " 就是冒牌貨" + bSecondStr + bConflict + "。" +
+      "老松聽下來覺得站 " + trustedLbl + " 這邊比較穩啦，" + goodSideText +
+      "這輪直接請 " + fakeLbl + " 去旁邊吹風冷靜！" + unspokenNote + signoffPhrase;
   }
   if (reg === "press") {
     return leadPrefix +
-      "交叉查核如下：站 " + sALbl + " 時狼坑落於 " + sBLbl + aSecondStr + aConflict + "；" +
-      "站 " + sBLbl + " 時狼坑反指 " + sALbl + bSecondStr + bConflict + "。" +
-      "核實可信度後我站邊 " + trustedLbl + "，" + goodSideText +
-      "這輪頭條鎖定先出 " + fakeLbl + "！" + unspokenNote + signoffPhrase;
+      "我把兩邊細節對了一下喔，站 " + sALbl + " 的話狼坑落在 " + sBLbl + aSecondStr + aConflict + "，" +
+      "站 " + sBLbl + " 的話狼坑就反過來是 " + sALbl + bSecondStr + bConflict + "。" +
+      "比對完前後說詞我比較信 " + trustedLbl + "，" + goodSideText +
+      "這輪我會先投 " + fakeLbl + "。" + unspokenNote + signoffPhrase;
   }
   if (reg === "pastry") {
     return leadPrefix +
-      "雙重試吃比對開始！站 " + sALbl + " 的話 " + sBLbl + " 就是烤焦的狼坑" + aSecondStr + aConflict + "；" +
-      "如果改站 " + sBLbl + "，那 " + sALbl + " 才是偷放酸醋的假牌" + bSecondStr + bConflict + "！" +
-      "柚子覺得 " + trustedLbl + " 比較真材實料先站邊他，" + goodSideText +
-      "這輪一起把 " + fakeLbl + " 端下桌吧！" + unspokenNote + signoffPhrase;
+      "兩邊擺在一起看喔，如果站 " + sALbl + " 的話那 " + sBLbl + " 就在狼坑裡" + aSecondStr + aConflict + "，" +
+      "如果改站 " + sBLbl + "，那 " + sALbl + " 才是假跳的壞人" + bSecondStr + bConflict + "。" +
+      "柚子聽下來覺得 " + trustedLbl + " 講話比較實在先站他這邊，" + goodSideText +
+      "這輪大家一起投 " + fakeLbl + " 吧！" + unspokenNote + signoffPhrase;
   }
   if (reg === "warm") {
     return leadPrefix +

@@ -83,30 +83,31 @@ const stage3dCharGeos = {
         new THREE.Vector2(0.036, 0.262),
         new THREE.Vector2(0.01, 0.260)
       ], 16);
-      // Sculpted organic teardrop flame (zero sharp geometric cone!)
+      // Sculpted organic teardrop flame (high-segment smooth curve — zero faceted crystal look!)
       this.candleFlame = new THREE.LatheGeometry([
         new THREE.Vector2(0.004, 0.0),
-        new THREE.Vector2(0.032, 0.024),
-        new THREE.Vector2(0.046, 0.062),
-        new THREE.Vector2(0.038, 0.108),
-        new THREE.Vector2(0.020, 0.146),
-        new THREE.Vector2(0.002, 0.172)
-      ], 14);
+        new THREE.Vector2(0.030, 0.022),
+        new THREE.Vector2(0.045, 0.056),
+        new THREE.Vector2(0.040, 0.098),
+        new THREE.Vector2(0.024, 0.138),
+        new THREE.Vector2(0.009, 0.162),
+        new THREE.Vector2(0.001, 0.176)
+      ], 22);
       this.candleFlameCore = new THREE.LatheGeometry([
         new THREE.Vector2(0.002, 0.008),
         new THREE.Vector2(0.020, 0.032),
         new THREE.Vector2(0.024, 0.064),
-        new THREE.Vector2(0.012, 0.102),
-        new THREE.Vector2(0.001, 0.118)
-      ], 10);
+        new THREE.Vector2(0.013, 0.100),
+        new THREE.Vector2(0.001, 0.120)
+      ], 16);
     } else {
       this.torso = new THREE.CylinderGeometry(0.30, 0.36, 0.90, 14);
       this.lapSkirt = new THREE.CylinderGeometry(0.28, 0.44, 0.38, 14);
       this.teacup = new THREE.CylinderGeometry(0.095, 0.068, 0.13, 12);
       this.candleHolder = new THREE.CylinderGeometry(0.12, 0.14, 0.08, 12);
-      this.candleStick = new THREE.CylinderGeometry(0.065, 0.075, 0.28, 10);
-      this.candleFlame = new THREE.ConeGeometry(0.048, 0.16, 8);
-      this.candleFlameCore = new THREE.ConeGeometry(0.026, 0.10, 6);
+      this.candleStick = new THREE.CylinderGeometry(0.065, 0.075, 0.28, 12);
+      this.candleFlame = new THREE.ConeGeometry(0.044, 0.16, 16);
+      this.candleFlameCore = new THREE.ConeGeometry(0.024, 0.10, 12);
     }
 
     // Seated lower body (thighs resting forward on cushion, shins dropping to courtyard stone, sculpted boots)

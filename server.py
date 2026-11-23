@@ -108,7 +108,7 @@ def prune_tts_cache(cache_dir=None, max_files=None, max_bytes=None):
         total_bytes = 0
         try:
             for p in target_dir.iterdir():
-                if not p.is_file() or p.suffix != ".mp3" or ".tmp." in p.name:
+                if not p.is_file() or p.suffix not in (".mp3", ".wav") or ".tmp." in p.name:
                     continue
                 try:
                     st = p.stat()
@@ -135,45 +135,70 @@ def prune_tts_cache(cache_dir=None, max_files=None, max_bytes=None):
                 continue
     return removed
 
-# 動漫角色適配自然配音（推薦預設：8 位高表現力神經配音員精準對應角色外型與年齡感，零機械變聲）
+# 動漫角色適配自然配音（v13.0 擬真升級：12 位角色聲線差異最大化＋柔化播音腔＋墨白／晴嵐古風韻味）
 VOICE_PROFILES_ANIME = {
-    "主持":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-2%", "pitch": "-1Hz"},
-    "你":    {"voice": "zh-TW-HsiaoChenNeural", "rate": "+2%", "pitch": "+1Hz"},
-    "你_男": {"voice": "zh-CN-YunxiNeural",     "rate": "+0%", "pitch": "+0Hz"},
-    "小澄":  {"voice": "zh-CN-YunyangNeural",   "rate": "+4%", "pitch": "+0Hz"},
-    "暖暖":  {"voice": "zh-CN-XiaoxiaoNeural",  "rate": "-3%", "pitch": "+1Hz"},
-    "阿松":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
-    "星兒":  {"voice": "zh-CN-XiaoyiNeural",    "rate": "+6%", "pitch": "+2Hz"},
-    "小雲":  {"voice": "zh-TW-HsiaoYuNeural",   "rate": "+4%", "pitch": "-1Hz"},
-    "阿竹":  {"voice": "zh-CN-YunxiNeural",     "rate": "-5%", "pitch": "-2Hz"},
-    "晨晨":  {"voice": "zh-CN-YunjianNeural",   "rate": "+6%", "pitch": "+1Hz"},
-    "墨白":  {"voice": "zh-CN-YunyangNeural",   "rate": "-9%", "pitch": "-3Hz"},
-    "晴嵐":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-6%", "pitch": "-2Hz"},
-    "阿朗":  {"voice": "zh-CN-YunjianNeural",   "rate": "+4%", "pitch": "-2Hz"},
-    "柚子":  {"voice": "zh-CN-XiaoyiNeural",    "rate": "+7%", "pitch": "+3Hz"},
+    "主持":  {"voice": "zh-TW-HsiaoChenNeural",        "rate": "-3%", "pitch": "-1Hz"},
+    "你":    {"voice": "zh-TW-HsiaoYuNeural",          "rate": "+1%", "pitch": "+1Hz"},
+    "你_男": {"voice": "zh-CN-YunxiNeural",            "rate": "+0%", "pitch": "+0Hz"},
+    "小澄":  {"voice": "zh-CN-YunxiNeural",            "rate": "+3%", "pitch": "+1Hz"},
+    "暖暖":  {"voice": "zh-TW-HsiaoChenNeural",        "rate": "-4%", "pitch": "+2Hz"},
+    "阿松":  {"voice": "zh-TW-YunJheNeural",           "rate": "+0%", "pitch": "+0Hz"},
+    "星兒":  {"voice": "zh-CN-XiaoyiNeural",           "rate": "+5%", "pitch": "+2Hz"},
+    "小雲":  {"voice": "zh-TW-HsiaoYuNeural",          "rate": "+4%", "pitch": "-1Hz"},
+    "阿竹":  {"voice": "zh-CN-YunxiNeural",            "rate": "-6%", "pitch": "-2Hz"},
+    "晨晨":  {"voice": "zh-CN-YunjianNeural",          "rate": "+6%", "pitch": "+1Hz"},
+    "墨白":  {"voice": "zh-CN-YunyangNeural",          "rate": "-10%", "pitch": "-4Hz"},
+    "晴嵐":  {"voice": "zh-CN-XiaoxiaoNeural",         "rate": "-7%", "pitch": "-2Hz"},
+    "阿朗":  {"voice": "zh-CN-YunjianNeural",          "rate": "+2%", "pitch": "-2Hz"},
+    "柚子":  {"voice": "zh-CN-XiaoxiaoNeural",         "rate": "+6%", "pitch": "+4Hz"},
 }
 
-# 純台灣腔（注意：zh-TW-YunJheNeural 在微軟端點僅支援預設語速音高 +0%/+0Hz）
+# 純台灣腔（注意：zh-TW-YunJheNeural 在微軟端點僅支援預設語速音高 +0%/+0Hz，男聲差異由前端聲道共振峰與無損變速拉開）
 VOICE_PROFILES_TW = {
-    "主持":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-2%", "pitch": "-1Hz"},
-    "你":    {"voice": "zh-TW-HsiaoChenNeural", "rate": "+2%", "pitch": "+1Hz"},
+    "主持":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-3%", "pitch": "-1Hz"},
+    "你":    {"voice": "zh-TW-HsiaoChenNeural", "rate": "+1%", "pitch": "+1Hz"},
     "你_男": {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
     "小澄":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
-    "暖暖":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-3%", "pitch": "+3Hz"},
+    "暖暖":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-4%", "pitch": "+2Hz"},
     "阿松":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
     "星兒":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "+5%", "pitch": "+3Hz"},
     "小雲":  {"voice": "zh-TW-HsiaoYuNeural",   "rate": "+3%", "pitch": "-2Hz"},
     "阿竹":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
     "晨晨":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
     "墨白":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
-    "晴嵐":  {"voice": "zh-TW-HsiaoYuNeural",   "rate": "-4%", "pitch": "-1Hz"},
+    "晴嵐":  {"voice": "zh-TW-HsiaoYuNeural",   "rate": "-5%", "pitch": "-2Hz"},
     "阿朗":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
-    "柚子":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "+7%", "pitch": "+4Hz"},
+    "柚子":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "+6%", "pitch": "+4Hz"},
 }
 VOICE_PROFILES = VOICE_PROFILES_ANIME
 
+ALLOWED_CLAUSE_ROLES = {"", "open", "pivot", "question", "climax", "close", "backchannel"}
+ALLOWED_GEMINI_VOICES = {
+    "Leda", "Kore", "Puck", "Orus", "Aoede", "Charon", "Zephyr", "Callirrhoe", "Fenrir"
+}
 
-def compute_rate_pitch(persona, user_rate, mood, accent="anime"):
+
+def naturalize_mandarin_text(text):
+    """Soften stiff written punctuation & seat digits into natural conversational Mandarin cadence."""
+    s = str(text or "").strip()
+    if not s:
+        return ""
+    # Convert 10~12 and 1~9 seat numbers into natural spoken Chinese numerals so neural TTS never reads digits stiffly
+    cn_nums = {
+        "12": "十二", "11": "十一", "10": "十",
+        "9": "九", "8": "八", "7": "七", "6": "六",
+        "5": "五", "4": "四", "3": "三", "2": "二", "1": "一",
+    }
+    for k, v in cn_nums.items():
+        s = re.sub(rf"(?<!\d)0?{k}\s*號", f"{v}號", s)
+    s = re.sub(r"1\.5\s*票", "一點五票", s)
+    s = re.sub(r"[；：]", "，", s)
+    s = re.sub(r"—+", "，", s)
+    s = re.sub(r"，{2,}", "，", s)
+    return s.strip()
+
+
+def compute_rate_pitch(persona, user_rate, mood, accent="anime", clause_role=""):
     table = VOICE_PROFILES_TW if accent == "tw" else VOICE_PROFILES_ANIME
     prof = table.get(persona, table["暖暖"])
     # zh-TW-YunJheNeural rejects any non-zero SSML rate/pitch upstream; keep strictly neutral
@@ -187,38 +212,59 @@ def compute_rate_pitch(persona, user_rate, mood, accent="anime"):
         ur = float(user_rate)
     except (TypeError, ValueError):
         ur = 0.96
-    rate_delta = round((ur - 0.98) * 75)
-    final_rate = max(-20, min(28, base_rate + rate_delta))
+    rate_delta = round((ur - 0.98) * 72)
+    final_rate = max(-22, min(28, base_rate + rate_delta))
     final_pitch = base_pitch
 
     # Expressive natural prosody within ±5Hz so every mood feels vivid without pitch artifacts
     if mood == "panic":
-        final_rate = min(28, final_rate + 9)
+        final_rate = min(28, final_rate + 8)
         final_pitch += 3
     elif mood == "accuse":
-        final_rate = min(28, final_rate + 6)
+        final_rate = min(28, final_rate + 5)
         final_pitch += 2
     elif mood == "claim_seer":
-        final_rate = min(26, final_rate + 3)
+        final_rate = min(26, final_rate + 2)
         final_pitch += 2
     elif mood == "rebut":
         final_rate = min(28, final_rate + 7)
-        final_pitch += 1
+        final_pitch += 2
     elif mood == "trust":
-        final_rate = max(-18, final_rate - 3)
+        final_rate = max(-20, final_rate - 3)
         final_pitch -= 1
     elif mood == "happy":
         final_rate = min(28, final_rate + 4)
         final_pitch += 2
     elif mood == "last_words":
-        final_rate = max(-20, final_rate - 7)
+        final_rate = max(-22, final_rate - 8)
         final_pitch -= 2
     elif mood == "host_night":
-        final_rate = max(-20, final_rate - 7)
+        final_rate = max(-22, final_rate - 8)
         final_pitch -= 3
     elif mood == "host_dawn":
         final_rate = min(26, final_rate + 3)
         final_pitch += 2
+
+    # Clause-level human prosody arc: unhurried opening -> energized climax/question -> grounded signoff!
+    c_role = clause_role if clause_role in ALLOWED_CLAUSE_ROLES else ""
+    if c_role == "open":
+        final_rate = max(-22, final_rate - 5)
+        final_pitch -= 1
+    elif c_role == "pivot":
+        final_rate = min(28, final_rate + 3)
+        final_pitch += 1
+    elif c_role == "question":
+        final_rate = min(28, final_rate + 2)
+        final_pitch += 2
+    elif c_role == "climax":
+        final_rate = min(28, final_rate + 6)
+        final_pitch += 2
+    elif c_role == "close":
+        final_rate = max(-22, final_rate - 7)
+        final_pitch -= 2
+    elif c_role == "backchannel":
+        final_rate = min(28, final_rate + 4)
+        final_pitch += 1
 
     final_pitch = max(-5, min(5, final_pitch))
     rate_str = f"+{final_rate}%" if final_rate >= 0 else f"{final_rate}%"
@@ -249,8 +295,54 @@ async def synthesize_edge_mp3(text, voice_name, rate_str, pitch_str, out_path):
         if voice_name == "zh-TW-YunJheNeural":
             fallback_comm = edge_tts.Communicate(text=text, voice="zh-CN-YunjianNeural", rate="-3%", pitch="-2Hz")
             await fallback_comm.save(str(out_path))
+        elif voice_name == "zh-CN-liaoning-XiaobeiNeural":
+            fallback_comm = edge_tts.Communicate(text=text, voice="zh-CN-XiaoyiNeural", rate="+6%", pitch="+3Hz")
+            await fallback_comm.save(str(out_path))
         else:
             raise
+
+
+def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=12):
+    """Call Gemini 3.8 Flash TTS Interactions API with speech_metadata & inline vocal tags; return WAV bytes."""
+    import base64
+    v_name = voice_name if voice_name in ALLOWED_GEMINI_VOICES else "Kore"
+    content_item = {"type": "text", "text": text}
+    if style_prompt:
+        content_item["annotations"] = [{
+            "type": "speech_metadata",
+            "style": str(style_prompt)[:320],
+        }]
+    payload = {
+        "model": "gemini-3.8-flash-tts",
+        "store": False,
+        "input": [{
+            "type": "user_input",
+            "content": [content_item],
+        }],
+        "response_format": {"type": "audio"},
+        "generation_config": {
+            "speech_config": [{"voice": v_name}],
+        },
+    }
+    body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        "https://generativelanguage.googleapis.com/v1beta/interactions",
+        data=body_bytes,
+        headers={
+            "Content-Type": "application/json; charset=utf-8",
+            "x-goog-api-key": api_key,
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    for step in reversed(data.get("steps") or []):
+        if step.get("type") != "model_output":
+            continue
+        for block in reversed(step.get("content") or []):
+            if block.get("type") == "audio" and block.get("data"):
+                return base64.b64decode(block["data"]), str(block.get("mime_type") or "audio/wav")
+    return None, ""
 
 
 class SanhaoHandler(SimpleHTTPRequestHandler):
@@ -509,6 +601,87 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             return
         self.send_json(200, {"ok": True, "saved": True, "id": fb_id})
 
+    def handle_post_gemini_tts(self):
+        raw_len = self.headers.get("Content-Length", "0")
+        try:
+            length = int(raw_len)
+        except (TypeError, ValueError):
+            self.send_json(400, {"ok": False, "error": "Invalid Content-Length"})
+            return
+        if length < 0:
+            self.send_json(400, {"ok": False, "error": "Invalid Content-Length"})
+            return
+        if length > 16384:
+            self.send_json(413, {"ok": False, "error": "Payload too large"})
+            return
+        api_key = (self.headers.get("x-goog-api-key") or "").strip()
+        raw = self.rfile.read(length)
+        try:
+            req = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.send_json(400, {"ok": False, "error": "Invalid JSON body"})
+            return
+        if not isinstance(req, dict):
+            self.send_json(400, {"ok": False, "error": "JSON body must be an object"})
+            return
+        raw_text = req.get("text")
+        text = raw_text.strip() if isinstance(raw_text, str) else ""
+        voice_name = str(req.get("voice") or "Kore").strip()
+        style_prompt = str(req.get("style") or "").strip()[:320]
+        if not text:
+            self.send_json(400, {"ok": False, "error": "Empty text"})
+            return
+        if len(text) > 480:
+            text = text[:480]
+        v_safe = voice_name if voice_name in ALLOWED_GEMINI_VOICES else "Kore"
+        key = "gem_" + hashlib.sha256(f"{v_safe}|{style_prompt}|{text}".encode("utf-8")).hexdigest()[:24]
+        wav_path = CACHE_DIR / f"{key}.wav"
+
+        # Serve directly from disk cache even without API call if already synthesized earlier!
+        if not wav_path.exists() or wav_path.stat().st_size < 128:
+            if not api_key:
+                self.send_json(401, {"ok": False, "error": "Missing x-goog-api-key header"})
+                return
+            with get_tts_key_lock(key):
+                if not wav_path.exists() or wav_path.stat().st_size < 128:
+                    try:
+                        audio_bytes, _mime = call_gemini_tts_wav(api_key, text, v_safe, style_prompt)
+                    except urllib.error.HTTPError as hexc:
+                        self.send_json(hexc.code if 400 <= hexc.code < 600 else 502, {"ok": False, "error": f"Gemini TTS HTTP {hexc.code}"})
+                        return
+                    except Exception as exc:
+                        self.send_json(502, {"ok": False, "error": f"Gemini TTS error: {str(exc)[:120]}"})
+                        return
+                    if not audio_bytes or len(audio_bytes) < 128:
+                        self.send_json(502, {"ok": False, "error": "Empty Gemini TTS audio"})
+                        return
+                    tmp_path = CACHE_DIR / f"{key}.{threading.get_ident()}.{uuid.uuid4().hex[:8]}.tmp.wav"
+                    try:
+                        tmp_path.write_bytes(audio_bytes)
+                        try:
+                            tmp_path.replace(wav_path)
+                        except PermissionError:
+                            if not wav_path.exists():
+                                wav_path.write_bytes(audio_bytes)
+                        global _TTS_WRITE_COUNTER
+                        _TTS_WRITE_COUNTER += 1
+                        if _TTS_WRITE_COUNTER % 20 == 0:
+                            threading.Thread(target=prune_tts_cache, daemon=True).start()
+                    finally:
+                        try:
+                            if tmp_path.exists():
+                                tmp_path.unlink()
+                        except OSError:
+                            pass
+
+        out_bytes = wav_path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/wav")
+        self.send_header("Content-Length", str(len(out_bytes)))
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.end_headers()
+        self.wfile.write(out_bytes)
+
     def do_POST(self):
         route = self.path.split("?")[0]
         if not self.is_allowed_api_origin():
@@ -519,6 +692,9 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             return
         if route == "/api/feedback":
             self.handle_post_feedback()
+            return
+        if route == "/api/tts/gemini":
+            self.handle_post_gemini_tts()
             return
         if route != "/api/tts":
             self.send_json(404, {"ok": False, "error": "Not found"})
@@ -553,15 +729,21 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             persona = str(req.get("persona") or "暖暖").strip()
             mood = str(req.get("mood") or "normal").strip()
             accent = str(req.get("accent") or "anime").strip()
+            clause_role = str(req.get("clauseRole") or "").strip()
+            if clause_role not in ALLOWED_CLAUSE_ROLES:
+                clause_role = ""
             user_rate = req.get("rate", 0.96)
             if not text:
                 self.send_json(400, {"ok": False, "error": "Empty text"})
                 return
             if len(text) > 360:
                 text = text[:360]
+            if req.get("naturalize"):
+                text = naturalize_mandarin_text(text) or text
 
-            voice_name, rate_str, pitch_str = compute_rate_pitch(persona, user_rate, mood, accent)
-            key = hashlib.sha256(f"{voice_name}|{rate_str}|{pitch_str}|{text}".encode("utf-8")).hexdigest()[:24]
+            voice_name, rate_str, pitch_str = compute_rate_pitch(persona, user_rate, mood, accent, clause_role)
+            key_src = f"{voice_name}|{rate_str}|{pitch_str}|{text}"
+            key = hashlib.sha256(key_src.encode("utf-8")).hexdigest()[:24]
             mp3_path = CACHE_DIR / f"{key}.mp3"
 
             if not mp3_path.exists() or mp3_path.stat().st_size < 128:

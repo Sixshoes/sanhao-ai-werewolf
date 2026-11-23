@@ -631,6 +631,7 @@ vm.runInContext(`
 // 2. 1-to-1 Asset Parity, CSS Brace Balance & Zero !important in Custom Styles
 const walk = dir =>
   fs.readdirSync(dir, { withFileTypes: true }).flatMap(d => {
+    if (d.name === ".DS_Store") return [];
     const p = `${dir}/${d.name}`;
     if (p === "js/vendor") return [];
     return d.isDirectory() ? walk(p) : [p];
@@ -4409,7 +4410,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 {
   const vercelCfgOk = fs.existsSync(path.join(ROOT, "vercel.json")) && fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8").includes("/ai.html");
   const vercelIgnOk = fs.existsSync(path.join(ROOT, ".vercelignore")) && fs.readFileSync(path.join(ROOT, ".vercelignore"), "utf8").includes("tests/");
-  const cardRitualHtmlOk = html.includes('id="roleDealFlipper"') && html.includes('id="roleDealCardBack"') && html.includes("deal-back-wax-seal") && html.includes("公測 1.0");
+  const cardRitualHtmlOk = html.includes('id="roleDealFlipper"') && html.includes('id="roleDealCardBack"') && html.includes("deal-back-wax-seal") && /公測\s*2\.0/.test(html);
   const cardRitualCssOk = compCss.includes("dealFlipReveal") && compCss.includes(".deal-card-back") && compCss.includes(".deal-burst-ring") && compCss.includes(".title-release-badge");
   const vrmSource11 = fs.readFileSync(path.join(ROOT, "js/stage3d/vrm-loader.js"), "utf8");
   const multiJointSrcOk = vrmSource11.includes("bm.neck") && vrmSource11.includes("bm.rightShoulder") && vrmSource11.includes("bm.rightHand") && vrmSource11.includes("rightIndexProximal") && vrmSource11.includes("FINGER_PRESETS");
@@ -4445,9 +4446,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     startSpotlightTypewriter({ speaker: sp11, badge: "02號・" + sp11.name, trait: sp11.trait, rawText: "請各位細察昨日票型與前後發言的邏輯脈絡。" });
     const silentAnimWindowOk = typeof state.activeSpeechAnimUntil === "number" && state.activeSpeechAnimUntil > performance.now() + 1500;
 
-    // 5. Public Release 1.0 diagnostics & anonymous host helper
+    // 5. Public Release 2.0 diagnostics & anonymous host helper
     const diag11 = collectFeedbackDiagnostics();
-    const version11Ok = /v1[12]\\.\\d/.test(diag11.version) && diag11.version.includes("公測 1.0") && typeof isAnonymousReviewHost === "function";
+    const version11Ok = diag11.version.includes("公測 2.0") && typeof isAnonymousReviewHost === "function";
 
     clearStepTimer();
     resetMatchToLobby();
@@ -5065,4 +5066,186 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v12.3 (Multi-Device RWD + Dual Switchable 3D Scenes + Bug Fixes + Authentic Badge Flow + Front Camera + Living VRM + Anti-Cheat) E2E smoke test PASSED!");
+// v13.0 REALISTIC VOICE ENGINE OVERHAUL: Multi-Clause Prosody Arc, MP3 Silence Trim, Wooden Pavilion Acoustics, Formant EQ, Gemini 3.8 Vocal Tags & Seat Backchannels
+{
+  const v13Res = vm.runInContext(`(() => {
+    // 1. 3-beat human prosody arc (open -> climax/question -> close)
+    const arc = voice.splitExpressiveSpeechArc("我先把前面幾位的時間線對了一遍，可是 6號 那段說詞前後兜不攏吧？這輪我先把票投給 6號，過。", "accuse");
+    const arcOk = Array.isArray(arc) && arc.length >= 2 && arc[0].role === "open" && arc[arc.length - 1].role === "close" && arc[0].rateNudge < 1.0 && arc[arc.length - 1].rateNudge < 1.0;
+
+    // 2. MP3 leading/trailing dead-silence trimmer with click-free cosine fade
+    let silenceTrimOk = false;
+    const prevCtx = sound.ctx;
+    sound.ctx = {
+      sampleRate: 24000,
+      createBuffer(nCh, len, sr) {
+        const arr = new Float32Array(len);
+        return { numberOfChannels: nCh, length: len, sampleRate: sr, duration: len / sr, getChannelData: () => arr };
+      }
+    };
+    try {
+      const rawLen = 24000; // 1.0s
+      const mockBuf = sound.ctx.createBuffer(1, rawLen, 24000);
+      const d = mockBuf.getChannelData(0);
+      // 120ms leading silence + 600ms speech + 280ms trailing silence
+      for (let i = Math.floor(24000 * 0.12); i < Math.floor(24000 * 0.72); i++) {
+        d[i] = Math.sin(i * 0.12) * 0.35;
+      }
+      const trimmed = voice.trimAudioBufferSilence(mockBuf);
+      silenceTrimOk = Boolean(trimmed && trimmed.length < rawLen * 0.72 && trimmed.length > rawLen * 0.58 && Math.abs(trimmed.getChannelData(0)[0]) < 0.001);
+    } finally {
+      sound.ctx = prevCtx;
+    }
+
+    // 3. Official Gemini 3.8 TTS inline vocal burst tags (<breath>, <sigh>, <chuckle>, <gasp>, <short pause>)
+    const tagPanic = voice.injectGeminiVocalTags("等一下，我真的是清白好人，這輪請聽我解釋！", "小澄", "panic");
+    const tagWarm = voice.injectGeminiVocalTags("先喝口熱茶放輕鬆，這輪我們溫柔找線索吧！", "暖暖", "happy");
+    const tagLast = voice.injectGeminiVocalTags("可惜被誤投了，請諸君回頭檢視票型。", "墨白", "last_words");
+    const geminiTagsOk = tagPanic.includes("<breath>") && tagPanic.includes("<short pause>") && tagWarm.includes("<chuckle>") && tagLast.includes("<sigh>");
+
+    // 4. Formant EQ & Wooden Pavilion Acoustic methods + 11-persona backchannel bank
+    const eqInk = PERSONA_AUDIO_EQ["墨白"];
+    const eqCheng = PERSONA_AUDIO_EQ["小澄"];
+    const formantDistinctOk = Boolean(eqInk && eqCheng && eqInk.twDetuneCents < -50 && eqCheng.twDetuneCents > 30 && eqInk.midFreq < eqCheng.midFreq);
+    const acousticMethodsOk = typeof sound.buildWoodenPavilionImpulse === "function" && typeof sound.playPreSpeechBreath === "function" && typeof sound.playBackchannelBuffer === "function" && typeof voice.triggerSeatBackchannel === "function";
+    const backchannelBankOk = ["小澄", "暖暖", "阿松", "星兒", "小雲", "阿竹", "晨晨", "墨白", "晴嵐", "阿朗", "柚子"].every(n => Boolean(PERSONA_BACKCHANNEL_CLIPS[n] && PERSONA_BACKCHANNEL_CLIPS[n].accuse && PERSONA_BACKCHANNEL_CLIPS[n].clash));
+
+    // 5. Mixer UI buttons & preference persistence
+    el("btnEngineGemini").click();
+    const engGemOk = voice.enginePref === "gemini" && el("btnEngineGemini").classList.contains("is-active");
+    el("btnEngineAuto").click();
+    const engAutoOk = voice.enginePref === "auto" && el("btnEngineAuto").classList.contains("is-active");
+    const prevBc = voice.liveBackchannel;
+    el("btnToggleLiveBackchannel").click();
+    const bcToggleOk = voice.liveBackchannel === !prevBc;
+    el("btnToggleLiveBackchannel").click();
+
+    // 6. v13.1 Bundled Qingming Host Voice Pack + Natural Taiwanese Colloquial Rewrite (zero cartoon announcer slogans)
+    const hostPackEntries = Object.entries(HOST_VOICE_PACK_MAP || {});
+    const hostPackCountOk = hostPackEntries.length >= 25 && typeof voice.playBundledHostClip === "function";
+    const flavorsStr = JSON.stringify(PERSONA_FLAVORS);
+    const noCartoonSlogansOk = !/叮咚烤箱計時器大響|事實查核報告出爐|正方一辯登場|絕殺灌籃來啦|超級緊急星象公告/.test(flavorsStr);
+
+    return {
+      arcOk,
+      silenceTrimOk,
+      geminiTagsOk,
+      formantDistinctOk,
+      acousticMethodsOk,
+      backchannelBankOk,
+      engGemOk,
+      engAutoOk,
+      bcToggleOk,
+      hostPackCountOk,
+      noCartoonSlogansOk,
+      hostPackFiles: hostPackEntries.map(e => e[1])
+    };
+  })()`, ctx);
+
+  for (const relMp3 of (v13Res.hostPackFiles || [])) {
+    const fullMp3 = path.join(ROOT, relMp3);
+    if (!fs.existsSync(fullMp3) || fs.statSync(fullMp3).size < 512) {
+      throw new Error("v13.1 Missing or invalid bundled host voice pack file: " + relMp3);
+    }
+  }
+  delete v13Res.hostPackFiles;
+  for (const [k, v] of Object.entries(v13Res)) {
+    if (!v) {
+      throw new Error("v13.1 REALISTIC VOICE ENGINE check failed for " + k + ": " + JSON.stringify(v13Res));
+    }
+  }
+
+  // ===== v13.2 LIVE QA BUGFIX & VISUAL/VOICE POLISH REGRESSION SUITE =====
+  const v132Res = vm.runInContext(`(() => {
+    // 1. Night phase hides btnStepNext (zero stray "進入公投" button during Night!)
+    el("selectModeCount").value = "12";
+    el("selectPreferredRole").value = "villager";
+    state.sheriffMode = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    state.match.phase = "NIGHT_WOLF";
+    renderControlPanels();
+    const nightHidesStepNextOk = el("btnStepNext").classList.contains("hidden");
+
+    // 2. Dynamic lobby seat summary reflects 12-seat selection + shortcut tooltip uses 0/-/= for seats 10/11/12
+    const lobby12Ok = el("lobbySeatSummary").textContent.includes("十二位書院夥伴");
+    const stripBtns = el("seatButtonStrip").children || [];
+    const btn10 = stripBtns[9], btn11 = stripBtns[10], btn12 = stripBtns[11];
+    const shortcutTooltipOk = Boolean(
+      btn10 && btn10.title.includes("快捷鍵 0") &&
+      btn11 && btn11.title.includes("快捷鍵 -") &&
+      btn12 && btn12.title.includes("快捷鍵 =")
+    );
+
+    // 3. Pausing voice during Night NEVER clears Night AI stepTimer
+    state.stepTimer = 777;
+    voice.speaking = true;
+    voice.paused = false;
+    voice.togglePause();
+    const nightPauseKeepsTimerOk = state.stepTimer === 777;
+    voice.togglePause();
+    voice.stop();
+    state.stepTimer = null;
+
+    // 4. Day-1 first speaker with sheriffVoteRecord NEVER says "昨天" or "昨輪"
+    state.match.day = 1;
+    state.match.phase = "DAY_SPEECH";
+    state.match.sheriffElectionPending = false;
+    state.match.daySpeechEvents = [];
+    state.match.allSpeechEvents = [];
+    const s2 = getSeat(2), s3 = getSeat(3), s4 = getSeat(4);
+    state.match.sheriffVoteRecord = {
+      day: 1, kind: "sheriff", candidateIds: [3, 4], withdrawnIds: [], seerClaimIds: [], winnerId: 3,
+      ballots: [{ voterId: 2, targetId: 3, weight: 1 }], tallies: { 3: 1, 4: 0 }
+    };
+    const d1Sp = buildHeuristicAiSpeech(s4);
+    const day1NoYesterdayOk = Boolean(d1Sp && d1Sp.text && !/昨天|昨輪/.test(d1Sp.text));
+
+    // 5. Dead UNCLAIMED Seer never leaks hidden Seer role via badge flow signal
+    const realSeer = state.match.seats.find(s => s.role === "seer");
+    const otherSeat = state.match.seats.find(s => s.id !== realSeer.id);
+    state.match.day = 2;
+    realSeer.claimedRole = null;
+    realSeer.checkedHistory = [{ day: 1, targetId: otherSeat.id, isWolf: false }];
+    setSheriffBadgeFlow(realSeer.id, otherSeat.id, null, "election");
+    const sigCountBefore = (state.match.badgeFlowSignals || []).length;
+    recordAndBroadcastBadgeFlowSignal(realSeer, otherSeat);
+    const unclaimedSeerNoLeakOk = (state.match.badgeFlowSignals || []).length === sigCountBefore;
+
+    // 6. Night-1 Pro wolf targeting ignores pending phantom sheriffSeatId
+    state.match.day = 1;
+    state.match.sheriffElectionPending = true;
+    const goodT = state.match.seats.filter(s => s.role !== "wolf");
+    state.match.sheriffSeatId = goodT[0].id;
+    state.aiDifficulty = "pro";
+    const pickAtHighRng = chooseAiWolfTarget(goodT, { rngVal: 0.72 });
+    const night1NoPhantomSheriffOk = Boolean(pickAtHighRng && pickAtHighRng.id !== goodT[0].id);
+
+    // 7. formatMandarinText matches HOST_VOICE_PACK_MAP for PK & colon host prompts
+    const pkHit = Boolean(HOST_VOICE_PACK_MAP[voice.formatMandarinText("平票 PK 拉票結束，依凹嗚規則由非平票玩家進行決選投票！")]);
+    const colonHit = Boolean(HOST_VOICE_PACK_MAP[voice.formatMandarinText("請警長指定今日發言順序：順時針或逆時針！")]);
+    const hostPackFormatOk = pkHit && colonHit;
+
+    // 8. Non-Taiwan voice casting sanity: 柚子 not using regional Dongbei accent, 阿松 distinct animeRateMul
+    const personaEqDistinctOk = Boolean(PERSONA_AUDIO_EQ["阿松"].animeRateMul < 0.96 && PERSONA_AUDIO_EQ["小澄"].animeRateMul > 1.02);
+
+    return {
+      nightHidesStepNextOk,
+      lobby12Ok,
+      shortcutTooltipOk,
+      nightPauseKeepsTimerOk,
+      day1NoYesterdayOk,
+      unclaimedSeerNoLeakOk,
+      night1NoPhantomSheriffOk,
+      hostPackFormatOk,
+      personaEqDistinctOk
+    };
+  })()`, ctx);
+  for (const [k, v] of Object.entries(v132Res)) {
+    if (!v) {
+      throw new Error("v13.2 QA BUGFIX check failed for " + k + ": " + JSON.stringify(v132Res));
+    }
+  }
+}
+
+console.log("[OK] Full v13.2 (Public Beta 2.0 + Multi-Device RWD + Live QA Bugfixes + 3D Framing + Realistic Voice Engine + Anti-Cheat) E2E smoke test PASSED!");

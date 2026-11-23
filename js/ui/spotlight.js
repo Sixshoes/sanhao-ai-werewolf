@@ -403,10 +403,10 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
     const tailSlice = clean.slice(lastIdx);
     html += escapeHtml(tailSlice);
   }
-  if (activeContraRec && !contraEmitted && !isPartial && speaker && speaker.id !== getPlayerId()) {
-    html += ' <span class="clue-token clue-contradiction' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="⚡破綻" data-speaker-id="' + spId + '" title="⚡ 點擊收入「' + escapeHtml(activeContraRec.label) + '」呈堂證供">⚡' + escapeHtml(activeContraRec.label) + (contraCaught ? ' ✓' : '') + '</span>';
-  }
   html += isPartial ? "" : "」";
+  if (activeContraRec && !contraEmitted && !isPartial && speaker && speaker.id !== getPlayerId()) {
+    html += ' <span class="clue-token clue-contradiction ml-1' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="⚡破綻" data-speaker-id="' + spId + '" title="⚡ 點擊收入「' + escapeHtml(activeContraRec.label) + '」呈堂證供">⚡收證：' + escapeHtml(activeContraRec.label) + (contraCaught ? ' ✓' : '') + '</span>';
+  }
   pEl.innerHTML = html;
 }
 

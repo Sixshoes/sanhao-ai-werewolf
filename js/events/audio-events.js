@@ -107,7 +107,10 @@ function bindAudioVoiceEvents() {
       voice.activeAudioGain.gain.value = clamp(voice.volume, 0, 1);
     }
     el("voiceVolLabel").textContent = v + "%";
-    if (v === 0 && voice.speaking) voice.stop();
+    if (v === 0 && voice.speaking) {
+      voice.stop();
+      if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
+    }
     saveUserPrefs();
   });
 
@@ -123,6 +126,48 @@ function bindAudioVoiceEvents() {
       auditionPersonaVoice("小澄");
     });
   });
+
+  ["btnEngineAuto", "btnEngineLocal", "btnEngineGemini"].forEach(function (id) {
+    if (!el(id)) return;
+    el(id).addEventListener("click", function () {
+      sound.unlock();
+      const fallbackPref = id === "btnEngineGemini" ? "gemini" : (id === "btnEngineLocal" ? "local" : "auto");
+      const pref = el(id).getAttribute("data-vengine") || fallbackPref;
+      voice.enginePref = (pref === "local" || pref === "gemini") ? pref : "auto";
+      ["btnEngineAuto", "btnEngineLocal", "btnEngineGemini"].forEach(function (other) {
+        if (el(other)) el(other).classList.toggle("is-active", other === id);
+      });
+      voice.updateEngineStatusUi();
+      saveUserPrefs();
+      if (voice.enginePref === "gemini" && !(typeof state !== "undefined" && state.geminiApiKey)) {
+        if (typeof showToast === "function") {
+          showToast("請先在 AI 設定填入 Gemini API Key，目前已自動使用免費本地神經語音兜底", "amber");
+        }
+      }
+      auditionPersonaVoice("暖暖");
+    });
+  });
+
+  if (el("btnToggleLiveBackchannel")) {
+    el("btnToggleLiveBackchannel").addEventListener("click", function () {
+      sound.unlock();
+      voice.liveBackchannel = !voice.liveBackchannel;
+      el("btnToggleLiveBackchannel").classList.toggle("is-active", voice.liveBackchannel);
+      el("btnToggleLiveBackchannel").textContent = "圓桌座位插話反應：" + (voice.liveBackchannel ? "開" : "關");
+      saveUserPrefs();
+    });
+  }
+
+  if (el("btnToggleHumanBreath")) {
+    el("btnToggleHumanBreath").addEventListener("click", function () {
+      sound.unlock();
+      voice.humanBreath = !voice.humanBreath;
+      el("btnToggleHumanBreath").classList.toggle("is-active", voice.humanBreath);
+      el("btnToggleHumanBreath").textContent = "真人換氣＋木亭音場：" + (voice.humanBreath ? "開" : "關");
+      saveUserPrefs();
+      if (voice.humanBreath) auditionPersonaVoice("阿竹");
+    });
+  }
 
   ["btnVoiceRateSlow", "btnVoiceRateDefault", "btnVoiceRateFast"].forEach(function (id) {
     el(id).addEventListener("click", function () {
@@ -153,18 +198,18 @@ function bindAudioVoiceEvents() {
       el("voiceToggleLabel").textContent = voice.getModeLabel();
     }
     const lines = {
-      "你":   "這輪大家的發言脈絡其實很清楚，我們一起對一下票型吧！",
-      "暖暖": "哈囉！我們心平氣和說好話，一起理性推理找出酸民狼吧！",
-      "小澄": "先講結論，照剛剛的發言邏輯來盤，線索其實很清楚喔。",
-      "阿松": "別急別急，先聽完大家說法，再來比對票型最準啦！",
-      "星兒": "咦？我第六感覺得，剛才有人說話語氣有點心虛喔！",
-      "小雲": "等一下，我們來交叉核對一下剛剛這輪的發言前後有沒有矛盾。",
-      "阿竹": "山城夜色靜謐，真相往往藏在最細微的語氣轉折裡。",
-      "晨晨": "好人夥伴們衝起來！別被酸言帶風向，這輪一定抓出酸民狼！",
-      "墨白": "落筆講究章法，對照票型與時間線，真相自然水落石出。",
-      "晴嵐": "大家先喝口熱茶緩緩，我們把兩邊視角柔和整理清楚吧。",
-      "阿朗": "論點擺上檯面直接交叉比對，破綻藏不住的，這輪精準歸票！",
-      "柚子": "耶～茶點準備好囉！我們用好話和直覺一起守護書院吧！",
+      "你":   "欸我剛順了一遍大家講的話喔，中間有幾句前後兜不太起來耶，這輪我們先投最可疑的那位吧，過。",
+      "暖暖": "欸大家先喝口熱茶別吵架嘛…可是老實說，剛剛那樣刺刺的口氣聽了有點毛毛的耶，這輪先請他去旁邊冷靜一下囉，過。",
+      "小澄": "欸等一下，我剛對了一下大家講的時間點，這邊前後根本兜不起來啊，照刪去法看這輪我先投他喔，過。",
+      "阿松": "欸老松講句實在話吼，剛剛聽半天都在繞圈子沒講重點，聽起來超心虛啊，這輪別分票直接抓狼啦，過。",
+      "星兒": "欸等一下啦…你們剛聽那段不會覺得哪裡怪怪的嗎？我聽完真的起雞皮疙瘩耶，直覺他超像在演的，過！",
+      "小雲": "欸慢著，我剛邊聽邊記了一下喔，前面講的跟後面講的根本對不起來啊，這很明顯在帶風向吧，過。",
+      "阿竹": "且慢，一盞凍頂未涼，席間破綻已浮茶面矣。小生便以此茶敬奉諸君明辨，過。",
+      "晨晨": "欸不是啊兄弟們，剛剛那段破綻也太大了吧，講話一直閃重點還想帶節奏，我這票直接鎖死投他啦，過！",
+      "墨白": "觀此席間，破綻昭然。此人言辭閃爍，實乃酸民狼無疑。言盡於此，請公決之。",
+      "晴嵐": "細聆諸君方才清談，唯有此人弦外生躁、宮商失序。妾身願護茶席清音不濁，還請諸君明鑒。",
+      "阿朗": "欸等一下，這邏輯說不通吧？連半點實際證據都沒拿出來就急著扣帽子，這輪照證據看我建議先出他，過。",
+      "柚子": "咦…等一下喔，剛剛聽那段怎麼空空的像塌掉的舒芙蕾一樣沒重點呀，柚子覺得怪怪的，這輪我先投他喔，過。",
       "主持": "天黑請閉眼，山城入夜，請各位靜待神秘行動。"
     };
     if (el("voiceAuditionStrip")) {
@@ -177,7 +222,9 @@ function bindAudioVoiceEvents() {
     if (voice.mode === "cozy") {
       playCozyAudition(prof.seatHint || 3);
     } else {
-      voice.speak(personaName, lines[personaName] || lines["暖暖"], personaName === "主持" ? "host_night" : "normal");
+      voice.speak(personaName, lines[personaName] || lines["暖暖"], personaName === "主持" ? "host_night" : "normal", function () {
+        if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
+      });
     }
   }
 
@@ -259,7 +306,9 @@ function bindAudioVoiceEvents() {
     voice.selectedVoiceUri = el("selectDeviceVoice").value || "auto";
     saveUserPrefs();
     if ((voice.mode === "tts" || voice.mode === "hybrid") && voice.enabled) {
-      voice.speak("暖暖", "已切換為這組聲線，祝你推理順利！", "normal");
+      voice.speak("暖暖", "已切換為這組聲線，祝你推理順利！", "normal", function () {
+        if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
+      });
     }
   });
 

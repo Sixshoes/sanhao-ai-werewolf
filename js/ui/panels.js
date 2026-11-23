@@ -370,8 +370,34 @@ function renderStepperPanel(p) {
   const lastSp = (state.match.speechQueue || []).length === 0;
   const isLwSpeech = (p === "LAST_WORDS_SPEECH");
   const isHunterResolve = (p === "HUNTER_RESOLVE");
-  const nextLabel = isHunterResolve ? "繼續 →" : (state.typewriter.active ? "顯示全文" : (isLwSpeech ? "繼續 →" : (lastSp ? "進入公投 →" : "下一位 →")));
-  el("btnStepNext").innerHTML = escapeHtml(nextLabel) + ' <kbd class="ui-kbd ml-1">Space</kbd>';
+  const isNightWait = typeof isNightPhase === "function" && isNightPhase(p);
+  const showStepNext = Boolean(
+    p === "DAY_SPEECH" ||
+    isLwSpeech ||
+    isHunterResolve ||
+    (p === "DAY_VOTE" && typeof isPlayerEligibleToVote === "function" && !isPlayerEligibleToVote())
+  );
+  const stepNextBtn = el("btnStepNext");
+  if (stepNextBtn) {
+    stepNextBtn.classList.toggle("hidden", !showStepNext);
+    if (showStepNext) {
+      const nextLabel = isHunterResolve
+        ? "繼續 →"
+        : (state.typewriter.active
+          ? "顯示全文"
+          : (isLwSpeech
+            ? "繼續 →"
+            : (p === "DAY_VOTE" ? "直接開票 →" : (lastSp ? "進入公投 →" : "下一位 →"))));
+      stepNextBtn.innerHTML = escapeHtml(nextLabel) + ' <kbd class="ui-kbd ml-1">Space</kbd>';
+    }
+  }
+  const stepRow = stepNextBtn ? stepNextBtn.parentElement : null;
+  if (stepRow && stepRow.classList && stepRow.classList.contains("stepper-action-row")) {
+    const hasSpecEnd = Boolean(state.match.started && pSeatLive && !pSeatLive.alive && p !== "GAME_OVER");
+    const hasMarkTools = (p === "DAY_SPEECH" && activeSpeaker && activeSpeaker.id !== getPlayerId());
+    const isSelfSp = ((p === "DAY_SPEECH" || isLwSpeech) && state.activeSpeakerId === getPlayerId());
+    stepRow.classList.toggle("hidden", isNightWait && !hasSpecEnd && !showStepNext && !hasMarkTools && !isSelfSp);
+  }
 
   const specEndBtn = el("btnSpectatorEndNow");
   if (specEndBtn) {

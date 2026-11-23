@@ -48,7 +48,7 @@
             <div id="dramaticCutIn" aria-hidden="true">
               <div class="cutin-band">
                 <div id="cutInTitle" class="text-base sm:text-xl font-black tracking-widest">真假明心觀察員對跳</div>
-                <div id="cutInSub" class="text-[11px] sm:text-xs font-medium opacity-90 mt-0.5 tracking-wider">茶席推理高光時刻
+                <div id="cutInSub" class="text-xs sm:text-[13px] font-semibold text-amber-50 mt-1 tracking-wider">茶席推理高光時刻
                 </div>
               </div>
             </div>
@@ -132,7 +132,7 @@
               <h2 id="bannerHeadline"
                 class="font-serif-craft text-xs sm:text-sm font-bold text-white truncate max-w-[190px] sm:max-w-[260px]">
                 找出 2 名說謊的酸民狼</h2>
-              <span id="roundTitle" class="text-[10.5px] text-slate-400 hidden lg:inline"></span>
+              <span id="roundTitle" class="text-[10.5px] text-slate-400 inline-flex items-center shrink-0"></span>
               <div class="hidden" aria-hidden="true">
                 <span id="stepTrack1" class="phase-pill step-night">壹 入夜</span>
                 <span id="stepTrack2" class="phase-pill step-speak">貳 論道</span>
@@ -383,12 +383,12 @@
                     <div class="flex items-center gap-2.5 flex-wrap">
                       <div class="seal-chop" aria-hidden="true">善</div>
                       <div class="text-[11px] tracking-[0.26em] text-amber-300/90 font-medium">林美山書院・反假訊息推理之夜</div>
-                      <span class="title-release-badge">公測 1.0</span>
+                      <span class="title-release-badge">公測 2.0</span>
                     </div>
                     <h1
                       class="font-serif-craft text-3xl sm:text-4xl font-black text-amber-50 tracking-[0.14em] leading-tight">
                       三好・雲起茶席</h1>
-                    <p class="text-xs text-slate-300 leading-relaxed max-w-[300px]">
+                    <p id="lobbySeatSummary" class="text-xs text-slate-300 leading-relaxed max-w-[300px]">
                       存好心明辨真偽，說好話凝聚共識。與八位書院夥伴圍坐茶席，在三好與四給間識破挑撥迷霧。
                     </p>
                   </div>
@@ -1149,7 +1149,7 @@
   <div id="modalHistoryLog" class="hidden"><button id="btnCloseLogDrawer" type="button"></button></div>
   <div id="modalVoteSheet" class="hidden"><button id="btnCloseVoteSheet" type="button"></button></div>
 
-  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-xs"></div>
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none max-w-xs"></div>
 
   <!-- Tutorial Modal (Clear 6-Chapter Interactive Game Manual — Accessible Anytime!) -->
   <div id="modalTutorial" class="hidden fixed inset-0 z-50 craft-modal-backdrop flex items-center justify-center p-3 sm:p-4">
@@ -1331,9 +1331,23 @@
             </select></div>
           <div class="grid grid-cols-2 gap-1.5 text-center">
             <button id="btnAccentMulti" type="button" data-accent="anime"
-              class="voice-accent-btn voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[10.5px] text-slate-200 transition"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>動漫角色自然配音（推薦）</button>
+              class="voice-accent-btn voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[10.5px] text-slate-200 transition"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>12角色聲線最大化（含古風）</button>
             <button id="btnAccentTw" type="button" data-accent="tw"
-              class="voice-accent-btn voice-rate-btn py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[10.5px] text-slate-300 transition">純台灣腔（溫和微調）</button>
+              class="voice-accent-btn voice-rate-btn py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[10.5px] text-slate-300 transition">純台灣腔（共振峰塑形）</button>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5 text-center">
+            <button id="btnEngineAuto" type="button" data-vengine="auto"
+              class="voice-rate-btn is-active py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[10px] text-slate-200 transition">雙軌自動（推薦）</button>
+            <button id="btnEngineLocal" type="button" data-vengine="local"
+              class="voice-rate-btn py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[10px] text-slate-300 transition">免費本地神經 $0</button>
+            <button id="btnEngineGemini" type="button" data-vengine="gemini"
+              class="voice-rate-btn py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[10px] text-slate-300 transition">Gemini 3.8 氣口</button>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 text-center">
+            <button id="btnToggleLiveBackchannel" type="button"
+              class="voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[10px] text-slate-200 transition">圓桌座位插話反應：開</button>
+            <button id="btnToggleHumanBreath" type="button"
+              class="voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[10px] text-slate-200 transition">真人換氣＋木亭音場：開</button>
           </div>
           <div class="grid grid-cols-3 gap-1.5 text-center">
             <button id="btnVoiceRateSlow" type="button" data-vrate="0.96"

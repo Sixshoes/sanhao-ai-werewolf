@@ -49,6 +49,12 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
       const tailPrompt = focusDidNotSpeak
         ? ("今天還沒輪到 " + seatLabel(focusTarget) + " 開口，我暫時先放一格狼坑看等下你怎麼解釋，" + (nextWatch && nextWatch.id !== focusTarget.id ? ("後置位 " + seatLabel(nextWatch) + " 也請接力盤坑，") : "") + signoffPhrase)
         : ("這輪我暫先把狼坑畫在 " + formatSeatList(initialWolfPits).join(" 跟 ") + "，先聽後面大家怎麼接力，" + signoffPhrase);
+      const leadIntro = day === 1
+        ? "我先起手整理剛才警長競選的線索："
+        : "我先起手整理昨天的線索：";
+      const trustIntro = trustPick
+        ? (seatLabel(trustPick) + (day === 1 ? " 剛才態度比較乾淨我暫放好人坑；" : " 昨輪態度比較乾淨我暫放好人坑；"))
+        : "";
       return {
         targetId: focusTarget ? focusTarget.id : null,
         relationType: prevVoteSuspect ? "suspect" : null,
@@ -57,9 +63,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
         wolfPits: initialWolfPits,
         goodPits: trustPick ? [trustPick.id] : [],
         hasToxicSlip: false,
-        text: leadPhrase + "我先起手整理昨天的線索：" +
-          (trustPick ? (seatLabel(trustPick) + " 昨輪態度比較乾淨我暫放好人坑；") : "") +
-          prevVoteNote + tailPrompt
+        text: leadPhrase + leadIntro + trustIntro + prevVoteNote + tailPrompt
       };
     }
     return {

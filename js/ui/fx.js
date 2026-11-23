@@ -390,6 +390,9 @@ function triggerSpeechAudienceReactions(speaker, generated) {
     nudgeSeat(tid, { scale: 0.91, vy: 4, vTilt: 0.2 });
     if (idx === 0) {
       setSeatBubble(tid, pickShort(tSeat, "reactGasp", "這跟我無關吧！"), "suspect", 1900);
+      if (typeof voice !== "undefined" && typeof voice.triggerSeatBackchannel === "function") {
+        voice.triggerSeatBackchannel(tid, "accuse", 740);
+      }
     }
   });
 
@@ -400,6 +403,9 @@ function triggerSpeechAudienceReactions(speaker, generated) {
       nudgeSeat(vSeat.id, { scale: 1.07, vy: -3.5 });
       spawnBurst(vSeat.id, ["#34d399", "#fde68a"], 8, "petal");
       setSeatBubble(vSeat.id, pickShort(vSeat, "reactVouch", "謝謝信任！"), "trust", 1800);
+      if (pitTargets.length === 0 && typeof voice !== "undefined" && typeof voice.triggerSeatBackchannel === "function") {
+        voice.triggerSeatBackchannel(vSeat.id, "vouch", 780);
+      }
     }
   }
 }

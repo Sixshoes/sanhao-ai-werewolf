@@ -296,6 +296,48 @@ class ServerTestCase(unittest.TestCase):
                 self.assertEqual(row.get("rating"), 5)
                 self.assertIn("坐席視角", row.get("message", ""))
 
+    def test_v13_clause_prosody_and_gemini_tts_cache(self):
+        # 1. Clause-level prosody arc stays strictly within ±5Hz & shapes open < climax and close < climax
+        for role in server.ALLOWED_CLAUSE_ROLES:
+            v_name, r_str, p_str = server.compute_rate_pitch("小澄", 0.96, "accuse", "anime", role)
+            self.assertTrue(v_name)
+            p_val = int(p_str[:-2])
+            self.assertGreaterEqual(p_val, -5)
+            self.assertLessEqual(p_val, 5)
+        _, r_open, _ = server.compute_rate_pitch("小澄", 0.96, "normal", "anime", "open")
+        _, r_climax, _ = server.compute_rate_pitch("小澄", 0.96, "normal", "anime", "climax")
+        _, r_close, _ = server.compute_rate_pitch("小澄", 0.96, "normal", "anime", "close")
+        self.assertLess(int(r_open[:-1]), int(r_climax[:-1]))
+        self.assertLess(int(r_close[:-1]), int(r_climax[:-1]))
+
+        # 2. Spoken Mandarin digit & rhythm naturalizer
+        nat = server.naturalize_mandarin_text("我覺得 12號 與 03號 票型不對；警長 1.5票 很關鍵")
+        self.assertIn("十二號", nat)
+        self.assertIn("三號", nat)
+        self.assertIn("一點五票", nat)
+        self.assertNotIn("；", nat)
+
+        # 3. Gemini 3.8 TTS disk cache endpoint: 401 without key on miss, 200 audio/wav on disk cache hit
+        miss_body = json.dumps({"voice": "Kore", "style": "warm", "text": "__uncached_v13_probe__"}).encode("utf-8")
+        st401, _, _ = dispatch_handler("POST", "/api/tts/gemini", body=miss_body)
+        self.assertEqual(st401, 401)
+
+        probe_txt = "<breath> 觀此席間，破綻昭然。"
+        probe_style = "低沉古風男聲"
+        gem_key = "gem_" + hashlib.sha256(f"Charon|{probe_style}|{probe_txt}".encode("utf-8")).hexdigest()[:24]
+        wav_path = server.CACHE_DIR / f"{gem_key}.wav"
+        fake_wav = b"RIFF\x24\x00\x00\x00WAVEfmt " + (b"\x00" * 160)
+        wav_path.write_bytes(fake_wav)
+        try:
+            hit_body = json.dumps({"voice": "Charon", "style": probe_style, "text": probe_txt}, ensure_ascii=False).encode("utf-8")
+            st200, hdrs200, data200 = dispatch_handler("POST", "/api/tts/gemini", body=hit_body)
+            self.assertEqual(st200, 200)
+            self.assertEqual(hdrs200.get("Content-Type"), "audio/wav")
+            self.assertEqual(data200, fake_wav)
+        finally:
+            if wav_path.exists():
+                wav_path.unlink()
+
 
 if __name__ == "__main__":
     unittest.main()
