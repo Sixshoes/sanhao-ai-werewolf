@@ -116,14 +116,20 @@ function buildAiLastWords(seat, mode) {
 }
 
 function applyLastWordsInfluence(seat, rawText, meta) {
-  const clean = String(rawText || "").replace(/^「|」$/g, "").trim();
+  let clean = String(rawText || "").replace(/^「|」$/g, "").trim();
+  if (clean && typeof normalizeSeatRefsInText === "function") {
+    clean = normalizeSeatRefsInText(clean);
+  }
   if (!clean || !seat) return;
   const m = meta || {};
-  const claimedSeer = m.claimRole === "seer" || /預言家|明心觀察員|觀察員/.test(clean);
-  const claimedWitch = m.claimRole === "witch" || /女巫|滴水奉茶師|奉茶師/.test(clean);
-  const claimedHunter = m.claimRole === "hunter" || /直心糾察長|糾察長|獵人/.test(clean);
-  const claimedGuard = m.claimRole === "guard" || /護心守衛|守衛/.test(clean);
-  const claimedElder = m.claimRole === "elder" || /清心長老/.test(clean);
+  const strippedClaimLw = clean
+    .replace(/(?:不是|非|絕不是|沒有|別信|別投|保護?|相信|力挺).{0,5}(?:預言家|明心觀察員|觀察員|女巫|滴水奉茶師|奉茶師|直心糾察長|糾察長|獵人|護心守衛|守衛|清心長老)/g, " ");
+  const selfClaimLwPrefix = "(?:我(?:才|就)?是|我這(?:真|張)|我(?:跳|拍|亮)|吾(?:乃|實為)|妾身(?:乃|實為)|小生(?:乃|實為)|^)";
+  const claimedSeer = m.claimRole === "seer" || new RegExp(selfClaimLwPrefix + "[^，。！？；;]{0,5}(?:預言家|明心觀察員|觀察員)").test(strippedClaimLw);
+  const claimedWitch = m.claimRole === "witch" || new RegExp(selfClaimLwPrefix + "[^，。！？；;]{0,5}(?:女巫|滴水奉茶師|奉茶師)").test(strippedClaimLw);
+  const claimedHunter = m.claimRole === "hunter" || new RegExp(selfClaimLwPrefix + "[^，。！？；;]{0,5}(?:直心糾察長|糾察長|獵人)").test(strippedClaimLw);
+  const claimedGuard = m.claimRole === "guard" || new RegExp(selfClaimLwPrefix + "[^，。！？；;]{0,5}(?:護心守衛|守衛)").test(strippedClaimLw);
+  const claimedElder = m.claimRole === "elder" || new RegExp(selfClaimLwPrefix + "[^，。！？；;]{0,5}清心長老").test(strippedClaimLw);
   if (claimedSeer) seat.claimedRole = "seer";
   else if (claimedWitch) seat.claimedRole = "witch";
   else if (claimedHunter) seat.claimedRole = "hunter";
@@ -185,7 +191,8 @@ function applyLastWordsInfluence(seat, rawText, meta) {
     rawText: clean
   });
 
-  if (state.match.day === 1 && (!state.lastWordsCtx || state.lastWordsCtx.mode === "first_night")) {
+  const lwModeNow = m.mode || (state.lastWordsCtx ? state.lastWordsCtx.mode : null);
+  if (state.match.day === 1 && lwModeNow === "first_night") {
     state.match.firstNightIntel = {
       speakerId: seat.id,
       speakerName: seat.id === getPlayerId() ? "你" : seat.name,
@@ -388,7 +395,10 @@ function preparePlayerLastWordsPanel(mode) {
 function submitPlayerLastWords(rawText) {
   sound.unlock();
   if (state.match.phase !== "LAST_WORDS_PLAYER" || !state.lastWordsCtx) return;
-  const clean = String(rawText || "").replace(/^「|」$/g, "").trim();
+  let clean = String(rawText || "").replace(/^「|」$/g, "").trim();
+  if (clean && typeof normalizeSeatRefsInText === "function") {
+    clean = normalizeSeatRefsInText(clean);
+  }
   const player = getPlayerSeat();
   const ctx = state.lastWordsCtx;
   if (!clean) {

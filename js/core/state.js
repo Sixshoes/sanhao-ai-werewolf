@@ -190,6 +190,7 @@ function saveUserPrefs() {
       guardMode: Boolean(state.guardMode),
       geminiModel: state.geminiModel || "gemini-3.8-flash",
       localLlmModel: state.localLlmModel || "",
+      serverGeminiOptOut: Boolean(state.serverGeminiOptOut),
       subtitleLarge: Boolean(state.subtitleLarge)
     };
     window.localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(payload));
@@ -254,6 +255,7 @@ function loadUserPrefs() {
     if (typeof p.guardMode === "boolean") state.guardMode = p.guardMode;
     if (typeof p.geminiModel === "string" && p.geminiModel) state.geminiModel = p.geminiModel;
     if (typeof p.localLlmModel === "string") state.localLlmModel = p.localLlmModel;
+    if (typeof p.serverGeminiOptOut === "boolean") state.serverGeminiOptOut = p.serverGeminiOptOut;
     if (typeof p.subtitleLarge === "boolean") state.subtitleLarge = p.subtitleLarge;
   } catch (e) {}
 }

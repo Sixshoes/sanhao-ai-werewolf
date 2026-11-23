@@ -60,7 +60,7 @@ function analyzeThreeGoodSpeech(rawText) {
     if (!cRaw) return;
     const cCleanWolf = cRaw.replace(/(?:不像|不是|非|絕不是|絕非).{0,2}(?:酸民)?狼/g, "好人");
     const cClean = cCleanWolf.replace(/(?:不是|不像|絕非).{0,2}(?:好人|好夥伴|夥伴)/g, "可疑");
-    const hasPosWord = /好人|信任|救活|保護|護回|守護|相信|金水|清白|誠懇|沒問題|正氣|善良|放心/.test(cClean);
+    const hasPosWord = /好人|信任|救活|保護|護回|守護|相信|金水|清白|誠懇|沒問題|正氣|善良|放心|不錯|有理|合理|認同|贊同|乾淨|很穩/.test(cClean);
     const hasNegWord = /懷疑|酸民狼|是狼|查殺|投出去|投他|投給|出他|請離|矛盾|假冒|冒充|誤導|破綻|重點檢視|重點留意|帶風向|可疑|問題|小心|盯緊|別信|栽贓|最像狼|硬打|抓|投\d+號/.test(cClean);
     let clauseStance = lastStance;
     if (hasNegWord && !hasPosWord) clauseStance = "accuse";
@@ -1247,11 +1247,14 @@ function submitPlayerSpeech() {
   }
   const res = analyzeThreeGoodSpeech(text);
   const player = getPlayerSeat();
-  const claimedSeerNow = /(我是|我才是|我亮|我跳|其實我|本著.{0,6}公開).{0,10}(預言家|明心觀察員|觀察員)|^(真)?(預言家|明心觀察員)/.test(text);
-  const claimedWitchNow = /(我是|我才是|我亮|我跳|其實我).{0,10}(女巫|滴水奉茶師|奉茶師)|^(真)?(滴水奉茶師|奉茶師)/.test(text);
-  const claimedHunterNow = /(我是|我才是|我亮|我跳|其實我).{0,10}(獵人|直心糾察長|糾察長)|^(真)?(直心糾察長|糾察長)/.test(text);
-  const claimedGuardNow = /(我是|我才是|我亮|我跳|其實我).{0,10}(護心守衛|守衛)|^(真)?(護心守衛|守衛)/.test(text);
-  const claimedElderNow = /(我是|我才是|我亮|我跳|其實我).{0,10}(清心長老|長老)|^(真)?清心長老/.test(text);
+  const strippedPlClaim = text
+    .replace(/(?:不是|非|絕不是|沒有|不信|懷疑).{0,5}(?:預言家|明心觀察員|觀察員|女巫|滴水奉茶師|奉茶師|獵人|直心糾察長|糾察長|護心守衛|守衛|清心長老|長老)/g, " ")
+    .replace(/(?:若|如果|萬一|假設)[^，。！？；;]*(?:預言家|明心觀察員|觀察員|女巫|滴水奉茶師|奉茶師|獵人|直心糾察長|糾察長|護心守衛|守衛|清心長老)[^，。！？；;]*/g, " ");
+  const claimedSeerNow = /(?:我是|我才是|我亮|我跳|其實我是|本著[^，。！？；;]{0,6}公開)[^，。！？；;]{0,6}(?:預言家|明心觀察員|觀察員)|^(?:真)?(?:預言家|明心觀察員)/.test(strippedPlClaim);
+  const claimedWitchNow = /(?:我是|我才是|我亮|我跳|其實我是)[^，。！？；;]{0,6}(?:女巫|滴水奉茶師|奉茶師)|^(?:真)?(?:滴水奉茶師|奉茶師)/.test(strippedPlClaim);
+  const claimedHunterNow = /(?:我是|我才是|我亮|我跳|其實我是)[^，。！？；;]{0,6}(?:獵人|直心糾察長|糾察長)|^(?:真)?(?:直心糾察長|糾察長)/.test(strippedPlClaim);
+  const claimedGuardNow = /(?:我是|我才是|我亮|我跳|其實我是)[^，。！？；;]{0,6}(?:護心守衛|守衛)|^(?:真)?(?:護心守衛|守衛)/.test(strippedPlClaim);
+  const claimedElderNow = /(?:我是|我才是|我亮|我跳|其實我是)[^，。！？；;]{0,6}(?:清心長老|長老)|^(?:真)?清心長老/.test(strippedPlClaim);
   if (claimedSeerNow) {
     player.claimedRole = "seer";
     const otherSeer = state.match.seats.some(function (s) { return s.id !== getPlayerId() && s.alive && s.claimedRole === "seer"; });
@@ -1317,10 +1320,12 @@ function submitPlayerSpeech() {
   const draftBfIds = {};
   if (draft.badgeFlowFirstId) draftBfIds[draft.badgeFlowFirstId] = true;
   if (draft.badgeFlowSecondId) draftBfIds[draft.badgeFlowSecondId] = true;
-  (res.seatMentions || []).forEach(function (sid) {
-    if (draftBfIds[sid] && (draft.wolfIds || []).indexOf(sid) === -1) return;
-    if (plGoodPits.indexOf(sid) === -1 && /(狼坑|檢視|懷疑|請離|投)/.test(stanceTextClean)) pushWolfPit(sid);
-  });
+  if (plWolfPits.length === 0 && plGoodPits.length === 0) {
+    (res.seatMentions || []).forEach(function (sid) {
+      if (draftBfIds[sid] && (draft.wolfIds || []).indexOf(sid) === -1) return;
+      if (plGoodPits.indexOf(sid) === -1 && /(狼坑|檢視|懷疑|請離|投)/.test(stanceTextClean)) pushWolfPit(sid);
+    });
+  }
 
   const fallbackTarget = evForceId || res.seatMentions.find(function (n) { return n !== pid && !draftBfIds[n]; }) || null;
   let accuseId = evForceId || plWolfPits[0] || null;
@@ -1484,7 +1489,8 @@ function submitPlayerSpeech() {
     state.match.seats.forEach(function (ai) {
       const aiEffRole = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(ai) : ai.role;
       if (ai.id !== pid && ai.alive && (ai.suspicionMap[pid] || 0) < 100 && !(plClaimedGod && aiEffRole === plClaimedGod)) {
-        ai.suspicionMap[pid] = clamp((ai.suspicionMap[pid] || 50) - (comboMult > 1 ? 11 : 8), 5, 95);
+        const trustBoost = Math.round((comboMult > 1 ? 11 : 8) * critMult);
+        ai.suspicionMap[pid] = clamp((ai.suspicionMap[pid] || 50) - trustBoost, 5, 95);
       }
     });
     plWolfPits.forEach(function (wId, idx) {

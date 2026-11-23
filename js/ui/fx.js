@@ -230,6 +230,7 @@ function bumpCombo(reasonText) {
   if (c >= 3 && !state.match.comboBoostReady) {
     state.match.comboBoostReady = true;
     state.match.harmonyScore = clamp(state.match.harmonyScore + 3, 0, 100);
+    if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
     spawnFx(getPlayerId(), "🔥 " + c + "連擊・發言強化!", "#fbbf24");
     spawnBurst(getPlayerId(), ["#fbbf24", "#fde68a", "#34d399"], 24, "star");
     setSeatEmotion(getPlayerId(), "proud", 3200);

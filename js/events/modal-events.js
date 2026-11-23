@@ -128,7 +128,7 @@ function bindModalEvents() {
         el("btnSheriffNextSpeech").click();
         return;
       }
-      if (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH" || state.match.phase === "HUNTER_RESOLVE") {
+      if (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH" || state.match.phase === "HUNTER_RESOLVE" || (state.match.phase === "DAY_VOTE" && typeof isPlayerEligibleToVote === "function" && !isPlayerEligibleToVote())) {
         ev.preventDefault();
         el("btnStepNext").click();
         return;
@@ -161,7 +161,7 @@ function bindModalEvents() {
         el("btnVoteResultNext").click();
         return;
       }
-      if (phNow === "DAY_SPEECH" || phNow === "LAST_WORDS_SPEECH" || phNow === "HUNTER_RESOLVE") {
+      if (phNow === "DAY_SPEECH" || phNow === "LAST_WORDS_SPEECH" || phNow === "HUNTER_RESOLVE" || (phNow === "DAY_VOTE" && typeof isPlayerEligibleToVote === "function" && !isPlayerEligibleToVote())) {
         ev.preventDefault();
         el("btnStepNext").click();
         return;
@@ -357,7 +357,9 @@ function bindModalEvents() {
     state.localLlmModel = "";
     state.serverGeminiOptOut = false;
     state.serverGeminiCooldownUntil = 0;
+    state._personalKeyCooldownUntil = 0;
     state.geminiApiKey = key;
+    if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
     if (typeof saveSessionGeminiKey === "function") saveSessionGeminiKey(key);
     state.geminiModel = chosenModel || "gemini-3.8-flash";
     saveUserPrefs();
@@ -393,10 +395,14 @@ function bindModalEvents() {
         } else {
           state.geminiApiKey = "";
           if (typeof saveSessionGeminiKey === "function") saveSessionGeminiKey("");
-          box.textContent = "金鑰無效、配額不足或網路受限，已自動使用內建三好 AI 引擎";
+          const proxyActiveNow = typeof isServerGeminiProxyActive === "function" && isServerGeminiProxyActive();
+          box.textContent = proxyActiveNow
+            ? "個人金鑰無效或配額不足，已改用線上公測雲端 Gemini 代理"
+            : "金鑰無效、配額不足或網路受限，已自動使用內建三好 AI 引擎";
         }
       }
     }
+    if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
     updateAllUI();
   });
 
@@ -404,6 +410,7 @@ function bindModalEvents() {
     state.geminiApiKey = "";
     state.localLlmModel = "";
     state.serverGeminiOptOut = true;
+    if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
     if (typeof saveSessionGeminiKey === "function") saveSessionGeminiKey("");
     saveUserPrefs();
     el("inputGeminiKey").value = "";

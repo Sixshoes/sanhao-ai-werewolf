@@ -26,6 +26,7 @@ function scheduleNightStep(fn, ms) {
 // ==================== NIGHT ENGINE ====================
 function beginNightPhase() {
   clearStepTimer();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   closeSeatIntel();
   closeRadialMenu();
   state.dragAction.active = false;
@@ -48,6 +49,7 @@ function beginNightPhase() {
 
   state.match.seats.forEach(function (s) {
     s.trustShield = false;
+    s.publicVouchId = null;
     s.emojiMood = "";
     s.microPulse = s.role === "wolf"
       ? clamp(68 + Math.floor(Math.random() * 25), 55, 96)
@@ -202,7 +204,7 @@ function proceedToNightWolf() {
   } else {
     if (player && player.alive && player.role === "seer") {
       voice.speakHost("第" + state.match.day + "晚，天黑請靜心。明心觀察員請點擊外圍座位查證身分。", undefined, "host_night");
-    } else if (!(typeof isSpectatorFastForward === "function" && isSpectatorFastForward())) {
+    } else if (!(typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) && !(player && player.alive && player.role === "guard")) {
       voice.speakHost("第" + state.match.day + "晚，天黑請靜心。", undefined, "host_night");
     }
     state.stepTimer = scheduleNightStep(function () {
@@ -430,6 +432,7 @@ function proceedToNightWitch() {
 // ==================== DAWN & HUNTER ====================
 function resolveDawn() {
   clearStepTimer();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
   state.activeBubble = null;
   sound.playDawn();
@@ -635,7 +638,8 @@ function chooseAiHunterTarget(hunterSeat) {
   if (isWK) {
     // AI Wolf King legally knows non-Wolf seats via Blind-View, prioritizing ONLY observable claimedRole / sheriff!
     const godPick = aliveOthers.find(function (s) { return s.claimedRole === "seer" || s.claimedRole === "witch" || s.claimedRole === "guard"; });
-    const shId = snap ? snap.sheriffSeatId : state.match.sheriffSeatId;
+    const shPending = snap ? snap.sheriffElectionPending : Boolean(state.match && state.match.sheriffElectionPending);
+    const shId = shPending ? null : (snap ? snap.sheriffSeatId : state.match.sheriffSeatId);
     const shPick = aliveOthers.find(function (s) { return s.id === shId; });
     const wkTarget = godPick || shPick || aliveOthers[0];
     chosenId = wkTarget ? wkTarget.id : null;
@@ -868,6 +872,7 @@ function resumeAfterHunter() {
 // ==================== NIGHT / HUNTER CONFIRM ====================
 function confirmTargetAction() {
   sound.unlock();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   const phase = state.match.phase;
   const target = getSeat(state.selectedSeatId);
 
@@ -899,6 +904,7 @@ function confirmTargetAction() {
       title: "🛡️ 雲水結界：今晚守護了 " + guardLabel + "！",
       text: ""
     });
+    addThreeGoodPoint("deeds", "做好事・護心結界");
     triggerCutIn("🛡️ 護心結界！", guardLabel + " 獲得今夜守護盾！", "celadon", 1300);
     state.selectedSeatId = null;
     proceedToNightWolf();
@@ -1010,6 +1016,7 @@ function confirmTargetAction() {
 
 function skipTargetAction() {
   sound.unlock();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   const p = state.match.phase;
   if (p === "NIGHT_GUARD") {
     state.match.lastGuardTargetId = null;

@@ -84,6 +84,7 @@ const orchestrator = {
   beginNewEpoch: function (reason) {
     this.matchEpoch += 1;
     this.clearAllTimers();
+    this.stats = { dispatches: 0, geminiHits: 0, heuristicHits: 0, complianceFiltered: 0 };
     if (typeof antiCheatMonitor !== "undefined" && typeof antiCheatMonitor.resetMatch === "function") {
       antiCheatMonitor.resetMatch();
     }
@@ -187,10 +188,11 @@ const orchestrator = {
 
   sanitizeAgentSpeech: function (rawText) {
     const orig = String(rawText || "");
-    let cleaned = orig
+    const parenCleaned = (typeof stripStageDirectionParens === "function")
+      ? stripStageDirectionParens(orig)
+      : orig.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "");
+    let cleaned = parenCleaned
       .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "")
-      .replace(/（[^）]*）/g, "")
-      .replace(/\([^)]*\)/g, "")
       .trim();
 
     const rules = [
@@ -289,6 +291,7 @@ const orchestrator = {
       const pick = (target && target.alive) ? target : aliveOthers[0];
       pick.suspicionMap[pid] = clamp((pick.suspicionMap[pid] || 50) - 12, 5, 95);
       state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + 8, 0, 100);
+      this.emit("harmony:changed", { score: state.match.harmonyScore });
       if (typeof spawnBeam === "function") spawnBeam(pid, pick.id, "#34d399", "trust", 720);
       if (typeof setSeatEmotion === "function") setSeatEmotion(pick.id, "happy", 2800);
       if (typeof setSeatBubble === "function") setSeatBubble(pick.id, "謝啦這杯冬瓜青超順口！感覺你態度很穩耶！", "trust", 3400);
@@ -310,6 +313,7 @@ const orchestrator = {
       if (typeof showToast === "function") showToast("🏮 古燈照出 " + (half === "front" ? "前半席" : "後半席") + "最緊張對象：" + fmtSeatNum(peak.id) + "號（心虛 " + peak.microPulse + "%）！", "emerald");
     } else {
       state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + 10, 0, 100);
+      this.emit("harmony:changed", { score: state.match.harmonyScore });
       if (typeof stage3d !== "undefined" && typeof stage3d.triggerHeroBeat === "function") stage3d.triggerHeroBeat("purify_cast", 2200);
       if (typeof addThreeGoodPoint === "function") addThreeGoodPoint("words", "共襄茶會");
       if (typeof spawnFx === "function") spawnFx(pid, "🔔 茶席響應 +10!", "#fde68a");
@@ -317,6 +321,7 @@ const orchestrator = {
       if (typeof showToast === "function") showToast("🔔 已響應今日茶席事件「" + ev.shortTitle + "」，全場友善度 +10！", "emerald");
     }
 
+    if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
     if (typeof updateAllUI === "function") updateAllUI();
     return true;
   },
@@ -389,7 +394,10 @@ const orchestrator = {
           const sanFb = this.sanitizeAgentSpeech(generated.text);
           generated.text = sanFb.text || generated.text;
           filtered = sanFb.filtered;
-          tier = (state.localLlmModel ? "Ollama逾時→本地保底" : "Gemini逾時→本地保底");
+          const rejReason = (typeof tryGenerateGeminiAiSpeech === "function" && tryGenerateGeminiAiSpeech._lastRejectReason) ? tryGenerateGeminiAiSpeech._lastRejectReason : "";
+          tier = state.localLlmModel
+            ? "Ollama逾時→本地保底"
+            : (rejReason ? ("Gemini護欄攔截(" + rejReason + ")→本地保底") : "Gemini逾時→本地保底");
           this.stats.heuristicHits += 1;
         }
       } else {
@@ -426,17 +434,30 @@ const orchestrator = {
       let filtered = false;
 
       if (typeof state !== "undefined" && (typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel)) && text.length > 0 && typeof callGeminiText === "function") {
-        const prompt = "把這句推理發言保留座位號碼，改寫成55到80字之間、溫和有禮、具三好精神（存好心說好話做好事）又有邏輯說服力的繁體中文口語推理（禁用刀殺毒與表情符號，只輸出一段話）：" + text;
+        const aliveRoster = (state.match && Array.isArray(state.match.seats))
+          ? state.match.seats.filter(function (s) { return s.alive; }).map(function (s) { return s.id + "號" + (s.id === pid ? "你" : s.name); }).join("、")
+          : "";
+        const stanceHint = (analysis.primaryVouchId && !analysis.primaryAccuseId)
+          ? ("保留「信任力挺 " + targetLabel + "」的立場")
+          : ("保留「溫和提醒大家重點檢視 " + targetLabel + "」的立場");
+        const prompt = "你是《三好AI狼人殺》的「三好說好話潤飾師」。場上在席：" + aliveRoster + "（發言者是 " + pid + "號）。" +
+          "請把以下玩家發言改寫成 55～85 字、溫和有禮、具三好精神（存好心、說好話、做好事）又有邏輯說服力的繁體中文圓桌口語。" +
+          "必須" + stanceHint + "、所有座號寫阿拉伯數字加「號」（如 3號、6號），絕對禁用任何人身攻擊、酸言嘲諷詞（如白癡、亂玩、別演了、少裝了、胡說八道、笑死、滾、瞎子、邏輯死亡）以及刀殺毒與表情符號，只輸出單一段落純文字：\n「" + text + "」";
         const live = await callGeminiText(prompt);
         if (!this.isEpochValid(ep)) {
           return { epochValid: false, text: text, analysis: analysis, tier: tier };
         }
         if (live) {
-          const san = this.sanitizeAgentSpeech(live);
-          outText = san.text;
-          filtered = san.filtered;
-          tier = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : (state.geminiModel || "gemini-3.8-flash");
-          this.stats.geminiHits += 1;
+          let cand = (typeof normalizeGeminiSpeechText === "function") ? normalizeGeminiSpeechText(live) : live;
+          const san = this.sanitizeAgentSpeech(cand);
+          cand = san.text;
+          const recheck = typeof analyzeThreeGoodSpeech === "function" ? analyzeThreeGoodSpeech(cand) : { isToxic: false };
+          if (cand && cand.length >= 16 && !recheck.isToxic) {
+            outText = cand;
+            filtered = san.filtered;
+            tier = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : (state.geminiModel || "gemini-3.8-flash");
+            this.stats.geminiHits += 1;
+          }
         }
       }
 
@@ -503,6 +524,60 @@ const orchestrator = {
         compliance: true,
         summary: "終局戰報封存（總調度 " + summary.totalDispatches + " 次・" + summary.kindnessHighlight + "）"
       });
+      // Non-blocking async Gemini God-View Coach Hydration (works on Cloud Proxy /api/gemini & BYOK!)
+      if (typeof state !== "undefined" && typeof isExternalLlmActive === "function" && isExternalLlmActive() && typeof callGeminiText === "function" && typeof document !== "undefined" && typeof el === "function" && el("gameOverCoachBox")) {
+        const selfOrch = this;
+        const mSnap = m;
+        const seatsBrief = (mSnap.seats || []).map(function (s) {
+          const rDef = typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : ROLE_DEFS[s.role];
+          return s.id + "號" + (s.id === (typeof getPlayerId === "function" ? getPlayerId() : 1) ? "玩家你" : s.name) + "(" + (rDef ? rDef.name : s.role) + (s.alive ? "・存" : "・離") + ")";
+        }).join("、");
+        const votesBrief = (mSnap.voteHistory || []).slice(-4).map(function (vh) {
+          return "第" + vh.day + "天公投離席:" + (vh.outId ? (vh.outId + "號") : "平票無人");
+        }).join("；") || "無公投紀錄";
+        const coachPrompt = "你是林美山書院《三好AI狼人殺》茶席總監「清茗」，剛結束一場對局，請以上帝視角給玩家精闢溫暖的覆盤點評。\n" +
+          "勝方：" + (summary.winnerTeam === "good" ? "三好書院（好人勝）" : "酸民狼陣營勝") + "（" + summary.reason + "）\n" +
+          "全場底牌：" + seatsBrief + "\n" +
+          "投票脈絡：" + votesBrief + "\n" +
+          "三好與四給表現：" + summary.kindnessHighlight + "｜友善度：" + (mSnap.harmonyScore || 70) + "｜四給連心次數：" + ((mSnap.fourGUsedCount) || 0) + "\n" +
+          "請只輸出單一純 JSON（3段各32～55字，自然繁體中文，無表情符號與 Markdown）：" +
+          '{"turnPoint":"本局勝負關鍵轉折點分析","threeGoodReview":"玩家本局三好說好話與四給策略亮點點評","nextTip":"下一局具體進階建議"}';
+        callGeminiText(coachPrompt, { jsonMode: true }).then(function (rawCoach) {
+          if (!rawCoach || !selfOrch.isEpochValid(ep)) return;
+          if (!state.match || state.match.phase !== "GAME_OVER") return;
+          const fb = rawCoach.indexOf("{");
+          const lb = rawCoach.lastIndexOf("}");
+          if (fb === -1 || lb <= fb) return;
+          let obj = null;
+          try { obj = JSON.parse(rawCoach.slice(fb, lb + 1)); } catch (e) { return; }
+          if (!obj || !obj.turnPoint || !obj.threeGoodReview || !obj.nextTip) return;
+          const cleanStr = function (v) {
+            return (typeof normalizeGeminiSpeechText === "function") ? normalizeGeminiSpeechText(String(v || "")) : String(v || "").trim();
+          };
+          const box = el("gameOverCoachBox");
+          if (!box) return;
+          const llmLbl = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : "Gemini";
+          const cards = [
+            { tag: "✦ 清茗上帝視角・勝負轉折", body: cleanStr(obj.turnPoint), cls: "border-amber-400/40 bg-amber-950/20 text-amber-100" },
+            { tag: "🌸 三好四給・實戰評語", body: cleanStr(obj.threeGoodReview), cls: "border-emerald-400/40 bg-emerald-950/20 text-emerald-100" },
+            { tag: "🧭 下一局進階策略", body: cleanStr(obj.nextTip), cls: "border-sky-400/40 bg-sky-950/20 text-sky-100" }
+          ];
+          box.innerHTML = '<div class="text-[11px] font-bold text-amber-300/90 mb-1.5 flex items-center justify-between"><span>✨ ' + escapeHtml(llmLbl) + ' 即時上帝視角覆盤</span></div>' +
+            cards.map(function (c) {
+              return '<div class="rounded-lg border px-2.5 py-2 mb-1.5 ' + c.cls + '">' +
+                '<div class="text-[11px] font-black mb-0.5">' + escapeHtml(c.tag) + '</div>' +
+                '<div class="text-xs leading-relaxed opacity-95">' + escapeHtml(c.body) + '</div></div>';
+            }).join("");
+          selfOrch.stats.geminiHits += 1;
+          selfOrch.recordTrace({
+            agent: "GodViewAnalystAgent",
+            tier: llmLbl + " (賽後覆盤)",
+            ms: Math.round((typeof performance !== "undefined" ? performance.now() : Date.now()) - t0),
+            compliance: true,
+            summary: "即時上帝視角三好覆盤生成完成"
+          });
+        }).catch(function () {});
+      }
       return summary;
     }
 

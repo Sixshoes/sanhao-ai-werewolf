@@ -351,6 +351,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
       kind: l.kind,
       speakerId: l.speakerId || null,
       title: l.title || "",
+      subBadge: l.subBadge || "",
       text: l.text || ""
     };
   });

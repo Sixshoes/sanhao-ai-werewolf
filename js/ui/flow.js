@@ -495,17 +495,31 @@ const indieFlow = {
     if (el("btnSetupSheriffToggle")) {
       el("btnSetupSheriffToggle").addEventListener("click", function () {
         sound.unlock();
-        if (el("chkSheriffMode")) el("chkSheriffMode").checked = !el("chkSheriffMode").checked;
+        if (el("chkSheriffMode")) {
+          el("chkSheriffMode").checked = !el("chkSheriffMode").checked;
+          state.sheriffMode = Boolean(el("chkSheriffMode").checked);
+        } else {
+          state.sheriffMode = !state.sheriffMode;
+        }
+        if (typeof saveUserPrefs === "function") saveUserPrefs();
         self.syncSetupDrawerFromSelects();
       });
     }
     if (el("btnSetupGuardToggle")) {
       el("btnSetupGuardToggle").addEventListener("click", function () {
         sound.unlock();
+        const curSeats = el("selectModeCount") ? parseInt(el("selectModeCount").value, 10) : 8;
         const nextGuard = el("chkGuardMode") ? !el("chkGuardMode").checked : !state.guardMode;
+        if (curSeats === 12 && !nextGuard) {
+          state.guardMode = true;
+          if (el("chkGuardMode")) el("chkGuardMode").checked = true;
+          if (typeof showToast === "function") showToast("12人標準板固定含護心守衛（切換 8/10 人可自由開關）", "sky");
+          self.syncSetupDrawerFromSelects();
+          return;
+        }
         state.guardMode = nextGuard;
         if (el("chkGuardMode")) el("chkGuardMode").checked = nextGuard;
-        if (nextGuard && el("selectModeCount") && parseInt(el("selectModeCount").value, 10) < 8) {
+        if (nextGuard && el("selectModeCount") && curSeats < 8) {
           el("selectModeCount").value = "8";
           el("selectModeCount").dispatchEvent(new Event("change"));
         } else if (!nextGuard && el("selectPreferredRole") && el("selectPreferredRole").value === "guard") {

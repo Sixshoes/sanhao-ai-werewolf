@@ -94,7 +94,7 @@ function maybeScheduleAutoAdvanceAfterSpeech() {
     state.match.sheriffElectionCtx.activeReelSeatId !== getPlayerId()
   );
   if (pNow !== "DAY_SPEECH" && pNow !== "LAST_WORDS_SPEECH" && !isSheriffSpeechAuto) return;
-  if (state.typewriter.active || voice.speaking) return;
+  if (state.speakingInFlight || state.typewriter.active || voice.speaking) return;
   if (state.stepTimer) clearTimeout(state.stepTimer);
   const pauseMs = ff ? 260 : (voice.canSpeak() ? 950 : (state.typewriter.holdMs || 2400));
   state.stepTimer = setTimeout(function () {

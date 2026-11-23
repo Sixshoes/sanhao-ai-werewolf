@@ -95,19 +95,26 @@ function chooseAiVoteTarget(voter, opts) {
     });
     const teamTargetId = wolfPushEv ? wolfPushEv.accuseId : null;
     pool.sort(function (a, b) {
-      const sA = (a.id === teamTargetId ? 28 : 0) + (a.id === self.publicVoteIntent ? 18 : 0) + (a.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
-      const sB = (b.id === teamTargetId ? 28 : 0) + (b.id === self.publicVoteIntent ? 18 : 0) + (b.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
+      const sA = (a.id === teamTargetId ? 28 : 0) + (a.id === self.publicVoteIntent ? 30 : 0) + (a.id === self.publicVouchId ? -18 : 0) + (a.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+      const sB = (b.id === teamTargetId ? 28 : 0) + (b.id === self.publicVoteIntent ? 30 : 0) + (b.id === self.publicVouchId ? -18 : 0) + (b.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
       return sB - sA;
     });
     chosen = pool[0] ? pool[0].id : null;
   } else {
-    // Zero-Leak Good Team Vote: Fact-Guard + public vote promise + 2-Seer Clash Focus + Uniform Harmony Haze (NEVER peeks a.team!)
+    // Zero-Leak Good Team Vote: Fact-Guard + Proven-Elder Guard + Speech-Vote Alignment + 4G Clues + 2-Seer Clash Focus (NEVER peeks a.team!)
     const rallyId = snap ? snap.convenienceRallyTargetId : (state.match.convenienceRallyTargetId || null);
+    const joyIds = (snap && Array.isArray(snap.fourGJoySuspects)) ? snap.fourGJoySuspects : [];
+    const hopePair = (snap && Array.isArray(snap.fourGHopePair) && snap.fourGHopePair.length === 2) ? snap.fourGHopePair : [];
+    const selfInHopePair = hopePair.indexOf(self.id) !== -1;
     const harmonyNow = snap ? snap.harmonyScore : state.match.harmonyScore;
     const hazeChaos = (harmonyNow <= 45) ? 14 : 0;
     const seerClaimants = alive.filter(function (s) { return s.claimedRole === "seer"; });
 
     let candidatePool = others.slice();
+    // Exclude publicly proven Good Elder (voteDisabled after elderShieldUsed) when other targets exist!
+    const nonElderPool = candidatePool.filter(function (t) { return !t.voteDisabled; });
+    if (nonElderPool.length > 0) candidatePool = nonElderPool;
+
     const verifiedWolfIds = (self.role === "seer" && self.checkedHistory)
       ? self.checkedHistory.filter(function (c) { return c.isWolf; }).map(function (c) { return c.targetId; })
       : [];
@@ -115,12 +122,25 @@ function chooseAiVoteTarget(voter, opts) {
       ? self.checkedHistory.filter(function (c) { return !c.isWolf; }).map(function (c) { return c.targetId; })
       : [];
     if (self.role === "seer") {
-      const safePool = others.filter(function (t) { return verifiedGoodIds.indexOf(t.id) === -1; });
+      const safePool = candidatePool.filter(function (t) { return verifiedGoodIds.indexOf(t.id) === -1; });
       if (safePool.length > 0) candidatePool = safePool;
     } else if (self.role === "witch" && self.savedSeatId) {
-      const safePool = others.filter(function (t) { return t.id !== self.savedSeatId; });
+      const safePool = candidatePool.filter(function (t) { return t.id !== self.savedSeatId; });
       if (safePool.length > 0) candidatePool = safePool;
     }
+
+    const computeFourGClueDelta = function (t) {
+      let d = 0;
+      const inJoy = joyIds.indexOf(t.id) !== -1;
+      const inHope = hopePair.indexOf(t.id) !== -1;
+      if (inJoy) d += (typeof t.microPulse === "number" && t.microPulse >= 72) ? 10 : 5;
+      if (inHope) {
+        if (selfInHopePair && t.id !== self.id) d += 32;
+        else d += 6;
+      }
+      if (inJoy && inHope) d += 14;
+      return d;
+    };
 
     const validPlayerTgt = Boolean(playerTargetId && candidatePool.some(function (t) { return t.id === playerTargetId; }));
     const ironSafe = Boolean(self.ironFollowPlayer && validPlayerTgt && playerTargetId !== self.id
@@ -137,8 +157,8 @@ function chooseAiVoteTarget(voter, opts) {
         chosen = aliveFakeSeer.id;
       } else {
         candidatePool.sort(function (a, b) {
-          const pA = (self.publicVoteIntent === a.id ? 24 : 0) + (rallyId === a.id ? 14 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
-          const pB = (self.publicVoteIntent === b.id ? 24 : 0) + (rallyId === b.id ? 14 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
+          const pA = (self.publicVoteIntent === a.id ? 34 : 0) + (self.publicVouchId === a.id ? -22 : 0) + (rallyId === a.id ? 14 : 0) + computeFourGClueDelta(a) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+          const pB = (self.publicVoteIntent === b.id ? 34 : 0) + (self.publicVouchId === b.id ? -22 : 0) + (rallyId === b.id ? 14 : 0) + computeFourGClueDelta(b) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
           return pB - pA;
         });
         if (candidatePool[0] && ((self.publicVoteIntent === candidatePool[0].id) || (rallyId === candidatePool[0].id) || ((self.suspicionMap && self.suspicionMap[candidatePool[0].id]) || 50) >= 48)) {
@@ -149,15 +169,15 @@ function chooseAiVoteTarget(voter, opts) {
       const twoSeerFocus = (seerClaimants.length >= 2 && candidatePool.some(function (t) { return t.claimedRole === "seer"; }));
       const dayEvsVote = snap ? snap.daySpeechEvents : (state.match.daySpeechEvents || []);
       const voteProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
-      const rallyWeight = voteProf ? Math.round(18 * (1 + voteProf.bandwagonBias * 0.45)) : 18;
+      const rallyWeight = voteProf ? Math.round(20 * (1 + voteProf.bandwagonBias * 0.45)) : 20;
       candidatePool.sort(function (a, b) {
         // Uniform low-harmony confusion jitter across ALL candidates (zero hidden team peeking!)
         const jA = hazeChaos ? Math.sin(self.id * 7 + a.id * 3) * hazeChaos : 0;
         const jB = hazeChaos ? Math.sin(self.id * 7 + b.id * 3) * hazeChaos : 0;
         const persA = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, a, { daySpeechEvents: dayEvsVote }) : 0;
         const persB = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, b, { daySpeechEvents: dayEvsVote }) : 0;
-        const pA = (self.publicVoteIntent === a.id ? 24 : 0) + (rallyId === a.id ? rallyWeight : 0) + (twoSeerFocus && a.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50) + persA + jA;
-        const pB = (self.publicVoteIntent === b.id ? 24 : 0) + (rallyId === b.id ? rallyWeight : 0) + (twoSeerFocus && b.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50) + persB + jB;
+        const pA = (self.publicVoteIntent === a.id ? 38 : 0) + (self.publicVouchId === a.id ? -26 : 0) + (rallyId === a.id ? rallyWeight : 0) + computeFourGClueDelta(a) + (twoSeerFocus && a.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50) + persA + jA;
+        const pB = (self.publicVoteIntent === b.id ? 38 : 0) + (self.publicVouchId === b.id ? -26 : 0) + (rallyId === b.id ? rallyWeight : 0) + computeFourGClueDelta(b) + (twoSeerFocus && b.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50) + persB + jB;
         return pB - pA;
       });
       if (candidatePool[0] && ((self.publicVoteIntent === candidatePool[0].id) || (rallyId === candidatePool[0].id) || ((self.suspicionMap && self.suspicionMap[candidatePool[0].id]) || 50) >= 48)) {
@@ -329,6 +349,12 @@ function finalizeVoteRound(playerTargetId) {
       outSeat.elderShieldUsed = true;
       outSeat.voteDisabled = true;
       outSeat.claimedRole = "elder";
+      // Publicly proven Good Elder: immediately clear alive Good AIs' suspicion so they don't re-vote the Elder tomorrow!
+      getAliveSeats().forEach(function (ai) {
+        if (ai.id !== outSeat.id && ai.team === "good" && ai.suspicionMap) {
+          ai.suspicionMap[outSeat.id] = 5;
+        }
+      });
       if (outSeat.id === getPlayerId() && state.match.stats) {
         state.match.stats.elderExempted = (state.match.stats.elderExempted || 0) + 1;
       }
@@ -426,7 +452,12 @@ function finalizeVoteRound(playerTargetId) {
       }
 
       const aiLw = buildAiLastWords(outSeat, "vote_out");
-      applyLastWordsInfluence(outSeat, aiLw.text, aiLw);
+      applyLastWordsInfluence(outSeat, aiLw.text, Object.assign({}, aiLw, { mode: "vote_out" }));
+      addLog({
+        kind: "system",
+        title: "💬 " + fmtSeatNum(outSeat.id) + "號 " + outSeat.name + "（公投遺言）",
+        text: aiLw.text
+      });
       const lastWord = "「" + aiLw.text + "」";
 
       state.voteResultPayload = {
@@ -660,6 +691,7 @@ function useFourGConfidence() {
     text: ""
   });
   triggerFourGSynergyCheck("confidence");
+  if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
   updateAllUI();
 }
 
@@ -732,6 +764,7 @@ function useFourGJoy() {
     ? ("👀 給歡喜試探：" + sortedNervous.map(function (id) { return fmtSeatNum(id) + "號"; }).join(" 與 ") + " 同時笑僵！可搭配【給希望】雙光交會鎖定！")
     : (pairLabels.length === 1 ? ("👀 快看圓桌！" + pairLabels[0] + " 笑不出來正在冒冷汗！") : "全場笑聲驅散了酸言霧霾！"), "emerald");
   triggerFourGSynergyCheck("joy");
+  if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
   updateAllUI();
 }
 
@@ -786,6 +819,7 @@ function useFourGHope() {
     if (overlapSeats.length === 1) {
       const ov = overlapSeats[0];
       state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + 6, 0, 100);
+      if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
       bumpCombo("四給雙光交會");
       spawnFx(ov.id, "✨ 雙光交會焦點!", "#fbbf24");
       triggerCutIn("✨ 歡喜 × 希望・雙光交會！", fmtSeatNum(ov.id) + "號 " + ov.name + " 同時落在破冰緊張與雙光鎖定中，建議重點查證！", "gold");
@@ -795,6 +829,7 @@ function useFourGHope() {
   addLog({ kind: "blessing", title: msg, text: "" });
   showToast(msg, "emerald");
   triggerFourGSynergyCheck("hope");
+  if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
   updateAllUI();
 }
 
@@ -823,7 +858,11 @@ function useFourGConvenience() {
       state.match.convenienceRallyTargetId = sel.id;
       getAliveSeats().forEach(function (ai) {
         if (ai.id !== getPlayerId() && ai.id !== sel.id && ai.team === "good") {
-          ai.suspicionMap[sel.id] = clamp((ai.suspicionMap[sel.id] || 50) + 16, 5, 96);
+          const seerKnownGood = ai.role === "seer" && (ai.checkedHistory || []).some(function (c) { return c.targetId === sel.id && !c.isWolf; });
+          const witchKnownGood = ai.role === "witch" && ai.savedSeatId === sel.id;
+          if (!seerKnownGood && !witchKnownGood && !sel.voteDisabled) {
+            ai.suspicionMap[sel.id] = clamp((ai.suspicionMap[sel.id] || 50) + 16, 5, 96);
+          }
         }
       });
       spawnBeam(getPlayerId(), sel.id, "#c084fc", "vote", 720);
@@ -864,6 +903,7 @@ function useFourGConvenience() {
       showToast("🧭 " + digestText + "（下次先點目標再按「給方便」還能直接歸票！）", "emerald");
     }
     triggerFourGSynergyCheck("convenience");
+    if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
     updateAllUI();
     return;
   }
@@ -1314,16 +1354,17 @@ function shouldAiRunForSheriff(seat) {
 function buildSheriffElectionCandidates() {
   const alive = getAliveSeats();
   const pid = getPlayerId();
+  const maxCands = alive.length <= 6 ? 2 : 3;
   const cands = alive.filter(function (s) { return s.id !== pid && shouldAiRunForSheriff(s); });
   // Ensure an engaging 2–3 seat election using strictly public seat order (never peeking at s.team!)
   alive.forEach(function (s) {
-    if (s.id !== pid && cands.length < 3 && !cands.some(function (c) { return c.id === s.id; })) {
+    if (s.id !== pid && cands.length < maxCands && !cands.some(function (c) { return c.id === s.id; })) {
       if (cands.length < 2 || (s.id % 3 === 0)) {
         cands.push(s);
       }
     }
   });
-  return cands.slice(0, 3);
+  return cands.slice(0, maxCands);
 }
 
 function buildSheriffCandidateLine(cand, priorSpeechesArg) {
@@ -1332,20 +1373,20 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
     : null;
   const self = (snap && snap.self) ? snap.self : cand;
   const others = snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== cand.id; });
-  const focusSeat = others[0] || null;
-  const focus = focusSeat ? (fmtSeatNum(focusSeat.id) + "號" + focusSeat.name) : "前排席位";
   // Zero-Leak: Candidate ONLY observes prior speeches already spoken on the stand — NEVER peeks at future candidates' hidden role or fakeSeer!
   const priorList = Array.isArray(priorSpeechesArg) ? priorSpeechesArg : [];
   const priorSeerSpeech = priorList.find(function (sp) {
     return sp && sp.id !== self.id && (sp.tone === "seer" || sp.tone === "clash");
   });
+  const focusSeat = others.find(function (s) { return !priorSeerSpeech || s.id !== priorSeerSpeech.id; }) || others[0] || null;
+  const focus = focusSeat ? (focusSeat.id + "號" + focusSeat.name) : "前排席位";
   const isSeerClaim = Boolean(self.role === "seer" || (self.role === "wolf" && self.fakeSeer));
   const lastChk = (self.role === "seer" && Array.isArray(self.checkedHistory) && self.checkedHistory.length > 0)
     ? self.checkedHistory[self.checkedHistory.length - 1]
     : null;
   const readSeat = snap ? snap.getSeat : getSeat;
   const seerCheckTarget = lastChk ? readSeat(lastChk.targetId) : focusSeat;
-  const checkLbl = seerCheckTarget ? (fmtSeatNum(seerCheckTarget.id) + "號" + seerCheckTarget.name) : focus;
+  const checkLbl = seerCheckTarget ? (seerCheckTarget.id + "號" + seerCheckTarget.name) : focus;
   const checkVerdict = lastChk ? (lastChk.isWolf ? "偏狼坑" : "偏金水") : "偏金水";
 
   // Select two distinct unchecked alive seats for authentic Dual Badge Flow (第一警徽流 → 第二警徽流)!
@@ -1572,7 +1613,7 @@ function startSheriffElection(onDone) {
   const cands = buildSheriffElectionCandidates().sort(function (a, b) { return a.id - b.id; });
   const pSeat = getPlayerSeat();
   const ffSpec = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-  if (state.autoPlay || ffSpec || !pSeat || !pSeat.alive || cands.length === 0) {
+  if (ffSpec || !pSeat || !pSeat.alive || cands.length === 0) {
     const existingSh = m.sheriffSeatId ? getSeat(m.sheriffSeatId) : null;
     let fallbackWinner = (existingSh && existingSh.alive) ? existingSh : (cands[0] || getAliveSeats()[0] || null);
     if (cands.length >= 1) {
@@ -1636,6 +1677,8 @@ function startSheriffElection(onDone) {
     return false;
   }
 
+  // Clear pre-seeded phantom crown during live interactive Sheriff Election!
+  m.sheriffSeatId = null;
   const candNamesStr = cands.map(function (c) { return fmtSeatNum(c.id) + "號" + c.name; }).join("、");
   const dramaEvents = [
     "👑 舉手上警名單：" + candNamesStr + "！請先決定要「上警競選」或「警下聽選」，隨即依序輪流發言拉票！"
@@ -1861,6 +1904,9 @@ function submitPlayerSheriffSpeech(rawText, explicitFlowArg, optsArg) {
     return false;
   }
   let cleanText = String(rawText || "").trim();
+  if (cleanText && typeof normalizeSeatRefsInText === "function") {
+    cleanText = normalizeSeatRefsInText(cleanText);
+  }
   let autoCardClaimsSeer = null;
   if (!cleanText) {
     const opts = Array.isArray(ctx.playerQuickOptions) ? ctx.playerQuickOptions : [];
@@ -2060,7 +2106,7 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     } else if (isPlayerUnderVoter) {
       ballots.push({ voterId: pid, targetId: null, weight: 0 });
     }
-    const aiUsePlayerBonus = Boolean(ctx.playerRunning || !playerVotedCand);
+    const aiUsePlayerBonus = Boolean(!ctx.playerRunning && !playerVotedCand);
     getAliveSeats().forEach(function (s) {
       if (s.id === pid || ctx.candidateIds.indexOf(s.id) !== -1) return;
       const pickId = chooseAiSheriffElectionVote(s, ctx.candidateIds, standSpeeches, aiUsePlayerBonus);
@@ -2114,6 +2160,9 @@ function finalizeSheriffElectionWinner(chosenCandId) {
   const tallySummary = sortedCands.map(function (c) {
     const voters = voteRecords[c.id] || [];
     const cName = c.id === pid ? (playerNumTag() + "你") : (fmtSeatNum(c.id) + c.name);
+    if (sortedCands.length === 1 && (counts[c.id] || 0) === 0) {
+      return cName + "（無對手直接當選）";
+    }
     return cName + "(" + Math.round((counts[c.id] || 0) * 10) / 10 + "票" + (voters.length ? ("：" + voters.join("、")) : "") + ")";
   }).join(" ｜ ");
 
@@ -2148,6 +2197,7 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     }
     const shortTallyCutIn = sortedCands.slice(0, 3).map(function (c) {
       const nm = c.id === pid ? (playerNumTag() + "你") : (fmtSeatNum(c.id) + c.name);
+      if (sortedCands.length === 1 && (counts[c.id] || 0) === 0) return nm + " 直接當選";
       return nm + " " + (Math.round((counts[c.id] || 0) * 10) / 10) + "票";
     }).join(" · ");
     const cutInBase = wLbl + (isCloseCall ? " 險勝當選警長（1.5票＋末置位歸票）" : " 當選本局警長（1.5票＋末置位歸票）");
@@ -2213,13 +2263,19 @@ function resolveSheriffElectionAction(actionOrVoteId) {
     if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
     if (!Array.isArray(ctx.withdrawnIds)) ctx.withdrawnIds = [];
 
-    // Zero-Leak Dramatic AI table reaction: based strictly on observable stand speeches & public seat order!
+    // Self-driven AI withdrawal check: never forcibly boot a Real Seer or Fake Seer off the stand before speeches!
     const aiCands = ctx.candidateIds.filter(function (id) { return id !== pid; }).map(getSeat).filter(Boolean);
     const seerStandMap = {};
     (ctx.spokenSpeeches || []).forEach(function (sp) {
       if (sp && (sp.tone === "seer" || sp.tone === "clash")) seerStandMap[sp.id] = true;
     });
-    const nonSeerAi = aiCands.slice().reverse().find(function (c) { return !seerStandMap[c.id]; });
+    const aiWillingToWithdraw = function (seat) {
+      if (!seat || seerStandMap[seat.id]) return false;
+      const bSnap = typeof createBlindMatchSnapshot === "function" ? createBlindMatchSnapshot(seat, { module: "sheriff_withdraw" }) : null;
+      const bSelf = (bSnap && bSnap.self) ? bSnap.self : seat;
+      return bSelf.role !== "seer" && !(bSelf.role === "wolf" && bSelf.fakeSeer);
+    };
+    const nonSeerAi = aiCands.slice().reverse().find(aiWillingToWithdraw);
     const seerClaimRival = aiCands.find(function (c) { return Boolean(seerStandMap[c.id]); });
     if (nonSeerAi && aiCands.length >= 3) {
       ctx.candidateIds = ctx.candidateIds.filter(function (id) { return id !== nonSeerAi.id; });
@@ -2316,7 +2372,8 @@ function startSheriffOrderPick(arg) {
     : function (dir) {
       startDayDiscussion(typeof arg === "string" ? arg : "", dir ? { forcedDir: dir } : undefined);
     };
-  if (!state.sheriffMode || !sh || !sh.alive || sh.id !== getPlayerId() || state.autoPlay) {
+  const ffOrd = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  if (!state.sheriffMode || !sh || !sh.alive || sh.id !== getPlayerId() || ffOrd) {
     onPicked(null);
     return false;
   }
@@ -2334,6 +2391,7 @@ function startSheriffOrderPick(arg) {
 
 function resolveSheriffOrderPick(dir) {
   sound.unlock();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   const m = state.match;
   const ctx = m ? m.sheriffOrderCtx : null;
   if (!m || !ctx || m.phase !== "SHERIFF_ORDER") return false;

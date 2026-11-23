@@ -21,6 +21,7 @@ function startGuidedBeginnerMatch() {
 function startNewGame() {
   sound.unlock();
   clearStepTimer();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   if (typeof indieFlow !== "undefined" && typeof indieFlow.hideRoleDealRitual === "function") {
     indieFlow.hideRoleDealRitual({ silent: true });
   }

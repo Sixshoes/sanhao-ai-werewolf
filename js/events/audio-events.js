@@ -181,13 +181,21 @@ function bindAudioVoiceEvents() {
     });
   });
 
+  let cozyAuditionTimers = [];
+  function clearCozyAuditionTimers() {
+    cozyAuditionTimers.forEach(function (t) { clearTimeout(t); });
+    cozyAuditionTimers = [];
+  }
+
   function playCozyAudition(seatId) {
+    clearCozyAuditionTimers();
     const sampleChars = ["歡", "迎", "來", "到", "三", "好", "狼", "人", "殺"];
     sampleChars.forEach(function (ch, idx) {
-      setTimeout(function () {
+      const tid = setTimeout(function () {
         const nextC = idx === sampleChars.length - 1 ? "。" : (idx === 3 ? "，" : "");
         sound.playCozySyllable(seatId, ch.charCodeAt(0) + idx * 5, ch, nextC);
       }, idx * 105);
+      cozyAuditionTimers.push(tid);
     });
   }
 
@@ -222,9 +230,8 @@ function bindAudioVoiceEvents() {
     if (voice.mode === "cozy") {
       playCozyAudition(prof.seatHint || 3);
     } else {
-      voice.speak(personaName, lines[personaName] || lines["暖暖"], personaName === "主持" ? "host_night" : "normal", function () {
-        if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
-      });
+      clearCozyAuditionTimers();
+      voice.speak(personaName, lines[personaName] || lines["暖暖"], personaName === "主持" ? "host_night" : "normal");
     }
   }
 
@@ -306,9 +313,8 @@ function bindAudioVoiceEvents() {
     voice.selectedVoiceUri = el("selectDeviceVoice").value || "auto";
     saveUserPrefs();
     if ((voice.mode === "tts" || voice.mode === "hybrid") && voice.enabled) {
-      voice.speak("暖暖", "已切換為這組聲線，祝你推理順利！", "normal", function () {
-        if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
-      });
+      clearCozyAuditionTimers();
+      voice.speak("暖暖", "已切換為這組聲線，祝你推理順利！", "normal");
     }
   });
 

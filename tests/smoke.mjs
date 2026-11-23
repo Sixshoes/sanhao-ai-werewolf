@@ -5314,6 +5314,24 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     state.match.totalSeats = prevTotal139;
     const bfCnBare = parseBadgeFlowFromText("今晚先驗三號再驗五", 1);
     const bfCnBareOk = Boolean(bfCnBare && bfCnBare.firstTargetId === 3 && bfCnBare.secondTargetId === 5);
+    // v14.0 Major Release regressions: zero-overlap audio, multi-digit/4G guardrails, smart parens, dry-run prefetch, proven-Elder vote guard, Sheriff transfer spectator lock, 3Good/4G prompt
+    const v14AudioStopOk = typeof sound.stopBackchannels === "function" && typeof bumpTableStateRev === "function";
+    const v14MultiDigitGuardOk = validateGeminiSpeechReality(spPrefTest, { text: "fallback" }, { text: "聽完11號剛才的發言，我覺得他很有道理，剛才6號笑僵了，這輪大家別分票。" }, { day: 1, seats: [{ id: 1, alive: true }, { id: 6, alive: true }, { id: 11, alive: true }], publicLogs: [{ day: 1, kind: "speech", speakerId: 11 }], voteHistory: [], sheriffVoteRecord: null }).ok;
+    const v14SmartParenOut = normalizeGeminiSpeechText("（冷笑）我昨晚查過3號（酸民狼），建議今天先投3號！");
+    const v14SmartParenOk = !v14SmartParenOut.includes("冷笑") && v14SmartParenOut.includes("（酸民狼）");
+    const v14StaleClear = syncGeminiSpeechMeta(spPrefTest, { text: "fb", accuseId: 4, vouchId: 4, standWithSeerId: 3 }, { parsedJson: true, text: "先聽後面表水再說。", accuseId: null, vouchId: null, standWithSeerId: null, claimRole: null }, { deferSeatMutation: true });
+    const v14StaleClearOk = v14StaleClear.accuseId === null && v14StaleClear.vouchId === null && v14StaleClear.standWithSeerId === null;
+    const v14PosNlp = analyzeThreeGoodSpeech("2號講得不錯，這輪懷疑4號");
+    const v14PosNlpOk = v14PosNlp.vouchTargets.includes(2) && v14PosNlp.accuseTargets.includes(4);
+    const v14PrevPhase = state.match.phase;
+    const v14PlayerAlive = getPlayerSeat().alive;
+    getPlayerSeat().alive = false;
+    state.match.phase = "SHERIFF_TRANSFER";
+    const v14SpectatorTransferLockOk = isSpectatorGuessActive() === false;
+    state.match.phase = v14PrevPhase;
+    getPlayerSeat().alive = v14PlayerAlive;
+    const v14PromptBuilt = buildBlindGeminiSpeechPrompt(spPrefTest, { text: "先聽發言" });
+    const v14ThreeGoodPromptOk = Boolean(v14PromptBuilt && v14PromptBuilt.audit && v14PromptBuilt.audit.ok && v14PromptBuilt.prompt.includes("【茶席三好與四給公開局勢】"));
     spPrefTest.claimedRole = origClaimPref;
 
     return {
@@ -5353,7 +5371,14 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       normFalsePosSafeOk,
       spotAllPills139Ok,
       nlpCnBareOk,
-      bfCnBareOk
+      bfCnBareOk,
+      v14AudioStopOk,
+      v14MultiDigitGuardOk,
+      v14SmartParenOk,
+      v14StaleClearOk,
+      v14PosNlpOk,
+      v14SpectatorTransferLockOk,
+      v14ThreeGoodPromptOk
     };
   })()`, ctx);
   for (const [k, v] of Object.entries(v132Res)) {

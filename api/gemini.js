@@ -128,7 +128,7 @@ function resolveSafeModel(requestedModel) {
   return "gemini-3.8-flash";
 }
 
-async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode) {
+async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeoutMs) {
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
   const isGen3 = modelId.indexOf("gemini-3") === 0;
   const genCfg = {
@@ -143,7 +143,7 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode) {
   }
 
   const controller = typeof AbortController === "function" ? new AbortController() : null;
-  const timer = controller ? setTimeout(function () { controller.abort(); }, 14000) : null;
+  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 8500) : null;
   try {
     const fetchOpts = {
       method: "POST",
@@ -166,10 +166,10 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode) {
     const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
     let joined = "";
     if (Array.isArray(parts)) {
-      parts.forEach(function (pt) { if (pt && typeof pt.text === "string") joined += pt.text; });
+      parts.forEach(function (pt) { if (pt && !pt.thought && typeof pt.text === "string") joined += pt.text; });
     }
     const text = joined.trim();
-    return { ok: Boolean(text), status: resp.status, text: text };
+    return { ok: Boolean(text), status: text ? resp.status : 502, text: text };
   } catch (err) {
     if (timer) clearTimeout(timer);
     return { ok: false, status: 504, text: "" };
@@ -254,21 +254,23 @@ async function handler(req, res) {
   const jsonMode = Boolean(body.jsonMode);
   const primaryModel = resolveSafeModel(body.model);
 
-  const first = await callUpstreamGemini(apiKey, primaryModel, promptText, jsonMode);
+  const first = await callUpstreamGemini(apiKey, primaryModel, promptText, jsonMode, 8500);
   if (first.ok && first.text) {
     return sendJson(res, 200, { ok: true, model: primaryModel, text: first.text });
   }
 
-  if (primaryModel !== "gemini-2.5-flash" && (first.status === 429 || first.status === 503 || first.status === 404)) {
-    const fb = await callUpstreamGemini(apiKey, "gemini-2.5-flash", promptText, jsonMode);
+  const canFallback = primaryModel !== "gemini-2.5-flash" &&
+    (first.status === 400 || first.status === 404 || first.status === 429 || first.status === 500 || first.status === 502 || first.status === 503 || first.status === 504 || !first.text);
+  if (canFallback) {
+    const fb = await callUpstreamGemini(apiKey, "gemini-2.5-flash", promptText, jsonMode, 7500);
     if (fb.ok && fb.text) {
       return sendJson(res, 200, { ok: true, model: "gemini-2.5-flash", text: fb.text });
     }
     return sendJson(res, fb.status === 429 ? 429 : 502, { ok: false, error: "Upstream Gemini unavailable (HTTP " + fb.status + ")" });
   }
 
-  const outStatus = first.status === 429 ? 429 : (first.status === 401 || first.status === 403 ? 502 : (first.status || 502));
-  return sendJson(res, outStatus, { ok: false, error: "Upstream Gemini error (HTTP " + first.status + ")" });
+  const outStatus = first.status === 429 ? 429 : (first.status >= 400 && first.status !== 401 && first.status !== 403 ? first.status : 502);
+  return sendJson(res, outStatus, { ok: false, error: "Upstream Gemini error (HTTP " + (first.status || 502) + ")" });
 }
 
 handler._isAllowedOrigin = isAllowedOrigin;

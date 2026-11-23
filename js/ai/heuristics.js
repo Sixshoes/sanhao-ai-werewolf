@@ -470,9 +470,12 @@ function sanitizeSpeechMeta(speaker, out, snapArg) {
     if (out.targetId === out.accuseId) out.targetId = null;
     out.accuseId = null;
   }
-  if (out.vouchId && !isAliveOther(out.vouchId)) {
-    if (out.targetId === out.vouchId) out.targetId = null;
+  if (out.vouchId && (!isAliveOther(out.vouchId) || out.vouchId === out.accuseId)) {
+    if (out.targetId === out.vouchId) out.targetId = out.accuseId || null;
     out.vouchId = null;
+  }
+  if (out.standWithSeerId && (out.standWithSeerId === speaker.id || out.standWithSeerId === out.accuseId || out.claimSeer || out.claimRole === "seer" || !isAliveOther(out.standWithSeerId))) {
+    out.standWithSeerId = null;
   }
   if (out.targetId && !isAliveOther(out.targetId)) {
     out.targetId = out.accuseId || out.vouchId || null;

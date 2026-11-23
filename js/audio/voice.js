@@ -89,7 +89,7 @@ const voice = {
   mode: "hybrid", // "hybrid" (自然人聲＋角色樂音簽名), "tts" (純淨自然人聲), "cozy" (療癒原音樂音)
   accentMode: "anime", // "anime" (12角色聲線差異最大化) | "tw" (純台灣腔＋共振峰拉開)
   enginePref: "auto", // "auto" (有金鑰優先 Gemini 3.8 氣口演技，無金鑰免費神經) | "local" ($0 免費神經) | "gemini" (Gemini 3.8 TTS)
-  liveBackchannel: true, // 圓桌被點名／對跳臨場立體聲微插話
+  liveBackchannel: false, // 圓桌被點名／對跳臨場立體聲微插話（預設關閉，確保純淨單人發聲零背景重疊）
   humanBreath: true, // 真人開口微換氣與無縫呼吸銜接
   selectedVoiceUri: "auto",
   primed: false,
@@ -604,6 +604,10 @@ const voice = {
       clearTimeout(this.clauseWatchdogTimer);
       this.clauseWatchdogTimer = null;
     }
+    if (this.backchannelTimer) {
+      clearTimeout(this.backchannelTimer);
+      this.backchannelTimer = null;
+    }
   },
 
   stop: function () {
@@ -614,13 +618,22 @@ const voice = {
     this._resumePendingClause = null;
     this._resumeWatchdogFinish = null;
     this.activeUtterance = null;
+    if (typeof sound !== "undefined" && typeof sound.stopBackchannels === "function") {
+      sound.stopBackchannels();
+    }
     if (this.activeAudioNode) {
-      try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); } catch (e) {}
+      try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); this.activeAudioNode.disconnect(); } catch (e) {}
       this.activeAudioNode = null;
     }
-    this.activeAudioGain = null;
+    if (this.activeAudioGain) {
+      try { this.activeAudioGain.disconnect(); } catch (e) {}
+      this.activeAudioGain = null;
+    }
     if (this.isSupported()) {
-      try { window.speechSynthesis.cancel(); } catch (e) {}
+      try {
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+        window.speechSynthesis.cancel();
+      } catch (e) {}
     }
     if (this.speaking) {
       this.setVisualSpeaking(false);
@@ -658,11 +671,15 @@ const voice = {
     }
     if (!this.paused) {
       this.paused = true;
+      if (this.backchannelTimer) { clearTimeout(this.backchannelTimer); this.backchannelTimer = null; }
+      if (typeof sound !== "undefined" && typeof sound.stopBackchannels === "function") {
+        sound.stopBackchannels();
+      }
       if (this.activeAudioNode && this.pauseMeta && sound.ctx) {
         const elapsed = Math.max(0, (sound.ctx.currentTime - this.pauseMeta.startedAt) * (this.pauseMeta.playbackRate || 1));
         this.pauseMeta.offset = Math.min(this.pauseMeta.audioBuf.duration - 0.05, (this.pauseMeta.offset || 0) + elapsed);
         this.clearTimers();
-        try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); } catch (e) {}
+        try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); this.activeAudioNode.disconnect(); } catch (e) {}
         this.activeAudioNode = null;
       } else if (this.isSupported()) {
         if (this.watchdogTimer) { clearTimeout(this.watchdogTimer); this.watchdogTimer = null; }
@@ -780,6 +797,14 @@ const voice = {
     if (this.humanBreath && startOffset === 0 && !(opts && opts.skipPreBreath) && pKey !== "主持" && typeof sound.playPreSpeechBreath === "function") {
       sound.playPreSpeechBreath(pKey, (opts && opts.mood) || "normal", opts && opts.seatId);
     }
+    if (this.activeAudioNode) {
+      try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); this.activeAudioNode.disconnect(); } catch (e) {}
+      this.activeAudioNode = null;
+    }
+    if (this.activeAudioGain) {
+      try { this.activeAudioGain.disconnect(); } catch (e) {}
+      this.activeAudioGain = null;
+    }
     this.activeAudioNode = src;
     this.activeAudioGain = vGain;
     this.setVisualSpeaking(true);
@@ -796,8 +821,10 @@ const voice = {
       if (seq !== self.utteranceSeq || self.paused) return;
       if (!(opts && opts.keepSeqOpen)) self.utteranceSeq += 1;
       self.clearTimers();
-      self.activeAudioNode = null;
-      self.activeAudioGain = null;
+      try { src.onended = null; src.stop(); src.disconnect(); } catch (e) {}
+      try { vGain.disconnect(); } catch (e) {}
+      if (self.activeAudioNode === src) self.activeAudioNode = null;
+      if (self.activeAudioGain === vGain) self.activeAudioGain = null;
       self.pauseMeta = null;
       if (!(opts && opts.keepSeqOpen)) self.setVisualSpeaking(false);
       self.syncPauseButtonUi();
@@ -1148,14 +1175,21 @@ const voice = {
     const ck = effKey + "|" + this.accentMode + "|" + Math.round(this.rate * 100) + "|" + mood + "|backchannel|" + phrase;
     const self = this;
 
-    // Fetch immediately in background while delaying playback by ~720ms so it lands naturally after speaker's opening clause!
+    // Fetch in background and bind strictly to active speaker + match phase + tracked timer (zero stale bleed-through!)
+    const capturedSpeakerId = state.activeSpeakerId;
+    const capturedDay = state.match.day || 0;
     const audioPromise = this._fetchLocalNeuralAudio(ck, effKey, phrase, mood, null, "backchannel");
-    const waitMs = clamp(typeof delayMs === "number" ? delayMs : 760, 320, 1600);
-    setTimeout(function () {
+    const waitMs = clamp(typeof delayMs === "number" ? delayMs : 980, 480, 1800);
+    if (this.backchannelTimer) clearTimeout(this.backchannelTimer);
+    this.backchannelTimer = setTimeout(function () {
+      self.backchannelTimer = null;
       if (!self.enabled || !self.liveBackchannel || self.paused || !self.speaking) return;
-      if (!state.match || state.match.phase !== "DAY_SPEECH") return;
+      if (!state.match || state.match.phase !== "DAY_SPEECH" || state.activeSpeakerId !== capturedSpeakerId || (state.match.day || 0) !== capturedDay) return;
+      const playSeq = self.utteranceSeq;
       audioPromise.then(function (buf) {
-        if (!buf || !self.enabled || self.paused || !self.speaking) return;
+        if (!buf || !self.enabled || !self.liveBackchannel || self.paused || !self.speaking) return;
+        if (playSeq !== self.utteranceSeq) return;
+        if (!state.match || state.match.phase !== "DAY_SPEECH" || state.activeSpeakerId !== capturedSpeakerId || (state.match.day || 0) !== capturedDay) return;
         const eq = (typeof PERSONA_AUDIO_EQ !== "undefined" && PERSONA_AUDIO_EQ[effKey]) ? PERSONA_AUDIO_EQ[effKey] : null;
         const pbRate = self.accentMode === "tw" && eq ? (eq.twRateMul || 1.0) : 1.02;
         const detune = eq ? (self.accentMode === "tw" ? (eq.twDetuneCents || 0) : (eq.detuneCents || 0)) : 0;
@@ -1167,13 +1201,13 @@ const voice = {
 
   speak: function (personaName, rawText, mood, onDone, opts) {
     const clean = this.formatMandarinText(rawText);
+    const wasBusy = Boolean(this.speaking || (this.isSupported() && (window.speechSynthesis.speaking || window.speechSynthesis.pending)));
+    this.stop();
     if (!clean || !this.canSpeak()) {
       if (opts && typeof opts.onAudioReady === "function") opts.onAudioReady(0);
       if (typeof onDone === "function") setTimeout(onDone, 0);
       return;
     }
-    const wasBusy = Boolean(this.speaking || (this.isSupported() && (window.speechSynthesis.speaking || window.speechSynthesis.pending)));
-    this.stop();
     const seq = ++this.utteranceSeq;
     const self = this;
     const effKey = this.resolvePersonaKey(personaName);
@@ -1192,7 +1226,7 @@ const voice = {
 
     // In "hybrid" mode, play a delicate 2-note character acoustic signature right as they start speaking!
     if (this.mode === "hybrid" && effKey !== "主持") {
-      sound.playVoiceSignature(personaName, mood || "normal");
+      sound.playVoiceSignature(effKey, mood || "normal");
     }
 
     const forwardOpts = {
@@ -1212,12 +1246,12 @@ const voice = {
           self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
             if (ok2 || seq !== self.utteranceSeq) return;
             if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-            self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
+            self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
           });
           return;
         }
         if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-        self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
+        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
       });
       return;
     }
@@ -1234,12 +1268,12 @@ const voice = {
           self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
             if (ok2 || seq !== self.utteranceSeq) return;
             if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-            self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
+            self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
           });
           return;
         }
         if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-        self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
+        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
       });
       return;
     }
@@ -1249,7 +1283,7 @@ const voice = {
       this.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
         if (ok || seq !== self.utteranceSeq) return;
         if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-        self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
+        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
       });
       return;
     }
@@ -1277,13 +1311,16 @@ const voice = {
       const effVol = clamp(this.volume * (isBasicVoice ? 0.92 : 1.0), 0, 1);
 
       const clauses = this.splitMandarinClauses(clean);
-      this.setVisualSpeaking(true);
+      if (!this.paused) this.setVisualSpeaking(true);
 
       const finishOnce = function () {
         if (seq !== self.utteranceSeq) return;
         self.utteranceSeq += 1;
         self.clearTimers();
         self.activeUtterance = null;
+        if (self.isSupported()) {
+          try { window.speechSynthesis.cancel(); } catch (e) {}
+        }
         self.setVisualSpeaking(false);
         if (typeof onDone === "function") onDone();
       };

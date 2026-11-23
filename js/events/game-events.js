@@ -160,6 +160,7 @@ function bindMatchFlowEvents() {
     sound.unlock();
     if (state.match.phase !== "NIGHT_SEER" || !state.seerReveal) return;
     clearStepTimer();
+    if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     state.seerReveal = null;
     proceedToNightWitch();
   });
@@ -168,6 +169,7 @@ function bindMatchFlowEvents() {
     sound.unlock();
     if (state.match.phase !== "DAY_VOTE_RESULT") return;
     clearStepTimer();
+    if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     const cb = state.voteResultPayload && state.voteResultPayload.onContinue;
     state.voteResultPayload = null;
     if (typeof cb === "function") cb();
@@ -234,16 +236,23 @@ function bindMatchFlowEvents() {
 
   el("btnAutoPlayToggle").addEventListener("click", function () {
     state.autoPlay = !state.autoPlay;
+    if (!state.autoPlay && state.spectatorFastForward) {
+      state.spectatorFastForward = false;
+      state._preSpectatorAutoPlay = null;
+    }
     el("btnAutoPlayToggle").textContent = "自動:" + (state.autoPlay ? "開" : "關");
     saveUserPrefs();
     if (typeof indieFlow !== "undefined" && typeof indieFlow.syncBodyScreenState === "function") {
       indieFlow.syncBodyScreenState();
     }
-    if (state.autoPlay && !state.stepTimer) {
+    const voiceBusyNow = Boolean(typeof voice !== "undefined" && (voice.speaking || voice.paused));
+    if (state.autoPlay && !state.stepTimer && !state.speakingInFlight && !voiceBusyNow) {
       if (state.match.phase === "DAY_SPEECH" && !state.typewriter.active) {
         advanceSpeechQueue();
       } else if (state.match.phase === "LAST_WORDS_SPEECH" && !state.typewriter.active) {
         advanceLastWordsQueue();
+      } else if (state.match.phase === "SHERIFF_ELECTION" && typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
+        maybeScheduleAutoAdvanceAfterSpeech();
       } else if (state.match.phase === "NIGHT_SEER" && state.seerReveal) {
         state.stepTimer = setTimeout(function () {
           if (state.match.phase === "NIGHT_SEER" && state.seerReveal) {
@@ -793,8 +802,13 @@ function bindSpeechInputEvents() {
   el("btnRewriteKindness").addEventListener("click", async function () {
     sound.unlock();
     const btn = el("btnRewriteKindness");
-    const raw = el("playerSpeechInput").value;
+    const raw = (el("playerSpeechInput").value || "").trim();
+    if (!raw) {
+      showToast("先輸入或點選一句發言，再按「AI 轉好話」觸發 1.5 倍暴擊！", "warn");
+      return;
+    }
     const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+    const alreadyCritThisTurn = Boolean(state.match && state.match.rewriteCritReady);
     btn.disabled = true;
     btn.textContent = "轉譯中…";
     let niceText = "";
@@ -807,12 +821,14 @@ function bindSpeechInputEvents() {
     if (!niceText || (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep))) return;
     el("playerSpeechInput").value = niceText;
     if (el("quickFreeInput")) el("quickFreeInput").value = niceText;
-    state.match.stats.rewritesUsed += 1;
-    state.match.rewriteCritReady = true;
-    addThreeGoodPoint("words", "說好話轉譯暴擊");
+    if (!alreadyCritThisTurn) {
+      state.match.stats.rewritesUsed += 1;
+      state.match.rewriteCritReady = true;
+      addThreeGoodPoint("words", "說好話轉譯暴擊");
+      bumpCombo("三好轉譯暴擊");
+    }
     sound.playBlessing();
     spawnFx(getPlayerId(), "好話暴擊準備!", "#34d399");
-    bumpCombo("三好轉譯暴擊");
     refreshQuickFreeInputHint();
     refreshLiveNlpUI();
   });
@@ -948,6 +964,7 @@ function bindNightVoteAndFourGEvents() {
   el("btnWitchHeal").addEventListener("click", function () {
     sound.unlock();
     if (state.match.phase !== "NIGHT_WITCH" || !state.match.witchPotions.heal) return;
+    if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     const victim = getSeat(state.match.nightState.wolfTarget);
     if (!victim) return;
     if (victim.id === getPlayerId() && state.match.day >= 2) {
@@ -976,6 +993,7 @@ function bindNightVoteAndFourGEvents() {
   el("btnWitchPurify").addEventListener("click", function () {
     sound.unlock();
     if (state.match.phase !== "NIGHT_WITCH" || !state.match.witchPotions.purify) return;
+    if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     const target = getSeat(state.selectedSeatId);
     if (!target || !target.alive || target.id === getPlayerId()) {
       showToast("先點圓桌選要端清心茶請離誰！", "warn");
@@ -1115,7 +1133,11 @@ function bindNightVoteAndFourGEvents() {
     });
   }
   if (el("btnSheriffNextSpeech")) {
-    el("btnSheriffNextSpeech").addEventListener("click", function () {
+    let lastSheriffNextAt = 0;
+    el("btnSheriffNextSpeech").addEventListener("click", function (ev) {
+      const now = Date.now();
+      if (ev && ev.isTrusted && (now - lastSheriffNextAt) < 260) return;
+      lastSheriffNextAt = now;
       if (typeof advanceSheriffSpeechTurn === "function") advanceSheriffSpeechTurn();
     });
   }

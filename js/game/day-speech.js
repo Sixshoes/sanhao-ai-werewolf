@@ -78,14 +78,15 @@ function startDayDiscussion(dawnVoiceLine, opts) {
     const goFirstSpeaker = function () {
       if (kickedOff || state.match.phase !== "DAY_SPEECH") return;
       kickedOff = true;
+      if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
       if (state.stepTimer) {
         clearTimeout(state.stepTimer);
         state.stepTimer = null;
       }
-      state.stepTimer = setTimeout(advanceSpeechQueue, 360);
+      state.stepTimer = setTimeout(advanceSpeechQueue, 320);
     };
     voice.speakHost(dawnVoiceLine, goFirstSpeaker, "host_dawn");
-    state.stepTimer = setTimeout(goFirstSpeaker, 12000);
+    state.stepTimer = setTimeout(goFirstSpeaker, 22000);
   } else {
     state.stepTimer = setTimeout(advanceSpeechQueue, ff ? 180 : 750);
   }
@@ -93,6 +94,7 @@ function startDayDiscussion(dawnVoiceLine, opts) {
 
 function advanceSpeechQueue() {
   clearStepTimer();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   if (state.match.phase !== "DAY_SPEECH" && state.match.phase !== "DAY_PLAYER_TURN") return;
 
   if (state.match.speechQueue.length === 0) {
@@ -155,17 +157,92 @@ function advanceSpeechQueue() {
   }, delayMs);
 }
 
+function bumpTableStateRev(rePrefetch) {
+  if (typeof state === "undefined" || !state.match) return;
+  state.match.tableStateRev = (state.match.tableStateRev || 0) + 1;
+  state.match._prefetchedSpeech = null;
+  if (rePrefetch && state.match.phase === "DAY_SPEECH" && typeof prefetchNextAiSpeech === "function") {
+    prefetchNextAiSpeech();
+  }
+}
+
+function _computeSpeechVoiceMood(speaker, generated) {
+  if (!speaker || !generated) return "normal";
+  const isHighStress = Boolean(speaker.microPulse >= 76 && (state.match && (state.match.microPulseRevealed || speaker.sweatExposed)));
+  return (generated.claimSeer || generated.claimRole === "seer")
+    ? "claim_seer"
+    : (generated.hasToxicSlip || generated.accuseId
+      ? (isHighStress ? "panic" : (generated.emotion === "defensive" ? "rebut" : "accuse"))
+      : (generated.relationType === "trust"
+        ? ((speaker.name === "星兒" || speaker.name === "晨晨" || speaker.name === "柚子") ? "happy" : "trust")
+        : "normal"));
+}
+
 function _buildSpeechPrefetchKey(seatId) {
   const m = state.match || {};
   const evLen = Array.isArray(m.daySpeechEvents) ? m.daySpeechEvents.length : 0;
   const pkTag = (typeof isPkVoteActive === "function" && isPkVoteActive()) ? "pk" : "reg";
-  return (m.day || 0) + ":" + seatId + ":" + evLen + ":" + pkTag;
+  const rev = m.tableStateRev || 0;
+  const llmTag = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : "";
+  return (m.day || 0) + ":" + seatId + ":" + evLen + ":" + pkTag + ":r" + rev + ":" + llmTag;
 }
 
 function isPrefetchedAiSpeechReady(seatId) {
   const pf = state.match && state.match._prefetchedSpeech;
   const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
   return Boolean(pf && pf.epoch === ep && pf.seatId === seatId && pf.key === _buildSpeechPrefetchKey(seatId) && pf.resolvedMeta);
+}
+
+function _buildDryRunHeuristicSpeech(seat) {
+  const m = state.match || {};
+  const prevBf = m.sheriffBadgeFlow;
+  const prevBfBySeat = m.sheriffBadgeFlowsBySeat ? Object.assign({}, m.sheriffBadgeFlowsBySeat) : null;
+  const drySeat = Object.assign({}, seat, {
+    fakeCheckedIds: Array.isArray(seat.fakeCheckedIds) ? seat.fakeCheckedIds.slice() : [],
+    suspicionMap: Object.assign({}, seat.suspicionMap || {})
+  });
+  const res = buildHeuristicAiSpeech(drySeat);
+  const newBf = (m.sheriffBadgeFlowsBySeat && m.sheriffBadgeFlowsBySeat[seat.id]) || null;
+  const oldBf = prevBfBySeat ? prevBfBySeat[seat.id] : null;
+  // Restore live match Badge Flow state so prefetch NEVER mutates table UI prematurely!
+  m.sheriffBadgeFlow = prevBf;
+  if (prevBfBySeat) m.sheriffBadgeFlowsBySeat = prevBfBySeat;
+  const patch = {
+    claimedRole: drySeat.claimedRole !== seat.claimedRole ? drySeat.claimedRole : undefined,
+    witchAnnouncedSave: drySeat.witchAnnouncedSave && !seat.witchAnnouncedSave,
+    hunterAnnounced: drySeat.hunterAnnounced && !seat.hunterAnnounced,
+    guardAnnounced: drySeat.guardAnnounced && !seat.guardAnnounced,
+    elderAnnounced: drySeat.elderAnnounced && !seat.elderAnnounced,
+    fakeSeer: drySeat.fakeSeer && !seat.fakeSeer,
+    fakeCheckedIdsAdded: drySeat.fakeCheckedIds.filter(function (id) {
+      return !Array.isArray(seat.fakeCheckedIds) || seat.fakeCheckedIds.indexOf(id) === -1;
+    }),
+    deferredBadgeFlow: (newBf && newBf !== oldBf) ? newBf : null
+  };
+  if (res) res._deferredSeatPatch = patch;
+  return res;
+}
+
+function _commitDeferredSeatPatch(speaker, generated) {
+  if (!speaker || !generated) return;
+  const patch = generated._deferredSeatPatch;
+  if (patch) {
+    if (patch.witchAnnouncedSave) speaker.witchAnnouncedSave = true;
+    if (patch.hunterAnnounced) speaker.hunterAnnounced = true;
+    if (patch.guardAnnounced) speaker.guardAnnounced = true;
+    if (patch.elderAnnounced) speaker.elderAnnounced = true;
+    if (patch.fakeSeer) speaker.fakeSeer = true;
+    if (Array.isArray(patch.fakeCheckedIdsAdded) && patch.fakeCheckedIdsAdded.length) {
+      if (!Array.isArray(speaker.fakeCheckedIds)) speaker.fakeCheckedIds = [];
+      patch.fakeCheckedIdsAdded.forEach(function (id) {
+        if (speaker.fakeCheckedIds.indexOf(id) === -1) speaker.fakeCheckedIds.push(id);
+      });
+    }
+    if (patch.deferredBadgeFlow && typeof setSheriffBadgeFlow === "function") {
+      setSheriffBadgeFlow(speaker.id, patch.deferredBadgeFlow.firstTargetId, patch.deferredBadgeFlow.secondTargetId, "speech");
+    }
+    delete generated._deferredSeatPatch;
+  }
 }
 
 function prefetchNextAiSpeech() {
@@ -186,7 +263,8 @@ function prefetchNextAiSpeech() {
   const existing = m._prefetchedSpeech;
   if (existing && existing.epoch === ep && existing.key === key) return true;
 
-  const fallbackMeta = buildHeuristicAiSpeech(nextSeat);
+  // Dry-run heuristic so nextSeat.claimedRole / announced flags / badge flow are NEVER leaked before their turn!
+  const fallbackMeta = _buildDryRunHeuristicSpeech(nextSeat);
   const entry = {
     key: key,
     epoch: ep,
@@ -206,7 +284,9 @@ function prefetchNextAiSpeech() {
         if (liveTxt) {
           if (typeof syncGeminiSpeechMeta === "function") syncGeminiSpeechMeta(nextSeat, fallbackMeta, liveRes, { deferSeatMutation: true });
           else fallbackMeta.text = liveTxt;
-          fallbackMeta.text = String(fallbackMeta.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
+          fallbackMeta.text = (typeof normalizeGeminiSpeechText === "function")
+            ? normalizeGeminiSpeechText(fallbackMeta.text)
+            : String(fallbackMeta.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").trim();
         }
         return fallbackMeta;
       });
@@ -214,6 +294,9 @@ function prefetchNextAiSpeech() {
   entry.promise = runDispatch.then(function (resMeta) {
     if (resMeta && m._prefetchedSpeech === entry) {
       entry.resolvedMeta = resMeta;
+      if (resMeta.text && typeof voice !== "undefined" && voice.canSpeak() && voice.localNeuralAvailable && typeof voice.prefetchFreeLocalNeural === "function") {
+        voice.prefetchFreeLocalNeural(nextSeat.name, resMeta.text, _computeSpeechVoiceMood(nextSeat, resMeta));
+      }
     }
     return resMeta;
   }).catch(function () {
@@ -242,15 +325,18 @@ async function executeAiTurnSpeech(speaker) {
   }
   let generated = null;
   const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
-  const extLlmOn = typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel);
+  const ffNow = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const extLlmOn = !ffNow && (typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel));
   const pf = state.match && state.match._prefetchedSpeech;
   const curKey = _buildSpeechPrefetchKey(speaker.id);
-  const pfMatch = Boolean(pf && pf.epoch === ep && pf.seatId === speaker.id && pf.key === curKey);
+  const pfMatch = !ffNow && Boolean(pf && pf.epoch === ep && pf.seatId === speaker.id && pf.key === curKey);
   if (pfMatch) state.match._prefetchedSpeech = null;
 
   let cueTimer = null;
   try {
-    if (pfMatch && pf.resolvedMeta) {
+    if (ffNow) {
+      generated = buildHeuristicAiSpeech(speaker);
+    } else if (pfMatch && pf.resolvedMeta) {
       // Zero-wait instant handoff from background prefetch!
       generated = pf.resolvedMeta;
     } else {
@@ -271,7 +357,7 @@ async function executeAiTurnSpeech(speaker) {
         if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return;
         generated = awaited || buildHeuristicAiSpeech(speaker);
       } else {
-        generated = buildHeuristicAiSpeech(speaker);
+        generated = _buildDryRunHeuristicSpeech(speaker);
         if (typeof orchestrator !== "undefined" && typeof orchestrator.dispatchAgent === "function") {
           const dispatched = await orchestrator.dispatchAgent("PersonaAgent", { speaker: speaker, fallbackMeta: generated, deferSeatMutation: true });
           if (!dispatched || !dispatched.epochValid || !orchestrator.isEpochValid(ep)) {
@@ -287,7 +373,9 @@ async function executeAiTurnSpeech(speaker) {
             } else {
               generated.text = liveTxt;
             }
-            generated.text = String(generated.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
+            generated.text = (typeof normalizeGeminiSpeechText === "function")
+              ? normalizeGeminiSpeechText(generated.text)
+              : String(generated.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").trim();
           }
         }
       }
@@ -298,11 +386,20 @@ async function executeAiTurnSpeech(speaker) {
   }
   if (state._speechTurnSeq !== turnSeq || state.match.phase !== "DAY_SPEECH" || state.activeSpeakerId !== speaker.id || !speaker.alive) return;
 
-  // Commit deferred role claim right on this seat's actual speaking turn (never prematurely during background prefetch!)
+  // Commit deferred seat flags & role claim right on this seat's actual speaking turn!
+  const wasAlreadyClaimed = Boolean(speaker.claimedRole);
+  _commitDeferredSeatPatch(speaker, generated);
   const committedClaim = generated.claimSeer ? "seer" : (generated.claimRole || null);
   if (committedClaim) {
     if (committedClaim === "seer" || !speaker.claimedRole || speaker.claimedRole === committedClaim) {
       speaker.claimedRole = committedClaim;
+    }
+  }
+  // Sync Gemini-spoken Badge Flow if speaker is Seer Sheriff
+  if (speaker.claimedRole === "seer" && state.match.sheriffSeatId === speaker.id && typeof parseBadgeFlowFromText === "function" && typeof setSheriffBadgeFlow === "function") {
+    const parsedBf = parseBadgeFlowFromText(generated.text, speaker.id);
+    if (parsedBf && parsedBf.firstTargetId) {
+      setSheriffBadgeFlow(speaker.id, parsedBf.firstTargetId, parsedBf.secondTargetId, "speech");
     }
   }
 
@@ -330,6 +427,40 @@ async function executeAiTurnSpeech(speaker) {
     rawText: generated.text
   };
   speaker.publicVoteIntent = generated.accuseId || null;
+  speaker.publicVouchId = generated.vouchId || generated.standWithSeerId || null;
+  // Keep speaker's OWN suspicionMap aligned with what Gemini just publicly argued (respecting Seer/Witch verified truths & wolf teammates!)
+  if (speaker.suspicionMap) {
+    const isVerifiedGoodSelf = function (tid) {
+      if (speaker.role === "seer" && (speaker.checkedHistory || []).some(function (c) { return c.targetId === tid && !c.isWolf; })) return true;
+      if (speaker.role === "witch" && speaker.savedSeatId === tid) return true;
+      return false;
+    };
+    const isVerifiedWolfSelf = function (tid) {
+      return speaker.role === "seer" && (speaker.checkedHistory || []).some(function (c) { return c.targetId === tid && c.isWolf; });
+    };
+    if (generated.accuseId && generated.accuseId !== speaker.id && !isVerifiedGoodSelf(generated.accuseId)) {
+      const aSeat = getSeat(generated.accuseId);
+      if (aSeat && aSeat.alive && !(speaker.role === "wolf" && aSeat.role === "wolf")) {
+        speaker.suspicionMap[generated.accuseId] = clamp(Math.max((speaker.suspicionMap[generated.accuseId] || 50) + 14, 68), 5, 98);
+      }
+    }
+    if (Array.isArray(generated.wolfPits)) {
+      generated.wolfPits.forEach(function (wid) {
+        if (!wid || wid === speaker.id || wid === generated.accuseId || isVerifiedGoodSelf(wid)) return;
+        const ws = getSeat(wid);
+        if (ws && ws.alive && !(speaker.role === "wolf" && ws.role === "wolf")) {
+          speaker.suspicionMap[wid] = clamp((speaker.suspicionMap[wid] || 50) + 8, 5, 96);
+        }
+      });
+    }
+    [generated.vouchId, generated.standWithSeerId].forEach(function (vid) {
+      if (!vid || vid === speaker.id || vid === generated.accuseId || isVerifiedWolfSelf(vid)) return;
+      const vs = getSeat(vid);
+      if (vs && vs.alive) {
+        speaker.suspicionMap[vid] = clamp(Math.min((speaker.suspicionMap[vid] || 50) - 14, 34), 5, 95);
+      }
+    });
+  }
   state.match.daySpeechEvents.push(aiEvObj);
   state.match.allSpeechEvents.push(aiEvObj);
 
@@ -384,7 +515,7 @@ async function executeAiTurnSpeech(speaker) {
           voice.triggerSeatBackchannel(rivalClaimant.id, "clash", 620);
         }
       }
-    } else if (generated.claimSeer || generated.claimRole) {
+    } else if (!wasAlreadyClaimed && (generated.claimSeer || generated.claimRole)) {
       spawnFx(speaker.id, "亮出" + rTitle + "身分!", "#fde68a");
       spawnBurst(speaker.id, ["#fde68a", "#fbbf24", "#ffffff"], 14, "ring");
     }
@@ -450,14 +581,7 @@ async function executeAiTurnSpeech(speaker) {
     }
   }
 
-  const isHighStress = Boolean(speaker.microPulse >= 76 && (state.match.microPulseRevealed || speaker.sweatExposed));
-  const moodTag = (generated.claimSeer || generated.claimRole === "seer")
-    ? "claim_seer"
-    : (generated.hasToxicSlip || generated.accuseId
-      ? (isHighStress ? "panic" : (generated.emotion === "defensive" ? "rebut" : "accuse"))
-      : (generated.relationType === "trust"
-        ? ((speaker.name === "星兒" || speaker.name === "晨晨" || speaker.name === "柚子") ? "happy" : "trust")
-        : "normal"));
+  const moodTag = _computeSpeechVoiceMood(speaker, generated);
   updateAllUI();
   if (typeof orchestrator !== "undefined") {
     orchestrator.emit("speech:committed", { speakerId: speaker.id, accuseId: generated.accuseId || null, isToxic: Boolean(generated.hasToxicSlip) });

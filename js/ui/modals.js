@@ -515,17 +515,19 @@ function renderVoteSheetIntoBody() {
   // SECTION 2: SEAT STATUS & ROLE NOTES TABLE
   let rows = "";
   state.match.seats.forEach(function (s) {
-    const knownKey = canSeeTruth ? s.role : state.match.playerKnownRoles[s.id];
+    const effKey = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(s) : s.role;
+    const knownKey = canSeeTruth ? effKey : state.match.playerKnownRoles[s.id];
+    const rDefRow = (knownKey && ROLE_DEFS[knownKey]) ? ROLE_DEFS[knownKey] : (canSeeTruth && typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : null);
     let roleBadge = '<span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-800/80 text-slate-400">未知</span>';
     if (knownKey === "good_verified") {
       roleBadge = '<span class="px-2 py-0.5 rounded-md text-[11px] font-black bg-emerald-500/20 text-emerald-200 border border-emerald-400/40">已驗好人</span>';
-    } else if (knownKey && ROLE_DEFS[knownKey]) {
-      const isWolfRole = knownKey === "wolf";
-      const isGodRole = knownKey === "seer" || knownKey === "witch" || knownKey === "hunter" || knownKey === "guard";
+    } else if (rDefRow) {
+      const isWolfRole = knownKey === "wolf" || knownKey === "wolf_king" || (canSeeTruth && s.team === "wolf");
+      const isGodRole = knownKey === "seer" || knownKey === "witch" || knownKey === "hunter" || knownKey === "guard" || knownKey === "elder";
       const rCls = isWolfRole
         ? "bg-rose-500/20 text-rose-200 border border-rose-400/45"
         : (isGodRole ? "bg-sky-500/20 text-sky-200 border border-sky-400/45" : "bg-emerald-500/20 text-emerald-200 border border-emerald-400/40");
-      roleBadge = '<span class="px-2 py-0.5 rounded-md text-[11px] font-black ' + rCls + '">' + ROLE_DEFS[knownKey].name + '</span>';
+      roleBadge = '<span class="px-2 py-0.5 rounded-md text-[11px] font-black ' + rCls + '">' + rDefRow.name + '</span>';
     }
 
     let noteBadge = '<span class="text-slate-500">-</span>';

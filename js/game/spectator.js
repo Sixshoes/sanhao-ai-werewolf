@@ -51,7 +51,7 @@ function isSpectatorGuessActive() {
   const m = state.match;
   if (!m || !m.started) return false;
   const p = m.phase;
-  if (p === "LOBBY" || p === "GAME_OVER" || p === "LAST_WORDS_PLAYER" || p === "HUNTER_TRIGGER") return false;
+  if (p === "LOBBY" || p === "GAME_OVER" || p === "LAST_WORDS_PLAYER" || p === "HUNTER_TRIGGER" || p === "SHERIFF_TRANSFER") return false;
   const player = getPlayerSeat();
   return Boolean(player && !player.alive);
 }
@@ -228,7 +228,8 @@ function evaluateSpectatorGuess() {
       const s = getSeat(pid);
       const hit = actualIds.indexOf(pid) !== -1;
       if (hit) hits += 1;
-      const actualRoleName = (s && ROLE_DEFS[s.role]) ? ROLE_DEFS[s.role].name : "好人";
+      const rDefAct = s && typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : (s && ROLE_DEFS[s.role]);
+      const actualRoleName = rDefAct ? rDefAct.name : "好人";
       return {
         label: "猜酸民狼",
         seatId: pid,
@@ -329,9 +330,14 @@ function toggleSpectatorFastForward() {
     if (state.match && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH")) {
       if (state.typewriter && state.typewriter.active && typeof completeCurrentTypewriter === "function") {
         completeCurrentTypewriter(true);
-      } else if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
+      } else if (!state.speakingInFlight && typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
         maybeScheduleAutoAdvanceAfterSpeech();
       }
+    } else if (state.match && state.match.phase === "HUNTER_RESOLVE" && typeof state.hunterResolveCommit === "function") {
+      const goHunt = state.hunterResolveCommit;
+      state.hunterResolveCommit = null;
+      goHunt();
+      return true;
     } else if (state.match && state.match.phase === "DAY_VOTE_RESULT" && state.voteResultPayload && typeof state.voteResultPayload.onContinue === "function") {
       const go = state.voteResultPayload.onContinue;
       state.voteResultPayload = null;

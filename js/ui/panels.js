@@ -563,7 +563,9 @@ function renderSheriffTransferPanel() {
         ? ("👑 警徽流傳訊指南【" + formatBadgeFlowSummary(myFlow) + "】：飛給警1（" + f1Lbl + "）⇒ 全場解讀為金水；" +
           (f2Lbl ? ("跳飛警2（" + f2Lbl + "）⇒ 報 " + f1Lbl + " 疑查殺、" + f2Lbl + " 金水；") : "") +
           "直接撕徽 ⇒ 報 " + f1Lbl + " 高度疑為查殺！")
-        : ("👑 你今日才剛宣告警徽流【" + formatBadgeFlowSummary(myFlow) + "】、尚未經過夜晚查驗，請直接將警徽移交給你信任的存活夥伴或當場撕毀。");
+        : (!isSeerClaimOrRoleP
+          ? ("👑 你尚未公開亮明觀察員身分，本次交棒將作為一般信任傳承（請移交給你信任的存活夥伴或撕毀警徽）。")
+          : ("👑 你今日才剛宣告警徽流【" + formatBadgeFlowSummary(myFlow) + "】、尚未經過夜晚查驗，請直接將警徽移交給你信任的存活夥伴或當場撕毀。"));
       let guideTone = "";
       if (isSeerP && f1Chk) {
         if (f1Chk.isWolf) {

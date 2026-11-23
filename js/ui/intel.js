@@ -290,7 +290,7 @@ function renderSeatIntelPopover() {
     }
     let godPrefix = "";
     if (typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive()) {
-      const rInfo = (typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[s.role]) ? ROLE_DEFS[s.role] : { name: s.role };
+      const rInfo = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : null) || ((typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[s.role]) ? ROLE_DEFS[s.role] : { name: s.role });
       const tops = state.match.seats
         .filter(function (o) { return o.alive && o.id !== s.id; })
         .map(function (o) { return { id: o.id, score: Math.round((s.suspicionMap && s.suspicionMap[o.id]) || 50) }; })
@@ -502,6 +502,7 @@ function inspectSeatMicroExpression(seatId) {
     if (isFeast) {
       bumpCombo("茶點連擊");
       state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + 5, 0, 100);
+      if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
     }
     addLog({
       kind: "blessing",
@@ -600,6 +601,7 @@ function serveWarmTeaToSeat(seatId) {
     text: ""
   });
   showToast("🍵 已奉暖茶給 " + fmtSeatNum(target.id) + "號 " + target.name + "！夥伴暖心回禮，點亮做好事進度！", "emerald");
+  if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
   updateAllUI();
   return true;
 }

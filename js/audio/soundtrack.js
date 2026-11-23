@@ -246,8 +246,30 @@ const sound = {
         g.connect(rSend);
         rSend.connect(this.voiceRoomConv);
       }
+      if (this._activeBreathNode) {
+        try { this._activeBreathNode.stop(); this._activeBreathNode.disconnect(); } catch (e) {}
+      }
+      this._activeBreathNode = src;
+      const selfSndBreath = this;
+      src.onended = function () {
+        if (selfSndBreath._activeBreathNode === src) selfSndBreath._activeBreathNode = null;
+        try { src.disconnect(); g.disconnect(); } catch (e) {}
+      };
       src.start();
     } catch (e) {}
+  },
+
+  stopBackchannels: function () {
+    if (this._activeBreathNode) {
+      try { this._activeBreathNode.onended = null; this._activeBreathNode.stop(); this._activeBreathNode.disconnect(); } catch (e) {}
+      this._activeBreathNode = null;
+    }
+    if (this._activeBackchannelNodes && this._activeBackchannelNodes.size) {
+      this._activeBackchannelNodes.forEach(function (node) {
+        try { node.onended = null; node.stop(); node.disconnect(); } catch (e) {}
+      });
+      this._activeBackchannelNodes.clear();
+    }
   },
 
   playBackchannelBuffer: function (audioBuf, seatId, personaKey, pbRate, detuneCents) {
@@ -256,6 +278,8 @@ const sound = {
       if (this.ctx.state === "suspended" && typeof this.ctx.resume === "function") {
         this.ctx.resume().catch(function () {});
       }
+      if (!this._activeBackchannelNodes) this._activeBackchannelNodes = new Set();
+      this.stopBackchannels();
       const eq = PERSONA_AUDIO_EQ[personaKey] || PERSONA_AUDIO_EQ["暖暖"];
       const src = this.ctx.createBufferSource();
       src.buffer = audioBuf;
@@ -297,6 +321,12 @@ const sound = {
         g.connect(rSend);
         rSend.connect(this.voiceRoomConv);
       }
+      const selfSndBc = this;
+      this._activeBackchannelNodes.add(src);
+      src.onended = function () {
+        if (selfSndBc._activeBackchannelNodes) selfSndBc._activeBackchannelNodes.delete(src);
+        try { src.disconnect(); g.disconnect(); } catch (e) {}
+      };
       src.start();
       return true;
     } catch (e) {

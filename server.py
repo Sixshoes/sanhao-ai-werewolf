@@ -372,7 +372,7 @@ def get_server_gemini_key():
     return ""
 
 
-def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeout=14):
+def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeout=9):
     safe_model = model_id if model_id in ALLOWED_PROXY_GEMINI_MODELS else "gemini-3.8-flash"
     is_gen3 = safe_model.startswith("gemini-3")
     gen_cfg = {
@@ -400,7 +400,7 @@ def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeo
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     parts = (((data.get("candidates") or [{}])[0].get("content") or {}).get("parts") or [])
-    text = "".join(str(p.get("text") or "") for p in parts if isinstance(p, dict)).strip()
+    text = "".join(str(p.get("text") or "") for p in parts if isinstance(p, dict) and not p.get("thought")).strip()
     return text, safe_model
 
 
@@ -628,14 +628,19 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         primary_model = req_model if req_model in ALLOWED_PROXY_GEMINI_MODELS else "gemini-3.8-flash"
         json_mode = bool(req.get("jsonMode"))
         try:
-            out_text, used_model = call_gemini_text_rest(api_key, primary_model, prompt_text, json_mode=json_mode)
+            out_text, used_model = call_gemini_text_rest(api_key, primary_model, prompt_text, json_mode=json_mode, timeout=9)
             if out_text:
                 self.send_json(200, {"ok": True, "model": used_model, "text": out_text})
                 return
+            if primary_model != "gemini-2.5-flash":
+                fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode, timeout=8)
+                if fb_text:
+                    self.send_json(200, {"ok": True, "model": fb_model, "text": fb_text})
+                    return
         except urllib.error.HTTPError as hexc:
-            if primary_model != "gemini-2.5-flash" and hexc.code in (404, 429, 503):
+            if primary_model != "gemini-2.5-flash" and hexc.code in (400, 404, 429, 500, 503, 504):
                 try:
-                    fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode)
+                    fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode, timeout=8)
                     if fb_text:
                         self.send_json(200, {"ok": True, "model": fb_model, "text": fb_text})
                         return
@@ -647,6 +652,14 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             self.send_json(429 if hexc.code == 429 else 502, {"ok": False, "error": f"Upstream Gemini HTTP {hexc.code}"})
             return
         except Exception as exc:
+            if primary_model != "gemini-2.5-flash":
+                try:
+                    fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode, timeout=8)
+                    if fb_text:
+                        self.send_json(200, {"ok": True, "model": fb_model, "text": fb_text})
+                        return
+                except Exception:
+                    pass
             self.send_json(502, {"ok": False, "error": f"Upstream Gemini error: {str(exc)[:100]}"})
             return
         self.send_json(502, {"ok": False, "error": "Empty Gemini output"})
