@@ -22,7 +22,10 @@ const ACHIEVEMENT_DEFS = [
   { id: "mission_ace",     icon: "🎖️", title: "密令達人",   desc: "完成本局專屬角色秘密任務並贏得對局" },
   { id: "tea_host",        icon: "🍵", title: "奉茶結緣師", desc: "單局曾於茶席間奉上暖茶結緣、拉近夥伴信任" },
   { id: "peacemaker",      icon: "🕊️", title: "化戾氣金句王", desc: "現場用「說好話化解」高情商接招尖銳發言" },
-  { id: "fourg_combo",     icon: "🌸", title: "四給連心大師", desc: "單局打出雙四給錦囊觸發「四給連心・三好充能」" }
+  { id: "fourg_combo",     icon: "🌸", title: "四給連心大師", desc: "單局打出雙四給錦囊觸發「四給連心・三好充能」" },
+  { id: "elder_shield",    icon: "🛡️", title: "泰山壓頂",     desc: "身為清心長老觸發亮牌豁免並帶領好人陣營獲勝" },
+  { id: "wolf_king_strike",icon: "🐺", title: "臨走翻盤",     desc: "身為流言首領在公投離席時成功發動最後帶風向反撲" },
+  { id: "sheriff_drama",   icon: "🎙️", title: "警上戲精",     desc: "親身上警競選並高人氣奪下警徽" }
 ];
 
 function loadCareerStats() {
@@ -102,6 +105,9 @@ function recordMatchCareer(winnerTeam) {
   tryUnlock("tea_host", (st.teaServedCount || 0) >= 1);
   tryUnlock("peacemaker", (st.kindDeescalations || 0) >= 1);
   tryUnlock("fourg_combo", (st.fourGSynergies || 0) >= 1);
+  tryUnlock("elder_shield", playerWon && (st.elderExempted || 0) >= 1);
+  tryUnlock("wolf_king_strike", (st.wolfKingStrikes || 0) >= 1);
+  tryUnlock("sheriff_drama", (st.sheriffDramaWins || 0) >= 1);
 
   saveCareerStats(career);
 

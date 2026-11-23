@@ -695,8 +695,10 @@
       <option value="witch">witch</option>
       <option value="guard">guard</option>
       <option value="villager">villager</option>
+      <option value="elder">elder</option>
       <option value="hunter">hunter</option>
       <option value="wolf">wolf</option>
+      <option value="wolf_king">wolf_king</option>
     </select>
     <select id="selectAiDifficulty">
       <option value="normal" selected>normal</option>
@@ -760,9 +762,17 @@
             <div class="font-serif-craft text-xs font-bold text-slate-200">三好書院生</div>
             <div class="text-[10px] text-slate-400 mt-0.5">理性傾聽守護茶席</div>
           </button>
+          <button type="button" data-setup-role="elder" class="role-pick-card">
+            <div class="font-serif-craft text-xs font-bold text-teal-300">清心長老</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">10/12人・首誤投亮牌豁免</div>
+          </button>
           <button type="button" data-setup-role="wolf" class="role-pick-card">
             <div class="font-serif-craft text-xs font-bold text-rose-300">鍵盤酸民狼</div>
             <div class="text-[10px] text-slate-400 mt-0.5">反派視角暗中佈局</div>
+          </button>
+          <button type="button" data-setup-role="wolf_king" class="role-pick-card">
+            <div class="font-serif-craft text-xs font-bold text-red-300">流言首領</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">10/12人・公投離席可反撲</div>
           </button>
           <button type="button" data-setup-role="random" class="role-pick-card">
             <div class="font-serif-craft text-xs font-bold text-amber-200">隨機抽牌</div>
@@ -973,6 +983,7 @@
           <button id="btnAutoPlayToggle" type="button" class="pause-action-btn">自動:關</button>
           <button id="btnReset3DCam" type="button" class="pause-action-btn">重置鏡頭</button>
         </div>
+        <div id="gpuPerfStatusLine" class="text-[10.5px] text-slate-400 text-center tabular-nums">3D 引擎就緒・即時監測中</div>
 
         <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
           <button id="btnOpenHeroShowcasePause" type="button" class="pause-action-btn text-amber-200">3D

@@ -3494,6 +3494,26 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const coachRes = buildAiPostMatchCoachInsights();
     const coachOk = Array.isArray(coachRes) && coachRes.length === 3 && buildMatchReplayReport().includes("AI 名偵探覆盤教練重點");
 
+    // 7. v6.1 Upgrades: Direct WolfKing/Elder role picks (auto-10p), Matrix cross-day flip alert badge & 20 achievements
+    renderTableMatrixIntoBody();
+    const matFlipHtml = (el("matrixSheetBody")._children || []).map(c => c.innerHTML || "").join(" ");
+    const matrixFlipOk = matFlipHtml.includes("跨日反水");
+
+    clearStepTimer();
+    el("selectModeCount").value = "6";
+    el("selectPreferredRole").value = "wolf_king";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const directWkOk = state.match.totalSeats === 10 && Boolean(getPlayerSeat() && getPlayerSeat().isWolfKing && getSeatEffectiveRoleKey(getPlayerSeat()) === "wolf_king");
+
+    clearStepTimer();
+    el("selectModeCount").value = "6";
+    el("selectPreferredRole").value = "elder";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const directElderOk = state.match.totalSeats === 10 && Boolean(getPlayerSeat() && getPlayerSeat().isElder && getSeatEffectiveRoleKey(getPlayerSeat()) === "elder");
+    const v61AchOk = Array.isArray(ACHIEVEMENT_DEFS) && ACHIEVEMENT_DEFS.length >= 20;
+
     clearStepTimer();
     resetMatchToLobby();
     return {
@@ -3504,7 +3524,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       v6RolesOk: hasWolfKing12 && hasElder12,
       wolfHuddleOk,
       v6SheriffOk: shStarted && shReelOk && shRunOk && shWithdrawOk && shPassOk,
-      ledgerOk, coachOk
+      ledgerOk, coachOk,
+      v61Ok: matrixFlipOk && directWkOk && directElderOk && v61AchOk
     };
   })()`, ctx);
 
@@ -3515,4 +3536,4 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v6.0 (6/8/10/12p + Dramatic Sheriff + Wolf Huddle + WolfKing/Elder + AI Coach + iGPU 3D) E2E smoke test PASSED!");
+console.log("[OK] Full v6.1 (6/8/10/12p + Direct WolfKing/Elder + Matrix Flip Alerts + 20 Badges + Live FPS + iGPU 3D) E2E smoke test PASSED!");

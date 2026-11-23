@@ -28,6 +28,11 @@ function startNewGame() {
   if (el("chkGuardMode")) state.guardMode = Boolean(el("chkGuardMode").checked);
   saveUserPrefs();
 
+  if ((pref === "wolf_king" || pref === "elder") && count < 10) {
+    count = 10;
+    if (el("selectModeCount")) el("selectModeCount").value = "10";
+    showToast(pref === "wolf_king" ? "🐺 流言首領已自動切換至 10人局！" : "🛡️ 清心長老已自動切換至 10人局！", "emerald");
+  }
   if (pref === "hunter" && count < 8) {
     count = 8;
     el("selectModeCount").value = "8";
@@ -63,7 +68,7 @@ function startNewGame() {
     rolePool = ["wolf", "wolf", "seer", "witch", "villager", "villager"];
   }
 
-  let playerRole = pref;
+  let playerRole = pref === "wolf_king" ? "wolf" : (pref === "elder" ? "villager" : pref);
   if (playerRole === "random" || rolePool.indexOf(playerRole) === -1) {
     playerRole = shuffle(rolePool)[0];
   }
@@ -122,11 +127,16 @@ function startNewGame() {
   if (count >= 10) {
     const wolfSeatsAll = seats.filter(function (s) { return s.role === "wolf"; });
     const villagerSeatsAll = seats.filter(function (s) { return s.role === "villager"; });
-    if (wolfSeatsAll.length > 0) {
+    const pSeatInit = seats.find(function (s) { return s.id === playerSeatId; });
+    if (pref === "wolf_king" && pSeatInit && pSeatInit.role === "wolf") {
+      pSeatInit.isWolfKing = true;
+    } else if (wolfSeatsAll.length > 0) {
       const wk = wolfSeatsAll[Math.floor(Math.random() * wolfSeatsAll.length)];
       wk.isWolfKing = true;
     }
-    if (villagerSeatsAll.length > 0) {
+    if (pref === "elder" && pSeatInit && pSeatInit.role === "villager") {
+      pSeatInit.isElder = true;
+    } else if (villagerSeatsAll.length > 0) {
       const eld = villagerSeatsAll[Math.floor(Math.random() * villagerSeatsAll.length)];
       eld.isElder = true;
     }
@@ -261,7 +271,10 @@ function startNewGame() {
       sheriffPassed: 0,
       teaServedCount: 0,
       kindDeescalations: 0,
-      fourGSynergies: 0
+      fourGSynergies: 0,
+      elderExempted: 0,
+      wolfKingStrikes: 0,
+      sheriffDramaWins: 0
     }
   };
 

@@ -178,7 +178,15 @@ const stage3d = {
       this.postfx.resize(Math.max(300, Math.floor(r.width)), Math.max(220, Math.floor(r.height)), dpr);
     }
     const qBtn = el("btnToggle3DQuality");
-    if (qBtn) qBtn.textContent = isEco ? "省電流暢" : (isBal ? "均衡畫質" : "極致畫質");
+    if (qBtn) {
+      const baseLbl = isEco ? "省電流暢" : (isBal ? "均衡畫質" : "極致畫質");
+      qBtn.textContent = baseLbl;
+      const fpsTag = (this._perfEmaMs && this._perfEmaMs > 1) ? (" · " + Math.min(60, Math.round(1000 / this._perfEmaMs)) + " FPS") : "";
+      const perfStr = (this.isIntegratedGpu ? "內顯最佳化" : "獨立/標準顯卡") + "｜" + baseLbl + fpsTag;
+      qBtn.title = perfStr;
+      const perfLine = el("gpuPerfStatusLine");
+      if (perfLine) perfLine.textContent = "⚡ 3D 狀態：" + perfStr;
+    }
   },
 
   toggleQualityMode: function () {
@@ -1296,6 +1304,18 @@ const stage3d = {
         const dt = nowMs - this._perfLastMs;
         if (dt > 0 && dt < 120) {
           this._perfEmaMs = this._perfEmaMs ? (this._perfEmaMs * 0.92 + dt * 0.08) : dt;
+          if (!this._fpsLabelLastMs || nowMs - this._fpsLabelLastMs > 1200) {
+            this._fpsLabelLastMs = nowMs;
+            if (this._perfEmaMs > 1) {
+              const qNow = state.quality3D === "eco" ? "省電流暢" : (state.quality3D === "balanced" ? "均衡畫質" : "極致畫質");
+              const fpsVal = Math.min(60, Math.round(1000 / this._perfEmaMs));
+              const perfStr = (this.isIntegratedGpu ? "內顯最佳化" : "獨立/標準顯卡") + "｜" + qNow + " · " + fpsVal + " FPS";
+              const qBtnLive = el("btnToggle3DQuality");
+              if (qBtnLive) qBtnLive.title = perfStr;
+              const perfLine = el("gpuPerfStatusLine");
+              if (perfLine) perfLine.textContent = "⚡ 3D 狀態：" + perfStr;
+            }
+          }
           if (!this._manualQualityLock && state.quality3D !== "eco" && this._perfEmaMs > 44) {
             this._perfSlowMs = (this._perfSlowMs || 0) + dt;
             if (this._perfSlowMs > 3200) {

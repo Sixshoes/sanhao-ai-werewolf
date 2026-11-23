@@ -289,6 +289,9 @@ function finalizeVoteRound(playerTargetId) {
       outSeat.elderShieldUsed = true;
       outSeat.voteDisabled = true;
       outSeat.claimedRole = "elder";
+      if (outSeat.id === getPlayerId() && state.match.stats) {
+        state.match.stats.elderExempted = (state.match.stats.elderExempted || 0) + 1;
+      }
       sound.playBlessing();
       spawnBurst(outSeat.id, ["#2dd4bf", "#fbbf24", "#ffffff"], 26, "star");
       spawnFx(outSeat.id, "🛡️ 清心長老豁免!", "#2dd4bf", { scale: 1.25, durationMs: 1800 });
@@ -1188,6 +1191,9 @@ function finalizeSheriffElectionWinner(chosenCandId) {
   if (winner) {
     m.sheriffSeatId = winner.id;
     m.stats.sheriffPassed = (m.stats.sheriffPassed || 0) + 1;
+    if (winner.id === pid && ctx.playerRunning) {
+      m.stats.sheriffDramaWins = (m.stats.sheriffDramaWins || 0) + 1;
+    }
     const wLbl = winner.id === pid ? (playerNumTag() + " 你") : (fmtSeatNum(winner.id) + "號 " + winner.name);
     sound.playBlessing();
     if (typeof spawnBurst === "function") spawnBurst(winner.id, ["#fbbf24", "#fde68a", "#ffffff"], 26, "star");

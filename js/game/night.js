@@ -842,6 +842,9 @@ function confirmTargetAction() {
       showToast("他是你的酸民狼同伴，請改選好夥伴帶走！", "warn");
       return;
     }
+    if (selfSeat && selfSeat.isWolfKing && state.match.stats) {
+      state.match.stats.wolfKingStrikes = (state.match.stats.wolfKingStrikes || 0) + 1;
+    }
     state.match.stats.nightSkillUsed += 1;
     executeHunterShotPresentation(selfSeat, target);
   }

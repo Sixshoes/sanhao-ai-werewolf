@@ -273,10 +273,14 @@ const indieFlow = {
         if (cntVal === "6") {
           state.guardMode = false;
           if (el("chkGuardMode")) el("chkGuardMode").checked = false;
-          if (el("selectPreferredRole") && (el("selectPreferredRole").value === "guard" || el("selectPreferredRole").value === "hunter")) {
+          if (el("selectPreferredRole") && ["guard", "hunter", "elder", "wolf_king"].indexOf(el("selectPreferredRole").value) !== -1) {
             el("selectPreferredRole").value = "seer";
           }
           if (typeof saveUserPrefs === "function") saveUserPrefs();
+        } else if (cntVal === "8") {
+          if (el("selectPreferredRole") && (el("selectPreferredRole").value === "elder" || el("selectPreferredRole").value === "wolf_king")) {
+            el("selectPreferredRole").value = "seer";
+          }
         } else if (cntVal === "10" || cntVal === "12") {
           state.guardMode = true;
           if (el("chkGuardMode")) el("chkGuardMode").checked = true;
@@ -300,7 +304,18 @@ const indieFlow = {
           if (el("selectModeCount")) el("selectModeCount").value = "8";
           if (typeof saveUserPrefs === "function") saveUserPrefs();
         } else if (rk === "hunter") {
-          if (el("selectModeCount")) el("selectModeCount").value = "8";
+          if (el("selectModeCount") && parseInt(el("selectModeCount").value, 10) < 8) {
+            el("selectModeCount").value = "8";
+            el("selectModeCount").dispatchEvent(new Event("change"));
+          }
+        } else if (rk === "elder" || rk === "wolf_king") {
+          state.guardMode = true;
+          if (el("chkGuardMode")) el("chkGuardMode").checked = true;
+          if (el("selectModeCount") && parseInt(el("selectModeCount").value, 10) < 10) {
+            el("selectModeCount").value = "10";
+            el("selectModeCount").dispatchEvent(new Event("change"));
+          }
+          if (typeof saveUserPrefs === "function") saveUserPrefs();
         }
         self.syncSetupDrawerFromSelects();
       });

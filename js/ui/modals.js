@@ -95,6 +95,9 @@ function renderTableMatrixIntoBody() {
   const dayEvs = state.match.daySpeechEvents || [];
   const allEvs = state.match.allSpeechEvents || [];
   const prevVote = (state.match.voteHistory || []).length ? state.match.voteHistory[state.match.voteHistory.length - 1] : null;
+  const ledgerNow = (typeof buildCrossDayMemoryLedger === "function") ? buildCrossDayMemoryLedger(getPlayerSeat()) : null;
+  const flipSet = ledgerNow && Array.isArray(ledgerNow.flipIds) ? ledgerNow.flipIds : [];
+  const wolfProtSet = ledgerNow && Array.isArray(ledgerNow.wolfProtectorIds) ? ledgerNow.wolfProtectorIds : [];
   const fmtTag = function (id) {
     if (!id) return "—";
     const st = getSeat(id);
@@ -118,6 +121,13 @@ function renderTableMatrixIntoBody() {
       : (mark === "good"
         ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/25 text-emerald-200">你標:認同</span>'
         : "");
+    const alertBadge = (s.isElder && s.voteDisabled)
+      ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-teal-500/25 text-teal-200">🛡️ 免票</span>'
+      : (flipSet.indexOf(s.id) !== -1
+        ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-600/35 text-rose-100">⚡ 跨日反水</span>'
+        : (wolfProtSet.indexOf(s.id) !== -1
+          ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-600/30 text-amber-200">⚠ 曾保出局狼</span>'
+          : ""));
     const accStr = latestEv && latestEv.accuseId ? ('<span class="text-rose-300 font-bold">🎯 打 ' + escapeHtml(fmtTag(latestEv.accuseId)) + '</span>') : '<span class="text-slate-400">🎯 打 —</span>';
     const vchStr = latestEv && latestEv.vouchId ? ('<span class="text-emerald-300 font-bold">✅ 保 ' + escapeHtml(fmtTag(latestEv.vouchId)) + '</span>') : '<span class="text-slate-400">✅ 保 —</span>';
     const voteStr = lastBallot ? (lastBallot.targetId ? ("🗳 投 " + fmtTag(lastBallot.targetId)) : "🗳 棄票") : "🗳 尚無票型";
@@ -129,6 +139,7 @@ function renderTableMatrixIntoBody() {
           '<span class="font-black text-amber-100 truncate">' + (isSh ? "👑 " : "") + escapeHtml(s.id === pid ? "你" : s.name) + (!s.alive ? "（離席）" : "") + '</span>' +
         '</div>' +
         '<div class="flex items-center gap-1 shrink-0">' +
+          alertBadge +
           '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-500/20 text-amber-200">' + escapeHtml(roleClaim) + '</span>' +
           markBadge +
         '</div>' +
