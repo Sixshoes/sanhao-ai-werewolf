@@ -1658,8 +1658,13 @@ function startSheriffElection(onDone) {
     }
     if (fallbackWinner) {
       m.sheriffSeatId = fallbackWinner.id;
-      if (m.sheriffBadgeFlowsBySeat && m.sheriffBadgeFlowsBySeat[fallbackWinner.id]) {
-        m.sheriffBadgeFlow = m.sheriffBadgeFlowsBySeat[fallbackWinner.id];
+      const winAutoFlow = (m.sheriffBadgeFlowsBySeat && m.sheriffBadgeFlowsBySeat[fallbackWinner.id]) || null;
+      m.sheriffBadgeFlowsBySeat = {};
+      if (winAutoFlow) {
+        m.sheriffBadgeFlowsBySeat[fallbackWinner.id] = winAutoFlow;
+        m.sheriffBadgeFlow = winAutoFlow;
+      } else {
+        m.sheriffBadgeFlow = null;
       }
       const pidAuto = getPlayerId();
       const autoFlowStr = (m.sheriffBadgeFlow && m.sheriffBadgeFlow.ownerId === fallbackWinner.id)
@@ -2170,8 +2175,13 @@ function finalizeSheriffElectionWinner(chosenCandId) {
   m.sheriffElectionCtx = null;
   if (winner) {
     m.sheriffSeatId = winner.id;
-    if (m.sheriffBadgeFlowsBySeat && m.sheriffBadgeFlowsBySeat[winner.id]) {
-      m.sheriffBadgeFlow = m.sheriffBadgeFlowsBySeat[winner.id];
+    const winFlow = (m.sheriffBadgeFlowsBySeat && m.sheriffBadgeFlowsBySeat[winner.id]) || null;
+    m.sheriffBadgeFlowsBySeat = {};
+    if (winFlow) {
+      m.sheriffBadgeFlowsBySeat[winner.id] = winFlow;
+      m.sheriffBadgeFlow = winFlow;
+    } else {
+      m.sheriffBadgeFlow = null;
     }
     m.stats.sheriffPassed = (m.stats.sheriffPassed || 0) + 1;
     if (winner.id === pid && ctx.playerRunning) {

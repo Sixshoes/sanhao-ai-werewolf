@@ -231,12 +231,17 @@ function renderVoteSheetIntoBody() {
   }
 
   if (canSeeTruth && state.match.nightArchive && state.match.nightArchive.length > 0) {
+    const seatPlain = function (id) {
+      if (!id) return "無";
+      const st = getSeat(id);
+      return fmtSeatNum(id) + "號" + (id === getPlayerId() ? "你" : (st ? st.name : ""));
+    };
     const seatTag = function (id) {
       if (!id) return "無";
       const st = getSeat(id);
       const effDef = (st && typeof getSeatRoleDef === "function") ? getSeatRoleDef(st) : (st && ROLE_DEFS[st.role]);
       const rName = effDef ? ("(" + effDef.name + ")") : "";
-      return fmtSeatNum(id) + "號" + (id === getPlayerId() ? "你" : (st ? st.name : "")) + rName;
+      return seatPlain(id) + rName;
     };
     html += '<div class="space-y-2.5">';
     html += '<div class="flex items-center justify-between">' +
@@ -245,16 +250,16 @@ function renderVoteSheetIntoBody() {
       '</div>';
     state.match.nightArchive.forEach(function (nr) {
       const guardLine = nr.guardTarget
-        ? ('<div class="text-cyan-200">🛡️ 護心守衛' + (nr.guardId ? ("(" + escapeHtml(seatTag(nr.guardId)) + ")") : "") + '守護：' + escapeHtml(seatTag(nr.guardTarget)) + (nr.doubleSaveClash ? ' <span class="text-amber-300 font-black">［⚠ 同守同救破盾］</span>' : (nr.wolfTarget === nr.guardTarget ? ' <span class="text-emerald-300 font-black">［✓ 成功擋霧］</span>' : '')) + '</div>')
+        ? ('<div class="text-cyan-200">🛡️ 護心守衛' + (nr.guardId ? ("(" + escapeHtml(seatPlain(nr.guardId)) + ")") : "") + '守護：' + escapeHtml(seatTag(nr.guardTarget)) + (nr.doubleSaveClash ? ' <span class="text-amber-300 font-black">［⚠ 同守同救破盾］</span>' : (nr.wolfTarget === nr.guardTarget ? ' <span class="text-emerald-300 font-black">［✓ 成功擋霧］</span>' : '')) + '</div>')
         : "";
       const wolfLine = nr.wolfTarget ? ("🐺 酸民狼散播迷霧：" + escapeHtml(seatTag(nr.wolfTarget))) : "🐺 酸民狼：未鎖定目標";
       const seerLine = nr.seerTarget
-        ? ("🔮 明心觀察員" + (nr.seerId ? ("(" + escapeHtml(seatTag(nr.seerId)) + ")") : "") + "查證：" + escapeHtml(seatTag(nr.seerTarget)) + " → " + (nr.seerIsWolf ? '<span class="text-rose-300 font-black">酸民狼</span>' : '<span class="text-emerald-300 font-black">好夥伴</span>'))
+        ? ("🔮 明心觀察員" + (nr.seerId ? ("(" + escapeHtml(seatPlain(nr.seerId)) + ")") : "") + "查證：" + escapeHtml(seatTag(nr.seerTarget)) + " → " + (nr.seerIsWolf ? '<span class="text-rose-300 font-black">酸民狼</span>' : '<span class="text-emerald-300 font-black">好夥伴</span>'))
         : "🔮 明心觀察員：未查證／已離席";
       const witchActs = [];
       if (nr.witchSaved && nr.wolfTarget) witchActs.push("暖心回甘茶護回 " + escapeHtml(seatTag(nr.wolfTarget)));
       if (nr.witchPoisonTarget) witchActs.push("清心醒神茶請離 " + escapeHtml(seatTag(nr.witchPoisonTarget)));
-      const witchLine = "🍵 滴水奉茶師" + (nr.witchId ? ("(" + escapeHtml(seatTag(nr.witchId)) + ")") : "") + "：" + (witchActs.length ? witchActs.join("、") : "未奉茶");
+      const witchLine = "🍵 滴水奉茶師" + (nr.witchId ? ("(" + escapeHtml(seatPlain(nr.witchId)) + ")") : "") + "：" + (witchActs.length ? witchActs.join("、") : "未奉茶");
       const dawnLine = (nr.casualties && nr.casualties.length > 0)
         ? ("☀️ 天亮離席：" + nr.casualties.map(function (c) { return escapeHtml(seatTag(c.id)) + (c.cause === "purify" ? "［清心茶請離］" : (c.cause === "double_clash" ? "［同守破盾］" : "［夜間迷霧］")); }).join("、"))
         : "☀️ 天亮結果：平安夜（全員在場）";

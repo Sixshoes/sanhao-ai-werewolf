@@ -5332,6 +5332,18 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     getPlayerSeat().alive = v14PlayerAlive;
     const v14PromptBuilt = buildBlindGeminiSpeechPrompt(spPrefTest, { text: "先聽發言" });
     const v14ThreeGoodPromptOk = Boolean(v14PromptBuilt && v14PromptBuilt.audit && v14PromptBuilt.audit.ok && v14PromptBuilt.prompt.includes("【茶席三好與四給公開局勢】"));
+    // v14.1 Returning-user voiceLiveBackchannel pref migration check (pre-v14 legacy localStorage must NOT re-enable overlapping backchannel!)
+    const prevPrefsRaw = window.localStorage.getItem(PREFS_STORAGE_KEY);
+    voice.liveBackchannel = false;
+    window.localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify({ voiceLiveBackchannel: true }));
+    loadUserPrefs();
+    const v141LegacyBackchannelIgnoredOk = voice.liveBackchannel === false;
+    window.localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify({ voiceLiveBackchannel: true, voicePrefVersion: 2 }));
+    loadUserPrefs();
+    const v141OptInBackchannelHonoredOk = voice.liveBackchannel === true;
+    voice.liveBackchannel = false;
+    if (prevPrefsRaw !== null) window.localStorage.setItem(PREFS_STORAGE_KEY, prevPrefsRaw);
+    else window.localStorage.removeItem(PREFS_STORAGE_KEY);
     spPrefTest.claimedRole = origClaimPref;
 
     return {
@@ -5378,7 +5390,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       v14StaleClearOk,
       v14PosNlpOk,
       v14SpectatorTransferLockOk,
-      v14ThreeGoodPromptOk
+      v14ThreeGoodPromptOk,
+      v141LegacyBackchannelIgnoredOk,
+      v141OptInBackchannelHonoredOk
     };
   })()`, ctx);
   for (const [k, v] of Object.entries(v132Res)) {

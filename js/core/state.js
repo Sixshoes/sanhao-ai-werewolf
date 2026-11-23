@@ -165,6 +165,7 @@ function saveUserPrefs() {
       voiceAccent: voice.accentMode === "tw" ? "tw" : "anime",
       voiceEnginePref: (voice.enginePref === "local" || voice.enginePref === "gemini") ? voice.enginePref : "auto",
       voiceLiveBackchannel: Boolean(voice.liveBackchannel),
+      voicePrefVersion: 2,
       voiceHumanBreath: Boolean(voice.humanBreath),
       voiceRate: Number(voice.rate) || 0.96,
       voiceVolume: Number(voice.volume),
@@ -230,7 +231,7 @@ function loadUserPrefs() {
     if (p.voiceAccent === "tw") voice.accentMode = "tw";
     else if (p.voiceAccent === "anime" || p.voiceAccent === "multi") voice.accentMode = "anime";
     if (p.voiceEnginePref === "local" || p.voiceEnginePref === "gemini" || p.voiceEnginePref === "auto") voice.enginePref = p.voiceEnginePref;
-    if (typeof p.voiceLiveBackchannel === "boolean") voice.liveBackchannel = p.voiceLiveBackchannel;
+    if ((p.voicePrefVersion >= 2) && typeof p.voiceLiveBackchannel === "boolean") voice.liveBackchannel = p.voiceLiveBackchannel;
     if (typeof p.voiceHumanBreath === "boolean") voice.humanBreath = p.voiceHumanBreath;
     if (typeof p.voiceRate === "number" && p.voiceRate >= 0.7 && p.voiceRate <= 1.35) voice.rate = p.voiceRate;
     if (typeof p.voiceVolume === "number" && p.voiceVolume >= 0 && p.voiceVolume <= 1) voice.volume = p.voiceVolume;

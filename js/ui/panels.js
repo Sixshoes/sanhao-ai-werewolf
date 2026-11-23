@@ -686,7 +686,7 @@ function renderSheriffElectionPanel() {
     cBox.innerHTML = "";
     if (Array.isArray(ctx.dramaEvents) && ctx.dramaEvents.length) {
       const dramaBanner = document.createElement("div");
-      dramaBanner.className = "rounded px-2.5 py-1.5 text-[11px] font-bold bg-rose-950/65 border border-rose-400/45 text-amber-200 mb-1";
+      dramaBanner.className = "rounded px-2.5 py-1.5 text-[11px] font-bold bg-amber-500/15 border border-amber-400/45 text-amber-100 mb-1";
       dramaBanner.textContent = ctx.dramaEvents[0];
       cBox.appendChild(dramaBanner);
     }
