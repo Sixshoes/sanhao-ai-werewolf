@@ -4922,6 +4922,23 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     stage3d.setShowcaseMode(false);
     const showcaseResetsTargetOk = stage3d.showcaseTarget === "hero";
 
+    // 6. Modesty & Anti-Upskirt Guards: showcase/orbit pitch never goes below safe floor + safety-shorts painter available
+    stage3d.showcaseMode = true;
+    stage3d.orbit.dragging = true;
+    stage3d.orbit.lastX = 100;
+    stage3d.orbit.lastY = 500;
+    stage3d.orbit.targetPitch = 0.18;
+    stage3d.moveOrbit(100, -2500);
+    const showcasePitchSafeOk = stage3d.orbit.targetPitch >= 0.06;
+    stage3d.showcaseMode = false;
+    stage3d.camPreset = "cinema";
+    stage3d.orbit.lastY = 500;
+    stage3d.orbit.targetPitch = 0.40;
+    stage3d.moveOrbit(100, -2500);
+    const orbitPitchSafeOk = stage3d.orbit.targetPitch >= 0.16;
+    stage3d.orbit.dragging = false;
+    const modestyPainterReadyOk = typeof stage3dVrm.paintVrmModestyShortsMap === "function";
+
     clearStepTimer();
     resetMatchToLobby();
     return {
@@ -4931,7 +4948,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       linmeiUiOk,
       celestialUiOk,
       resetClearsCloseUpOk,
-      showcaseResetsTargetOk
+      showcaseResetsTargetOk,
+      showcasePitchSafeOk,
+      orbitPitchSafeOk,
+      modestyPainterReadyOk
     };
   })()`, ctx);
 

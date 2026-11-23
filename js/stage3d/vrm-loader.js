@@ -213,6 +213,111 @@ const stage3dVrm = {
     }
   },
 
+  /**
+   * Paints opaque matte charcoal-navy modesty safety shorts (安全褲) directly onto VRoid standard
+   * female Body_00_SKIN UV maps, completely eliminating default white underwear & skin gaps
+   * across pelvis, crotch, and upper thighs while leaving feet/hands/torso untouched.
+   */
+  paintVrmModestyShortsMap: function (srcTex, shortHex) {
+    if (!srcTex || !srcTex.image || typeof document === "undefined" || typeof THREE.CanvasTexture !== "function") {
+      return srcTex;
+    }
+    const img = srcTex.image;
+    const iw = img.naturalWidth || img.width || 0;
+    const ih = img.naturalHeight || img.height || 0;
+    if (iw < 4 || ih < 4) return srcTex;
+    const hexCol = shortHex || "#1e2330";
+    const cacheKey = (srcTex.uuid || "tex") + "|modesty_shorts|" + hexCol;
+    if (this._recolorCache[cacheKey]) return this._recolorCache[cacheKey];
+    try {
+      const maxDim = 512;
+      const sc = Math.min(1, maxDim / Math.max(iw, ih));
+      const w = Math.max(32, Math.round(iw * sc));
+      const h = Math.max(32, Math.round(ih * sc));
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+
+      // Subtle matte woven fabric vertical gradient for realistic anime safety shorts (安全褲)
+      const pelvisGrad = ctx.createLinearGradient(0, h * 0.44, 0, h * 0.65);
+      pelvisGrad.addColorStop(0.0, "#262c3b");
+      pelvisGrad.addColorStop(0.45, hexCol);
+      pelvisGrad.addColorStop(1.0, "#151923");
+
+      // 1. Center pelvis / hips / buttocks / crotch UV polygon (strictly inside u∈[0.239, 0.761] & above feet so forearms/wrists/feet stay 100% untouched!)
+      ctx.save();
+      ctx.fillStyle = pelvisGrad;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.239, h * 0.448);
+      ctx.lineTo(w * 0.761, h * 0.448);
+      ctx.lineTo(w * 0.761, h * 0.608);
+      ctx.lineTo(w * 0.720, h * 0.584);
+      ctx.lineTo(w * 0.635, h * 0.576);
+      ctx.lineTo(w * 0.542, h * 0.584);
+      ctx.lineTo(w * 0.520, h * 0.646);
+      ctx.lineTo(w * 0.480, h * 0.646);
+      ctx.lineTo(w * 0.458, h * 0.584);
+      ctx.lineTo(w * 0.365, h * 0.576);
+      ctx.lineTo(w * 0.280, h * 0.584);
+      ctx.lineTo(w * 0.239, h * 0.608);
+      ctx.closePath();
+      ctx.fill();
+
+      // Subtle waistband trim line
+      ctx.strokeStyle = "#12151e";
+      ctx.lineWidth = Math.max(1.5, h * 0.004);
+      ctx.beginPath();
+      ctx.moveTo(w * 0.239, h * 0.452);
+      ctx.lineTo(w * 0.761, h * 0.452);
+      ctx.stroke();
+
+      // 2. Left & Right upper-thigh modesty short legs (starts at v=0.491, clearing wrists at v<=0.4858 while fully covering thighs from v=0.496!)
+      const thighGrad = ctx.createLinearGradient(0, h * 0.491, 0, h * 0.594);
+      thighGrad.addColorStop(0.0, "#252b3a");
+      thighGrad.addColorStop(0.75, hexCol);
+      thighGrad.addColorStop(1.0, "#171b26");
+      ctx.fillStyle = thighGrad;
+      ctx.fillRect(0, h * 0.491, w * 0.238, h * 0.103);
+      ctx.fillRect(w * 0.762, h * 0.491, w * 0.238, h * 0.103);
+
+      // Clean safety-short lower hem stitch on both upper thighs
+      ctx.strokeStyle = "#2f374a";
+      ctx.lineWidth = Math.max(1.2, h * 0.003);
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.590);
+      ctx.lineTo(w * 0.238, h * 0.590);
+      ctx.moveTo(w * 0.762, h * 0.590);
+      ctx.lineTo(w, h * 0.590);
+      ctx.stroke();
+      ctx.restore();
+
+      const outTex = new THREE.CanvasTexture(c);
+      outTex.flipY = srcTex.flipY;
+      outTex.wrapS = srcTex.wrapS;
+      outTex.wrapT = srcTex.wrapT;
+      if (THREE.sRGBEncoding !== undefined) outTex.encoding = THREE.sRGBEncoding;
+      outTex.needsUpdate = true;
+      this._recolorCache[cacheKey] = outTex;
+      if (!Array.isArray(this._recolorCacheKeys)) this._recolorCacheKeys = [];
+      this._recolorCacheKeys.push(cacheKey);
+      while (this._recolorCacheKeys.length > 36) {
+        const oldestKey = this._recolorCacheKeys.shift();
+        if (oldestKey && oldestKey !== cacheKey && this._recolorCache[oldestKey]) {
+          const oldTex = this._recolorCache[oldestKey];
+          if (oldTex && typeof oldTex.dispose === "function") {
+            try { oldTex.dispose(); } catch (e) {}
+          }
+          delete this._recolorCache[oldestKey];
+        }
+      }
+      return outTex;
+    } catch (e) {
+      return srcTex;
+    }
+  },
+
   attachVrmPersonaAccessories: function (bones, personaName, isVrm0) {
     const styling = this.getPersonaStyling(personaName);
     if (!styling || !styling.vrmAcc || !bones || typeof THREE === "undefined") return null;
@@ -784,19 +889,20 @@ const stage3dVrm = {
     const sgn = sb.skirtSideSign || 0;
     const sw = (typeof sway === "number" ? sway : 0) * (d === 0 ? 0.5 : 1.0);
     if (sb.skirtInheritsLeg) {
-      // Parent UpperLeg is already bent -1.40 rad (-80 deg) forward along thigh; relax DOWNWARD (+rx)!
+      // Parent UpperLeg is already bent -1.42 rad (-81 deg) forward along thigh; relax DOWNWARD (+rx) & tuck center inward!
       if (zone === "front") {
-        const rx = d === 0 ? 0.14 : (d === 1 ? 0.38 : 0.22);
-        return { rx: rx + sw, ry: 0, rz: 0 };
+        const rx = d === 0 ? 0.24 : (d === 1 ? 0.42 : 0.26);
+        const rz = d === 0 ? (-sgn * 0.05) : 0;
+        return { rx: rx + sw, ry: 0, rz: rz };
       }
       if (zone === "back") {
-        const rx = d === 0 ? 0.52 : (d === 1 ? 0.36 : 0.20);
-        return { rx: rx + sw * 0.4, ry: 0, rz: 0 };
+        const rx = d === 0 ? 0.58 : (d === 1 ? 0.38 : 0.22);
+        return { rx: rx + sw * 0.35, ry: 0, rz: 0 };
       }
       // side panel parented to UpperLeg (Gen-A VRMs: player, xiaoyun, qingming)
-      const rx = d === 0 ? 0.66 : (d === 1 ? 0.38 : 0.20);
-      const rz = d === 0 ? (sgn * 0.14) : (d === 1 ? (sgn * 0.06) : 0);
-      return { rx: rx + sw * 0.6, ry: 0, rz: rz };
+      const rx = d === 0 ? 0.72 : (d === 1 ? 0.40 : 0.22);
+      const rz = d === 0 ? (sgn * 0.09) : (d === 1 ? (sgn * 0.04) : 0);
+      return { rx: rx + sw * 0.5, ry: 0, rz: rz };
     }
     // Hips-parented skirt panels (Gen-B VRMs: nuannuan/xinger Side panels) start hanging straight down (0 rad)
     if (zone === "side") {
@@ -873,12 +979,20 @@ const stage3dVrm = {
     }
 
     // CRITICAL STEP 3: Pose legs & arms using exact anatomical Model-Space quaternions (zero gimbal flip or VRM 1.0 twist!)
+    const hasSkirt = springBones.some(function (sb) { return Boolean(sb && sb.isSkirt); });
     if (mode === "seated") {
-      // Thighs extend cleanly FORWARD (+Z) with slight outward splay; knees hang STRAIGHT DOWN (-Y)
-      this.setBoneModelDeltaImmediate(boneMeta.leftUpperLeg, -1.40, 0.08, 0, "YXZ");
-      this.setBoneModelDeltaImmediate(boneMeta.rightUpperLeg, -1.40, -0.08, 0, "YXZ");
-      this.setBoneModelDeltaImmediate(boneMeta.leftLowerLeg, 1.42, 0, 0, "YXZ");
-      this.setBoneModelDeltaImmediate(boneMeta.rightLowerLeg, 1.42, 0, 0, "YXZ");
+      // Skirted avatars sit gracefully with knees CLOSED TOGETHER so skirts stay draped & modest; trousered avatars sit relaxed
+      if (hasSkirt) {
+        this.setBoneModelDeltaImmediate(boneMeta.leftUpperLeg, -1.42, -0.02, 0.026, "YXZ");
+        this.setBoneModelDeltaImmediate(boneMeta.rightUpperLeg, -1.42, 0.02, -0.026, "YXZ");
+        this.setBoneModelDeltaImmediate(boneMeta.leftLowerLeg, 1.44, 0, 0, "YXZ");
+        this.setBoneModelDeltaImmediate(boneMeta.rightLowerLeg, 1.44, 0, 0, "YXZ");
+      } else {
+        this.setBoneModelDeltaImmediate(boneMeta.leftUpperLeg, -1.40, 0.06, 0, "YXZ");
+        this.setBoneModelDeltaImmediate(boneMeta.rightUpperLeg, -1.40, -0.06, 0, "YXZ");
+        this.setBoneModelDeltaImmediate(boneMeta.leftLowerLeg, 1.42, 0, 0, "YXZ");
+        this.setBoneModelDeltaImmediate(boneMeta.rightLowerLeg, 1.42, 0, 0, "YXZ");
+      }
 
       // Arms drop DOWN & OUT from T-pose (left: Z = -drop, right: Z = +drop) and angle slightly FORWARD (X = -fwd), elbows bend FORWARD around Y (left: Y = -bend, right: Y = +bend)
       this.setBoneModelDeltaImmediate(boneMeta.leftUpperArm, -0.26, 0, -1.08, "YXZ");
@@ -964,6 +1078,13 @@ const stage3dVrm = {
           if (m.transparent && !m.alphaTest) m.alphaTest = 0.35;
           if (m.map && THREE.sRGBEncoding !== undefined) m.map.encoding = THREE.sRGBEncoding;
 
+          // Modesty Safety Shorts (安全褲): erase VRoid default white panties on ALL female/skirted Body_00_SKIN textures!
+          const isFemaleBodySkin = /body.*skin/i.test(mName) && (/^f\d{2}/i.test(mName) || hasSkirt);
+          if (isFemaleBodySkin && !isOutline && m.map) {
+            m = m.clone ? m.clone() : m;
+            m.map = selfLoader.paintVrmModestyShortsMap(m.map, "#1e2330");
+          }
+
           // v10.0 Luminance-preserving texture recolor so ALL 11 AI characters match their 2D portraits!
           if (personaStyling && !isOutline && m.map) {
             if (isHairMat && personaStyling.hairHex) {
@@ -1029,6 +1150,7 @@ const stage3dVrm = {
       rawScene: rawScene,
       isVrm: isVrm0 || isVrm1,
       isVrm0: isVrm0,
+      hasSkirt: hasSkirt,
       mode: mode,
       baseY: modelWrap.position.y,
       bones: bones,
@@ -1390,21 +1512,32 @@ const stage3dVrm = {
       if (bm.rightEye) this.slerpBoneModelDelta(bm.rightEye, eyePitch, eyeYaw, 0, 0.38, "YXZ");
     }
 
-    // Subtle Living Seated Lower-Body Micro-Rhythm (keeps thighWorld.z > 0.85, zero chair/table clipping!)
+    // Subtle Living Seated Lower-Body Micro-Rhythm (keeps thighWorld.z > 0.85; skirted avatars keep knees modestly together!)
     if (inst.mode === "seated" && !sleeping) {
       const lTempo = arch.legTempo !== undefined ? arch.legTempo : 0.7;
-      const kneeShift = Math.sin(t * 0.55 + seed * 2.1) * 0.032 * lTempo;
-      const thighBob = (talking ? Math.sin(t * 3.2 + seed) * 0.022 : 0) + (iname === "playful_sway" ? Math.sin(t * 3.4 + seed) * 0.030 * iw : 0);
-      const shinSwingR = (o.isAccusing ? -0.14 : 0) +
-        (lTempo >= 1.1 ? Math.sin(t * (2.6 + lTempo * 0.6) + seed) * 0.095 : Math.sin(t * 1.25 + seed) * 0.035) +
-        (iname === "playful_sway" ? Math.sin(t * 4.4 + seed) * 0.12 * iw : 0);
-      const shinSwingL = (o.isAccusing ? -0.12 : 0) +
-        (lTempo >= 1.1 ? Math.cos(t * (2.4 + lTempo * 0.6) + seed) * 0.085 : Math.cos(t * 1.15 + seed) * 0.030) -
-        (iname === "playful_sway" ? Math.sin(t * 4.4 + seed) * 0.10 * iw : 0);
-      if (bm.leftUpperLeg) this.slerpBoneModelDelta(bm.leftUpperLeg, clamp(-1.40 + thighBob, -1.46, -1.33), clamp(0.08 + kneeShift, 0.03, 0.15), 0, 0.10, "YXZ");
-      if (bm.rightUpperLeg) this.slerpBoneModelDelta(bm.rightUpperLeg, clamp(-1.40 - thighBob, -1.46, -1.33), clamp(-0.08 + kneeShift, -0.15, -0.03), 0, 0.10, "YXZ");
-      if (bm.leftLowerLeg) this.slerpBoneModelDelta(bm.leftLowerLeg, clamp(1.42 + shinSwingL, 1.20, 1.60), 0, 0, 0.12, "YXZ");
-      if (bm.rightLowerLeg) this.slerpBoneModelDelta(bm.rightLowerLeg, clamp(1.42 + shinSwingR, 1.20, 1.60), 0, 0, 0.12, "YXZ");
+      if (inst.hasSkirt) {
+        // Synchronized subtle poise with knees gracefully together (NEVER shears skirt open!)
+        const gentleSway = Math.sin(t * 0.55 + seed * 2.1) * 0.012 * lTempo;
+        const gentleBob = (talking ? Math.sin(t * 2.6 + seed) * 0.010 : 0);
+        const shinGentle = Math.sin(t * 1.15 + seed) * 0.028 + (o.isAccusing ? -0.06 : 0);
+        if (bm.leftUpperLeg) this.slerpBoneModelDelta(bm.leftUpperLeg, clamp(-1.42 + gentleBob, -1.45, -1.39), clamp(-0.02 + gentleSway, -0.04, 0.01), 0.026, 0.10, "YXZ");
+        if (bm.rightUpperLeg) this.slerpBoneModelDelta(bm.rightUpperLeg, clamp(-1.42 + gentleBob, -1.45, -1.39), clamp(0.02 + gentleSway, -0.01, 0.04), -0.026, 0.10, "YXZ");
+        if (bm.leftLowerLeg) this.slerpBoneModelDelta(bm.leftLowerLeg, clamp(1.44 + shinGentle, 1.32, 1.54), 0, 0, 0.12, "YXZ");
+        if (bm.rightLowerLeg) this.slerpBoneModelDelta(bm.rightLowerLeg, clamp(1.44 + shinGentle, 1.32, 1.54), 0, 0, 0.12, "YXZ");
+      } else {
+        const kneeShift = Math.sin(t * 0.55 + seed * 2.1) * 0.028 * lTempo;
+        const thighBob = (talking ? Math.sin(t * 3.2 + seed) * 0.020 : 0) + (iname === "playful_sway" ? Math.sin(t * 3.4 + seed) * 0.026 * iw : 0);
+        const shinSwingR = (o.isAccusing ? -0.14 : 0) +
+          (lTempo >= 1.1 ? Math.sin(t * (2.6 + lTempo * 0.6) + seed) * 0.095 : Math.sin(t * 1.25 + seed) * 0.035) +
+          (iname === "playful_sway" ? Math.sin(t * 4.4 + seed) * 0.12 * iw : 0);
+        const shinSwingL = (o.isAccusing ? -0.12 : 0) +
+          (lTempo >= 1.1 ? Math.cos(t * (2.4 + lTempo * 0.6) + seed) * 0.085 : Math.cos(t * 1.15 + seed) * 0.030) -
+          (iname === "playful_sway" ? Math.sin(t * 4.4 + seed) * 0.10 * iw : 0);
+        if (bm.leftUpperLeg) this.slerpBoneModelDelta(bm.leftUpperLeg, clamp(-1.40 + thighBob, -1.46, -1.33), clamp(0.06 + kneeShift, 0.02, 0.12), 0, 0.10, "YXZ");
+        if (bm.rightUpperLeg) this.slerpBoneModelDelta(bm.rightUpperLeg, clamp(-1.40 - thighBob, -1.46, -1.33), clamp(-0.06 + kneeShift, -0.12, -0.02), 0, 0.10, "YXZ");
+        if (bm.leftLowerLeg) this.slerpBoneModelDelta(bm.leftLowerLeg, clamp(1.42 + shinSwingL, 1.20, 1.60), 0, 0, 0.12, "YXZ");
+        if (bm.rightLowerLeg) this.slerpBoneModelDelta(bm.rightLowerLeg, clamp(1.42 + shinSwingR, 1.20, 1.60), 0, 0, 0.12, "YXZ");
+      }
     }
 
     // Anatomical Upper-Limb Choreography: Drop + Forward + Humeral Twist + Elbow Flex + Wrist + Clavicle + Fingers!
@@ -1755,9 +1888,14 @@ const stage3dVrm = {
         const sb = inst.springBones[si];
         if (!sb || !sb.quatMeta) continue;
         if (sb.isSkirt && inst.mode === "seated") {
-          const skSway = Math.sin(t * 1.6 + sb.phase) * 0.018;
+          const skSway = Math.sin(t * 1.6 + sb.phase) * 0.014;
           const skAng = this.getSeatedSkirtTargetAngles(sb, skSway);
           this.slerpBoneModelDelta(sb.quatMeta, skAng.rx, skAng.ry, skAng.rz, 0.16, "YXZ");
+        } else if (sb.isSkirt) {
+          // Standing skirt: ultra-gentle hem flutter strictly biased downward so breeze NEVER lifts skirt!
+          const hemZ = clamp(Math.sin(t * 1.8 + sb.phase) * 0.028, -0.035, 0.035);
+          const hemX = clamp(Math.cos(t * 1.5 + sb.phase) * 0.018, -0.022, 0.022);
+          this.slerpBoneModelDelta(sb.quatMeta, hemX, 0, hemZ, 0.16, "YXZ");
         } else {
           const baseAmp = clamp(0.072 / Math.sqrt(sb.stiffness || 0.7), 0.038, 0.115);
           const breezeZ = clamp(Math.sin(t * 2.25 + sb.phase) * baseAmp + inst.headInertia * 0.32, -0.16, 0.16);

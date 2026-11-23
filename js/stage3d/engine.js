@@ -592,16 +592,16 @@ const stage3d = {
       const hp = this.hero ? this.hero.root.position : new THREE.Vector3(2.95, 0.02, -5.45);
       const hRotY = this.hero ? (this.hero.root.rotation.y || 0) : -0.44;
       this.orbit.targetYaw = hRotY + 0.18;
-      this.orbit.targetPitch = 0.14;
+      this.orbit.targetPitch = 0.18;
       this.orbit.targetRadius = 3.75;
-      if (this.orbit.targetLookAt) this.orbit.targetLookAt.set(hp.x, hp.y + 1.54, hp.z);
+      if (this.orbit.targetLookAt) this.orbit.targetLookAt.set(hp.x, hp.y + 1.58, hp.z);
     } else if (this.seats && this.seats.anchors && this.seats.anchors[this.showcaseTarget]) {
       const ap = this.seats.anchors[this.showcaseTarget].worldPos;
       const frontYaw = Math.atan2(-ap.x, -ap.z);
       this.orbit.targetYaw = frontYaw + 0.22;
-      this.orbit.targetPitch = 0.22;
+      this.orbit.targetPitch = 0.24;
       this.orbit.targetRadius = 3.45;
-      if (this.orbit.targetLookAt) this.orbit.targetLookAt.set(ap.x, ap.y + 1.48, ap.z);
+      if (this.orbit.targetLookAt) this.orbit.targetLookAt.set(ap.x, ap.y + 1.50, ap.z);
     }
 
     if (typeof indieFlow !== "undefined" && typeof indieFlow.syncShowcaseTargetUi === "function") {
@@ -1209,7 +1209,8 @@ const stage3d = {
     this.orbit.lastY = clientY;
     if (this.showcaseMode) {
       this.orbit.targetYaw -= dx * 0.0085;
-      this.orbit.targetPitch = clamp(this.orbit.targetPitch + dy * 0.005, -0.18, 0.72);
+      // Strictly keep showcase pitch at or above horizontal (zero upskirt low-angle tilt!)
+      this.orbit.targetPitch = clamp(this.orbit.targetPitch + dy * 0.005, 0.06, 0.68);
       this.orbit.userOverrideUntil = performance.now() + 9000;
       return;
     }
@@ -1219,7 +1220,8 @@ const stage3d = {
       this.orbit.fpTargetPitch = clamp(this.orbit.fpTargetPitch + dy * 0.0040, -0.46, 0.24);
     } else {
       this.orbit.targetYaw -= dx * 0.0075;
-      this.orbit.targetPitch = clamp(this.orbit.targetPitch + dy * 0.0055, 0.08, 1.22);
+      // Keep orbit camera gracefully above tabletop height
+      this.orbit.targetPitch = clamp(this.orbit.targetPitch + dy * 0.0055, 0.16, 1.22);
     }
     this.orbit.userOverrideUntil = performance.now() + 9000;
   },
@@ -1270,10 +1272,11 @@ const stage3d = {
       const hp = anchorObj || this.hero.root.position;
       if (!o.dragging && nowMs > o.userOverrideUntil) {
         o.targetYaw += 0.0045;
-        o.targetPitch = anchorObj ? 0.22 : 0.14;
+        o.targetPitch = anchorObj ? 0.24 : 0.18;
         o.targetRadius = clamp(o.targetRadius, 2.6, 5.4);
-        o.targetLookAt.set(hp.x, hp.y + (anchorObj ? 1.48 : 1.56), hp.z);
+        o.targetLookAt.set(hp.x, hp.y + (anchorObj ? 1.50 : 1.58), hp.z);
       }
+      o.targetPitch = clamp(o.targetPitch, 0.06, 0.68);
       const smS = o.dragging ? 0.25 : 0.09;
       o.yaw += (o.targetYaw - o.yaw) * smS;
       o.pitch += (o.targetPitch - o.pitch) * smS;
