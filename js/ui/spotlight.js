@@ -124,7 +124,7 @@ function renderSpeakerStanceStrip(speaker, speechEv) {
     const iconKeyMap = { seer: "seer", witch: "witch", hunter: "scales", guard: "guard", elder: "elder" };
     chips.push({ cls: "is-role", iconKey: iconKeyMap[speechEv.claimRole] || "spark", tone: "gold", label: "亮・" + ROLE_DEFS[speechEv.claimRole].name, seatId: speaker.id });
   }
-  if (speechEv.standWithSeerId) {
+  if (speechEv.standWithSeerId && speechEv.standWithSeerId !== speaker.id && speechEv.claimRole !== "seer") {
     chips.push({ cls: "is-good", iconKey: "handshake", tone: "jade", label: "站・" + fmtTag(speechEv.standWithSeerId), seatId: speechEv.standWithSeerId });
   }
   if (speechEv.vouchId && speechEv.vouchId !== speechEv.standWithSeerId) {

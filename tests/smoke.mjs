@@ -5284,8 +5284,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const spPrefTest = state.match.seats[1];
     const origClaimPref = spPrefTest.claimedRole;
     spPrefTest.claimedRole = null;
-    syncGeminiSpeechMeta(spPrefTest, { text: "fallback" }, { parsedJson: true, text: "我是觀察員", claimRole: "seer", accuseId: null, vouchId: null }, { deferSeatMutation: true });
-    const prefetchNoMutateOk = spPrefTest.claimedRole === null;
+    const prefSynced = syncGeminiSpeechMeta(spPrefTest, { text: "fallback" }, { parsedJson: true, text: "信 03號 狼坑是01跟04，今晚必驗03", claimRole: "seer", standWithSeerId: spPrefTest.id, accuseId: null, vouchId: null }, { deferSeatMutation: true });
+    const prefetchNoMutateOk = spPrefTest.claimedRole === null && prefSynced.standWithSeerId === null && prefSynced.text.includes("1號跟4號") && prefSynced.text.includes("必驗3號");
+    const ttsZeroPadOk = voice.formatMandarinText("今晚必驗03，狼坑01跟04。") === "今晚必驗3號，狼坑1號跟4號。";
     spPrefTest.claimedRole = origClaimPref;
 
     return {
@@ -5311,7 +5312,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       jsonSalvageOk,
       seatPillExactOk,
       longTtsClauseOk,
-      prefetchNoMutateOk
+      prefetchNoMutateOk,
+      ttsZeroPadOk
     };
   })()`, ctx);
   for (const [k, v] of Object.entries(v132Res)) {
