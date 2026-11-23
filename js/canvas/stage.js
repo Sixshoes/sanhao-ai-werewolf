@@ -465,11 +465,18 @@ function drawSanctuaryFrame(nowMs) {
 
 function startAnimationLoop() {
   if (state.animFrame) cancelAnimationFrame(state.animFrame);
+  let lastDrawMs = 0;
   function frame(now) {
     if (typeof document !== "undefined" && document.hidden) {
       state.animFrame = null;
       return;
     }
+    // Smooth 60fps pacing cap so 144Hz/240Hz monitors never saturate single-threaded WebGL/ANGLE!
+    if (lastDrawMs && (now - lastDrawMs) < 15.2) {
+      state.animFrame = requestAnimationFrame(frame);
+      return;
+    }
+    lastDrawMs = now;
     drawSanctuaryFrame(now);
     drawSpotlightPortrait(now);
     state.animFrame = requestAnimationFrame(frame);

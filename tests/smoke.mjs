@@ -5229,6 +5229,20 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     // 8. Non-Taiwan voice casting sanity: 柚子 not using regional Dongbei accent, 阿松 distinct animeRateMul
     const personaEqDistinctOk = Boolean(PERSONA_AUDIO_EQ["阿松"].animeRateMul < 0.96 && PERSONA_AUDIO_EQ["小澄"].animeRateMul > 1.02);
 
+    // 9. v13.3 Beta 2.0 Live QA final fixes: live pill sync on async TTS + Day 1 quick card wording
+    state.match.phase = "DAY_SPEECH";
+    state.typewriter.active = false;
+    voice.setVisualSpeaking(true);
+    const livePillOnOk = el("speakerLiveStatePill").textContent === "語音中";
+    voice.setVisualSpeaking(false);
+    const livePillOffOk = el("speakerLiveStatePill").textContent === "已講畢";
+    state.match.day = 1;
+    state.match.phase = "DAY_PLAYER_TURN";
+    state.match.daySpeechEvents = [];
+    preparePlayerSpeechPanel();
+    const chipNodes = (el("quickSpeechChips") && el("quickSpeechChips").children) || [];
+    const day1CardNoPrevRoundOk = chipNodes.length > 0 && chipNodes.every(c => !String(c.innerHTML || c.textContent || "").includes("前面幾輪"));
+
     return {
       nightHidesStepNextOk,
       lobby12Ok,
@@ -5238,7 +5252,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       unclaimedSeerNoLeakOk,
       night1NoPhantomSheriffOk,
       hostPackFormatOk,
-      personaEqDistinctOk
+      personaEqDistinctOk,
+      livePillOnOk,
+      livePillOffOk,
+      day1CardNoPrevRoundOk
     };
   })()`, ctx);
   for (const [k, v] of Object.entries(v132Res)) {

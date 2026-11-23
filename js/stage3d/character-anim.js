@@ -758,7 +758,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       actor.faceBundle.tex.needsUpdate = true;
     }
 
-    actor.root.updateMatrixWorld(true);
+    actor.root.updateMatrixWorld(false);
     actor.worldPos.copy(actor.root.position);
     if (actor.useVrm && actor.vrmAvatar && actor.vrmAvatar.bones && actor.vrmAvatar.bones.head && typeof actor.vrmAvatar.bones.head.getWorldPosition === "function") {
       actor.vrmAvatar.bones.head.getWorldPosition(actor.headWorldPos);

@@ -547,9 +547,24 @@ const voice = {
     const hBars = document.getElementById("headerVoiceBars");
     if (hBars) hBars.classList.toggle("playing", active && this.enabled);
     const sWave = document.getElementById("speakerVoiceWave");
-    const inSheriffSpeech = Boolean(state.match.phase === "SHERIFF_ELECTION" && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech");
-    if (sWave && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH" || inSheriffSpeech)) {
-      sWave.classList.toggle("playing", active || state.typewriter.active);
+    const phNow = (typeof state !== "undefined" && state.match) ? state.match.phase : "";
+    const inSheriffSpeech = Boolean(phNow === "SHERIFF_ELECTION" && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech");
+    const isSpeechStage = (phNow === "DAY_SPEECH" || phNow === "LAST_WORDS_SPEECH" || inSheriffSpeech);
+    const isTypingNow = Boolean(typeof state !== "undefined" && state.typewriter && state.typewriter.active);
+    if (sWave && isSpeechStage) {
+      sWave.classList.toggle("playing", active || isTypingNow);
+    }
+    if (isSpeechStage) {
+      const livePill = document.getElementById("speakerLiveStatePill");
+      if (livePill) {
+        livePill.textContent = isTypingNow ? "發言中" : (active ? "語音中" : "已講畢");
+      }
+      const nextBtn = document.getElementById("btnStepNext");
+      if (nextBtn && (phNow === "DAY_SPEECH" || phNow === "LAST_WORDS_SPEECH") && !nextBtn.classList.contains("hidden")) {
+        nextBtn.className = (!isTypingNow && !active)
+          ? "cta-brass py-1.5 px-3.5 text-xs shrink-0 inline-flex items-center"
+          : "cta-ink py-1.5 px-3 text-xs shrink-0 inline-flex items-center";
+      }
     }
   },
 

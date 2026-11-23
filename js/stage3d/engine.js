@@ -138,8 +138,8 @@ const stage3d = {
   getTargetDpr: function (quality) {
     const q = quality === "eco" ? "eco" : (quality === "balanced" ? "balanced" : "high");
     const cap = this.isIntegratedGpu
-      ? (q === "eco" ? 0.9 : (q === "balanced" ? 1.0 : 1.35))
-      : (q === "eco" ? 1.15 : (q === "balanced" ? 1.45 : 2.0));
+      ? (q === "eco" ? 0.9 : (q === "balanced" ? 1.0 : 1.25))
+      : (q === "eco" ? 1.0 : (q === "balanced" ? 1.25 : 1.5));
     return Math.min(window.devicePixelRatio || 1, cap);
   },
 
@@ -226,7 +226,7 @@ const stage3d = {
     const dpr = this.getTargetDpr(q);
     this.renderer.setPixelRatio(dpr);
     this.renderer.shadowMap.enabled = !isEco;
-    this.renderer.shadowMap.autoUpdate = !(this.isIntegratedGpu && !isEco);
+    this.renderer.shadowMap.autoUpdate = false;
     if (this.renderer.shadowMap.enabled) this.renderer.shadowMap.needsUpdate = true;
     if (this.env && this.env.dirLight) this.env.dirLight.castShadow = !isEco;
     if (this.env && this.env.fireflyPoints) this.env.fireflyPoints.visible = q === "high";
@@ -361,16 +361,27 @@ const stage3d = {
     const isInspect = style === "inspect";
     const isDramatic = style === "dramatic";
     // Position camera cleanly IN FRONT OF & SLIGHTLY ABOVE tabletop props (clearing lotus, teacup & candle across 6/8/10/12-seat tables!)
+    const isMobileSplit = typeof window !== "undefined" && window.innerWidth <= 767;
     const maxSafeR = Math.max(2.75, seatDist - 0.96);
-    const desiredR = isInspect ? 3.26 : (isDramatic ? 3.30 : 3.52);
+    const desiredR = isMobileSplit
+      ? (isInspect ? 3.56 : (isDramatic ? 3.62 : 3.74))
+      : (isInspect ? 3.26 : (isDramatic ? 3.30 : 3.52));
     const radius = Math.min(desiredR, maxSafeR);
-    const pitch = isInspect ? 0.19 : (isDramatic ? 0.20 : 0.22);
+    const pitch = isMobileSplit
+      ? (isInspect ? 0.14 : (isDramatic ? 0.15 : 0.16))
+      : (isInspect ? 0.19 : (isDramatic ? 0.20 : 0.22));
     // Subtle ±6°..±7.5° three-quarter offset gives rich 3D facial depth without foreground prop intrusion
     const angleOffset = (seatId % 2 === 0 ? 1 : -1) * (isInspect ? 0.10 : 0.12);
-    // Aim lookAt lower in world Y so the speaker's head & upper torso sit prominently in the upper open viewport ABOVE #controlDeck!
+    // Desktop: aim lookAt lower so head sits in upper open viewport above overlapping #controlDeck.
+    // Mobile split-canvas (<= 767px): #controlDeck sits BELOW #canvasStageWrap while 2-row #inGameTopHud covers the top ~32%,
+    // so raise lookY so the speaker's head drops cleanly below #inGameTopHud with room for the nameplate above the forehead!
     const headY = (hp && typeof hp.y === "number" && hp.y > 1.2) ? hp.y : 2.10;
-    const lookY = clamp(isInspect ? (headY - 0.80) : (headY - 0.92), 1.08, 1.46);
-    const fov = isInspect ? 39 : (isDramatic ? 38 : 40);
+    const lookY = isMobileSplit
+      ? clamp(isInspect ? (headY - 0.18) : (headY - 0.24), 1.68, 1.98)
+      : clamp(isInspect ? (headY - 0.80) : (headY - 0.92), 1.08, 1.46);
+    const fov = isMobileSplit
+      ? (isInspect ? 43 : 44)
+      : (isInspect ? 39 : (isDramatic ? 38 : 40));
     return {
       yaw: frontYaw + angleOffset,
       pitch: pitch,
@@ -1422,11 +1433,18 @@ const stage3d = {
           isFrontShot = true;
         }
       } else if (this.camPreset === "overview") {
-        // Offset bird's-eye target forward (+Z) so the entire 8/10/12-seat round table sits cleanly ABOVE #controlDeck!
-        o.targetYaw = Math.sin(f.tSec * 0.08) * 0.10;
-        o.targetPitch = 1.03;
-        o.targetRadius = 13.8 + largeTableR * 1.48;
-        o.targetLookAt.set(0, 0.72, 1.55 + largeTableR * 0.42);
+        // Offset bird's-eye target forward (+Z) & pull radius back on desktop widescreen so ALL 12 seats + standing host Qingming sit cleanly ABOVE #controlDeck!
+        const isLandscapeCam = (this.camera && this.camera.aspect ? this.camera.aspect : 1.6) >= 1.0;
+        o.targetYaw = Math.sin(f.tSec * 0.08) * 0.08;
+        o.targetPitch = isLandscapeCam ? 1.06 : 1.04;
+        o.targetRadius = isLandscapeCam
+          ? (15.6 + largeTableR * 2.15)
+          : (14.0 + largeTableR * 1.45);
+        o.targetLookAt.set(
+          0,
+          isLandscapeCam ? 0.52 : 0.72,
+          isLandscapeCam ? (2.35 + largeTableR * 0.68) : (1.35 + largeTableR * 0.35)
+        );
       } else if (!state.match.started || p === "LOBBY") {
         // Theatrical Indie Title Screen Framing: gentle sweep showing intimate table + Qingming + layered mountains & Guishan Island
         o.targetYaw = -0.18 + Math.sin(f.tSec * 0.14) * 0.24;
@@ -1667,9 +1685,9 @@ const stage3d = {
     const harmonyBoost = (f.daylight && state.match && typeof state.match.harmonyScore === "number" && state.match.harmonyScore >= 75) ? 0.05 : 0;
     const dynExpBoost = harmonyBoost + (isPunchGlow ? 0.05 : 0) + (isFlashGlow ? 0.06 : 0);
 
-    if (this.isIntegratedGpu && this.renderer && this.renderer.shadowMap && this.renderer.shadowMap.enabled) {
+    if (this.renderer && this.renderer.shadowMap && this.renderer.shadowMap.enabled) {
       this._shadowFrameCounter = (this._shadowFrameCounter || 0) + 1;
-      const shadowStride = state.quality3D === "balanced" ? 3 : 2;
+      const shadowStride = (this.isIntegratedGpu || state.quality3D === "balanced") ? 3 : 2;
       if (this._shadowFrameCounter % shadowStride === 0) {
         this.renderer.shadowMap.needsUpdate = true;
       }
@@ -1715,28 +1733,43 @@ function draw3DOverlayHud(ctx, f, coords) {
   const isPickPhase = (p === "NIGHT_GUARD" || p === "NIGHT_SEER" || p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "HUNTER_TRIGGER" || p === "DAY_VOTE" || p === "DAY_PLAYER_TURN");
   const activelyVoicing = Boolean((state.typewriter && state.typewriter.active) || (typeof voice !== "undefined" && voice.speaking));
 
-  // Measure live HUD top/bottom safe bounds relative to canvas so 3D nameplates NEVER collide with #inGameTopHud or bleed behind #controlDeck!
+  // Cached HUD top/bottom safe bounds (refreshed at ~2Hz or on size/phase change — zero per-frame Forced Synchronous Layout!)
   let topSafeY = 56 * dpr;
   let bottomSafeY = f.h - 10 * dpr;
   if (typeof document !== "undefined") {
-    const cvEl = el("sanctuaryCanvas");
-    const cvRect = cvEl && typeof cvEl.getBoundingClientRect === "function" ? cvEl.getBoundingClientRect() : null;
-    if (cvRect && cvRect.height > 80) {
-      const topHudEl = el("inGameTopHud");
-      if (topHudEl && !topHudEl.classList.contains("hidden") && typeof topHudEl.getBoundingClientRect === "function") {
-        const tr = topHudEl.getBoundingClientRect();
-        if (tr.height > 0 && tr.bottom > cvRect.top) {
-          topSafeY = Math.max(topSafeY, Math.min(f.h * 0.36, (tr.bottom - cvRect.top + 8) * dpr));
+    const cache = draw3DOverlayHud._safeCache || (draw3DOverlayHud._safeCache = { at: 0, w: 0, h: 0, p: "", inMatch: false, top: 56 * dpr, bottom: f.h - 10 * dpr });
+    const needRefresh = (f.nowMs - cache.at) > 450 || cache.w !== f.w || cache.h !== f.h || cache.p !== p || cache.inMatch !== inMatch;
+    if (needRefresh) {
+      let nextTop = 56 * dpr;
+      let nextBottom = f.h - 10 * dpr;
+      const cvEl = el("sanctuaryCanvas");
+      const cvRect = cvEl && typeof cvEl.getBoundingClientRect === "function" ? cvEl.getBoundingClientRect() : null;
+      if (cvRect && cvRect.height > 80) {
+        const topHudEl = el("inGameTopHud");
+        if (topHudEl && !topHudEl.classList.contains("hidden") && typeof topHudEl.getBoundingClientRect === "function") {
+          const tr = topHudEl.getBoundingClientRect();
+          if (tr.height > 0 && tr.bottom > cvRect.top) {
+            nextTop = Math.max(nextTop, Math.min(f.h * 0.36, (tr.bottom - cvRect.top + 8) * dpr));
+          }
+        }
+        const deckEl = el("controlDeck");
+        if (deckEl && inMatch && typeof deckEl.getBoundingClientRect === "function") {
+          const dr = deckEl.getBoundingClientRect();
+          if (dr.height > 0 && dr.top > cvRect.top + 80 && dr.top < cvRect.bottom - 16) {
+            nextBottom = Math.max(nextTop + 42 * dpr, (dr.top - cvRect.top - 8) * dpr);
+          }
         }
       }
-      const deckEl = el("controlDeck");
-      if (deckEl && inMatch && typeof deckEl.getBoundingClientRect === "function") {
-        const dr = deckEl.getBoundingClientRect();
-        if (dr.height > 0 && dr.top > cvRect.top + 80 && dr.top < cvRect.bottom - 16) {
-          bottomSafeY = Math.max(topSafeY + 42 * dpr, (dr.top - cvRect.top - 8) * dpr);
-        }
-      }
+      cache.at = f.nowMs;
+      cache.w = f.w;
+      cache.h = f.h;
+      cache.p = p;
+      cache.inMatch = inMatch;
+      cache.top = nextTop;
+      cache.bottom = nextBottom;
     }
+    topSafeY = cache.top;
+    bottomSafeY = cache.bottom;
   }
 
   const ROLE_SHORT_3D = {
@@ -1772,7 +1805,8 @@ function draw3DOverlayHud(ctx, f, coords) {
     let isSubtleNameplate = false;
     let prio = 1;
     const sRoleDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : null) || ROLE_DEFS[s.role];
-    const sShortTag = (s.id !== getPlayerId() && typeof getPersonaShortTag === "function") ? getPersonaShortTag(s) : "";
+    const isNarrow3D = (f.w / Math.max(1, dpr)) < 600;
+    const sShortTag = (!isNarrow3D && s.id !== getPlayerId() && typeof getPersonaShortTag === "function") ? getPersonaShortTag(s) : "";
     const sCompactName = s.id === getPlayerId() ? "你" : s.name;
     const sNameTag = s.id === getPlayerId() ? "你" : (s.name + (sShortTag ? ("·" + sShortTag) : ""));
     if (isSpeaking) {
@@ -1859,14 +1893,16 @@ function draw3DOverlayHud(ctx, f, coords) {
     }
 
     if (topTag) {
+      const isNarrowFont = (f.w / Math.max(1, dpr)) < 600;
       const font = isSubtleNameplate
-        ? ("600 " + Math.round(9 * dpr) + "px 'Noto Sans TC', sans-serif")
-        : ("700 " + Math.round(10 * dpr) + "px 'Noto Serif TC', 'Songti TC', 'Noto Sans TC', serif");
+        ? ("600 " + Math.round((isNarrowFont ? 8.2 : 9) * dpr) + "px 'Noto Sans TC', sans-serif")
+        : ("700 " + Math.round((isNarrowFont ? 9.2 : 10) * dpr) + "px 'Noto Serif TC', 'Songti TC', 'Noto Sans TC', serif");
       ctx.font = font;
       const ttw = ctx.measureText(topTag).width;
-      const tW = ttw + (isSubtleNameplate ? 10 : 16) * dpr;
-      const tH = (isSubtleNameplate ? 14.5 : 18) * dpr;
-      const rawY = sy - drawR * 0.44 - tH - 3 * dpr;
+      const tW = ttw + (isSubtleNameplate ? (isNarrowFont ? 8 : 10) : (isNarrowFont ? 12 : 16)) * dpr;
+      const tH = (isSubtleNameplate ? (isNarrowFont ? 13.5 : 14.5) : (isNarrowFont ? 16.5 : 18)) * dpr;
+      const closeUpLift = drawR > 58 * dpr ? 0.68 : 0.46;
+      const rawY = sy - drawR * closeUpLift - tH - 3 * dpr;
       // Hide low-priority subtle nameplates whose character sits buried behind the bottom #controlDeck so zero labels bleed through chips!
       if (isSubtleNameplate && prio <= 1 && rawY > bottomSafeY + 24 * dpr) return;
       const maxPlateY = Math.max(topSafeY, bottomSafeY - tH);
@@ -1881,12 +1917,12 @@ function draw3DOverlayHud(ctx, f, coords) {
     }
   });
 
-  // Subtle identity nameplate for standing Academy Tea Host「清茗」so players immediately recognize her!
+  // Subtle identity nameplate for standing Academy Tea Host「清茗」so players immediately recognize her even in settled overview!
   if (typeof stage3d !== "undefined" && stage3d.hero && stage3d.hero.root && stage3d.hero.root.visible && !stage3d.showcaseMode && stage3d.camera && typeof THREE !== "undefined") {
     const hp = stage3d.hero.root.position;
-    const hostHead = new THREE.Vector3(hp.x, hp.y + 2.38, hp.z);
+    const hostHead = new THREE.Vector3(hp.x, hp.y + 2.28, hp.z);
     hostHead.project(stage3d.camera);
-    if (hostHead.z > -1 && hostHead.z < 1 && Math.abs(hostHead.x) < 0.94 && Math.abs(hostHead.y) < 0.94) {
+    if (hostHead.z > -1 && hostHead.z < 1 && Math.abs(hostHead.x) < 0.96 && hostHead.y > -0.95 && hostHead.y < 1.14) {
       const hx = (hostHead.x * 0.5 + 0.5) * f.w;
       const hy = (-hostHead.y * 0.5 + 0.5) * f.h;
       const hFont = "600 " + Math.round(8.5 * dpr) + "px 'Noto Serif TC', 'Noto Sans TC', serif";
@@ -1894,16 +1930,17 @@ function draw3DOverlayHud(ctx, f, coords) {
       ctx.font = hFont;
       const hW = ctx.measureText(hTag).width + 12 * dpr;
       const hH = 14 * dpr;
-      if (hy >= topSafeY - 8 * dpr && hy <= bottomSafeY - hH) {
+      const clampedHy = clamp(hy - hH * 0.5, topSafeY, Math.max(topSafeY, bottomSafeY - hH));
+      if (hy <= bottomSafeY + 12 * dpr) {
         plates.push({
-          seatId: 0, anchorX: hx, anchorY: hy + hH,
+          seatId: 0, anchorX: hx, anchorY: Math.max(topSafeY + hH, hy + hH),
           x: clamp(hx, hW * 0.5 + 6 * dpr, Math.max(hW * 0.5 + 6 * dpr, f.w - hW * 0.5 - 6 * dpr)),
-          y: clamp(hy - hH * 0.5, topSafeY, Math.max(topSafeY, bottomSafeY - hH)),
-          origY: clamp(hy - hH * 0.5, topSafeY, Math.max(topSafeY, bottomSafeY - hH)),
+          y: clampedHy,
+          origY: clampedHy,
           w: hW, h: hH,
           topTag: hTag,
-          topBg: "rgba(38, 28, 16, 0.76)",
-          topBorder: "rgba(212, 166, 87, 0.55)",
+          topBg: "rgba(38, 28, 16, 0.80)",
+          topBorder: "rgba(212, 166, 87, 0.62)",
           topFg: "#f5dfac",
           font: hFont, isSubtle: true, prio: 0
         });
@@ -1911,7 +1948,7 @@ function draw3DOverlayHud(ctx, f, coords) {
     }
   }
 
-  // 3-pass Screen-Space AABB Anti-Overlap Solver (strictly bounded inside HUD safe zone!)
+  // 3-pass Screen-Space AABB Anti-Overlap Solver (vertical + horizontal nudge when clamped near topSafeY!)
   const padX = 4 * dpr;
   const padY = 3 * dpr;
   for (let iter = 0; iter < 3; iter++) {
@@ -1924,8 +1961,15 @@ function draw3DOverlayHud(ctx, f, coords) {
         if (overlapX > 0 && overlapY > 0) {
           const pushUp = (a.prio >= b.prio) ? b : a;
           const fixed = (pushUp === b) ? a : b;
-          const dirY = (pushUp.y <= fixed.y) ? -1 : 1;
-          pushUp.y = clamp(pushUp.y + dirY * (overlapY + 2 * dpr), topSafeY, Math.max(topSafeY, bottomSafeY - pushUp.h));
+          const nearTop = pushUp.y <= topSafeY + 6 * dpr && fixed.y <= topSafeY + 6 * dpr;
+          if (nearTop && overlapX < overlapY * 2.8) {
+            const dirX = (pushUp.x <= fixed.x) ? -1 : 1;
+            pushUp.x = clamp(pushUp.x + dirX * (overlapX * 0.6 + 2 * dpr), pushUp.w * 0.5 + 4 * dpr, Math.max(pushUp.w * 0.5 + 4 * dpr, f.w - pushUp.w * 0.5 - 4 * dpr));
+            pushUp.y = clamp(pushUp.y + (overlapY + 2 * dpr), topSafeY, Math.max(topSafeY, bottomSafeY - pushUp.h));
+          } else {
+            const dirY = (pushUp.y <= fixed.y && !nearTop) ? -1 : 1;
+            pushUp.y = clamp(pushUp.y + dirY * (overlapY + 2 * dpr), topSafeY, Math.max(topSafeY, bottomSafeY - pushUp.h));
+          }
         }
       }
     }

@@ -1046,7 +1046,7 @@ function preparePlayerSpeechPanel() {
       label: "【說好話】放進好人坑：溫和力挺 " + fmtSeatNum(friendTarget.id) + "號 " + friendTarget.name,
       text: friendSpoke
         ? ("我想把 " + friendTarget.id + "號" + friendTarget.name + " 放進好人坑！剛剛聽他發言態度溫和、邏輯真誠，只要好人彼此互信不亂踩，這輪一定能把真正狼坑抓出來！")
-        : ("目前 " + friendTarget.id + "號" + friendTarget.name + " 還沒發言，不過他前面幾輪的配合態度還算穩定，我期待聽完他的表水，大家先別急著把他打進狼坑！")
+        : ("目前 " + friendTarget.id + "號" + friendTarget.name + " 還沒發言，不過他" + ((state.match && state.match.day === 1) ? "開場至今的態度還算冷靜誠懇" : "前面幾輪的配合態度還算穩定") + "，我期待聽完他的表水，大家先別急著把他打進狼坑！")
     });
   }
 
