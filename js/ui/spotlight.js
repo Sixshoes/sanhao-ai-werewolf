@@ -66,9 +66,9 @@ function renderSpeakerTurnStrip() {
       const isDone = !isCurrent && !isPending;
       btn.className = "turn-chip cursor-pointer hover:opacity-100" + (isCurrent ? " is-speaking" : (isDone ? " is-done" : ""));
       const shPrefix = (shIdNow === sid) ? "👑" : "";
-      const shortName = shPrefix + (sid === pid ? ("0" + sid + " 你") : ("0" + sid + " " + seat.name));
+      const shortName = shPrefix + (sid === pid ? (fmtSeatNum(sid) + " 你") : (fmtSeatNum(sid) + " " + seat.name));
       btn.textContent = isCurrent ? (shortName + " 發言中") : (isDone ? (shortName + " 已講") : shortName);
-      btn.title = sid === pid ? "你的座位" : ("點擊查看 0" + sid + "號 情報");
+      btn.title = sid === pid ? "你的座位" : ("點擊查看 " + fmtSeatNum(sid) + "號 情報");
       btn.addEventListener("click", function (ev) {
         ev.stopPropagation();
         if (sid !== pid) onSeatClick(sid);
@@ -83,14 +83,137 @@ function renderSpeakerTurnStrip() {
 function maybeScheduleAutoAdvanceAfterSpeech() {
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   if (!state.autoPlay && !ff) return;
+  if (voice && voice.paused) return;
   if (state.match.phase !== "DAY_SPEECH" && state.match.phase !== "LAST_WORDS_SPEECH") return;
   if (state.typewriter.active || voice.speaking) return;
   if (state.stepTimer) clearTimeout(state.stepTimer);
   const pauseMs = ff ? 260 : (voice.canSpeak() ? 950 : (state.typewriter.holdMs || 2400));
   state.stepTimer = setTimeout(function () {
+    if (voice && voice.paused) return;
     if (state.match.phase === "LAST_WORDS_SPEECH") advanceLastWordsQueue();
     else advanceSpeechQueue();
   }, pauseMs);
+}
+
+function renderSpeakerStanceStrip(speaker, speechEv) {
+  const strip = el("speakerStanceStrip");
+  if (!strip) return;
+  strip.innerHTML = "";
+  if (!speaker || !speechEv) {
+    strip.classList.add("hidden");
+    return;
+  }
+  const pid = getPlayerId();
+  const fmtTag = function (id) {
+    const s = getSeat(id);
+    const num = typeof fmtSeatNum === "function" ? fmtSeatNum(id) : (id < 10 ? ("0" + id) : String(id));
+    return num + (s ? (s.id === pid ? " 你" : (" " + s.name)) : "號");
+  };
+  const chips = [];
+  if (speechEv.claimRole && ROLE_DEFS[speechEv.claimRole]) {
+    const iconMap = { seer: "🔮", witch: "🍵", hunter: "⚖️", guard: "🛡️" };
+    chips.push({ cls: "is-role", label: (iconMap[speechEv.claimRole] || "✦") + " 跳" + ROLE_DEFS[speechEv.claimRole].name, seatId: speaker.id });
+  }
+  if (speechEv.standWithSeerId) {
+    chips.push({ cls: "is-good", label: "🤝 站邊 " + fmtTag(speechEv.standWithSeerId), seatId: speechEv.standWithSeerId });
+  }
+  if (speechEv.vouchId && speechEv.vouchId !== speechEv.standWithSeerId) {
+    chips.push({ cls: "is-good", label: "✅ 保 " + fmtTag(speechEv.vouchId), seatId: speechEv.vouchId });
+  }
+  if (speechEv.accuseId) {
+    chips.push({ cls: "is-wolf", label: "🎯 打 " + fmtTag(speechEv.accuseId), seatId: speechEv.accuseId });
+  }
+  const extraWolves = (Array.isArray(speechEv.wolfPits) ? speechEv.wolfPits : []).filter(function (id) { return id !== speechEv.accuseId; });
+  if (extraWolves.length > 0) {
+    chips.push({ cls: "is-wolf", label: "🐺 疑 " + extraWolves.map(fmtTag).join("・"), seatId: extraWolves[0] });
+  }
+  if (speechEv.contradiction) {
+    chips.push({ cls: "is-contra", label: "⚡ " + (speechEv.contradiction.label || "邏輯矛盾"), seatId: speaker.id });
+  }
+  if (!chips.length) {
+    strip.classList.add("hidden");
+    return;
+  }
+  chips.forEach(function (c) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "stance-chip " + c.cls;
+    btn.textContent = c.label;
+    btn.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      if (c.seatId && c.seatId !== pid && typeof openSeatIntel === "function") openSeatIntel(c.seatId);
+    });
+    strip.appendChild(btn);
+  });
+  strip.classList.remove("hidden");
+}
+
+function renderTargetReactionCard(speaker, speechEv, customOverride) {
+  const card = el("spotlightTargetReact");
+  const img = el("targetReactImg");
+  const badge = el("targetReactBadge");
+  const quote = el("targetReactQuote");
+  if (!card || !img || !badge || !quote) return;
+
+  let targetSeat = null;
+  let kind = null;
+  let badgeTxt = "";
+  let quoteTxt = "";
+
+  if (customOverride && customOverride.seat) {
+    targetSeat = customOverride.seat;
+    kind = customOverride.kind || "trust";
+    badgeTxt = customOverride.badge || "";
+    quoteTxt = customOverride.quote || "";
+  } else if (speaker && speechEv) {
+    const tid = speechEv.accuseId || speechEv.vouchId || null;
+    if (tid && tid !== speaker.id) {
+      targetSeat = getSeat(tid);
+      if (targetSeat && targetSeat.alive) {
+        kind = speechEv.accuseId ? "accuse" : "trust";
+        const num = typeof fmtSeatNum === "function" ? fmtSeatNum(targetSeat.id) : (targetSeat.id < 10 ? ("0" + targetSeat.id) : String(targetSeat.id));
+        const who = targetSeat.id === getPlayerId() ? (num + " 你") : (num + " " + targetSeat.name);
+        if (kind === "accuse") {
+          badgeTxt = who + " · 被點名";
+          const gaspPool = (typeof PERSONA_VOICE_STYLES !== "undefined" && PERSONA_VOICE_STYLES[targetSeat.name] && PERSONA_VOICE_STYLES[targetSeat.name].reactGasp) || ["等輪到我再把話說清楚！", "先聽完整邏輯再定調吧！"];
+          quoteTxt = targetSeat.id === getPlayerId()
+            ? "被點進狼坑！記下來等會反駁"
+            : ("「" + gaspPool[(targetSeat.id + (state.match ? state.match.day : 1)) % gaspPool.length] + "」");
+        } else {
+          badgeTxt = who + " · 被力挺";
+          const vouchPool = (typeof PERSONA_VOICE_STYLES !== "undefined" && PERSONA_VOICE_STYLES[targetSeat.name] && PERSONA_VOICE_STYLES[targetSeat.name].reactVouch) || ["謝啦！好人一起穩穩盤！"];
+          quoteTxt = targetSeat.id === getPlayerId()
+            ? "對方把你放進好人坑了！"
+            : ("「" + vouchPool[(targetSeat.id + (state.match ? state.match.day : 1)) % vouchPool.length] + "」");
+        }
+      }
+    }
+  }
+
+  if (!targetSeat) {
+    card.classList.add("hidden");
+    card.classList.remove("is-accuse", "is-trust");
+    card.onclick = null;
+    return;
+  }
+
+  const art = typeof getPortraitImageUrl === "function" ? getPortraitImageUrl(targetSeat) : null;
+  if (art) {
+    img.src = art;
+    img.classList.remove("hidden");
+  } else {
+    img.classList.add("hidden");
+  }
+  badge.textContent = badgeTxt;
+  quote.textContent = quoteTxt;
+  card.classList.remove("hidden", "is-accuse", "is-trust");
+  card.classList.add(kind === "accuse" ? "is-accuse" : "is-trust");
+  card.onclick = function (ev) {
+    ev.stopPropagation();
+    if (targetSeat.id !== getPlayerId() && typeof openSeatIntel === "function") {
+      openSeatIntel(targetSeat.id);
+    }
+  };
 }
 
 function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
@@ -103,7 +226,7 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
   const stillTalking = Boolean(isTyping || voice.speaking);
   if (speaker) {
     if (med) {
-      med.textContent = "0" + speaker.id;
+      med.textContent = fmtSeatNum(speaker.id);
       med.style.borderColor = speaker.color || "#d4a657";
       med.style.color = speaker.color || "#d4a657";
     }
@@ -204,7 +327,7 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
     ? ["硬打", "自稱", "假冒", "冒充", "力挺", "洗白", "投出去", "站邊", "護航", "點進狼坑", "明心觀察員", "滴水奉茶師", "直心糾察長", "狼坑"]
     : [];
   const combinedPattern = new RegExp(
-    "(0?[1-8]號(?:[\\u4e00-\\u9fff]{1,2})?|" +
+    "((?:1[0-2]|0?[1-9])號(?:[\\u4e00-\\u9fff]{1,2})?|" +
     uniqueToxic.map(function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|") + "|" +
     roleWords.join("|") + ")",
     "g"
@@ -224,7 +347,7 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
       html += escapeHtml(clean.slice(lastIdx, match.index));
     }
     const tok = match[0];
-    const seatMatch = tok.match(/^0?([1-8])號/);
+    const seatMatch = tok.match(/^(1[0-2]|0?[1-9])號/);
     const isRole = roleWords.indexOf(tok) !== -1;
     const isToxic = uniqueToxic.indexOf(tok) !== -1;
     const clueKey = (state.match.day || 0) + ":" + spId + ":" + tok;
@@ -239,7 +362,7 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
       html += '<span class="clue-token clue-contradiction' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="⚡ 發現邏輯破綻：「' + escapeHtml(activeContraRec.label) + '」！點擊立即收入呈堂證供！">' + escapeHtml(tok) + (contraCaught ? ' ✓' : ' ⚡') + '</span>';
     } else if (seatMatch) {
       const sid = parseInt(seatMatch[1], 10);
-      html += '<span class="clue-token clue-seat" data-clue-type="seat" data-seat-id="' + sid + '" title="點擊查看 0' + sid + '號情報並鎖定">' + escapeHtml(tok) + '</span>';
+      html += '<span class="clue-token clue-seat" data-clue-type="seat" data-seat-id="' + sid + '" title="點擊查看 ' + fmtSeatNum(sid) + '號情報並鎖定">' + escapeHtml(tok) + '</span>';
     } else if (isToxic && speaker && speaker.id !== getPlayerId()) {
       html += '<span class="clue-token clue-toxic' + (isCaught ? ' clue-caught' : '') + '" data-clue-type="toxic" data-clue-key="' + escapeHtml(clueKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="點擊抓包這句酸言破綻！">' + escapeHtml(tok) + (isCaught ? ' ✓' : '') + '</span>';
     } else if (isRole) {
@@ -296,7 +419,7 @@ function handleSpotlightClueClick(targetEl) {
       ? state.match.activeSpeechContra.contra
       : ((state.match.detectedContradictions || []).slice().reverse().find(function (c) { return c.day === state.match.day && c.speakerId === sp.id; }));
     const labelStr = (contraRec && contraRec.label) || "邏輯矛盾";
-    const rebText = (contraRec && contraRec.rebuttalText) || ("我整理了 0" + sp.id + "號" + sp.name + " 前後的邏輯破綻，請大家重點檢視 0" + sp.id + "號！");
+    const rebText = (contraRec && contraRec.rebuttalText) || ("我整理了 " + fmtSeatNum(sp.id) + "號" + sp.name + " 前後的邏輯破綻，請大家重點檢視 " + fmtSeatNum(sp.id) + "號！");
     const extraFeast = (state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "harmony_feast");
     state.match.stats.contradictionsFound = (state.match.stats.contradictionsFound || 0) + 1;
     state.match.stats.cluesCaught = (state.match.stats.cluesCaught || 0) + 1;
@@ -312,7 +435,7 @@ function handleSpotlightClueClick(targetEl) {
     bumpCombo("抓破矛盾" + (extraFeast ? "（茶點×2）" : ""));
     if (extraFeast) bumpCombo("茶點加碼連擊");
     if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
-    showToast("⚡ 已抓破 0" + sp.id + "號「" + labelStr + "」！解鎖你的「⚡ 呈堂證供」邏輯破防卡！", "emerald");
+    showToast("⚡ 已抓破 " + fmtSeatNum(sp.id) + "號「" + labelStr + "」！解鎖你的「⚡ 呈堂證供」邏輯破防卡！", "emerald");
     updateAllUI();
     return true;
   }
@@ -325,14 +448,14 @@ function handleSpotlightClueClick(targetEl) {
     spawnBurst(sp.id, ["#fb7185", "#fbbf24", "#ffffff"], 14, "spark");
     nudgeSeat(sp.id, { scale: 1.1 });
     sound.tone(580, 0.08, "triangle", 0.05, 0);
-    pinClue(sp.id, "記下酸言「" + word + "」", "剛才 0" + sp.id + "號" + sp.name + "發言用了挑撥字眼「" + word + "」，大家留意他的動機與立場！", "toxic");
+    pinClue(sp.id, "記下酸言「" + word + "」", "剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + "發言用了挑撥字眼「" + word + "」，大家留意他的動機與立場！", "toxic");
     addThreeGoodPoint("heart", "存好心蒐證");
     bumpCombo("靜默筆記蒐證");
     if (state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "anonymous_wall") {
       bumpCombo("匿名牆破綻連擊");
     }
     if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
-    showToast("📌 已揪出 0" + sp.id + "號的酸言「" + word + "」並淨化場上友善度！", "emerald");
+    showToast("📌 已揪出 " + fmtSeatNum(sp.id) + "號的酸言「" + word + "」並淨化場上友善度！", "emerald");
     updateAllUI();
   } else if (type === "role") {
     state.match.stats.cluesCaught = (state.match.stats.cluesCaught || 0) + 1;
@@ -340,12 +463,12 @@ function handleSpotlightClueClick(targetEl) {
     spawnBurst(sp.id, ["#fbbf24", "#fde68a", "#ffffff"], 12, "star");
     nudgeSeat(sp.id, { scale: 1.1 });
     sound.tone(660, 0.09, "triangle", 0.055, 0);
-    pinClue(sp.id, "0" + sp.id + "號提到「" + word + "」", "剛才 0" + sp.id + "號" + sp.name + "提到「" + word + "」，請大家比對真偽與邏輯！", "role");
+    pinClue(sp.id, fmtSeatNum(sp.id) + "號提到「" + word + "」", "剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + "提到「" + word + "」，請大家比對真偽與邏輯！", "role");
     bumpCombo("線索歸檔");
     if (state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "anonymous_wall") {
       bumpCombo("匿名牆線索連擊");
     }
-    showToast("📌 已將 0" + sp.id + "號提到的「" + word + "」存入發言筆記！", "amber");
+    showToast("📌 已將 " + fmtSeatNum(sp.id) + "號提到的「" + word + "」存入發言筆記！", "amber");
     updateAllUI();
   }
   return true;
@@ -389,6 +512,7 @@ function runTypewriterInterval(delayMs, speaker, useRealVoice) {
   let spokenCharTick = 0;
   state.typewriter.timer = setInterval(function () {
     if (!state.typewriter.active) return;
+    if (typeof voice !== "undefined" && voice.paused) return;
     state.typewriter.pos += 1;
     const slice = state.typewriter.fullText.slice(0, state.typewriter.pos);
     if (pEl) renderInteractiveSpotlightText(slice, speaker, true);
@@ -433,7 +557,7 @@ function startSpotlightTypewriter(opts) {
   const syncedDelay = ff
     ? 12
     : (useRealVoice
-      ? Math.round(clamp(138 / voice.rate, 85, 165))
+      ? Math.round(clamp(138 / voice.rate, 75, 165))
       : (voice.mode === "cozy" ? 44 : (opts.charDelay || 36)));
 
   state.typewriter.fullText = cleanText;
@@ -443,26 +567,56 @@ function startSpotlightTypewriter(opts) {
   state.typewriter.holdMs = ff ? 280 : (opts.holdMs || 2450);
   state.typewriter.onDone = opts.onDone || null;
 
-  if (useRealVoice) {
-    voice.speakCharacter(speaker, cleanText, opts.voiceMood || "normal", function () {
-      const curSp = getSeat(state.typewriter.speakerId);
-      const bTxt = el("spotlightSpeakerBadge") ? el("spotlightSpeakerBadge").textContent : "";
-      const tTxt = el("spotlightTraitTag") ? el("spotlightTraitTag").textContent : "";
-      syncSpeakerBannerVisuals(curSp, bTxt, tTxt, state.typewriter.active);
-      maybeScheduleAutoAdvanceAfterSpeech();
-    });
+  if (typeof renderSpeakerStanceStrip === "function") {
+    renderSpeakerStanceStrip(speaker, opts.speechEv || null);
+  }
+  if (typeof renderTargetReactionCard === "function") {
+    renderTargetReactionCard(speaker, opts.speechEv || null);
   }
 
   const pEl = el("spotlightText");
   if (pEl) {
-    pEl.textContent = "「";
+    pEl.textContent = (useRealVoice && voice.localNeuralAvailable) ? "「…" : "「";
     pEl.classList.add("typing-cursor");
   }
   const prog = el("spotlightProgressBar");
   if (prog) prog.style.width = "2%";
   syncSpeakerBannerVisuals(speaker, opts.badge, opts.trait, true);
 
-  runTypewriterInterval(syncedDelay, speaker, useRealVoice);
+  let twStarted = false;
+  let waitAudioTimer = null;
+  const launchTypewriter = function (durMs) {
+    if (twStarted || !state.typewriter.active || state.typewriter.fullText !== cleanText) return;
+    twStarted = true;
+    if (waitAudioTimer) {
+      clearTimeout(waitAudioTimer);
+      waitAudioTimer = null;
+    }
+    const exactDelay = (durMs && durMs > 200)
+      ? Math.round(clamp((durMs * 0.94) / Math.max(1, cleanText.length), 26, 200))
+      : syncedDelay;
+    runTypewriterInterval(exactDelay, speaker, useRealVoice);
+  };
+
+  if (useRealVoice) {
+    const waitForNeuralAudio = Boolean(voice.localNeuralAvailable && typeof sound !== "undefined" && sound.ctx);
+    voice.speakCharacter(speaker, cleanText, opts.voiceMood || "normal", function () {
+      const curSp = getSeat(state.typewriter.speakerId);
+      const bTxt = el("spotlightSpeakerBadge") ? el("spotlightSpeakerBadge").textContent : "";
+      const tTxt = el("spotlightTraitTag") ? el("spotlightTraitTag").textContent : "";
+      syncSpeakerBannerVisuals(curSp, bTxt, tTxt, state.typewriter.active);
+      maybeScheduleAutoAdvanceAfterSpeech();
+    }, waitForNeuralAudio ? { onAudioReady: launchTypewriter } : undefined);
+
+    if (waitForNeuralAudio) {
+      // Wait cleanly up to 900ms for first neural audio chunk so voice & subtitles start in exact lockstep!
+      waitAudioTimer = setTimeout(function () { launchTypewriter(0); }, 900);
+    } else {
+      launchTypewriter(0);
+    }
+  } else {
+    launchTypewriter(0);
+  }
 }
 
 function refreshQuickFreeInputHint() {

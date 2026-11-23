@@ -136,6 +136,10 @@ VOICE_PROFILES_ANIME = {
     "小雲":  {"voice": "zh-TW-HsiaoYuNeural",   "rate": "+3%", "pitch": "-1Hz"},
     "阿竹":  {"voice": "zh-CN-YunxiNeural",     "rate": "-4%", "pitch": "-2Hz"},
     "晨晨":  {"voice": "zh-CN-YunjianNeural",   "rate": "+5%", "pitch": "+1Hz"},
+    "墨白":  {"voice": "zh-CN-YunyangNeural",   "rate": "-6%", "pitch": "-3Hz"},
+    "晴嵐":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-4%", "pitch": "-2Hz"},
+    "阿朗":  {"voice": "zh-CN-YunjianNeural",   "rate": "+2%", "pitch": "-2Hz"},
+    "柚子":  {"voice": "zh-CN-XiaoyiNeural",    "rate": "+6%", "pitch": "+3Hz"},
 }
 
 # 純台灣腔（注意：zh-TW-YunJheNeural 在微軟端點僅支援預設語速音高 +0%/+0Hz）
@@ -150,6 +154,10 @@ VOICE_PROFILES_TW = {
     "小雲":  {"voice": "zh-TW-HsiaoYuNeural",   "rate": "+3%", "pitch": "-2Hz"},
     "阿竹":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
     "晨晨":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
+    "墨白":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
+    "晴嵐":  {"voice": "zh-TW-HsiaoYuNeural",   "rate": "-4%", "pitch": "-1Hz"},
+    "阿朗":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
+    "柚子":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "+7%", "pitch": "+4Hz"},
 }
 VOICE_PROFILES = VOICE_PROFILES_ANIME
 
@@ -172,27 +180,34 @@ def compute_rate_pitch(persona, user_rate, mood, accent="anime"):
     final_rate = max(-20, min(28, base_rate + rate_delta))
     final_pitch = base_pitch
 
-    # Subtle ±2Hz mood prosody so voices stay crisp and natural without pitching artifacts
+    # Expressive natural prosody within ±5Hz so every mood feels vivid without pitch artifacts
     if mood == "panic":
-        final_rate = min(28, final_rate + 7)
-        final_pitch += 2
+        final_rate = min(28, final_rate + 9)
+        final_pitch += 3
     elif mood == "accuse":
-        final_rate = min(28, final_rate + 4)
+        final_rate = min(28, final_rate + 6)
+        final_pitch += 2
+    elif mood == "claim_seer":
+        final_rate = min(26, final_rate + 3)
+        final_pitch += 2
+    elif mood == "rebut":
+        final_rate = min(28, final_rate + 7)
         final_pitch += 1
     elif mood == "trust":
-        final_rate = max(-18, final_rate - 2)
+        final_rate = max(-18, final_rate - 3)
+        final_pitch -= 1
     elif mood == "happy":
-        final_rate = min(28, final_rate + 3)
+        final_rate = min(28, final_rate + 4)
         final_pitch += 2
     elif mood == "last_words":
-        final_rate = max(-18, final_rate - 5)
-        final_pitch -= 1
-    elif mood == "host_night":
-        final_rate = max(-18, final_rate - 6)
+        final_rate = max(-20, final_rate - 7)
         final_pitch -= 2
+    elif mood == "host_night":
+        final_rate = max(-20, final_rate - 7)
+        final_pitch -= 3
     elif mood == "host_dawn":
-        final_rate = min(25, final_rate + 2)
-        final_pitch += 1
+        final_rate = min(26, final_rate + 3)
+        final_pitch += 2
 
     final_pitch = max(-5, min(5, final_pitch))
     rate_str = f"+{final_rate}%" if final_rate >= 0 else f"{final_rate}%"
@@ -292,6 +307,10 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
                 "xiaoyun": "seat6",
                 "azhu": "seat7",
                 "chenchen": "seat8",
+                "mobai": "seat9",
+                "qinglan": "seat10",
+                "alang": "seat11",
+                "youzi": "seat12",
             }
             seat_models = {}
             for slug, alias in seat_slugs.items():

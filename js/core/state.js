@@ -170,7 +170,8 @@ function saveUserPrefs() {
       sheriffMode: Boolean(state.sheriffMode),
       guardMode: Boolean(state.guardMode),
       geminiModel: state.geminiModel || "gemini-3.8-flash",
-      localLlmModel: state.localLlmModel || ""
+      localLlmModel: state.localLlmModel || "",
+      subtitleLarge: Boolean(state.subtitleLarge)
     };
     window.localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(payload));
   } catch (e) {}
@@ -206,6 +207,7 @@ function loadUserPrefs() {
     if (typeof p.guardMode === "boolean") state.guardMode = p.guardMode;
     if (typeof p.geminiModel === "string" && p.geminiModel) state.geminiModel = p.geminiModel;
     if (typeof p.localLlmModel === "string") state.localLlmModel = p.localLlmModel;
+    if (typeof p.subtitleLarge === "boolean") state.subtitleLarge = p.subtitleLarge;
   } catch (e) {}
 }
 
@@ -253,6 +255,14 @@ function syncPrefsToControls() {
   });
   if (el("selectDeviceVoice") && voice.selectedVoiceUri) {
     el("selectDeviceVoice").value = voice.selectedVoiceUri;
+  }
+  if (typeof voice.syncQuickSpeedButtonUi === "function") voice.syncQuickSpeedButtonUi();
+  if (typeof document !== "undefined" && document.body) {
+    document.body.classList.toggle("subtitle-large", Boolean(state.subtitleLarge));
+  }
+  if (el("btnToggleSubtitleSize")) {
+    el("btnToggleSubtitleSize").textContent = state.subtitleLarge ? "大字" : "字級";
+    el("btnToggleSubtitleSize").classList.toggle("is-active", Boolean(state.subtitleLarge));
   }
   if (el("selectAiDifficulty")) el("selectAiDifficulty").value = state.aiDifficulty || "normal";
   if (el("selectRuleDepth")) el("selectRuleDepth").value = state.ruleDepth || "full";
@@ -356,8 +366,8 @@ function addThreeGoodPoint(kind, reasonText) {
         const targetFocus = focusId ? getSeat(focusId) : null;
         if (targetFocus) {
           waveringGood.suspicionMap[targetFocus.id] = clamp((waveringGood.suspicionMap[targetFocus.id] || 50) + 18, 5, 98);
-          setSeatBubble(waveringGood.id, "剛才被你的善意點醒了！這輪我跟你一起重點留意 0" + targetFocus.id + "號！", "trust", 4200);
-          enlightenNote = "，並感化 0" + waveringGood.id + "號" + waveringGood.name + "共商聚焦 0" + targetFocus.id + "號";
+          setSeatBubble(waveringGood.id, "剛才被你的善意點醒了！這輪我跟你一起重點留意 " + fmtSeatNum(targetFocus.id) + "號！", "trust", 4200);
+          enlightenNote = "，並感化 " + fmtSeatNum(waveringGood.id) + "號" + waveringGood.name + "共商聚焦 " + fmtSeatNum(targetFocus.id) + "號";
         }
       }
       triggerCutIn("🌟 三好蓮花三瓣覺醒！", "獲得「黃金善意票（公投 +1 票）」" + enlightenNote + "！", "emerald");
@@ -420,8 +430,31 @@ function getPlayerSeat() {
   return getSeat(getPlayerId());
 }
 
+function fmtSeatNum(id) {
+  const n = parseInt(id, 10);
+  if (!Number.isFinite(n)) return String(id || "");
+  return n >= 0 && n < 10 ? ("0" + n) : String(n);
+}
+
+function fmtSeatTag(id) {
+  return fmtSeatNum(id) + "號";
+}
+
+function getLobbySeatCount() {
+  const raw = el("selectModeCount") ? parseInt(el("selectModeCount").value, 10) : 8;
+  if (raw === 12 || raw === 10 || raw === 8 || raw === 6) return raw;
+  return 8;
+}
+
+function getInitialWolfCount(totalSeats) {
+  const n = parseInt(totalSeats, 10) || (state.match && state.match.started ? state.match.totalSeats : getLobbySeatCount());
+  if (n >= 12) return 4;
+  if (n >= 10) return 3;
+  return 2;
+}
+
 function playerNumTag() {
-  return "0" + getPlayerId() + "號";
+  return fmtSeatTag(getPlayerId());
 }
 
 function getAliveSeats() {

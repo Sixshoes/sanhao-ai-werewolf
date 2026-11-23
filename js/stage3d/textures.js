@@ -16,7 +16,11 @@ const PORTRAIT_ART_MAP = {
   "星兒": "assets/portraits/xinger.jpg",
   "小雲": "assets/portraits/xiaoyun.jpg",
   "阿竹": "assets/portraits/azhu.jpg",
-  "晨晨": "assets/portraits/chenchen.jpg"
+  "晨晨": "assets/portraits/chenchen.jpg",
+  "墨白": "assets/portraits/mobai.jpg",
+  "晴嵐": "assets/portraits/qinglan.jpg",
+  "阿朗": "assets/portraits/alang.jpg",
+  "柚子": "assets/portraits/youzi.jpg"
 };
 
 const VRM_PORTRAIT_ART_MAP = {
@@ -29,7 +33,11 @@ const VRM_PORTRAIT_ART_MAP = {
   "星兒": "assets/portraits_vrm/xinger.jpg",
   "小雲": "assets/portraits_vrm/xiaoyun.jpg",
   "阿竹": "assets/portraits_vrm/azhu.jpg",
-  "晨晨": "assets/portraits_vrm/chenchen.jpg"
+  "晨晨": "assets/portraits_vrm/chenchen.jpg",
+  "墨白": "assets/portraits/mobai.jpg",
+  "晴嵐": "assets/portraits/qinglan.jpg",
+  "阿朗": "assets/portraits/alang.jpg",
+  "柚子": "assets/portraits/youzi.jpg"
 };
 
 function getPortraitKey(seat) {
@@ -1019,7 +1027,7 @@ const stage3dTextures = {
     ctx.textBaseline = "middle";
     ctx.fillStyle = isSpeaking ? "#2b1908" : (!seat.alive ? "#94a3b8" : "#d9b46c");
     ctx.font = "700 22px 'Noto Serif TC', 'Songti TC', serif";
-    ctx.fillText("第 0" + seat.id + " 席", 128, 42);
+    ctx.fillText("第 " + fmtSeatNum(seat.id) + " 席", 128, 42);
 
     ctx.strokeStyle = isSpeaking ? "rgba(43, 25, 8, 0.35)" : "rgba(212, 166, 87, 0.32)";
     ctx.lineWidth = 2;

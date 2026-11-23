@@ -74,7 +74,7 @@ function getActiveGodRoleKeys() {
 function formatSpectatorSeatLabel(seat) {
   if (!seat) return "未知";
   const pid = getPlayerId();
-  return "0" + seat.id + "號 " + (seat.id === pid ? "你" : seat.name);
+  return fmtSeatNum(seat.id) + "號 " + (seat.id === pid ? "你" : seat.name);
 }
 
 function toggleSpectatorWolfGuess(seatId) {
@@ -90,10 +90,13 @@ function toggleSpectatorWolfGuess(seatId) {
 
   const idx = g.wolfIds.indexOf(seatId);
   let selectedNow = false;
+  const wolfCap = (state.match && state.match.seats)
+    ? Math.max(2, state.match.seats.filter(function (s) { return s.role === "wolf"; }).length)
+    : (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2);
   if (idx !== -1) {
     g.wolfIds.splice(idx, 1);
   } else {
-    if (g.wolfIds.length >= 2) g.wolfIds.shift();
+    if (g.wolfIds.length >= wolfCap) g.wolfIds.shift();
     g.wolfIds.push(seatId);
     selectedNow = true;
   }
@@ -165,9 +168,12 @@ function lockSpectatorGuess() {
   if (g.locked) return false;
 
   const mode = getSpectatorGuessMode();
+  const wolfNeed = (state.match && state.match.seats)
+    ? Math.max(2, state.match.seats.filter(function (s) { return s.role === "wolf"; }).length)
+    : (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2);
   if (mode === "wolf_hunt") {
-    if (g.wolfIds.length < 2) {
-      showToast("請先選出 2 名你懷疑的酸民狼再鎖定押注！", "warn");
+    if (g.wolfIds.length < wolfNeed) {
+      showToast("請先選出 " + wolfNeed + " 名你懷疑的酸民狼再鎖定押注！", "warn");
       return false;
     }
   } else {
@@ -359,7 +365,10 @@ function renderSpectatorGuessPanel() {
   titleWrap.className = "flex items-center gap-1.5 min-w-0";
   const badge = document.createElement("span");
   badge.className = "text-[11px] font-bold tracking-wider truncate " + (mode === "god_hunt" ? "text-amber-300" : "text-emerald-300");
-  badge.textContent = mode === "god_hunt" ? "🎯 席外獵神挑戰・揪出真神職" : "🔍 席外猜狼挑戰・鎖定 2 名酸民狼";
+  const wNeed = (state.match && state.match.seats)
+    ? Math.max(2, state.match.seats.filter(function (s) { return s.role === "wolf"; }).length)
+    : (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2);
+  badge.textContent = mode === "god_hunt" ? "🎯 席外獵神挑戰・揪出真神職" : ("🔍 席外猜狼挑戰・鎖定 " + wNeed + " 名酸民狼");
   const progress = document.createElement("span");
   progress.className = "text-[10px] text-slate-400 shrink-0";
   if (mode === "wolf_hunt") {
@@ -431,7 +440,7 @@ function renderSpectatorGuessPanel() {
       pill.className = "text-[10px] px-2 py-0.5 rounded border font-bold " +
         (st.role === "wolf" ? "bg-rose-500/20 border-rose-400/50 text-rose-100" : "bg-emerald-500/15 border-emerald-400/40 text-emerald-100") +
         (st.alive ? "" : " opacity-55");
-      pill.textContent = "0" + st.id + st.name + "〔" + rName + "〕" + (st.alive && topTarget ? ("→疑0" + topTarget) : (!st.alive ? "(離)" : ""));
+      pill.textContent = fmtSeatNum(st.id) + st.name + "〔" + rName + "〕" + (st.alive && topTarget ? ("→疑" + fmtSeatNum(topTarget)) : (!st.alive ? "(離)" : ""));
       godRow.appendChild(pill);
     });
     host.appendChild(godRow);
@@ -452,7 +461,7 @@ function renderSpectatorGuessPanel() {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "spec-role-slot" + (isCur ? " is-active-slot" : "") + (assignedId ? " is-filled" : "");
-      btn.textContent = roleShortLabels[rk] + (assignedSeat ? (" → 0" + assignedSeat.id + assignedSeat.name) : " → 未選");
+      btn.textContent = roleShortLabels[rk] + (assignedSeat ? (" → " + fmtSeatNum(assignedSeat.id) + assignedSeat.name) : " → 未選");
       btn.disabled = g.locked;
       btn.addEventListener("click", function () { selectSpectatorGodSlot(rk); });
       slotRow.appendChild(btn);
@@ -501,7 +510,7 @@ function renderSpectatorGuessPanel() {
     if (g.locked) cls += " is-locked";
     chip.className = cls;
     chip.disabled = g.locked;
-    chip.textContent = "0" + s.id + " " + s.name + suffix;
+    chip.textContent = fmtSeatNum(s.id) + " " + s.name + suffix;
     chip.addEventListener("click", function () {
       if (mode === "wolf_hunt") toggleSpectatorWolfGuess(s.id);
       else assignSpectatorGodGuess(s.id);

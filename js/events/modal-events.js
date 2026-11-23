@@ -130,7 +130,16 @@ function bindModalEvents() {
         }
       }
     }
-    if (ev.key >= "1" && ev.key <= String((state.match && state.match.totalSeats) || 8)) selectSeat(parseInt(ev.key, 10));
+    const maxSeatsKey = (state.match && state.match.totalSeats) || 8;
+    const seatKeyMap = { "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "0": 10, "-": 11, "=": 12 };
+    if (Object.prototype.hasOwnProperty.call(seatKeyMap, ev.key) && seatKeyMap[ev.key] <= maxSeatsKey) {
+      selectSeat(seatKeyMap[ev.key]);
+    }
+    else if (ev.key === "p" || ev.key === "P") {
+      if (state.match.started && el("btnPauseVoice") && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH")) {
+        el("btnPauseVoice").click();
+      }
+    }
     else if (ev.key === "a" || ev.key === "A") { if (state.match.started && el("btnAutoPlayToggle")) el("btnAutoPlayToggle").click(); }
     else if (ev.key === "j" || ev.key === "J") {
       if (state.match.started && typeof indieFlow !== "undefined") {

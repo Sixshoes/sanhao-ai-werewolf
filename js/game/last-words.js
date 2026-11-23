@@ -9,12 +9,12 @@ function buildAiLastWords(seat, mode) {
   const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
   const labelOf = function (s) {
     if (!s) return "";
-    return "0" + s.id + "號" + (s.id === pid ? "你" : s.name);
+    return fmtSeatNum(s.id) + "號" + (s.id === pid ? "你" : s.name);
   };
   if (seat.role === "seer" && seat.checkedHistory && seat.checkedHistory.length > 0) {
     const chk = seat.checkedHistory[seat.checkedHistory.length - 1];
     const tSeat = getSeat(chk.targetId);
-    const tLbl = labelOf(tSeat) || ("0" + chk.targetId + "號");
+    const tLbl = labelOf(tSeat) || (fmtSeatNum(chk.targetId) + "號");
     return {
       text: (isFirstNight
         ? ("各位好人注意！我是明心觀察員，首夜離席留遺言：昨晚我查證了 " + tLbl + "，確定他是" + (chk.isWolf ? "酸民狼！今天拜託直接集中投 " + tLbl + "！" : "善良的好夥伴，大家別投錯他！"))
@@ -115,7 +115,7 @@ function applyLastWordsInfluence(seat, rawText, meta) {
   let targetId = m.targetId || null;
   let isWolfClaim = (typeof m.isWolf === "boolean") ? m.isWolf : null;
   if (!targetId) {
-    const matches = clean.match(/0?([1-8])\s*號/g) || [];
+    const matches = clean.match(/(?:1[0-2]|0?[1-9])\s*號/g) || [];
     for (let i = 0; i < matches.length; i++) {
       const num = parseInt(matches[i], 10);
       if (num >= 1 && num <= state.match.totalSeats && num !== seat.id) {
@@ -228,20 +228,20 @@ function advanceLastWordsQueue() {
   state.match.phase = "LAST_WORDS_SPEECH";
   setSeatBubble(seat.id, lwObj.text, lwObj.isWolf ? "suspect" : "trust", 4800);
   if (lwObj.claimRole === "seer") {
-    triggerCutIn("🕯️ 明心觀察員" + lwLabel + "！", "0" + seat.id + "號 " + seat.name + " 臨走前公開查驗真相！", "gold");
+    triggerCutIn("🕯️ 明心觀察員" + lwLabel + "！", fmtSeatNum(seat.id) + "號 " + seat.name + " 臨走前公開查驗真相！", "gold");
   }
   addLog({
     kind: "speech",
     useTypewriter: true,
     speakerId: seat.id,
-    title: "0" + seat.id + "號 · " + seat.name + "（" + lwLabel + "）",
+    title: fmtSeatNum(seat.id) + "號 · " + seat.name + "（" + lwLabel + "）",
     subBadge: lwLabel,
     text: lwObj.text
   });
   updateAllUI();
   startSpotlightTypewriter({
     speaker: seat,
-    badge: "0" + seat.id + "號 " + seat.name + "（遺言）",
+    badge: fmtSeatNum(seat.id) + "號 " + seat.name + "（遺言）",
     trait: lwLabel,
     rawText: lwObj.text,
     voiceMood: "last_words",
@@ -274,7 +274,7 @@ function preparePlayerLastWordsPanel(mode) {
   if (player.role === "seer" && player.checkedHistory && player.checkedHistory.length > 0) {
     const last = player.checkedHistory[player.checkedHistory.length - 1];
     const cSeat = getSeat(last.targetId);
-    const cLbl = "0" + last.targetId + "號" + (cSeat ? cSeat.name : "");
+    const cLbl = fmtSeatNum(last.targetId) + "號" + (cSeat ? cSeat.name : "");
     cards.push({
       tag: "觀察員交接",
       accent: "bg-amber-500/20 hover:bg-amber-500/35 border-amber-400/60 text-amber-100",
@@ -286,8 +286,8 @@ function preparePlayerLastWordsPanel(mode) {
     cards.push({
       tag: "奉茶師作證",
       accent: "bg-emerald-500/20 hover:bg-emerald-500/35 border-emerald-400/60 text-emerald-100",
-      label: "【滴水奉茶師遺言】證明 0" + player.savedSeatId + "號 是我用回甘茶護回的好人",
-      text: "我是這局的滴水奉茶師！之前晚上是我端暖心回甘茶護回了 0" + player.savedSeatId + "號" + (sv ? sv.name : "") + "，他是鐵好人大家別投錯，剩下靠你們找出酸民狼！"
+      label: "【滴水奉茶師遺言】證明 " + fmtSeatNum(player.savedSeatId) + "號 是我用回甘茶護回的好人",
+      text: "我是這局的滴水奉茶師！之前晚上是我端暖心回甘茶護回了 " + fmtSeatNum(player.savedSeatId) + "號" + (sv ? sv.name : "") + "，他是鐵好人大家別投錯，剩下靠你們找出酸民狼！"
     });
   } else if (player.role === "guard") {
     const gPrevP = state.match.lastGuardTargetId ? getSeat(state.match.lastGuardTargetId) : null;
@@ -295,10 +295,10 @@ function preparePlayerLastWordsPanel(mode) {
       tag: "守衛交接",
       accent: "bg-sky-500/20 hover:bg-sky-500/35 border-sky-400/60 text-sky-100",
       label: gPrevP
-        ? ("【護心守衛遺言】公開昨晚守護 0" + gPrevP.id + "號 " + gPrevP.name + "・提醒防破盾")
+        ? ("【護心守衛遺言】公開昨晚守護 " + fmtSeatNum(gPrevP.id) + "號 " + gPrevP.name + "・提醒防破盾")
         : "【護心守衛遺言】亮明護心守衛身分・呼籲穩住神職防線",
       text: gPrevP
-        ? ("我亮出護心守衛留遺言！上一晚我的護心結界守過 0" + gPrevP.id + "號" + gPrevP.name + "，請奉茶師留意交錯救援防破盾，大家照好人邏輯抓狼！")
+        ? ("我亮出護心守衛留遺言！上一晚我的護心結界守過 " + fmtSeatNum(gPrevP.id) + "號" + gPrevP.name + "，請奉茶師留意交錯救援防破盾，大家照好人邏輯抓狼！")
         : "我是這局的護心守衛，離席前提醒大家留意是誰避談昨夜保護視角、把兩隻酸民狼找出來！"
     });
   } else if (player.role === "hunter") {
@@ -306,31 +306,31 @@ function preparePlayerLastWordsPanel(mode) {
       tag: "糾察長表態",
       accent: "bg-amber-500/20 hover:bg-amber-500/35 border-amber-400/60 text-amber-100",
       label: "【直心糾察長遺言】亮明正氣身分・點出剩餘狼坑焦點",
-      text: "我是本局直心糾察長！希望大家接續把" + (pickSus ? (" 0" + pickSus.id + "號" + pickSus.name + " 等") : "") + "可疑發言對齊，穩穩拿下好人勝利！"
+      text: "我是本局直心糾察長！希望大家接續把" + (pickSus ? (" " + fmtSeatNum(pickSus.id) + "號" + pickSus.name + " 等") : "") + "可疑發言對齊，穩穩拿下好人勝利！"
     });
   } else if (player.role === "wolf") {
     const targetGood = aliveOthers.find(function (s) { return s.team === "good"; }) || pickSus;
     cards.push({
       tag: "干擾視角",
       accent: "bg-rose-500/20 hover:bg-rose-500/35 border-rose-400/60 text-rose-100",
-      label: "【狼人偽裝】假裝好人將焦點導向 " + (targetGood ? ("0" + targetGood.id + "號") : "場上"),
-      text: "哎呀你們真的投錯好人了！我真心覺得 " + (targetGood ? ("0" + targetGood.id + "號" + targetGood.name) : "剛才帶節奏的人") + " 講話破綻超大，大家下一輪務必盯緊他！"
+      label: "【狼人偽裝】假裝好人將焦點導向 " + (targetGood ? (fmtSeatNum(targetGood.id) + "號") : "場上"),
+      text: "哎呀你們真的投錯好人了！我真心覺得 " + (targetGood ? (fmtSeatNum(targetGood.id) + "號" + targetGood.name) : "剛才帶節奏的人") + " 講話破綻超大，大家下一輪務必盯緊他！"
     });
   }
   if (pickSus) {
     cards.push({
       tag: "提醒抓狼",
       accent: "bg-rose-500/18 hover:bg-rose-500/30 border-rose-400/50 text-rose-100",
-      label: "【點名提醒】請隊友重點留意 0" + pickSus.id + "號 " + pickSus.name,
-      text: "我是清白好人！離席前提醒大家重點檢視 0" + pickSus.id + "號" + pickSus.name + " 的邏輯與票型，我覺得他非常可疑，祝好人夥伴順利抓出酸民狼！"
+      label: "【點名提醒】請隊友重點留意 " + fmtSeatNum(pickSus.id) + "號 " + pickSus.name,
+      text: "我是清白好人！離席前提醒大家重點檢視 " + fmtSeatNum(pickSus.id) + "號" + pickSus.name + " 的邏輯與票型，我覺得他非常可疑，祝好人夥伴順利抓出酸民狼！"
     });
   }
   if (pickGood) {
     cards.push({
       tag: "守護夥伴",
       accent: "bg-sky-500/18 hover:bg-sky-500/30 border-sky-400/50 text-sky-100",
-      label: "【三好叮嚀】信任 0" + pickGood.id + "號 " + pickGood.name + "・保持理性抓狼",
-      text: "大家千萬別被酸言挑撥弄亂節奏！目前我覺得 0" + pickGood.id + "號" + pickGood.name + " 態度很誠懇像好人，好人團結說好話、穩住票型一定會贏！"
+      label: "【三好叮嚀】信任 " + fmtSeatNum(pickGood.id) + "號 " + pickGood.name + "・保持理性抓狼",
+      text: "大家千萬別被酸言挑撥弄亂節奏！目前我覺得 " + fmtSeatNum(pickGood.id) + "號" + pickGood.name + " 態度很誠懇像好人，好人團結說好話、穩住票型一定會贏！"
     });
   }
 

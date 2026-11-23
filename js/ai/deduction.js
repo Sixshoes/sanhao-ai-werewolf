@@ -132,10 +132,10 @@ function detectSpeechContradictions(speaker, speechEv) {
 
   const day = m.day || 1;
   const player = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
-  const spTag = "0" + speaker.id + "號" + speaker.name;
+  const spTag = fmtSeatNum(speaker.id) + "號" + speaker.name;
   const labelSeat = function (id) {
     const s = typeof getSeat === "function" ? getSeat(id) : null;
-    return s ? ("0" + s.id + "號" + (s.id === pid ? "你" : s.name)) : ("0" + id + "號");
+    return s ? (fmtSeatNum(s.id) + "號" + (s.id === pid ? "你" : s.name)) : (fmtSeatNum(id) + "號");
   };
 
   // 1. Role counter-claim clash (against another alive claimant OR player's own real role)
@@ -312,22 +312,22 @@ function computeTableWindVane() {
   const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
   if (topHeatSeatId) {
     const hs = typeof getSeat === "function" ? getSeat(topHeatSeatId) : null;
-    parts.push("今日集火：0" + topHeatSeatId + "號" + (topHeatSeatId === pid ? "你" : (hs ? hs.name : "")) + "(" + topHeatCount + "指認)");
+    parts.push("今日集火：" + fmtSeatNum(topHeatSeatId) + "號" + (topHeatSeatId === pid ? "你" : (hs ? hs.name : "")) + "(" + topHeatCount + "指認)");
   }
   const slotView = typeof buildTableSlotAndWorldAnalysis === "function"
     ? buildTableSlotAndWorldAnalysis(typeof getPlayerSeat === "function" ? getPlayerSeat() : null)
     : null;
   if (slotView && slotView.dualSeerWorlds) {
     const dw = slotView.dualSeerWorlds;
-    const wA2 = dw.worldA.secondWolf ? ("+0" + dw.worldA.secondWolf.id) : "";
-    const wB2 = dw.worldB.secondWolf ? ("+0" + dw.worldB.secondWolf.id) : "";
-    parts.push("站0" + dw.seerA.id + "坑:0" + dw.seerB.id + wA2 + "｜站0" + dw.seerB.id + "坑:0" + dw.seerA.id + wB2);
+    const wA2 = dw.worldA.secondWolf ? ("+" + fmtSeatNum(dw.worldA.secondWolf.id)) : "";
+    const wB2 = dw.worldB.secondWolf ? ("+" + fmtSeatNum(dw.worldB.secondWolf.id)) : "";
+    parts.push("站" + fmtSeatNum(dw.seerA.id) + "坑:" + fmtSeatNum(dw.seerB.id) + wA2 + "｜站" + fmtSeatNum(dw.seerB.id) + "坑:" + fmtSeatNum(dw.seerA.id) + wB2);
   } else {
     Object.keys(claimGroups).forEach(function (rk) {
       const ids = claimGroups[rk];
       if (ids.length > 0) {
         const rName = ROLE_DEFS[rk].name;
-        parts.push((ids.length >= 2 ? "對跳" : "亮牌") + rName + "：" + ids.map(function (id) { return "0" + id; }).join("/"));
+        parts.push((ids.length >= 2 ? "對跳" : "亮牌") + rName + "：" + ids.map(function (id) { return fmtSeatNum(id); }).join("/"));
       }
     });
   }
@@ -335,7 +335,7 @@ function computeTableWindVane() {
     return ev && ev.speakerId !== pid && (ev.accuseId === pid || (Array.isArray(ev.wolfPits) && ev.wolfPits.indexOf(pid) !== -1));
   });
   if (pitCaller) {
-    parts.push("⚠ 0" + pitCaller.speakerId + "號點你進狼坑");
+    parts.push("⚠ " + fmtSeatNum(pitCaller.speakerId) + "號點你進狼坑");
   }
   if (todayContra.length > 0) {
     parts.push("偵測矛盾 " + todayContra.length + " 處");
@@ -345,7 +345,7 @@ function computeTableWindVane() {
     return s && s.alive && state.playerMarks[k] === "wolf";
   });
   if (markedWolves.length > 0) {
-    parts.push("你標疑：" + markedWolves.map(function (id) { return "0" + id; }).join("、"));
+    parts.push("你標疑：" + markedWolves.map(function (id) { return fmtSeatNum(id); }).join("、"));
   }
 
   return {

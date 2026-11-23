@@ -161,6 +161,10 @@ function bindAudioVoiceEvents() {
       "小雲": "等一下，我們來交叉核對一下剛剛這輪的發言前後有沒有矛盾。",
       "阿竹": "山城夜色靜謐，真相往往藏在最細微的語氣轉折裡。",
       "晨晨": "好人夥伴們衝起來！別被酸言帶風向，這輪一定抓出酸民狼！",
+      "墨白": "落筆講究章法，對照票型與時間線，真相自然水落石出。",
+      "晴嵐": "大家先喝口熱茶緩緩，我們把兩邊視角柔和整理清楚吧。",
+      "阿朗": "論點擺上檯面直接交叉比對，破綻藏不住的，這輪精準歸票！",
+      "柚子": "耶～茶點準備好囉！我們用好話和直覺一起守護書院吧！",
       "主持": "天黑請閉眼，山城入夜，請各位靜待神秘行動。"
     };
     if (el("voiceAuditionStrip")) {
@@ -305,6 +309,47 @@ function bindAudioVoiceEvents() {
       voice.replayLast();
     }
   });
+
+  if (el("btnPauseVoice")) {
+    el("btnPauseVoice").addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      sound.unlock();
+      if (typeof voice.togglePause === "function") {
+        const pausedNow = voice.togglePause();
+        if (typeof showToast === "function") {
+          showToast(pausedNow ? "⏸ 已暫停語音與字幕（再按一次繼續）" : "▶ 已繼續播放", "emerald");
+        }
+      }
+    });
+  }
+
+  if (el("btnQuickVoiceSpeed")) {
+    el("btnQuickVoiceSpeed").addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      sound.unlock();
+      if (typeof voice.cycleQuickRate === "function") {
+        const nextR = voice.cycleQuickRate();
+        const tag = nextR >= 1.18 ? "1.3× 疾風快節奏" : (nextR >= 1.05 ? "1.15× 輕快推理" : "1.0× 自然節奏");
+        if (typeof showToast === "function") showToast("🎙️ 語音語速切換為：" + tag, "emerald");
+      }
+    });
+  }
+
+  if (el("btnToggleSubtitleSize")) {
+    el("btnToggleSubtitleSize").addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      state.subtitleLarge = !state.subtitleLarge;
+      if (typeof document !== "undefined" && document.body) {
+        document.body.classList.toggle("subtitle-large", state.subtitleLarge);
+      }
+      el("btnToggleSubtitleSize").textContent = state.subtitleLarge ? "大字" : "字級";
+      el("btnToggleSubtitleSize").classList.toggle("is-active", state.subtitleLarge);
+      if (typeof saveUserPrefs === "function") saveUserPrefs();
+      if (typeof showToast === "function") {
+        showToast(state.subtitleLarge ? "🔍 已切換為「大字護眼字幕」" : "已切回標準字幕大小", "emerald");
+      }
+    });
+  }
 
   el("sliderSfxVol").addEventListener("input", function () {
     sound.unlock();

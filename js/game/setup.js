@@ -33,20 +33,35 @@ function startNewGame() {
     el("selectModeCount").value = "8";
     showToast("直心糾察長已自動切換至 8人局！", "emerald");
   }
-  if (pref === "guard") {
+  if (pref === "guard" && count < 8) {
     count = 8;
     state.guardMode = true;
     if (el("selectModeCount")) el("selectModeCount").value = "8";
     if (el("chkGuardMode")) el("chkGuardMode").checked = true;
     showToast("🛡️ 已切換至 8 人「預女獵守」護心守衛模式！", "emerald");
+  } else if (pref === "guard") {
+    state.guardMode = true;
+    if (el("chkGuardMode")) el("chkGuardMode").checked = true;
   }
 
-  const useGuardBoard = Boolean(count === 8 && state.guardMode);
-  const rolePool = useGuardBoard
-    ? ["wolf", "wolf", "seer", "witch", "hunter", "guard", "villager", "villager"]
-    : (count === 8
-      ? ["wolf", "wolf", "seer", "witch", "hunter", "villager", "villager", "villager"]
-      : ["wolf", "wolf", "seer", "witch", "villager", "villager"]);
+  const useGuardBoard = Boolean(count >= 12 || (count >= 8 && state.guardMode));
+  let rolePool;
+  if (count >= 12) {
+    count = 12;
+    rolePool = ["wolf", "wolf", "wolf", "wolf", "seer", "witch", "hunter", "guard", "villager", "villager", "villager", "villager"];
+  } else if (count >= 10) {
+    count = 10;
+    rolePool = useGuardBoard
+      ? ["wolf", "wolf", "wolf", "seer", "witch", "hunter", "guard", "villager", "villager", "villager"]
+      : ["wolf", "wolf", "wolf", "seer", "witch", "hunter", "villager", "villager", "villager", "villager"];
+  } else if (count === 8) {
+    rolePool = useGuardBoard
+      ? ["wolf", "wolf", "seer", "witch", "hunter", "guard", "villager", "villager"]
+      : ["wolf", "wolf", "seer", "witch", "hunter", "villager", "villager", "villager"];
+  } else {
+    count = 6;
+    rolePool = ["wolf", "wolf", "seer", "witch", "villager", "villager"];
+  }
 
   let playerRole = pref;
   if (playerRole === "random" || rolePool.indexOf(playerRole) === -1) {
@@ -261,7 +276,7 @@ function startNewGame() {
       const shSeat = getSeat(sheriffSeatId);
       addLog({
         kind: "blessing",
-        title: "👑 警長誕生：0" + sheriffSeatId + "號 " + (shSeat ? shSeat.name : "") + "（公投擁有 1.5 票歸票權！）",
+        title: "👑 警長誕生：" + fmtSeatNum(sheriffSeatId) + "號 " + (shSeat ? shSeat.name : "") + "（公投擁有 1.5 票歸票權！）",
         text: ""
       });
     }
@@ -327,7 +342,8 @@ function checkAndHandleGameOver() {
   // 標準《凹嗚狼人殺》屠邊規則：
   // 1. 好人勝利優先判定（例如最後一神直心糾察長帶走最後一狼，好人獲勝）
   if (wolves === 0) {
-    finishMatch("good", "2 隻酸民狼全數離席！");
+    const initialWolves = allSeats.filter(function (s) { return s.team === "wolf"; }).length || getInitialWolfCount();
+    finishMatch("good", initialWolves + " 隻酸民狼全數離席！");
     return true;
   }
   // 2. 屠神勝利：所有神職皆已離席

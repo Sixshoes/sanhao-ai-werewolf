@@ -201,7 +201,7 @@ const stage3d = {
     this.closeUpSeatId = seatId;
     this.orbit.userOverrideUntil = 0;
     const s = getSeat(seatId) || (this.seats.anchors[seatId] && this.seats.anchors[seatId].seat);
-    showToast("🔍 特寫檢視 0" + seatId + "號 " + (s ? s.name : "") + "（點空白處退回全景）", "emerald");
+    showToast("🔍 特寫檢視 " + fmtSeatNum(seatId) + "號 " + (s ? s.name : "") + "（點空白處退回全景）", "emerald");
   },
 
   clearCloseUp: function () {
@@ -242,7 +242,7 @@ const stage3d = {
     if (this.seats.anchors[seatId]) {
       spawn3DShockwave(this.fx, this.seats.anchors[seatId].worldPos, "#fde047", performance.now(), 1.32, 1.8);
     }
-    showToast("🕯️ 撥亮了 0" + seatId + "號 桌前的燭火！", "emerald");
+    showToast("🕯️ 撥亮了 " + fmtSeatNum(seatId) + "號 桌前的燭火！", "emerald");
   },
 
   extinguishSeatCandleFx: function (seatId) {
@@ -444,7 +444,7 @@ const stage3d = {
     } else if (this.seats && this.seats.slots[tgt] && typeof setSeatVisualMode === "function") {
       setSeatVisualMode(this.seats.slots[tgt], "sculpt3d");
       const s = typeof getSeat === "function" ? getSeat(tgt) : null;
-      showToast("已切回 0" + tgt + "號 " + (s ? s.name : "") + " 的內建動漫 3D 造型", "emerald");
+      showToast("已切回 " + fmtSeatNum(tgt) + "號 " + (s ? s.name : "") + " 的內建動漫 3D 造型", "emerald");
     }
     if (typeof indieFlow !== "undefined" && typeof indieFlow.syncShowcaseTargetUi === "function") {
       indieFlow.syncShowcaseTargetUi();
@@ -555,7 +555,7 @@ const stage3d = {
     if (typeof indieFlow !== "undefined" && typeof indieFlow.syncShowcaseTargetUi === "function") {
       indieFlow.syncShowcaseTargetUi();
     }
-    if (!silent) showToast("已為 0" + seatId + "號 套用專屬二次元 3D 模型：" + label, "emerald");
+    if (!silent) showToast("已為 " + fmtSeatNum(seatId) + "號 套用專屬二次元 3D 模型：" + label, "emerald");
   },
 
   extractEmbeddedVrmThumbnail: function (gltf, personaKey) {
@@ -1096,7 +1096,11 @@ const stage3d = {
       return;
     }
 
-    // Cinema or Tactical Overview Orbit Camera (with Double-Click Character Close-Up Inspection!)
+    // Cinema or Tactical Overview Orbit Camera (with Double-Click Character Close-Up Inspection & 10/12-seat framing!)
+    const activeSeatCount = (state.match && state.match.started)
+      ? (state.match.totalSeats || 8)
+      : (typeof getLobbySeatCount === "function" ? getLobbySeatCount() : 8);
+    const largeTableR = activeSeatCount >= 12 ? 1.85 : (activeSeatCount >= 10 ? 0.95 : 0);
     if (!o.dragging && nowMs > o.userOverrideUntil) {
       if (this.closeUpSeatId && this.seats.anchors[this.closeUpSeatId]) {
         const cp = this.seats.anchors[this.closeUpSeatId].worldPos;
@@ -1108,13 +1112,13 @@ const stage3d = {
       } else if (this.camPreset === "overview") {
         o.targetYaw = Math.sin(f.tSec * 0.08) * 0.12;
         o.targetPitch = 0.96;
-        o.targetRadius = 12.8;
+        o.targetRadius = 12.8 + largeTableR * 1.15;
         o.targetLookAt.set(0, 1.0, 0);
       } else if (!state.match.started || p === "LOBBY") {
         // Theatrical Indie Title Screen Framing: gentle sweep showing table + Qingming + Guishan Island right of title
         o.targetYaw = -0.18 + Math.sin(f.tSec * 0.14) * 0.26;
         o.targetPitch = 0.36;
-        o.targetRadius = 11.4;
+        o.targetRadius = 11.4 + largeTableR;
         o.targetLookAt.set(-1.05, 1.55, -1.15);
       } else if (f.night) {
         const nightFocusId = state.selectedSeatId || state.hoverSeatId;
@@ -1123,12 +1127,12 @@ const stage3d = {
           const np = nightAnchor.worldPos;
           o.targetYaw = -Math.sin(Math.atan2(np.x, np.z)) * 0.24;
           o.targetPitch = 0.62;
-          o.targetRadius = 11.6;
+          o.targetRadius = 11.6 + largeTableR * 0.85;
           o.targetLookAt.set(np.x * 0.22, 0.72, np.z * 0.22 + 0.28);
         } else {
           o.targetYaw = Math.sin(f.tSec * 0.12) * 0.14;
           o.targetPitch = 0.68;
-          o.targetRadius = 12.6;
+          o.targetRadius = 12.6 + largeTableR;
           o.targetLookAt.set(0, 0.58, 0.35);
         }
       } else if ((p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId && this.seats.anchors[state.activeSpeakerId]) {
@@ -1148,7 +1152,7 @@ const stage3d = {
         const spAngle = Math.atan2(spPos.x, spPos.z);
         o.targetYaw = -Math.sin(spAngle) * ((isAccuseShot || isPkSpeech) ? 0.52 : 0.42);
         o.targetPitch = (isClaimShot || isPkSpeech) ? 0.39 : (isAccuseShot ? 0.42 : (focusPos ? 0.46 : 0.44));
-        o.targetRadius = (isClaimShot || isPkSpeech) ? 8.7 : (isAccuseShot ? 9.3 : (focusPos ? 10.0 : 9.4));
+        o.targetRadius = ((isClaimShot || isPkSpeech) ? 8.7 : (isAccuseShot ? 9.3 : (focusPos ? 10.0 : 9.4))) + largeTableR * 0.65;
         o.targetLookAt.set(aimX, (isClaimShot || isPkSpeech) ? 1.02 : 0.86, aimZ);
       } else if ((p === "DAY_VOTE" && isPkVoteActive()) || (p === "DAY_SPEECH" && state.match.seats.filter(function (s) { return s.alive && s.claimedRole === "seer"; }).length >= 2 && !state.activeSpeakerId)) {
         // Dual-Rival Confrontation Framing (PK or Seer Clash!)
@@ -1161,7 +1165,7 @@ const stage3d = {
           const axisAng = Math.atan2(rivals[1].worldPos.z - rivals[0].worldPos.z, rivals[1].worldPos.x - rivals[0].worldPos.x);
           o.targetYaw = Math.sin(axisAng) * 0.52;
           o.targetPitch = 0.56;
-          o.targetRadius = 11.8;
+          o.targetRadius = 11.8 + largeTableR * 0.85;
           o.targetLookAt.set(midX * 0.32, 0.65, midZ * 0.32 + 0.35);
         } else {
           o.targetYaw = Math.sin(f.tSec * 0.2) * 0.16;
@@ -1389,7 +1393,7 @@ function draw3DOverlayHud(ctx, f, coords) {
     let isSubtleNameplate = false;
     let prio = 1;
     if (isSpeaking) {
-      topTag = sheriffPrefix + "0" + s.id + " " + s.name + (!s.alive ? "・遺言中" : "・發言中");
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + s.name + (!s.alive ? "・遺言中" : "・發言中");
       topBg = "rgba(166, 50, 38, 0.94)";
       topBorder = "rgba(242, 212, 156, 0.85)";
       topFg = "#fbf5ea";
@@ -1405,7 +1409,7 @@ function draw3DOverlayHud(ctx, f, coords) {
       topFg = "#fbf5ea";
       prio = 3;
     } else if (isSelected) {
-      topTag = sheriffPrefix + "✦ 已鎖定・0" + s.id + " " + s.name;
+      topTag = sheriffPrefix + "✦ 已鎖定・" + fmtSeatNum(s.id) + " " + s.name;
       topBg = "rgba(166, 50, 38, 0.94)";
       topBorder = "rgba(250, 224, 156, 0.9)";
       topFg = "#fff8eb";
@@ -1423,26 +1427,26 @@ function draw3DOverlayHud(ctx, f, coords) {
       topFg = "#fbf5ea";
       prio = 3;
     } else if (mark === "wolf") {
-      topTag = sheriffPrefix + "存疑・0" + s.id + s.name;
+      topTag = sheriffPrefix + "存疑・" + fmtSeatNum(s.id) + s.name;
       topBg = "rgba(154, 44, 34, 0.9)";
       topBorder = "rgba(232, 140, 128, 0.65)";
       topFg = "#fbf5ea";
       prio = 2;
     } else if (mark === "good") {
-      topTag = sheriffPrefix + "認同・0" + s.id + s.name;
+      topTag = sheriffPrefix + "認同・" + fmtSeatNum(s.id) + s.name;
       topBg = "rgba(33, 94, 73, 0.9)";
       topBorder = "rgba(126, 196, 166, 0.65)";
       topFg = "#fbf5ea";
       prio = 2;
     } else if (state.hoverSeatId === s.id) {
-      topTag = sheriffPrefix + "0" + s.id + "號 " + s.name;
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + "號 " + s.name;
       topBg = "rgba(22, 17, 13, 0.92)";
       topBorder = "rgba(212, 166, 87, 0.72)";
       topFg = "#e8c884";
       prio = 3;
     } else if (inMatch && isSheriff) {
       isSubtleNameplate = true;
-      topTag = sheriffPrefix + "0" + s.id + " " + (s.id === getPlayerId() ? "你" : s.name);
+      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + (s.id === getPlayerId() ? "你" : s.name);
       topBg = "rgba(18, 14, 11, 0.72)";
       topBorder = "rgba(245, 196, 81, 0.75)";
       topFg = "#fde68a";

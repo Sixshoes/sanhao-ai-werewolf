@@ -36,19 +36,19 @@ function pinSeatSummaryNote(seatId) {
   if (!s || !s.alive || s.id === getPlayerId()) return;
   const allEvs = (state.match.allSpeechEvents || []).filter(function (ev) { return ev.speakerId === s.id; });
   const latest = allEvs.length ? allEvs[allEvs.length - 1] : null;
-  let tag = "留意 0" + s.id + "號" + s.name;
-  let summary = "請大家比對 0" + s.id + "號" + s.name + " 的前後發言與投票站邊！";
+  let tag = "留意 " + fmtSeatNum(s.id) + "號" + s.name;
+  let summary = "請大家比對 " + fmtSeatNum(s.id) + "號" + s.name + " 的前後發言與投票站邊！";
   if (latest) {
     if (latest.claimRole && ROLE_DEFS[latest.claimRole]) {
       const rn = ROLE_DEFS[latest.claimRole].name;
-      tag = "0" + s.id + "號跳" + rn;
-      summary = "剛才 0" + s.id + "號" + s.name + "跳了" + rn + "身分，請大家冷靜比對他的發言真實性！";
+      tag = fmtSeatNum(s.id) + "號跳" + rn;
+      summary = "剛才 " + fmtSeatNum(s.id) + "號" + s.name + "跳了" + rn + "身分，請大家冷靜比對他的發言真實性！";
     } else if (latest.accuseId) {
-      tag = "0" + s.id + "號打0" + latest.accuseId + "號";
-      summary = "剛才 0" + s.id + "號" + s.name + "點名懷疑 0" + latest.accuseId + "號，我覺得我們要仔細檢視他的動機與票型！";
+      tag = fmtSeatNum(s.id) + "號打" + fmtSeatNum(latest.accuseId) + "號";
+      summary = "剛才 " + fmtSeatNum(s.id) + "號" + s.name + "點名懷疑 " + fmtSeatNum(latest.accuseId) + "號，我覺得我們要仔細檢視他的動機與票型！";
     } else if (latest.vouchId) {
-      tag = "0" + s.id + "號保0" + latest.vouchId + "號";
-      summary = "剛才 0" + s.id + "號" + s.name + "表態力挺 0" + latest.vouchId + "號，大家記一下他們的站邊關係！";
+      tag = fmtSeatNum(s.id) + "號保" + fmtSeatNum(latest.vouchId) + "號";
+      summary = "剛才 " + fmtSeatNum(s.id) + "號" + s.name + "表態力挺 " + fmtSeatNum(latest.vouchId) + "號，大家記一下他們的站邊關係！";
     }
   }
   pinClue(s.id, tag, summary, "note");
@@ -56,7 +56,7 @@ function pinSeatSummaryNote(seatId) {
   spawnBurst(s.id, ["#fbbf24", "#fde68a", "#ffffff"], 12, "star");
   nudgeSeat(s.id, { scale: 1.12, vy: -4 });
   sound.tone(620, 0.08, "triangle", 0.045, 0);
-  showToast("📌 已靜默記下 0" + s.id + "號重點，輪到你發言時可一鍵帶入！", "emerald");
+  showToast("📌 已靜默記下 " + fmtSeatNum(s.id) + "號重點，輪到你發言時可一鍵帶入！", "emerald");
 }
 
 function executeRadialAction(actionKey) {
@@ -133,7 +133,7 @@ function renderSeatIntelPopover() {
   pop.classList.remove("hidden");
   const dot = el("intelSeatDot");
   if (dot) {
-    dot.textContent = "0" + s.id;
+    dot.textContent = fmtSeatNum(s.id);
     dot.style.backgroundColor = s.color || "#38bdf8";
   }
   const pImg = el("intelSeatPortrait");
@@ -152,7 +152,7 @@ function renderSeatIntelPopover() {
   const sweatTag = (state.match.started && s.alive && (state.match.microPulseRevealed || s.sweatExposed))
     ? ("・心虛" + s.microPulse + "%")
     : "";
-  el("intelSeatTitle").textContent = "0" + s.id + "號 " + s.name + (!s.alive ? "（已離席）" : "");
+  el("intelSeatTitle").textContent = fmtSeatNum(s.id) + "號 " + s.name + (!s.alive ? "（已離席）" : "");
   el("intelSeatSub").textContent = (s.trait || "推理夥伴") + roleTag + sweatTag;
 
   const attBox = el("intelAttitudeBox");
@@ -188,8 +188,8 @@ function renderSeatIntelPopover() {
     const latest = allEvs.length ? allEvs[allEvs.length - 1] : null;
     if (latest) {
       const stance = latest.accuseId
-        ? ("【指控 0" + latest.accuseId + "號】")
-        : (latest.vouchId ? ("【力挺 0" + latest.vouchId + "號】") : "【發言摘要】");
+        ? ("【指控 " + fmtSeatNum(latest.accuseId) + "號】")
+        : (latest.vouchId ? ("【力挺 " + fmtSeatNum(latest.vouchId) + "號】") : "【發言摘要】");
       qBox.textContent = "第" + latest.day + "天 " + stance + " " + latest.rawText;
     } else {
       qBox.textContent = s.alive ? "本局尚未輪到他發言，點下方可先做靜默標記或看票型。" : ("離席原因：" + (s.outReason || "出局"));
@@ -201,7 +201,7 @@ function renderSeatIntelPopover() {
         .map(function (o) { return { id: o.id, score: Math.round((s.suspicionMap && s.suspicionMap[o.id]) || 50) }; })
         .sort(function (a, b) { return b.score - a.score; })
         .slice(0, 2)
-        .map(function (o) { return "0" + o.id + "號(" + o.score + "%)"; })
+        .map(function (o) { return fmtSeatNum(o.id) + "號(" + o.score + "%)"; })
         .join("、");
       qBox.textContent = "👁 真實：" + rInfo.icon + rInfo.name + (tops ? ("｜最疑：" + tops) : "") + " ▸ " + qBox.textContent;
     }
@@ -266,15 +266,15 @@ function renderSeatIntelPopover() {
     let quickLabel = "";
     if (state.match.started && s.alive) {
       if (ph === "DAY_VOTE" && typeof isPlayerEligibleToVote === "function" && isPlayerEligibleToVote() && !(state.voteFlight && state.voteFlight.active) && (typeof isValidVoteTarget !== "function" || isValidVoteTarget(s.id))) {
-        quickLabel = "🗳 確認投給 0" + s.id + "號";
+        quickLabel = "🗳 確認投給 " + fmtSeatNum(s.id) + "號";
       } else if (ph === "NIGHT_GUARD" && pAliveSelf && pSelf.role === "guard" && state.match.lastGuardTargetId !== s.id) {
-        quickLabel = "🛡️ 守護 0" + s.id + "號";
+        quickLabel = "🛡️ 守護 " + fmtSeatNum(s.id) + "號";
       } else if (ph === "NIGHT_SEER" && !state.seerReveal && pAliveSelf && pSelf.role === "seer") {
-        quickLabel = "🔮 立即查證 0" + s.id + "號";
+        quickLabel = "🔮 立即查證 " + fmtSeatNum(s.id) + "號";
       } else if (ph === "NIGHT_WOLF" && pAliveSelf && pSelf.role === "wolf" && s.role !== "wolf") {
-        quickLabel = "🐺 夜間鎖定 0" + s.id + "號";
+        quickLabel = "🐺 夜間鎖定 " + fmtSeatNum(s.id) + "號";
       } else if (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && pSelf.role === "hunter") {
-        quickLabel = "🎯 共鳴請離 0" + s.id + "號";
+        quickLabel = "🎯 共鳴請離 " + fmtSeatNum(s.id) + "號";
       } else if (ph === "DAY_PLAYER_TURN") {
         quickLabel = "🎯 設為發言點名對象";
       }
@@ -318,7 +318,7 @@ function inspectSeatMicroExpression(seatId) {
   if (!state.match.microInspectedSeats) state.match.microInspectedSeats = {};
   const dayKey = (state.match.day || 0) + ":" + target.id;
   if (state.match.microInspectedSeats[dayKey]) {
-    showToast("今天已經靜心觀微過 0" + target.id + "號 囉！", "amber");
+    showToast("今天已經靜心觀微過 " + fmtSeatNum(target.id) + "號 囉！", "amber");
     return false;
   }
 
@@ -351,8 +351,8 @@ function inspectSeatMicroExpression(seatId) {
     spawnBurst(target.id, ["#fb7185", "#fbbf24", "#ffffff"], 18, "spark");
     pinClue(
       target.id,
-      "🔍觀微 0" + target.id + "號心虛",
-      "剛才我仔細觀察 0" + target.id + "號" + target.name + " 的神情反應，發現他眼角閃躲、神色緊繃（緊張度約 " + reading + "%），建議這輪重點查證 0" + target.id + "號！",
+      "🔍觀微 " + fmtSeatNum(target.id) + "號心虛",
+      "剛才我仔細觀察 " + fmtSeatNum(target.id) + "號" + target.name + " 的神情反應，發現他眼角閃躲、神色緊繃（緊張度約 " + reading + "%），建議這輪重點查證 " + fmtSeatNum(target.id) + "號！",
       "micro"
     );
     if (target.team === "wolf") {
@@ -366,28 +366,28 @@ function inspectSeatMicroExpression(seatId) {
     }
     addLog({
       kind: "blessing",
-      title: "🔍 靜心觀微：0" + target.id + "號 " + target.name + " 神情明顯緊繃閃躲（緊張讀數 " + reading + "%），已存為「呈堂證供」素材！",
+      title: "🔍 靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 神情明顯緊繃閃躲（緊張讀數 " + reading + "%），已存為「呈堂證供」素材！",
       text: ""
     });
-    showToast("🔍 觀微察覺 0" + target.id + "號神色緊張 (" + reading + "%)！已存入呈堂證供素材！", "emerald");
+    showToast("🔍 觀微察覺 " + fmtSeatNum(target.id) + "號神色緊張 (" + reading + "%)！已存入呈堂證供素材！", "emerald");
   } else if (reading <= 38) {
     setSeatEmotion(target.id, "happy", 2800);
     spawnFx(target.id, "🌿 氣息沉穩 " + reading + "%", "#34d399");
     spawnBurst(target.id, ["#34d399", "#a7f3d0"], 12, "petal");
     addLog({
       kind: "blessing",
-      title: "🔍 靜心觀微：0" + target.id + "號 " + target.name + " 目光坦然、呼吸沉穩（緊張讀數 " + reading + "%）。",
+      title: "🔍 靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 目光坦然、呼吸沉穩（緊張讀數 " + reading + "%）。",
       text: ""
     });
-    showToast("🔍 觀微顯示 0" + target.id + "號神情沉穩自然 (" + reading + "%)。", "emerald");
+    showToast("🔍 觀微顯示 " + fmtSeatNum(target.id) + "號神情沉穩自然 (" + reading + "%)。", "emerald");
   } else {
     spawnFx(target.id, "🔍 尚稱克制 " + reading + "%", "#fde68a");
     addLog({
       kind: "blessing",
-      title: "🔍 靜心觀微：0" + target.id + "號 " + target.name + " 情緒壓抑尚無明顯波瀾（讀數 " + reading + "%），仍需聽後續言行比對。",
+      title: "🔍 靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 情緒壓抑尚無明顯波瀾（讀數 " + reading + "%），仍需聽後續言行比對。",
       text: ""
     });
-    showToast("🔍 0" + target.id + "號情緒尚稱克制（讀數 " + reading + "%），可再聽其邏輯。", "amber");
+    showToast("🔍 " + fmtSeatNum(target.id) + "號情緒尚稱克制（讀數 " + reading + "%），可再聽其邏輯。", "amber");
   }
 
   updateAllUI();
@@ -453,10 +453,10 @@ function serveWarmTeaToSeat(seatId) {
   }
   addLog({
     kind: "blessing",
-    title: "🍵 奉茶結緣：你親自端了一盞暖茶給 0" + target.id + "號 " + target.name + "（全場友善度 +6、好感拉近）！",
+    title: "🍵 奉茶結緣：你親自端了一盞暖茶給 " + fmtSeatNum(target.id) + "號 " + target.name + "（全場友善度 +6、好感拉近）！",
     text: ""
   });
-  showToast("🍵 已奉暖茶給 0" + target.id + "號 " + target.name + "！夥伴暖心回禮，點亮做好事進度！", "emerald");
+  showToast("🍵 已奉暖茶給 " + fmtSeatNum(target.id) + "號 " + target.name + "！夥伴暖心回禮，點亮做好事進度！", "emerald");
   updateAllUI();
   return true;
 }

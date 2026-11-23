@@ -30,8 +30,8 @@ function analyzeThreeGoodSpeech(rawText) {
     if (text.indexOf(kw) !== -1) kindBonus += 7;
   });
 
-  const maxSeats = (state.match && state.match.totalSeats) ? state.match.totalSeats : 8;
-  const seatMatches = text.match(/0?[1-8]\s*號/g) || [];
+  const maxSeats = (state.match && state.match.totalSeats) ? state.match.totalSeats : 12;
+  const seatMatches = text.match(/(?:1[0-2]|0?[1-9])\s*號/g) || [];
   const seatNums = [];
   seatMatches.forEach(function (m) {
     const n = parseInt(m, 10);
@@ -59,7 +59,7 @@ function analyzeThreeGoodSpeech(rawText) {
     }
     if (clauseStance) lastStance = clauseStance;
 
-    const cSeats = cRaw.match(/0?[1-8]\s*號/g) || [];
+    const cSeats = cRaw.match(/(?:1[0-2]|0?[1-9])\s*號/g) || [];
     cSeats.forEach(function (m) {
       const n = parseInt(m, 10);
       if (n >= 1 && n <= maxSeats && n !== pidNow) {
@@ -162,7 +162,7 @@ function composePlayerPitSpeechText() {
   const fmtList = function (ids) {
     return ids.map(function (id) {
       const s = getSeat(id);
-      return "0" + id + "號" + (s ? s.name : "");
+      return fmtSeatNum(id) + "號" + (s ? s.name : "");
     }).join("、");
   };
 
@@ -176,22 +176,22 @@ function composePlayerPitSpeechText() {
       if (player.role === "seer" && player.checkedHistory && player.checkedHistory.length > 0) {
         const latest = player.checkedHistory[player.checkedHistory.length - 1];
         const cs = getSeat(latest.targetId);
-        parts.push("我是真正的明心觀察員！已查驗 0" + latest.targetId + "號" + (cs ? cs.name : "") + " 是" + (latest.isWolf ? "酸民狼" : "好夥伴") + "。");
+        parts.push("我是真正的明心觀察員！已查驗 " + fmtSeatNum(latest.targetId) + "號" + (cs ? cs.name : "") + " 是" + (latest.isWolf ? "酸民狼" : "好夥伴") + "。");
       } else if (d.wolfIds.length > 0) {
         const w0 = getSeat(d.wolfIds[0]);
-        parts.push("我才是這局真正的明心觀察員！昨晚查驗 0" + d.wolfIds[0] + "號" + (w0 ? w0.name : "") + " 確定是酸民狼！");
+        parts.push("我才是這局真正的明心觀察員！昨晚查驗 " + fmtSeatNum(d.wolfIds[0]) + "號" + (w0 ? w0.name : "") + " 確定是酸民狼！");
       } else {
         parts.push("我才是這局真正的明心觀察員！");
       }
     } else if (d.claimRole === "witch") {
       const sv = player.savedSeatId ? getSeat(player.savedSeatId) : null;
       parts.push(sv && sv.alive
-        ? ("我是滴水奉茶師，先前用暖心回甘茶護回了 0" + sv.id + "號" + sv.name + "，他是鐵好人。")
+        ? ("我是滴水奉茶師，先前用暖心回甘茶護回了 " + fmtSeatNum(sv.id) + "號" + sv.name + "，他是鐵好人。")
         : "我是這局的滴水奉茶師，請大家配合好人邏輯穩穩出狼。");
     } else if (d.claimRole === "guard") {
       const lg = state.match.lastGuardTargetId ? getSeat(state.match.lastGuardTargetId) : null;
       parts.push(lg
-        ? ("我是護心守衛！昨晚剛守護過 0" + lg.id + "號" + lg.name + "，請奉茶師留意別撞車破盾。")
+        ? ("我是護心守衛！昨晚剛守護過 " + fmtSeatNum(lg.id) + "號" + lg.name + "，請奉茶師留意別撞車破盾。")
         : "我是護心守衛！每晚都會錯開位置防破盾。");
     } else if (d.claimRole === "hunter") {
       parts.push("我是直心糾察長！正氣共鳴在手，若遭誤投離席必帶走最可疑狼坑。");
@@ -200,7 +200,7 @@ function composePlayerPitSpeechText() {
 
   if (d.standSeerId) {
     const ss = getSeat(d.standSeerId);
-    parts.push("雙觀察員對跳我站邊 0" + d.standSeerId + "號" + (ss ? ss.name : "") + " 的視角！");
+    parts.push("雙觀察員對跳我站邊 " + fmtSeatNum(d.standSeerId) + "號" + (ss ? ss.name : "") + " 的視角！");
   }
 
   if (d.evidenceClueId) {
@@ -208,7 +208,7 @@ function composePlayerPitSpeechText() {
     if (clue && clue.summary) {
       parts.push(clue.summary + " ");
     } else if (clue && clue.seatId) {
-      parts.push("我直接點出 0" + clue.seatId + "號 的前後矛盾破綻！");
+      parts.push("我直接點出 " + fmtSeatNum(clue.seatId) + "號 的前後矛盾破綻！");
     }
   }
 
@@ -216,7 +216,7 @@ function composePlayerPitSpeechText() {
     parts.push("好人坑我先放 " + fmtList(d.goodIds) + "（立場較真誠）；");
   }
   if (d.wolfIds.length > 0) {
-    parts.push("狼坑目前點進 " + fmtList(d.wolfIds) + "，邏輯最讓人起疑，建議今天集中檢視並優先公投 0" + d.wolfIds[0] + "號！");
+    parts.push("狼坑目前點進 " + fmtList(d.wolfIds) + "，邏輯最讓人起疑，建議今天集中檢視並優先公投 " + fmtSeatNum(d.wolfIds[0]) + "號！");
   }
 
   return parts.join("").trim();
@@ -383,7 +383,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
     chip.setAttribute("data-pit-seat", String(s.id));
     chip.className = "pit-seat-chip" + (isWolf ? " is-wolf" : (isGood ? " is-good" : ""));
     chip.title = "點1下標狼坑・點2下標好人坑・點3下清除";
-    chip.textContent = "0" + s.id + s.name;
+    chip.textContent = fmtSeatNum(s.id) + s.name;
     if (isWolf || isGood) {
       const bdg = document.createElement("span");
       bdg.className = "pit-chip-badge";
@@ -438,7 +438,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
       if (sr.id === pid) return;
       extras.push({
         standId: sr.id,
-        label: "站 0" + sr.id + "號視角",
+        label: "站 " + fmtSeatNum(sr.id) + "號視角",
         active: d.standSeerId === sr.id,
         onClick: function () { togglePlayerDraftStandSeer(sr.id, dualWorlds); }
       });
@@ -451,7 +451,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   });
   if (contraClue) {
     extras.push({
-      label: "⚡ 呈堂證供 0" + contraClue.seatId + "號",
+      label: "⚡ 呈堂證供 " + fmtSeatNum(contraClue.seatId) + "號",
       active: d.evidenceClueId === contraClue.id,
       onClick: function () { togglePlayerDraftEvidence(contraClue); }
     });
@@ -497,7 +497,7 @@ function preparePlayerSpeechPanel() {
   }
   const tHintEl = el("playerSpeechTargetLabel");
   if (tHintEl) {
-    tHintEl.textContent = "🎯 針對：0" + sampleTarget.id + "號 " + sampleTarget.name;
+    tHintEl.textContent = "🎯 針對：" + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name;
   }
   const cHintEl = el("playerComboBonusHint");
   if (cHintEl) {
@@ -547,20 +547,20 @@ function preparePlayerSpeechPanel() {
   // Card 1: PK Rebuttal OR Dual-Seer World A vs B OR 存好心 (Truth & Evidence / Role Claim)
   if (inPk && pkRivalSeat && pkRivalSeat.alive) {
     const pkRoleProof = (player.role === "seer" && player.checkedHistory.length > 0)
-      ? ("我是真正的明心觀察員，已查證 0" + player.checkedHistory[player.checkedHistory.length - 1].targetId + "號，絕不能在 PK 斷了查驗線！")
+      ? ("我是真正的明心觀察員，已查證 " + fmtSeatNum(player.checkedHistory)[player.checkedHistory.length - 1].targetId + "號，絕不能在 PK 斷了查驗線！")
       : (player.role === "witch" && player.savedSeatId
-        ? ("我是滴水奉茶師，曾用暖心回甘茶護回 0" + player.savedSeatId + "號，留我在場好人更穩！")
+        ? ("我是滴水奉茶師，曾用暖心回甘茶護回 " + fmtSeatNum(player.savedSeatId) + "號，留我在場好人更穩！")
         : "我全程理性講話無任何邏輯矛盾，留我在場才能繼續幫好人對齊票型！");
     cards.push({
       tgKind: "heart",
       tgTag: "PK 拉票",
-      label: "【PK 搶救陳詞】平票 PK 自證清白，呼籲好人轉投 0" + pkRivalSeat.id + "號 " + pkRivalSeat.name,
-      text: "平票 PK 我誠懇向全場搶救這一票！" + pkRoleProof + "對比之下，0" + pkRivalSeat.id + "號" + pkRivalSeat.name + " 的立場破綻更大，拜託非平票的好人夥伴這輪集中投給 " + pkRivalSeat.id + "號！"
+      label: "【PK 搶救陳詞】平票 PK 自證清白，呼籲好人轉投 " + fmtSeatNum(pkRivalSeat.id) + "號 " + pkRivalSeat.name,
+      text: "平票 PK 我誠懇向全場搶救這一票！" + pkRoleProof + "對比之下，" + fmtSeatNum(pkRivalSeat.id) + "號" + pkRivalSeat.name + " 的立場破綻更大，拜託非平票的好人夥伴這輪集中投給 " + pkRivalSeat.id + "號！"
     });
   } else if (player.role === "seer" && player.checkedHistory.length > 0) {
     const last = player.checkedHistory[player.checkedHistory.length - 1];
     const cSeat = getSeat(last.targetId);
-    const cLabel = "0" + last.targetId + "號" + (cSeat ? cSeat.name : "");
+    const cLabel = fmtSeatNum(last.targetId) + "號" + (cSeat ? cSeat.name : "");
     if (last.isWolf) {
       cards.push({
         tgKind: "heart",
@@ -580,7 +580,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "deeds",
       tgTag: "做好事",
-      label: "【做好事】亮滴水奉茶師底牌：證明用回甘茶護回 0" + player.savedSeatId + "號",
+      label: "【做好事】亮滴水奉茶師底牌：證明用回甘茶護回 " + fmtSeatNum(player.savedSeatId) + "號",
       text: "我是這局的滴水奉茶師，想本著做好事的精神向大家報告：之前晚上被迷霧鎖定的人正是 " + player.savedSeatId + "號，是我用暖心回甘茶把他護回來的，所以他確定是好夥伴，千萬別投錯人！"
     });
   } else if (player.role === "guard") {
@@ -589,11 +589,11 @@ function preparePlayerSpeechPanel() {
       tgKind: "deeds",
       tgTag: "守衛表態",
       label: guarded
-        ? ("【做好事】公開護心結界：昨晚守護了 0" + guarded.id + "號 " + guarded.name)
-        : ("【做好事】低調表態好人立場・點評 0" + sampleTarget.id + "號 " + sampleTarget.name),
+        ? ("【做好事】公開護心結界：昨晚守護了 " + fmtSeatNum(guarded.id) + "號 " + guarded.name)
+        : ("【做好事】低調表態好人立場・點評 " + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name),
       text: guarded
-        ? ("我先穩住全場視角：我是這局的護心守衛！昨晚我的護心結界剛守過 0" + guarded.id + "號" + guarded.name + "，希望滴水奉茶師留意別跟我撞車造成破盾，今晚請大家齊心檢視 " + sampleTarget.id + "號！")
-        : ("我是認真盤邏輯的好人，目前場上資訊有限，我先重點檢視 0" + sampleTarget.id + "號" + sampleTarget.name + " 的立場與發言細節！")
+        ? ("我先穩住全場視角：我是這局的護心守衛！昨晚我的護心結界剛守過 " + fmtSeatNum(guarded.id) + "號" + guarded.name + "，希望滴水奉茶師留意別跟我撞車造成破盾，今晚請大家齊心檢視 " + sampleTarget.id + "號！")
+        : ("我是認真盤邏輯的好人，目前場上資訊有限，我先重點檢視 " + fmtSeatNum(sampleTarget.id) + "號" + sampleTarget.name + " 的立場與發言細節！")
     });
   } else if (player.role === "wolf") {
     const wolfMateSeer = aliveOthers.find(function (s) { return s.role === "wolf" && s.claimedRole === "seer"; });
@@ -603,15 +603,15 @@ function preparePlayerSpeechPanel() {
       cards.push({
         tgKind: "heart",
         tgTag: "狼隊配合",
-        label: "【狼隊配合・站邊同伴】聲援 0" + wolfMateSeer.id + "號 觀察員，打擊 0" + wolfScapegoat.id + "號",
-        text: "聽下來我覺得 0" + wolfMateSeer.id + "號" + wolfMateSeer.name + " 的觀察員視野與時間線真實多了！反觀 0" + wolfScapegoat.id + "號" + wolfScapegoat.name + " 一直躲在後面攪混水，我堅定站邊 0" + wolfMateSeer.id + "號，這輪直接把票集中給 " + wolfScapegoat.id + "號！"
+        label: "【狼隊配合・站邊同伴】聲援 " + fmtSeatNum(wolfMateSeer.id) + "號 觀察員，打擊 " + fmtSeatNum(wolfScapegoat.id) + "號",
+        text: "聽下來我覺得 " + fmtSeatNum(wolfMateSeer.id) + "號" + wolfMateSeer.name + " 的觀察員視野與時間線真實多了！反觀 " + fmtSeatNum(wolfScapegoat.id) + "號" + wolfScapegoat.name + " 一直躲在後面攪混水，我堅定站邊 " + fmtSeatNum(wolfMateSeer.id) + "號，這輪直接把票集中給 " + wolfScapegoat.id + "號！"
       });
     } else {
       cards.push({
         tgKind: "heart",
         tgTag: "悍跳查殺",
-        label: "【狼隊悍跳】冒充明心觀察員・查殺 0" + wolfScapegoat.id + "號 " + wolfScapegoat.name,
-        text: "請全場注意我的視野！我才是這局真正的明心觀察員！昨晚我查驗了 0" + wolfScapegoat.id + "號" + wolfScapegoat.name + "，確定他是躲在茶席裡的酸民狼！我警徽與公投票全部押在 " + wolfScapegoat.id + "號，請好人跟我一起出他！"
+        label: "【狼隊悍跳】冒充明心觀察員・查殺 " + fmtSeatNum(wolfScapegoat.id) + "號 " + wolfScapegoat.name,
+        text: "請全場注意我的視野！我才是這局真正的明心觀察員！昨晚我查驗了 " + fmtSeatNum(wolfScapegoat.id) + "號" + wolfScapegoat.name + "，確定他是躲在茶席裡的酸民狼！我警徽與公投票全部押在 " + wolfScapegoat.id + "號，請好人跟我一起出他！"
       });
     }
   } else {
@@ -624,7 +624,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "heart",
       tgTag: "存好心",
-      label: "【存好心】盤好人坑與狼坑：重點檢視 0" + sampleTarget.id + "號 " + sampleTarget.name,
+      label: "【存好心】盤好人坑與狼坑：重點檢視 " + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name,
       text: targetAlreadySpoke
         ? ("我存好心幫大家梳理一下坑位：" + buddyNote + "剛才講過的 " + sampleTarget.id + "號" + sampleTarget.name + " 立場比較模糊，暫時進我今天的檢視狼坑，請大家也聽完還沒發言的人表水再對齊！")
         : ("目前好人坑與狼坑都還在成形中，因為 " + sampleTarget.id + "號" + sampleTarget.name + " 今天還沒發言，我先留著待聽他等一下怎麼盤坑！")
@@ -640,14 +640,14 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "words",
       tgTag: "拉攏票倉",
-      label: "【假發金水・拉攏好人】力挺 0" + friendTarget.id + "號 " + friendTarget.name + " 帶動信任",
-      text: "這輪我特別想幫 0" + friendTarget.id + "號" + friendTarget.name + " 說話！我覺得他的發言邏輯比全場很多人都誠懇真摯，明顯是站在好人視角替大家著想的好夥伴，大家可以放心先把 " + friendTarget.id + "號 放進好人坑跟我一起抓狼！"
+      label: "【假發金水・拉攏好人】力挺 " + fmtSeatNum(friendTarget.id) + "號 " + friendTarget.name + " 帶動信任",
+      text: "這輪我特別想幫 " + fmtSeatNum(friendTarget.id) + "號" + friendTarget.name + " 說話！我覺得他的發言邏輯比全場很多人都誠懇真摯，明顯是站在好人視角替大家著想的好夥伴，大家可以放心先把 " + friendTarget.id + "號 放進好人坑跟我一起抓狼！"
     });
   } else {
     cards.push({
       tgKind: "words",
       tgTag: "說好話",
-      label: "【說好話】放進好人坑：溫和力挺 0" + friendTarget.id + "號 " + friendTarget.name,
+      label: "【說好話】放進好人坑：溫和力挺 " + fmtSeatNum(friendTarget.id) + "號 " + friendTarget.name,
       text: friendSpoke
         ? ("我想把 " + friendTarget.id + "號" + friendTarget.name + " 放進好人坑！剛剛聽他發言態度溫和、邏輯真誠，只要好人彼此互信不亂踩，這輪一定能把真正狼坑抓出來！")
         : ("目前 " + friendTarget.id + "號" + friendTarget.name + " 還沒發言，不過他前面幾輪的配合態度還算穩定，我期待聽完他的表水，大家先別急著把他打進狼坑！")
@@ -670,7 +670,7 @@ function preparePlayerSpeechPanel() {
       isEvidenceCard: true,
       evidenceClueId: evClue.id,
       evidenceTargetId: evSeat.id,
-      label: "【⚡呈堂證供・邏輯破防】對 0" + evSeat.id + "號 " + evSeat.name + " 打出關鍵線索！",
+      label: "【⚡呈堂證供・邏輯破防】對 " + fmtSeatNum(evSeat.id) + "號 " + evSeat.name + " 打出關鍵線索！",
       text: evClue.summary
     });
   } else if (player.role === "wolf") {
@@ -680,15 +680,15 @@ function preparePlayerSpeechPanel() {
       cards.push({
         tgKind: "deeds",
         tgTag: "深水倒鉤",
-        label: "【狼隊偽裝・穿衣自保】保持理性和氣，點檢視 0" + pushSeat.id + "號",
-        text: "大家先別急著火氣上來，我是個低調守規矩、有分寸的茶席好夥伴，這輪先把視角對準立場比較模糊的 0" + pushSeat.id + "號" + pushSeat.name + "，我們理性聽清楚後面表水再定票！"
+        label: "【狼隊偽裝・穿衣自保】保持理性和氣，點檢視 " + fmtSeatNum(pushSeat.id) + "號",
+        text: "大家先別急著火氣上來，我是個低調守規矩、有分寸的茶席好夥伴，這輪先把視角對準立場比較模糊的 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + "，我們理性聽清楚後面表水再定票！"
       });
     } else {
       cards.push({
         tgKind: "deeds",
         tgTag: "帶風推坑",
-        label: "【狼隊戰術・抗推抗辯】假穿護航・點進狼坑 0" + pushSeat.id + "號 " + pushSeat.name,
-        text: "昨晚其實是我用關鍵職能幫忙穩住局勢，所以我自己絕對是鐵好人一張！反觀 0" + pushSeat.id + "號" + pushSeat.name + " 的反應一直閃躲對立，我直接先把 " + pushSeat.id + "號 點進第一狼坑！"
+        label: "【狼隊戰術・抗推抗辯】假穿護航・點進狼坑 " + fmtSeatNum(pushSeat.id) + "號 " + pushSeat.name,
+        text: "昨晚其實是我用關鍵職能幫忙穩住局勢，所以我自己絕對是鐵好人一張！反觀 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + " 的反應一直閃躲對立，我直接先把 " + pushSeat.id + "號 點進第一狼坑！"
       });
     }
   } else if (evToday.fakeSeerId && getSeat(evToday.fakeSeerId) && getSeat(evToday.fakeSeerId).alive) {
@@ -696,8 +696,8 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "deeds",
       tgTag: "拆穿假牌",
-      label: "【存好心・正面回應】拆穿 0" + fs.id + "號 " + fs.name + " 剛剛假冒明心觀察員！",
-      text: "終於輪到我發言了！剛才前置位 0" + fs.id + "號" + fs.name + " 竟然冒充明心觀察員誤導全場，我才是真正的明心觀察員，他鐵定佔一個狼坑，請好人今天務必先把 " + fs.id + "號 請離茶席！"
+      label: "【存好心・正面回應】拆穿 " + fmtSeatNum(fs.id) + "號 " + fs.name + " 剛剛假冒明心觀察員！",
+      text: "終於輪到我發言了！剛才前置位 " + fmtSeatNum(fs.id) + "號" + fs.name + " 竟然冒充明心觀察員誤導全場，我才是真正的明心觀察員，他鐵定佔一個狼坑，請好人今天務必先把 " + fs.id + "號 請離茶席！"
     });
   } else if (dualWorlds && dualWorlds.chosenWorld && dualWorlds.rivalWorld) {
     const wA = dualWorlds.worldA;
@@ -717,22 +717,22 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "words",
       tgTag: "回應狼坑",
-      label: "【正面回應】反駁前置位 0" + ac.id + "號 " + ac.name + " 把你點進狼坑",
-      text: "前置位 0" + ac.id + "號" + ac.name + " 剛才把我點進狼坑我必須回應：我全程認真找線索，絕對不在狼坑裡！你急著把我往狼坑推反而讓人懷疑，這輪我先把你跟 " + (extraWp ? (extraWp.id + "號") : "立場曖昧的位置") + " 畫進檢視狼坑！"
+      label: "【正面回應】反駁前置位 " + fmtSeatNum(ac.id) + "號 " + ac.name + " 把你點進狼坑",
+      text: "前置位 " + fmtSeatNum(ac.id) + "號" + ac.name + " 剛才把我點進狼坑我必須回應：我全程認真找線索，絕對不在狼坑裡！你急著把我往狼坑推反而讓人懷疑，這輪我先把你跟 " + (extraWp ? (extraWp.id + "號") : "立場曖昧的位置") + " 畫進檢視狼坑！"
     });
   } else if (evToday.toxicSlipId && getSeat(evToday.toxicSlipId) && getSeat(evToday.toxicSlipId).alive) {
     const tx = getSeat(evToday.toxicSlipId);
     cards.push({
       tgKind: "deeds",
       tgTag: "做好事",
-      label: "【做好事・化解酸言】點出 0" + tx.id + "號 " + tx.name + " 剛剛的挑撥語氣",
-      text: "輪到我發言想提醒大家，剛才前置位 0" + tx.id + "號" + tx.name + " 的語氣帶著挑撥對立，很符合酸民狼的特徵，暫時先放一格狼坑；我們保持說好話風度，大家多檢視 " + tx.id + "號。"
+      label: "【做好事・化解酸言】點出 " + fmtSeatNum(tx.id) + "號 " + tx.name + " 剛剛的挑撥語氣",
+      text: "輪到我發言想提醒大家，剛才前置位 " + fmtSeatNum(tx.id) + "號" + tx.name + " 的語氣帶著挑撥對立，很符合酸民狼的特徵，暫時先放一格狼坑；我們保持說好話風度，大家多檢視 " + tx.id + "號。"
     });
   } else {
     cards.push({
       tgKind: "deeds",
       tgTag: "做好事",
-      label: "【做好事】點出完整坑位・守護好人坑 0" + friendTarget.id + "號",
+      label: "【做好事】點出完整坑位・守護好人坑 " + fmtSeatNum(friendTarget.id) + "號",
       text: "我提醒大家按發言時序把坑位理清：目前好人坑先看 " + friendTarget.id + "號" + friendTarget.name + "，其餘未發言席位待聽表水後再從中點齊剩餘狼坑，避免好人被帶風向誤投！"
     });
   }
@@ -1048,13 +1048,13 @@ function submitPlayerSpeech() {
         if (typeof stage3d.triggerHeroBeat === "function") stage3d.triggerHeroBeat("celebrate", 2200);
       }
       triggerShake(280);
-      triggerCutIn("⚡ 呈堂證供・邏輯破防！", "鐵證命中 0" + evTarget.id + "號 " + evTarget.name + " 破綻，全場好人高度警覺！", "gold");
+      triggerCutIn("⚡ 呈堂證供・邏輯破防！", "鐵證命中 " + fmtSeatNum(evTarget.id) + "號 " + evTarget.name + " 破綻，全場好人高度警覺！", "gold");
       triggerAiCrowdReactions("crit", evTarget.id);
       bumpCombo("邏輯破防");
       addThreeGoodPoint("heart", "存好心照破矛盾");
       addLog({
         kind: "blessing",
-        title: "⚡ 邏輯破防！你出示蒐證鐵證直指 0" + evTarget.id + "號 " + evTarget.name + " 矛盾，好人陣營大幅提高警戒！",
+        title: "⚡ 邏輯破防！你出示蒐證鐵證直指 " + fmtSeatNum(evTarget.id) + "號 " + evTarget.name + " 矛盾，好人陣營大幅提高警戒！",
         text: ""
       });
     }

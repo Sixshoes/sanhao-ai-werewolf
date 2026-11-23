@@ -208,16 +208,26 @@ function assertMatchInvariants(matchIdx) {
         throw new Error(`Match ${matchIdx}: forbidden term "${bad}" in speech: ${txt}`);
       }
     }
+    if (/01[0-2]號/.test(txt)) {
+      throw new Error(`Match ${matchIdx}: malformed seat number (010/011/012) in speech: ${txt}`);
+    }
+  }
+  for (const lg of m.logs || []) {
+    const txt = String(lg.text || "") + " " + String(lg.badge || "");
+    if (/01[0-2]號/.test(txt)) {
+      throw new Error(`Match ${matchIdx}: malformed seat number (010/011/012) in log: ${txt}`);
+    }
   }
 }
 
+const modeCounts = ["6", "8", "10", "12"];
 for (let i = 0; i < 60; i++) {
   pendingTimers.clear();
-  const count = i % 2 === 0 ? "8" : "6";
+  const count = modeCounts[i % modeCounts.length];
   const prefRole = roles[i % roles.length];
   const diff = diffs[i % diffs.length];
-  const sheriffOn = i % 2 === 1;
-  const guardOn = count === "8" && (prefRole === "guard" || i % 4 === 0);
+  const sheriffOn = count === "12" ? true : (i % 2 === 1);
+  const guardOn = count === "12" ? true : (Number(count) >= 8 && (prefRole === "guard" || i % 3 === 0));
 
   vm.runInContext(`
     el("selectModeCount").value = ${JSON.stringify(count)};
@@ -235,7 +245,7 @@ for (let i = 0; i < 60; i++) {
   let sawPk = false;
   while (gState.match.phase !== "GAME_OVER") {
     steps += 1;
-    if (steps > 450 || gState.match.day > 14) {
+    if (steps > 650 || gState.match.day > 18) {
       throw new Error(`Match ${i} (count=${count}, role=${prefRole}, diff=${diff}, sheriff=${sheriffOn}) stalled at phase=${gState.match.phase}, day=${gState.match.day}`);
     }
     if (gState.match.pkCandidates && gState.match.pkCandidates.length >= 2) sawPk = true;
@@ -344,7 +354,8 @@ for (let i = 0; i < 60; i++) {
       if (pSelf && !pSelf.alive && ctx.isSpectatorGuessActive() && !gState.match.spectatorGuess.locked) {
         const mode = ctx.getSpectatorGuessMode();
         if (mode === "wolf_hunt") {
-          aliveOthers.slice(0, 2).forEach(s => ctx.toggleSpectatorWolfGuess(s.id));
+          const wCap = ctx.getInitialWolfCount();
+          aliveOthers.slice(0, wCap).forEach(s => ctx.toggleSpectatorWolfGuess(s.id));
         } else if (mode === "god_hunt") {
           ctx.getActiveGodRoleKeys().forEach((rk, kIdx) => {
             ctx.selectSpectatorGodSlot(rk);

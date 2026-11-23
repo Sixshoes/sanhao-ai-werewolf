@@ -14,7 +14,7 @@ const ACHIEVEMENT_DEFS = [
   { id: "four_g_sage",  icon: "🎴", title: "四給智囊",     desc: "善用四給錦囊並帶領陣營獲勝" },
   { id: "pro_slayer",      icon: "🧠", title: "凹嗚高手",   desc: "在「凹嗚高手局」難度下奪得勝利" },
   { id: "wolf_actor",      icon: "🎭", title: "深水影帝",   desc: "扮演酸民狼成功騙過全場獲勝" },
-  { id: "ghost_detective", icon: "🔍", title: "席外名偵探", desc: "好人離席觀戰時精準猜中全場 2 名酸民狼" },
+  { id: "ghost_detective", icon: "🔍", title: "席外名偵探", desc: "好人離席觀戰時精準猜中全場所有酸民狼" },
   { id: "shadow_oracle",   icon: "🎯", title: "暗影獵神手", desc: "酸民狼離席觀戰時全數猜中好人真神職" },
   { id: "logic_breaker",   icon: "⚡", title: "矛盾終結者", desc: "單局打出一張「呈堂證供」成功觸發邏輯破防" },
   { id: "micro_reader",    icon: "🔮", title: "觀微察心",   desc: "單局透過靜心觀微識破真正心虛的酸民狼" },
@@ -154,7 +154,7 @@ function buildMatchReplayReport() {
   const winnerLabel = m.winner === "good" ? "好人陣營獲勝" : (m.winner === "wolf" ? "酸民狼陣營獲勝" : "提早揭曉底牌");
   const lines = [
     "【三好AI狼人殺｜賽後上帝視角復盤戰報】",
-    "局制：" + m.totalSeats + "人局｜難度：" + diffLabel + (m.sheriffSeatId ? ("｜警長：0" + m.sheriffSeatId + "號") : ""),
+    "局制：" + m.totalSeats + "人局｜難度：" + diffLabel + (m.sheriffSeatId ? ("｜警長：" + fmtSeatNum(m.sheriffSeatId) + "號") : ""),
     "結果：" + winnerLabel + (m.winReason ? ("（" + m.winReason + "）") : ""),
     "友善度：" + m.harmonyScore + "｜說好話：" + (m.stats.goodWordsCount || 0) + "次｜轉好話暴擊：" + (m.stats.rewritesUsed || 0) + "次｜最高連擊：" + (m.maxCombo || 0),
     "",
@@ -165,14 +165,14 @@ function buildMatchReplayReport() {
     const tag = s.id === getPlayerId() ? "（你）" : "";
     const status = s.alive ? "存活" : ("離席：" + (s.outReason || "出局"));
     const sh = m.sheriffSeatId === s.id ? " [👑警長]" : "";
-    lines.push("  0" + s.id + "號 " + s.name + tag + sh + " — " + rName + "｜" + status);
+    lines.push("  " + fmtSeatNum(s.id) + "號 " + s.name + tag + sh + " — " + rName + "｜" + status);
   });
 
   if (m.voteHistory && m.voteHistory.length > 0) {
     lines.push("", "■ 各回合投票紀錄：");
     m.voteHistory.forEach(function (vh, idx) {
       const bStr = (vh.ballots || []).map(function (b) {
-        return "0" + b.voterId + "→" + (b.targetId ? ("0" + b.targetId) : "棄");
+        return fmtSeatNum(b.voterId) + "→" + (b.targetId ? (fmtSeatNum(b.targetId)) : "棄");
       }).join(" ");
       lines.push("  第 " + (vh.day || idx + 1) + " 輪：" + bStr);
     });

@@ -66,8 +66,8 @@ function updatePhaseTrackUI() {
   const cEl = el("spotlightTurnCounter");
   if (p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN") {
     const spObj = getSeat(state.activeSpeakerId);
-    const cur = spObj ? ("[0" + spObj.id + (spObj.id === getPlayerId() ? " 你" : (" " + spObj.name)) + " 發言中]") : "";
-    const rest = state.match.speechQueue.map(function (id) { return id === getPlayerId() ? ("0" + id + "(你)") : ("0" + id + "號"); }).join(" → ");
+    const cur = spObj ? ("[" + fmtSeatNum(spObj.id) + (spObj.id === getPlayerId() ? " 你" : (" " + spObj.name)) + " 發言中]") : "";
+    const rest = state.match.speechQueue.map(function (id) { return id === getPlayerId() ? (fmtSeatNum(id) + "(你)") : (fmtSeatNum(id) + "號"); }).join(" → ");
     const summary = cur + (rest ? (" → 接著：" + rest) : " → 準備投票");
     if (qHint) qHint.textContent = summary;
     if (cEl) cEl.textContent = rest ? ("下一順位：" + rest) : "本輪最後一位發言";
@@ -117,8 +117,9 @@ function updateAllUI() {
   }
   el("aiModeLabel").textContent = extLlmOn ? modelShort : "內建AI";
 
+  const lobbyWolfN = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
   const phaseMap = {
-    LOBBY: { pill: "準備開局", head: "找出 2 名說謊的酸民狼" },
+    LOBBY: { pill: "準備開局", head: "找出 " + lobbyWolfN + " 名說謊的酸民狼" },
     NIGHT_GUARD: { pill: "護心結界", head: "選 1 位夥伴展開守護結界（可守自己、不可連守）" },
     NIGHT_WOLF: { pill: "第" + m.day + "晚", head: "天黑請閉眼…" },
     NIGHT_SEER: { pill: "明心查證", head: "選 1 位夥伴靜心查證立場！" },
@@ -127,7 +128,7 @@ function updateAllUI() {
     HUNTER_RESOLVE: {
       pill: "⚖️ 正氣共鳴",
       head: m.lastHunterShot
-        ? ("0" + m.lastHunterShot.hunterId + "號 帶走 0" + m.lastHunterShot.targetId + "號 " + m.lastHunterShot.targetName + "！")
+        ? (fmtSeatNum(m.lastHunterShot.hunterId) + "號 帶走 " + fmtSeatNum(m.lastHunterShot.targetId) + "號 " + m.lastHunterShot.targetName + "！")
         : "直心糾察長正氣共鳴結算"
     },
     SHERIFF_ELECTION: { pill: "上警競選", head: "第一天警長競選（1.5 票＋末置位歸票權）" },
@@ -183,13 +184,17 @@ function renderSeatStrip() {
   const strip = el("seatButtonStrip");
   if (!strip) return;
   strip.innerHTML = "";
-  const lobbyCount = (el("selectModeCount") && parseInt(el("selectModeCount").value, 10) === 8) ? 8 : 6;
+  const lobbyCount = typeof getLobbySeatCount === "function" ? getLobbySeatCount() : ((el("selectModeCount") && parseInt(el("selectModeCount").value, 10)) || 8);
   const seats = state.match.started ? state.match.seats : Array.from({ length: lobbyCount }, function (_, idx) {
     const n = idx + 1;
-    return { id: n, name: n === 1 ? "你" : AI_PERSONAS[n - 2].name, alive: true, color: n === 1 ? "#d4a657" : AI_PERSONAS[n - 2].avatarColor };
+    const pInfo = n === 1 ? null : (AI_PERSONAS[n - 2] || AI_PERSONAS[0]);
+    return { id: n, name: n === 1 ? "你" : pInfo.name, alive: true, color: n === 1 ? "#d4a657" : pInfo.avatarColor };
   });
   const wasHidden = strip.classList.contains("hidden");
-  strip.className = (wasHidden ? "hidden " : "") + "grid gap-1.5 " + (seats.length === 8 ? "grid-cols-4 sm:grid-cols-8" : "grid-cols-3 sm:grid-cols-6");
+  const gridCols = seats.length >= 10
+    ? "grid-cols-4 sm:grid-cols-6"
+    : (seats.length === 8 ? "grid-cols-4 sm:grid-cols-8" : "grid-cols-3 sm:grid-cols-6");
+  strip.className = (wasHidden ? "hidden " : "") + "grid gap-1.5 " + gridCols;
   const pid = getPlayerId();
   const p = state.match.phase;
   const pSelf = state.match.started ? getPlayerSeat() : null;
@@ -334,7 +339,7 @@ function renderPlayerRoleCard() {
 
   let info = rDef.desc;
   if (p.role === "guard") {
-    info = state.match.lastGuardTargetId ? ("上晚守：0" + state.match.lastGuardTargetId + "號（今晚不可連守，可守自己）") : rDef.desc;
+    info = state.match.lastGuardTargetId ? ("上晚守：" + fmtSeatNum(state.match.lastGuardTargetId) + "號（今晚不可連守，可守自己）") : rDef.desc;
   } else if (p.role === "seer" && p.checkedHistory.length > 0) {
     info = "已查：" + p.checkedHistory.map(function (c) {
       return c.targetId + "號=" + (c.isWolf ? "狼" : "好人");
@@ -437,8 +442,8 @@ function renderPkDuelBanner(liveCounts) {
   const pid = getPlayerId();
   syncPkPortrait(el("pkLeftImg"), left);
   syncPkPortrait(el("pkRightImg"), right);
-  if (el("pkLeftName")) el("pkLeftName").textContent = "0" + left.id + "號 " + (left.id === pid ? "你" : left.name);
-  if (el("pkRightName")) el("pkRightName").textContent = "0" + right.id + "號 " + (right.id === pid ? "你" : right.name);
+  if (el("pkLeftName")) el("pkLeftName").textContent = fmtSeatNum(left.id) + "號 " + (left.id === pid ? "你" : left.name);
+  if (el("pkRightName")) el("pkRightName").textContent = fmtSeatNum(right.id) + "號 " + (right.id === pid ? "你" : right.name);
   const lv = liveCounts ? (liveCounts[left.id] || 0) : null;
   const rv = liveCounts ? (liveCounts[right.id] || 0) : null;
   if (el("pkLeftVotes")) el("pkLeftVotes").textContent = lv !== null ? ("即時 " + lv + " 票") : (state.activeSpeakerId === left.id ? "🎙 正在拉票" : "PK 對決台");

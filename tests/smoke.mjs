@@ -33,6 +33,8 @@ if (!cssMatches.includes("css/tailwind-local.css")) {
 // 1b. Verify Offline Portrait, 360° Skybox, Poly Haven CC0 PBR Textures & Deployment Docs
 const requiredAssets = [
   "index.html",
+  "manifest.webmanifest",
+  "sw.js",
   "CREDITS.md",
   "assets/portraits/player.jpg",
   "assets/portraits/player_female.jpg",
@@ -44,6 +46,10 @@ const requiredAssets = [
   "assets/portraits/xiaoyun.jpg",
   "assets/portraits/azhu.jpg",
   "assets/portraits/chenchen.jpg",
+  "assets/portraits/mobai.jpg",
+  "assets/portraits/qinglan.jpg",
+  "assets/portraits/alang.jpg",
+  "assets/portraits/youzi.jpg",
   "assets/sky/sanctuary_day.jpg",
   "assets/sky/sanctuary_dusk.jpg",
   "assets/sky/sanctuary_night.jpg",
@@ -308,8 +314,8 @@ vm.runInContext(`
     setHeroVisualMode(rHero, "glb"); // safely stays sculpt3d when no .glb loaded
     updateHeroCharacter(rHero, new THREE.PerspectiveCamera(), { tSec: 1.5, nowMs: 1500, p: "LOBBY", w: 1280, h: 720 }, null, true);
 
-    // Build ALL 8 bespoke Genshin-styled AI seated actors + verify double-sided plaque materials
-    const allSeatNames = ["你", "小澄", "暖暖", "阿松", "星兒", "小雲", "阿竹", "晨晨"];
+    // Build ALL 12 bespoke Genshin-styled AI seated actors + verify double-sided plaque materials
+    const allSeatNames = ["你", "小澄", "暖暖", "阿松", "星兒", "小雲", "阿竹", "晨晨", "墨白", "晴嵐", "阿朗", "柚子"];
     allSeatNames.forEach((nm, idx) => {
       const rActor = create3DSeatActor({ id: idx + 1, name: nm, color: "#38bdf8", alive: true, role: "villager" });
       if (!rActor || !rActor.vrmMountGroup || !rActor.sculptBodyRoot) {
@@ -3366,4 +3372,108 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v5.0 Indie UX Flow + Flagship 3D Hero ('清茗') + Multi-Agent Orchestrator E2E smoke test PASSED!");
+// PLAN1-PLAN2-UPGRADE: Voice streaming/pause/speed, Stance strip, Reaction card, Table matrix, Quote rebuttal, PWA, and 10/12-player expansion
+{
+  const pwaManifest = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.webmanifest"), "utf8"));
+  if (!pwaManifest.name || !pwaManifest.start_url) {
+    throw new Error("Invalid manifest.webmanifest");
+  }
+  const swSrc = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  if (!swSrc.includes("/api/") || !swSrc.includes("CACHE_NAME") || !swSrc.includes("IMMUTABLE_RE")) {
+    throw new Error("sw.js missing API bypass or static cache strategy");
+  }
+
+  const p12Res = vm.runInContext(`(() => {
+    // 1. Seat number formatter invariants (01..09, 10..12 — never 010!)
+    const fmtOk = fmtSeatNum(1) === "01" && fmtSeatNum(9) === "09" && fmtSeatNum(10) === "10" && fmtSeatNum(12) === "12" && fmtSeatTag(12) === "12號";
+
+    // 2. Voice streaming splitter + Pause/Resume + Quick rate cycle
+    const streamParts = voice.splitTwoStageStream("各位書院夥伴早安，我昨晚查驗了 10號 晴嵐，他是好人金水！請大家一起盯緊前置位踩人的對象。");
+    const splitOk = Array.isArray(streamParts) && streamParts.length === 2 && streamParts[0].length >= 6 && streamParts[1].length >= 6;
+    const prevRate = voice.rate;
+    const r1 = voice.cycleQuickRate();
+    const r2 = voice.cycleQuickRate();
+    const r3 = voice.cycleQuickRate();
+    voice.rate = prevRate;
+    voice.syncQuickSpeedButtonUi();
+    const rateCycleOk = [r1, r2, r3].some(v => Math.abs(v - 1.10) < 0.02) && [r1, r2, r3].some(v => Math.abs(v - 1.22) < 0.02) && [r1, r2, r3].some(v => Math.abs(v - 0.96) < 0.02);
+
+    // 3. 10-player match setup (3 wolves, 10 seats, zero "010號")
+    clearStepTimer();
+    el("selectModeCount").value = "10";
+    el("selectPreferredRole").value = "seer";
+    el("chkGuardMode").checked = true;
+    el("chkSheriffMode").checked = true;
+    state.autoPlay = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const m10Seats = state.match.seats.length;
+    const m10Wolves = state.match.seats.filter(s => s.team === "wolf").length;
+    const m10Has10 = Boolean(getSeat(10));
+    const m10LogsStr = JSON.stringify(state.match.logs || []);
+    const m10NoBadZero = !/01[0-2]號/.test(m10LogsStr);
+
+    // 4. 12-player match setup (4 wolves, 4 gods, 4 villagers, 4 new personas present)
+    clearStepTimer();
+    el("selectModeCount").value = "12";
+    el("selectPreferredRole").value = "villager";
+    state.autoPlay = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const m12Seats = state.match.seats.length;
+    const m12Wolves = state.match.seats.filter(s => s.team === "wolf").length;
+    const m12Gods = state.match.seats.filter(s => isGodRole(s.role)).length;
+    const m12Names = state.match.seats.map(s => s.name);
+    const has4NewChars = ["墨白", "晴嵐", "阿朗", "柚子"].every(n => m12Names.includes(n));
+
+    // 5. Plan 1 UI components in 12-player context: stance strip, target reaction card, table matrix & quote rebuttal
+    const s10 = getSeat(10);
+    const s12 = getSeat(12);
+    const fakeEv = {
+      day: 1, speakerId: 10, speakerName: s10.name,
+      claimRole: "seer", accuseId: 12, vouchId: 2,
+      wolfPits: [12, 11], goodPits: [2],
+      rawText: "我是明心觀察員，昨晚查驗 12號 是酸民狼，02號 是好人金水！"
+    };
+    state.match.daySpeechEvents = state.match.daySpeechEvents || [];
+    state.match.allSpeechEvents = state.match.allSpeechEvents || [];
+    state.match.daySpeechEvents.push(fakeEv);
+    state.match.allSpeechEvents.push(fakeEv);
+    renderSpeakerStanceStrip(s10, fakeEv);
+    const stanceText = (el("speakerStanceStrip")._children || []).map(c => c.textContent || "").join(" ");
+    const stanceOk = !el("speakerStanceStrip").classList.contains("hidden") && stanceText.includes("12") && !/01[0-2]/.test(stanceText);
+
+    renderTargetReactionCard(s10, fakeEv);
+    const reactBadge = el("targetReactBadge").textContent || "";
+    const reactOk = !el("spotlightTargetReact").classList.contains("hidden") && reactBadge.includes("12") && !/01[0-2]/.test(reactBadge);
+
+    renderTableMatrixIntoBody();
+    const matrixChildren = el("matrixSheetBody")._children || [];
+    const matrixHtml = matrixChildren.map(c => c.innerHTML || "").join(" ");
+    const matrixOk = matrixChildren.length === 12 && !/01[0-2]/.test(matrixHtml);
+
+    state.match.phase = "DAY_PLAYER_TURN";
+    quoteSpeechForRebuttal(10, fakeEv.rawText);
+    const quoteOk = el("quickFreeInput").value.includes("10號") && !el("quickFreeInput").value.includes("010號");
+
+    renderSeatStrip();
+    const strip12Ok = (el("seatButtonStrip")._children || []).length === 12;
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      fmtOk, splitOk, rateCycleOk,
+      m10Ok: m10Seats === 10 && m10Wolves === 3 && m10Has10 && m10NoBadZero,
+      m12Ok: m12Seats === 12 && m12Wolves === 4 && m12Gods === 4 && has4NewChars,
+      stanceOk, reactOk, matrixOk, quoteOk, strip12Ok
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(p12Res)) {
+    if (!v) {
+      throw new Error("PLAN1-PLAN2-UPGRADE check failed for " + k + ": " + JSON.stringify(p12Res));
+    }
+  }
+}
+
+console.log("[OK] Full v5.3 Plan 1 & Plan 2 (6/8/10/12p + Voice/UI/PWA + Flagship 3D) E2E smoke test PASSED!");

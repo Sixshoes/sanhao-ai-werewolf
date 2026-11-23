@@ -192,7 +192,7 @@ function finalizeVoteRound(playerTargetId) {
   ballots.forEach(function (b) {
     if (b.targetId) {
       if (!groupedVoters[b.targetId]) groupedVoters[b.targetId] = [];
-      groupedVoters[b.targetId].push("0" + b.voterId);
+      groupedVoters[b.targetId].push(fmtSeatNum(b.voterId));
     }
   });
 
@@ -319,7 +319,7 @@ function finalizeVoteRound(playerTargetId) {
         // 凹嗚規則：玩家被公投出局時，先親自發表遺言，再顯示票型與觀戰/結束選項！
         startLastWordsSequence([outSeat.id], "vote_out", function (recordedText) {
           state.voteResultPayload = {
-            headline: "0" + outSeat.id + "號 " + outSeat.name + " 最高票離席休息" + shieldNote,
+            headline: fmtSeatNum(outSeat.id) + "號 " + outSeat.name + " 最高票離席休息" + shieldNote,
             lastWord: recordedText || "（已發表遺言並離席）",
             tallies: tallies,
             groupedVoters: groupedVoters,
@@ -340,7 +340,7 @@ function finalizeVoteRound(playerTargetId) {
       const lastWord = "「" + aiLw.text + "」";
 
       state.voteResultPayload = {
-        headline: "0" + outSeat.id + "號 " + outSeat.name + " 最高票離席休息" + shieldNote,
+        headline: fmtSeatNum(outSeat.id) + "號 " + outSeat.name + " 最高票離席休息" + shieldNote,
         lastWord: lastWord,
         tallies: tallies,
         groupedVoters: groupedVoters,
@@ -428,11 +428,11 @@ function runVoteFlightSequence(ballots, onDone) {
         const labelPop = cnt >= 3 ? ("🔥 " + cnt + "票領先!") : (cnt >= 2 ? ("⚠ 累計 " + cnt + "票!") : "+1 票!");
         spawnFx(b.targetId, labelPop, cnt >= 2 ? "#f43f5e" : "#fb7185", { scale: cnt >= 2 ? 1.18 : 1.0, durationMs: 1450 });
         sound.tone(440 + idx * 38 + Math.min(cnt, 4) * 32, 0.08, "triangle", 0.055, 0);
-        if (fTxt) fTxt.textContent = "開票 (" + (idx + 1) + "/" + ballots.length + ")：0" + b.voterId + " " + vName + " → 投給 0" + b.targetId + " " + tName + "（累計 " + cnt + " 票）";
+        if (fTxt) fTxt.textContent = "開票 (" + (idx + 1) + "/" + ballots.length + ")：" + fmtSeatNum(b.voterId) + " " + vName + " → 投給 " + fmtSeatNum(b.targetId) + " " + tName + "（累計 " + cnt + " 票）";
       } else {
         spawnFx(b.voterId, "棄票", "#94a3b8");
         sound.tone(320, 0.06, "sine", 0.035, 0);
-        if (fTxt) fTxt.textContent = "開票 (" + (idx + 1) + "/" + ballots.length + ")：0" + b.voterId + " " + vName + " 棄票";
+        if (fTxt) fTxt.textContent = "開票 (" + (idx + 1) + "/" + ballots.length + ")：" + fmtSeatNum(b.voterId) + " " + vName + " 棄票";
       }
     }, idx * stepMs);
     timers.push(tm);
@@ -533,20 +533,20 @@ function useFourGConfidence() {
   setSeatEmotion(target.id, "happy", 3400);
   spawnBurst(target.id, ["#34d399", "#fbbf24", "#ffffff"], 22, "petal");
   // Fair Play: Unified public copy prevents leaking whether target is Good or Wolf before tally!
-  triggerCutIn("🛡 四給・給信心！", "0" + target.id + "號 " + target.name + " 獲得信任護盾・本輪少計 1 票！", "emerald");
+  triggerCutIn("🛡 四給・給信心！", fmtSeatNum(target.id) + "號 " + target.name + " 獲得信任護盾・本輪少計 1 票！", "emerald");
   spawnFx(target.id, "🛡 擋1票護盾!", "#34d399");
   bumpCombo("四給・給信心");
 
   const others = getAliveSeats().filter(function (s) { return s.id !== target.id; });
   others.sort(function (a, b) { return (target.suspicionMap[b.id] || 50) - (target.suspicionMap[a.id] || 50); });
   const topSus = others[0];
-  const topLbl = topSus ? ("0" + topSus.id + "號") : "可疑者";
+  const topLbl = topSus ? (fmtSeatNum(topSus.id) + "號") : "可疑者";
   const replyTpl = PERSONA_CONFIDENCE_LINES[target.name] || ("謝謝你的信任！這輪我也會特別留意 " + topLbl + "！");
   setCanvasBubble(target.id, replyTpl.replace(/\{t\}/g, topLbl), "trust");
 
   addLog({
     kind: "blessing",
-    title: "🛡 給信心：0" + target.id + "號 本輪擋1票護盾，並回應目前留意 " + (topSus ? ("0" + topSus.id + "號") : "未知"),
+    title: "🛡 給信心：" + fmtSeatNum(target.id) + "號 本輪擋1票護盾，並回應目前留意 " + (topSus ? (fmtSeatNum(topSus.id) + "號") : "未知"),
     text: ""
   });
   triggerFourGSynergyCheck("confidence");
@@ -609,7 +609,7 @@ function useFourGJoy() {
   state.match.fourGJoySuspects = sortedNervous.slice();
   const pairLabels = sortedNervous.map(function (id) {
     const st = getSeat(id);
-    return "0" + id + "號" + (st ? (" " + st.name) : "");
+    return fmtSeatNum(id) + "號" + (st ? (" " + st.name) : "");
   });
   const clueMsg = pairLabels.length >= 2
     ? ("☀️ 給歡喜破冰成功！" + pairLabels.join(" 與 ") + " 笑容略顯僵硬，其中必藏酸民狼（點擊可細看心虛脈搏）！")
@@ -618,7 +618,7 @@ function useFourGJoy() {
       : "☀️ 給歡喜破冰成功！全場氣氛大大回溫！");
   addLog({ kind: "blessing", title: clueMsg, text: "" });
   showToast(pairLabels.length >= 2
-    ? ("👀 給歡喜試探：" + sortedNervous.map(function (id) { return "0" + id + "號"; }).join(" 與 ") + " 同時笑僵！可搭配【給希望】雙光交會鎖定！")
+    ? ("👀 給歡喜試探：" + sortedNervous.map(function (id) { return fmtSeatNum(id) + "號"; }).join(" 與 ") + " 同時笑僵！可搭配【給希望】雙光交會鎖定！")
     : (pairLabels.length === 1 ? ("👀 快看圓桌！" + pairLabels[0] + " 笑不出來正在冒冷汗！") : "全場笑聲驅散了酸言霧霾！"), "emerald");
   triggerFourGSynergyCheck("joy");
   updateAllUI();
@@ -655,7 +655,7 @@ function useFourGHope() {
     setSeatEmotion(pair[1].id, "shock", 2600);
     spawnFx(pair[0].id, "二選一!", "#38bdf8");
     spawnFx(pair[1].id, "二選一!", "#38bdf8");
-    triggerCutIn("🌟 四給・給希望！", "金色雙光鎖定：0" + pair[0].id + "號 與 0" + pair[1].id + "號 必有一狼！", "gold");
+    triggerCutIn("🌟 四給・給希望！", "金色雙光鎖定：" + fmtSeatNum(pair[0].id) + "號 與 " + fmtSeatNum(pair[1].id) + "號 必有一狼！", "gold");
     msg = "AI 二選一鎖定：【" + pair[0].id + "號】與【" + pair[1].id + "號】其中必有酸民狼！";
 
     const joyList = Array.isArray(state.match.fourGJoySuspects) ? state.match.fourGJoySuspects : [];
@@ -665,8 +665,8 @@ function useFourGHope() {
       state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + 6, 0, 100);
       bumpCombo("四給雙光交會");
       spawnFx(ov.id, "✨ 雙光交會焦點!", "#fbbf24");
-      triggerCutIn("✨ 歡喜 × 希望・雙光交會！", "0" + ov.id + "號 " + ov.name + " 同時落在破冰緊張與雙光鎖定中，建議重點查證！", "gold");
-      addLog({ kind: "blessing", title: "✨ 歡喜×希望雙光交會：0" + ov.id + "號 " + ov.name + " 同時重疊兩張四給線索！", text: "" });
+      triggerCutIn("✨ 歡喜 × 希望・雙光交會！", fmtSeatNum(ov.id) + "號 " + ov.name + " 同時落在破冰緊張與雙光鎖定中，建議重點查證！", "gold");
+      addLog({ kind: "blessing", title: "✨ 歡喜×希望雙光交會：" + fmtSeatNum(ov.id) + "號 " + ov.name + " 同時重疊兩張四給線索！", text: "" });
     }
   }
   addLog({ kind: "blessing", title: msg, text: "" });
@@ -688,7 +688,7 @@ function useFourGConvenience() {
     sound.playBlessing();
 
     const claims = state.match.seats.filter(function (s) { return s.alive && s.claimedRole && ROLE_DEFS[s.claimedRole]; })
-      .map(function (s) { return "0" + s.id + "號跳" + ROLE_DEFS[s.claimedRole].name; });
+      .map(function (s) { return fmtSeatNum(s.id) + "號跳" + ROLE_DEFS[s.claimedRole].name; });
     const vw = typeof computeTableWindVane === "function" ? computeTableWindVane() : null;
     const digestText = "跳牌：" + (claims.length ? claims.join("、") : "尚無") + (vw && vw.summaryText ? ("｜" + vw.summaryText) : "");
 
@@ -706,13 +706,13 @@ function useFourGConvenience() {
       if (typeof stage3d !== "undefined" && stage3d.isActive()) {
         stage3d.triggerSkillFx("seer_scan", getPlayerId(), sel.id, false);
       }
-      triggerCutIn("🧭 四給・給方便歸票！", "理清全場關係線，號召搖擺好人集中檢視 0" + sel.id + "號 " + sel.name + "！", "gold");
+      triggerCutIn("🧭 四給・給方便歸票！", "理清全場關係線，號召搖擺好人集中檢視 " + fmtSeatNum(sel.id) + "號 " + sel.name + "！", "gold");
       addLog({
         kind: "blessing",
-        title: "🧭 給方便歸票：已點亮連線並號召集中檢視 0" + sel.id + "號 " + sel.name + "！（" + digestText + "）",
+        title: "🧭 給方便歸票：已點亮連線並號召集中檢視 " + fmtSeatNum(sel.id) + "號 " + sel.name + "！（" + digestText + "）",
         text: ""
       });
-      showToast("🧭 已理清關係線並號召好人歸票 0" + sel.id + "號！（" + digestText + "）", "emerald");
+      showToast("🧭 已理清關係線並號召好人歸票 " + fmtSeatNum(sel.id) + "號！（" + digestText + "）", "emerald");
     } else {
       // Find the seat with a real observable contradiction, toxic slip, or early claim
       const evs = state.match.daySpeechEvents || [];
@@ -731,10 +731,10 @@ function useFourGConvenience() {
           stage3d.triggerSkillFx("seer_scan", getPlayerId(), hs.id, false);
         }
       }
-      triggerCutIn("🧭 四給・給方便理清混亂！", hs ? ("已標記全場焦點 0" + hs.id + "號 " + hs.name + " 並點亮關係連線！") : "已點亮全場 3D 關係連線與戰情懶人包！", "gold");
+      triggerCutIn("🧭 四給・給方便理清混亂！", hs ? ("已標記全場焦點 " + fmtSeatNum(hs.id) + "號 " + hs.name + " 並點亮關係連線！") : "已點亮全場 3D 關係連線與戰情懶人包！", "gold");
       addLog({
         kind: "blessing",
-        title: "🧭 給方便戰情懶人包：" + (hs ? ("焦點 0" + hs.id + "號" + hs.name + "｜") : "") + digestText,
+        title: "🧭 給方便戰情懶人包：" + (hs ? ("焦點 " + fmtSeatNum(hs.id) + "號" + hs.name + "｜") : "") + digestText,
         text: ""
       });
       showToast("🧭 " + digestText + "（下次先點目標再按「給方便」還能直接歸票！）", "emerald");
@@ -779,11 +779,11 @@ function handleSheriffEliminated(deadSheriff, onDone) {
     if (pick) {
       spawnBeam(deadSheriff.id, pick.id, "#fbbf24", "trust", 900);
       spawnFx(pick.id, "👑 接棒警徽!", "#fbbf24");
-      triggerCutIn("👑 警徽移交！", "0" + deadSheriff.id + "號警長將 1.5 票警徽交予 0" + pick.id + "號 " + (pick.id === getPlayerId() ? "你" : pick.name) + "！", "gold");
-      addLog({ kind: "blessing", title: "👑 警徽傳承：0" + deadSheriff.id + "號將警徽移交給 0" + pick.id + "號 " + (pick.id === getPlayerId() ? "你" : pick.name) + "（擁有 1.5 票歸票權）！", text: "" });
+      triggerCutIn("👑 警徽移交！", fmtSeatNum(deadSheriff.id) + "號警長將 1.5 票警徽交予 " + fmtSeatNum(pick.id) + "號 " + (pick.id === getPlayerId() ? "你" : pick.name) + "！", "gold");
+      addLog({ kind: "blessing", title: "👑 警徽傳承：" + fmtSeatNum(deadSheriff.id) + "號將警徽移交給 " + fmtSeatNum(pick.id) + "號 " + (pick.id === getPlayerId() ? "你" : pick.name) + "（擁有 1.5 票歸票權）！", text: "" });
     } else {
-      triggerCutIn("💥 警徽撕毀！", "0" + deadSheriff.id + "號警長選擇當場撕毀警徽，本局不設警長。", "crimson");
-      addLog({ kind: "dawn", title: "💥 警徽作廢：0" + deadSheriff.id + "號離席並撕毀警徽！", text: "" });
+      triggerCutIn("💥 警徽撕毀！", fmtSeatNum(deadSheriff.id) + "號警長選擇當場撕毀警徽，本局不設警長。", "crimson");
+      addLog({ kind: "dawn", title: "💥 警徽作廢：" + fmtSeatNum(deadSheriff.id) + "號離席並撕毀警徽！", text: "" });
     }
     updateAllUI();
     doneCb();
@@ -809,8 +809,8 @@ function resolvePlayerSheriffTransfer(targetSeatId) {
     sound.playBlessing();
     spawnBeam(pid, heir.id, "#fbbf24", "trust", 900);
     spawnFx(heir.id, "👑 接下警徽!", "#fbbf24");
-    triggerCutIn("👑 警徽交棒！", "你將 1.5 票警徽移交給 0" + heir.id + "號 " + heir.name + "！", "gold");
-    addLog({ kind: "blessing", title: "👑 警徽傳承：你將警徽移交給 0" + heir.id + "號 " + heir.name + "！", text: "" });
+    triggerCutIn("👑 警徽交棒！", "你將 1.5 票警徽移交給 " + fmtSeatNum(heir.id) + "號 " + heir.name + "！", "gold");
+    addLog({ kind: "blessing", title: "👑 警徽傳承：你將警徽移交給 " + fmtSeatNum(heir.id) + "號 " + heir.name + "！", text: "" });
   } else {
     state.match.sheriffSeatId = null;
     state.match.stats.sheriffPassed = (state.match.stats.sheriffPassed || 0) + 1;
@@ -850,8 +850,8 @@ function useSheriffRallyCall() {
   if (typeof stage3d !== "undefined" && stage3d.isActive()) {
     stage3d.triggerSkillFx("seer_scan", pid, sel.id, false);
   }
-  triggerCutIn("👑 警長歸票號召！", "號召好人夥伴集中檢視 0" + sel.id + "號 " + sel.name + "（1.5票威望+14懷疑）！", "gold");
-  addLog({ kind: "blessing", title: "👑 警長歸票：你以警長身分號召好人陣營集中考量 0" + sel.id + "號 " + sel.name + "！", text: "" });
+  triggerCutIn("👑 警長歸票號召！", "號召好人夥伴集中檢視 " + fmtSeatNum(sel.id) + "號 " + sel.name + "（1.5票威望+14懷疑）！", "gold");
+  addLog({ kind: "blessing", title: "👑 警長歸票：你以警長身分號召好人陣營集中考量 " + fmtSeatNum(sel.id) + "號 " + sel.name + "！", text: "" });
   showToast("👑 警長歸票號召成功！接下來點「確認投票」送出你的 1.5 票！", "emerald");
   updateAllUI();
   return true;
@@ -879,8 +879,8 @@ function buildSheriffElectionCandidates() {
 
 function buildSheriffCandidateLine(cand) {
   const others = getAliveSeats().filter(function (s) { return s.id !== cand.id; });
-  const focus = others[0] ? ("0" + others[0].id + "號" + others[0].name) : "前排席位";
-  const next = others[1] ? ("0" + others[1].id + "號" + others[1].name) : "後置位";
+  const focus = others[0] ? (fmtSeatNum(others[0].id) + "號" + others[0].name) : "前排席位";
+  const next = others[1] ? (fmtSeatNum(others[1].id) + "號" + others[1].name) : "後置位";
   if (cand.role === "seer" || cand.fakeSeer) {
     return "「昨晚先查了 " + focus + "（視角偏正），若拿警徽今晚先驗 " + next + "，雙邊警徽流透明帶隊！」";
   }
@@ -909,7 +909,7 @@ function startSheriffElection(onDone) {
       const pidAuto = getPlayerId();
       addLog({
         kind: "blessing",
-        title: "👑 警長誕生：0" + fallbackWinner.id + "號 " + (fallbackWinner.id === pidAuto ? "你" : fallbackWinner.name) + " 當選本局警長（1.5票＆末置位歸票權）！",
+        title: "👑 警長誕生：" + fmtSeatNum(fallbackWinner.id) + "號 " + (fallbackWinner.id === pidAuto ? "你" : fallbackWinner.name) + " 當選本局警長（1.5票＆末置位歸票權）！",
         text: ""
       });
     } else {
@@ -984,7 +984,7 @@ function finalizeSheriffElectionWinner(chosenCandId) {
   if (winner) {
     m.sheriffSeatId = winner.id;
     m.stats.sheriffPassed = (m.stats.sheriffPassed || 0) + 1;
-    const wLbl = winner.id === pid ? (playerNumTag() + " 你") : ("0" + winner.id + "號 " + winner.name);
+    const wLbl = winner.id === pid ? (playerNumTag() + " 你") : (fmtSeatNum(winner.id) + "號 " + winner.name);
     sound.playBlessing();
     if (typeof spawnBurst === "function") spawnBurst(winner.id, ["#fbbf24", "#fde68a", "#ffffff"], 22, "star");
     if (typeof spawnFx === "function") spawnFx(winner.id, "👑 當選警長!", "#fbbf24", { scale: 1.15, durationMs: 1600 });

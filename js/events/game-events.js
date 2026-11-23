@@ -293,7 +293,7 @@ function bindIntelAndDetectiveEvents() {
         closeSeatIntel();
         if (typeof preparePlayerSpeechPanel === "function") preparePlayerSpeechPanel();
         updateAllUI();
-        showToast("已鎖定 0" + sid + "號 " + s.name + " 為發言點名對象！", "emerald");
+        showToast("已鎖定 " + fmtSeatNum(sid) + "號 " + s.name + " 為發言點名對象！", "emerald");
       }
     });
   }
@@ -330,11 +330,11 @@ function bindIntelAndDetectiveEvents() {
         state.selectedSeatId = sid;
         preparePlayerSpeechPanel();
         updateAllUI();
-        showToast("已鎖定 0" + sid + "號 " + s.name + " 為發言點名對象！", "emerald");
+        showToast("已鎖定 " + fmtSeatNum(sid) + "號 " + s.name + " 為發言點名對象！", "emerald");
       } else {
-        pinClue(sid, "點名 0" + sid + "號" + s.name, "大家待會多留意 0" + sid + "號" + s.name + " 的邏輯與票型，我覺得他的立場很關鍵！", "seat");
+        pinClue(sid, "點名 " + fmtSeatNum(sid) + "號" + s.name, "大家待會多留意 " + fmtSeatNum(sid) + "號" + s.name + " 的邏輯與票型，我覺得他的立場很關鍵！", "seat");
         bumpCombo("鎖定目標");
-        showToast("已將 0" + sid + "號 加入你的發言筆記！", "emerald");
+        showToast("已將 " + fmtSeatNum(sid) + "號 加入你的發言筆記！", "emerald");
       }
     });
   }
@@ -364,32 +364,46 @@ function bindIntelAndDetectiveEvents() {
     state.match.quickReactedMap[key] = kind;
     const isGoodReaction = (kind === "good");
     state.playerMarks[sp.id] = state.playerMarks[sp.id] === kind ? null : kind;
-    sound.tone(isGoodReaction ? 660 : 330, 0.09, "triangle", 0.055, 0);
+    if (typeof sound.playTableReactionSfx === "function") {
+      sound.playTableReactionSfx(isGoodReaction ? "agree" : "doubt");
+    } else {
+      sound.tone(isGoodReaction ? 660 : 330, 0.09, "triangle", 0.055, 0);
+    }
 
     if (state.playerMarks[sp.id] === kind) {
       spawnFx(sp.id, isGoodReaction ? "👍 認同好人" : "🤨 存疑懷疑", isGoodReaction ? "#34d399" : "#fb7185");
-      nudgeSeat(sp.id, { scale: isGoodReaction ? 1.12 : 0.90, vy: isGoodReaction ? -5 : 4 });
+      nudgeSeat(sp.id, { scale: isGoodReaction ? 1.12 : 0.90, vy: isGoodReaction ? -5 : 4, vTilt: isGoodReaction ? 0.06 : -0.14 });
       const selfPlayer = getPlayerSeat();
       const selfAlive = Boolean(selfPlayer && selfPlayer.alive);
       if (firstTime && selfAlive) {
         if (isGoodReaction) {
           addThreeGoodPoint("words", "說好話鼓勵");
           setSeatEmotion(sp.id, "happy", 2800);
-          setSeatBubble(sp.id, sp.team === "wolf"
+          const goodReply = sp.team === "wolf"
             ? "哈哈謝謝你的信任～我一定幫大家找狼！"
-            : "謝謝你點頭認同！我們好人一定要團結！", "trust", 3000);
+            : "謝謝你點頭認同！我們好人一定要團結！";
+          setSeatBubble(sp.id, goodReply, "trust", 3000);
+          if (typeof renderTargetReactionCard === "function") {
+            renderTargetReactionCard(null, null, { seat: sp, kind: "trust", badge: sp.name + " · 回眸致謝", quote: "「" + goodReply + "」" });
+          }
           if (sp.team === "good") {
             sp.suspicionMap[getPlayerId()] = clamp((sp.suspicionMap[getPlayerId()] || 50) - 8, 5, 95);
           }
         } else {
           addThreeGoodPoint("heart", "存好心質疑");
+          let doubtReply = "";
           if (sp.team === "wolf") {
             setSeatEmotion(sp.id, "nervous", 3000);
             sp.sweatExposed = (sp.microPulse >= 72);
-            setSeatBubble(sp.id, "呃、你幹嘛突然瞪我？我哪有在帶風向啦…", "wolf", 3200);
+            doubtReply = "呃、你幹嘛突然瞪我？我哪有在帶風向啦…";
+            setSeatBubble(sp.id, doubtReply, "wolf", 3200);
           } else {
             setSeatEmotion(sp.id, "shock", 2600);
-            setSeatBubble(sp.id, "欸真的不是我啦！等一下看我的票型就知道！", "suspect", 3000);
+            doubtReply = "欸真的不是我啦！等一下看我的票型就知道！";
+            setSeatBubble(sp.id, doubtReply, "suspect", 3000);
+          }
+          if (typeof renderTargetReactionCard === "function") {
+            renderTargetReactionCard(null, null, { seat: sp, kind: "accuse", badge: sp.name + " · 回頭回應", quote: "「" + doubtReply + "」" });
           }
           pinSeatSummaryNote(sp.id);
         }
@@ -419,6 +433,81 @@ function bindIntelAndDetectiveEvents() {
       if (!sp || sp.id === getPlayerId()) return;
       pinSeatSummaryNote(sp.id);
       updateAllUI();
+    });
+  }
+
+  // Native Web Speech Recognition (zh-TW) for hands-free spoken player speeches!
+  if (el("btnMicVoiceSpeech")) {
+    let activeRec = null;
+    let isListening = false;
+    const stopMicUi = function () {
+      isListening = false;
+      const b = el("btnMicVoiceSpeech");
+      if (b) {
+        b.classList.remove("is-listening");
+        b.textContent = "🎙️";
+      }
+    };
+    el("btnMicVoiceSpeech").addEventListener("click", function () {
+      sound.unlock();
+      const SpeechRec = (typeof window !== "undefined") && (window.SpeechRecognition || window.webkitSpeechRecognition);
+      if (!SpeechRec) {
+        showToast("目前瀏覽器不支援原生語音辨識（建議使用 Chrome / Edge / Safari），請直接輸入或點卡發言！", "warn");
+        return;
+      }
+      if (isListening && activeRec) {
+        try { activeRec.stop(); } catch (e) {}
+        if (typeof sound.playTableReactionSfx === "function") sound.playTableReactionSfx("mic_off");
+        stopMicUi();
+        return;
+      }
+      try {
+        voice.stop();
+        const rec = new SpeechRec();
+        rec.lang = "zh-TW";
+        rec.interimResults = true;
+        rec.continuous = false;
+        activeRec = rec;
+        isListening = true;
+        const btn = el("btnMicVoiceSpeech");
+        btn.classList.add("is-listening");
+        btn.textContent = "⏹";
+        if (typeof sound.playTableReactionSfx === "function") sound.playTableReactionSfx("mic_on");
+        showToast("🎙️ 正在聆聽你的推理發言（說完停頓或再按一次結束）…", "emerald");
+        const basePrefix = (el("quickFreeInput") && el("quickFreeInput").value.trim()) ? (el("quickFreeInput").value.trim() + " ") : "";
+        rec.onresult = function (ev) {
+          let transcript = "";
+          for (let i = 0; i < ev.results.length; i++) {
+            transcript += ev.results[i][0].transcript;
+          }
+          if (el("quickFreeInput")) {
+            el("quickFreeInput").value = (basePrefix + transcript).trim();
+            if (typeof refreshQuickFreeInputHint === "function") refreshQuickFreeInputHint();
+          }
+        };
+        rec.onerror = function (err) {
+          stopMicUi();
+          const code = err && err.error ? err.error : "error";
+          if (code === "not-allowed" || code === "service-not-allowed") {
+            showToast("未取得麥克風權限，請在瀏覽器網址列允許麥克風後再試！", "warn");
+          } else if (code !== "aborted" && code !== "no-speech") {
+            showToast("語音辨識暫時中斷，請再試一次或直接打字發言。", "warn");
+          }
+        };
+        rec.onend = function () {
+          if (isListening && typeof sound.playTableReactionSfx === "function") {
+            sound.playTableReactionSfx("mic_off");
+          }
+          stopMicUi();
+          if (el("quickFreeInput") && el("quickFreeInput").value.trim()) {
+            showToast("✓ 語音已轉入陳詞欄！確認內容後按「陳詞」或「AI 轉好話」送出", "emerald");
+          }
+        };
+        rec.start();
+      } catch (e) {
+        stopMicUi();
+        showToast("無法啟動麥克風語音輸入，請直接輸入文字發言。", "warn");
+      }
     });
   }
 
@@ -485,14 +574,14 @@ function bindIntelAndDetectiveEvents() {
       spawnBurst(sp.id, ["#34d399", "#fbbf24", "#fde68a"], 18, "petal");
       spawnFx(sp.id, "✨ 戾氣化解 +9!", "#34d399");
       const noteTxt = clashKind === "toxic_slip"
-        ? ("剛才 0" + sp.id + "號" + sp.name + " 語氣帶著挑撥，我先以說好話降溫，請大家仍保持理性留意 0" + sp.id + "號 的真實立場！")
-        : ("剛才 0" + sp.id + "號" + sp.name + " 把懷疑指向我，我心平氣和澄清並存進筆記，大家可對比我們雙方的邏輯！");
-      pinClue(sp.id, "✨化解 0" + sp.id + "號", noteTxt, "clash");
+        ? ("剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + " 語氣帶著挑撥，我先以說好話降溫，請大家仍保持理性留意 " + fmtSeatNum(sp.id) + "號 的真實立場！")
+        : ("剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + " 把懷疑指向我，我心平氣和澄清並存進筆記，大家可對比我們雙方的邏輯！");
+      pinClue(sp.id, "✨化解 " + fmtSeatNum(sp.id) + "號", noteTxt, "clash");
     }
 
     bumpCombo("說好話化解");
     addThreeGoodPoint("words", "說好話・化戾氣");
-    triggerCutIn("✨ 說好話・化戾氣為祥和！", sp ? ("你用幽默與善意接住 0" + sp.id + "號的尖銳發言，全場友善度 +9！") : "溫柔堅定的風度贏得全場肯定！", "emerald");
+    triggerCutIn("✨ 說好話・化戾氣為祥和！", sp ? ("你用幽默與善意接住 " + fmtSeatNum(sp.id) + "號的尖銳發言，全場友善度 +9！") : "溫柔堅定的風度贏得全場肯定！", "emerald");
     if (typeof orchestrator !== "undefined") {
       orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
     }
@@ -531,14 +620,14 @@ function bindIntelAndDetectiveEvents() {
           if (isFeast) bumpCombo("茶點連擊");
           addThreeGoodPoint("heart", "存好心抓包矛盾");
           spawnFx(getPlayerId(), "⚡ 解鎖呈堂證供!", "#fbbf24");
-          showToast("⚡ 已抓下 0" + sp.id + "號矛盾！輪到你時將出現「呈堂證供」金色卡牌！", "emerald");
+          showToast("⚡ 已抓下 " + fmtSeatNum(sp.id) + "號矛盾！輪到你時將出現「呈堂證供」金色卡牌！", "emerald");
         } else {
           const noteTxt = clashKind === "fake_seer"
-            ? ("剛才 0" + sp.id + "號" + sp.name + " 假冒明心觀察員，我才是真觀察員，今天建議大家集中投 0" + sp.id + "號！")
+            ? ("剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + " 假冒明心觀察員，我才是真觀察員，今天建議大家集中投 " + fmtSeatNum(sp.id) + "號！")
             : clashKind === "toxic_slip"
-            ? ("0" + sp.id + "號" + sp.name + " 剛才講話帶有明顯酸言挑撥，我們保持理性，這輪重點檢視 0" + sp.id + "號！")
-            : ("0" + sp.id + "號" + sp.name + " 剛才突然把矛頭指向我，我是清白好人，請大家比對我們兩邊的邏輯！");
-          pinClue(sp.id, "反駁 0" + sp.id + "號", noteTxt, "clash");
+            ? (fmtSeatNum(sp.id) + "號" + sp.name + " 剛才講話帶有明顯酸言挑撥，我們保持理性，這輪重點檢視 " + fmtSeatNum(sp.id) + "號！")
+            : (fmtSeatNum(sp.id) + "號" + sp.name + " 剛才突然把矛頭指向我，我是清白好人，請大家比對我們兩邊的邏輯！");
+          pinClue(sp.id, "反駁 " + fmtSeatNum(sp.id) + "號", noteTxt, "clash");
           bumpCombo("靜默記下反駁點");
           spawnFx(getPlayerId(), "📌 已存進筆記!", "#38bdf8");
           showToast("📌 已靜默存進筆記，輪到你的順位即可打出一鍵反駁！", "emerald");
@@ -696,10 +785,10 @@ function bindSpeechInputEvents() {
         ? getSeat(state.selectedSeatId)
         : (aliveOthers[0] || { id: pid === 1 ? 2 : 1, name: "夥伴" });
       const roasts = [
-        "0" + t.id + "號好了啦別演了，講那什麼胡說八道的風向！",
-        "笑死，0" + t.id + "號剛那段簡直邏輯死亡，少裝了好不好！",
-        "0" + t.id + "號講完可以下去吧，根本在演給好人看！",
-        "0" + t.id + "號閉嘴啦，亂玩一通還在硬拗帶節奏！"
+        fmtSeatNum(t.id) + "號好了啦別演了，講那什麼胡說八道的風向！",
+        "笑死，" + fmtSeatNum(t.id) + "號剛那段簡直邏輯死亡，少裝了好不好！",
+        fmtSeatNum(t.id) + "號講完可以下去吧，根本在演給好人看！",
+        fmtSeatNum(t.id) + "號閉嘴啦，亂玩一通還在硬拗帶節奏！"
       ];
       state.match.rewriteCritReady = false;
       qIn.value = roasts[((state.match.day || 1) + t.id) % roasts.length];
@@ -748,7 +837,7 @@ function bindSpeechInputEvents() {
         const target = getSeat(state.selectedSeatId) && state.selectedSeatId !== pid && getSeat(state.selectedSeatId).alive
           ? getSeat(state.selectedSeatId)
           : (aliveOthers[0] || { id: pid === 1 ? 2 : 1, name: "夥伴" });
-        const tTag = "0" + target.id + "號" + target.name;
+        const tTag = fmtSeatNum(target.id) + "號" + target.name;
         const templates = {
           accuse: "我心平氣和比對了一下，覺得 " + tTag + " 剛才的說法有些矛盾，建議這輪優先檢視 " + target.id + "號！",
           vouch: "聽完 " + tTag + " 的分析我覺得真誠有條理，這輪我選擇相信 " + target.id + "號 是好人夥伴！",
@@ -910,7 +999,7 @@ function bindNightVoteAndFourGEvents() {
             if (typeof setSeatBubble === "function") setSeatBubble(mate.id, rMsg, "wolf", 4200);
             if (typeof nudgeSeat === "function") nudgeSeat(mate.id, 0.85);
             if (typeof addLog === "function") {
-              addLog({ kind: "secret", title: "🐺 狼同伴暗語（0" + mate.id + "號 " + mate.name + "）：" + rMsg, text: "" });
+              addLog({ kind: "secret", title: "🐺 狼同伴暗語（" + fmtSeatNum(mate.id) + "號 " + mate.name + "）：" + rMsg, text: "" });
             }
           }
         }

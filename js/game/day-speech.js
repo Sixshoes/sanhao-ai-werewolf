@@ -57,7 +57,7 @@ function startDayDiscussion(dawnVoiceLine, opts) {
   if (ordered.length > 0) {
     addLog({
       kind: "dawn",
-      title: "第 " + state.match.day + " 天輪流發言（" + orderReason + "）：從 0" + ordered[0] + "號 開始依序發言",
+      title: "第 " + state.match.day + " 天輪流發言（" + orderReason + "）：從 " + fmtSeatNum(ordered[0]) + "號 開始依序發言",
       text: ""
     });
   }
@@ -117,9 +117,9 @@ function advanceSpeechQueue() {
         state.match.clearBreezeUsedDay = state.match.day;
         const shSeat = getSeat(sharpEv.speakerId);
         if (shSeat && shSeat.alive) {
-          pinClue(shSeat.id, "🍃清風圈出 0" + shSeat.id + "號", "剛剛三好清風幫我注意到 0" + shSeat.id + "號" + shSeat.name + " 的語氣與立場有矛盾，建議大家重點檢視 0" + shSeat.id + "號！", "clash");
+          pinClue(shSeat.id, "🍃清風圈出 " + fmtSeatNum(shSeat.id) + "號", "剛剛三好清風幫我注意到 " + fmtSeatNum(shSeat.id) + "號" + shSeat.name + " 的語氣與立場有矛盾，建議大家重點檢視 " + fmtSeatNum(shSeat.id) + "號！", "clash");
           spawnFx(shSeat.id, "🍃 清風照破!", "#34d399");
-          showToast("🍃 三好清風吹拂（友善度 ≥ 85）：已自動圈出 0" + shSeat.id + "號的發言破綻到你的筆記！", "emerald");
+          showToast("🍃 三好清風吹拂（友善度 ≥ 85）：已自動圈出 " + fmtSeatNum(shSeat.id) + "號的發言破綻到你的筆記！", "emerald");
         }
       }
     }
@@ -157,8 +157,8 @@ async function executeAiTurnSpeech(speaker) {
     if (extLlmOn) {
       const llmLabel = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : (state.geminiModel || "Gemini");
       const thinkLabel = llmLabel + " 即時推理中…";
-      syncSpeakerBannerVisuals(speaker, "0" + speaker.id + "號 · " + speaker.name, speaker.trait, false);
-      updateSpotlightBox("0" + speaker.id + "號 · " + speaker.name, speaker.trait, thinkLabel);
+      syncSpeakerBannerVisuals(speaker, fmtSeatNum(speaker.id) + "號 · " + speaker.name, speaker.trait, false);
+      updateSpotlightBox(fmtSeatNum(speaker.id) + "號 · " + speaker.name, speaker.trait, thinkLabel);
     }
     if (typeof orchestrator !== "undefined" && typeof orchestrator.dispatchAgent === "function") {
       const dispatched = await orchestrator.dispatchAgent("PersonaAgent", { speaker: speaker, fallbackMeta: generated });
@@ -243,6 +243,9 @@ async function executeAiTurnSpeech(speaker) {
     const rTitle = ROLE_DEFS[speaker.claimedRole].name;
     if (sameClaimants.length >= 2) {
       triggerShake(340);
+      if (typeof sound !== "undefined" && typeof sound.playTableReactionSfx === "function") {
+        sound.playTableReactionSfx("clash");
+      }
       spawnFx(speaker.id, "真假" + rTitle + "對跳!", "#fbbf24");
       spawnBurst(speaker.id, ["#fbbf24", "#f43f5e", "#ffffff"], 22, "slash");
       if (typeof triggerScreenFlash === "function") triggerScreenFlash("#fbbf24", 440, 0.34);
@@ -260,7 +263,7 @@ async function executeAiTurnSpeech(speaker) {
     }
   }
 
-  const badgeTitle = "0" + speaker.id + "號 · " + speaker.name;
+  const badgeTitle = fmtSeatNum(speaker.id) + "號 · " + speaker.name;
   const subTag = (state.match.microPulseRevealed || speaker.sweatExposed)
     ? ("心虛 " + speaker.microPulse + "%")
     : speaker.trait;
@@ -291,7 +294,7 @@ async function executeAiTurnSpeech(speaker) {
       state.activeClash = { speakerId: speaker.id, kind: "fake_seer", resolved: false };
       triggerShake(260);
       spawnFx(speaker.id, "⚠ 冒充觀察員!", "#fbbf24");
-      triggerCutIn("🔮 有人冒充明心觀察員！", "0" + speaker.id + "號 " + speaker.name + " 搶跳觀察員・輪到你的順位再拆穿！", "gold");
+      triggerCutIn("🔮 有人冒充明心觀察員！", fmtSeatNum(speaker.id) + "號 " + speaker.name + " 搶跳觀察員・輪到你的順位再拆穿！", "gold");
       if (typeof orchestrator !== "undefined") orchestrator.emit("clash:detected", { kind: "fake_seer", speakerId: speaker.id });
     } else if (putPlayerInWolfPit) {
       state.match.todayEvents.accusedYouId = speaker.id;
@@ -321,11 +324,13 @@ async function executeAiTurnSpeech(speaker) {
   }
 
   const isHighStress = Boolean(speaker.microPulse >= 76 && (state.match.microPulseRevealed || speaker.sweatExposed));
-  const moodTag = generated.hasToxicSlip || generated.accuseId
-    ? (isHighStress ? "panic" : "accuse")
-    : (generated.relationType === "trust"
-      ? ((speaker.name === "星兒" || speaker.name === "晨晨") ? "happy" : "trust")
-      : "normal");
+  const moodTag = (generated.claimSeer || generated.claimRole === "seer")
+    ? "claim_seer"
+    : (generated.hasToxicSlip || generated.accuseId
+      ? (isHighStress ? "panic" : (generated.emotion === "defensive" ? "rebut" : "accuse"))
+      : (generated.relationType === "trust"
+        ? ((speaker.name === "星兒" || speaker.name === "晨晨" || speaker.name === "柚子") ? "happy" : "trust")
+        : "normal"));
   updateAllUI();
   if (typeof orchestrator !== "undefined") {
     orchestrator.emit("speech:committed", { speakerId: speaker.id, accuseId: generated.accuseId || null, isToxic: Boolean(generated.hasToxicSlip) });
@@ -336,6 +341,7 @@ async function executeAiTurnSpeech(speaker) {
     trait: subTag,
     rawText: generated.text,
     voiceMood: moodTag,
+    speechEv: aiEvObj,
     charDelay: 34,
     holdMs: 2400
   });

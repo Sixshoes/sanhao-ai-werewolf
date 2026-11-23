@@ -277,15 +277,16 @@ function draw3DFaceCanvas(ctx, seat, st, opts) {
 }
 
 function getStageSeatListFor3D() {
-  const lobbySeatsN = (el("selectModeCount") && parseInt(el("selectModeCount").value, 10) === 8) ? 8 : 6;
+  const lobbySeatsN = typeof getLobbySeatCount === "function" ? getLobbySeatCount() : ((el("selectModeCount") && parseInt(el("selectModeCount").value, 10)) || 8);
   return state.match.started
     ? state.match.seats
     : Array.from({ length: lobbySeatsN }, function (_, idx) {
       const n = idx + 1;
+      const pInfo = n === 1 ? null : (AI_PERSONAS[n - 2] || AI_PERSONAS[0]);
       return {
         id: n,
-        name: n === 1 ? "你" : AI_PERSONAS[n - 2].name,
-        color: n === 1 ? "#f5b942" : AI_PERSONAS[n - 2].avatarColor,
+        name: n === 1 ? "你" : pInfo.name,
+        color: n === 1 ? "#f5b942" : pInfo.avatarColor,
         alive: true,
         role: "villager",
         microPulse: 22
@@ -296,7 +297,7 @@ function getStageSeatListFor3D() {
 function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
   const seats = getStageSeatListFor3D();
   const nSeats = seats.length;
-  const ringRadius = nSeats >= 8 ? 4.85 : 4.55;
+  const ringRadius = nSeats >= 12 ? 5.85 : (nSeats >= 10 ? 5.35 : (nSeats >= 8 ? 4.85 : 4.55));
   const t = f.tSec;
   const p = f.p;
   const nowMs = f.nowMs;

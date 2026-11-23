@@ -17,7 +17,11 @@ const SEAT_MODEL_SLUGS = {
   "星兒": "xinger",
   "小雲": "xiaoyun",
   "阿竹": "azhu",
-  "晨晨": "chenchen"
+  "晨晨": "chenchen",
+  "墨白": "mobai",
+  "晴嵐": "qinglan",
+  "阿朗": "alang",
+  "柚子": "youzi"
 };
 
 const VRM_IDLE_ARCHETYPES = {
@@ -29,6 +33,10 @@ const VRM_IDLE_ARCHETYPES = {
   "小雲": { breathFreq: 1.75, breathAmp: 0.016, spineLean: 0.02, headRollAmp: 0.032, headTiltBias: -0.035, idleHappy: 0.10, idleFun: 0.08, rDrop: 1.19, rFwd: 0.19, rBend: 0.72, lDrop: 1.21, lFwd: 0.15, lBend: 0.66, armSwayAmp: 0.018 },
   "阿竹": { breathFreq: 1.60, breathAmp: 0.014, spineLean: 0.015, headRollAmp: 0.018, headTiltBias: 0.015, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.20, rFwd: 0.17, rBend: 0.70, lDrop: 1.20, lFwd: 0.16, lBend: 0.68, armSwayAmp: 0.014 },
   "晨晨": { breathFreq: 2.35, breathAmp: 0.020, spineLean: 0.0, headRollAmp: 0.028, headTiltBias: 0.0, idleHappy: 0.12, idleFun: 0.10, rDrop: 1.20, rFwd: 0.16, rBend: 0.62, lDrop: 1.20, lFwd: 0.16, lBend: 0.62, armSwayAmp: 0.022 },
+  "墨白": { breathFreq: 1.45, breathAmp: 0.013, spineLean: 0.005, headRollAmp: 0.014, headTiltBias: 0.01, idleHappy: 0.02, idleFun: 0.0, rDrop: 1.21, rFwd: 0.15, rBend: 0.64, lDrop: 1.21, lFwd: 0.15, lBend: 0.64, armSwayAmp: 0.010 },
+  "晴嵐": { breathFreq: 1.80, breathAmp: 0.017, spineLean: 0.01, headRollAmp: 0.030, headTiltBias: -0.025, idleHappy: 0.18, idleFun: 0.08, rDrop: 1.19, rFwd: 0.18, rBend: 0.72, lDrop: 1.20, lFwd: 0.16, lBend: 0.68, armSwayAmp: 0.018 },
+  "阿朗": { breathFreq: 2.10, breathAmp: 0.018, spineLean: 0.025, headRollAmp: 0.022, headTiltBias: 0.015, idleHappy: 0.08, idleFun: 0.06, rDrop: 1.18, rFwd: 0.19, rBend: 0.68, lDrop: 1.20, lFwd: 0.15, lBend: 0.62, armSwayAmp: 0.020 },
+  "柚子": { breathFreq: 2.65, breathAmp: 0.022, spineLean: 0.015, headRollAmp: 0.048, headTiltBias: -0.02, idleHappy: 0.28, idleFun: 0.22, rDrop: 1.18, rFwd: 0.20, rBend: 0.74, lDrop: 1.19, lFwd: 0.18, lBend: 0.70, armSwayAmp: 0.030 },
   default: { breathFreq: 2.05, breathAmp: 0.016, spineLean: 0.01, headRollAmp: 0.025, headTiltBias: 0.0, idleHappy: 0.05, idleFun: 0.0, rDrop: 1.20, rFwd: 0.16, rBend: 0.64, lDrop: 1.20, lFwd: 0.16, lBend: 0.64, armSwayAmp: 0.016 }
 };
 

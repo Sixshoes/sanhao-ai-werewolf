@@ -69,7 +69,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         || aliveChecks[aliveChecks.length - 1]
         || speaker.checkedHistory[speaker.checkedHistory.length - 1];
       const chkSeat = getSeat(focusChk.targetId);
-      const chkLbl = chkSeat ? seatLabel(chkSeat) : ("0" + focusChk.targetId + "號");
+      const chkLbl = chkSeat ? seatLabel(chkSeat) : (fmtSeatNum(focusChk.targetId) + "號");
       return {
         targetId: rid,
         relationType: rid ? "suspect" : null,
@@ -199,7 +199,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
       if (speaker.role === "witch") {
         speaker.claimedRole = "witch";
         speaker.witchAnnouncedSave = true;
-        const saveNote = speaker.savedSeatId ? ("我之前還用暖心回甘茶護回過 0" + speaker.savedSeatId + "號，") : "";
+        const saveNote = speaker.savedSeatId ? ("我之前還用暖心回甘茶護回過 " + fmtSeatNum(speaker.savedSeatId) + "號，") : "";
         return {
           targetId: seerWolfOnMe.speakerId,
           relationType: "suspect",
@@ -379,7 +379,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     speaker.suspicionMap[priorSameRoleSteal.speakerId] = 100;
     const v0C = (speaker.role === "witch" && speaker.savedSeatId) ? speaker.savedSeatId : null;
     const extraProof = v0C
-      ? ("之前晚上是我端暖心回甘茶護回了 0" + v0C + "號，")
+      ? ("之前晚上是我端暖心回甘茶護回了 " + fmtSeatNum(v0C) + "號，")
       : (speaker.role === "hunter" ? "如果大家誤投我，我離席一定發動共鳴帶他一起冷靜，" : "");
     return {
       targetId: priorSameRoleSteal.speakerId,

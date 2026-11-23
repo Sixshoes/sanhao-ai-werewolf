@@ -199,7 +199,7 @@ function bindCanvasEvents() {
           nudgeSeat(targetId, { scale: 1.16 });
           preparePlayerSpeechPanel();
           updateAllUI();
-          showToast("🎯 已拖曳鎖定 0" + targetId + "號 為發言點名對象！", "emerald");
+          showToast("🎯 已拖曳鎖定 " + fmtSeatNum(targetId) + "號 為發言點名對象！", "emerald");
         } else if (targetId !== pid && !isNightPhase(p) && p !== "SHERIFF_ELECTION" && p !== "SHERIFF_ORDER" && p !== "SHERIFF_TRANSFER") {
           openRadialMenu(targetId);
         }

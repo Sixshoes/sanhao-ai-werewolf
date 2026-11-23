@@ -13,8 +13,29 @@ const PERSONA_VOICE_PROFILES = {
   "阿松":  { gender: "m", slot: 2, seatHint: 4, studioVoice: "Charon",     pitch: 0.94, basicPitch: 0.980, rateMul: 0.93 },
   "星兒":  { gender: "f", slot: 3, seatHint: 5, studioVoice: "Zephyr",     pitch: 1.05, basicPitch: 1.018, rateMul: 1.04 },
   "小雲":  { gender: "f", slot: 4, seatHint: 6, studioVoice: "Callirrhoe", pitch: 1.01, basicPitch: 1.004, rateMul: 1.02 },
-  "阿竹":  { gender: "m", slot: 3, seatHint: 7, studioVoice: "Fenrir",     pitch: 0.96, basicPitch: 0.986, rateMul: 0.95 },
-  "晨晨":  { gender: "m", slot: 4, seatHint: 8, studioVoice: "Puck",       pitch: 1.00, basicPitch: 0.998, rateMul: 1.06 }
+  "阿竹":  { gender: "m", slot: 3, seatHint: 7,  studioVoice: "Fenrir",     pitch: 0.96, basicPitch: 0.986, rateMul: 0.95 },
+  "晨晨":  { gender: "m", slot: 4, seatHint: 8,  studioVoice: "Puck",       pitch: 1.00, basicPitch: 0.998, rateMul: 1.06 },
+  "墨白":  { gender: "m", slot: 5, seatHint: 9,  studioVoice: "Charon",     pitch: 0.93, basicPitch: 0.982, rateMul: 0.94 },
+  "晴嵐":  { gender: "f", slot: 5, seatHint: 10, studioVoice: "Leda",       pitch: 0.99, basicPitch: 0.996, rateMul: 0.95 },
+  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Orus",       pitch: 0.99, basicPitch: 0.995, rateMul: 1.05 },
+  "柚子":  { gender: "f", slot: 6, seatHint: 12, studioVoice: "Zephyr",     pitch: 1.06, basicPitch: 1.020, rateMul: 1.05 }
+};
+
+const PERSONA_TTS_DIRECTIONS = {
+  "主持":  "沉穩溫雅的台灣書院說書女聲，語氣端莊有韻味",
+  "你":    "自然親切的台灣女大學生口語，清晰從容",
+  "你_男": "自然沉穩的台灣男大學生口語，條理清晰",
+  "小澄":  "冷靜銳利、略帶數據分析感的台灣理工男大學生口語",
+  "暖暖":  "溫柔親切、語調輕軟帶笑意的台灣女大學生口語",
+  "阿松":  "沉穩厚實、不疾不徐、像登山社學長的台灣男聲",
+  "星兒":  "活潑靈動、帶點直覺驚嘆感的台灣女大學生口語",
+  "小雲":  "俐落果斷、像新聞查核社長的台灣知性女聲",
+  "阿竹":  "溫潤斯文、略帶書卷氣與停頓節奏的台灣男聲",
+  "晨晨":  "熱血爽朗、語速明快有朝氣的台灣陽光男大學生口語",
+  "墨白":  "低沉冷峻、字句精練沉著的台灣書法社長男聲",
+  "晴嵐":  "溫婉清雅、從容柔和卻有定見的台灣古箏社學姊女聲",
+  "阿朗":  "俐落鏗鏘、節奏鮮明具說服力的台灣辯論社主辯男聲",
+  "柚子":  "甜美元氣、輕快開朗帶點可愛驚嘆的台灣大學學妹女聲"
 };
 
 const voice = {
@@ -24,6 +45,8 @@ const voice = {
   selectedVoiceUri: "auto",
   primed: false,
   speaking: false,
+  paused: false,
+  pauseMeta: null,
   localNeuralAvailable: false,
   localNeuralChecked: false,
   volume: 0.86,
@@ -268,10 +291,30 @@ const voice = {
       .replace(/→/g, "投給")
       .replace(/[「」『』【】]/g, "")
       .replace(/[｜|·・—]/g, "，")
+      .replace(/(?<!，)(我是明心觀察員|我是滴水奉茶師|我是護心守衛|我是直心糾察長)/g, "，$1")
       .replace(/…+/g, "…")
       .replace(/，{2,}/g, "，")
+      .replace(/^，+/, "")
       .replace(/\s+/g, " ")
       .trim();
+  },
+
+  splitTwoStageStream: function (cleanText) {
+    if (!cleanText || cleanText.length <= 42) return [cleanText];
+    const punctRe = /[，。！？；…]/g;
+    let bestSplit = -1;
+    let m;
+    while ((m = punctRe.exec(cleanText)) !== null) {
+      const idx = m.index + 1;
+      if (idx >= 16 && idx <= 38) {
+        bestSplit = idx;
+        if (idx >= 22) break;
+      }
+    }
+    if (bestSplit === -1 || cleanText.length - bestSplit < 14) return [cleanText];
+    const first = cleanText.slice(0, bestSplit).trim();
+    const rest = cleanText.slice(bestSplit).trim();
+    return (first && rest) ? [first, rest] : [cleanText];
   },
 
   // Split long Mandarin text into natural breathing clauses (protecting seat numbers + names & short endings!)
@@ -348,9 +391,11 @@ const voice = {
   stop: function () {
     this.utteranceSeq += 1;
     this.clearTimers();
+    this.paused = false;
+    this.pauseMeta = null;
     this.activeUtterance = null;
     if (this.activeAudioNode) {
-      try { this.activeAudioNode.stop(); } catch (e) {}
+      try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); } catch (e) {}
       this.activeAudioNode = null;
     }
     this.activeAudioGain = null;
@@ -359,6 +404,67 @@ const voice = {
     }
     if (this.speaking) {
       this.setVisualSpeaking(false);
+    }
+    this.syncPauseButtonUi();
+  },
+
+  syncPauseButtonUi: function () {
+    const btn = typeof document !== "undefined" ? document.getElementById("btnPauseVoice") : null;
+    if (btn) {
+      btn.textContent = this.paused ? "▶ 繼續" : "⏸ 暫停";
+      btn.classList.toggle("is-paused", Boolean(this.paused));
+    }
+  },
+
+  syncQuickSpeedButtonUi: function () {
+    const btn = typeof document !== "undefined" ? document.getElementById("btnQuickVoiceSpeed") : null;
+    if (!btn) return;
+    const label = this.rate >= 1.18 ? "1.3×" : (this.rate >= 1.05 ? "1.15×" : "1.0×");
+    btn.textContent = label;
+  },
+
+  cycleQuickRate: function () {
+    const next = this.rate < 1.05 ? 1.10 : (this.rate < 1.18 ? 1.22 : 0.96);
+    this.rate = next;
+    this.syncQuickSpeedButtonUi();
+    if (typeof syncPrefsToControls === "function") syncPrefsToControls();
+    if (typeof saveUserPrefs === "function") saveUserPrefs();
+    return next;
+  },
+
+  togglePause: function () {
+    if (!this.speaking && !(typeof state !== "undefined" && state.typewriter && state.typewriter.active) && !this.paused) {
+      return false;
+    }
+    if (!this.paused) {
+      this.paused = true;
+      if (this.activeAudioNode && this.pauseMeta && sound.ctx) {
+        const elapsed = Math.max(0, (sound.ctx.currentTime - this.pauseMeta.startedAt) * (this.pauseMeta.playbackRate || 1));
+        this.pauseMeta.offset = Math.min(this.pauseMeta.audioBuf.duration - 0.05, (this.pauseMeta.offset || 0) + elapsed);
+        this.clearTimers();
+        try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); } catch (e) {}
+        this.activeAudioNode = null;
+      } else if (this.isSupported()) {
+        try { window.speechSynthesis.pause(); } catch (e) {}
+      }
+      if (typeof state !== "undefined" && state.stepTimer) {
+        clearTimeout(state.stepTimer);
+        state.stepTimer = null;
+      }
+      this.setVisualSpeaking(false);
+      this.syncPauseButtonUi();
+      return true;
+    } else {
+      this.paused = false;
+      this.syncPauseButtonUi();
+      if (this.pauseMeta && this.pauseMeta.audioBuf && sound.ctx) {
+        const pm = this.pauseMeta;
+        this.playBufferedStudioAudio(pm.seq, pm.audioBuf, pm.onDone, Object.assign({}, pm.opts, { startOffset: pm.offset || 0 }));
+      } else if (this.isSupported()) {
+        try { window.speechSynthesis.resume(); } catch (e) {}
+        this.setVisualSpeaking(true);
+      }
+      return false;
     }
   },
 
@@ -375,8 +481,17 @@ const voice = {
       sound.applyPersonaVoiceChain(pKey, (opts && opts.mood) || "normal", opts && opts.seatId);
     }
 
+    // Differentiate Taiwan-accent YunJheNeural male voices subtly via Web Audio playbackRate!
+    let twTrim = 1.0;
+    if (this.accentMode === "tw" && typeof PERSONA_AUDIO_EQ !== "undefined" && PERSONA_AUDIO_EQ[pKey] && PERSONA_AUDIO_EQ[pKey].twRateMul) {
+      twTrim = PERSONA_AUDIO_EQ[pKey].twRateMul;
+    }
+    const pbRate = skipRateAdjust
+      ? clamp(twTrim * (this.rate >= 1.15 ? 1.06 : 1.0), 0.90, 1.24)
+      : clamp(this.rate * twTrim, 0.90, 1.26);
+
     src.buffer = audioBuf;
-    src.playbackRate.value = skipRateAdjust ? 1.0 : clamp(this.rate, 0.92, 1.22);
+    src.playbackRate.value = pbRate;
     vGain.gain.value = clamp(this.volume, 0, 1);
 
     // Route through Broadcast Vocal Chain (Per-Persona EQ + Presence + De-Ess + Compressor + 3D Spatial Panner + Live Lip-Sync Analyser!)
@@ -387,27 +502,44 @@ const voice = {
       vGain.connect(sound.comp || sound.ctx.destination);
     }
 
+    const startOffset = Math.max(0, Number(opts && opts.startOffset) || 0);
+    const remainDur = Math.max(0.1, (audioBuf ? audioBuf.duration : 2.5) - startOffset);
     this.activeAudioNode = src;
     this.activeAudioGain = vGain;
+    this.pauseMeta = {
+      seq: seq,
+      audioBuf: audioBuf,
+      onDone: onDone,
+      opts: opts || {},
+      offset: startOffset,
+      startedAt: sound.ctx.currentTime,
+      playbackRate: pbRate
+    };
     this.setVisualSpeaking(true);
-    // Sync spotlight typewriter cadence precisely to real decoded audio duration!
-    if (audioBuf && audioBuf.duration && typeof syncTypewriterToAudioDuration === "function") {
-      syncTypewriterToAudioDuration((audioBuf.duration / src.playbackRate.value) * 1000);
+    this.syncPauseButtonUi();
+
+    const estPlayMs = (remainDur / pbRate) * 1000;
+    if (opts && typeof opts.onAudioReady === "function" && startOffset === 0) {
+      try { opts.onAudioReady(opts.totalDurationHintMs || estPlayMs); } catch (e) {}
+    } else if (audioBuf && audioBuf.duration && startOffset === 0 && !(opts && opts.skipTypewriterSync) && typeof syncTypewriterToAudioDuration === "function") {
+      syncTypewriterToAudioDuration(opts && opts.totalDurationHintMs ? opts.totalDurationHintMs : estPlayMs);
     }
     const self = this;
     const finishOnce = function () {
-      if (seq !== self.utteranceSeq) return;
-      self.utteranceSeq += 1;
+      if (seq !== self.utteranceSeq || self.paused) return;
+      if (!(opts && opts.keepSeqOpen)) self.utteranceSeq += 1;
       self.clearTimers();
       self.activeAudioNode = null;
       self.activeAudioGain = null;
-      self.setVisualSpeaking(false);
+      self.pauseMeta = null;
+      if (!(opts && opts.keepSeqOpen)) self.setVisualSpeaking(false);
+      self.syncPauseButtonUi();
       if (typeof onDone === "function") onDone();
     };
-    const estMs = Math.max(3000, Math.round(((audioBuf && audioBuf.duration ? audioBuf.duration : 2.5) / Math.max(0.5, src.playbackRate.value)) * 1000) + 3500);
+    const estMs = Math.max(3000, Math.round(estPlayMs) + 3500);
     this.watchdogTimer = setTimeout(finishOnce, estMs);
     src.onended = finishOnce;
-    src.start(0);
+    src.start(0, startOffset);
     return true;
   },
 
@@ -465,51 +597,117 @@ const voice = {
   playFreeLocalNeuralTts: async function (seq, personaName, cleanText, mood, onDone, opts) {
     if (!this.localNeuralAvailable || !sound.ctx) return false;
     const effKey = this.resolvePersonaKey(personaName);
-    const playOpts = { skipRateAdjust: true, personaKey: effKey, mood: mood || "normal", seatId: opts && opts.seatId };
-    const cacheKey = effKey + "|" + this.accentMode + "|" + Math.round(this.rate * 100) + "|" + (mood || "normal") + "|" + cleanText;
-    if (this.localNeuralCache[cacheKey]) {
-      return this.playBufferedStudioAudio(seq, this.localNeuralCache[cacheKey], onDone, playOpts);
+    const segments = this.splitTwoStageStream(cleanText);
+    const makeKey = function (segText) {
+      return effKey + "|" + voice.accentMode + "|" + Math.round(voice.rate * 100) + "|" + (mood || "normal") + "|" + segText;
+    };
+
+    const fetchWithTimeout = async function (segText, timeoutMs) {
+      const ck = makeKey(segText);
+      if (voice.localNeuralCache[ck]) return voice.localNeuralCache[ck];
+      const controller = typeof AbortController === "function" ? new AbortController() : null;
+      let timer = null;
+      try {
+        const fetchPromise = voice._fetchLocalNeuralAudio(
+          ck, effKey, segText, mood,
+          (!voice.localNeuralPending[ck] && controller) ? controller.signal : null
+        );
+        const timeoutPromise = new Promise(function (resolve) {
+          timer = setTimeout(function () {
+            if (controller) controller.abort();
+            resolve(null);
+          }, timeoutMs || 11000);
+        });
+        const buf = await Promise.race([fetchPromise, timeoutPromise]);
+        if (timer) clearTimeout(timer);
+        return buf;
+      } catch (e) {
+        if (timer) clearTimeout(timer);
+        return null;
+      }
+    };
+
+    // Fast two-stage streaming: synthesize & play opening clause immediately while prefetching rest in parallel!
+    const seg1 = segments[0];
+    const seg2 = segments.length > 1 ? segments[1] : null;
+    if (seg2) {
+      const ck2 = makeKey(seg2);
+      if (!this.localNeuralCache[ck2] && !this.localNeuralPending[ck2]) {
+        this._fetchLocalNeuralAudio(ck2, effKey, seg2, mood, null);
+      }
     }
-    const controller = typeof AbortController === "function" ? new AbortController() : null;
-    let timer = null;
-    try {
-      const fetchPromise = this._fetchLocalNeuralAudio(
-        cacheKey,
-        effKey,
-        cleanText,
-        mood,
-        (!this.localNeuralPending[cacheKey] && controller) ? controller.signal : null
-      );
-      const timeoutPromise = new Promise(function (resolve) {
-        timer = setTimeout(function () {
-          if (controller) controller.abort();
-          resolve(null);
-        }, 11000);
+
+    const buf1 = await fetchWithTimeout(seg1, 10000);
+    if (!buf1 || seq !== this.utteranceSeq) return false;
+
+    const estTotalMs = seg2
+      ? Math.round((buf1.duration * (cleanText.length / Math.max(1, seg1.length))) * 1000)
+      : Math.round(buf1.duration * 1000);
+    const playOpts1 = {
+      skipRateAdjust: true,
+      personaKey: effKey,
+      mood: mood || "normal",
+      seatId: opts && opts.seatId,
+      onAudioReady: opts && opts.onAudioReady,
+      totalDurationHintMs: estTotalMs,
+      keepSeqOpen: Boolean(seg2)
+    };
+
+    if (!seg2) {
+      return this.playBufferedStudioAudio(seq, buf1, onDone, playOpts1);
+    }
+
+    const self = this;
+    return this.playBufferedStudioAudio(seq, buf1, function () {
+      if (seq !== self.utteranceSeq) return;
+      fetchWithTimeout(seg2, 10000).then(function (buf2) {
+        if (!buf2 || seq !== self.utteranceSeq) {
+          self.utteranceSeq += 1;
+          self.setVisualSpeaking(false);
+          if (typeof onDone === "function") onDone();
+          return;
+        }
+        const playOpts2 = {
+          skipRateAdjust: true,
+          personaKey: effKey,
+          mood: mood || "normal",
+          seatId: opts && opts.seatId,
+          skipTypewriterSync: true
+        };
+        if (typeof syncTypewriterToAudioDuration === "function") {
+          syncTypewriterToAudioDuration(buf2.duration * 1000);
+        }
+        self.playBufferedStudioAudio(seq, buf2, onDone, playOpts2);
       });
-      const audioBuf = await Promise.race([fetchPromise, timeoutPromise]);
-      if (timer) clearTimeout(timer);
-      if (!audioBuf || seq !== this.utteranceSeq) return false;
-      return this.playBufferedStudioAudio(seq, audioBuf, onDone, playOpts);
-    } catch (e) {
-      if (timer) clearTimeout(timer);
-      return false;
-    }
+    }, playOpts1);
   },
 
-  playGeminiStudioTts: async function (seq, profile, cleanText, mood, onDone) {
+  playGeminiStudioTts: async function (seq, profile, cleanText, mood, onDone, opts) {
     if (!state.geminiApiKey || !sound.ctx) return false;
     const voiceName = profile.studioVoice || "Kore";
-    const cacheKey = voiceName + ":" + cleanText;
+    const effKey = (opts && opts.personaKey) ? opts.personaKey : this.activePersonaName;
+    const cacheKey = voiceName + ":" + (mood || "normal") + ":" + cleanText;
     if (this.studioCache[cacheKey]) {
-      return this.playBufferedStudioAudio(seq, this.studioCache[cacheKey], onDone);
+      return this.playBufferedStudioAudio(seq, this.studioCache[cacheKey], onDone, opts);
     }
     const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent";
     const controller = new AbortController();
-    const timer = setTimeout(function () { controller.abort(); }, 7500);
+    const timer = setTimeout(function () { controller.abort(); }, 8500);
     try {
-      const styledText = mood === "panic"
-        ? ("用稍微緊張急促的台灣口語說：" + cleanText)
-        : cleanText;
+      const baseDir = PERSONA_TTS_DIRECTIONS[effKey] || "自然親切的台灣年輕人口語";
+      const moodDirMap = {
+        panic: "語氣略帶緊張急促、防守心虛",
+        accuse: "語氣堅定犀利、帶有質詢與說服力",
+        claim_seer: "語氣鄭重果決、亮明身分號召全場",
+        rebut: "語氣急轉反駁、直指對方邏輯漏洞",
+        trust: "語氣溫和真誠、展現信任與善意",
+        happy: "語氣輕快開朗、帶著微笑",
+        last_words: "語氣略微不捨沉靜、像臨走前的誠懇叮嚀",
+        host_night: "語氣低沉神祕、營造夜晚靜謐氛圍",
+        host_dawn: "語氣清朗明快、揭曉天亮結果"
+      };
+      const moodDir = moodDirMap[mood] || "語氣自然流暢、像圍坐喝茶聊天";
+      const styledText = "（請以「" + baseDir + "，" + moodDir + "」演繹以下繁體中文台詞，直接唸出內容不要唸括號指令）：" + cleanText;
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -552,7 +750,7 @@ const voice = {
         if (keys.length > 24) delete this.studioCache[keys[0]];
         this.studioCache[cacheKey] = audioBuf;
       }
-      return this.playBufferedStudioAudio(seq, audioBuf, onDone);
+      return this.playBufferedStudioAudio(seq, audioBuf, onDone, opts);
     } catch (e) {
       clearTimeout(timer);
       return false;
@@ -562,6 +760,7 @@ const voice = {
   speak: function (personaName, rawText, mood, onDone, opts) {
     const clean = this.formatMandarinText(rawText);
     if (!clean || !this.canSpeak()) {
+      if (opts && typeof opts.onAudioReady === "function") opts.onAudioReady(0);
       if (typeof onDone === "function") setTimeout(onDone, 0);
       return;
     }
@@ -588,11 +787,19 @@ const voice = {
       sound.playVoiceSignature(personaName, mood || "normal");
     }
 
+    const forwardOpts = {
+      seatId: seatId,
+      personaKey: effKey,
+      mood: mood || "normal",
+      onAudioReady: opts && opts.onAudioReady
+    };
+
     // Priority 1 (100% Free $0): Local Neural Voice Server (server.py + Microsoft Edge Neural voices!)
     if (this.localNeuralAvailable && sound.ctx) {
       this.setVisualSpeaking(true);
-      this.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, { seatId: seatId }).then(function (ok) {
+      this.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
         if (ok || seq !== self.utteranceSeq) return;
+        if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
         self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
       });
       return;
@@ -601,14 +808,16 @@ const voice = {
     // Priority 2 (Optional): If user voluntarily connected their own Gemini API Key
     if (state.geminiApiKey && sound.ctx) {
       this.setVisualSpeaking(true);
-      this.playGeminiStudioTts(seq, profile, clean, mood || "normal", onDone).then(function (ok) {
+      this.playGeminiStudioTts(seq, profile, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
         if (ok || seq !== self.utteranceSeq) return;
+        if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
         self.speakLocalBrowserTts(seq, profile, clean, mood, false, onDone);
       });
       return;
     }
 
     // Priority 3 (100% Free $0 Offline): Upgraded Browser Neural/OS TTS with Natural Clause Cadence
+    if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
     this.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
   },
 
@@ -722,9 +931,9 @@ const voice = {
     this.speak("主持", text, mood || "normal", onDone, { seatId: 0 });
   },
 
-  speakCharacter: function (speaker, text, mood, onDone) {
+  speakCharacter: function (speaker, text, mood, onDone, opts) {
     const nameKey = (!speaker || speaker.id === getPlayerId()) ? "你" : speaker.name;
-    this.speak(nameKey, text, mood || "normal", onDone, { seatId: speaker ? speaker.id : null });
+    this.speak(nameKey, text, mood || "normal", onDone, Object.assign({ seatId: speaker ? speaker.id : null }, opts || {}));
   },
 
   replayLast: function () {

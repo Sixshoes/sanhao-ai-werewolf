@@ -6,17 +6,19 @@
 function computeStageSeatCoords(f) {
   const { dpr, cx, cy, rx, ry } = f;
 
-  // 4. Seat Positions (Dynamic 6 or 8 seats even in Lobby!)
-  const lobbySeatsN = (el("selectModeCount") && parseInt(el("selectModeCount").value, 10) === 8) ? 8 : 6;
+  // 4. Seat Positions (Dynamic 6 / 8 / 10 / 12 seats even in Lobby!)
+  const lobbySeatsN = typeof getLobbySeatCount === "function" ? getLobbySeatCount() : ((el("selectModeCount") && parseInt(el("selectModeCount").value, 10)) || 8);
   const seats = state.match.started
     ? state.match.seats
     : Array.from({ length: lobbySeatsN }, function (_, idx) {
         const n = idx + 1;
-        return { id: n, name: n === 1 ? "你" : AI_PERSONAS[n - 2].name, color: n === 1 ? "#f5b942" : AI_PERSONAS[n - 2].avatarColor, alive: true, role: "villager", microPulse: 22 };
+        const pInfo = n === 1 ? null : (AI_PERSONAS[n - 2] || AI_PERSONAS[0]);
+        return { id: n, name: n === 1 ? "你" : pInfo.name, color: n === 1 ? "#f5b942" : pInfo.avatarColor, alive: true, role: "villager", microPulse: 22 };
       });
 
   const coords = [];
   const nSeats = seats.length;
+  const seatR = (nSeats >= 12 ? 20 : (nSeats >= 10 ? 22.5 : 26)) * dpr;
   for (let i = 0; i < nSeats; i++) {
     const angle = Math.PI * 0.5 + (i * Math.PI * 2) / nSeats;
     const deg = Math.round(((angle * 180) / Math.PI) % 360);
@@ -26,7 +28,7 @@ function computeStageSeatCoords(f) {
       deg: deg,
       x: cx + Math.cos(angle) * rx,
       y: cy + Math.sin(angle) * ry,
-      r: 26 * dpr,
+      r: seatR,
       seat: seats[i]
     });
   }
@@ -295,13 +297,13 @@ function drawStageSeats(ctx, f, coords) {
     const known = state.match.started && !state.hidePlayerRole
       ? (showTruth ? s.role : state.match.playerKnownRoles[s.id])
       : null;
-    let plateText = "0" + s.id + " " + (s.id === getPlayerId() ? "你" : s.name);
-    if (!s.alive) plateText = (showTruth && ROLE_DEFS[s.role]) ? ("0" + s.id + " " + ROLE_DEFS[s.role].name) : ("0" + s.id + " 休息");
-    else if (known === "wolf") plateText = "0" + s.id + " 酸民狼";
-    else if (known === "good_verified") plateText = "0" + s.id + " 好人";
-    else if (known && ROLE_DEFS[known] && showTruth) plateText = "0" + s.id + " " + ROLE_DEFS[known].name;
-    else if (pMark === "wolf") plateText = "0" + s.id + " 懷疑";
-    else if (pMark === "good") plateText = "0" + s.id + " 信任";
+    let plateText = fmtSeatNum(s.id) + " " + (s.id === getPlayerId() ? "你" : s.name);
+    if (!s.alive) plateText = (showTruth && ROLE_DEFS[s.role]) ? (fmtSeatNum(s.id) + " " + ROLE_DEFS[s.role].name) : (fmtSeatNum(s.id) + " 休息");
+    else if (known === "wolf") plateText = fmtSeatNum(s.id) + " 酸民狼";
+    else if (known === "good_verified") plateText = fmtSeatNum(s.id) + " 好人";
+    else if (known && ROLE_DEFS[known] && showTruth) plateText = fmtSeatNum(s.id) + " " + ROLE_DEFS[known].name;
+    else if (pMark === "wolf") plateText = fmtSeatNum(s.id) + " 懷疑";
+    else if (pMark === "good") plateText = fmtSeatNum(s.id) + " 信任";
 
     const plateW = Math.max(48 * dpr, (plateText.length * 8.2 + 12) * dpr);
     const plateH = 16 * dpr;

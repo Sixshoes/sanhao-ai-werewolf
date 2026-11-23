@@ -256,7 +256,7 @@ function drawStageOverlays(ctx, f, coords, skipBeams) {
       // Floating live action label near pointer / snapped seat!
       let dragLabel = "拖曳到任一角色頭像放開互動";
       if (snapN) {
-        const snName = "0" + snapN.id + "號" + snapN.seat.name;
+        const snName = fmtSeatNum(snapN.id) + "號" + snapN.seat.name;
         if (!state.match.started || p === "LOBBY") dragLabel = "👋 放開與 " + snName + " 擊掌打招呼！";
         else if (p === "DAY_VOTE") dragLabel = "🗳 放開直接投票給 " + snName + "！";
         else if (p === "NIGHT_SEER") dragLabel = "🔮 放開立即查驗 " + snName + "！";

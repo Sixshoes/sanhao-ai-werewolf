@@ -4,16 +4,20 @@
 "use strict";
 
 const PERSONA_AUDIO_EQ = {
-  "主持":  { lowFreq: 190, lowGain: 1.0,  midFreq: 950,  midGain: 0.4,  presFreq: 3000, presGain: 0.6, highFreq: 6800, highGain: -1.0, revSend: 0.16, gainTrim: 0.98 },
-  "你":    { lowFreq: 200, lowGain: 0.6,  midFreq: 1000, midGain: 0.2,  presFreq: 3100, presGain: 0.8, highFreq: 6600, highGain: -0.8, revSend: 0.04, gainTrim: 1.00 },
-  "你_男": { lowFreq: 185, lowGain: 0.8,  midFreq: 860,  midGain: 0.4,  presFreq: 2800, presGain: 0.8, highFreq: 6400, highGain: -1.0, revSend: 0.05, gainTrim: 1.01 },
-  "小澄":  { lowFreq: 210, lowGain: -0.6, midFreq: 1100, midGain: 0.5,  presFreq: 3400, presGain: 1.2, highFreq: 6800, highGain: -0.8, revSend: 0.04, gainTrim: 0.98 },
-  "暖暖":  { lowFreq: 220, lowGain: 0.8,  midFreq: 920,  midGain: 0.3,  presFreq: 2900, presGain: 0.5, highFreq: 7500, highGain: 0.9,  revSend: 0.08, gainTrim: 0.96 },
-  "阿松":  { lowFreq: 175, lowGain: 1.4,  midFreq: 680,  midGain: 0.6,  presFreq: 2500, presGain: 0.5, highFreq: 5800, highGain: -1.2, revSend: 0.07, gainTrim: 1.03 },
-  "星兒":  { lowFreq: 230, lowGain: -0.8, midFreq: 1150, midGain: 0.3,  presFreq: 3900, presGain: 1.2, highFreq: 7600, highGain: 0.8,  revSend: 0.06, gainTrim: 0.95 },
-  "小雲":  { lowFreq: 215, lowGain: -0.5, midFreq: 1050, midGain: 0.6,  presFreq: 2800, presGain: 1.3, highFreq: 6400, highGain: -1.0, revSend: 0.04, gainTrim: 0.99 },
-  "阿竹":  { lowFreq: 195, lowGain: 0.8,  midFreq: 700,  midGain: 0.9,  presFreq: 2700, presGain: 0.4, highFreq: 6000, highGain: -1.1, revSend: 0.11, gainTrim: 1.00 },
-  "晨晨":  { lowFreq: 205, lowGain: 0.4,  midFreq: 1050, midGain: 0.6,  presFreq: 3500, presGain: 1.4, highFreq: 7000, highGain: -0.5, revSend: 0.06, gainTrim: 1.02 }
+  "主持":  { lowFreq: 190, lowGain: 1.0,  midFreq: 950,  midGain: 0.4,  presFreq: 3000, presGain: 0.6, highFreq: 6800, highGain: -1.0, revSend: 0.14, gainTrim: 0.98, twRateMul: 1.00 },
+  "你":    { lowFreq: 200, lowGain: 0.6,  midFreq: 1000, midGain: 0.2,  presFreq: 3100, presGain: 0.8, highFreq: 6600, highGain: -0.8, revSend: 0.04, gainTrim: 1.00, twRateMul: 1.00 },
+  "你_男": { lowFreq: 185, lowGain: 0.8,  midFreq: 860,  midGain: 0.4,  presFreq: 2800, presGain: 0.8, highFreq: 6400, highGain: -1.0, revSend: 0.05, gainTrim: 1.01, twRateMul: 1.00 },
+  "小澄":  { lowFreq: 215, lowGain: -1.2, midFreq: 1180, midGain: 0.9,  presFreq: 3500, presGain: 1.6, highFreq: 6800, highGain: -0.5, revSend: 0.04, gainTrim: 0.98, twRateMul: 1.045 },
+  "暖暖":  { lowFreq: 220, lowGain: 0.8,  midFreq: 920,  midGain: 0.3,  presFreq: 2900, presGain: 0.5, highFreq: 7500, highGain: 0.9,  revSend: 0.07, gainTrim: 0.96, twRateMul: 0.98 },
+  "阿松":  { lowFreq: 165, lowGain: 2.2,  midFreq: 640,  midGain: 0.9,  presFreq: 2400, presGain: 0.4, highFreq: 5500, highGain: -1.6, revSend: 0.06, gainTrim: 1.04, twRateMul: 0.935 },
+  "星兒":  { lowFreq: 230, lowGain: -0.8, midFreq: 1150, midGain: 0.3,  presFreq: 3900, presGain: 1.2, highFreq: 7600, highGain: 0.8,  revSend: 0.05, gainTrim: 0.95, twRateMul: 1.04 },
+  "小雲":  { lowFreq: 215, lowGain: -0.5, midFreq: 1050, midGain: 0.6,  presFreq: 2800, presGain: 1.3, highFreq: 6400, highGain: -1.0, revSend: 0.04, gainTrim: 0.99, twRateMul: 1.02 },
+  "阿竹":  { lowFreq: 195, lowGain: 1.1,  midFreq: 720,  midGain: 1.2,  presFreq: 2700, presGain: 0.4, highFreq: 6000, highGain: -1.2, revSend: 0.09, gainTrim: 1.00, twRateMul: 0.965 },
+  "晨晨":  { lowFreq: 210, lowGain: 0.3,  midFreq: 1080, midGain: 0.8,  presFreq: 3650, presGain: 1.8, highFreq: 7200, highGain: -0.2, revSend: 0.05, gainTrim: 1.02, twRateMul: 1.06 },
+  "墨白":  { lowFreq: 155, lowGain: 2.5,  midFreq: 580,  midGain: 0.8,  presFreq: 2250, presGain: 0.5, highFreq: 5200, highGain: -1.8, revSend: 0.08, gainTrim: 1.03, twRateMul: 0.92 },
+  "晴嵐":  { lowFreq: 205, lowGain: 0.7,  midFreq: 960,  midGain: 0.5,  presFreq: 2950, presGain: 0.7, highFreq: 6900, highGain: -0.4, revSend: 0.08, gainTrim: 0.98, twRateMul: 0.96 },
+  "阿朗":  { lowFreq: 190, lowGain: -0.4, midFreq: 1140, midGain: 1.1,  presFreq: 3450, presGain: 1.9, highFreq: 6700, highGain: -0.4, revSend: 0.04, gainTrim: 1.02, twRateMul: 1.055 },
+  "柚子":  { lowFreq: 240, lowGain: -0.9, midFreq: 1220, midGain: 0.4,  presFreq: 4050, presGain: 1.3, highFreq: 7800, highGain: 1.0,  revSend: 0.05, gainTrim: 0.96, twRateMul: 1.05 }
 };
 
 const sound = {
@@ -210,7 +214,34 @@ const sound = {
       if (personaKey === "主持" || personaKey === "你" || personaKey === "你_男") {
         this.setVoicePan(0);
       } else if (seatId && typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.computeSeatPan === "function") {
-        this.setVoicePan(stage3d.computeSeatPan(seatId));
+        // Pull active speaker slightly closer to center-mic for crisp focus while preserving spatial cue!
+        this.setVoicePan(stage3d.computeSeatPan(seatId) * 0.64);
+      }
+    } catch (e) {}
+  },
+
+  playTableReactionSfx: function (kind) {
+    if (this.muted || !this.ctx) return;
+    try {
+      if (kind === "clash") {
+        // Subtle porcelain teacup clink + wooden gavel resonance on role counter-claim
+        this.tone(1480, 0.08, "sine", 0.045, 0);
+        this.tone(2210, 0.11, "triangle", 0.032, 0.03);
+        this.tone(296, 0.16, "triangle", 0.055, 0.05);
+      } else if (kind === "agree") {
+        // Warm wooden-chime nod for agreement / vouch
+        this.tone(523.25, 0.09, "sine", 0.04, 0);
+        this.tone(659.25, 0.14, "sine", 0.038, 0.07);
+      } else if (kind === "doubt") {
+        // Soft inquisitive wood-tap cue for suspicion / questioning
+        this.tone(392, 0.07, "triangle", 0.048, 0);
+        this.tone(330, 0.12, "triangle", 0.042, 0.06);
+      } else if (kind === "mic_on") {
+        this.tone(587.3, 0.07, "sine", 0.045, 0);
+        this.tone(880, 0.11, "sine", 0.045, 0.06);
+      } else if (kind === "mic_off") {
+        this.tone(659.25, 0.07, "sine", 0.04, 0);
+        this.tone(440, 0.10, "sine", 0.035, 0.06);
       }
     } catch (e) {}
   },

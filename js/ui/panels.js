@@ -59,7 +59,7 @@ function renderVoteResultPanel() {
     if (vr.playerVotedOut) {
       el("votePlayerOutChoiceNotice").textContent = (p1 && p1.team === "wolf")
         ? "你已被請離茶席！留下觀戰即可開啟「🎯 席外獵神挑戰」揪出全場真神職，或直接結束看底牌。"
-        : "你已被請離茶席！留下觀戰即可開啟「🔍 席外猜狼挑戰」找出 2 名酸民狼，或直接結束看底牌。";
+        : ("你已被請離茶席！留下觀戰即可開啟「🔍 席外猜狼挑戰」找出 " + (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2) + " 名酸民狼，或直接結束看底牌。");
     }
   }
   if (el("btnVoteEndNow")) {
@@ -107,7 +107,7 @@ function renderVoteResultPanel() {
     row.className = "rounded-xl px-2.5 py-1.5 border " + (isOut ? "bg-rose-500/20 border-rose-400/50 vote-row-out" : "bg-slate-950/70 border-slate-800");
     row.innerHTML =
       '<div class="flex items-center justify-between text-xs font-black">' +
-      '<span class="' + (isOut ? "text-rose-200" : "text-slate-200") + '">0' + e.id + "號 " + escapeHtml(sObj ? sObj.name : "") + (isOut ? "（出局）" : "") + "</span>" +
+      '<span class="' + (isOut ? "text-rose-200" : "text-slate-200") + '">' + fmtSeatNum(e.id) + "號 " + escapeHtml(sObj ? sObj.name : "") + (isOut ? "（出局）" : "") + "</span>" +
       '<span class="text-amber-300 math-font">' + e.count + " 票 (" + sharePct + "%)</span>" +
       "</div>" +
       '<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden my-1">' +
@@ -151,7 +151,7 @@ function renderVotePickPanel() {
   }
   const pkActive = isPkVoteActive();
   const pkListLabel = pkActive
-    ? state.match.pkCandidates.map(function (id) { return "0" + id + "號"; }).join("、")
+    ? state.match.pkCandidates.map(function (id) { return fmtSeatNum(id) + "號"; }).join("、")
     : "";
   if (el("votePromptLabel")) {
     el("votePromptLabel").textContent = pkActive
@@ -161,7 +161,7 @@ function renderVotePickPanel() {
   const sel = getSeat(state.selectedSeatId);
   const validVote = Boolean(sel && isValidVoteTarget(sel.id));
   el("selectedVoteBadge").textContent = validVote
-    ? ("已鎖定：0" + sel.id + "號 " + sel.name)
+    ? ("已鎖定：" + fmtSeatNum(sel.id) + "號 " + sel.name)
     : (pkActive ? ("僅可投給 " + pkListLabel + "（或棄票）") : "點上方頭像或圓桌角色（再點一次秒投）");
   const vIntel = el("voteTargetIntelLine");
   if (vIntel) {
@@ -170,7 +170,7 @@ function renderVotePickPanel() {
       const sw = (state.match.microPulseRevealed || sel.sweatExposed) ? ("・心虛 " + sel.microPulse + "%") : "";
       const cl = (sel.claimedRole && ROLE_DEFS[sel.claimedRole]) ? ("・跳" + ROLE_DEFS[sel.claimedRole].name) : "";
       const lastEv = (state.match.daySpeechEvents || []).find(function (ev) { return ev.speakerId === sel.id; });
-      const st = lastEv ? (lastEv.accuseId ? ("・今日指控0" + lastEv.accuseId + "號") : (lastEv.vouchId ? ("・今日力挺0" + lastEv.vouchId + "號") : "")) : "";
+      const st = lastEv ? (lastEv.accuseId ? ("・今日指控" + fmtSeatNum(lastEv.accuseId) + "號") : (lastEv.vouchId ? ("・今日力挺" + fmtSeatNum(lastEv.vouchId) + "號") : "")) : "";
       vIntel.textContent = mk + cl + sw + st;
       vIntel.classList.remove("hidden");
     } else {
@@ -180,7 +180,7 @@ function renderVotePickPanel() {
   const castBtn = el("btnCastVote");
   castBtn.disabled = !validVote;
   if (validVote) {
-    castBtn.innerHTML = escapeHtml("確認投給 0" + sel.id + "號") + ' <kbd class="ui-kbd ml-1">Enter</kbd>';
+    castBtn.innerHTML = escapeHtml("確認投給 " + fmtSeatNum(sel.id) + "號") + ' <kbd class="ui-kbd ml-1">Enter</kbd>';
   } else {
     castBtn.textContent = pkActive ? "請點選 PK 候選人" : "請先選對象";
   }
@@ -205,7 +205,7 @@ function renderNightAndHunterPanel(p) {
         ? "bg-rose-500/20 border-rose-400/60 text-rose-100"
         : "bg-emerald-500/20 border-emerald-400/60 text-emerald-100"
     );
-    el("seerRevealTitle").textContent = "0" + rv.targetId + "號 " + rv.targetName + (rv.isWolf ? " 是【鍵盤酸民狼】！" : " 是【書院好夥伴】！");
+    el("seerRevealTitle").textContent = fmtSeatNum(rv.targetId) + "號 " + rv.targetName + (rv.isWolf ? " 是【鍵盤酸民狼】！" : " 是【書院好夥伴】！");
     el("seerRevealSub").textContent = rv.isWolf
       ? "白天發言時可直接亮牌號召大家投他！"
       : "白天可放心信任並保護這位好夥伴！";
@@ -267,9 +267,9 @@ function renderNightAndHunterPanel(p) {
   }
   const lastG = state.match.lastGuardTargetId;
   el("targetPromptBox").textContent = validT
-    ? ("已鎖定 0" + sel.id + "號 " + (sel.id === getPlayerId() ? "你自己" : sel.name) + "（再點頭像或按 Enter 確認）")
+    ? ("已鎖定 " + fmtSeatNum(sel.id) + "號 " + (sel.id === getPlayerId() ? "你自己" : sel.name) + "（再點頭像或按 Enter 確認）")
     : (p === "NIGHT_GUARD"
-      ? (lastG ? ("護心守衛：點上方頭像（含自己）守護；上晚守過 0" + lastG + "號，今晚不可連守或按略過") : "護心守衛：點上方頭像（含自己）展開今夜守護結界")
+      ? (lastG ? ("護心守衛：點上方頭像（含自己）守護；上晚守過 " + fmtSeatNum(lastG) + "號，今晚不可連守或按略過") : "護心守衛：點上方頭像（含自己）展開今夜守護結界")
       : (p === "NIGHT_SEER" ? "明心觀察員：點上方頭像查證身分（再點一次秒查）" : "請直接點上方頭像選擇目標座位"));
 }
 
@@ -347,15 +347,15 @@ function renderStepperPanel(p) {
       const wTxt = el("turnWatchText");
       if (wTxt && cSp) {
         if (state.activeClash.kind === "fake_seer") {
-          wTxt.textContent = "🔮 0" + cSp.id + "號 " + cSp.name + " 冒充明心觀察員！已備好反駁牌，輪到你的順位再拆穿。";
+          wTxt.textContent = "🔮 " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 冒充明心觀察員！已備好反駁牌，輪到你的順位再拆穿。";
         } else if (state.activeClash.kind === "contradiction" && state.activeClash.contradiction) {
           wTxt.textContent = "⚡ 抓到矛盾（" + state.activeClash.contradiction.label + "）：" + state.activeClash.contradiction.detail + "｜按「記進筆記」解鎖呈堂證供卡！";
         } else if (state.activeClash.kind === "toxic_slip") {
-          wTxt.textContent = "⚠ 0" + cSp.id + "號 " + cSp.name + " 語氣帶刺！可靜默記進筆記，輪到你再點出破綻。";
+          wTxt.textContent = "⚠ " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 語氣帶刺！可靜默記進筆記，輪到你再點出破綻。";
         } else {
           wTxt.textContent = state.activeClash.inWolfPit
-            ? ("📌 前置位 0" + cSp.id + "號 " + cSp.name + " 把你點進狼坑！輪到你的順位即可正面回應並反盤狼坑。")
-            : ("📌 0" + cSp.id + "號 " + cSp.name + " 點名懷疑你！嚴守輪流發言，輪到你時即可回擊。");
+            ? ("📌 前置位 " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 把你點進狼坑！輪到你的順位即可正面回應並反盤狼坑。")
+            : ("📌 " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 點名懷疑你！嚴守輪流發言，輪到你時即可回擊。");
         }
       }
     }
@@ -376,7 +376,7 @@ function renderStepperPanel(p) {
   const hunterShot = state.match.lastHunterShot;
   el("stepperStatusText").textContent = isHunterResolve
     ? (hunterShot
-      ? ("⚖️ 直心糾察長 0" + hunterShot.hunterId + "號 " + hunterShot.hunterName + " 帶走 0" + hunterShot.targetId + "號 " + hunterShot.targetName + " 一同離席！")
+      ? ("⚖️ 直心糾察長 " + fmtSeatNum(hunterShot.hunterId) + "號 " + hunterShot.hunterName + " 帶走 " + fmtSeatNum(hunterShot.targetId) + "號 " + hunterShot.targetName + " 一同離席！")
       : "⚖️ 直心糾察長壓下正氣共鳴，未帶走任何人。")
     : (activeSpeaker
       ? (activeSpeaker.id + "號 " + activeSpeaker.name + "發言中…")
@@ -395,7 +395,7 @@ function renderSheriffTransferPanel() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "cta-brass py-1.5 px-2.5 text-xs";
-    btn.textContent = "👑 交給 0" + s.id + "號 " + s.name;
+    btn.textContent = "👑 交給 " + fmtSeatNum(s.id) + "號 " + s.name;
     btn.addEventListener("click", function () {
       if (typeof resolvePlayerSheriffTransfer === "function") resolvePlayerSheriffTransfer(s.id);
     });
@@ -417,7 +417,7 @@ function renderSheriffElectionPanel() {
     ctx.speeches.forEach(function (sp) {
       const row = document.createElement("div");
       row.className = "rounded px-2 py-1 text-[11px] bg-slate-900/55 border border-amber-400/25 text-slate-200";
-      row.innerHTML = '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("👑 " + playerNumTag() + " 你") : ("0" + sp.id + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
+      row.innerHTML = '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("👑 " + playerNumTag() + " 你") : (fmtSeatNum(sp.id) + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
       cBox.appendChild(row);
     });
   }
@@ -434,7 +434,7 @@ function renderSheriffElectionPanel() {
         const vb = document.createElement("button");
         vb.type = "button";
         vb.className = "cta-celadon py-1 px-2.5 text-[11px]";
-        vb.textContent = "👑 投給 0" + cid + "號 " + cs.name;
+        vb.textContent = "👑 投給 " + fmtSeatNum(cid) + "號 " + cs.name;
         vb.addEventListener("click", function () {
           if (typeof resolveSheriffElectionAction === "function") resolveSheriffElectionAction(cid);
         });

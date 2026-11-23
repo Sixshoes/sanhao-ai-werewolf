@@ -15,7 +15,7 @@ function renderTimeline() {
       '<div class="grid grid-cols-1 gap-1.5">' +
       '<div class="p-2 rounded-lg bg-slate-950/70"> <strong>晚上</strong>：迷霧鎖定、明心觀察員查證、滴水奉茶師護場</div>' +
       '<div class="p-2 rounded-lg bg-slate-950/70"> <strong>白天</strong>：嚴守凹嗚輪流發言，靜默標記與記筆記！</div>' +
-      '<div class="p-2 rounded-lg bg-slate-950/70"> <strong>投票</strong>：公投／平票 PK，把 2 隻酸民狼送出場！</div>' +
+      '<div class="p-2 rounded-lg bg-slate-950/70"> <strong>投票</strong>：公投／平票 PK，把全場酸民狼送出場！</div>' +
       '</div>';
     container.appendChild(empty);
     return;
@@ -34,12 +34,24 @@ function renderTimeline() {
     card.className = "rounded-xl border px-3 py-1.5 text-xs msg-enter " + cls;
 
     if (item.kind === "speech") {
+      const canQuote = Boolean(item.speakerId && item.speakerId !== getPlayerId() && state.match.started);
       card.innerHTML =
         '<div class="flex items-center justify-between gap-1">' +
         '<span class="font-black text-amber-200">' + escapeHtml(item.title) + '</span>' +
+        '<div class="flex items-center gap-1">' +
         (item.subBadge ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-950/80 text-slate-300">' + escapeHtml(item.subBadge) + '</span>' : '') +
+        (canQuote ? '<button type="button" data-quote-seat="' + item.speakerId + '" class="cta-ink text-[9.5px] px-1.5 py-0.5">📌 引用反駁</button>' : '') +
+        '</div>' +
         '</div>' +
         '<div class="text-slate-100 mt-0.5">' + escapeHtml(item.text) + '</div>';
+      if (canQuote) {
+        const qBtn = card.querySelector("[data-quote-seat]");
+        if (qBtn) {
+          qBtn.addEventListener("click", function () {
+            quoteSpeechForRebuttal(item.speakerId, item.text);
+          });
+        }
+      }
     } else {
       card.textContent = item.title + (item.text ? (" — " + item.text) : "");
     }
@@ -47,6 +59,99 @@ function renderTimeline() {
   });
 
   container.scrollTop = container.scrollHeight;
+}
+
+function quoteSpeechForRebuttal(seatId, rawSnippet) {
+  const s = getSeat(seatId);
+  if (!s || seatId === getPlayerId()) return;
+  const num = typeof fmtSeatNum === "function" ? fmtSeatNum(s.id) : (s.id < 10 ? ("0" + s.id) : String(s.id));
+  const cleanClip = String(rawSnippet || "").replace(/^「|」$/g, "").trim().slice(0, 26);
+  const rebLine = "針對剛剛 " + num + "號" + s.name + " 提到「" + cleanClip + "…」，我比對了全場邏輯發現有矛盾點，建議大家這輪重點檢視 " + num + "號！";
+  if (typeof pinClue === "function") {
+    pinClue(s.id, "📌引用反駁 " + num + "號", rebLine, "contradiction");
+  }
+  const qIn = el("quickFreeInput");
+  if (qIn && state.match.phase === "DAY_PLAYER_TURN") {
+    qIn.value = rebLine;
+    if (typeof refreshQuickFreeInputHint === "function") refreshQuickFreeInputHint();
+    if (el("modalJournal")) el("modalJournal").classList.add("hidden");
+    qIn.focus();
+    showToast("📌 已帶入引用反駁台詞到你的陳詞欄！", "emerald");
+  } else {
+    showToast("📌 已收藏「引用 " + num + "號原話」進筆記，輪到你發言時可一鍵帶出！", "emerald");
+  }
+}
+
+function renderTableMatrixIntoBody() {
+  const body = el("matrixSheetBody");
+  if (!body) return;
+  body.innerHTML = "";
+  if (!state.match || !state.match.started || !Array.isArray(state.match.seats)) {
+    body.innerHTML = '<div class="col-span-full rounded-xl p-5 text-center bg-slate-950/70 border border-slate-800 text-slate-400">開局後這裡會以矩陣方式整理每位茶客的宣稱身分、今日打／保對象與昨日票型。</div>';
+    return;
+  }
+  const pid = getPlayerId();
+  const day = state.match.day || 1;
+  const dayEvs = state.match.daySpeechEvents || [];
+  const allEvs = state.match.allSpeechEvents || [];
+  const prevVote = (state.match.voteHistory || []).length ? state.match.voteHistory[state.match.voteHistory.length - 1] : null;
+  const fmtTag = function (id) {
+    if (!id) return "—";
+    const st = getSeat(id);
+    const num = typeof fmtSeatNum === "function" ? fmtSeatNum(id) : (id < 10 ? ("0" + id) : String(id));
+    return num + (st ? (st.id === pid ? "你" : st.name) : "號");
+  };
+
+  state.match.seats.forEach(function (s) {
+    const todayEv = dayEvs.slice().reverse().find(function (e) { return e.speakerId === s.id; });
+    const latestEv = todayEv || allEvs.slice().reverse().find(function (e) { return e.speakerId === s.id; });
+    const lastBallot = prevVote && prevVote.ballots ? prevVote.ballots.find(function (b) { return b.voterId === s.id; }) : null;
+    const mark = state.playerMarks ? state.playerMarks[s.id] : null;
+    const isSh = Boolean(!state.match.sheriffElectionPending && state.match.sheriffSeatId === s.id);
+    const roleClaim = (s.claimedRole && ROLE_DEFS[s.claimedRole]) ? ROLE_DEFS[s.claimedRole].name : "未亮牌";
+    const num = typeof fmtSeatNum === "function" ? fmtSeatNum(s.id) : (s.id < 10 ? ("0" + s.id) : String(s.id));
+
+    const card = document.createElement("div");
+    card.className = "matrix-seat-card" + (!s.alive ? " is-dead" : "");
+    const markBadge = mark === "wolf"
+      ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-500/25 text-rose-200">你標:懷疑</span>'
+      : (mark === "good"
+        ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/25 text-emerald-200">你標:認同</span>'
+        : "");
+    const accStr = latestEv && latestEv.accuseId ? ('<span class="text-rose-300 font-bold">🎯 打 ' + escapeHtml(fmtTag(latestEv.accuseId)) + '</span>') : '<span class="text-slate-400">🎯 打 —</span>';
+    const vchStr = latestEv && latestEv.vouchId ? ('<span class="text-emerald-300 font-bold">✅ 保 ' + escapeHtml(fmtTag(latestEv.vouchId)) + '</span>') : '<span class="text-slate-400">✅ 保 —</span>';
+    const voteStr = lastBallot ? (lastBallot.targetId ? ("🗳 投 " + fmtTag(lastBallot.targetId)) : "🗳 棄票") : "🗳 尚無票型";
+
+    card.innerHTML =
+      '<div class="flex items-center justify-between gap-1.5">' +
+        '<div class="flex items-center gap-1.5 min-w-0">' +
+          '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black shrink-0" style="background:' + escapeHtml(s.color || "#64748b") + ';color:#0f172a;">' + num + '</span>' +
+          '<span class="font-black text-amber-100 truncate">' + (isSh ? "👑 " : "") + escapeHtml(s.id === pid ? "你" : s.name) + (!s.alive ? "（離席）" : "") + '</span>' +
+        '</div>' +
+        '<div class="flex items-center gap-1 shrink-0">' +
+          '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-500/20 text-amber-200">' + escapeHtml(roleClaim) + '</span>' +
+          markBadge +
+        '</div>' +
+      '</div>' +
+      '<div class="flex items-center justify-between gap-2 text-[10.5px]">' +
+        '<div class="flex items-center gap-2 flex-wrap">' + accStr + vchStr + '</div>' +
+        '<span class="text-[10px] text-slate-400 shrink-0">' + escapeHtml(voteStr) + '</span>' +
+      '</div>' +
+      (latestEv && latestEv.rawText
+        ? ('<div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/70">' +
+            '<span class="text-[10px] text-slate-300 truncate">「' + escapeHtml(latestEv.rawText.slice(0, 32)) + '…」</span>' +
+            (s.id !== pid ? '<button type="button" data-mat-quote="' + s.id + '" class="cta-ink text-[9.5px] px-1.5 py-0.5 shrink-0">📌 引用</button>' : '') +
+          '</div>')
+        : '<div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">第 ' + day + ' 天尚未發言</div>');
+
+    const mBtn = card.querySelector("[data-mat-quote]");
+    if (mBtn && latestEv) {
+      mBtn.addEventListener("click", function () {
+        quoteSpeechForRebuttal(s.id, latestEv.rawText);
+      });
+    }
+    body.appendChild(card);
+  });
 }
 
 function openVoteSheetModal() {
@@ -110,7 +215,7 @@ function renderVoteSheetIntoBody() {
       if (!id) return "無";
       const st = getSeat(id);
       const rName = (st && ROLE_DEFS[st.role]) ? ("(" + ROLE_DEFS[st.role].name + ")") : "";
-      return "0" + id + "號" + (id === getPlayerId() ? "你" : (st ? st.name : "")) + rName;
+      return fmtSeatNum(id) + "號" + (id === getPlayerId() ? "你" : (st ? st.name : "")) + rName;
     };
     html += '<div class="space-y-2.5">';
     html += '<div class="flex items-center justify-between">' +
@@ -200,9 +305,9 @@ function renderVoteSheetIntoBody() {
       let summaryBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">全員棄票</span>';
       if (topTargets.length === 1) {
         const ts = getSeat(topTargets[0].targetId);
-        summaryBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-200 border border-rose-400/45">最高票：0' + topTargets[0].targetId + '號 ' + escapeHtml(ts ? ts.name : '') + '（' + maxCount + ' 票）</span>';
+        summaryBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-200 border border-rose-400/45">最高票：' + fmtSeatNum(topTargets[0].targetId) + '號 ' + escapeHtml(ts ? ts.name : '') + '（' + maxCount + ' 票）</span>';
       } else if (topTargets.length > 1) {
-        const tieNames = topTargets.map(function (t) { return '0' + t.targetId + '號'; }).join('、');
+        const tieNames = topTargets.map(function (t) { return fmtSeatNum(t.targetId) + '號'; }).join('、');
         summaryBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-200 border border-amber-400/45">平票：' + escapeHtml(tieNames) + '（各 ' + maxCount + ' 票）</span>';
       }
 
@@ -219,13 +324,13 @@ function renderVoteSheetIntoBody() {
             (isMe
               ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/45'
               : 'bg-slate-800/90 text-slate-200 border-slate-700') +
-            '">0' + vid + ' ' + escapeHtml(vs ? vs.name : '') + '</span>';
+            '">' + fmtSeatNum(vid) + ' ' + escapeHtml(vs ? vs.name : '') + '</span>';
         }).join("");
 
         rowsHtml += '<div class="rounded-xl p-2.5 border ' + (isTop ? 'bg-rose-500/10 border-rose-400/35' : 'bg-slate-900/90 border-slate-800') + '">' +
           '<div class="flex items-center justify-between gap-2 mb-1.5">' +
             '<div class="flex items-center gap-2 min-w-0">' +
-              '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-black shrink-0 ' + (isTop ? 'bg-rose-500 text-white' : 'bg-slate-800 text-amber-200 border border-slate-700') + '">0' + item.targetId + '</span>' +
+              '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-black shrink-0 ' + (isTop ? 'bg-rose-500 text-white' : 'bg-slate-800 text-amber-200 border border-slate-700') + '">' + fmtSeatNum(item.targetId) + '</span>' +
               '<span class="text-xs font-black ' + (isTop ? 'text-rose-100' : 'text-slate-100') + '">' + escapeHtml(tSeat ? tSeat.name : '') + '</span>' +
               (isTop && topTargets.length === 1 ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/25 text-rose-200">最高票</span>' : '') +
             '</div>' +
@@ -243,7 +348,7 @@ function renderVoteSheetIntoBody() {
       if (abstainers.length > 0) {
         const absChips = abstainers.map(function (vid) {
           const vs = getSeat(vid);
-          return '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-900 text-slate-400 border border-slate-800">0' + vid + ' ' + escapeHtml(vs ? vs.name : '') + '</span>';
+          return '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-900 text-slate-400 border border-slate-800">' + fmtSeatNum(vid) + ' ' + escapeHtml(vs ? vs.name : '') + '</span>';
         }).join("");
         rowsHtml += '<div class="rounded-xl px-2.5 py-2 bg-slate-950/60 border border-slate-800/80 flex items-center flex-wrap gap-1.5">' +
           '<span class="text-[10px] font-bold text-slate-400 mr-1">本輪棄票（' + abstainers.length + ' 人）：</span>' + absChips +
@@ -297,7 +402,7 @@ function renderVoteSheetIntoBody() {
 
     rows += '<tr class="border-b border-slate-800/80 hover:bg-slate-800/35 transition ' + (!s.alive ? 'opacity-75' : '') + '">' +
       '<td class="py-2 px-2.5 font-black text-slate-100 whitespace-nowrap">' +
-        '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-800 text-amber-200 text-[10px] mr-1.5 border border-slate-700">0' + s.id + '</span>' +
+        '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-800 text-amber-200 text-[10px] mr-1.5 border border-slate-700">' + fmtSeatNum(s.id) + '</span>' +
         escapeHtml(s.name) +
       '</td>' +
       '<td class="py-2 px-2 whitespace-nowrap">' + stBadge + '</td>' +

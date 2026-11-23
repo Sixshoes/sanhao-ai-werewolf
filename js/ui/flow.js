@@ -40,7 +40,7 @@ const indieFlow = {
     const gdToggle = el("btnSetupGuardToggle");
     if (gdToggle) {
       gdToggle.classList.toggle("is-selected", gd);
-      gdToggle.textContent = gd ? "已開啟・8人守衛" : "未開啟";
+      gdToggle.textContent = gd ? "已開啟・守衛" : "未開啟";
     }
   },
 
@@ -72,18 +72,24 @@ const indieFlow = {
   },
 
   switchJournalTab: function (tabKey) {
-    const isVote = tabKey === "vote";
+    const key = (tabKey === "vote" || tabKey === "matrix") ? tabKey : "log";
     const tLog = el("tabJournalLog");
+    const tMat = el("tabJournalMatrix");
     const tVote = el("tabJournalVote");
     const pLog = el("journalPaneLog");
+    const pMat = el("journalPaneMatrix");
     const pVote = el("journalPaneVote");
-    if (tLog) tLog.classList.toggle("is-active", !isVote);
-    if (tVote) tVote.classList.toggle("is-active", isVote);
-    if (pLog) pLog.classList.toggle("hidden", isVote);
-    if (pVote) pVote.classList.toggle("hidden", !isVote);
-    if (isVote && typeof renderVoteSheetIntoBody === "function") {
+    if (tLog) tLog.classList.toggle("is-active", key === "log");
+    if (tMat) tMat.classList.toggle("is-active", key === "matrix");
+    if (tVote) tVote.classList.toggle("is-active", key === "vote");
+    if (pLog) pLog.classList.toggle("hidden", key !== "log");
+    if (pMat) pMat.classList.toggle("hidden", key !== "matrix");
+    if (pVote) pVote.classList.toggle("hidden", key !== "vote");
+    if (key === "vote" && typeof renderVoteSheetIntoBody === "function") {
       renderVoteSheetIntoBody();
-    } else if (!isVote && typeof renderTimeline === "function") {
+    } else if (key === "matrix" && typeof renderTableMatrixIntoBody === "function") {
+      renderTableMatrixIntoBody();
+    } else if (typeof renderTimeline === "function") {
       renderTimeline();
     }
   },
@@ -231,7 +237,7 @@ const indieFlow = {
       const sid = parseInt(tgt, 10);
       const s = typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D().find(function (x) { return x.id === sid; }) : null;
       const slug = (typeof stage3dVrm !== "undefined" && s) ? stage3dVrm.getSeatModelSlug(s) : ("seat" + sid);
-      if (titleEl) titleEl.textContent = "0" + sid + "號 " + (s ? s.name : "") + "（可放入 " + slug + ".vrm）";
+      if (titleEl) titleEl.textContent = fmtSeatNum(sid) + "號 " + (s ? s.name : "") + "（可放入 " + slug + ".vrm）";
       const actor = (typeof stage3d !== "undefined" && stage3d.seats && stage3d.seats.slots) ? stage3d.seats.slots[sid] : null;
       if (resetBtn) resetBtn.classList.toggle("hidden", !(actor && actor.useVrm));
     }
@@ -269,6 +275,14 @@ const indieFlow = {
           if (el("chkGuardMode")) el("chkGuardMode").checked = false;
           if (el("selectPreferredRole") && (el("selectPreferredRole").value === "guard" || el("selectPreferredRole").value === "hunter")) {
             el("selectPreferredRole").value = "seer";
+          }
+          if (typeof saveUserPrefs === "function") saveUserPrefs();
+        } else if (cntVal === "10" || cntVal === "12") {
+          state.guardMode = true;
+          if (el("chkGuardMode")) el("chkGuardMode").checked = true;
+          if (cntVal === "12") {
+            state.sheriffMode = true;
+            if (el("chkSheriffMode")) el("chkSheriffMode").checked = true;
           }
           if (typeof saveUserPrefs === "function") saveUserPrefs();
         }
@@ -368,6 +382,7 @@ const indieFlow = {
       });
     }
     if (el("tabJournalLog")) el("tabJournalLog").addEventListener("click", function () { self.switchJournalTab("log"); });
+    if (el("tabJournalMatrix")) el("tabJournalMatrix").addEventListener("click", function () { self.switchJournalTab("matrix"); });
     if (el("tabJournalVote")) el("tabJournalVote").addEventListener("click", function () { self.switchJournalTab("vote"); });
 
     if (el("btnCycleViewHud")) {

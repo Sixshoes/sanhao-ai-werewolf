@@ -25,7 +25,7 @@ function buildPriorCallbackPhrase(speaker, dayEvents, seatLabel) {
   const nameOf = function (id) {
     const s = typeof getSeat === "function" ? getSeat(id) : null;
     if (!s) return "";
-    return typeof seatLabel === "function" ? seatLabel(s) : ("0" + s.id + "號" + s.name);
+    return typeof seatLabel === "function" ? seatLabel(s) : (fmtSeatNum(s.id) + "號" + s.name);
   };
 
   // Mutual vouch / standing-together pair detection among today's spoken seats
@@ -153,8 +153,10 @@ function buildTableSlotAndWorldAnalysis(viewerSeat) {
     const viewerKnownDeadWolf = Boolean(legalKnownWolf[s.id]);
     if (lostClash || verifiedDeadWolf || viewerKnownDeadWolf) confirmedDeadWolves += 1;
   });
-  const baseWolfTotal = m.totalSeats >= 6 ? 2 : 1;
-  const aliveWolfSlots = Math.max(1, Math.min(2, baseWolfTotal - confirmedDeadWolves));
+  const baseWolfTotal = typeof getInitialWolfCount === "function"
+    ? getInitialWolfCount(m.totalSeats)
+    : (m.totalSeats >= 12 ? 4 : (m.totalSeats >= 10 ? 3 : (m.totalSeats >= 6 ? 2 : 1)));
+  const aliveWolfSlots = Math.max(1, Math.min(baseWolfTotal, baseWolfTotal - confirmedDeadWolves));
 
   let dualSeerWorlds = null;
   if (seerClaimants.length >= 2) {

@@ -445,7 +445,7 @@ function pokeSeatWithReaction(seatId) {
   setSeatEmotion(seatId, "happy", 3200);
   spawnBurst(seatId, ["#fbbf24", "#34d399", "#fde68a"], 14, "petal");
   spawnFx(seatId, "嗨！(揮手)", "#fde68a");
-  if (pInfo) showToast("0" + seatId + "號 " + pInfo.name + " 回應了你！", "emerald");
+  if (pInfo) showToast(fmtSeatNum(seatId) + "號 " + pInfo.name + " 回應了你！", "emerald");
 }
 
 function triggerShake(ms) {

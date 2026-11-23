@@ -14,6 +14,10 @@ const CHAR_AVATAR_STYLES = {
   "小雲": { hair: "#331e28", hairHi: "#b5697a", style: "long",     outfit: "#363842", accent: "#8e3b49", acc: "turtle",   skin: "#f7dfd0", eye: "#3c212c", lash: "curved" },
   "阿竹": { hair: "#202328", hairHi: "#5e938a", style: "sidepart", outfit: "#3b6660", accent: "#29343b", acc: "tie",      skin: "#f1d0b5", eye: "#25302f", lash: "clean" },
   "晨晨": { hair: "#422b1f", hairHi: "#d6943c", style: "spiky",    outfit: "#9e4f2e", accent: "#d6943c", acc: "headband", skin: "#eec9a9", eye: "#3c2519", lash: "clean" },
+  "墨白": { hair: "#171a24", hairHi: "#6d7ba8", style: "sidepart", outfit: "#2c3852", accent: "#e8decb", acc: "collar",   skin: "#f3d7c0", eye: "#222940", lash: "clean" },
+  "晴嵐": { hair: "#4b2e23", hairHi: "#c99a6b", style: "long",     outfit: "#c0898e", accent: "#6eb59b", acc: "clip",     skin: "#f8dfd0", eye: "#543222", lash: "curved" },
+  "阿朗": { hair: "#36241b", hairHi: "#c89552", style: "sleek",    outfit: "#9d7443", accent: "#2d323b", acc: "tie",      skin: "#efccb0", eye: "#6b471f", lash: "clean" },
+  "柚子": { hair: "#8a5a2b", hairHi: "#e0b565", style: "bob",      outfit: "#7d9b58", accent: "#f6ecd2", acc: "clip",     skin: "#f8dfc8", eye: "#4b5e2b", lash: "curved" },
   "主持": { hair: "#2b1f1a", hairHi: "#d4a657", style: "sleek",    outfit: "#4c7a69", accent: "#d4a657", acc: "halo",     skin: "#f8ddc4", eye: "#38261c", lash: "soft" }
 };
 

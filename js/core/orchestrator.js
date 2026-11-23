@@ -290,8 +290,8 @@ const orchestrator = {
       if (typeof setSeatEmotion === "function") setSeatEmotion(pick.id, "happy", 2800);
       if (typeof setSeatBubble === "function") setSeatBubble(pick.id, "謝啦這杯冬瓜青超順口！感覺你態度很穩耶！", "trust", 3400);
       if (typeof spawnFx === "function") spawnFx(pick.id, "🍵 冬瓜青暖場 +8!", "#34d399");
-      if (typeof addLog === "function") addLog({ kind: "blessing", title: "🍵 請喝冬瓜青：贈予 0" + pick.id + "號 " + pick.name + "，全場友善度 +8！", text: "" });
-      if (typeof showToast === "function") showToast("🍵 已請 0" + pick.id + "號喝冬瓜青！友善度 +8 並拉近信任！", "emerald");
+      if (typeof addLog === "function") addLog({ kind: "blessing", title: "🍵 請喝冬瓜青：贈予 " + fmtSeatNum(pick.id) + "號 " + pick.name + "，全場友善度 +8！", text: "" });
+      if (typeof showToast === "function") showToast("🍵 已請 " + fmtSeatNum(pick.id) + "號喝冬瓜青！友善度 +8 並拉近信任！", "emerald");
     } else if (ev.id === "truth_lantern") {
       const half = optionKey === "back" ? "back" : "front";
       const mid = Math.ceil((state.match.totalSeats || 8) / 2);
@@ -303,8 +303,8 @@ const orchestrator = {
       if (typeof spawnBeam === "function") spawnBeam(pid, peak.id, "#fbbf24", "emote", 780);
       if (typeof setSeatEmotion === "function") setSeatEmotion(peak.id, peak.microPulse >= 60 ? "nervous" : "shock", 3000);
       if (typeof spawnFx === "function") spawnFx(peak.id, "🏮 古燈照出 " + peak.microPulse + "%", "#fbbf24");
-      if (typeof addLog === "function") addLog({ kind: "blessing", title: "🏮 照妖古燈掃描（" + (half === "front" ? "前排" : "後排") + "）：0" + peak.id + "號 " + peak.name + " 脈搏最高（" + peak.microPulse + "%）", text: "" });
-      if (typeof showToast === "function") showToast("🏮 古燈照出 " + (half === "front" ? "前半席" : "後半席") + "最緊張對象：0" + peak.id + "號（心虛 " + peak.microPulse + "%）！", "emerald");
+      if (typeof addLog === "function") addLog({ kind: "blessing", title: "🏮 照妖古燈掃描（" + (half === "front" ? "前排" : "後排") + "）：" + fmtSeatNum(peak.id) + "號 " + peak.name + " 脈搏最高（" + peak.microPulse + "%）", text: "" });
+      if (typeof showToast === "function") showToast("🏮 古燈照出 " + (half === "front" ? "前半席" : "後半席") + "最緊張對象：" + fmtSeatNum(peak.id) + "號（心虛 " + peak.microPulse + "%）！", "emerald");
     } else {
       state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + 10, 0, 100);
       if (typeof stage3d !== "undefined" && typeof stage3d.triggerHeroBeat === "function") stage3d.triggerHeroBeat("purify_cast", 2200);
@@ -398,14 +398,14 @@ const orchestrator = {
 
       const dt = (typeof performance !== "undefined" ? performance.now() : Date.now()) - t0;
       const stance = generated.accuseId
-        ? ("懷疑 0" + generated.accuseId + "號")
-        : (generated.vouchId ? ("力挺 0" + generated.vouchId + "號") : "整理局勢");
+        ? ("懷疑 " + fmtSeatNum(generated.accuseId) + "號")
+        : (generated.vouchId ? ("力挺 " + fmtSeatNum(generated.vouchId) + "號") : "整理局勢");
       this.recordTrace({
         agent: "PersonaAgent",
         tier: tier,
         ms: dt,
         compliance: !filtered,
-        summary: "0" + speaker.id + "號" + speaker.name + "｜立場：" + stance + (generated.claimSeer ? "［宣稱觀察員］" : "") + (filtered ? "［已合規淨化］" : "")
+        summary: fmtSeatNum(speaker.id) + "號" + speaker.name + "｜立場：" + stance + (generated.claimSeer ? "［宣稱觀察員］" : "") + (filtered ? "［已合規淨化］" : "")
       });
       return { epochValid: this.isEpochValid(ep), generated: generated, tier: tier, filtered: filtered };
     }
