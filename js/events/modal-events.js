@@ -118,6 +118,11 @@ function bindModalEvents() {
         el("btnSeerRevealContinue").click();
         return;
       }
+      if (state.match && state.match.candlelitReview && state.match.candlelitReview.active) {
+        ev.preventDefault();
+        if (typeof finishCandlelitNightReview === "function") finishCandlelitNightReview();
+        return;
+      }
       if (state.match.phase === "DAY_VOTE_RESULT" && el("btnVoteResultNext") && !el("btnVoteResultNext").classList.contains("hidden")) {
         ev.preventDefault();
         el("btnVoteResultNext").click();
@@ -136,6 +141,11 @@ function bindModalEvents() {
     }
     if (ev.key === "Enter") {
       const phNow = state.match && state.match.phase;
+      if (state.match && state.match.candlelitReview && state.match.candlelitReview.active) {
+        ev.preventDefault();
+        if (typeof finishCandlelitNightReview === "function") finishCandlelitNightReview();
+        return;
+      }
       if (phNow === "SHERIFF_ELECTION" && el("btnSheriffNextSpeech") && !el("btnSheriffNextSpeech").classList.contains("hidden")) {
         ev.preventDefault();
         el("btnSheriffNextSpeech").click();

@@ -5660,18 +5660,23 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       downstreamPrompt5.prompt.includes("為何急著替他緩頰")
     );
 
-    // F. Civilian Candlelit Night Review (燭下覆茶)
+    // F. Civilian Candlelit Night Review (燭下覆茶) — including LAST_WORDS_SPEECH -> Night 2 phase transition guard!
+    state.match.phase = "LAST_WORDS_SPEECH";
     const slipsNight = buildCandlelitNightSlips();
     let proceededNight = false;
     const openedCandle = openCandlelitNightReview(() => { proceededNight = true; });
+    const phaseLeftLastWordsOk = isNightPhase(state.match.phase) && !el("candlelitReviewCard").classList.contains("hidden");
     if (slipsNight[0]) toggleCandlelitWatchSeat(slipsNight[0].seatId);
     const watchCount = (state.match.candlelitReview && state.match.candlelitReview.watchIds) ? state.match.candlelitReview.watchIds.length : 0;
-    finishCandlelitNightReview();
+    // Verify Space key / btnCandlelitDone advances cleanly out of Candlelit Night Review
+    window.dispatchEvent({ type: "keydown", key: " ", code: "Space", target: { tagName: "BODY" }, preventDefault() {} });
     const candlelitOk = Boolean(
       slipsNight.length >= 2 &&
       openedCandle &&
+      phaseLeftLastWordsOk &&
       watchCount === 1 &&
       proceededNight &&
+      el("candlelitReviewCard").classList.contains("hidden") &&
       state.match.pinnedClues.some(c => c.tag.includes("燭下圈防") && !noEmojiRe.test(c.tag))
     );
 

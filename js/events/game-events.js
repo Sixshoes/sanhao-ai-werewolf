@@ -762,6 +762,10 @@ function bindSpeechInputEvents() {
 
   el("btnStepNext").addEventListener("click", function (ev) {
     sound.unlock();
+    if (state.match && state.match.candlelitReview && state.match.candlelitReview.active) {
+      if (typeof finishCandlelitNightReview === "function") finishCandlelitNightReview();
+      return;
+    }
     if (state.match.phase === "HUNTER_RESOLVE") {
       if (typeof state.hunterResolveCommit === "function") state.hunterResolveCommit();
       return;
@@ -777,6 +781,10 @@ function bindSpeechInputEvents() {
         return;
       }
       voice.stop();
+      if (!state.lastWordsCtx) {
+        if (typeof beginNightPhase === "function") beginNightPhase();
+        return;
+      }
       advanceLastWordsQueue();
       return;
     }

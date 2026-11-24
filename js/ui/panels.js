@@ -492,8 +492,8 @@ function renderStepperPanel(p) {
   }
 
   const candleBox = el("candlelitReviewCard");
+  const showCandle = Boolean(isNightWait && state.match && state.match.candlelitReview && state.match.candlelitReview.active);
   if (candleBox) {
-    const showCandle = Boolean(isNightWait && state.match && state.match.candlelitReview && state.match.candlelitReview.active);
     candleBox.classList.toggle("hidden", !showCandle);
     if (showCandle && typeof renderCandlelitNightSlips === "function") {
       renderCandlelitNightSlips();
@@ -544,11 +544,13 @@ function renderStepperPanel(p) {
   const hunterShot = state.match.lastHunterShot;
   el("stepperStatusText").textContent = isHunterResolve
     ? (hunterShot
-      ? ("⚖️ 直心糾察長 " + fmtSeatNum(hunterShot.hunterId) + "號 " + hunterShot.hunterName + " 帶走 " + fmtSeatNum(hunterShot.targetId) + "號 " + hunterShot.targetName + " 一同離席！")
-      : "⚖️ 直心糾察長壓下正氣共鳴，未帶走任何人。")
-    : (activeSpeaker
-      ? (activeSpeaker.id + "號 " + activeSpeaker.name + "發言中…")
-      : "天黑行動中…");
+      ? ("直心糾察長 " + fmtSeatNum(hunterShot.hunterId) + "號 " + hunterShot.hunterName + " 帶走 " + fmtSeatNum(hunterShot.targetId) + "號 " + hunterShot.targetName + " 一同離席。")
+      : "直心糾察長壓下正氣共鳴，未帶走任何人。")
+    : (showCandle
+      ? "燭下覆茶：圈選明日盯防對象，或點「覆茶靜候天明」(Space)"
+      : (activeSpeaker
+        ? (activeSpeaker.id + "號 " + activeSpeaker.name + "發言中…")
+        : "天黑行動中…"));
 }
 
 function renderSheriffTransferPanel() {

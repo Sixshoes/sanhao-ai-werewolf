@@ -105,6 +105,16 @@ function openCandlelitNightReview(onProceed) {
     if (typeof onProceed === "function") onProceed();
     return false;
   }
+  // Transition cleanly into night phase BEFORE rendering so LAST_WORDS_SPEECH / DAY_VOTE_RESULT never stays stuck!
+  if (!isNightPhase(state.match.phase)) {
+    state.match.phase = "NIGHT_WOLF";
+    if (typeof orchestrator !== "undefined") {
+      orchestrator.emit("phase:changed", { phase: "NIGHT_WOLF", day: state.match.day });
+    }
+  }
+  if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") {
+    stage3d.clearCloseUp();
+  }
   state.match.candlelitReview = {
     active: true,
     slips: slips,
@@ -116,7 +126,13 @@ function openCandlelitNightReview(onProceed) {
   renderCandlelitNightSlips();
   const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
   if (isBrowserUi && state.autoPlay) {
-    state.stepTimer = scheduleNightStep(finishCandlelitNightReview, 6200);
+    const autoDone = function () {
+      if (!state.match || !state.match.started || state.match.phase === "LOBBY" || state.match.phase === "GAME_OVER") return;
+      finishCandlelitNightReview();
+    };
+    state.stepTimer = (typeof orchestrator !== "undefined" && typeof orchestrator.schedule === "function")
+      ? orchestrator.schedule("turn_step", autoDone, 6500)
+      : setTimeout(autoDone, 6500);
   }
   return true;
 }
@@ -124,6 +140,7 @@ function openCandlelitNightReview(onProceed) {
 function finishCandlelitNightReview() {
   const rev = state.match && state.match.candlelitReview;
   if (!rev || rev.finished) return;
+  clearStepTimer();
   rev.finished = true;
   rev.active = false;
   const watchIds = Array.isArray(rev.watchIds) ? rev.watchIds.slice() : [];
