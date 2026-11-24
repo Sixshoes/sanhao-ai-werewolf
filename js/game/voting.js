@@ -138,12 +138,15 @@ function chooseAiVoteTarget(voter, opts) {
     const nonWolves = others.filter(function (t) { return snap ? !t.isWolfMate : (t.role !== "wolf"); });
     const rawTac = snap ? snap.wolfTactic : null;
     const isDeepBus = (rawTac === "deep_stealth_bus" || rawTac === "deep_stealth");
+    // v17.0 阿竹狼破綻：隊友一旦公開熱度偏高，會比其他狼更果斷倒鉤賣隊友保自身金身！
+    const isAzhuBus = (self.name === "阿竹");
+    const busHeatThreshold = isAzhuBus ? 62 : 78;
+    const canBusVote = Boolean((isDeepBus || isAzhuBus) && others.length > 0 && nonWolves.length > 0 && snap);
     const isPlayerPush = (rawTac === "player_fake_seer_push" || rawTac === "pack_push");
-    // In deep_stealth_bus mode, if a wolf mate is already heavily under fire (observable heat >= 78), wolf may bus-vote to build good credibility!
-    const pool = (isDeepBus && others.length > 0 && nonWolves.length > 0 && snap)
+    const pool = canBusVote
       ? others.filter(function (t) {
           if (!t.isWolfMate) return true;
-          return snap.getObservableHeatOnSeat(t.id) >= 78;
+          return snap.getObservableHeatOnSeat(t.id) >= busHeatThreshold;
         })
       : (nonWolves.length > 0 ? nonWolves : others);
     const dayEvs = snap ? snap.daySpeechEvents : (state.match.daySpeechEvents || []);
@@ -158,8 +161,8 @@ function chooseAiVoteTarget(voter, opts) {
     });
     const teamTargetId = wolfPushEv ? wolfPushEv.accuseId : null;
     pool.sort(function (a, b) {
-      const busBonusA = (isDeepBus && a.isWolfMate && snap && snap.getObservableHeatOnSeat(a.id) >= 78) ? 26 : 0;
-      const busBonusB = (isDeepBus && b.isWolfMate && snap && snap.getObservableHeatOnSeat(b.id) >= 78) ? 26 : 0;
+      const busBonusA = (canBusVote && a.isWolfMate && snap && snap.getObservableHeatOnSeat(a.id) >= busHeatThreshold) ? (isDeepBus ? 26 : 24) : 0;
+      const busBonusB = (canBusVote && b.isWolfMate && snap && snap.getObservableHeatOnSeat(b.id) >= busHeatThreshold) ? (isDeepBus ? 26 : 24) : 0;
       const sA = busBonusA + (a.id === teamTargetId ? (isPlayerPush ? 42 : 28) : 0) + (a.id === self.publicVoteIntent ? 30 : 0) + (a.id === self.publicVouchId ? -18 : 0) + (a.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
       const sB = busBonusB + (b.id === teamTargetId ? (isPlayerPush ? 42 : 28) : 0) + (b.id === self.publicVoteIntent ? 30 : 0) + (b.id === self.publicVouchId ? -18 : 0) + (b.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
       return sB - sA;
@@ -236,12 +239,25 @@ function chooseAiVoteTarget(voter, opts) {
       const dayEvsVote = snap ? snap.daySpeechEvents : (state.match.daySpeechEvents || []);
       const voteProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
       const rallyWeight = voteProf ? Math.round(20 * (1 + voteProf.bandwagonBias * 0.45)) : 20;
+      const vmVote = (snap && typeof buildVoteSpeechMatrix === "function") ? buildVoteSpeechMatrix(self, snap) : null;
+      const ledgerVote = (snap && typeof buildCrossDayMemoryLedger === "function") ? buildCrossDayMemoryLedger(self, snap) : null;
+      const sheriffVoteId = (snap && !snap.sheriffElectionPending) ? snap.sheriffSeatId : null;
+      const votePersonaOpts = {
+        snap: snap,
+        day: snap ? snap.day : 1,
+        isPk: pkActive,
+        sheriffSeatId: sheriffVoteId,
+        seerClaimCount: seerClaimants.length,
+        daySpeechEvents: dayEvsVote,
+        divergenceBySeat: vmVote ? vmVote.divergenceBySeat : null,
+        flipIds: ledgerVote ? ledgerVote.flipIds : []
+      };
       candidatePool.sort(function (a, b) {
         // Uniform low-harmony confusion jitter across ALL candidates (zero hidden team peeking!)
         const jA = hazeChaos ? Math.sin(self.id * 7 + a.id * 3) * hazeChaos : 0;
         const jB = hazeChaos ? Math.sin(self.id * 7 + b.id * 3) * hazeChaos : 0;
-        const persA = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, a, { daySpeechEvents: dayEvsVote }) : 0;
-        const persB = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, b, { daySpeechEvents: dayEvsVote }) : 0;
+        const persA = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, a, votePersonaOpts) : 0;
+        const persB = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, b, votePersonaOpts) : 0;
         const pA = (self.publicVoteIntent === a.id ? 38 : 0) + (self.publicVouchId === a.id ? -26 : 0) + (rallyId === a.id ? rallyWeight : 0) + computeFourGClueDelta(a) + (twoSeerFocus && a.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50) + persA + jA;
         const pB = (self.publicVoteIntent === b.id ? 38 : 0) + (self.publicVouchId === b.id ? -26 : 0) + (rallyId === b.id ? rallyWeight : 0) + computeFourGClueDelta(b) + (twoSeerFocus && b.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50) + persB + jB;
         return pB - pA;
@@ -1768,7 +1784,7 @@ function useSheriffRallyCall() {
   }
   const sel = getSeat(state.selectedSeatId);
   if (!sel || !isValidVoteTarget(sel.id)) {
-    showToast("請先點選一位可投票的目標，再按「👑 警長歸票」！", "warn");
+    showToast("請先點選一位可投票的目標，再按「警長歸票」！", "warn");
     return false;
   }
   state.match.sheriffRallyUsedDay = state.match.day;
@@ -1784,9 +1800,9 @@ function useSheriffRallyCall() {
   if (typeof stage3d !== "undefined" && stage3d.isActive()) {
     stage3d.triggerSkillFx("seer_scan", pid, sel.id, false);
   }
-  triggerCutIn("👑 警長歸票號召！", "號召好人夥伴集中檢視 " + fmtSeatNum(sel.id) + "號 " + sel.name + "（1.5票威望+14懷疑）！", "gold");
-  addLog({ kind: "blessing", title: "👑 警長歸票：你以警長身分號召好人陣營集中考量 " + fmtSeatNum(sel.id) + "號 " + sel.name + "！", text: "" });
-  showToast("👑 警長歸票號召成功！接下來點「確認投票」送出你的 1.5 票！", "emerald");
+  triggerCutIn("警長歸票號召！", "號召好人夥伴集中檢視 " + fmtSeatNum(sel.id) + "號 " + sel.name + "（1.5票威望+14懷疑）！", "gold");
+  addLog({ kind: "blessing", title: "警長歸票：你以警長身分號召好人陣營集中考量 " + fmtSeatNum(sel.id) + "號 " + sel.name + "！", text: "" });
+  showToast("警長歸票號召成功！接下來點「確認投票」送出你的 1.5 票！", "emerald");
   updateAllUI();
   return true;
 }
@@ -1799,6 +1815,9 @@ function shouldAiRunForSheriff(seat) {
   const self = (snap && snap.self) ? snap.self : seat;
   // Each AI decides independently using ONLY its own role & persona (zero cross-seat peeking!)
   if (self.role === "seer") return true;
+  // v17.0 阿朗狼破綻：拿狼時反常地極愛主動上警悍跳控場；墨白拿狼則鮮少主動悍跳
+  if (self.role === "wolf" && self.name === "阿朗") return true;
+  if (self.role === "wolf" && self.name === "墨白" && !self.fakeSeer) return false;
   if (self.role === "wolf" && self.fakeSeer) return true;
   if (self.role === "guard" && (self.id % 2 === 0)) return true;
   return false;

@@ -7355,3 +7355,137 @@ body.craft-ui.theme-day .spirit-bet-chip {
   color: #94a3b8;
   background: rgba(30, 41, 59, 0.6);
 }
+
+/* ===== v17.0 360° CHARACTER SHOWCASE PROFILE DOSSIER CARD (ZERO !important / ZERO blur) ===== */
+.showcase-profile-card {
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: rgba(14, 11, 9, 0.86);
+  border: 1px solid rgba(212, 166, 87, 0.32);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.42;
+  color: #ece3d2;
+}
+
+.showcase-profile-card.hidden {
+  display: none;
+}
+
+.showcase-profile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 1px;
+}
+
+.showcase-profile-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fde68a;
+  background: rgba(78, 52, 20, 0.56);
+  border: 1px solid rgba(212, 166, 87, 0.42);
+}
+
+.showcase-profile-pill.is-club {
+  color: #a7f3d0;
+  background: rgba(17, 56, 46, 0.54);
+  border-color: rgba(52, 211, 153, 0.36);
+}
+
+.showcase-profile-pill.is-sil {
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.55);
+  border-color: rgba(148, 163, 184, 0.3);
+  font-weight: 500;
+}
+
+.showcase-profile-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 10.8px;
+  color: #f3eadb;
+}
+
+.showcase-profile-row.is-locked {
+  color: #94a3b8;
+}
+
+.showcase-profile-tag {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9.8px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.showcase-profile-tag.is-good {
+  color: #d1fae5;
+  background: rgba(20, 83, 65, 0.78);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+}
+
+.showcase-profile-tag.is-wolf {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.78);
+  border: 1px solid rgba(248, 113, 113, 0.45);
+}
+
+.showcase-profile-tag.is-locked {
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+}
+
+body.craft-ui.theme-day .showcase-profile-card {
+  background: rgba(250, 245, 234, 0.94);
+  border-color: rgba(164, 122, 52, 0.42);
+  color: #2b2116;
+}
+
+body.craft-ui.theme-day .showcase-profile-row {
+  color: #2b2116;
+}
+
+body.craft-ui.theme-day .showcase-profile-row.is-locked {
+  color: #64748b;
+}
+
+body.craft-ui.theme-day .showcase-profile-pill {
+  color: #7c2d12;
+  background: rgba(245, 224, 178, 0.78);
+  border-color: rgba(180, 120, 32, 0.44);
+}
+
+body.craft-ui.theme-day .showcase-profile-pill.is-club {
+  color: #065f46;
+  background: rgba(209, 250, 229, 0.8);
+  border-color: rgba(16, 185, 129, 0.42);
+}
+
+body.craft-ui.theme-day .showcase-profile-pill.is-sil {
+  color: #475569;
+  background: rgba(226, 232, 240, 0.78);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+@media (max-width: 680px) {
+  .showcase-profile-card {
+    padding: 5px 8px;
+    gap: 3px;
+  }
+
+  .showcase-profile-pill.is-sil {
+    display: none;
+  }
+}

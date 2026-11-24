@@ -6,6 +6,7 @@
 function resetMatchToLobby() {
   voice.stop();
   clearStepTimer();
+  if (typeof clearTransientMatchTimers === "function") clearTransientMatchTimers();
   if (typeof orchestrator !== "undefined") orchestrator.beginNewEpoch("reset_lobby");
   if (state.voteFlight && state.voteFlight.timers) {
     state.voteFlight.timers.forEach(function (t) { clearTimeout(t); });

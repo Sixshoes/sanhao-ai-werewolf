@@ -297,6 +297,26 @@ function getStageSeatListFor3D() {
     });
 }
 
+function reset3DSeatGazeState(pool) {
+  if (!pool) return;
+  pool._lastGazeSpeakerId = null;
+  pool._prevGazeSpeakerId = null;
+  pool._lastGazeMentionId = null;
+  pool._gazeSpeakerChangedAt = 0;
+  pool._gazeMentionChangedAt = 0;
+  if (pool.slots) {
+    Object.keys(pool.slots).forEach(function (k) {
+      const a = pool.slots[k];
+      if (!a) return;
+      a.extinguishedAt = 0;
+      a.lidProgress = 0;
+      a._wasAlive = true;
+      if (a.teaLidGroup) a.teaLidGroup.visible = false;
+      if (a.fogSealStrip) a.fogSealStrip.visible = false;
+    });
+  }
+}
+
 function computeCollectiveGazeTarget(seatId, activeSpeakerId, activeMentionId, day) {
   if (!activeSpeakerId || seatId === activeSpeakerId) return null;
   if (activeMentionId && activeMentionId !== seatId && activeMentionId !== activeSpeakerId) {
@@ -455,11 +475,15 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       actor.tablePropGroup.position.set(0, 1.07 + actor.outFade * 0.12, propBaseZ + ringRadius * (radialOut - 1.0));
     }
 
-    const breath = s.alive ? Math.sin(t * 2.2 + s.id * 1.1) * 0.025 : 0;
-    const leanIn = isSpeaking ? (0.14 + liveAmp * 0.08) : (isBeingAccusedNow ? -0.14 : (isHovered ? 0.07 : (!s.alive ? 0.22 * actor.outFade : 0)));
+    const archFallback = (typeof stage3dVrm !== "undefined" && typeof stage3dVrm.getIdleArchetype === "function")
+      ? stage3dVrm.getIdleArchetype(s.name, s.id)
+      : null;
+    const basePostureLean = archFallback ? (archFallback.spineLean || 0) : 0;
+    const breath = s.alive ? Math.sin(t * (archFallback ? archFallback.breathFreq : 2.2) + s.id * 1.1) * 0.025 : 0;
+    const leanIn = isSpeaking ? (0.14 + liveAmp * 0.08) : (isBeingAccusedNow ? -0.14 : (isHovered ? 0.07 : (!s.alive ? 0.22 * actor.outFade : basePostureLean)));
     actor.figureGroup.position.y = 0.72 + breath + Math.max(0, -phys.oy * 0.015);
     actor.figureGroup.rotation.x = leanIn;
-    actor.figureGroup.rotation.z = phys.tilt * 0.45;
+    actor.figureGroup.rotation.z = phys.tilt * 0.45 + (s.alive && archFallback ? (archFallback.headTiltBias || 0) * 0.35 : 0);
     actor.figureGroup.scale.setScalar(phys.scale);
 
     // Wolf Night Partner Secret Eye-Contact (stays awake & looks directly at player when player is Wolf at Night!)

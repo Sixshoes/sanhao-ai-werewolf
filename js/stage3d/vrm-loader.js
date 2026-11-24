@@ -25,37 +25,37 @@ const SEAT_MODEL_SLUGS = {
 };
 
 const VRM_IDLE_ARCHETYPES = {
-  "你": { gestureStyle: "balanced", breathFreq: 1.95, breathAmp: 0.024, spineLean: 0.022, headRollAmp: 0.036, headTiltBias: 0.0, idleHappy: 0.10, idleFun: 0.05, rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.13, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.036, talkArmAmp: 1.14, legTempo: 0.75, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] },
-  "小澄": { gestureStyle: "analytical", breathFreq: 1.85, breathAmp: 0.020, spineLean: 0.040, headRollAmp: 0.032, headTiltBias: 0.030, idleHappy: 0.02, idleFun: 0.0, rDrop: 1.09, rFwd: 0.28, rBend: 1.02, lDrop: 1.14, lFwd: 0.22, lBend: 0.84, armSwayAmp: 0.030, talkArmAmp: 1.10, legTempo: 0.55, idlePool: ["glasses_adjust", "chin_rest", "table_tap", "sip_tea"] },
-  "暖暖": { gestureStyle: "graceful", breathFreq: 2.15, breathAmp: 0.028, spineLean: 0.022, headRollAmp: 0.058, headTiltBias: -0.03, idleHappy: 0.28, idleFun: 0.18, rDrop: 1.10, rFwd: 0.28, rBend: 0.98, lDrop: 1.11, lFwd: 0.27, lBend: 0.96, armSwayAmp: 0.042, talkArmAmp: 1.08, legTempo: 0.70, idlePool: ["sip_tea", "hands_clasp", "playful_sway", "look_around"] },
-  "阿松": { gestureStyle: "steady", breathFreq: 1.38, breathAmp: 0.024, spineLean: -0.022, headRollAmp: 0.024, headTiltBias: 0.0, idleHappy: 0.09, idleFun: 0.0, rDrop: 1.14, rFwd: 0.22, rBend: 0.86, lDrop: 1.14, lFwd: 0.22, lBend: 0.86, armSwayAmp: 0.026, talkArmAmp: 1.00, legTempo: 0.40, idlePool: ["arms_fold", "sip_tea", "stretch_roll", "chin_rest"] },
-  "星兒": { gestureStyle: "expressive", breathFreq: 2.85, breathAmp: 0.032, spineLean: 0.032, headRollAmp: 0.074, headTiltBias: 0.04, idleHappy: 0.22, idleFun: 0.30, rDrop: 1.06, rFwd: 0.31, rBend: 1.08, lDrop: 1.12, lFwd: 0.25, lBend: 0.90, armSwayAmp: 0.052, talkArmAmp: 1.44, legTempo: 1.35, idlePool: ["playful_sway", "chin_rest", "look_around", "sip_tea", "hands_clasp"] },
-  "小雲": { gestureStyle: "analytical", breathFreq: 1.75, breathAmp: 0.022, spineLean: 0.032, headRollAmp: 0.040, headTiltBias: -0.038, idleHappy: 0.08, idleFun: 0.05, rDrop: 1.09, rFwd: 0.29, rBend: 1.04, lDrop: 1.14, lFwd: 0.23, lBend: 0.88, armSwayAmp: 0.034, talkArmAmp: 1.20, legTempo: 0.65, idlePool: ["arms_fold", "chin_rest", "table_tap", "look_around"] },
-  "阿竹": { gestureStyle: "poetic", breathFreq: 1.55, breathAmp: 0.020, spineLean: 0.022, headRollAmp: 0.034, headTiltBias: 0.022, idleHappy: 0.08, idleFun: 0.03, rDrop: 1.12, rFwd: 0.26, rBend: 0.98, lDrop: 1.13, lFwd: 0.25, lBend: 0.94, armSwayAmp: 0.030, talkArmAmp: 0.98, legTempo: 0.42, idlePool: ["sip_tea", "sleeve_poise", "chin_rest", "look_around"] },
-  "晨晨": { gestureStyle: "energetic", breathFreq: 2.48, breathAmp: 0.030, spineLean: 0.040, headRollAmp: 0.054, headTiltBias: 0.0, idleHappy: 0.20, idleFun: 0.16, rDrop: 1.08, rFwd: 0.30, rBend: 0.92, lDrop: 1.10, lFwd: 0.28, lBend: 0.88, armSwayAmp: 0.048, talkArmAmp: 1.46, legTempo: 1.45, idlePool: ["stretch_roll", "table_tap", "arms_fold", "look_around", "playful_sway"] },
-  "墨白": { gestureStyle: "classical", breathFreq: 1.32, breathAmp: 0.018, spineLean: 0.010, headRollAmp: 0.022, headTiltBias: 0.014, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.13, rFwd: 0.24, rBend: 0.96, lDrop: 1.14, lFwd: 0.22, lBend: 0.92, armSwayAmp: 0.024, talkArmAmp: 0.92, legTempo: 0.32, idlePool: ["sleeve_poise", "sip_tea", "arms_fold", "chin_rest"] },
-  "晴嵐": { gestureStyle: "graceful", breathFreq: 1.65, breathAmp: 0.023, spineLean: 0.018, headRollAmp: 0.044, headTiltBias: -0.028, idleHappy: 0.22, idleFun: 0.12, rDrop: 1.11, rFwd: 0.27, rBend: 1.00, lDrop: 1.13, lFwd: 0.25, lBend: 0.94, armSwayAmp: 0.035, talkArmAmp: 0.98, legTempo: 0.50, idlePool: ["sip_tea", "sleeve_poise", "hands_clasp", "look_around"] },
-  "阿朗": { gestureStyle: "energetic", breathFreq: 2.15, breathAmp: 0.026, spineLean: 0.038, headRollAmp: 0.038, headTiltBias: 0.020, idleHappy: 0.08, idleFun: 0.08, rDrop: 1.08, rFwd: 0.29, rBend: 0.96, lDrop: 1.13, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.040, talkArmAmp: 1.38, legTempo: 0.95, idlePool: ["arms_fold", "table_tap", "chin_rest", "stretch_roll"] },
-  "柚子": { gestureStyle: "expressive", breathFreq: 2.70, breathAmp: 0.031, spineLean: 0.025, headRollAmp: 0.068, headTiltBias: -0.03, idleHappy: 0.32, idleFun: 0.26, rDrop: 1.07, rFwd: 0.30, rBend: 1.04, lDrop: 1.09, lFwd: 0.28, lBend: 1.00, armSwayAmp: 0.050, talkArmAmp: 1.40, legTempo: 1.38, idlePool: ["playful_sway", "sip_tea", "hands_clasp", "look_around"] },
-  default: { gestureStyle: "balanced", breathFreq: 2.05, breathAmp: 0.024, spineLean: 0.020, headRollAmp: 0.038, headTiltBias: 0.0, idleHappy: 0.06, idleFun: 0.0, rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.12, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.035, talkArmAmp: 1.12, legTempo: 0.72, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] }
+  "你":   { gestureStyle: "balanced",   breathFreq: 1.95, breathAmp: 0.024, spineLean: 0.022,  shoulderSpread: 0.0,    headRollAmp: 0.036, headTiltBias: 0.0,    gazeSaccadeSpeed: 1.0,  idleHappy: 0.10, idleFun: 0.05, rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.13, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.036, talkArmAmp: 1.14, legTempo: 0.75, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] },
+  "小澄": { gestureStyle: "analytical", breathFreq: 1.85, breathAmp: 0.020, spineLean: 0.062,  shoulderSpread: -0.065, headRollAmp: 0.030, headTiltBias: 0.032,  gazeSaccadeSpeed: 1.35, idleHappy: 0.02, idleFun: 0.0,  rDrop: 1.08, rFwd: 0.31, rBend: 1.06, lDrop: 1.14, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.028, talkArmAmp: 1.12, legTempo: 0.55, idlePool: ["glasses_adjust", "count_fingers", "chin_rest", "table_tap"] },
+  "暖暖": { gestureStyle: "graceful",   breathFreq: 2.15, breathAmp: 0.028, spineLean: 0.032,  shoulderSpread: -0.050, headRollAmp: 0.058, headTiltBias: -0.038, gazeSaccadeSpeed: 0.92, idleHappy: 0.28, idleFun: 0.18, rDrop: 0.96, rFwd: 0.44, rBend: 1.24, lDrop: 0.96, lFwd: 0.44, lBend: 1.24, armSwayAmp: 0.038, talkArmAmp: 1.04, legTempo: 0.65, idlePool: ["cup_cradle", "sip_tea", "hands_clasp", "playful_sway"] },
+  "阿松": { gestureStyle: "steady",     breathFreq: 1.38, breathAmp: 0.024, spineLean: -0.062, shoulderSpread: 0.072,  headRollAmp: 0.022, headTiltBias: 0.0,    gazeSaccadeSpeed: 0.78, idleHappy: 0.09, idleFun: 0.0,  rDrop: 1.04, rFwd: 0.36, rBend: 1.16, lDrop: 1.04, lFwd: 0.36, lBend: 1.16, armSwayAmp: 0.024, talkArmAmp: 0.98, legTempo: 0.38, idlePool: ["arms_fold", "lean_back", "sip_tea", "stretch_roll"] },
+  "星兒": { gestureStyle: "expressive", breathFreq: 2.85, breathAmp: 0.032, spineLean: 0.028,  shoulderSpread: -0.020, headRollAmp: 0.074, headTiltBias: 0.088,  gazeSaccadeSpeed: 1.22, starGaze: true, idleHappy: 0.22, idleFun: 0.30, rDrop: 1.06, rFwd: 0.31, rBend: 1.08, lDrop: 1.12, lFwd: 0.25, lBend: 0.90, armSwayAmp: 0.052, talkArmAmp: 1.42, legTempo: 1.35, idlePool: ["star_gaze", "playful_sway", "chin_rest", "sip_tea"] },
+  "小雲": { gestureStyle: "analytical", breathFreq: 1.75, breathAmp: 0.022, spineLean: 0.055,  shoulderSpread: -0.035, headRollAmp: 0.040, headTiltBias: -0.042, gazeSaccadeSpeed: 1.85, idleHappy: 0.08, idleFun: 0.05, rDrop: 1.04, rFwd: 0.34, rBend: 1.12, lDrop: 1.12, lFwd: 0.26, lBend: 0.96, armSwayAmp: 0.034, talkArmAmp: 1.22, legTempo: 0.65, idlePool: ["note_jot", "chin_rest", "table_tap", "look_around"] },
+  "阿竹": { gestureStyle: "poetic",     breathFreq: 1.55, breathAmp: 0.020, spineLean: 0.012,  shoulderSpread: 0.010,  headRollAmp: 0.034, headTiltBias: 0.022,  gazeSaccadeSpeed: 0.85, idleHappy: 0.08, idleFun: 0.03, rDrop: 0.98, rFwd: 0.42, rBend: 1.14, lDrop: 1.08, lFwd: 0.32, lBend: 1.06, armSwayAmp: 0.028, talkArmAmp: 0.96, legTempo: 0.42, idlePool: ["tea_poise", "sip_tea", "sleeve_poise", "look_around"] },
+  "晨晨": { gestureStyle: "energetic",  breathFreq: 2.48, breathAmp: 0.030, spineLean: -0.075, shoulderSpread: 0.095,  headRollAmp: 0.054, headTiltBias: 0.0,    gazeSaccadeSpeed: 1.28, idleHappy: 0.20, idleFun: 0.16, rDrop: 1.02, rFwd: 0.30, rBend: 0.82, lDrop: 1.04, lFwd: 0.28, lBend: 0.80, armSwayAmp: 0.052, talkArmAmp: 1.52, legTempo: 1.48, idlePool: ["lean_back", "stretch_roll", "table_tap", "playful_sway"] },
+  "墨白": { gestureStyle: "classical",  breathFreq: 1.32, breathAmp: 0.018, spineLean: -0.016, shoulderSpread: 0.012,  headRollAmp: 0.020, headTiltBias: 0.008,  gazeSaccadeSpeed: 0.72, idleHappy: 0.0,  idleFun: 0.0,  rDrop: 1.04, rFwd: 0.36, rBend: 1.12, lDrop: 1.12, lFwd: 0.28, lBend: 1.02, armSwayAmp: 0.022, talkArmAmp: 0.88, legTempo: 0.30, idlePool: ["tea_poise", "sleeve_poise", "sip_tea", "arms_fold"] },
+  "晴嵐": { gestureStyle: "graceful",   breathFreq: 1.65, breathAmp: 0.023, spineLean: 0.016,  shoulderSpread: -0.022, headRollAmp: 0.044, headTiltBias: -0.034, gazeSaccadeSpeed: 0.95, idleHappy: 0.22, idleFun: 0.12, rDrop: 1.06, rFwd: 0.32, rBend: 1.06, lDrop: 1.10, lFwd: 0.28, lBend: 1.00, armSwayAmp: 0.034, talkArmAmp: 0.96, legTempo: 0.48, idlePool: ["sleeve_poise", "tea_poise", "sip_tea", "hands_clasp"] },
+  "阿朗": { gestureStyle: "energetic",  breathFreq: 2.15, breathAmp: 0.026, spineLean: 0.105,  shoulderSpread: -0.040, headRollAmp: 0.038, headTiltBias: 0.028,  gazeSaccadeSpeed: 1.45, idleHappy: 0.08, idleFun: 0.08, rDrop: 0.82, rFwd: 0.56, rBend: 1.34, lDrop: 1.02, lFwd: 0.38, lBend: 1.16, armSwayAmp: 0.042, talkArmAmp: 1.40, legTempo: 0.95, idlePool: ["chin_rest", "table_tap", "arms_fold", "stretch_roll"] },
+  "柚子": { gestureStyle: "expressive", breathFreq: 2.70, breathAmp: 0.031, spineLean: 0.042,  shoulderSpread: -0.042, headRollAmp: 0.068, headTiltBias: -0.045, gazeSaccadeSpeed: 1.18, idleHappy: 0.32, idleFun: 0.26, rDrop: 0.94, rFwd: 0.46, rBend: 1.28, lDrop: 0.94, lFwd: 0.46, lBend: 1.28, armSwayAmp: 0.050, talkArmAmp: 1.38, legTempo: 1.38, idlePool: ["cup_cradle", "playful_sway", "sip_tea", "hands_clasp"] },
+  default: { gestureStyle: "balanced",  breathFreq: 2.05, breathAmp: 0.024, spineLean: 0.020,  shoulderSpread: 0.0,    headRollAmp: 0.038, headTiltBias: 0.0,    gazeSaccadeSpeed: 1.0,  idleHappy: 0.06, idleFun: 0.0,  rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.12, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.035, talkArmAmp: 1.12, legTempo: 0.72, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] }
 };
 
 /**
- * v10.0 全 11 位 AI 角色 VRM 外型對齊立繪配置表
- * - 修正小澄性別穿幫（改用男體 VRM 骨架＋深藍髮衣＋頭骨掛載 3D 細框眼鏡）
- * - 補齊 10/12 人局 4 位角色（墨白、晴嵐、阿朗、柚子）全 VRM 骨架＋材質重繪＋專屬 3D 頭飾／胸章
- * - 校正既有角色髮色／衣色與專屬配件（星兒紫髮星夾、阿松銀鬢綠衣、阿竹墨黑青衫玉佩、晨晨橘頭帶等）
+ * v17.0 全 11 位 AI 角色 3D 剪影拆雙胞胎與專屬大型輪廓配件表
+ * - 晴嵐改掛獨立閒置女體模型 xiaocheng.vrm（徹底脫離與玩家女主角 player.vrm 撞臉）＋單側長辮＋玉簪披帛
+ * - 墨白（頭頂束髮高髻＋深色交領寬袖披肩）、柚子（抹茶軟呢貝雷帽＋雙側蓬鬆耳髮）、阿朗（西裝背心翻領＋耳掛）、小澄（眼鏡＋立領連帽外套）全數以大面積剪影破除撞臉
+ * - 補齊阿松（高領登山摺疊圍巾＋傘繩手環）與小雲（採訪證斜背掛繩＋胸袋速寫本＋髮夾）原本為 null 的 3D 配件
  */
 const VRM_PERSONA_STYLING = Object.freeze({
   "小澄": Object.freeze({ baseSlug: "azhu", hairHex: "#1c283d", hairStr: 0.88, topsHex: "#31587d", topsStr: 0.82, neckHex: "#e8decb", eyeHex: "#24354d", vrmAcc: "glasses" }),
   "暖暖": Object.freeze({ baseSlug: "nuannuan", hairHex: "#623d26", hairStr: 0.45, topsHex: "#c2893b", topsStr: 0.76, neckHex: "#f3e6cc", eyeHex: "#523220", vrmAcc: "ribbon" }),
-  "阿松": Object.freeze({ baseSlug: "asong", hairHex: "#5f6872", hairStr: 0.72, topsHex: "#2a5c46", topsStr: 0.76, neckHex: "#82ab95", eyeHex: "#30261d", vrmAcc: null }),
+  "阿松": Object.freeze({ baseSlug: "asong", hairHex: "#5f6872", hairStr: 0.72, topsHex: "#2a5c46", topsStr: 0.76, neckHex: "#82ab95", eyeHex: "#30261d", vrmAcc: "hiking_scarf" }),
   "星兒": Object.freeze({ baseSlug: "xinger", hairHex: "#54366e", hairStr: 0.90, topsHex: "#876094", topsStr: 0.84, neckHex: "#e0be72", eyeHex: "#553b75", vrmAcc: "star_clip" }),
-  "小雲": Object.freeze({ baseSlug: "xiaoyun", hairHex: "#3a1e2b", hairStr: 0.68, topsHex: "#2d303a", topsStr: 0.72, neckHex: "#943548", eyeHex: "#422130", vrmAcc: null }),
+  "小雲": Object.freeze({ baseSlug: "xiaoyun", hairHex: "#3a1e2b", hairStr: 0.68, topsHex: "#2d303a", topsStr: 0.72, neckHex: "#943548", eyeHex: "#422130", vrmAcc: "press_kit" }),
   "阿竹": Object.freeze({ baseSlug: "azhu", hairHex: "#1f242b", hairStr: 0.88, topsHex: "#35615b", topsStr: 0.78, neckHex: "#232a30", eyeHex: "#283635", vrmAcc: "jade_pendant" }),
   "晨晨": Object.freeze({ baseSlug: "chenchen", hairHex: "#573724", hairStr: 0.78, topsHex: "#b8552a", topsStr: 0.84, neckHex: "#e39c3e", eyeHex: "#42281a", vrmAcc: "headband" }),
   "墨白": Object.freeze({ baseSlug: "chenchen", hairHex: "#151923", hairStr: 0.88, topsHex: "#31405c", topsStr: 0.86, neckHex: "#ece2d0", eyeHex: "#242c47", vrmAcc: "ink_scroll" }),
-  "晴嵐": Object.freeze({ baseSlug: "player", hairHex: "#523325", hairStr: 0.65, topsHex: "#c98f96", topsStr: 0.82, neckHex: "#f2e8dc", eyeHex: "#593524", vrmAcc: "jade_hairpin" }),
+  "晴嵐": Object.freeze({ baseSlug: "xiaocheng", hairHex: "#523325", hairStr: 0.74, topsHex: "#c98f96", topsStr: 0.84, neckHex: "#f2e8dc", eyeHex: "#593524", vrmAcc: "jade_hairpin" }),
   "阿朗": Object.freeze({ baseSlug: "player_male", hairHex: "#3a251b", hairStr: 0.76, topsHex: "#a37944", topsStr: 0.84, neckHex: "#f0eee8", eyeHex: "#7a511e", vrmAcc: "gavel_brooch" }),
   "柚子": Object.freeze({ baseSlug: "nuannuan", hairHex: "#a36c33", hairStr: 0.78, topsHex: "#829e5a", topsStr: 0.84, neckHex: "#f6efe0", eyeHex: "#4f642c", vrmAcc: "yuzu_clip" })
 });
@@ -360,6 +360,7 @@ const stage3dVrm = {
     const darkMetal = new THREE.MeshStandardMaterial({ color: 0x1c2536, roughness: 0.26, metalness: 0.78 });
 
     if (acc === "glasses" && headBone) {
+      // 小澄：細框眼鏡（頭骨）＋立領連帽外套翻領與拉鍊頭（胸骨，徹底區隔阿竹青衫！）
       const gGrp = new THREE.Group();
       const lensZ = eyeZ + fwdSign * 0.056;
       const lensR = Math.max(0.019, eyeHalf * 0.76);
@@ -380,6 +381,28 @@ const stage3dVrm = {
       gGrp.add(bridge);
       headBone.add(gGrp);
       mounted.push(gGrp);
+      if (chestBone) {
+        const hoodGrp = new THREE.Group();
+        const hoodieMat = new THREE.MeshStandardMaterial({ color: 0x264566, roughness: 0.62, metalness: 0.06 });
+        const trimMat = new THREE.MeshStandardMaterial({ color: 0xe6dec8, roughness: 0.52 });
+        const standCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.096, 0.068, 16, 1, true), hoodieMat);
+        standCollar.position.set(0, 0.132, -fwdSign * 0.010);
+        const hoodCowl = new THREE.Mesh(new THREE.TorusGeometry(0.098, 0.026, 8, 22), hoodieMat);
+        hoodCowl.rotation.x = Math.PI * 0.46;
+        hoodCowl.position.set(0, 0.118, -fwdSign * 0.042);
+        hoodCowl.scale.set(1.12, 1.0, 0.78);
+        const zipLine = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.145, 0.006), darkMetal);
+        zipLine.position.set(0, 0.048, fwdSign * 0.096);
+        [-1, 1].forEach(function (sd) {
+          const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.078, 6), trimMat);
+          cord.position.set(sd * 0.026, 0.088, fwdSign * 0.098);
+          cord.rotation.z = sd * 0.10;
+          hoodGrp.add(cord);
+        });
+        hoodGrp.add(standCollar, hoodCowl, zipLine);
+        chestBone.add(hoodGrp);
+        mounted.push(hoodGrp);
+      }
     } else if (acc === "headband" && headBone) {
       const bGrp = new THREE.Group();
       const bandMat = new THREE.MeshStandardMaterial({ color: 0xe6912e, roughness: 0.55, metalness: 0.05 });
@@ -393,16 +416,23 @@ const stage3dVrm = {
       headBone.add(bGrp);
       mounted.push(bGrp);
     } else if (acc === "star_clip" && headBone) {
+      // 星兒：放大 1.3x 並加微光材質的占星金星髮夾
       const sGrp = new THREE.Group();
-      sGrp.position.set(0.072, eyeY + 0.055, eyeZ + fwdSign * 0.036);
+      const starGlowMat = new THREE.MeshStandardMaterial({
+        color: 0xf7d26a, emissive: 0xd49c2a, emissiveIntensity: 0.45, roughness: 0.22, metalness: 0.85
+      });
+      sGrp.position.set(0.074, eyeY + 0.058, eyeZ + fwdSign * 0.036);
       sGrp.rotation.set(0.15, fwdSign < 0 ? 0.5 : -0.5, -0.35);
+      sGrp.scale.setScalar(1.3);
       for (let k = 0; k < 5; k++) {
         const ang = (k / 5) * Math.PI * 2;
-        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.007, 0.022, 4), goldMat);
-        spike.position.set(Math.cos(ang) * 0.009, Math.sin(ang) * 0.009, 0);
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.0075, 0.024, 4), starGlowMat);
+        spike.position.set(Math.cos(ang) * 0.0095, Math.sin(ang) * 0.0095, 0);
         spike.rotation.z = ang - Math.PI * 0.5;
         sGrp.add(spike);
       }
+      const coreStar = new THREE.Mesh(new THREE.SphereGeometry(0.0075, 8, 6), starGlowMat);
+      sGrp.add(coreStar);
       headBone.add(sGrp);
       mounted.push(sGrp);
     } else if (acc === "ribbon" && headBone) {
@@ -418,66 +448,239 @@ const stage3dVrm = {
       rGrp.add(wL, wR, knot);
       headBone.add(rGrp);
       mounted.push(rGrp);
+    } else if (acc === "hiking_scarf" && chestBone) {
+      // 阿松（補齊原本 null）：登山社高領防風摺疊圍巾＋手腕編織傘繩
+      const scGrp = new THREE.Group();
+      const scarfMat = new THREE.MeshStandardMaterial({ color: 0x3b6a52, roughness: 0.72, metalness: 0.04 });
+      const stripeMat = new THREE.MeshStandardMaterial({ color: 0xd9c7a0, roughness: 0.65 });
+      const wrap1 = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.032, 10, 24), scarfMat);
+      wrap1.rotation.x = Math.PI * 0.52;
+      wrap1.position.set(0, 0.128, fwdSign * 0.008);
+      wrap1.scale.set(1.12, 1.04, 1.0);
+      const wrap2 = new THREE.Mesh(new THREE.TorusGeometry(0.086, 0.026, 10, 22), stripeMat);
+      wrap2.rotation.x = Math.PI * 0.48;
+      wrap2.position.set(0, 0.156, fwdSign * 0.004);
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.135, 0.020), scarfMat);
+      tail.position.set(0.052 * fwdSign, 0.055, fwdSign * 0.094);
+      tail.rotation.z = -0.14 * fwdSign;
+      scGrp.add(wrap1, wrap2, tail);
+      chestBone.add(scGrp);
+      mounted.push(scGrp);
+      const wristBone = bones.rightHand || bones.rightLowerArm;
+      if (wristBone) {
+        const paracord = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.008, 8, 16), stripeMat);
+        paracord.rotation.x = Math.PI * 0.5;
+        paracord.position.set(0, -0.01, 0);
+        wristBone.add(paracord);
+        mounted.push(paracord);
+      }
+    } else if (acc === "press_kit" && chestBone) {
+      // 小雲（補齊原本 null）：斜背採訪證掛繩＋胸袋速寫本（胸骨）＋單邊俐落髮夾（頭骨）
+      const pkGrp = new THREE.Group();
+      const strapMat = new THREE.MeshStandardMaterial({ color: 0x9e2f44, roughness: 0.52 });
+      const cardMat = new THREE.MeshStandardMaterial({ color: 0xf7f2e7, roughness: 0.35 });
+      const bookMat = new THREE.MeshStandardMaterial({ color: 0x222938, roughness: 0.62 });
+      [-1, 1].forEach(function (sd) {
+        const strap = new THREE.Mesh(new THREE.BoxGeometry(0.011, 0.155, 0.005), strapMat);
+        strap.position.set(sd * 0.040, 0.082, fwdSign * 0.095);
+        strap.rotation.z = sd * 0.24;
+        pkGrp.add(strap);
+      });
+      const badgeHolder = new THREE.Mesh(new THREE.BoxGeometry(0.054, 0.072, 0.008), cardMat);
+      badgeHolder.position.set(0, -0.006, fwdSign * 0.105);
+      const badgeBand = new THREE.Mesh(new THREE.BoxGeometry(0.056, 0.016, 0.010), strapMat);
+      badgeBand.position.set(0, 0.020, fwdSign * 0.106);
+      const notebook = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.068, 0.014), bookMat);
+      notebook.position.set(-0.078 * fwdSign, 0.028, fwdSign * 0.092);
+      notebook.rotation.z = 0.08 * fwdSign;
+      const pen = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.075, 6), goldMat);
+      pen.position.set(-0.064 * fwdSign, 0.036, fwdSign * 0.100);
+      pkGrp.add(badgeHolder, badgeBand, notebook, pen);
+      chestBone.add(pkGrp);
+      mounted.push(pkGrp);
+      if (headBone) {
+        const clip = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.009, 0.008), strapMat);
+        clip.position.set(-0.072, eyeY + 0.042, eyeZ + fwdSign * 0.036);
+        clip.rotation.set(0.08, fwdSign < 0 ? -0.45 : 0.45, 0.22);
+        headBone.add(clip);
+        mounted.push(clip);
+      }
     } else if (acc === "jade_hairpin" && headBone) {
-      // 晴嵐：青玉流蘇古風髮簪
+      // 晴嵐：青玉流蘇古風髮簪＋單側垂胸長髮辮＋溫雅披帛（獨立女模 xiaocheng.vrm）
       const pGrp = new THREE.Group();
       pGrp.position.set(0.082, eyeY + 0.056, eyeZ + fwdSign * 0.015);
       pGrp.rotation.set(0.08, 0.25, -0.55);
-      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.0022, 0.115, 8), goldMat);
-      const bead = new THREE.Mesh(new THREE.SphereGeometry(0.014, 10, 8), jadeMat);
-      bead.position.y = 0.052;
-      const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.0085, 0.056, 8), jadeMat);
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.0030, 0.0024, 0.125, 8), goldMat);
+      const bead = new THREE.Mesh(new THREE.SphereGeometry(0.015, 10, 8), jadeMat);
+      bead.position.y = 0.056;
+      const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.0095, 0.062, 8), jadeMat);
       tassel.position.set(0.016, 0.008, 0);
       tassel.rotation.z = 0.55;
       pGrp.add(stem, bead, tassel);
       headBone.add(pGrp);
       mounted.push(pGrp);
+      // 單側垂肩長髮辮（顯著區隔輪廓！）
+      const braidMat = new THREE.MeshStandardMaterial({ color: 0x4b2e21, roughness: 0.58 });
+      const braidGrp = new THREE.Group();
+      for (let bi = 0; bi < 6; bi++) {
+        const seg = new THREE.Mesh(new THREE.SphereGeometry(0.021 - bi * 0.0018, 8, 6), braidMat);
+        seg.scale.set(0.88, 1.32, 0.88);
+        seg.position.set(-0.082 - bi * 0.002, eyeY - 0.036 - bi * 0.035, eyeZ + fwdSign * (0.028 + bi * 0.015));
+        braidGrp.add(seg);
+      }
+      const braidTie = new THREE.Mesh(new THREE.TorusGeometry(0.013, 0.0045, 6, 12), jadeMat);
+      braidTie.rotation.x = Math.PI * 0.5;
+      braidTie.position.set(-0.094, eyeY - 0.242, eyeZ + fwdSign * 0.112);
+      braidGrp.add(braidTie);
+      headBone.add(braidGrp);
+      mounted.push(braidGrp);
+      if (chestBone) {
+        const shawlMat = new THREE.MeshStandardMaterial({ color: 0xf4e8de, roughness: 0.52 });
+        const shawl = new THREE.Mesh(new THREE.TorusGeometry(0.146, 0.022, 8, 26), shawlMat);
+        shawl.rotation.x = Math.PI * 0.52;
+        shawl.position.set(0, 0.068, -fwdSign * 0.010);
+        shawl.scale.set(1.22, 0.88, 0.55);
+        chestBone.add(shawl);
+        mounted.push(shawl);
+      }
     } else if (acc === "yuzu_clip" && headBone) {
-      // 柚子：金柚果實＋雙翠綠葉髮夾
+      // 柚子：點心社抹茶軟呢貝雷帽＋雙側蓬鬆耳髮＋金柚果實胸／帽徽（徹底拉開與暖暖剪影差距！）
+      const beretGrp = new THREE.Group();
+      const beretMat = new THREE.MeshStandardMaterial({ color: 0x6b8747, roughness: 0.72, metalness: 0.04 });
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0x4b6132, roughness: 0.68 });
+      const capCrown = new THREE.Mesh(new THREE.SphereGeometry(0.128, 16, 12), beretMat);
+      capCrown.scale.set(1.12, 0.44, 1.08);
+      capCrown.position.set(0.018, eyeY + 0.118, -fwdSign * 0.018);
+      capCrown.rotation.z = -0.18;
+      const capRim = new THREE.Mesh(new THREE.TorusGeometry(0.106, 0.014, 8, 24), rimMat);
+      capRim.rotation.x = Math.PI * 0.5;
+      capRim.rotation.y = 0.18;
+      capRim.position.set(0.010, eyeY + 0.088, -fwdSign * 0.010);
+      const capStem = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.005, 0.024, 6), rimMat);
+      capStem.position.set(0.028, eyeY + 0.172, -fwdSign * 0.020);
+      capStem.rotation.z = -0.25;
+      // 雙側蓬鬆短捲耳髮
+      const curlMat = new THREE.MeshStandardMaterial({ color: 0x9c652f, roughness: 0.60 });
+      [-1, 1].forEach(function (sd) {
+        const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.036, 10, 8), curlMat);
+        tuft.scale.set(0.82, 1.32, 0.92);
+        tuft.position.set(sd * 0.106, eyeY - 0.012, eyeZ + fwdSign * 0.002);
+        beretGrp.add(tuft);
+      });
+      // 帽緣金柚果實＋雙翠葉徽飾
       const yGrp = new THREE.Group();
-      yGrp.position.set(0.076, eyeY + 0.048, eyeZ + fwdSign * 0.035);
+      yGrp.position.set(0.095, eyeY + 0.082, eyeZ + fwdSign * 0.032);
       yGrp.rotation.set(0.12, fwdSign < 0 ? 0.52 : -0.52, -0.25);
-      const fruitMat = new THREE.MeshStandardMaterial({ color: 0xf4b938, roughness: 0.38, metalness: 0.08 });
+      const fruitMat = new THREE.MeshStandardMaterial({ color: 0xf4b938, roughness: 0.36, metalness: 0.08 });
       const leafMat = new THREE.MeshStandardMaterial({ color: 0x4ca64c, roughness: 0.45 });
-      const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.013, 10, 8), fruitMat);
-      const leaf1 = new THREE.Mesh(new THREE.ConeGeometry(0.0065, 0.024, 5), leafMat);
-      leaf1.position.set(-0.012, 0.011, 0); leaf1.rotation.z = 0.75;
-      const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.006, 0.020, 5), leafMat);
-      leaf2.position.set(-0.004, 0.016, 0); leaf2.rotation.z = 0.25;
+      const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.015, 10, 8), fruitMat);
+      const leaf1 = new THREE.Mesh(new THREE.ConeGeometry(0.007, 0.026, 5), leafMat);
+      leaf1.position.set(-0.013, 0.012, 0); leaf1.rotation.z = 0.75;
+      const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.0065, 0.022, 5), leafMat);
+      leaf2.position.set(-0.004, 0.018, 0); leaf2.rotation.z = 0.25;
       yGrp.add(fruit, leaf1, leaf2);
-      headBone.add(yGrp);
-      mounted.push(yGrp);
+      beretGrp.add(capCrown, capRim, capStem, yGrp);
+      headBone.add(beretGrp);
+      mounted.push(beretGrp);
     } else if (acc === "gavel_brooch" && chestBone) {
-      // 阿朗：辯論社金色法槌桂冠胸章
+      // 阿朗：深色西裝背心翻領＋領帶＋法槌桂冠胸章（胸骨）＋單邊辯論耳掛（頭骨，區隔男主角！）
+      const vestGrp = new THREE.Group();
+      const vestMat = new THREE.MeshStandardMaterial({ color: 0x2c241d, roughness: 0.55, metalness: 0.08 });
+      const tieMat = new THREE.MeshStandardMaterial({ color: 0x8f2424, roughness: 0.45 });
+      [-1, 1].forEach(function (sd) {
+        const lapel = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.165, 0.022), vestMat);
+        lapel.position.set(sd * 0.056, 0.058, fwdSign * 0.088);
+        lapel.rotation.z = sd * 0.24;
+        lapel.rotation.y = -sd * 0.18 * fwdSign;
+        vestGrp.add(lapel);
+      });
+      const tieKnot = new THREE.Mesh(new THREE.ConeGeometry(0.016, 0.028, 4), tieMat);
+      tieKnot.rotation.x = Math.PI;
+      tieKnot.position.set(0, 0.112, fwdSign * 0.098);
+      const tieBlade = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.125, 0.008), tieMat);
+      tieBlade.position.set(0, 0.036, fwdSign * 0.098);
       const gbGrp = new THREE.Group();
-      gbGrp.position.set(-0.058 * fwdSign, 0.045, fwdSign * 0.098);
-      const wreath = new THREE.Mesh(new THREE.TorusGeometry(0.019, 0.0032, 6, 16), goldMat);
-      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.0024, 0.0024, 0.028, 6), goldMat);
+      gbGrp.position.set(-0.064 * fwdSign, 0.058, fwdSign * 0.104);
+      const wreath = new THREE.Mesh(new THREE.TorusGeometry(0.021, 0.0036, 6, 16), goldMat);
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.0026, 0.0026, 0.030, 6), goldMat);
       handle.rotation.z = -0.45;
-      const headG = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.0055, 0.018, 8), goldMat);
+      const headG = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.020, 8), goldMat);
       headG.position.set(0.006, 0.010, 0); headG.rotation.z = 1.1;
       gbGrp.add(wreath, handle, headG);
-      chestBone.add(gbGrp);
-      mounted.push(gbGrp);
+      vestGrp.add(tieKnot, tieBlade, gbGrp);
+      chestBone.add(vestGrp);
+      mounted.push(vestGrp);
+      if (headBone) {
+        const earGrp = new THREE.Group();
+        const earHook = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.004, 6, 14), darkMetal);
+        earHook.position.set(0.092, eyeY - 0.008, eyeZ * 0.15);
+        earHook.rotation.y = Math.PI * 0.5;
+        const micBoom = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.0022, 0.068, 6), darkMetal);
+        micBoom.rotation.x = Math.PI * 0.45;
+        micBoom.rotation.z = 0.32;
+        micBoom.position.set(0.072, eyeY - 0.034, eyeZ + fwdSign * 0.032);
+        earGrp.add(earHook, micBoom);
+        headBone.add(earGrp);
+        mounted.push(earGrp);
+      }
     } else if (acc === "ink_scroll" && chestBone) {
-      // 墨白：青竹書法玉扣盤飾
+      // 墨白：頭頂束髮高髻＋玉簪（頭骨）＋深藍書院交領寬袖披肩＋朱印玉扣（胸骨，徹底脫離晨晨運動風！）
+      if (headBone) {
+        const bunGrp = new THREE.Group();
+        const inkHairMat = new THREE.MeshStandardMaterial({ color: 0x141822, roughness: 0.55 });
+        const topknot = new THREE.Mesh(new THREE.SphereGeometry(0.048, 12, 10), inkHairMat);
+        topknot.scale.set(0.92, 1.15, 0.92);
+        topknot.position.set(0, eyeY + 0.148, -fwdSign * 0.028);
+        const hairCrown = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.042, 0.038, 12), darkMetal);
+        hairCrown.position.set(0, eyeY + 0.140, -fwdSign * 0.028);
+        const crownPin = new THREE.Mesh(new THREE.CylinderGeometry(0.0032, 0.0032, 0.148, 8), jadeMat);
+        crownPin.rotation.z = Math.PI * 0.5;
+        crownPin.position.set(0, eyeY + 0.148, -fwdSign * 0.028);
+        bunGrp.add(topknot, hairCrown, crownPin);
+        headBone.add(bunGrp);
+        mounted.push(bunGrp);
+      }
       const isGrp = new THREE.Group();
-      isGrp.position.set(0, 0.036, fwdSign * 0.104);
+      const mantleMat = new THREE.MeshStandardMaterial({ color: 0x222d44, roughness: 0.62 });
+      const ivoryTrim = new THREE.MeshStandardMaterial({ color: 0xede3cf, roughness: 0.52 });
+      const shoulderMantle = new THREE.Mesh(new THREE.TorusGeometry(0.152, 0.032, 10, 26), mantleMat);
+      shoulderMantle.rotation.x = Math.PI * 0.52;
+      shoulderMantle.position.set(0, 0.072, -fwdSign * 0.008);
+      shoulderMantle.scale.set(1.24, 0.88, 0.52);
+      [-1, 1].forEach(function (sd) {
+        const crossCollar = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.185, 0.016), ivoryTrim);
+        crossCollar.position.set(sd * 0.036, 0.056, fwdSign * 0.095);
+        crossCollar.rotation.z = -sd * 0.34;
+        isGrp.add(crossCollar);
+      });
       const cinnabar = new THREE.MeshStandardMaterial({ color: 0xa63529, roughness: 0.42 });
-      const seal = new THREE.Mesh(new THREE.BoxGeometry(0.020, 0.028, 0.008), cinnabar);
-      const cord = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.0025, 6, 14), goldMat);
-      cord.position.y = 0.016;
-      isGrp.add(seal, cord);
+      const seal = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.030, 0.009), cinnabar);
+      seal.position.set(0, 0.026, fwdSign * 0.106);
+      const cord = new THREE.Mesh(new THREE.TorusGeometry(0.015, 0.0028, 6, 14), goldMat);
+      cord.position.set(0, 0.044, fwdSign * 0.106);
+      isGrp.add(shoulderMantle, seal, cord);
       chestBone.add(isGrp);
       mounted.push(isGrp);
     } else if (acc === "jade_pendant" && chestBone) {
-      // 阿竹：書院青玉佩
+      // 阿竹：寬領青衫書院茶服襟飾＋青玉佩（對比小澄連帽立領！）
       const jpGrp = new THREE.Group();
-      jpGrp.position.set(0, 0.022, fwdSign * 0.106);
-      const disc = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.005, 8, 16), jadeMat);
-      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6), goldMat);
-      knot.position.y = 0.018;
-      jpGrp.add(disc, knot);
+      const robeMat = new THREE.MeshStandardMaterial({ color: 0x2b554e, roughness: 0.60 });
+      const lapelTrim = new THREE.MeshStandardMaterial({ color: 0xd9e8df, roughness: 0.52 });
+      [-1, 1].forEach(function (sd) {
+        const collar = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.165, 0.014), lapelTrim);
+        collar.position.set(sd * 0.034, 0.058, fwdSign * 0.092);
+        collar.rotation.z = -sd * 0.30;
+        jpGrp.add(collar);
+      });
+      const wideCollar = new THREE.Mesh(new THREE.TorusGeometry(0.132, 0.022, 8, 22), robeMat);
+      wideCollar.rotation.x = Math.PI * 0.50;
+      wideCollar.position.set(0, 0.112, -fwdSign * 0.012);
+      wideCollar.scale.set(1.16, 0.84, 1.0);
+      const disc = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.0055, 8, 16), jadeMat);
+      disc.position.set(0, 0.018, fwdSign * 0.108);
+      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.0065, 8, 6), goldMat);
+      knot.position.set(0, 0.038, fwdSign * 0.108);
+      jpGrp.add(wideCollar, disc, knot);
       chestBone.add(jpGrp);
       mounted.push(jpGrp);
     }
@@ -1445,9 +1648,12 @@ const stage3dVrm = {
     const beatFrac = beatRaw - beatIdx;
     const beatPulse = Math.sin(beatFrac * Math.PI); // 0 -> 1 -> 0 accent curve within each conversational phrase
 
-    const idleLeanDelta = (iname === "sip_tea" || iname === "table_tap" || iname === "chin_rest")
-      ? (0.075 * iw)
-      : ((iname === "arms_fold" || iname === "stretch_roll") ? (-0.065 * iw) : 0);
+    const idleLeanDelta = (iname === "sip_tea" || iname === "table_tap" || iname === "chin_rest" || iname === "note_jot" || iname === "cup_cradle")
+      ? (0.072 * iw)
+      : ((iname === "arms_fold" || iname === "stretch_roll" || iname === "lean_back") ? (-0.078 * iw) : 0);
+    const starLookPitch = (!sleeping && !isActiveSpeaker && (iname === "star_gaze" || (arch.starGaze && Math.sin(t * 0.42 + seed) > 0.72)))
+      ? (-0.18 * (iname === "star_gaze" ? iw : 0.65))
+      : 0;
     const talkTorsoLean = talking
       ? ((gStyle === "energetic" ? 0.125 : (gStyle === "classical" ? 0.055 : 0.095)) + beatPulse * 0.045 * tEnergy)
       : (isFloorHolder ? 0.075 : 0);
@@ -1515,20 +1721,21 @@ const stage3dVrm = {
     if (bm.head) {
       this.slerpBoneModelDelta(
         bm.head,
-        pitchNow * headPitchFrac + nodOffset * 0.66,
+        pitchNow * headPitchFrac + nodOffset * 0.66 + starLookPitch,
         yawNow * headYawFrac + shakeOffset * 0.72,
         idleRoll * 0.66,
         0.22,
         "YXZ"
       );
     }
-    // Expressive Eye-Bone Micro-Saccades (eyes lead head gaze; nervous wolves show quick sideways dart!)
+    // Expressive Eye-Bone Micro-Saccades (小雲 fastest scanning saccades; nervous wolves show quick sideways dart!)
     if (bm.leftEye || bm.rightEye) {
+      const sacSpd = arch.gazeSaccadeSpeed || 1.0;
       const dartEye = (!sleeping && (sweating || emotion === "nervous"))
         ? Math.sin(t * 7.2 + seed * 1.3) * 0.16
-        : (!sleeping ? Math.sin(t * 1.65 + seed * 2.1) * 0.065 : 0);
+        : (!sleeping ? Math.sin(t * 1.65 * sacSpd + seed * 2.1) * (0.065 * Math.min(1.45, sacSpd)) : 0);
       const eyeYaw = sleeping ? 0 : clamp(yawNow * 0.32 + dartEye, -0.26, 0.26);
-      const eyePitch = sleeping ? 0.14 : clamp(pitchNow * 0.26, -0.16, 0.16);
+      const eyePitch = sleeping ? 0.14 : clamp(pitchNow * 0.26 + starLookPitch * 0.45, -0.20, 0.16);
       if (bm.leftEye) this.slerpBoneModelDelta(bm.leftEye, eyePitch, eyeYaw, 0, 0.38, "YXZ");
       if (bm.rightEye) this.slerpBoneModelDelta(bm.rightEye, eyePitch, eyeYaw, 0, 0.38, "YXZ");
     }
@@ -1839,6 +2046,41 @@ const stage3dVrm = {
           tLD = 0.78; tLF = 0.28; tLB = 0.82; tLT = -0.12;
           shLiftR = 0.10 * iw; shLiftL = 0.10 * iw;
           rHandPose = "open_palm"; lHandPose = "open_palm";
+        } else if (iname === "cup_cradle") {
+          // 暖暖 / 柚子：雙手溫柔捧茶盞待機姿
+          tRD = 0.86; tRF = 0.60; tRB = 1.40; tRT = 0.32;
+          tLD = 0.86; tLF = 0.60; tLB = 1.40; tLT = 0.32;
+          rWristX = -0.18 * iw; lWristX = -0.18 * iw;
+          rHandPose = "tea_poise"; lHandPose = "tea_poise";
+        } else if (iname === "tea_poise") {
+          // 墨白 / 阿竹 / 晴嵐：端坐輕扶茶杯／茶壺
+          tRD = 0.78; tRF = 0.64; tRB = 1.28; tRT = 0.28;
+          tLD = 1.02; tLF = 0.38; tLB = 1.16; tLT = 0.20;
+          rWristX = -0.20 * iw; rWristY = 0.14 * iw;
+          rHandPose = "tea_poise"; lHandPose = "tea_poise";
+        } else if (iname === "lean_back") {
+          // 晨晨 / 阿松：雙肩敞開靠椅背鬆弛姿
+          tRD = 0.96; tRF = 0.20; tRB = 0.74; tRT = -0.16;
+          tLD = 0.98; tLF = 0.18; tLB = 0.72; tLT = -0.16;
+          shFwdR = -0.06 * iw; shFwdL = -0.06 * iw;
+          rHandPose = "relaxed"; lHandPose = "relaxed";
+        } else if (iname === "note_jot") {
+          // 小雲：低頭在胸袋速寫本記時間線筆記
+          const jot = Math.sin(t * 9.0 + seed) * 0.04;
+          tRD = 0.80; tRF = 0.62 + jot; tRB = 1.38; tRT = 0.28;
+          tLD = 0.86; tLF = 0.58; tLB = 1.36; tLT = 0.32;
+          rHandPose = "point_index"; lHandPose = "open_palm";
+        } else if (iname === "count_fingers") {
+          // 小澄：比出食指算票數與刪去法
+          tRD = 0.70; tRF = 0.68; tRB = 1.34; tRT = 0.22;
+          tLD = 1.04; tLF = 0.32; tLB = 1.06; tLT = 0.16;
+          rWristX = -0.16 * iw;
+          rHandPose = "point_index";
+        } else if (iname === "star_gaze") {
+          // 星兒：微托下巴抬眼望亭外星空
+          tRD = 0.68; tRF = 0.62; tRB = 1.46; tRT = 0.22;
+          tLD = 1.02; tLF = 0.36; tLB = 1.12; tLT = 0.16;
+          rHandPose = "tea_poise";
         } else if (iname === "playful_sway") {
           const bounceA = Math.sin(t * 3.8 + seed) * 0.09;
           tRD = 0.80 + bounceA; tRF = 0.52; tRB = 1.26 - bounceA; tRT = 0.24;
@@ -1856,6 +2098,13 @@ const stage3dVrm = {
         lTwist = lTwist + (tLT - lTwist) * iw;
       }
     }
+
+    // Apply per-persona baseline shoulderSpread (晨晨/阿松 open shoulders vs 小澄/暖暖 tucked shoulders)
+    const baseShSpread = arch.shoulderSpread || 0;
+    shFwdR -= baseShSpread * 0.75;
+    shFwdL -= baseShSpread * 0.75;
+    rDrop -= baseShSpread * 0.45;
+    lDrop -= baseShSpread * 0.45;
 
     rDrop = clamp(rDrop, -0.55, 1.24);
     lDrop = clamp(lDrop, -0.55, 1.24);

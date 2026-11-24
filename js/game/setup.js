@@ -18,7 +18,17 @@ function clearTransientMatchTimers() {
     document.body.classList.remove("is-match-point", "is-seat-focus-vignette");
   }
   if (el("matchPointBadge")) el("matchPointBadge").classList.add("hidden");
+  if (state._lanternVeilTimer) {
+    clearTimeout(state._lanternVeilTimer);
+    state._lanternVeilTimer = null;
+  }
   if (el("lanternOutVeil")) el("lanternOutVeil").classList.remove("is-active");
+  if (typeof stage3d !== "undefined") {
+    if (stage3d.env) stage3d.env.lanternBlackoutUntil = 0;
+    if (stage3d.seats && typeof reset3DSeatGazeState === "function") {
+      reset3DSeatGazeState(stage3d.seats);
+    }
+  }
   if (state.match) state.match.isMatchPoint = false;
 }
 

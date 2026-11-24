@@ -281,7 +281,7 @@ function renderPinnedCluesTray() {
     return;
   }
   tray.classList.remove("hidden");
-  tray.innerHTML = '<span class="text-[10px] font-black text-amber-300 shrink-0">📌 蒐證：</span>';
+  tray.innerHTML = '<span class="text-[10px] font-black text-amber-300 shrink-0">蒐證：</span>';
   list.forEach(function (clue) {
     const chip = document.createElement("button");
     chip.type = "button";

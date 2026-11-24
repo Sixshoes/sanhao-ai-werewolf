@@ -162,6 +162,19 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
         text: leadPhrase + leadIntro + trustIntro + prevVoteNote + tailPrompt
       };
     }
+    // v17.0 星兒招牌習慣：第一天無任何線索時也敢直接憑直覺點名試水溫！
+    if (speaker.name === "星兒" && day === 1 && nextWatch) {
+      return {
+        targetId: nextWatch.id,
+        relationType: "suspect",
+        accuseId: nextWatch.id,
+        vouchId: null,
+        wolfPits: [nextWatch.id],
+        goodPits: [],
+        hasToxicSlip: false,
+        text: "欸雖然是第一輪還沒線索啦，但我第六感直覺先點一下 " + seatLabel(nextWatch) + " 試試水溫喔，等等大家仔細聽他怎麼表水！"
+      };
+    }
     return {
       targetId: null,
       relationType: null,
@@ -206,6 +219,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
 
     const dualText = typeof buildPersonaDualSeerText === "function"
       ? buildPersonaDualSeerText(speaker, {
+          day: day,
           leadPrefix: leadPrefix,
           sALbl: sALbl,
           sBLbl: sBLbl,
@@ -511,7 +525,31 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     }
   }
 
+  // v17.0 阿朗招牌習慣：「逢跳必詰」——好人見前置位亮神職必先壓力測試挑毛病
+  if (speaker.name === "阿朗" && speaker.role !== "seer" && Array.isArray(priorGodClaims) && priorGodClaims.length > 0 && !dualSeerWorlds) {
+    const claimedEv = priorGodClaims[0];
+    const claimedSeat = claimedEv ? readSeat(claimedEv.speakerId) : null;
+    if (claimedSeat && claimedSeat.alive && claimedSeat.id !== speaker.id) {
+      const clubBanter = typeof buildPersonaClubAndHabitInsert === "function"
+        ? buildPersonaClubAndHabitInsert(speaker, ctx, claimedSeat, "suspect")
+        : "";
+      return {
+        targetId: claimedSeat.id,
+        relationType: "suspect",
+        accuseId: claimedSeat.id,
+        vouchId: null,
+        wolfPits: [claimedSeat.id],
+        goodPits: [],
+        hasToxicSlip: false,
+        text: leadPhrase + clubBanter + "先別急著全信跳牌，我慣例先對 " + seatLabel(claimedSeat) + " 做個壓力測試：你亮身分這條線還缺佐證，待會交代清楚我才放行！" + unspokenNote
+      };
+    }
+  }
+
   if (topSpokenSus && (speaker.suspicionMap[topSpokenSus.id] || 50) >= 56) {
+    const clubHabitNote = typeof buildPersonaClubAndHabitInsert === "function"
+      ? buildPersonaClubAndHabitInsert(speaker, ctx, topSpokenSus, "suspect")
+      : "";
     return {
       targetId: topSpokenSus.id,
       relationType: "suspect",
@@ -521,11 +559,14 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
       goodPits: bestSpokenAlly && bestSpokenAlly.id !== topSpokenSus.id ? [bestSpokenAlly.id] : [],
       hasToxicSlip: false,
       text: (prevVoteNote ? (prevVoteNote + "而且") : (leadPhrase + cbNote)) +
-        fill(flv.goodSus, { t: seatLabel(topSpokenSus) }) + unspokenNote
+        clubHabitNote + fill(flv.goodSus, { t: seatLabel(topSpokenSus) }) + unspokenNote
     };
   }
 
   if (bestSpokenAlly) {
+    const clubAllyNote = typeof buildPersonaClubAndHabitInsert === "function"
+      ? buildPersonaClubAndHabitInsert(speaker, ctx, bestSpokenAlly, "trust")
+      : "";
     return {
       targetId: bestSpokenAlly.id,
       relationType: "trust",
@@ -534,7 +575,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
       wolfPits: [],
       goodPits: [bestSpokenAlly.id],
       hasToxicSlip: false,
-      text: leadPhrase + fill(flv.goodAlly, {
+      text: leadPhrase + clubAllyNote + fill(flv.goodAlly, {
         t: seatLabel(bestSpokenAlly),
         tail: (unspokenNote || ("目前後置位還沒發言完，我先把 " + seatLabel(bestSpokenAlly) + " 放好人坑，" + signoffPhrase))
       })

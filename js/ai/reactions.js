@@ -450,6 +450,13 @@ function tryDefendOrCounterClaim(speaker, ctx) {
           ? ("另外剛才發言過的 " + seatLabel(secondFakePit) + " 我也覺得待檢視")
           : ("至於後置位 " + seatLabel(secondFakePit) + " 還沒發言，待會我也會重點聽他表水"))
         : "";
+      // v17.0 小雲狼破綻：被踩時為了自證清白，解釋篇幅會明顯飆升！
+      const xiaoyunOverExplain = speaker.name === "小雲"
+        ? "我剛剛每一句時間軸跟前後邏輯都對得清清楚楚，從第一輪到現在我的筆記本完全沒有任何矛盾，這點大家翻紀錄就能逐字驗證！"
+        : "";
+      const baseWolfRebutText = makePitTxt
+        ? makePitTxt(speaker, "wolf", { rebutLead: rebutLead, accName: accName, secClause: secClause, signoff: signoff })
+        : (rebutLead + pitPhrase + "實在太草率了吧？我被 " + accName + " 硬塞進狼坑當替罪羊！依我看想混淆視聽的狼坑就是 " + accName + (secClause ? ("，" + secClause) : "") + "，這輪我先反點 " + accName + "！" + signoff);
       return {
         targetId: pitCallerEv.speakerId,
         relationType: "suspect",
@@ -458,9 +465,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         wolfPits: wolfFakePits,
         goodPits: [],
         hasToxicSlip: wolfTactic === "deep_stealth" ? false : shouldWolfEmitToxicSlip(speaker, day, 3),
-        text: makePitTxt
-          ? makePitTxt(speaker, "wolf", { rebutLead: rebutLead, accName: accName, secClause: secClause, signoff: signoff })
-          : (rebutLead + pitPhrase + "實在太草率了吧？我被 " + accName + " 硬塞進狼坑當替罪羊！依我看想混淆視聽的狼坑就是 " + accName + (secClause ? ("，" + secClause) : "") + "，這輪我先反點 " + accName + "！" + signoff)
+        text: xiaoyunOverExplain ? (baseWolfRebutText + xiaoyunOverExplain) : baseWolfRebutText
       };
     }
   }
@@ -794,6 +799,10 @@ function tryRoleSpecificSpeech(speaker, ctx) {
           ? ("今晚我的警徽流改留先驗 " + seatLabel(secondFrame) + "、再驗 " + seatLabel(fakeFlow2) + "，大家放心看我手勢！")
           : ("今晚我的警徽流鎖定 " + seatLabel(secondFrame) + "！");
       }
+      // v17.0 Wolf Fake-Seer Signature Tells: 星兒假跳過於死板講邏輯 / 墨白假跳顯得過於工整拘謹
+      const fakeSeerTellPrefix = speaker.name === "星兒"
+        ? "照嚴格排除法加上三點推論交叉核對，"
+        : (speaker.name === "墨白" ? "按序查核、條分縷析，昨夜依例檢視完畢：" : "");
       return {
         targetId: frameTarget.id,
         relationType: "suspect",
@@ -807,7 +816,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
         checkedWolfId: frameTarget.id,
         checkedGoodId: null,
         hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 2),
-        text: fill(flv.fakeSeer, { t: seatLabel(frameTarget) }) + fakeFlowTail
+        text: fakeSeerTellPrefix + fill(flv.fakeSeer, { t: seatLabel(frameTarget) }) + fakeFlowTail
       };
     }
   }
@@ -1041,10 +1050,57 @@ function tryRoleSpecificSpeech(speaker, ctx) {
       };
     }
 
+    // v17.0 Signature Wolf Tells (100% ZERO-LEAK: reads only own speaker.name/role & legal wolf-pack/public heat!)
+    // 1. 晨晨當狼破綻：隊友遭高熱度圍攻時沉不住氣衝動跳出來硬保
+    if (speaker.name === "晨晨" && !isDeepBusScript && !isPlayerPushScript && snap) {
+      const hotMateChen = spokenOthers.find(function (s) {
+        return s.isWolfMate && snap.getObservableHeatOnSeat(s.id) >= 60;
+      });
+      if (hotMateChen) {
+        const scapegoatC = goodSpoken[0] || goodAll[0] || aliveOthers[0];
+        return {
+          targetId: hotMateChen.id,
+          relationType: "trust",
+          accuseId: scapegoatC ? scapegoatC.id : null,
+          vouchId: hotMateChen.id,
+          wolfPits: scapegoatC ? [scapegoatC.id] : [],
+          goodPits: [hotMateChen.id],
+          hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 5, true),
+          text: "欸等等兄弟們別一窩蜂打 " + seatLabel(hotMateChen) + " 啦！他剛剛講得很坦白啊，我敢拿信譽力挺 " + seatLabel(hotMateChen) + (scapegoatC ? ("，真正該查的是 " + seatLabel(scapegoatC) + " 吧！") : "，先別急著投他！")
+        };
+      }
+    }
+    // 2. 暖暖當狼破綻：因心虛比平時更不敢得罪人，整段話誰都不踩
+    if (speaker.name === "暖暖" && !isPlayerPushScript && !wolfPartnerSeer && !isFirstToday) {
+      const mildAlly = goodSpoken[0] || spokenOthers[0] || null;
+      return {
+        targetId: mildAlly ? mildAlly.id : null,
+        relationType: mildAlly ? "trust" : null,
+        accuseId: null,
+        vouchId: mildAlly ? mildAlly.id : null,
+        wolfPits: [],
+        goodPits: mildAlly ? [mildAlly.id] : [],
+        hasToxicSlip: false,
+        text: "欸大家剛剛講得好像都滿有道理的耶…暖暖不太敢隨便踩誰啦，氣氛和和氣氣就好，這輪我先聽後面大家怎麼決定囉…"
+      };
+    }
+
     const scapegoat = goodSpoken[0] || goodAll[0] || aliveOthers[0];
     if (!scapegoat) return null;
     const scSpoke = spokenIdsToday.indexOf(scapegoat.id) !== -1;
     const secScapegoat = goodSpoken.find(function (s) { return s.id !== scapegoat.id; }) || goodAll.find(function (s) { return s.id !== scapegoat.id; });
+    const wolfClubPrefix = typeof buildPersonaClubAndHabitInsert === "function"
+      ? buildPersonaClubAndHabitInsert(speaker, ctx, scapegoat, "wolf")
+      : "";
+    // 3. 柚子當狼破綻：緊張時特別愛附和前一位發言者
+    const prevGoodSp = spokenOthers.length ? spokenOthers[spokenOthers.length - 1] : null;
+    const youziEcho = (speaker.name === "柚子" && prevGoodSp && prevGoodSp.id !== scapegoat.id)
+      ? ("我也覺得剛剛 " + seatLabel(prevGoodSp) + " 講得好有道理喔，")
+      : "";
+    // 4. 小澄當狼破綻：過度執著解釋票數合理性
+    const xiaoChengWolfTell = speaker.name === "小澄"
+      ? "先單純從票數分佈算一遍合理性，不看情緒動機的話，"
+      : "";
     return {
       targetId: scapegoat.id,
       relationType: "suspect",
@@ -1053,7 +1109,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
       wolfPits: (scSpoke && secScapegoat && spokeToday(secScapegoat.id)) ? [scapegoat.id, secScapegoat.id] : (scSpoke ? [scapegoat.id] : []),
       goodPits: [],
       hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 8),
-      text: fill(scSpoke ? flv.wolfSpoken : flv.wolfWait, { t: seatLabel(scapegoat) })
+      text: wolfClubPrefix + youziEcho + xiaoChengWolfTell + fill(scSpoke ? flv.wolfSpoken : flv.wolfWait, { t: seatLabel(scapegoat) })
     };
   }
   return null;

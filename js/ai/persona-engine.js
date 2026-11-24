@@ -217,6 +217,171 @@ const DEFAULT_PERSONA_PROFILE = Object.freeze({
   llmStyleRule: "自然親切的台灣書院夥伴口語，理性清晰。"
 });
 
+// ==================== v17.0 11 SIGNATURE DOSSIERS & 3 CLUB ACQUAINTANCE NETWORKS ====================
+const CLUB_ACQUAINTANCE_GROUPS = Object.freeze({
+  debate_trio: Object.freeze({
+    key: "debate_trio",
+    title: "論辯交鋒組",
+    members: Object.freeze(["小澄", "阿朗", "小雲"]),
+    desc: "資訊、辯論與新聞查核三社常辦聯合社課；阿朗愛抬槓小澄的純數據票型，小雲習慣居中調閱紀錄驗證兩人。"
+  }),
+  academy_arts: Object.freeze({
+    key: "academy_arts",
+    title: "雅集同門組",
+    members: Object.freeze(["墨白", "晴嵐", "阿竹"]),
+    desc: "書法、古箏與茶藝三社共用書院茶室，最熟悉彼此平日氣息；任一人在公開場露破綻時，另兩人警覺度放大 15%。"
+  }),
+  mountain_circle: Object.freeze({
+    key: "mountain_circle",
+    title: "山城互挺組",
+    members: Object.freeze(["阿松", "晨晨", "暖暖", "柚子"]),
+    desc: "登山社與球社練完常去茶社和點心社吃茶點；阿松與晨晨天生照應學妹，晨晨抽到狼被迫踩柚子時易露出語氣卡頓。"
+  })
+});
+
+const PERSONA_SIGNATURE_DOSSIERS = Object.freeze({
+  "小澄": Object.freeze({
+    id: "xiaocheng",
+    clubGroup: "debate_trio",
+    clubLabel: "論辯交鋒組（小澄 × 阿朗 × 小雲）",
+    quadrant: "證據查核・主動推進",
+    silhouetteTag: "細框眼鏡・深藍立領連帽外套・推鏡算票姿",
+    goodHabit: "票行潔癖：只要有人「嘴上踩 A 卻投 B」出現言票背離，隔天必定死咬不放。",
+    wolfTell: "當狼時過度執著解釋票數合理性，極少談論他人的情緒與動機。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  }),
+  "暖暖": Object.freeze({
+    id: "nuannuan",
+    clubGroup: "mountain_circle",
+    clubLabel: "山城互挺組（阿松 × 晨晨 × 暖暖 × 柚子）",
+    quadrant: "直覺人情・低調護場",
+    silhouetteTag: "暖黃緞帶・雙手溫柔捧杯姿",
+    goodHabit: "首輪不跟風投資訊少的邊緣位，平票 PK 時優先力保態度誠懇的弱勢方。",
+    wolfTell: "抽到狼時因心虛比平時更不敢得罪人，整段話誰都不踩、立場模糊。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  }),
+  "阿松": Object.freeze({
+    id: "asong",
+    clubGroup: "mountain_circle",
+    clubLabel: "山城互挺組（阿松 × 晨晨 × 暖暖 × 柚子）",
+    quadrant: "證據查核・低調護場",
+    silhouetteTag: "高領防風登山圍巾・手腕傘繩・靠背抱胸姿",
+    goodHabit: "前兩天話少但專算剩餘容錯輪次，優先護住無矛盾的疑似神職。",
+    wolfTell: "夜間配刀極準專挑安靜藏神位，白天卻假裝不熟輪次節奏。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  }),
+  "星兒": Object.freeze({
+    id: "xinger",
+    clubGroup: "",
+    clubLabel: "觀星社獨立直覺派",
+    quadrant: "直覺人情・主動試水",
+    silhouetteTag: "微光放大星形髮夾・歪頭 5° 偶爾仰望星空",
+    goodHabit: "第一天沒線索時敢直接憑直覺點名試水溫；拿真觀察員時偏好低調暗保金水。",
+    wolfTell: "假跳觀察員時編造的查驗理由反而過於死板講邏輯，失去平時的直覺跳躍感。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  }),
+  "小雲": Object.freeze({
+    id: "xiaoyun",
+    clubGroup: "debate_trio",
+    clubLabel: "論辯交鋒組（小澄 × 阿朗 × 小雲）",
+    quadrant: "證據查核・主動踢爆",
+    silhouetteTag: "斜背採訪證掛繩・胸袋速寫本・全場最快掃視眼神",
+    goodHabit: "專抓跨日立場反水，第一時間點破「昨天保他、今天為何改口」。",
+    wolfTell: "被反抓時間線漏洞時，防禦回嘴字數會突然暴增、反覆補述細節。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  }),
+  "阿竹": Object.freeze({
+    id: "azhu",
+    clubGroup: "academy_arts",
+    clubLabel: "雅集同門組（墨白 × 晴嵐 × 阿竹）",
+    quadrant: "直覺人情・沉穩留白",
+    silhouetteTag: "青衫寬領茶服・青玉佩・扶壺品茗姿",
+    goodHabit: "雙預言家對跳時常主張先出外置位，留雙邊觀察員看夜間倒牌驗證。",
+    wolfTell: "最擅長打深水倒鉤，會果斷把票投給快曝光的狼隊友替自己做身分。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  }),
+  "晨晨": Object.freeze({
+    id: "chenchen",
+    clubGroup: "mountain_circle",
+    clubLabel: "山城互挺組（阿松 × 晨晨 × 暖暖 × 柚子）",
+    quadrant: "直覺人情・主動衝鋒",
+    silhouetteTag: "橘色運動頭帶・雙肩敞開後仰・1.35× 最大手勢幅度",
+    goodHabit: "認準站邊的預言家就死忠衝票到底；一旦發現受騙隔天必定強烈反咬。",
+    wolfTell: "沉不住氣，隊友遭圍攻時常衝動跳出來硬保；被迫踩柚子時語氣容易卡頓。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  }),
+  "墨白": Object.freeze({
+    id: "mobai",
+    clubGroup: "academy_arts",
+    clubLabel: "雅集同門組（墨白 × 晴嵐 × 阿竹）",
+    quadrant: "證據查核・低調控場",
+    silhouetteTag: "頭頂束髮高髻玉簪・深藍交領寬袖披肩・端坐扶杯姿",
+    goodHabit: "極度看重警徽流與承諾是否兌現，被踩時不急躁，只冷靜反問關鍵盲點。",
+    wolfTell: "鮮少主動悍跳，若被迫上警假跳時詞句會顯得過於工整拘謹。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  }),
+  "晴嵐": Object.freeze({
+    id: "qinglan",
+    clubGroup: "academy_arts",
+    clubLabel: "雅集同門組（墨白 × 晴嵐 × 阿竹）",
+    quadrant: "直覺人情・溫雅察微",
+    silhouetteTag: "單側垂胸長髮辮・青玉流蘇髮簪與素色披帛",
+    goodHabit: "對心虛脈搏與語氣急躁最敏感，常第一個察覺誰被點名時神色慌張。",
+    wolfTell: "慣用溫柔語氣包裝軟刀子，暗中將焦點帶往安靜的低熱度好人身上。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  }),
+  "阿朗": Object.freeze({
+    id: "alang",
+    clubGroup: "debate_trio",
+    clubLabel: "論辯交鋒組（小澄 × 阿朗 × 小雲）",
+    quadrant: "證據查核・主動質詢",
+    silhouetteTag: "深色西裝背心翻領・單邊耳掛・前傾 6° 托腮姿",
+    goodHabit: "「逢跳必詰」：誰跳神職就先挑毛病壓力測試，拿好人時常被誤當衝鋒狼。",
+    wolfTell: "反常地極愛主動上警悍跳搶麥控場，享受舌戰群雄的主導權。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  }),
+  "柚子": Object.freeze({
+    id: "youzi",
+    clubGroup: "mountain_circle",
+    clubLabel: "山城互挺組（阿松 × 晨晨 × 暖暖 × 柚子）",
+    quadrant: "直覺人情・溫軟跟票",
+    silhouetteTag: "抹茶軟呢貝雷帽・雙側蓬鬆短捲耳髮・雙手捧杯姿",
+    goodHabit: "耳根子軟，易信發言長且有條理的警長；抽到奉茶師或糾察長時護友極果斷。",
+    wolfTell: "緊張時特別愛附和前一位好人的發言（「我也覺得剛剛講得好有道理」）。",
+    unlockGoodGames: 1,
+    unlockWolfGames: 3
+  })
+});
+
+function getPersonaDossier(seatOrName) {
+  const name = typeof seatOrName === "string"
+    ? seatOrName
+    : (seatOrName && seatOrName.name ? seatOrName.name : "");
+  return PERSONA_SIGNATURE_DOSSIERS[name] || null;
+}
+
+function getClubAcquaintanceRelation(seatA, seatB) {
+  const nA = typeof seatA === "string" ? seatA : (seatA && seatA.name ? seatA.name : "");
+  const nB = typeof seatB === "string" ? seatB : (seatB && seatB.name ? seatB.name : "");
+  if (!nA || !nB || nA === nB) return null;
+  const dA = PERSONA_SIGNATURE_DOSSIERS[nA];
+  const dB = PERSONA_SIGNATURE_DOSSIERS[nB];
+  if (!dA || !dB || !dA.clubGroup || dA.clubGroup !== dB.clubGroup) return null;
+  const grp = CLUB_ACQUAINTANCE_GROUPS[dA.clubGroup];
+  if (!grp) return null;
+  return { groupKey: grp.key, groupLabel: grp.title, members: grp.members };
+}
+
 function getPersonaShortTag(seatOrName) {
   const name = typeof seatOrName === "string" ? seatOrName : (seatOrName && seatOrName.name ? seatOrName.name : "");
   if (!name || name === "你") return "";
@@ -268,6 +433,8 @@ function getPersonaToxicSlipScale(speaker) {
 function getPersonaVotePersonalityDelta(voter, candidate, opts) {
   const o = opts || {};
   const p = getPersonaProfile(voter);
+  const vName = voter && voter.name ? voter.name : "";
+  const cName = candidate && candidate.name ? candidate.name : "";
   let delta = 0;
   // 1. Grudge memory: if candidate publicly accused/pitted voter earlier today, high-grudge personas counter-push harder!
   const dayEvs = Array.isArray(o.daySpeechEvents) ? o.daySpeechEvents : [];
@@ -294,7 +461,121 @@ function getPersonaVotePersonalityDelta(voter, candidate, opts) {
   if (emittedToxicToday) {
     delta += Math.round(7 * p.harmonySensitivity);
   }
+
+  // 4. v17.0 Signature Good-Team Decision Habits (100% ZERO-LEAK: strictly public speech/vote/claim signals!)
+  const snap = o.snap || null;
+  const dayNow = snap ? (snap.day || 1) : (typeof o.day === "number" ? o.day : 1);
+  const isPk = Boolean(o.isPk || (snap && snap.pkActive));
+  const sheriffId = o.sheriffSeatId !== undefined ? o.sheriffSeatId : (snap && !snap.sheriffElectionPending ? snap.sheriffSeatId : null);
+  const vmDiv = (o.divergenceBySeat && o.divergenceBySeat[candidate.id]) || 0;
+  const flipIds = Array.isArray(o.flipIds) ? o.flipIds : [];
+  const hasFlip = flipIds.indexOf(candidate.id) !== -1;
+  const hasPublicContra = dayEvs.some(function (ev) { return ev && ev.speakerId === candidate.id && ev.contradiction; });
+  const candSpokeLen = dayEvs.reduce(function (mx, ev) {
+    return (ev && ev.speakerId === candidate.id && ev.rawText) ? Math.max(mx, ev.rawText.length) : mx;
+  }, 0);
+
+  if (vName === "小澄" && vmDiv >= 1) {
+    // 票行潔癖：嘴上踩 A 卻投 B，隔天必定死咬不放！
+    delta += 22;
+  } else if (vName === "小雲" && hasFlip) {
+    // 抓跨日反水：昨天保人今天改口
+    delta += 18;
+  } else if (vName === "阿朗" && candidate.claimedRole && dayNow <= 2) {
+    // 逢跳必詰：誰跳神職先挑毛病壓力測試
+    delta += 14;
+  } else if (vName === "暖暖") {
+    // 首輪不跟風投資訊少的邊緣位；PK 優先保無酸言誠懇方
+    if (dayNow === 1 && !emittedToxicToday && publicHeat <= 1 && !hasPublicContra) delta -= 8;
+    if (isPk && !emittedToxicToday) delta -= 10;
+  } else if (vName === "阿松") {
+    // 算輪次守神職：優先護住無明顯矛盾的神職宣稱席
+    if (candidate.claimedRole && ["seer", "witch", "guard", "hunter"].indexOf(candidate.claimedRole) !== -1 && !hasPublicContra && !emittedToxicToday) {
+      delta -= 14;
+    }
+  } else if (vName === "墨白") {
+    // 重警徽承諾：警長若言票背離／出矛盾重扣，穩定履約則加信
+    if (sheriffId && candidate.id === sheriffId) {
+      delta += (vmDiv >= 1 || hasPublicContra) ? 16 : -8;
+    }
+  } else if (vName === "晴嵐") {
+    // 抓語速與心虛：公開緊張／急躁破綻加倍敏感
+    if (candidate.sweatExposed || emittedToxicToday) delta += 16;
+  } else if (vName === "柚子") {
+    // 易信發言長且有條理的警長
+    if (sheriffId && candidate.id === sheriffId && candSpokeLen >= 40 && !emittedToxicToday) delta -= 14;
+  } else if (vName === "晨晨") {
+    // 認準站邊就死忠衝票；遭反咬或言票背離則暴怒反打
+    if (voter.publicVouchId === candidate.id && candidate.claimedRole === "seer" && !hasFlip) delta -= 14;
+    if (attackedMe || (voter.publicVouchId === candidate.id && hasFlip)) delta += 16;
+  } else if (vName === "阿竹") {
+    // 雙預言家對跳首日傾向留雙邊、先查外置位
+    if (dayNow === 1 && (o.seerClaimCount || 0) >= 2 && candidate.claimedRole === "seer") delta -= 9;
+  }
+
+  // 5. v17.0 Club Acquaintance Modifiers (100% ZERO-LEAK: strictly public observable anomalies & persona names!)
+  const clubRel = getClubAcquaintanceRelation(vName, cName);
+  if (clubRel) {
+    if (clubRel.groupKey === "academy_arts") {
+      // 雅集同門組（墨白×晴嵐×阿竹）：熟悉彼此氣息，公開露出破綻／矛盾／高熱度時額外放大 15% 警覺！
+      const observableTell = Boolean(emittedToxicToday || hasPublicContra || vmDiv >= 1 || hasFlip || candidate.sweatExposed || publicHeat >= 2);
+      if (observableTell) {
+        delta += Math.max(6, Math.round(Math.max(20, delta) * 0.15));
+      }
+    } else if (clubRel.groupKey === "mountain_circle") {
+      // 山城互挺組：阿松與晨晨天生照應學妹暖暖與柚子（公開無破綻時微幅初始信任加權）
+      const isSenior = (vName === "阿松" || vName === "晨晨");
+      const isJunior = (cName === "暖暖" || cName === "柚子");
+      if (isSenior && isJunior && !emittedToxicToday && !hasPublicContra && !hasFlip) {
+        delta -= 7;
+      }
+    }
+  }
   return delta;
+}
+
+function buildPersonaClubAndHabitInsert(speaker, ctx, targetSeat, mode) {
+  if (!speaker || !ctx) return "";
+  const spName = speaker.name || "";
+  const tgtName = targetSeat && targetSeat.name ? targetSeat.name : "";
+  const spokenOthers = Array.isArray(ctx.spokenOthers) ? ctx.spokenOthers : [];
+  const aliveOthers = Array.isArray(ctx.aliveOthers) ? ctx.aliveOthers : [];
+  const day = ctx.day || 1;
+
+  // 1. 雅集同門組（墨白×晴嵐×阿竹）：公開對同門起疑時的熟人台詞（100% 公開可觀測觸發）
+  if (targetSeat && mode === "suspect") {
+    const rel = getClubAcquaintanceRelation(spName, tgtName);
+    if (rel && rel.groupKey === "academy_arts") {
+      if (spName === "墨白") return "同在書院雅集認識你這麼久，你今天落墨行文的氣口不太對，";
+      if (spName === "晴嵐") return "平日一起在茶室練琴泡茶，我聽得出來你今天語氣明顯偏緊了，";
+      if (spName === "阿竹") return "老朋友了，你今天泡茶說話的手勢跟平常不太一樣喔，";
+    }
+  }
+
+  // 2. 論辯交鋒組（小澄×阿朗×小雲）：同桌鬥嘴與交叉查核火花
+  if (spName === "阿朗") {
+    const xiaochengSpoke = spokenOthers.find(function (s) { return s.name === "小澄"; });
+    if (xiaochengSpoke && day <= 2) {
+      return "先跟小澄抬個槓，只看票型不看人最容易被深水倒鉤騙過去；";
+    }
+  } else if (spName === "小雲") {
+    const hasCheng = spokenOthers.some(function (s) { return s.name === "小澄"; });
+    const hasLang = spokenOthers.some(function (s) { return s.name === "阿朗"; });
+    if (hasCheng && hasLang) {
+      return "我剛把小澄跟阿朗這兩邊的說法攤在筆記本上對了一輪，";
+    }
+  } else if (spName === "阿松" && mode !== "wolf" && day <= 2) {
+    // 阿松招牌習慣：算剩餘容錯輪次守神職
+    const aliveCnt = aliveOthers.length + 1;
+    const roundsLeft = Math.max(1, Math.floor((aliveCnt - 2) / 2));
+    return "老松先算一下盤面，咱們大概還有 " + roundsLeft + " 輪容錯，關鍵神職得先穩住；";
+  }
+
+  // 3. 山城互挺組（晨晨自身抽到狼被迫踩柚子／暖暖時觸發語氣卡頓破綻——僅讀自身 role，100% 零作弊！）
+  if (spName === "晨晨" && speaker.role === "wolf" && (tgtName === "柚子" || tgtName === "暖暖")) {
+    return "欸…等等，平常練完球最挺你了，這輪實在有點不好意思，但…";
+  }
+  return "";
 }
 
 // ==================== 11-REGISTER RICH SPEECH ENGINE ====================
@@ -442,10 +723,13 @@ function buildPersonaDualSeerText(speaker, data) {
       "這輪先請 " + fakeLbl + " 離席歇心。" + unspokenNote + signoffPhrase;
   }
   if (reg === "poetic") {
+    const outerNote = (data.day === 1)
+      ? "不過首輪雙預言家不妨先留著看今晚倒牌驗證，外置位也要一併細查；"
+      : "";
     return leadPrefix +
       "如果站 " + sALbl + "，這局 " + sBLbl + " 必佔一狼" + aSecondStr + aConflict + "；" +
       "要是改站 " + sBLbl + "，就換 " + sALbl + " 落進狼坑" + bSecondStr + bConflict + "。" +
-      "一盞茶間其實高下已判，我站邊 " + trustedLbl + "，" + goodSideText +
+      outerNote + "一盞茶間其實高下已判，我站邊 " + trustedLbl + "，" + goodSideText +
       "這輪先請 " + fakeLbl + " 退席品茶。" + unspokenNote + signoffPhrase;
   }
   if (reg === "data") {

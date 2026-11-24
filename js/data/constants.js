@@ -15,16 +15,16 @@ const TUTORIAL_SLIDES = [
       '<div class="space-y-2.5 text-left text-xs">' +
       '<div class="tut-tip-bar">每晚有人暗中滋事，天亮後從眾人的話裡找出破綻，<strong>投票請他離席</strong>。不必擅長演戲，也不必打字，點選畫面即可開局。</div>' +
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
-        '<div class="tut-card tut-tone-good"><div class="tut-card-title text-emerald-300">好人陣營（多數・互不知底牌）</div><div class="tut-card-body">比對眾人的發言與票型找破綻，<strong>將所有酸民狼公投請離</strong>即勝。</div></div>' +
-        '<div class="tut-card tut-tone-wolf"><div class="tut-card-title text-rose-300">酸民狼陣營（少數・夜間相識）</div><div class="tut-card-body">入夜暗中令 1 位好人離席，白天偽裝清白混淆視聽；<strong>令所有神職或所有書院生離席</strong>即勝。</div></div>' +
+      '<div class="tut-card tut-tone-good"><div class="tut-card-title text-emerald-300">好人陣營（多數・互不知底牌）</div><div class="tut-card-body">比對眾人的發言與票型找破綻，<strong>將所有酸民狼公投請離</strong>即勝。</div></div>' +
+      '<div class="tut-card tut-tone-wolf"><div class="tut-card-title text-rose-300">酸民狼陣營（少數・夜間相識）</div><div class="tut-card-body">入夜暗中令 1 位好人離席，白天偽裝清白混淆視聽；<strong>令所有神職或所有書院生離席</strong>即勝。</div></div>' +
       '</div>' +
       '<div class="tut-card tut-tone-neutral">' +
-        '<div class="tut-card-title text-amber-300 mb-1.5">每一輪依序推進三個階段，直到分出勝負：</div>' +
-        '<div class="grid grid-cols-3 gap-1.5 text-center">' +
-          '<div class="tut-step-pill"><div class="text-[10px] font-black text-indigo-300">壹 · 入夜</div><div class="font-bold mt-0.5">暗中行動</div><div class="text-[10.5px] opacity-80">有職能者閉眼施展<br />書院生可燭下覆茶</div></div>' +
-          '<div class="tut-step-pill"><div class="text-[10px] font-black text-amber-300">貳 · 白天</div><div class="font-bold mt-0.5">輪流陳詞</div><div class="text-[10.5px] opacity-80">依序發言盤理線索<br />輪到你點牌即可發聲</div></div>' +
-          '<div class="tut-step-pill"><div class="text-[10px] font-black text-rose-300">參 · 公投</div><div class="font-bold mt-0.5">投籌請離</div><div class="text-[10.5px] opacity-80">每人投向最可疑一席<br />最高票離席・平票決選</div></div>' +
-        '</div>' +
+      '<div class="tut-card-title text-amber-300 mb-1.5">每一輪依序推進三個階段，直到分出勝負：</div>' +
+      '<div class="grid grid-cols-3 gap-1.5 text-center">' +
+      '<div class="tut-step-pill"><div class="text-[10px] font-black text-indigo-300">壹 · 入夜</div><div class="font-bold mt-0.5">暗中行動</div><div class="text-[10.5px] opacity-80">有職能者閉眼施展<br />書院生可燭下覆茶</div></div>' +
+      '<div class="tut-step-pill"><div class="text-[10px] font-black text-amber-300">貳 · 白天</div><div class="font-bold mt-0.5">輪流陳詞</div><div class="text-[10.5px] opacity-80">依序發言盤理線索<br />輪到你點牌即可發聲</div></div>' +
+      '<div class="tut-step-pill"><div class="text-[10px] font-black text-rose-300">參 · 公投</div><div class="font-bold mt-0.5">投籌請離</div><div class="text-[10.5px] opacity-80">每人投向最可疑一席<br />最高票離席・平票決選</div></div>' +
+      '</div>' +
       '</div>' +
       '</div>'
   },
@@ -36,17 +36,17 @@ const TUTORIAL_SLIDES = [
       '<div class="space-y-2 text-left text-[11.5px]">' +
       '<div class="text-[10.5px] font-bold text-emerald-300">基礎四職（6 人局配置）</div>' +
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">' +
-        '<div class="tut-role-item"><span class="tut-role-badge text-amber-300">明心觀察員</span><span>每晚可查驗 1 人立場是否為酸民狼，天亮後向全場說明線索。</span></div>' +
-        '<div class="tut-role-item"><span class="tut-role-badge text-emerald-300">滴水奉茶師</span><span>手握<strong>「暖心回甘茶」</strong>救人與<strong>「清心醒神茶」</strong>請離，全場各限一次。</span></div>' +
-        '<div class="tut-role-item"><span class="tut-role-badge text-slate-200">三好書院生</span><span>無夜間主動技，憑傾聽發言、對照票型找出說謊者。</span></div>' +
-        '<div class="tut-role-item tut-role-wolf"><span class="tut-role-badge text-rose-300">鍵盤酸民狼</span><span>入夜與同伴選定目標令其離席，白天偽裝清白帶動風向。</span></div>' +
+      '<div class="tut-role-item"><span class="tut-role-badge text-amber-300">明心觀察員</span><span>每晚可查驗 1 人立場是否為酸民狼，天亮後向全場說明線索。</span></div>' +
+      '<div class="tut-role-item"><span class="tut-role-badge text-emerald-300">滴水奉茶師</span><span>手握<strong>「暖心回甘茶」</strong>救人與<strong>「清心醒神茶」</strong>請離，全場各限一次。</span></div>' +
+      '<div class="tut-role-item"><span class="tut-role-badge text-slate-200">三好書院生</span><span>無夜間主動技，憑傾聽發言、對照票型找出說謊者。</span></div>' +
+      '<div class="tut-role-item tut-role-wolf"><span class="tut-role-badge text-rose-300">鍵盤酸民狼</span><span>入夜與同伴選定目標令其離席，白天偽裝清白帶動風向。</span></div>' +
       '</div>' +
       '<div class="text-[10.5px] font-bold text-sky-300 pt-0.5">進階四職（8～12 人局配置）</div>' +
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">' +
-        '<div class="tut-role-item"><span class="tut-role-badge text-sky-300">直心糾察長</span><span>離席時可帶走 1 人一同退席（遭清心茶請離時除外）。</span></div>' +
-        '<div class="tut-role-item"><span class="tut-role-badge text-cyan-300">護心守衛</span><span>每晚可守護 1 人擋下夜襲（不可連兩晚守同一人，同守同救會破盾）。</span></div>' +
-        '<div class="tut-role-item"><span class="tut-role-badge text-teal-300">清心長老 <small>(10/12人)</small></span><span>首次遭公投誤投時亮牌免於離席，之後失去投票權仍可發言帶隊。</span></div>' +
-        '<div class="tut-role-item tut-role-wolf"><span class="tut-role-badge text-rose-200">流言首領 <small>(10/12人)</small></span><span>白天遭公投離席時，可反手拉走 1 位在席好人。</span></div>' +
+      '<div class="tut-role-item"><span class="tut-role-badge text-sky-300">直心糾察長</span><span>離席時可帶走 1 人一同退席（遭清心茶請離時除外）。</span></div>' +
+      '<div class="tut-role-item"><span class="tut-role-badge text-cyan-300">護心守衛</span><span>每晚可守護 1 人擋下夜襲（不可連兩晚守同一人，同守同救會破盾）。</span></div>' +
+      '<div class="tut-role-item"><span class="tut-role-badge text-teal-300">清心長老 <small>(10/12人)</small></span><span>首次遭公投誤投時亮牌免於離席，之後失去投票權仍可發言帶隊。</span></div>' +
+      '<div class="tut-role-item tut-role-wolf"><span class="tut-role-badge text-rose-200">流言首領 <small>(10/12人)</small></span><span>白天遭公投離席時，可反手拉走 1 位在席好人。</span></div>' +
       '</div>' +
       '<div class="tut-tip-bar">對局中隨時點擊左下角<strong>「指南」</strong>，可查看當前職能行動與角色密令。</div>' +
       '</div>'
@@ -57,22 +57,22 @@ const TUTORIAL_SLIDES = [
     title: "席間基本操作",
     html:
       '<div class="space-y-2 text-left text-[11.5px]">' +
-        '<div class="tut-card tut-tone-neutral space-y-1">' +
-          '<div class="tut-card-title text-amber-300">三個核心互動</div>' +
-          '<div>1. <strong>入夜行動：</strong>點選圓桌任一席位後按「確認執行」（連點兩下亦可確認）。</div>' +
-          '<div>2. <strong>白天聽盤：</strong>可隨時按<strong>「點頭認同」</strong>、<strong>「皺眉存疑」</strong>或每日一次<strong>「舉杯追問」</strong>，按<strong>「下一位」</strong>或空白鍵推進。</div>' +
-          '<div>3. <strong>陳詞與公投：</strong>輪到你時可直接點選下方預設發言牌，或自行輸入與語音口述；公投時鎖定最可疑的席位投籌。</div>' +
-        '</div>' +
-        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
-          '<div class="tut-card tut-tone-good space-y-1">' +
-            '<div class="tut-card-title text-emerald-300">身為好人</div>' +
-            '<div>可在排坑板自由標記好人坑與懷疑對象，並比對「茶席言行錄」與歷輪票型。</div>' +
-          '</div>' +
-          '<div class="tut-card tut-tone-wolf space-y-1">' +
-            '<div class="tut-card-title text-rose-300">身為酸民狼</div>' +
-            '<div>系統會標示你的狼同伴；入夜可透過屏風三選一下達戰術，白天亦可選擇「拂袖掀席」自爆直入黑夜。</div>' +
-          '</div>' +
-        '</div>' +
+      '<div class="tut-card tut-tone-neutral space-y-1">' +
+      '<div class="tut-card-title text-amber-300">三個核心互動</div>' +
+      '<div>1. <strong>入夜行動：</strong>點選圓桌任一席位後按「確認執行」（連點兩下亦可確認）。</div>' +
+      '<div>2. <strong>白天聽盤：</strong>可隨時按<strong>「點頭認同」</strong>、<strong>「皺眉存疑」</strong>或每日一次<strong>「舉杯追問」</strong>，按<strong>「下一位」</strong>或空白鍵推進。</div>' +
+      '<div>3. <strong>陳詞與公投：</strong>輪到你時可直接點選下方預設發言牌，或自行輸入與語音口述；公投時鎖定最可疑的席位投籌。</div>' +
+      '</div>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
+      '<div class="tut-card tut-tone-good space-y-1">' +
+      '<div class="tut-card-title text-emerald-300">身為好人</div>' +
+      '<div>可在排坑板自由標記好人坑與懷疑對象，並比對「茶席言行錄」與歷輪票型。</div>' +
+      '</div>' +
+      '<div class="tut-card tut-tone-wolf space-y-1">' +
+      '<div class="tut-card-title text-rose-300">身為酸民狼</div>' +
+      '<div>系統會標示你的狼同伴；入夜可透過屏風三選一下達戰術，白天亦可選擇「拂袖掀席」自爆直入黑夜。</div>' +
+      '</div>' +
+      '</div>' +
       '</div>'
   },
   {
@@ -81,24 +81,24 @@ const TUTORIAL_SLIDES = [
     title: "三好蓮花與四給奉茶",
     html:
       '<div class="space-y-2 text-left text-[11.5px]">' +
-        '<div class="tut-card tut-tone-good space-y-1">' +
-          '<div class="tut-card-title text-emerald-300">三好蓮花（左下角三瓣修為・集滿解鎖加權）</div>' +
-          '<div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-0.5">' +
-            '<div class="tut-step-pill"><strong class="text-amber-300">存好心</strong><div class="text-[10.5px] opacity-85">查證線索、抓出前後矛盾</div></div>' +
-            '<div class="tut-step-pill"><strong class="text-emerald-300">說好話</strong><div class="text-[10.5px] opacity-85">語氣溫潤、以理服人化解對立</div></div>' +
-            '<div class="tut-step-pill"><strong class="text-sky-300">做好事</strong><div class="text-[10.5px] opacity-85">奉茶結緣、守護同席夥伴</div></div>' +
-          '</div>' +
-          '<div class="text-[11px] pt-0.5">集滿三瓣：好人於公投獲得<strong>「黃金善意票（+1 票）」</strong>；酸民狼則可降低席間戒心。</div>' +
-        '</div>' +
-        '<div class="tut-card tut-tone-gold space-y-1">' +
-          '<div class="tut-card-title text-amber-300">右下角四給奉茶茶禮（每張全場限用一次）</div>' +
-          '<div class="grid grid-cols-2 gap-1.5">' +
-            '<div><strong>給信心：</strong>替選定夥伴隱密擋下 1 票</div>' +
-            '<div><strong>給歡喜：</strong>破冰觀察 2 位神色緊繃的茶友</div>' +
-            '<div><strong>給希望：</strong>點名 2 席展開 15 秒明燈雙向對質，比對言票矛盾與各自狼坑（絕不洩漏底牌）</div>' +
-            '<div><strong>給方便：</strong>展開關係脈絡並溫言號召歸票</div>' +
-          '</div>' +
-        '</div>' +
+      '<div class="tut-card tut-tone-good space-y-1">' +
+      '<div class="tut-card-title text-emerald-300">三好蓮花（左下角三瓣修為・集滿解鎖加權）</div>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-0.5">' +
+      '<div class="tut-step-pill"><strong class="text-amber-300">存好心</strong><div class="text-[10.5px] opacity-85">查證線索、抓出前後矛盾</div></div>' +
+      '<div class="tut-step-pill"><strong class="text-emerald-300">說好話</strong><div class="text-[10.5px] opacity-85">語氣溫潤、以理服人化解對立</div></div>' +
+      '<div class="tut-step-pill"><strong class="text-sky-300">做好事</strong><div class="text-[10.5px] opacity-85">奉茶結緣、守護同席夥伴</div></div>' +
+      '</div>' +
+      '<div class="text-[11px] pt-0.5">集滿三瓣：好人於公投獲得<strong>「黃金善意票（+1 票）」</strong>；酸民狼則可降低席間戒心。</div>' +
+      '</div>' +
+      '<div class="tut-card tut-tone-gold space-y-1">' +
+      '<div class="tut-card-title text-amber-300">右下角四給奉茶茶禮（每張全場限用一次）</div>' +
+      '<div class="grid grid-cols-2 gap-1.5">' +
+      '<div><strong>給信心：</strong>替選定夥伴隱密擋下 1 票</div>' +
+      '<div><strong>給歡喜：</strong>破冰觀察 2 位神色緊繃的茶友</div>' +
+      '<div><strong>給希望：</strong>點名 2 席展開 15 秒明燈雙向對質，比對言票矛盾與各自狼坑（絕不洩漏底牌）</div>' +
+      '<div><strong>給方便：</strong>展開關係脈絡並溫言號召歸票</div>' +
+      '</div>' +
+      '</div>' +
       '</div>'
   },
   {
@@ -107,27 +107,27 @@ const TUTORIAL_SLIDES = [
     title: "3D 席位視角與常用快捷鍵",
     html:
       '<div class="space-y-2 text-left text-[11.5px]">' +
-        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
-          '<div class="tut-card tut-tone-neutral space-y-1">' +
-            '<div class="tut-card-title text-amber-300">四種視角自由切換（右上角「運鏡」）</div>' +
-            '<div>• 支援<strong>運鏡、坐席、俯瞰、2D 圓桌</strong>循環切換。</div>' +
-            '<div>• <strong>坐席視角</strong>下可拖曳轉頭環顧左右、滾輪微調焦距，聚焦關鍵席位。</div>' +
-            '<div>• 點擊桌心蓮花、撥亮燭火、點選「清茗」皆有即時動態互動。</div>' +
-          '</div>' +
-          '<div class="tut-card tut-tone-neutral space-y-1">' +
-            '<div class="tut-card-title text-sky-300">常用鍵盤快捷鍵</div>' +
-            '<div class="tut-kbd-grid">' +
-              '<span><kbd class="ui-kbd">Space</kbd> 下一位發言</span>' +
-              '<span><kbd class="ui-kbd">Enter</kbd> 確認行動</span>' +
-              '<span><kbd class="ui-kbd">Q/W/E</kbd> 快捷出牌</span>' +
-              '<span><kbd class="ui-kbd">1-0/-=</kbd> 選取座位</span>' +
-              '<span><kbd class="ui-kbd">J</kbd> 茶席手札</span>' +
-              '<span><kbd class="ui-kbd">C</kbd> 切換視角</span>' +
-              '<span><kbd class="ui-kbd">P / V</kbd> 暫停 / 語音</span>' +
-              '<span><kbd class="ui-kbd">Esc</kbd> 關閉／選單</span>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
+      '<div class="tut-card tut-tone-neutral space-y-1">' +
+      '<div class="tut-card-title text-amber-300">四種視角自由切換（右上角「運鏡」）</div>' +
+      '<div>• 支援<strong>運鏡、坐席、俯瞰、2D 圓桌</strong>循環切換。</div>' +
+      '<div>• <strong>坐席視角</strong>下可拖曳轉頭環顧左右、滾輪微調焦距，聚焦關鍵席位。</div>' +
+      '<div>• 點擊桌心蓮花、撥亮燭火、點選「清茗」皆有即時動態互動。</div>' +
+      '</div>' +
+      '<div class="tut-card tut-tone-neutral space-y-1">' +
+      '<div class="tut-card-title text-sky-300">常用鍵盤快捷鍵</div>' +
+      '<div class="tut-kbd-grid">' +
+      '<span><kbd class="ui-kbd">Space</kbd> 下一位發言</span>' +
+      '<span><kbd class="ui-kbd">Enter</kbd> 確認行動</span>' +
+      '<span><kbd class="ui-kbd">Q/W/E</kbd> 快捷出牌</span>' +
+      '<span><kbd class="ui-kbd">1-0/-=</kbd> 選取座位</span>' +
+      '<span><kbd class="ui-kbd">J</kbd> 茶席手札</span>' +
+      '<span><kbd class="ui-kbd">C</kbd> 切換視角</span>' +
+      '<span><kbd class="ui-kbd">P / V</kbd> 暫停 / 語音</span>' +
+      '<span><kbd class="ui-kbd">Esc</kbd> 關閉／選單</span>' +
+      '</div>' +
+      '</div>' +
+      '</div>' +
       '</div>'
   },
   {
@@ -136,22 +136,22 @@ const TUTORIAL_SLIDES = [
     title: "初入茶席的開局建議",
     html:
       '<div class="space-y-2 text-left text-[11.5px]">' +
-        '<div class="tut-card tut-tone-good space-y-1.5">' +
-          '<div class="tut-card-title text-emerald-300">初次接觸推薦「新手帶玩席」</div>' +
-          '<div>• 預設開啟單純的<strong> 6 人基礎席（明心觀察員視角）</strong>，節奏平緩易讀。</div>' +
-          '<div>• 第一輪會在畫面上方提供簡明指引，完成一輪即可掌握完整流程。</div>' +
-        '</div>' +
-        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
-          '<div class="tut-card tut-tone-neutral space-y-1">' +
-            '<div class="tut-card-title text-amber-300">提早離席後的觀戰玩法</div>' +
-            '<div>離席後可續留觀戰，參與每輪 5 秒<strong>「席外茶靈押注」</strong>與全場猜狼挑戰。</div>' +
-          '</div>' +
-          '<div class="tut-card tut-tone-gold space-y-1">' +
-            '<div class="tut-card-title text-amber-300">離線與自訂模型皆可暢玩</div>' +
-            '<div>免設定即可直接對弈；若欲連接個人 Gemini 金鑰或本機 Ollama，可於選單中調整。</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="tut-tip-bar text-center">準備就緒後，可點選右下角<strong>「開啟新手帶玩席」</strong>立即入座。</div>' +
+      '<div class="tut-card tut-tone-good space-y-1.5">' +
+      '<div class="tut-card-title text-emerald-300">初次接觸推薦「新手帶玩席」</div>' +
+      '<div>• 預設開啟單純的<strong> 6 人基礎席（明心觀察員視角）</strong>，節奏平緩易讀。</div>' +
+      '<div>• 第一輪會在畫面上方提供簡明指引，完成一輪即可掌握完整流程。</div>' +
+      '</div>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
+      '<div class="tut-card tut-tone-neutral space-y-1">' +
+      '<div class="tut-card-title text-amber-300">提早離席後的觀戰玩法</div>' +
+      '<div>離席後可續留觀戰，參與每輪 5 秒<strong>「席外茶靈押注」</strong>與全場猜狼挑戰。</div>' +
+      '</div>' +
+      '<div class="tut-card tut-tone-gold space-y-1">' +
+      '<div class="tut-card-title text-amber-300">離線與自訂模型皆可暢玩</div>' +
+      '<div>免設定即可直接對弈；若欲連接個人 Gemini 金鑰或本機 Ollama，可於選單中調整。</div>' +
+      '</div>' +
+      '</div>' +
+      '<div class="tut-tip-bar text-center">準備就緒後，可點選右下角<strong>「開啟新手帶玩席」</strong>立即入座。</div>' +
       '</div>'
   }
 ];
@@ -234,7 +234,8 @@ const ROLE_DEFS = {
 // ==================== V8.0 PER-ROLE PLAYBOOK & THREE-GOODNESS QUOTES ====================
 const ROLE_GUIDES = {
   seer: {
-    icon: "🔮",
+    icon: "",
+    iconKey: "seer",
     themeClass: "role-theme-seer",
     shortRole: "神職・查驗核心",
     cardOneLiner: "每晚可偷看 1 個人是不是酸民狼",
@@ -247,7 +248,8 @@ const ROLE_GUIDES = {
     threeGoodTip: "存好心公開真實查證、溫和號召歸票，最快點亮三好蓮花取得「黃金善意票 +1」！"
   },
   witch: {
-    icon: "🍵",
+    icon: "",
+    iconKey: "witch",
     themeClass: "role-theme-witch",
     shortRole: "神職・雙茶救贖",
     cardOneLiner: "手握「暖心護回」與「清心請離」雙茶的好人",
@@ -260,7 +262,8 @@ const ROLE_GUIDES = {
     threeGoodTip: "用暖心回甘茶護回夥伴或白天奉暖茶給好人，立刻累積「做好事」瓣並穩定全場信任！"
   },
   hunter: {
-    icon: "⚖️",
+    icon: "",
+    iconKey: "scales",
     themeClass: "role-theme-hunter",
     shortRole: "神職・正氣威懾",
     cardOneLiner: "離席瞬間可以拉 1 個人一同退席的正氣好人",
@@ -273,7 +276,8 @@ const ROLE_GUIDES = {
     threeGoodTip: "理性聽盤不急躁貼標籤，靠「說好話」贏得全場好人信賴，危急時刻一擊翻盤！"
   },
   guard: {
-    icon: "🛡️",
+    icon: "",
+    iconKey: "guard",
     themeClass: "role-theme-guard",
     shortRole: "神職・結界守護",
     cardOneLiner: "每晚替 1 位夥伴展開護心結界擋下迷霧",
@@ -286,7 +290,8 @@ const ROLE_GUIDES = {
     threeGoodTip: "默默守護他人正是最高境界的「做好事」，搭配四給【給信心】更能雙重守護核心夥伴！"
   },
   elder: {
-    icon: "🌿",
+    icon: "",
+    iconKey: "elder",
     themeClass: "role-theme-elder",
     shortRole: "進階好人・豁免定海針",
     cardOneLiner: "首次被誤投時亮牌豁免離席的穩健長者",
@@ -299,7 +304,8 @@ const ROLE_GUIDES = {
     threeGoodTip: "以長者風範說好話化解對立、善用四給錦囊團結好人，就算失票仍能靠發言定乾坤！"
   },
   villager: {
-    icon: "📖",
+    icon: "",
+    iconKey: "villager",
     themeClass: "role-theme-villager",
     shortRole: "好人陣營・三好偵探",
     cardOneLiner: "憑聽覺與邏輯識破謊言的三好偵探",
@@ -312,7 +318,8 @@ const ROLE_GUIDES = {
     threeGoodTip: "三好書院生最能發揮三好精神：存好心找證據、說好話化解酸言、做好事奉暖茶，覺醒「黃金善意票 +1」關鍵一票定勝負！"
   },
   wolf: {
-    icon: "🐺",
+    icon: "",
+    iconKey: "wolf",
     themeClass: "role-theme-wolf",
     shortRole: "酸民狼陣營・暗中佈局",
     cardOneLiner: "暗中請離好人、白天偽裝帶風向的酸民狼",
@@ -325,7 +332,8 @@ const ROLE_GUIDES = {
     threeGoodTip: "反派也能修演技：保持溫和禮貌、適時打四給卡，點亮三好偽裝光環可大幅降低全場好人對你的懷疑度！"
   },
   wolf_king: {
-    icon: "👑",
+    icon: "",
+    iconKey: "crown",
     themeClass: "role-theme-wolf_king",
     shortRole: "進階酸民狼・臨離反撲",
     cardOneLiner: "白天被投出時可反撲帶走 1 人的流言首領",
@@ -412,17 +420,17 @@ const ROLE_STRATEGY_PLAYBOOKS = {
 };
 
 const AI_PERSONAS = [
-  { name: "小澄", trait: "資訊社數據控",   deductionStyle: "skeptical", avatarColor: "#38bdf8", register: "data" },
-  { name: "暖暖", trait: "滴水茶社和事佬", deductionStyle: "gullible",  avatarColor: "#fbbf24", register: "warm" },
-  { name: "阿松", trait: "林美登山社學長", deductionStyle: "skeptical", avatarColor: "#34d399", register: "mountain" },
-  { name: "星兒", trait: "觀星社第六感",   deductionStyle: "gullible",  avatarColor: "#a78bfa", register: "astro" },
-  { name: "小雲", trait: "校園查核社長",   deductionStyle: "skeptical", avatarColor: "#fb7185", register: "press" },
-  { name: "阿竹", trait: "書院詩茶文青",   deductionStyle: "balanced",  avatarColor: "#2dd4bf", register: "poetic" },
-  { name: "晨晨", trait: "山城球社熱血男", deductionStyle: "balanced",  avatarColor: "#f97316", register: "sport" },
-  { name: "墨白", trait: "書法社文言社長", deductionStyle: "skeptical", avatarColor: "#6366f1", register: "classical" },
-  { name: "晴嵐", trait: "古箏社雅言學姊", deductionStyle: "balanced",  avatarColor: "#ec4899", register: "guzheng" },
-  { name: "阿朗", trait: "辯論社犀利主辯", deductionStyle: "skeptical", avatarColor: "#eab308", register: "debate" },
-  { name: "柚子", trait: "點心社元氣學妹", deductionStyle: "gullible",  avatarColor: "#84cc16", register: "pastry" }
+  { id: "xiaocheng", name: "小澄", trait: "資訊社數據控",   deductionStyle: "skeptical", avatarColor: "#38bdf8", register: "data" },
+  { id: "nuannuan",  name: "暖暖", trait: "滴水茶社和事佬", deductionStyle: "gullible",  avatarColor: "#fbbf24", register: "warm" },
+  { id: "asong",     name: "阿松", trait: "林美登山社學長", deductionStyle: "skeptical", avatarColor: "#34d399", register: "mountain" },
+  { id: "xinger",    name: "星兒", trait: "觀星社第六感",   deductionStyle: "gullible",  avatarColor: "#a78bfa", register: "astro" },
+  { id: "xiaoyun",   name: "小雲", trait: "校園查核社長",   deductionStyle: "skeptical", avatarColor: "#fb7185", register: "press" },
+  { id: "azhu",      name: "阿竹", trait: "書院詩茶文青",   deductionStyle: "balanced",  avatarColor: "#2dd4bf", register: "poetic" },
+  { id: "chenchen",  name: "晨晨", trait: "山城球社熱血男", deductionStyle: "balanced",  avatarColor: "#f97316", register: "sport" },
+  { id: "mobai",     name: "墨白", trait: "書法社社長",     deductionStyle: "skeptical", avatarColor: "#6366f1", register: "classical" },
+  { id: "qinglan",   name: "晴嵐", trait: "古箏社雅言學姊", deductionStyle: "balanced",  avatarColor: "#ec4899", register: "guzheng" },
+  { id: "alang",     name: "阿朗", trait: "辯論社犀利主辯", deductionStyle: "skeptical", avatarColor: "#eab308", register: "debate" },
+  { id: "youzi",     name: "柚子", trait: "點心社元氣學妹", deductionStyle: "gullible",  avatarColor: "#84cc16", register: "pastry" }
 ];
 
 const PERSONA_FLAVORS = {

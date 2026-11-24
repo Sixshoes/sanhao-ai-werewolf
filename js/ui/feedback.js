@@ -40,7 +40,7 @@ function isAnonymousReviewHost() {
       const host = String(window.location.hostname).toLowerCase();
       return host.endsWith(".vercel.app") || host.endsWith(".netlify.app");
     }
-  } catch (e) {}
+  } catch (e) { }
   return false;
 }
 
@@ -55,7 +55,7 @@ function resolveFeedbackGithubRepo() {
         if (owner && repo) return { owner: owner, repo: repo };
       }
     }
-  } catch (e) {}
+  } catch (e) { }
   return { owner: FEEDBACK_CONFIG.githubOwner, repo: FEEDBACK_CONFIG.githubRepo };
 }
 
@@ -74,7 +74,7 @@ function saveFeedbackHistory(list) {
   try {
     const safeList = Array.isArray(list) ? list.slice(0, FEEDBACK_CONFIG.maxStoredItems) : [];
     window.localStorage.setItem(FEEDBACK_CONFIG.storageKey, JSON.stringify(safeList));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function collectFeedbackDiagnostics() {
@@ -101,7 +101,7 @@ function collectFeedbackDiagnostics() {
     : "未開局或已遮蔽";
 
   return {
-    version: "v16.1 (公測 3.1)",
+    version: "v17.0 (公測 3.2)",
     timestamp: new Date().toISOString(),
     started: Boolean(m.started),
     phase: String(m.phase || "LOBBY"),
@@ -248,8 +248,8 @@ function renderFeedbackHistoryList() {
       : (item.deliveredTo === "webhook" ? "已送達雲端" : "本機已存");
     row.innerHTML =
       '<div class="flex items-center justify-between gap-2 text-[10px]">' +
-        '<span class="font-bold text-amber-300">' + escapeHtml(catDef.label) + ' · ' + escapeHtml(stars) + '</span>' +
-        '<span class="text-slate-400">' + escapeHtml(statusLabel) + (timeLabel ? (" · " + escapeHtml(timeLabel)) : "") + '</span>' +
+      '<span class="font-bold text-amber-300">' + escapeHtml(catDef.label) + ' · ' + escapeHtml(stars) + '</span>' +
+      '<span class="text-slate-400">' + escapeHtml(statusLabel) + (timeLabel ? (" · " + escapeHtml(timeLabel)) : "") + '</span>' +
       '</div>' +
       '<div class="text-[11px] text-slate-200 mt-1 break-words">' + escapeHtml(String(item.message || "").slice(0, 120)) + '</div>';
     listEl.appendChild(row);
@@ -297,7 +297,7 @@ async function tryDeliverFeedbackRemote(entry) {
         })
       });
       if (rWeb && rWeb.ok) return { delivered: true, channel: "webhook" };
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // 2. Local / LAN Python server direct inbox (/api/feedback -> .feedback_inbox/feedback.jsonl)
@@ -319,7 +319,7 @@ async function tryDeliverFeedbackRemote(entry) {
         const j = await rLoc.json().catch(function () { return null; });
         if (j && j.ok) return { delivered: true, channel: "server", id: j.id || "" };
       }
-    } catch (e) {}
+    } catch (e) { }
   }
   return { delivered: false, channel: "local" };
 }
@@ -422,7 +422,7 @@ function exportFeedbackHistoryJson() {
       if (typeof showToast === "function") showToast("已匯出 " + list.length + " 筆玩家反饋（JSON）。", "emerald");
       return true;
     }
-  } catch (e) {}
+  } catch (e) { }
   copyFeedbackText(text);
   if (typeof showToast === "function") showToast("已複製全部反饋 JSON 到剪貼簿。", "emerald");
   return true;

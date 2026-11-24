@@ -456,12 +456,17 @@ const indieFlow = {
     });
     const titleEl = el("heroShowcaseTitle");
     const bioEl = el("showcasePersonaBio");
+    const profileCardEl = el("showcaseProfileCard");
     const resetBtn = el("btnResetHeroRig");
     if (tgt === "hero") {
       if (titleEl) titleEl.textContent = "清茗・雲茶書靈";
       if (bioEl) {
-        bioEl.textContent = "雲起茶席說書主持｜點選下方 02～12 號可 360° 鑑賞全 11 位 AI 角色的 3D 造型與專屬語風（含文言文）。";
+        bioEl.textContent = "雲起茶席說書主持｜點選下方 02～12 號可 360° 鑑賞全 11 位 AI 角色的專屬剪影、招牌決策癖好與社團關係。";
         if (typeof shPrependIcon === "function") shPrependIcon(bioEl, "leaf", "jade");
+      }
+      if (profileCardEl) {
+        profileCardEl.classList.add("hidden");
+        profileCardEl.innerHTML = "";
       }
       const glbActive = Boolean(typeof stage3d !== "undefined" && stage3d.hero && stage3d.hero.visualMode === "glb" && stage3d.hero.customGlbRoot);
       if (resetBtn) resetBtn.classList.toggle("hidden", !glbActive);
@@ -479,6 +484,34 @@ const indieFlow = {
           : "你的專屬玩家席位（可於主畫面或設定切換男／女 3D 模型與聲線）";
         if (typeof shPrependIcon === "function") {
           shPrependIcon(bioEl, (pProfShow && s && s.name !== "你" && pProfShow.iconKey) ? pProfShow.iconKey : "mask", (pProfShow && pProfShow.iconTone) || "gold");
+        }
+      }
+      if (profileCardEl) {
+        const unlockInfo = (s && s.name !== "你" && typeof getPersonaDossierUnlockState === "function")
+          ? getPersonaDossierUnlockState(s.name)
+          : null;
+        if (unlockInfo && unlockInfo.dossier) {
+          const d = unlockInfo.dossier;
+          const esc = typeof escapeHtml === "function" ? escapeHtml : function (v) { return String(v || ""); };
+          const goodHtml = unlockInfo.goodUnlocked
+            ? ('<div class="showcase-profile-row"><span class="showcase-profile-tag is-good">好人癖好</span><span>' + esc(d.goodHabit) + '</span></div>')
+            : ('<div class="showcase-profile-row is-locked"><span class="showcase-profile-tag is-locked">好人癖好・未解鎖</span><span>完成 ' + unlockInfo.needGood + ' 場對局解鎖（尚差 ' + unlockInfo.remainGood + ' 局）</span></div>');
+          const wolfHtml = unlockInfo.wolfUnlocked
+            ? ('<div class="showcase-profile-row"><span class="showcase-profile-tag is-wolf">狼人破綻</span><span>' + esc(d.wolfTell) + '</span></div>')
+            : ('<div class="showcase-profile-row is-locked"><span class="showcase-profile-tag is-locked">狼人破綻・未解鎖</span><span>累積 ' + unlockInfo.needWolf + ' 場對局解鎖（尚差 ' + unlockInfo.remainWolf + ' 局）</span></div>');
+          const clubText = unlockInfo.goodUnlocked ? d.clubLabel : "完成 1 場對局解鎖社團熟人圈";
+          profileCardEl.innerHTML =
+            '<div class="showcase-profile-meta">' +
+              '<span class="showcase-profile-pill">' + esc(d.quadrant) + '</span>' +
+              '<span class="showcase-profile-pill is-club">' + esc(clubText) + '</span>' +
+              '<span class="showcase-profile-pill is-sil">' + esc(d.silhouetteTag) + '</span>' +
+            '</div>' +
+            goodHtml +
+            wolfHtml;
+          profileCardEl.classList.remove("hidden");
+        } else {
+          profileCardEl.classList.add("hidden");
+          profileCardEl.innerHTML = "";
         }
       }
       const actor = (typeof stage3d !== "undefined" && stage3d.seats && stage3d.seats.slots) ? stage3d.seats.slots[sid] : null;

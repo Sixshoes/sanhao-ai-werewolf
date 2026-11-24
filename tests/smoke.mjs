@@ -5290,7 +5290,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const longUnpunct = "這是一段故意完全沒有標點符號用來測試瀏覽器語音長句子會不會在十四秒被卡斷的超長繁體中文狼人殺推理測試發言內容確認每個切片都不超過二十二個字元而且一個字都不會漏掉";
     const split136 = voice.splitMandarinClauses(longUnpunct);
     const longTtsClauseOk = split136.length >= 4 && split136.every(c => c.length <= 22) && split136.join("") === longUnpunct;
-    const spPrefTest = state.match.seats.find(s => s.role === "villager" && s.id !== getPlayerId()) || state.match.seats[1];
+    const spPrefTest = state.match.seats.find(s => s.role === "villager" && s.id !== getPlayerId() && s.id !== 8) || state.match.seats.find(s => s.id !== getPlayerId() && s.id !== 8) || state.match.seats[1];
     const nonSeerOther = state.match.seats.find(s => s.id !== spPrefTest.id && s.claimedRole !== "seer") || state.match.seats[3];
     const origClaimPref = spPrefTest.claimedRole;
     spPrefTest.claimedRole = null;
@@ -6308,4 +6308,202 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v16.1 (3D Collective Gaze / Focus Dimming / Carved Wood Ballots / 70ms Hit-Stop / Frameless Subtraction / De-AI Copy / 8 Bugfixes) E2E smoke test PASSED!");
+// v17.0 CHARACTER IDENTITY, 3D SILHOUETTE TWIN-BREAKING, 11 SIGNATURE HABITS, CLUB NETWORKS & 4-BUGFIX SUITE
+{
+  const v170Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    const prevAntiStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+    const emojiRe = /[\\u{1F300}-\\u{1FAFF}\\u2600-\\u27BF]/u;
+
+    // 1. v16.1 4 Edge-Case Bugfixes: gaze/lid reset + lanternBlackoutUntil reset + zero emoji in ROLE_GUIDES + persona IDs
+    const mockPool = {
+      _lastGazeSpeakerId: 5,
+      _prevGazeSpeakerId: 3,
+      _lastGazeMentionId: 7,
+      _gazeSpeakerChangedAt: 12345,
+      _gazeMentionChangedAt: 12346,
+      slots: {
+        2: { extinguishedAt: 999, lidProgress: 0.8, _wasAlive: false, teaLidGroup: { visible: true }, fogSealStrip: { visible: true } }
+      }
+    };
+    reset3DSeatGazeState(mockPool);
+    const gazeResetOk = Boolean(
+      mockPool._lastGazeSpeakerId === null &&
+      mockPool._prevGazeSpeakerId === null &&
+      mockPool._lastGazeMentionId === null &&
+      mockPool._gazeSpeakerChangedAt === 0 &&
+      mockPool._gazeMentionChangedAt === 0 &&
+      mockPool.slots[2].extinguishedAt === 0 &&
+      mockPool.slots[2].lidProgress === 0 &&
+      mockPool.slots[2]._wasAlive === true &&
+      mockPool.slots[2].teaLidGroup.visible === false &&
+      mockPool.slots[2].fogSealStrip.visible === false
+    );
+    if (stage3d && stage3d.env) stage3d.env.lanternBlackoutUntil = performance.now() + 5000;
+    state._lanternVeilTimer = setTimeout(function () {}, 5000);
+    clearTransientMatchTimers();
+    const lanternResetOk = Boolean(
+      (!stage3d || !stage3d.env || stage3d.env.lanternBlackoutUntil === 0) &&
+      state._lanternVeilTimer === null
+    );
+    const roleGuidesCleanOk = Object.keys(ROLE_GUIDES).length >= 8 && Object.values(ROLE_GUIDES).every(function (g) {
+      return g.icon === "" && Boolean(g.iconKey) && !emojiRe.test(g.title || "") && !emojiRe.test(g.oneLiner || "");
+    });
+    const personaIdsOk = AI_PERSONAS.length === 11 && AI_PERSONAS.every(function (p) {
+      return typeof p.id === "string" && /^[a-z]+$/.test(p.id);
+    });
+    const mobai = AI_PERSONAS.find(function (p) { return p.name === "墨白"; });
+    const mobaiTitleOk = Boolean(mobai && mobai.trait === "書法社社長" && !mobai.trait.includes("文言"));
+
+    // 2. 3D Silhouette Twin-Breaking & 11 Distinct Seated Idle Archetypes
+    const stylingAll11Ok = AI_PERSONAS.every(function (p) {
+      const st = VRM_PERSONA_STYLING[p.name];
+      return Boolean(st && typeof st.vrmAcc === "string" && st.vrmAcc.length > 0);
+    }) &&
+      VRM_PERSONA_STYLING["阿松"].vrmAcc === "hiking_scarf" &&
+      VRM_PERSONA_STYLING["小雲"].vrmAcc === "press_kit" &&
+      VRM_PERSONA_STYLING["晴嵐"].baseSlug === "xiaocheng";
+
+    const idleArchetypes11Ok = AI_PERSONAS.every(function (p) {
+      const ar = VRM_IDLE_ARCHETYPES[p.name];
+      return Boolean(
+        ar &&
+        typeof ar.spineLean === "number" &&
+        typeof ar.shoulderSpread === "number" &&
+        typeof ar.headTiltBias === "number" &&
+        typeof ar.gazeSaccadeSpeed === "number" &&
+        Array.isArray(ar.idlePool) && ar.idlePool.length >= 2
+      );
+    });
+
+    let accAttachAll11Ok = true;
+    try {
+      AI_PERSONAS.forEach(function (p) {
+        const mockBones = {
+          head: new THREE.Group(),
+          neck: new THREE.Group(),
+          chest: new THREE.Group(),
+          upperChest: new THREE.Group(),
+          leftHand: new THREE.Group(),
+          rightHand: new THREE.Group()
+        };
+        stage3dVrm.attachVrmPersonaAccessories(mockBones, p.name, true);
+      });
+    } catch (e) {
+      accAttachAll11Ok = false;
+    }
+
+    // 3. 11 Signature Dossiers & 3 Club Acquaintance Networks (100% Zero-Leak)
+    const dossiersAll11Ok = AI_PERSONAS.every(function (p) {
+      const d = getPersonaDossier(p.name);
+      return Boolean(d && d.id === p.id && d.clubLabel && d.goodHabit && d.wolfTell && d.silhouetteTag);
+    });
+    const clubNetOk = Boolean(
+      Object.keys(CLUB_ACQUAINTANCE_GROUPS).length === 3 &&
+      getClubAcquaintanceRelation("墨白", "阿竹").groupKey === "academy_arts" &&
+      getClubAcquaintanceRelation("小澄", "阿朗").groupKey === "debate_trio" &&
+      getClubAcquaintanceRelation("阿松", "柚子").groupKey === "mountain_circle" &&
+      getClubAcquaintanceRelation("墨白", "阿朗") === null
+    );
+
+    // 4. Signature Decision Habits (Zero-Leak Public Signals Only)
+    const dXiaochengDiv = getPersonaVotePersonalityDelta({ id: 2, name: "小澄" }, { id: 4, name: "阿松" }, { day: 2, daySpeechEvents: [], divergenceBySeat: { 4: 1 } });
+    const dXiaochengClean = getPersonaVotePersonalityDelta({ id: 2, name: "小澄" }, { id: 4, name: "阿松" }, { day: 2, daySpeechEvents: [], divergenceBySeat: {} });
+    const dAlangClaim = getPersonaVotePersonalityDelta({ id: 11, name: "阿朗" }, { id: 3, name: "暖暖", claimedRole: "seer" }, { day: 1, daySpeechEvents: [] });
+    const dAlangPlain = getPersonaVotePersonalityDelta({ id: 11, name: "阿朗" }, { id: 3, name: "暖暖", claimedRole: null }, { day: 1, daySpeechEvents: [] });
+    const dXiaoyunFlip = getPersonaVotePersonalityDelta({ id: 6, name: "小雲" }, { id: 8, name: "晨晨" }, { day: 2, daySpeechEvents: [], flipIds: [8] });
+    const dNuannuanPk = getPersonaVotePersonalityDelta({ id: 3, name: "暖暖" }, { id: 4, name: "阿松" }, { day: 1, isPk: true, daySpeechEvents: [] });
+    // Academy Arts zero-leak: clean fellow gets 0 anomaly boost; publicly toxic fellow gets amplified boost!
+    const dMobaiCleanAzhu = getPersonaVotePersonalityDelta({ id: 9, name: "墨白" }, { id: 7, name: "阿竹" }, { day: 1, daySpeechEvents: [] });
+    const dMobaiToxicAzhu = getPersonaVotePersonalityDelta({ id: 9, name: "墨白" }, { id: 7, name: "阿竹" }, { day: 1, daySpeechEvents: [{ speakerId: 7, hasToxicSlip: true }] });
+    const dMobaiToxicOther = getPersonaVotePersonalityDelta({ id: 9, name: "墨白" }, { id: 4, name: "阿松" }, { day: 1, daySpeechEvents: [{ speakerId: 4, hasToxicSlip: true }] });
+    const goodHabitsOk = Boolean(
+      (dXiaochengDiv - dXiaochengClean) >= 20 &&
+      (dAlangClaim - dAlangPlain) >= 12 &&
+      dXiaoyunFlip >= 16 &&
+      dNuannuanPk <= -10 &&
+      dMobaiCleanAzhu === 0 &&
+      dMobaiToxicAzhu > dMobaiToxicOther
+    );
+
+    // Wolf habits: Alang runs for sheriff as wolf; Mobai skips wolf sheriff when not fakeSeer; Chenchen hesitates targeting Youzi; Azhu buses hot wolf mate
+    el("selectModeCount").value = "12";
+    el("selectPreferredRole").value = "villager";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const sAlang = state.match.seats.find(function (s) { return s.name === "阿朗"; });
+    const sMobai = state.match.seats.find(function (s) { return s.name === "墨白"; });
+    const sChen = state.match.seats.find(function (s) { return s.name === "晨晨"; });
+    const sYouzi = state.match.seats.find(function (s) { return s.name === "柚子"; });
+    const sAzhu = state.match.seats.find(function (s) { return s.name === "阿竹"; });
+    sAlang.role = "wolf"; sAlang.team = "wolf"; sAlang.fakeSeer = false;
+    sMobai.role = "wolf"; sMobai.team = "wolf"; sMobai.fakeSeer = false;
+    const alangWolfSheriffOk = shouldAiRunForSheriff(sAlang) === true && shouldAiRunForSheriff(sMobai) === false;
+    sChen.role = "wolf"; sChen.team = "wolf";
+    const chenHesitateTxt = buildPersonaClubAndHabitInsert(sChen, { day: 1, spokenOthers: [], aliveOthers: state.match.seats }, sYouzi, "wolf");
+    const sXiaocheng = state.match.seats.find(function (s) { return s.name === "小澄"; });
+    const debateBanterTxt = buildPersonaClubAndHabitInsert(sAlang, { day: 1, spokenOthers: [sXiaocheng], aliveOthers: state.match.seats }, sXiaocheng, "suspect");
+    const academyArtsTxt = buildPersonaClubAndHabitInsert(sMobai, { day: 1, spokenOthers: [sAzhu], aliveOthers: state.match.seats }, sAzhu, "suspect");
+    const clubInsertOk = Boolean(chenHesitateTxt.includes("不好意思") && debateBanterTxt.includes("小澄") && academyArtsTxt.includes("書院雅集"));
+
+    // Azhu wolf bus vote when wolf mate has observable heat >= 62
+    state.match.seats.forEach(function (s) { s.role = "villager"; s.team = "good"; s.suspicionMap = {}; });
+    sAzhu.role = "wolf"; sAzhu.team = "wolf";
+    sChen.role = "wolf"; sChen.team = "wolf";
+    state.match.wolfTactic = "standard";
+    state.match.daySpeechEvents = [
+      { speakerId: 2, accuseId: sChen.id },
+      { speakerId: 3, accuseId: sChen.id },
+      { speakerId: 4, accuseId: sChen.id },
+      { speakerId: 5, accuseId: sChen.id },
+      { speakerId: sChen.id, hasToxicSlip: true }
+    ];
+    sAzhu.suspicionMap[sChen.id] = 85;
+    const azhuVotePick = chooseAiVoteTarget(sAzhu, {});
+    const azhuWolfBusOk = azhuVotePick === sChen.id;
+
+    // 5. 360 Showcase Unlockable Profile Dossier Card & v17.0 Version
+    const u0 = getPersonaDossierUnlockState("墨白", { gamesPlayed: 0 });
+    const u1 = getPersonaDossierUnlockState("墨白", { gamesPlayed: 1 });
+    const u3 = getPersonaDossierUnlockState("墨白", { gamesPlayed: 3 });
+    const dossierUnlockOk = Boolean(
+      u0 && !u0.goodUnlocked && !u0.wolfUnlocked &&
+      u1 && u1.goodUnlocked && !u1.wolfUnlocked &&
+      u3 && u3.goodUnlocked && u3.wolfUnlocked
+    );
+    stage3d.showcaseTarget = "hero";
+    indieFlow.syncShowcaseTargetUi();
+    const cardHiddenHero = el("showcaseProfileCard").classList.contains("hidden");
+    stage3d.showcaseTarget = String(sMobai.id);
+    indieFlow.syncShowcaseTargetUi();
+    const cardShownMobai = !el("showcaseProfileCard").classList.contains("hidden") &&
+      el("showcaseProfileCard").innerHTML.includes("好人癖好");
+    const showcaseCardOk = Boolean(cardHiddenHero && cardShownMobai);
+    const diag17 = collectFeedbackDiagnostics();
+    const version17Ok = Boolean(diag17 && diag17.version === "v17.0 (公測 3.2)");
+
+    antiCheatMonitor.strictThrow = prevAntiStrict;
+    resetMatchToLobby();
+
+    return {
+      gazeResetOk, lanternResetOk, roleGuidesCleanOk, personaIdsOk, mobaiTitleOk,
+      stylingAll11Ok, idleArchetypes11Ok, accAttachAll11Ok, dossiersAll11Ok, clubNetOk,
+      goodHabitsOk, alangWolfSheriffOk, clubInsertOk, azhuWolfBusOk, dossierUnlockOk,
+      showcaseCardOk, version17Ok
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v170Res)) {
+    if (!v) {
+      throw new Error("v17.0 Character Identity / 3D Silhouette / Habits check failed for " + k + ": " + JSON.stringify(v170Res));
+    }
+  }
+  const nightSrcV17 = fs.readFileSync(path.join(ROOT, "js/game/night.js"), "utf8");
+  const hunterBlockV17 = nightSrcV17.slice(nightSrcV17.indexOf("function executeHunterShotPresentation"), nightSrcV17.indexOf("function executeHunterShotPresentation") + 1500);
+  if (/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(hunterBlockV17)) {
+    throw new Error("v17.0 residual emoji detected in executeHunterShotPresentation in js/game/night.js!");
+  }
+}
+
+console.log("[OK] Full v17.0 (Character Identity / 11 Silhouettes & Seated Rigs / 11 Habits / 3 Club Networks / 360° Profile Dossier / 4 Bugfixes) E2E smoke test PASSED!");

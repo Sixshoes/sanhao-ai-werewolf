@@ -576,22 +576,25 @@ function openRoleGuidePopover(mode) {
     const tg = state.match.threeGood || { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
     const fgUsed = state.match.fourGivingsUsed || {};
     const fgUsedCount = ["confidence", "joy", "hope", "convenience"].filter(function (k) { return fgUsed[k]; }).length;
-    if (titleEl) titleEl.textContent = "🪷 三好蓮花 × 四給修為手札";
+    if (titleEl) {
+      titleEl.textContent = "三好蓮花 × 四給修為手札";
+      if (typeof shPrependIcon === "function") shPrependIcon(titleEl, "lotus", "jade");
+    }
     if (badgeEl) {
       badgeEl.textContent = tg.resonanceTriggered ? "三瓣全亮・已覺醒" : ("進度 " + ((tg.heart > 0 ? 1 : 0) + (tg.words > 0 ? 1 : 0) + (tg.deeds > 0 ? 1 : 0)) + "/3");
       badgeEl.className = "text-[10px] px-1.5 py-0.5 rounded shrink-0 border " + (tg.resonanceTriggered ? "bg-emerald-500/25 text-emerald-200 border-emerald-400/50" : "bg-amber-500/20 text-amber-200 border-amber-400/35");
     }
     const rowHtml = function (ok, icon, name, count, how) {
       return '<div class="role-guide-row ' + (ok ? "is-lit" : "") + '">' +
-        '<div class="font-bold ' + (ok ? "text-emerald-300" : "text-amber-200") + '">' + escapeHtml((ok ? "✅ " : "○ ") + icon + " " + name + "（已修 " + count + " 次）") + "</div>" +
+        '<div class="font-bold ' + (ok ? "text-emerald-300" : "text-amber-200") + '">' + escapeHtml((ok ? "✓ " : "○ ") + icon + " " + name + "（已修 " + count + " 次）") + "</div>" +
         '<div class="text-[10.5px] opacity-90">' + escapeHtml(how) + "</div>" +
         "</div>";
     };
     const rewardText = isRoleMasked
-      ? "三瓣全亮獎勵：解鎖本陣營三好蓮花覺醒加成（取消底牌遮蔽即可檢視詳細效果）！"
+      ? "三瓣全亮獎勵：解鎖本陣營三好蓮花覺醒加成（取消底牌遮蔽即可檢視詳細效果）"
       : (isWolf
-        ? "三瓣全亮獎勵：觸發「深水三好光環」，全場好人對你的懷疑度大幅下降且心虛值平息！"
-        : "三瓣全亮獎勵：獲得「🌟 黃金善意票（公投 +1 票權重）」，並感化 1 位好夥伴與你同步聚焦！");
+        ? "三瓣全亮獎勵：觸發「深水三好光環」，全場好人對你的懷疑度大幅下降且心虛值平息。"
+        : "三瓣全亮獎勵：獲得「黃金善意票（公投 +1 票權重）」，並感化 1 位好夥伴與你同步聚焦。");
     const synText = state.match.fourGSynergyTriggered
       ? "「雙四給連心」已觸發（友善度 +8 並自動點亮 1 瓣蓮花）"
       : ("雙四給連心：已奉用 " + fgUsedCount + "/2 項茶禮（累積 2 項額外友善 +8 並點亮 1 瓣）");
@@ -602,7 +605,10 @@ function openRoleGuidePopover(mode) {
       '<div class="role-guide-reward">' + escapeHtml(rewardText) + "</div>" +
       '<div class="text-[10.5px] text-amber-200/90 pt-0.5">' + escapeHtml(synText) + "</div>";
   } else {
-    if (titleEl) titleEl.textContent = guide.icon + " " + rDef.name + "・指南";
+    if (titleEl) {
+      titleEl.textContent = rDef.name + "・指南";
+      if (typeof shPrependIcon === "function" && guide.iconKey) shPrependIcon(titleEl, guide.iconKey, isWolf ? "cinnabar" : "gold");
+    }
     if (badgeEl) {
       badgeEl.textContent = guide.shortRole;
       badgeEl.className = "text-[10px] px-1.5 py-0.5 rounded shrink-0 border " + (isWolf ? "bg-rose-500/25 text-rose-200 border-rose-400/45" : "bg-emerald-500/20 text-emerald-200 border-emerald-400/40");
@@ -613,26 +619,26 @@ function openRoleGuidePopover(mode) {
       const stCls = it.canUseNow ? "is-ready" : "is-muted";
       return '<div class="guide-tool-item ' + stCls + '">' +
         '<div class="flex items-center justify-between gap-1.5">' +
-          '<span class="font-bold text-amber-100">' + escapeHtml(it.name) + "</span>" +
-          '<span class="guide-tool-status ' + stCls + '">' + escapeHtml(it.statusText) + "</span>" +
+        '<span class="font-bold text-amber-100">' + escapeHtml(it.name) + "</span>" +
+        '<span class="guide-tool-status ' + stCls + '">' + escapeHtml(it.statusText) + "</span>" +
         "</div>" +
         '<div class="text-[10px] opacity-85 mt-0.5">' + escapeHtml(it.desc) + "</div>" +
-      "</div>";
+        "</div>";
     }).join("");
     const classicModeGuide = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
     const misGuide = !classicModeGuide ? (typeof evaluateRoleMission === "function" ? evaluateRoleMission() : state.match.roleMission) : null;
     const misGuideHtml = misGuide
-      ? ('<div class="role-guide-row ' + (misGuide.completed ? "is-lit" : "") + '"><span class="font-bold text-amber-200">' + (misGuide.completed ? "✅ 密令達成：" : "🎋 本局密令：") + '</span>' + escapeHtml(misGuide.title + "（" + misGuide.progressText + "）") + "</div>")
+      ? ('<div class="role-guide-row ' + (misGuide.completed ? "is-lit" : "") + '"><span class="font-bold text-amber-200">' + (misGuide.completed ? "✓ 密令達成：" : "本局密令：") + '</span>' + escapeHtml(misGuide.title + "（" + misGuide.progressText + "）") + "</div>")
       : "";
     bodyEl.innerHTML =
-      '<div class="guide-now-box"><div class="text-[10px] font-bold text-amber-300/90">⚡ 現在這一步</div><div class="font-bold text-amber-50 mt-0.5">' + escapeHtml(nowHint) + "</div></div>" +
+      '<div class="guide-now-box"><div class="text-[10px] font-bold text-amber-300/90">現在這一步</div><div class="font-bold text-amber-50 mt-0.5">' + escapeHtml(nowHint) + "</div></div>" +
       misGuideHtml +
-      '<div class="space-y-1"><div class="text-[10px] font-bold text-slate-300">🎒 你目前手上的道具與按鈕</div>' + toolsHtml + "</div>" +
+      '<div class="space-y-1"><div class="text-[10px] font-bold text-slate-300">目前可用道具與按鈕</div>' + toolsHtml + "</div>" +
       '<div class="pt-1 border-t border-slate-700/60 space-y-1">' +
-        '<div class="role-guide-row"><span class="font-bold text-amber-200">🎯 勝利目標：</span>' + escapeHtml(guide.winCond) + "</div>" +
-        '<div class="role-guide-row"><span class="font-bold text-indigo-300">🌙 夜晚職能：</span>' + escapeHtml(guide.nightAction) + "</div>" +
-        '<div class="role-guide-row"><span class="font-bold text-emerald-300">☀️ 白天職能：</span>' + escapeHtml(guide.dayAction) + "</div>" +
-        '<div class="role-guide-reward"><span class="font-bold">🌸 三好心法：</span>' + escapeHtml(guide.threeGoodTip) + "</div>" +
+        '<div class="role-guide-row"><span class="font-bold text-amber-200">勝利目標：</span>' + escapeHtml(guide.winCond) + "</div>" +
+        '<div class="role-guide-row"><span class="font-bold text-indigo-300">夜晚職能：</span>' + escapeHtml(guide.nightAction) + "</div>" +
+        '<div class="role-guide-row"><span class="font-bold text-emerald-300">白天職能：</span>' + escapeHtml(guide.dayAction) + "</div>" +
+        '<div class="role-guide-reward"><span class="font-bold">三好心法：</span>' + escapeHtml(guide.threeGoodTip) + "</div>" +
       "</div>";
   }
   pop.classList.remove("hidden");

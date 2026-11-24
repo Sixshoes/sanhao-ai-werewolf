@@ -489,7 +489,7 @@ function chooseAiWolfTargetBlind(wolfSeat, rngVal) {
     }
   }
 
-  const picked = chooseAiWolfTarget(goodTargets, { snap: snap, rngVal: rngVal });
+  const picked = chooseAiWolfTarget(goodTargets, { snap: snap, rngVal: rngVal, wolfSeat: self });
   if (typeof antiCheatMonitor !== "undefined" && wolfSeat) {
     antiCheatMonitor.recordDecision("night_wolf", wolfSeat.id, picked ? ("夜襲 " + picked.id + "號") : "無目標");
   }
@@ -533,6 +533,15 @@ function chooseAiWolfTarget(goodTargets, opts) {
   }
   const observableShielded = goodTargets.find(function (s) { return s.trustShield; });
   if (observableShielded && rand() < 0.55) return observableShielded;
+  // v17.0 阿松當狼習慣：夜間配刀精準鎖定低熱度安靜藏神位（僅依公開可觀測熱度與跳牌，100% 盲視合法）
+  if (o.wolfSeat && o.wolfSeat.name === "阿松" && snap && (snap.day || 1) >= 2 && goodTargets.length > 1) {
+    const quietPool = goodTargets.filter(function (s) { return s.claimedRole !== "hunter"; });
+    const src = quietPool.length > 0 ? quietPool : goodTargets;
+    const sortedQuiet = src.slice().sort(function (a, b) {
+      return snap.getObservableHeatOnSeat(a.id) - snap.getObservableHeatOnSeat(b.id);
+    });
+    if (sortedQuiet[0] && rand() < 0.72) return sortedQuiet[0];
+  }
   return goodTargets[Math.floor(rand() * goodTargets.length) % goodTargets.length];
 }
 
@@ -1016,7 +1025,6 @@ function executeHunterShotPresentation(hunterSeat, targetSeat) {
   const isWK = Boolean(hunterSeat.isWolfKing);
   const roleLabel = isWK ? "流言首領" : "直心糾察長";
   const actLabel = isWK ? "最後帶風向反撲" : "正氣共鳴";
-  const iconLabel = isWK ? "🐺" : "⚖️";
   clearStepTimer();
   targetSeat.alive = false;
   targetSeat.outReason = state.match.variantMode === "fog_seal"
@@ -1053,24 +1061,24 @@ function executeHunterShotPresentation(hunterSeat, targetSeat) {
   spawnBurst(targetSeat.id, ["#f43f5e", "#fbbf24", "#ffffff"], 40, "spark");
   setSeatEmotion(targetSeat.id, "shock", 4000);
   nudgeSeat(targetSeat.id, { scale: 0.8, vScale: 0.28, vy: 10, vTilt: 0.36 });
-  spawnFx(hunterSeat.id, iconLabel + " " + (isWK ? "流言反撲！" : "糾察開槍！"), "#fbbf24", { durationMs: 2200, scale: 1.2 });
-  spawnFx(targetSeat.id, iconLabel + " 被 " + fmtSeatNum(hunterSeat.id) + "號帶走！", "#f43f5e", { durationMs: 2600, scale: 1.35 });
+  spawnFx(hunterSeat.id, isWK ? "流言反撲" : "糾察開槍", "#fbbf24", { durationMs: 2200, scale: 1.2 });
+  spawnFx(targetSeat.id, "被 " + fmtSeatNum(hunterSeat.id) + "號帶走", "#f43f5e", { durationMs: 2600, scale: 1.35 });
   setCanvasBubble(hunterSeat.id, "我是" + roleLabel + "！帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + "！", "suspect");
   setSeatBubble(targetSeat.id, "遭 " + fmtSeatNum(hunterSeat.id) + "號 " + actLabel + "帶走！", "suspect", 4800);
   if (typeof triggerCutIn === "function") {
     triggerCutIn(
-      iconLabel + " " + actLabel + "・帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + "！",
-      roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 臨離前鎖定目標一同離席！",
+      actLabel + "・帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName,
+      roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 臨離前鎖定目標一同離席",
       "crimson",
       2350
     );
   }
   if (typeof showToast === "function") {
-    showToast(iconLabel + " " + roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + " 一同離席！", "warn");
+    showToast(roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + " 一同離席。", "warn");
   }
   addLog({
     kind: "dawn",
-    title: iconLabel + " " + roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 發動" + actLabel + "，帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + " 一同離席！",
+    title: roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 發動" + actLabel + "，帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + " 一同離席。",
     text: ""
   });
   const ffHunter = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();

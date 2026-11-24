@@ -6,26 +6,26 @@
 const CAREER_STORAGE_KEY = "sanhao_ai_werewolf_career_v1";
 
 const ACHIEVEMENT_DEFS = [
-  { id: "first_win",    icon: "勝", title: "初露鋒芒",     desc: "贏得第一場雲起茶席勝利" },
-  { id: "zero_toxic",   icon: "善", title: "三好典範",     desc: "全程平穩有禮並贏得整場對局" },
-  { id: "kind_crit",    icon: "辭", title: "化戾氣為祥和", desc: "單局透過「婉轉潤飾詞句」陳詞並奪勝" },
-  { id: "resonance",    icon: "蓮", title: "三好圓滿",     desc: "單局點亮存好心、說好話、做好事三瓣修為" },
-  { id: "combo_master", icon: "連", title: "連擊神探",     desc: "單局達成 3 連擊以上推理互動" },
-  { id: "four_g_sage",  icon: "茶", title: "四給智囊",     desc: "善用四給奉茶並帶領陣營獲勝" },
-  { id: "pro_slayer",      icon: "弈", title: "高階弈手",   desc: "在高階難度下奪得勝利" },
-  { id: "wolf_actor",      icon: "影", title: "深水影帝",   desc: "扮演酸民狼成功騙過全場獲勝" },
+  { id: "first_win", icon: "勝", title: "初露鋒芒", desc: "贏得第一場雲起茶席勝利" },
+  { id: "zero_toxic", icon: "善", title: "三好典範", desc: "全程平穩有禮並贏得整場對局" },
+  { id: "kind_crit", icon: "辭", title: "化戾氣為祥和", desc: "單局透過「婉轉潤飾詞句」陳詞並奪勝" },
+  { id: "resonance", icon: "蓮", title: "三好圓滿", desc: "單局點亮存好心、說好話、做好事三瓣修為" },
+  { id: "combo_master", icon: "連", title: "連擊神探", desc: "單局達成 3 連擊以上推理互動" },
+  { id: "four_g_sage", icon: "茶", title: "四給智囊", desc: "善用四給奉茶並帶領陣營獲勝" },
+  { id: "pro_slayer", icon: "弈", title: "高階弈手", desc: "在高階難度下奪得勝利" },
+  { id: "wolf_actor", icon: "影", title: "深水影帝", desc: "扮演酸民狼成功騙過全場獲勝" },
   { id: "ghost_detective", icon: "察", title: "席外名偵探", desc: "好人離席觀戰時精準猜中全場所有酸民狼" },
-  { id: "shadow_oracle",   icon: "獵", title: "暗影獵神手", desc: "酸民狼離席觀戰時全數猜中好人真神職" },
-  { id: "logic_breaker",   icon: "破", title: "矛盾終結者", desc: "單局打出一張「呈堂證供」成功觸發邏輯破防" },
-  { id: "micro_reader",    icon: "微", title: "觀微察心",   desc: "單局透過靜心觀微識破真正心虛的酸民狼" },
-  { id: "crown_heir",      icon: "徽", title: "警徽傳承",   desc: "完成警長歸票或警徽移交並帶領陣營獲勝" },
-  { id: "mission_ace",     icon: "令", title: "密令達人",   desc: "完成本局專屬角色秘密任務並贏得對局" },
-  { id: "tea_host",        icon: "暖", title: "奉茶結緣師", desc: "單局曾於茶席間奉上暖茶結緣、拉近夥伴信任" },
-  { id: "peacemaker",      icon: "和", title: "化戾氣金句王", desc: "面對質疑未帶情緒字眼，平穩回應並化解對立" },
-  { id: "fourg_combo",     icon: "心", title: "四給連心大師", desc: "同一局內兩度奉茶相助同席茶友，觸發四給連心" },
-  { id: "elder_shield",    icon: "泰", title: "泰山壓頂",     desc: "身為清心長老觸發亮牌豁免並帶領好人陣營獲勝" },
-  { id: "wolf_king_strike",icon: "風", title: "臨走翻盤",     desc: "身為流言首領在公投離席時成功發動最後帶風向反撲" },
-  { id: "sheriff_drama",   icon: "警", title: "警上名嘴",     desc: "親身上警競選並高票奪下警徽" }
+  { id: "shadow_oracle", icon: "獵", title: "暗影獵神手", desc: "酸民狼離席觀戰時全數猜中好人真神職" },
+  { id: "logic_breaker", icon: "破", title: "矛盾終結者", desc: "單局打出一張「呈堂證供」成功觸發邏輯破防" },
+  { id: "micro_reader", icon: "微", title: "觀微察心", desc: "單局透過靜心觀微識破真正心虛的酸民狼" },
+  { id: "crown_heir", icon: "徽", title: "警徽傳承", desc: "完成警長歸票或警徽移交並帶領陣營獲勝" },
+  { id: "mission_ace", icon: "令", title: "密令達人", desc: "完成本局專屬角色秘密任務並贏得對局" },
+  { id: "tea_host", icon: "暖", title: "奉茶結緣師", desc: "單局曾於茶席間奉上暖茶結緣、拉近夥伴信任" },
+  { id: "peacemaker", icon: "和", title: "化戾氣金句王", desc: "面對質疑未帶情緒字眼，平穩回應並化解對立" },
+  { id: "fourg_combo", icon: "心", title: "四給連心大師", desc: "同一局內兩度奉茶相助同席茶友，觸發四給連心" },
+  { id: "elder_shield", icon: "泰", title: "泰山壓頂", desc: "身為清心長老觸發亮牌豁免並帶領好人陣營獲勝" },
+  { id: "wolf_king_strike", icon: "風", title: "臨走翻盤", desc: "身為流言首領在公投離席時成功發動最後帶風向反撲" },
+  { id: "sheriff_drama", icon: "警", title: "警上名嘴", desc: "親身上警競選並高票奪下警徽" }
 ];
 
 const CLOUD_VARIANT_DEFS = [
@@ -105,6 +105,28 @@ function getUnlockedVariants(careerOpt) {
   return CLOUD_VARIANT_DEFS.filter(function (v) { return isVariantUnlocked(v.id, c); }).map(function (v) { return v.id; });
 }
 
+function getPersonaDossierUnlockState(personaName, careerOpt) {
+  const dossier = typeof getPersonaDossier === "function"
+    ? getPersonaDossier(personaName)
+    : (typeof PERSONA_SIGNATURE_DOSSIERS !== "undefined" ? PERSONA_SIGNATURE_DOSSIERS[personaName] : null);
+  if (!dossier) return null;
+  const c = careerOpt || loadCareerStats();
+  const gamesPlayed = Math.max(0, Number(c && c.gamesPlayed) || 0);
+  const needGood = typeof dossier.unlockGoodGames === "number" ? dossier.unlockGoodGames : 1;
+  const needWolf = typeof dossier.unlockWolfGames === "number" ? dossier.unlockWolfGames : 3;
+  return {
+    personaName: String(personaName || ""),
+    dossier: dossier,
+    gamesPlayed: gamesPlayed,
+    needGood: needGood,
+    needWolf: needWolf,
+    goodUnlocked: gamesPlayed >= needGood,
+    wolfUnlocked: gamesPlayed >= needWolf,
+    remainGood: Math.max(0, needGood - gamesPlayed),
+    remainWolf: Math.max(0, needWolf - gamesPlayed)
+  };
+}
+
 function recordSpiritBetCareerBonus(pts, streak) {
   const addPts = Math.max(0, Math.round(Number(pts) || 0));
   const st = Math.max(0, Math.round(Number(streak) || 0));
@@ -119,7 +141,7 @@ function recordSpiritBetCareerBonus(pts, streak) {
 function saveCareerStats(career) {
   try {
     window.localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify(career));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function recordMatchCareer(winnerTeam) {
