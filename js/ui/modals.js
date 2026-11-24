@@ -29,15 +29,21 @@ function renderTimeline() {
 
     if (item.kind === "speech") {
       const canQuote = Boolean(item.speakerId && item.speakerId !== getPlayerId() && state.match.started);
+      const hideSpoilerNow = Boolean(
+        item.pendingReveal &&
+        state.activeSpeakerId === item.speakerId &&
+        typeof voice !== "undefined" && voice.speaking
+      );
+      const bodyText = hideSpoilerNow ? "（正在發言中…語音播畢後自動收錄全文）" : item.text;
       card.innerHTML =
         '<div class="flex items-center justify-between gap-1">' +
         '<span class="font-black text-amber-200">' + escapeHtml(item.title) + '</span>' +
         '<div class="flex items-center gap-1">' +
         (item.subBadge ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-950/80 text-slate-300">' + escapeHtml(item.subBadge) + '</span>' : '') +
-        (canQuote ? '<button type="button" data-quote-seat="' + item.speakerId + '" class="cta-ink text-[9.5px] px-1.5 py-0.5">引用反駁</button>' : '') +
+        (canQuote && !hideSpoilerNow ? '<button type="button" data-quote-seat="' + item.speakerId + '" class="cta-ink text-[9.5px] px-1.5 py-0.5">引用反駁</button>' : '') +
         '</div>' +
         '</div>' +
-        '<div class="text-slate-100 mt-0.5">' + escapeHtml(item.text) + '</div>';
+        '<div class="text-slate-100 mt-0.5">' + escapeHtml(bodyText) + '</div>';
       if (canQuote) {
         const qBtn = card.querySelector("[data-quote-seat]");
         if (qBtn) {
@@ -137,24 +143,24 @@ function renderTableMatrixIntoBody() {
 
     card.innerHTML =
       '<div class="flex items-center justify-between gap-1.5">' +
-        '<div class="flex items-center gap-1.5 min-w-0">' +
-          '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black shrink-0" style="background:' + escapeHtml(s.color || "#64748b") + ';color:#0f172a;">' + num + '</span>' +
-          '<span class="font-black text-amber-100 truncate">' + (isSh ? "[警] " : "") + escapeHtml(s.id === pid ? "你" : s.name) + (!s.alive ? "（離席）" : "") + '</span>' +
-        '</div>' +
-        '<div class="flex items-center gap-1 shrink-0">' +
-          alertBadge +
-          '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-500/20 text-amber-200">' + escapeHtml(roleClaim) + '</span>' +
-          markBadge +
-        '</div>' +
+      '<div class="flex items-center gap-1.5 min-w-0">' +
+      '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black shrink-0" style="background:' + escapeHtml(s.color || "#64748b") + ';color:#0f172a;">' + num + '</span>' +
+      '<span class="font-black text-amber-100 truncate">' + (isSh ? "[警] " : "") + escapeHtml(s.id === pid ? "你" : s.name) + (!s.alive ? "（離席）" : "") + '</span>' +
+      '</div>' +
+      '<div class="flex items-center gap-1 shrink-0">' +
+      alertBadge +
+      '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-500/20 text-amber-200">' + escapeHtml(roleClaim) + '</span>' +
+      markBadge +
+      '</div>' +
       '</div>' +
       '<div class="flex items-center justify-between gap-2 text-[10.5px]">' +
-        '<div class="flex items-center gap-2 flex-wrap">' + accStr + vchStr + '</div>' +
-        '<span class="text-[10px] text-slate-400 shrink-0">' + escapeHtml(voteStr) + '</span>' +
+      '<div class="flex items-center gap-2 flex-wrap">' + accStr + vchStr + '</div>' +
+      '<span class="text-[10px] text-slate-400 shrink-0">' + escapeHtml(voteStr) + '</span>' +
       '</div>' +
       (latestEv && latestEv.rawText
         ? ('<div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/70">' +
-            '<span class="text-[10px] text-slate-300 truncate">「' + escapeHtml(latestEv.rawText.slice(0, 32)) + '…」</span>' +
-            (s.id !== pid ? '<button type="button" data-mat-quote="' + s.id + '" class="cta-ink text-[9.5px] px-1.5 py-0.5 shrink-0">引用</button>' : '') +
+          '<span class="text-[10px] text-slate-300 truncate">「' + escapeHtml(latestEv.rawText.slice(0, 32)) + '…」</span>' +
+          (s.id !== pid ? '<button type="button" data-mat-quote="' + s.id + '" class="cta-ink text-[9.5px] px-1.5 py-0.5 shrink-0">引用</button>' : '') +
           '</div>')
         : '<div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">第 ' + day + ' 天尚未發言</div>');
 
@@ -221,7 +227,7 @@ function renderVoteSheetIntoBody() {
     html += '<div class="rounded-2xl p-3 bg-amber-500/10 border border-amber-400/40 text-xs space-y-1">' +
       '<div class="font-black text-amber-300">本局關鍵轉折與勝負覆盤</div>' +
       '<div class="text-slate-100 leading-relaxed">' + escapeHtml(mvpParts.join("；")) + '（友善度 ' + m.harmonyScore + ' · 好話 ' + (st.goodWordsCount || 0) + ' · 矛盾抓包 ' + (st.contradictionsFound || 0) + '）</div>' +
-    '</div>';
+      '</div>';
   }
 
   if (canSeeTruth && state.match.nightArchive && state.match.nightArchive.length > 0) {
@@ -307,10 +313,10 @@ function renderVoteSheetIntoBody() {
     }).join("");
     const shWithHtml = (shVoteRec.withdrawnIds || []).length > 0
       ? ('<div class="flex items-center flex-wrap gap-1.5 text-[10.5px]"><span class="font-bold text-slate-400">警上退水：</span>' +
-          shVoteRec.withdrawnIds.map(function (wid) {
-            const ws = getSeat(wid);
-            return '<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">' + fmtSeatNum(wid) + ' ' + escapeHtml(ws ? (wid === getPlayerId() ? "你" : ws.name) : '') + '</span>';
-          }).join("") + '</div>')
+        shVoteRec.withdrawnIds.map(function (wid) {
+          const ws = getSeat(wid);
+          return '<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">' + fmtSeatNum(wid) + ' ' + escapeHtml(ws ? (wid === getPlayerId() ? "你" : ws.name) : '') + '</span>';
+        }).join("") + '</div>')
       : "";
     const shGrouped = {};
     const shAbstainers = [];
@@ -347,18 +353,18 @@ function renderVoteSheetIntoBody() {
         }).join("");
         shBallotRowsHtml += '<div class="rounded-xl p-2.5 border ' + (isWin ? 'bg-amber-500/12 border-amber-400/45' : 'bg-slate-900/90 border-slate-800') + '">' +
           '<div class="flex items-center justify-between gap-2 mb-1">' +
-            '<div class="flex items-center gap-2 min-w-0">' +
-              '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-black shrink-0 ' + (isWin ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-200 border border-slate-700') + '">' + fmtSeatNum(item.targetId) + '</span>' +
-              '<span class="text-xs font-black ' + (isWin ? 'text-amber-100' : 'text-slate-100') + '">' + escapeHtml(ts ? (item.targetId === getPlayerId() ? "你" : ts.name) : '') + '</span>' +
-              (isWin ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-200">當選警長</span>' : '') +
-            '</div>' +
-            '<span class="text-xs font-black text-amber-300 shrink-0">' + item.count + ' 票</span>' +
+          '<div class="flex items-center gap-2 min-w-0">' +
+          '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-black shrink-0 ' + (isWin ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-200 border border-slate-700') + '">' + fmtSeatNum(item.targetId) + '</span>' +
+          '<span class="text-xs font-black ' + (isWin ? 'text-amber-100' : 'text-slate-100') + '">' + escapeHtml(ts ? (item.targetId === getPlayerId() ? "你" : ts.name) : '') + '</span>' +
+          (isWin ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-200">當選警長</span>' : '') +
+          '</div>' +
+          '<span class="text-xs font-black text-amber-300 shrink-0">' + item.count + ' 票</span>' +
           '</div>' +
           '<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-1.5">' +
-            '<div class="h-full rounded-full ' + (isWin ? 'bg-amber-400' : 'bg-sky-400/75') + '" style="width:' + barPct + '%"></div>' +
+          '<div class="h-full rounded-full ' + (isWin ? 'bg-amber-400' : 'bg-sky-400/75') + '" style="width:' + barPct + '%"></div>' +
           '</div>' +
           '<div class="flex items-center flex-wrap gap-1.5"><span class="text-[10px] font-bold text-slate-400 mr-0.5">警下投給他：</span>' + vChips + '</div>' +
-        '</div>';
+          '</div>';
       });
     }
     if (shAbstainers.length > 0) {
@@ -368,18 +374,18 @@ function renderVoteSheetIntoBody() {
       }).join("");
       shBallotRowsHtml += '<div class="rounded-xl px-2.5 py-1.5 bg-slate-950/60 border border-slate-800/80 flex items-center flex-wrap gap-1.5">' +
         '<span class="text-[10px] font-bold text-slate-400 mr-1">警下棄票：</span>' + shAbsChips +
-      '</div>';
+        '</div>';
     }
 
     html += '<div class="rounded-2xl p-3 bg-amber-500/10 border border-amber-400/45 space-y-2">' +
       '<div class="flex items-center justify-between flex-wrap gap-1.5 pb-1.5 border-b border-amber-400/25">' +
-        '<span class="text-xs font-black text-amber-200">第 ' + (shVoteRec.day || 1) + ' 天・警長競選票型（排坑重點依據）</span>' +
-        '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/25 text-amber-100 border border-amber-400/50">警長：' + escapeHtml(shWinnerLbl) + '</span>' +
+      '<span class="text-xs font-black text-amber-200">第 ' + (shVoteRec.day || 1) + ' 天・警長競選票型（排坑重點依據）</span>' +
+      '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/25 text-amber-100 border border-amber-400/50">警長：' + escapeHtml(shWinnerLbl) + '</span>' +
       '</div>' +
       '<div class="flex items-center flex-wrap gap-1.5 text-[10.5px]"><span class="font-bold text-amber-200/80">警上候選：</span>' + shCandHtml + '</div>' +
       shWithHtml +
       '<div class="space-y-1.5">' + shBallotRowsHtml + '</div>' +
-    '</div>';
+      '</div>';
   }
 
   const activeBfModal = state.match.sheriffBadgeFlow || null;
@@ -392,22 +398,22 @@ function renderVoteSheetIntoBody() {
         '<div><span class="font-black">目前生效警徽流（' + escapeHtml(owLblM) + '）：</span>' +
         escapeHtml(formatBadgeFlowSummary(activeBfModal)) + '</div>' +
         '<div class="text-[10.5px] opacity-80 mt-0.5">規則暗號：倒牌後徽飛第一順位＝金水｜跳飛第二順位或外飛＝第一順位疑查殺｜撕毀警徽＝報查殺！</div>' +
-      '</div>';
+        '</div>';
     }
     bfSigsModal.forEach(function (sig) {
       const isAlert = Array.isArray(sig.suspectedWolfIds) && sig.suspectedWolfIds.length > 0;
       bfBodyHtml += '<div class="' + (isAlert ? 'bf-modal-sig-wolf' : 'bf-modal-sig-good') + '">' +
         '<div class="font-black">' + escapeHtml(sig.headline || "警徽流暗號解讀") + ' <span class="text-[10px] font-normal opacity-80">（第 ' + (sig.day || 1) + ' 天）</span></div>' +
         '<div class="text-[10.5px] opacity-90 mt-0.5">' + escapeHtml(sig.detail || "") + '</div>' +
-      '</div>';
+        '</div>';
     });
     html += '<div class="bf-modal-card space-y-2">' +
       '<div class="bf-modal-head">' +
-        '<span class="text-xs font-black">警徽流追蹤 ＆ 暗號解讀</span>' +
-        '<span class="text-[10px] font-bold opacity-80">' + (bfSigsModal.length ? ("已解讀 " + bfSigsModal.length + " 條暗號") : "進行中") + '</span>' +
+      '<span class="text-xs font-black">警徽流追蹤 ＆ 暗號解讀</span>' +
+      '<span class="text-[10px] font-bold opacity-80">' + (bfSigsModal.length ? ("已解讀 " + bfSigsModal.length + " 條暗號") : "進行中") + '</span>' +
       '</div>' +
       bfBodyHtml +
-    '</div>';
+      '</div>';
   }
 
   html += '<div class="space-y-2.5">';
@@ -474,20 +480,20 @@ function renderVoteSheetIntoBody() {
 
         rowsHtml += '<div class="rounded-xl p-2.5 border ' + (isTop ? 'bg-rose-500/10 border-rose-400/35' : 'bg-slate-900/90 border-slate-800') + '">' +
           '<div class="flex items-center justify-between gap-2 mb-1.5">' +
-            '<div class="flex items-center gap-2 min-w-0">' +
-              '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-black shrink-0 ' + (isTop ? 'bg-rose-500 text-white' : 'bg-slate-800 text-amber-200 border border-slate-700') + '">' + fmtSeatNum(item.targetId) + '</span>' +
-              '<span class="text-xs font-black ' + (isTop ? 'text-rose-100' : 'text-slate-100') + '">' + escapeHtml(tSeat ? tSeat.name : '') + '</span>' +
-              (isTop && topTargets.length === 1 ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/25 text-rose-200">最高票</span>' : '') +
-            '</div>' +
-            '<span class="text-xs font-black text-amber-300 shrink-0">' + item.count + ' 票</span>' +
+          '<div class="flex items-center gap-2 min-w-0">' +
+          '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-black shrink-0 ' + (isTop ? 'bg-rose-500 text-white' : 'bg-slate-800 text-amber-200 border border-slate-700') + '">' + fmtSeatNum(item.targetId) + '</span>' +
+          '<span class="text-xs font-black ' + (isTop ? 'text-rose-100' : 'text-slate-100') + '">' + escapeHtml(tSeat ? tSeat.name : '') + '</span>' +
+          (isTop && topTargets.length === 1 ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/25 text-rose-200">最高票</span>' : '') +
+          '</div>' +
+          '<span class="text-xs font-black text-amber-300 shrink-0">' + item.count + ' 票</span>' +
           '</div>' +
           '<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-2">' +
-            '<div class="h-full rounded-full ' + (isTop ? 'bg-rose-400' : 'bg-amber-400/80') + '" style="width:' + barPct + '%"></div>' +
+          '<div class="h-full rounded-full ' + (isTop ? 'bg-rose-400' : 'bg-amber-400/80') + '" style="width:' + barPct + '%"></div>' +
           '</div>' +
           '<div class="flex items-center flex-wrap gap-1.5">' +
-            '<span class="text-[10px] font-bold text-slate-400 mr-0.5">投給他：</span>' + voterChips +
+          '<span class="text-[10px] font-bold text-slate-400 mr-0.5">投給他：</span>' + voterChips +
           '</div>' +
-        '</div>';
+          '</div>';
       });
 
       if (abstainers.length > 0) {
@@ -497,16 +503,16 @@ function renderVoteSheetIntoBody() {
         }).join("");
         rowsHtml += '<div class="rounded-xl px-2.5 py-2 bg-slate-950/60 border border-slate-800/80 flex items-center flex-wrap gap-1.5">' +
           '<span class="text-[10px] font-bold text-slate-400 mr-1">本輪棄票（' + abstainers.length + ' 人）：</span>' + absChips +
-        '</div>';
+          '</div>';
       }
 
       html += '<div class="rounded-2xl p-3 bg-slate-950/80 border border-slate-800 space-y-2">' +
         '<div class="flex items-center justify-between flex-wrap gap-1.5 pb-1.5 border-b border-slate-800/80">' +
-          '<span class="text-xs font-black text-amber-200">' + roundLabel + '</span>' +
-          summaryBadge +
+        '<span class="text-xs font-black text-amber-200">' + roundLabel + '</span>' +
+        summaryBadge +
         '</div>' +
         '<div class="space-y-2">' + rowsHtml + '</div>' +
-      '</div>';
+        '</div>';
     });
   }
   html += '</div>';
@@ -549,31 +555,31 @@ function renderVoteSheetIntoBody() {
 
     rows += '<tr class="border-b border-slate-800/80 hover:bg-slate-800/35 transition ' + (!s.alive ? 'opacity-75' : '') + '">' +
       '<td class="py-2 px-2.5 font-black text-slate-100 whitespace-nowrap">' +
-        '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-800 text-amber-200 text-[10px] mr-1.5 border border-slate-700">' + fmtSeatNum(s.id) + '</span>' +
-        escapeHtml(s.name) +
+      '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-800 text-amber-200 text-[10px] mr-1.5 border border-slate-700">' + fmtSeatNum(s.id) + '</span>' +
+      escapeHtml(s.name) +
       '</td>' +
       '<td class="py-2 px-2 whitespace-nowrap">' + stBadge + '</td>' +
       '<td class="py-2 px-2 whitespace-nowrap">' + claimBadge + '</td>' +
       (!canSeeTruth ? ('<td class="py-2 px-2 whitespace-nowrap">' + noteBadge + '</td>') : '') +
       '<td class="py-2 px-2 whitespace-nowrap">' + roleBadge + '</td>' +
-    '</tr>';
+      '</tr>';
   });
 
   html += '<div class="space-y-2">' +
     '<h4 class="text-xs font-black tracking-wide text-amber-300">全場座位與' + (canSeeTruth ? '真實底牌' : '情報筆記') + '</h4>' +
     '<div class="rounded-2xl overflow-hidden border border-slate-800 bg-slate-950/75">' +
-      '<table class="w-full text-left border-collapse">' +
-        '<thead><tr class="bg-slate-900/90 border-b border-slate-800 text-[11px] text-slate-400">' +
-          '<th class="py-2 px-2.5 font-bold">座位</th>' +
-          '<th class="py-2 px-2 font-bold">狀態</th>' +
-          '<th class="py-2 px-2 font-bold">場上表態</th>' +
-          (!canSeeTruth ? '<th class="py-2 px-2 font-bold">我的標記</th>' : '') +
-          '<th class="py-2 px-2 font-bold">' + (canSeeTruth ? '真實底牌' : '已知情報') + '</th>' +
-        '</tr></thead>' +
-        '<tbody>' + rows + '</tbody>' +
-      '</table>' +
+    '<table class="w-full text-left border-collapse">' +
+    '<thead><tr class="bg-slate-900/90 border-b border-slate-800 text-[11px] text-slate-400">' +
+    '<th class="py-2 px-2.5 font-bold">座位</th>' +
+    '<th class="py-2 px-2 font-bold">狀態</th>' +
+    '<th class="py-2 px-2 font-bold">場上表態</th>' +
+    (!canSeeTruth ? '<th class="py-2 px-2 font-bold">我的標記</th>' : '') +
+    '<th class="py-2 px-2 font-bold">' + (canSeeTruth ? '真實底牌' : '已知情報') + '</th>' +
+    '</tr></thead>' +
+    '<tbody>' + rows + '</tbody>' +
+    '</table>' +
     '</div>' +
-  '</div>';
+    '</div>';
 
   body.innerHTML = html;
 }
@@ -625,17 +631,17 @@ function renderOrchestratorTracePanel() {
     }).join(" · ");
     acBox.innerHTML =
       '<div class="flex items-center justify-between gap-2 flex-wrap">' +
-        '<span class="font-serif-craft text-xs font-bold text-emerald-300">反作弊盲視隔離防火牆（即時稽核）</span>' +
-        statusBadge +
+      '<span class="font-serif-craft text-xs font-bold text-emerald-300">反作弊盲視隔離防火牆（即時稽核）</span>' +
+      statusBadge +
       '</div>' +
       '<div class="grid grid-cols-3 gap-1.5 text-center text-[10.5px]">' +
-        '<div class="p-1.5 rounded bg-slate-900/90 border border-slate-800"><div class="text-[9.5px] text-slate-400">盲視快照簽發</div><div class="font-black text-amber-200 tabular-nums">' + ac.blindViewsIssued + ' 次</div></div>' +
-        '<div class="p-1.5 rounded bg-slate-900/90 border border-slate-800"><div class="text-[9.5px] text-slate-400">受保護 AI 決策</div><div class="font-black text-emerald-300 tabular-nums">' + ac.decisionsAudited + ' 次</div></div>' +
-        '<div class="p-1.5 rounded bg-slate-900/90 border border-slate-800"><div class="text-[9.5px] text-slate-400">LLM 零洩漏檢核</div><div class="font-black text-sky-300 tabular-nums">' + ac.promptAuditsPassed + ' 通過</div></div>' +
+      '<div class="p-1.5 rounded bg-slate-900/90 border border-slate-800"><div class="text-[9.5px] text-slate-400">盲視快照簽發</div><div class="font-black text-amber-200 tabular-nums">' + ac.blindViewsIssued + ' 次</div></div>' +
+      '<div class="p-1.5 rounded bg-slate-900/90 border border-slate-800"><div class="text-[9.5px] text-slate-400">受保護 AI 決策</div><div class="font-black text-emerald-300 tabular-nums">' + ac.decisionsAudited + ' 次</div></div>' +
+      '<div class="p-1.5 rounded bg-slate-900/90 border border-slate-800"><div class="text-[9.5px] text-slate-400">LLM 零洩漏檢核</div><div class="font-black text-sky-300 tabular-nums">' + ac.promptAuditsPassed + ' 通過</div></div>' +
       '</div>' +
       '<div class="text-[10.5px] text-slate-300 leading-relaxed">' +
-        '封鎖項目：他席底牌（role/team/isElder/fakeSeer）、他人私密懷疑值（suspicionMap）、未揭露心虛脈搏、<code>nightArchive</code> 與玩家私密驗證。' +
-        (modEntries ? ('<div class="text-[10px] text-emerald-200/90 mt-1">本局已稽核：' + modEntries + '</div>') : '') +
+      '封鎖項目：他席底牌（role/team/isElder/fakeSeer）、他人私密懷疑值（suspicionMap）、未揭露心虛脈搏、<code>nightArchive</code> 與玩家私密驗證。' +
+      (modEntries ? ('<div class="text-[10px] text-emerald-200/90 mt-1">本局已稽核：' + modEntries + '</div>') : '') +
       '</div>';
   }
 
@@ -655,17 +661,17 @@ function renderOrchestratorTracePanel() {
     const tagTone = tr.compliance ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/35" : "bg-amber-500/20 text-amber-200 border-amber-400/45";
     rowsHtml +=
       '<div class="rounded-lg px-2.5 py-2 border text-[11px] space-y-0.5 ' + tone + '">' +
-        '<div class="flex items-center justify-between gap-2">' +
-          '<div class="flex items-center gap-1.5 min-w-0">' +
-            '<span class="font-black text-amber-200 shrink-0">' + escapeHtml(tr.agent) + '</span>' +
-            '<span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-[10px] text-sky-200 truncate">' + escapeHtml(tr.tier) + '</span>' +
-          '</div>' +
-          '<div class="flex items-center gap-1.5 shrink-0 text-[10px]">' +
-            '<span class="px-1.5 py-0.2 rounded border ' + tagTone + '">' + (tr.compliance ? "合規通過" : "已淨化") + '</span>' +
-            '<span class="text-slate-400 tabular-nums">' + tr.ms + 'ms · D' + tr.day + '</span>' +
-          '</div>' +
-        '</div>' +
-        '<div class="text-slate-200 leading-snug">' + escapeHtml(tr.summary) + '</div>' +
+      '<div class="flex items-center justify-between gap-2">' +
+      '<div class="flex items-center gap-1.5 min-w-0">' +
+      '<span class="font-black text-amber-200 shrink-0">' + escapeHtml(tr.agent) + '</span>' +
+      '<span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-[10px] text-sky-200 truncate">' + escapeHtml(tr.tier) + '</span>' +
+      '</div>' +
+      '<div class="flex items-center gap-1.5 shrink-0 text-[10px]">' +
+      '<span class="px-1.5 py-0.2 rounded border ' + tagTone + '">' + (tr.compliance ? "合規通過" : "已淨化") + '</span>' +
+      '<span class="text-slate-400 tabular-nums">' + tr.ms + 'ms · D' + tr.day + '</span>' +
+      '</div>' +
+      '</div>' +
+      '<div class="text-slate-200 leading-snug">' + escapeHtml(tr.summary) + '</div>' +
       '</div>';
   });
   listEl.innerHTML = rowsHtml;

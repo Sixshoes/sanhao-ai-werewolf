@@ -775,20 +775,28 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       }
       const inSeatShowcase = Boolean(typeof stage3d !== "undefined" && stage3d.showcaseMode && stage3d.showcaseTarget === s.id);
       const scAct = inSeatShowcase ? (actor.showcaseAction || "") : "";
-      const isPointingAcc = Boolean(isSpeaking && activeAccuseTargetId && seatWorldMap[activeAccuseTargetId]);
+      const isPreppingNow = Boolean(state.speechPrepUntil && nowMs < state.speechPrepUntil && state.speechPrepSeatId === s.id);
+      const liveBeat = (state.activeMentionBeat && nowMs < state.activeMentionBeat.until) ? state.activeMentionBeat : null;
+      const isMentionPointBeat = Boolean(isSpeaking && liveBeat && liveBeat.speakerId === s.id && seatWorldMap[liveBeat.targetId]);
+      const isMentionedTargetNow = Boolean(!isSpeaking && s.alive && liveBeat && liveBeat.targetId === s.id);
+      const sitStateNow = isSpeaking
+        ? ((p === "LAST_WORDS_SPEECH") ? "last_words" : ((typeof voice !== "undefined" && voice.activeSituationalState) ? voice.activeSituationalState : "standard"))
+        : "standard";
+      const isLastWordsEndNow = Boolean(p === "LAST_WORDS_SPEECH" && isSpeaking && !isTalkingNow && !isPreppingNow);
+      const isPointingAcc = Boolean(isMentionPointBeat || (isSpeaking && activeAccuseTargetId && seatWorldMap[activeAccuseTargetId] && !liveBeat));
       const isBeingVouchedNow = Boolean(s.alive && activeVouchTargetId === s.id && state.activeSpeakerId && state.activeSpeakerId !== s.id);
       const speechActNow = isSpeaking ? (activeClaimRole ? "claim_role" : (activeVouchTargetId ? "vouch_warm" : "")) : "";
-      let moodNowVrm = isBeingAccusedNow ? "shock" : (!s.alive ? "sorrow" : getSeatEmotion(s.id, nowMs));
+      let moodNowVrm = (isBeingAccusedNow || isMentionedTargetNow) ? "shock" : (!s.alive ? "sorrow" : getSeatEmotion(s.id, nowMs));
       if (scAct === "gasp_react") moodNowVrm = "shock";
       else if (scAct === "celebrate") moodNowVrm = "laugh";
       else if (scAct === "welcome_bow" || scAct === "purify_cast") moodNowVrm = "happy";
       else if (scAct === "speak_gesture") moodNowVrm = "proud";
-      else if (isPointingAcc && moodNowVrm === "neutral") moodNowVrm = "angry";
+      else if ((isPointingAcc || sitStateNow === "under_fire") && moodNowVrm === "neutral") moodNowVrm = "angry";
       else if (isBeingVouchedNow && moodNowVrm === "neutral") moodNowVrm = "happy";
       const liveVowels = (isTalkingNow && typeof sound !== "undefined" && typeof sound.getVoiceVowelWeights === "function")
         ? sound.getVoiceVowelWeights(s.id, nowMs)
         : null;
-      const scTalking = isTalkingNow || scAct === "speak_gesture";
+      const scTalking = (isTalkingNow && !isPreppingNow) || scAct === "speak_gesture";
       const isSweatingVrm = Boolean(state.match && state.match.started && s.alive && (state.match.microPulseRevealed || s.sweatExposed) && s.microPulse >= 60);
       const spSusVal = (s.suspicionMap && state.activeSpeakerId) ? (s.suspicionMap[state.activeSpeakerId] || 50) : 50;
       const isDebateListening = Boolean(p === "DAY_SPEECH" || p === "SHERIFF_ELECTION" || p === "LAST_WORDS_SPEECH");
@@ -802,6 +810,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       );
       stage3dVrm.updateVrmAvatar(actor.vrmAvatar, {
         tSec: t,
+        nowMs: nowMs,
         dt60: dt60 * vrmStride,
         seed: s.id * 1.7,
         personaName: s.name,
@@ -809,16 +818,20 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         alive: s.alive || isSpeaking,
         sleeping: f.night && !isSelected && !isWolfNightMate,
         talking: scTalking,
+        isPrepping: isPreppingNow,
+        sitState: sitStateNow,
+        mentionBeat: isMentionPointBeat ? liveBeat : null,
+        isLastWordsEnd: isLastWordsEndNow,
         isFloorHolder: isSpeaking,
         sweating: isSweatingVrm,
-        mouthAmp: isTalkingNow ? liveAmp : (scAct === "speak_gesture" ? 0.52 : 0),
+        mouthAmp: (isTalkingNow && !isPreppingNow) ? liveAmp : (scAct === "speak_gesture" ? 0.52 : 0),
         vowels: liveVowels,
         emotion: moodNowVrm,
         headYaw: actor.headYaw,
         headPitch: actor.headPitch,
         isVoting: isVotingNow,
         isPointingAccuse: isPointingAcc,
-        isAccusing: isBeingAccusedNow || scAct === "gasp_react",
+        isAccusing: isBeingAccusedNow || isMentionedTargetNow || scAct === "gasp_react",
         isBeingVouched: isBeingVouchedNow,
         isListeningCurious: isListeningCurious,
         isListeningAgree: isListeningAgree,

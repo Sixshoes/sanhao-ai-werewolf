@@ -303,30 +303,28 @@ async def synthesize_edge_mp3(text, voice_name, rate_str, pitch_str, out_path):
 
 
 def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=12):
-    """Call Gemini 3.8 Flash TTS Interactions API with speech_metadata & inline vocal tags; return WAV bytes."""
+    """Call official Gemini 2.5 Flash Preview TTS generateContent API; return WAV/PCM audio bytes."""
     import base64
     v_name = voice_name if voice_name in ALLOWED_GEMINI_VOICES else "Kore"
-    content_item = {"type": "text", "text": text}
-    if style_prompt:
-        content_item["annotations"] = [{
-            "type": "speech_metadata",
-            "style": str(style_prompt)[:320],
-        }]
+    prompt_line = f"{style_prompt}：\n{text}" if style_prompt else str(text)
     payload = {
-        "model": "gemini-3.8-flash-tts",
-        "store": False,
-        "input": [{
-            "type": "user_input",
-            "content": [content_item],
+        "contents": [{
+            "parts": [{"text": prompt_line}]
         }],
-        "response_format": {"type": "audio"},
-        "generation_config": {
-            "speech_config": [{"voice": v_name}],
-        },
+        "generationConfig": {
+            "responseModalities": ["AUDIO"],
+            "speechConfig": {
+                "voiceConfig": {
+                    "prebuiltVoiceConfig": {
+                        "voiceName": v_name
+                    }
+                }
+            }
+        }
     }
     body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
-        "https://generativelanguage.googleapis.com/v1beta/interactions",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
         data=body_bytes,
         headers={
             "Content-Type": "application/json; charset=utf-8",
@@ -336,12 +334,14 @@ def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=12):
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read().decode("utf-8"))
-    for step in reversed(data.get("steps") or []):
-        if step.get("type") != "model_output":
-            continue
-        for block in reversed(step.get("content") or []):
-            if block.get("type") == "audio" and block.get("data"):
-                return base64.b64decode(block["data"]), str(block.get("mime_type") or "audio/wav")
+    for cand in (data.get("candidates") or []):
+        parts = ((cand.get("content") or {}).get("parts") or [])
+        for part in parts:
+            inline = part.get("inlineData") or part.get("inline_data") or {}
+            if inline.get("data"):
+                raw_bytes = base64.b64decode(inline["data"])
+                mime = str(inline.get("mimeType") or inline.get("mime_type") or "audio/L16;rate=24000")
+                return raw_bytes, mime
     return None, ""
 
 

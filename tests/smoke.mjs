@@ -3540,8 +3540,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   if (geminiSrc.includes("?key=") || voiceSrc.includes("?key=")) {
     throw new Error("Gemini API key must be passed via x-goog-api-key header, not URL query string");
   }
-  if (!voiceSrc.includes("gemini-3.8-flash-tts")) {
-    throw new Error("Voice TTS endpoint should target gemini-3.8-flash-tts");
+  if (!voiceSrc.includes("gemini-2.5-flash-preview-tts")) {
+    throw new Error("Voice TTS endpoint should target gemini-2.5-flash-preview-tts");
   }
   const staticManifestOk = vm.runInContext(`(() => {
     const m = stage3d.getDefaultStaticAvatarManifest();
@@ -6482,7 +6482,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       el("showcaseProfileCard").innerHTML.includes("好人癖好");
     const showcaseCardOk = Boolean(cardHiddenHero && cardShownMobai);
     const diag17 = collectFeedbackDiagnostics();
-    const version17Ok = Boolean(diag17 && diag17.version === "v17.0 (公測 3.2)");
+    const version17Ok = Boolean(diag17 && diag17.version === "v18.0 (公測 3.3)");
 
     // 6. Standard Day-1 Werewolf Order: Sheriff Election FIRST, THEN Night-1 Death Reveal (+ Dead-Sheriff Transfer + Election Explode Settlement)
     el("selectModeCount").value = "8";
@@ -6577,4 +6577,225 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v17.0 (Character Identity / 11 Silhouettes & Seated Rigs / 11 Habits / 3 Club Networks / 360° Profile Dossier / 4 Bugfixes) E2E smoke test PASSED!");
+// v18.0 SHERIFF 5-BUGFIX SUITE + PITCH-PRESERVED VOICE + 4-STATE MODULATION + 1.25kHz VOCAL CARVE + NARRATIVE SYNC
+{
+  const v180Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    const prevAntiStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+
+    // 1. Bug #5: getPersonaVotePersonalityDelta null safety
+    const nullDeltaOk = (getPersonaVotePersonalityDelta(null, null) === 0) &&
+      (getPersonaVotePersonalityDelta({ id: 2, name: "小澄" }, null) === 0);
+
+    // 2. Bug #1: 0 candidates / all withdrew -> badgeLost (NEVER awards Seat 1!)
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    state.match.sheriffElectionCtx.candidateIds = [];
+    state.match.sheriffElectionCtx.playerRunning = false;
+    finalizeSheriffElectionWinner(null);
+    const zeroCandLostOk = Boolean(
+      state.match.sheriffSeatId === null &&
+      state.match.sheriffVoteRecord &&
+      state.match.sheriffVoteRecord.badgeLost === true
+    );
+
+    // 3. Bug #2: ALL alive seats run for Sheriff (0 under-sheriff voters) -> badgeLost!
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    state.match.sheriffElectionCtx.candidateIds = getAliveSeats().map(function (s) { return s.id; });
+    state.match.sheriffElectionCtx.playerRunning = true;
+    finalizeSheriffElectionWinner(null);
+    const allRunLostOk = Boolean(
+      state.match.sheriffSeatId === null &&
+      state.match.sheriffVoteRecord &&
+      state.match.sheriffVoteRecord.badgeLost === true
+    );
+
+    // 4. Bug #3: Wolf self-explodes DURING Day-1 pre-dawn Sheriff Election when Night-1 wolf-killed Hunter -> Hunter STILL gets to shoot before Night 2!
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "wolf";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const wSelf18 = getPlayerSeat();
+    const hVictim18 = state.match.seats.find(function (s) { return s.role === "hunter" && s.alive; });
+    state.match.day = 1;
+    state.match.nightState = { wolfTarget: hVictim18.id, guardTarget: null, seerTarget: null, witchSaved: false, witchPoisonTarget: null };
+    resolveDawn();
+    clearStepTimer();
+    const explodeTriggeredHunter = triggerWolfSelfExplode(wSelf18.id);
+    clearStepTimer();
+    const explodeHunterCanShootOk = Boolean(
+      explodeTriggeredHunter &&
+      !hVictim18.alive &&
+      state.match.phase === "HUNTER_TRIGGER" &&
+      state.match.afterHunterNext === "AFTER_ELECTION_EXPLODE"
+    );
+    // Finish hunter turn cleanly -> enters Night 2!
+    resumeAfterHunter();
+    clearStepTimer();
+    const explodeHunterThenNight2Ok = state.match.day === 2;
+
+    // 5. Bug #4A: Voted-out Hunter who is ALSO Sheriff shoots -> STILL triggers SHERIFF_TRANSFER before Last Words!
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "hunter";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const hShP = getPlayerSeat();
+    state.match.day = 2;
+    state.match.sheriffElectionPending = false;
+    state.match.sheriffSeatId = hShP.id;
+    state.match.phase = "DAY_VOTE";
+    const shootTgt18 = getAliveSeats().find(function (s) { return s.id !== hShP.id && s.team === "good"; });
+    getAliveSeats().forEach(function (s) {
+      if (s.id !== hShP.id) { s.publicVoteIntent = hShP.id; s.suspicionMap[hShP.id] = 99; }
+    });
+    finalizeVoteRound(shootTgt18.id);
+    if (state.voteFlight && typeof state.voteFlight.finish === "function") state.voteFlight.finish();
+    const votedHunterTrigOk = state.match.phase === "HUNTER_TRIGGER";
+    state.selectedSeatId = shootTgt18.id;
+    confirmTargetAction();
+    if (typeof state.hunterResolveCommit === "function") state.hunterResolveCommit();
+    const votedHunterSheriffTransferOk = Boolean(votedHunterTrigOk && state.match.phase === "SHERIFF_TRANSFER");
+
+    // 6. Bug #4B: Sheriff Election Tie -> PK Round -> 2nd Tie = Badge Lost!
+    el("selectModeCount").value = "6";
+    el("selectPreferredRole").value = "villager";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pidTie = getPlayerId();
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    const aiAliveTie = getAliveSeats().filter(function (s) { return s.id !== pidTie; });
+    const candA = aiAliveTie[0];
+    const candB = aiAliveTie[1];
+    // Set exactly 2 candidates & 2 under-voters (player + 1 AI who prefers candB via suspicion) -> exact 1-1 tie!
+    aiAliveTie.slice(3).forEach(function (s) { s.alive = false; });
+    const soleAiVoter = aiAliveTie[2];
+    soleAiVoter.suspicionMap[candA.id] = 95;
+    soleAiVoter.suspicionMap[candB.id] = 5;
+    state.match.sheriffElectionCtx.candidateIds = [candA.id, candB.id];
+    state.match.sheriffElectionCtx.playerRunning = false;
+    state.match.sheriffElectionCtx.stage = "vote";
+    const tie1Res = finalizeSheriffElectionWinner(candA.id);
+    const firstTieEntersPkOk = Boolean(
+      tie1Res === null &&
+      state.match.phase === "SHERIFF_ELECTION" &&
+      state.match.sheriffElectionCtx &&
+      state.match.sheriffElectionCtx.isPkRound === true
+    );
+    // Second tie on PK round -> Badge Lost!
+    finalizeSheriffElectionWinner(candA.id);
+    const secondTieLostBadgeOk = Boolean(
+      state.match.sheriffSeatId === null &&
+      state.match.sheriffVoteRecord &&
+      state.match.sheriffVoteRecord.badgeLost === true
+    );
+
+    // 7. Voice 4-State Situational Modulation + 48-char buffered clause split + Punctuation-closed Mandarin Lip-Sync
+    const longBufText = "各位好夥伴先冷靜一下，我剛才把第一輪到現在所有人的發言跟警下票型全部對照過一輪，覺得三號邏輯最可疑。";
+    const split48 = voice.splitMandarinClauses(longBufText, { maxLen: 48 });
+    const split48Ok = split48.length <= 2 && split48.every(function (c) { return c.length <= 52; });
+    const sitStd = voice.resolveSituationalVoiceState({ id: 2, role: "villager", microPulse: 35 }, "normal");
+    const sitFire = voice.resolveSituationalVoiceState({ id: 2, role: "villager", microPulse: 40 }, "panic");
+    const sitWolf = voice.resolveSituationalVoiceState({ id: 3, role: "wolf", microPulse: 78 }, "accuse");
+    const sitLw = voice.resolveSituationalVoiceState({ id: 4, role: "seer", microPulse: 20 }, "last_words");
+    const sitStatesOk = Boolean(
+      sitStd.key === "standard" && sitStd.commaPauseMs === 110 &&
+      sitFire.key === "under_fire" && sitFire.rateMul === 1.10 && sitFire.commaPauseMs === 45 &&
+      sitWolf.key === "wolf_nervous" && sitWolf.hesitateBeforeAccuseMs === 240 &&
+      sitLw.key === "last_words" && sitLw.rateMul === 0.88 && sitLw.tailFadeSec >= 0.4
+    );
+    const vComma = sound.computeMandarinCharVowels("，", 100);
+    const vPeriod = sound.computeMandarinCharVowels("。", 100);
+    const vOpen = sound.computeMandarinCharVowels("好", 100);
+    const syllableLipSyncOk = Boolean(vComma.amp === 0 && vPeriod.amp === 0 && vOpen.amp > 0.5 && vOpen.a > 0.5);
+
+    // 8. 1.25kHz Vocal-Carve Mixing + Casualty-Driven BPM Scaling + Dynamic 420ms/950ms Narrative Hold + Anti-Spoiler Timeline
+    let lastCarveDb = null;
+    let lastBgmGainVal = null;
+    const prevBgmG = sound.bgmGain;
+    const prevSfxG = sound.sfxGain;
+    const prevCarve = sound.bgmVocalCarve;
+    const prevDuck = sound.voiceDucking;
+    const prevBrief = sound._briefDuckActive;
+    sound._briefDuckActive = false;
+    sound.bgmGain = { gain: { setTargetAtTime: function (v) { lastBgmGainVal = v; } } };
+    sound.sfxGain = { gain: { setTargetAtTime: function () {} } };
+    sound.bgmVocalCarve = { type: "peaking", frequency: { value: 1250 }, Q: { value: 0.85 }, gain: { setTargetAtTime: function (v) { lastCarveDb = v; } } };
+    sound.voiceDucking = true;
+    sound.muted = false;
+    sound.bgmVol = 0.6;
+    sound.applyVolumes();
+    const carveDuckOk = lastCarveDb === -9.0 && Math.abs(lastBgmGainVal - (0.6 * 0.52 * 0.58)) < 0.002;
+    sound.voiceDucking = false;
+    sound.applyVolumes();
+    const carveRestoreOk = lastCarveDb === 0.0;
+    sound._briefDuckActive = prevBrief;
+    sound.bgmGain = prevBgmG;
+    sound.sfxGain = prevSfxG;
+    sound.bgmVocalCarve = prevCarve;
+    sound.voiceDucking = prevDuck;
+    const carveNodeOk = Boolean(carveDuckOk && carveRestoreOk);
+    el("selectModeCount").value = "8";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.phase = "DAY_SPEECH";
+    const bpmAlive8 = sound.getEffectiveBpm("day");
+    state.match.seats[1].alive = false;
+    state.match.seats[2].alive = false;
+    const bpmDead2 = sound.getEffectiveBpm("day");
+    const bpmEscalateOk = (bpmDead2 - bpmAlive8) === 8;
+
+    const holdBrief = computeNarrativeHoldMs({ claimRole: null, accuseId: null }, "我目前還沒太多線索，先聽後置位發言。", "normal");
+    const holdBomb = computeNarrativeHoldMs({ claimRole: "seer", checkedWolfId: 4 }, "我是明心觀察員，昨晚查殺4號酸民狼！", "claim_seer");
+    const narrativeHoldOk = Boolean(holdBrief.ms === 420 && !holdBrief.isBombshell && holdBomb.ms === 950 && holdBomb.isBombshell);
+
+    state.match.logs = [{ kind: "speech", speakerId: 2, pendingReveal: true, title: "02號 · 小澄", subBadge: "", text: "秘密推理台詞全文" }];
+    state.activeSpeakerId = 2;
+    const prevSpk = voice.speaking;
+    voice.speaking = true;
+    renderTimeline();
+    const maskedHtml = (el("chatTimeline")._children || []).map(function (c) { return c.innerHTML || c.textContent || ""; }).join(" ");
+    commitPendingSpeechLog(2);
+    const unmaskedHtml = (el("chatTimeline")._children || []).map(function (c) { return c.innerHTML || c.textContent || ""; }).join(" ");
+    voice.speaking = prevSpk;
+    const antiSpoilerTimelineOk = Boolean(
+      maskedHtml.includes("正在發言中") &&
+      !maskedHtml.includes("秘密推理台詞全文") &&
+      unmaskedHtml.includes("秘密推理台詞全文")
+    );
+
+    antiCheatMonitor.strictThrow = prevAntiStrict;
+    resetMatchToLobby();
+
+    return {
+      nullDeltaOk, zeroCandLostOk, allRunLostOk, explodeHunterCanShootOk, explodeHunterThenNight2Ok,
+      votedHunterSheriffTransferOk, firstTieEntersPkOk, secondTieLostBadgeOk,
+      split48Ok, sitStatesOk, syllableLipSyncOk, carveNodeOk, bpmEscalateOk, narrativeHoldOk, antiSpoilerTimelineOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v180Res)) {
+    if (!v) {
+      throw new Error("v18.0 Sheriff Bugfix / Audio-Narrative Sync check failed for " + k + ": " + JSON.stringify(v180Res));
+    }
+  }
+  const voiceSrcV18 = fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8");
+  const serverSrcV18 = fs.readFileSync(path.join(ROOT, "server.py"), "utf8");
+  if (!voiceSrcV18.includes("preservesPitch = true") || !serverSrcV18.includes("gemini-2.5-flash-preview-tts")) {
+    throw new Error("v18.0 Pitch-preserving preservesPitch or server.py gemini-2.5-flash-preview-tts alignment missing!");
+  }
+}
+
+console.log("[OK] Full v18.0 (5 Sheriff Bugfixes / Pitch-Preserved Speed / 220ms Prep Beat / 4-State Vocal Sync / 1.25kHz Vocal Carve / Narrative Hold) E2E smoke test PASSED!");

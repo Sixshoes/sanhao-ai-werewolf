@@ -2094,8 +2094,41 @@ function startSheriffElection(onDone) {
   const pSeat = getPlayerSeat();
   const ffSpec = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   if (ffSpec || !pSeat || !pSeat.alive || cands.length === 0) {
+    // v18.0 標準規則：無人上警（cands.length === 0）時直接流失警徽，絕不誤發給 1 號！
+    if (cands.length === 0) {
+      m.sheriffSeatId = null;
+      m.sheriffBadgeFlow = null;
+      m.sheriffBadgeFlowsBySeat = {};
+      m.sheriffVoteRecord = {
+        day: m.day || 1,
+        kind: "sheriff",
+        candidateIds: [],
+        withdrawnIds: [],
+        seerClaimIds: [],
+        winnerId: null,
+        badgeLost: true,
+        badgeLostReason: "無人上警",
+        ballots: [],
+        tallies: {}
+      };
+      addLog({
+        kind: "dawn",
+        title: "警長競選：本局無人上警，警徽流失（本局不設警長）。",
+        text: ""
+      });
+      if (typeof onDone === "function") onDone();
+      return false;
+    }
     const existingSh = m.sheriffSeatId ? getSeat(m.sheriffSeatId) : null;
-    let fallbackWinner = (existingSh && existingSh.alive) ? existingSh : (cands[0] || getAliveSeats()[0] || null);
+    let fallbackWinner = (existingSh && existingSh.alive && cands.some(function (c) { return c.id === existingSh.id; }))
+      ? existingSh
+      : cands[0];
+    const autoUnderVoters = getAliveSeats().filter(function (s) {
+      return !cands.some(function (c) { return c.id === s.id; });
+    });
+    if (cands.length >= 2 && autoUnderVoters.length === 0) {
+      fallbackWinner = null;
+    }
     if (cands.length >= 1) {
       const autoSpeeches = [];
       cands.forEach(function (c) {
@@ -2110,17 +2143,18 @@ function startSheriffElection(onDone) {
       const counts = {};
       const ballots = [];
       candIds.forEach(function (id) { counts[id] = 0; });
-      if (cands.length >= 2) {
-        getAliveSeats().forEach(function (s) {
-          if (candIds.indexOf(s.id) !== -1) return;
+      if (cands.length >= 2 && autoUnderVoters.length > 0) {
+        autoUnderVoters.forEach(function (s) {
           const pickId = chooseAiSheriffElectionVote(s, candIds, autoSpeeches, true);
           if (pickId) {
             counts[pickId] = (counts[pickId] || 0) + 1;
             ballots.push({ voterId: s.id, targetId: pickId, weight: 1 });
           }
         });
-        fallbackWinner = cands.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); })[0] || fallbackWinner;
-      } else {
+        const maxAutoV = cands.reduce(function (mx, c) { return Math.max(mx, counts[c.id] || 0); }, 0);
+        const topAuto = cands.filter(function (c) { return (counts[c.id] || 0) === maxAutoV; });
+        fallbackWinner = (maxAutoV > 0 && topAuto.length === 1) ? topAuto[0] : (maxAutoV > 0 ? topAuto[0] : null);
+      } else if (cands.length === 1) {
         fallbackWinner = cands[0];
         counts[cands[0].id] = 1;
       }
@@ -2132,6 +2166,7 @@ function startSheriffElection(onDone) {
         withdrawnIds: [],
         seerClaimIds: seerIdsAuto,
         winnerId: fallbackWinner ? fallbackWinner.id : null,
+        badgeLost: !fallbackWinner,
         ballots: ballots,
         tallies: Object.assign({}, counts)
       };
@@ -2152,11 +2187,18 @@ function startSheriffElection(onDone) {
         : "";
       addLog({
         kind: "blessing",
-        title: "👑 警長誕生：" + fmtSeatNum(fallbackWinner.id) + "號 " + (fallbackWinner.id === pidAuto ? "你" : fallbackWinner.name) + " 當選本局警長（1.5票＆末置位歸票權" + autoFlowStr + "）！",
+        title: "警長誕生：" + fmtSeatNum(fallbackWinner.id) + "號 " + (fallbackWinner.id === pidAuto ? "你" : fallbackWinner.name) + " 當選本局警長（1.5票＆末置位歸票權" + autoFlowStr + "）！",
         text: ""
       });
     } else {
       m.sheriffSeatId = null;
+      m.sheriffBadgeFlow = null;
+      m.sheriffBadgeFlowsBySeat = {};
+      addLog({
+        kind: "dawn",
+        title: "警長競選：警下無合格投票人或全員棄票，本局警徽流失！",
+        text: ""
+      });
     }
     if (typeof onDone === "function") onDone();
     return false;
@@ -2539,13 +2581,14 @@ function chooseAiSheriffElectionVote(voter, candidateIds, speeches, isAutoPass) 
   return chosenId;
 }
 
-function finalizeSheriffElectionWinner(chosenCandId) {
+function finalizeSheriffElectionWinner(chosenCandId, opts) {
   clearStepTimer();
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   state.activeSpeakerId = null;
   const m = state.match;
   const ctx = m ? m.sheriffElectionCtx : null;
   if (!m || !ctx) return null;
+  const finOpts = opts || {};
   ctx.activeReelSeatId = null;
   const pid = getPlayerId();
   const cands = ctx.candidateIds.map(getSeat).filter(function (s) { return s && s.alive; });
@@ -2561,7 +2604,7 @@ function finalizeSheriffElectionWinner(chosenCandId) {
         const pLine = {
           id: pid,
           name: "你",
-          tag: "👑 強勢上警",
+          tag: "強勢上警",
           tone: "player",
           rivalId: null,
           text: "「我上警爭取警徽，末置位帶大家理性歸票！」"
@@ -2585,6 +2628,7 @@ function finalizeSheriffElectionWinner(chosenCandId) {
 
   const standSpeeches = ctx.spokenSpeeches.length ? ctx.spokenSpeeches : ctx.speeches;
   let winner = null;
+  let badgeLostReason = "";
   const counts = {};
   const voteRecords = {};
   const ballots = [];
@@ -2593,23 +2637,23 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     voteRecords[c.id] = [];
   });
 
-  const isPlayerUnderVoter = Boolean(getPlayerSeat() && getPlayerSeat().alive && !ctx.playerRunning && ctx.candidateIds.indexOf(pid) === -1);
+  const candIdSet = {};
+  cands.forEach(function (c) { candIdSet[c.id] = true; });
+  const eligibleUnderVoters = getAliveSeats().filter(function (s) { return !candIdSet[s.id]; });
+  const isPlayerUnderVoter = Boolean(getPlayerSeat() && getPlayerSeat().alive && !ctx.playerRunning && !candIdSet[pid]);
   const playerVotedCand = (chosenCandId && chosenCandId !== pid && isPlayerUnderVoter && cands.some(function (c) { return c.id === chosenCandId; }))
     ? chosenCandId
     : null;
-  const tiePreferId = (chosenCandId && cands.some(function (c) { return c.id === chosenCandId; })) ? chosenCandId : null;
   const sortByTally = function (a, b) {
     const diff = (counts[b.id] || 0) - (counts[a.id] || 0);
     if (diff !== 0) return diff;
-    if (tiePreferId) {
-      if (a.id === tiePreferId) return -1;
-      if (b.id === tiePreferId) return 1;
-    }
     return a.id - b.id;
   };
 
+  // v18.0 標準警長規則：無人上警／全員退水 → 警徽流失；全體上警（警下無合格投票人）→ 警徽流失；警上平票 → 進入 PK 重投，二次平票流失警徽！
   if (cands.length === 0) {
-    winner = getAliveSeats()[0] || null;
+    winner = null;
+    badgeLostReason = "無人留於警上（無人上警或全員退水）";
   } else if (cands.length === 1) {
     winner = cands[0];
     if (playerVotedCand) {
@@ -2617,6 +2661,9 @@ function finalizeSheriffElectionWinner(chosenCandId) {
       ballots.push({ voterId: pid, targetId: playerVotedCand, weight: 1 });
       voteRecords[playerVotedCand].push(playerNumTag() + "你");
     }
+  } else if (eligibleUnderVoters.length === 0) {
+    winner = null;
+    badgeLostReason = "全體上警（警下無合格投票人）";
   } else {
     if (playerVotedCand) {
       counts[playerVotedCand] = (counts[playerVotedCand] || 0) + 1;
@@ -2627,8 +2674,8 @@ function finalizeSheriffElectionWinner(chosenCandId) {
       ballots.push({ voterId: pid, targetId: null, weight: 0 });
     }
     const aiUsePlayerBonus = Boolean(!ctx.playerRunning && !playerVotedCand);
-    getAliveSeats().forEach(function (s) {
-      if (s.id === pid || ctx.candidateIds.indexOf(s.id) !== -1) return;
+    eligibleUnderVoters.forEach(function (s) {
+      if (s.id === pid) return;
       const pickId = chooseAiSheriffElectionVote(s, ctx.candidateIds, standSpeeches, aiUsePlayerBonus);
       if (pickId) {
         counts[pickId] = (counts[pickId] || 0) + 1;
@@ -2639,7 +2686,43 @@ function finalizeSheriffElectionWinner(chosenCandId) {
         ballots.push({ voterId: s.id, targetId: null, weight: 0 });
       }
     });
-    winner = cands.slice().sort(sortByTally)[0];
+    const sortedNow = cands.slice().sort(sortByTally);
+    const topVotes = sortedNow.length ? (counts[sortedNow[0].id] || 0) : 0;
+    const tiedTop = sortedNow.filter(function (c) { return (counts[c.id] || 0) === topVotes; });
+
+    if (topVotes <= 0) {
+      winner = null;
+      badgeLostReason = "警下全員棄票";
+    } else if (tiedTop.length >= 2) {
+      if (!ctx.isPkRound && !finOpts.forceTieBreak) {
+        // 首次平票：進入警上平票 PK 決選（僅保留平票候選人，其餘回警下／非平票者皆可參與決選）
+        ctx.isPkRound = true;
+        ctx.candidateIds = tiedTop.map(function (c) { return c.id; });
+        ctx.playerRunning = ctx.candidateIds.indexOf(pid) !== -1;
+        ctx.stage = "vote";
+        const tiedNamesStr = tiedTop.map(function (c) { return fmtSeatNum(c.id) + "號" + (c.id === pid ? "你" : c.name); }).join("、");
+        const pkMsg = "警長競選平票（" + tiedNamesStr + " 各得 " + topVotes + " 票）！進入警上平票 PK 決選，若再次平票將流失警徽。";
+        ctx.dramaEvents = [pkMsg].concat((ctx.dramaEvents || []).slice(0, 2));
+        addLog({ kind: "system", title: "警長平票 PK：" + pkMsg, text: "" });
+        if (typeof triggerCutIn === "function") {
+          triggerCutIn("警長平票・進入 PK 決選", tiedNamesStr + " 各得 " + topVotes + " 票，請再次投票（再平則警徽流失）", "gold", 1900);
+        }
+        if (typeof showToast === "function") {
+          showToast("警長競選平票！進入平票 PK 重投。", "amber");
+        }
+        if (!finOpts.isQuickPass) {
+          updateAllUI();
+          return null;
+        }
+        // 快速開票模式自動執行第 2 輪 PK 投票（若仍平票則正式流失警徽）
+        return finalizeSheriffElectionWinner(chosenCandId, { isQuickPass: true });
+      }
+      // 二次平票：本局警徽正式流失！
+      winner = null;
+      badgeLostReason = "警上 PK 再次平票";
+    } else {
+      winner = sortedNow[0];
+    }
   }
 
   const seerClaimIds = standSpeeches
@@ -2653,6 +2736,8 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     withdrawnIds: Array.isArray(ctx.withdrawnIds) ? ctx.withdrawnIds.slice() : [],
     seerClaimIds: seerClaimIds,
     winnerId: winner ? winner.id : null,
+    badgeLost: !winner,
+    badgeLostReason: badgeLostReason || "",
     ballots: ballots,
     tallies: Object.assign({}, counts)
   };
@@ -2735,9 +2820,23 @@ function finalizeSheriffElectionWinner(chosenCandId) {
     );
     addLog({
       kind: "blessing",
-      title: "👑 競選開票：" + wLbl + (isCloseCall ? " 驚險當選本局警長！" : " 高票當選本局警長！") + activeFlowNote,
+      title: "競選開票：" + wLbl + (isCloseCall ? " 驚險當選本局警長！" : " 高票當選本局警長！") + activeFlowNote,
       text: tallySummary ? ("【警下票型・已納入排坑】" + tallySummary) : ""
     });
+  } else {
+    m.sheriffSeatId = null;
+    m.sheriffBadgeFlow = null;
+    m.sheriffBadgeFlowsBySeat = {};
+    const lostTxt = badgeLostReason || "未產生警長";
+    triggerCutIn("本局警徽流失", lostTxt + "，本局不設警長", "amber", 1900);
+    addLog({
+      kind: "dawn",
+      title: "警長競選：" + lostTxt + "，本局警徽流失（不設警長）！",
+      text: tallySummary ? ("【警下票型】" + tallySummary) : ""
+    });
+    if (typeof showToast === "function") {
+      showToast("本局警徽流失：" + lostTxt, "amber");
+    }
   }
   if (typeof doneCb === "function") doneCb();
   else updateAllUI();
@@ -2882,7 +2981,7 @@ function resolveSheriffElectionAction(actionOrVoteId) {
 
   if (actionOrVoteId === "pass") {
     ctx.activeReelSeatId = null;
-    finalizeSheriffElectionWinner(ctx.playerRunning ? pid : null);
+    finalizeSheriffElectionWinner(ctx.playerRunning ? pid : null, { isQuickPass: true });
     return true;
   }
 

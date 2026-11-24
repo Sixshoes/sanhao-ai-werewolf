@@ -81,6 +81,39 @@ function renderSpeakerTurnStrip() {
   populateTurnStrip(el("playerTurnOrderStrip"), selectSeat);
 }
 
+function computeNarrativeHoldMs(speechEv, rawText, voiceMood) {
+  const txt = String(rawText || "").trim();
+  const isBombshell = Boolean(
+    voiceMood === "claim_seer" ||
+    voiceMood === "rebut" ||
+    voiceMood === "panic" ||
+    (speechEv && (speechEv.claimRole || speechEv.checkedWolfId || speechEv.contradiction || speechEv.isInterject)) ||
+    /查殺|對跳|我是明心|我是觀察員|我是奉茶|我是守衛|我是糾察/.test(txt)
+  );
+  if (isBombshell) return { ms: 950, isBombshell: true };
+  const isBriefPass = Boolean(
+    txt.length <= 28 &&
+    (!speechEv || (!speechEv.claimRole && !speechEv.accuseId && !speechEv.contradiction))
+  );
+  if (isBriefPass) return { ms: 420, isBombshell: false };
+  return { ms: 720, isBombshell: false };
+}
+
+function commitPendingSpeechLog(speakerId) {
+  if (typeof state === "undefined" || !state.match || !Array.isArray(state.match.logs)) return false;
+  let changed = false;
+  state.match.logs.forEach(function (item) {
+    if (item && item.pendingReveal && (!speakerId || item.speakerId === speakerId)) {
+      item.pendingReveal = false;
+      changed = true;
+    }
+  });
+  if (changed && typeof renderTimeline === "function") {
+    renderTimeline();
+  }
+  return changed;
+}
+
 function maybeScheduleAutoAdvanceAfterSpeech() {
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   if (!state.autoPlay && !ff) return;
@@ -97,7 +130,12 @@ function maybeScheduleAutoAdvanceAfterSpeech() {
   if (pNow !== "DAY_SPEECH" && pNow !== "LAST_WORDS_SPEECH" && !isSheriffSpeechAuto) return;
   if (state.speakingInFlight || state.typewriter.active || voice.speaking) return;
   if (state.stepTimer) clearTimeout(state.stepTimer);
-  const pauseMs = ff ? 260 : (voice.canSpeak() ? 950 : (state.typewriter.holdMs || 2400));
+  const pauseMs = ff
+    ? 260
+    : (voice.canSpeak() ? (state.typewriter.narrativeHoldMs || 720) : (state.typewriter.holdMs || 2400));
+  if (!ff && state.typewriter.isBombshellHold && typeof sound !== "undefined" && typeof sound.playSeatFoley === "function") {
+    sound.playSeatFoley("cup_set", state.typewriter.speakerId || 0);
+  }
   state.stepTimer = setTimeout(function () {
     if (voice && voice.paused) return;
     if (state.match.phase === "LAST_WORDS_SPEECH") advanceLastWordsQueue();
@@ -526,6 +564,7 @@ function completeCurrentTypewriter(scheduleHold) {
   }
   state.typewriter.active = false;
   const sp = getSeat(state.typewriter.speakerId);
+  commitPendingSpeechLog(sp ? sp.id : null);
   const pEl = el("spotlightText");
   if (pEl) {
     pEl.classList.remove("typing-cursor");
@@ -595,6 +634,17 @@ function startSpotlightTypewriter(opts) {
     state.stepTimer = null;
   }
   const speaker = opts.speaker || null;
+  // Reveal any prior speaker's deferred timeline entry when advancing to a new speaker
+  if (state.match && Array.isArray(state.match.logs)) {
+    let revealedPrior = false;
+    state.match.logs.forEach(function (it) {
+      if (it && it.pendingReveal && (!speaker || it.speakerId !== speaker.id)) {
+        it.pendingReveal = false;
+        revealedPrior = true;
+      }
+    });
+    if (revealedPrior && typeof renderTimeline === "function") renderTimeline();
+  }
   const cleanText = String(opts.rawText || "").replace(/^「|」$/g, "").trim();
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   const useRealVoice = ff ? false : voice.canSpeak();
@@ -607,7 +657,10 @@ function startSpotlightTypewriter(opts) {
   state.activeSpeechAnimUntil = (speaker && cleanText.length > 0)
     ? (performance.now() + clamp(cleanText.length * 68, 2400, 6400))
     : 0;
+  const narHold = computeNarrativeHoldMs(opts.speechEv || null, cleanText, opts.voiceMood || "normal");
   state.typewriter.holdMs = ff ? 280 : (opts.holdMs || 2450);
+  state.typewriter.narrativeHoldMs = narHold.ms;
+  state.typewriter.isBombshellHold = narHold.isBombshell;
   state.typewriter.onDone = null;
 
   if (typeof renderSpeakerStanceStrip === "function") {
@@ -636,12 +689,14 @@ function startSpotlightTypewriter(opts) {
   if (useRealVoice) {
     voice.speakCharacter(speaker, cleanText, opts.voiceMood || "normal", function () {
       const curSp = getSeat(state.typewriter.speakerId);
+      commitPendingSpeechLog(curSp ? curSp.id : null);
       const bTxt = el("spotlightSpeakerBadge") ? el("spotlightSpeakerBadge").textContent : "";
       const tTxt = el("spotlightTraitTag") ? el("spotlightTraitTag").textContent : "";
       syncSpeakerBannerVisuals(curSp, bTxt, tTxt, false);
       maybeScheduleAutoAdvanceAfterSpeech();
     });
   } else {
+    commitPendingSpeechLog(speaker ? speaker.id : null);
     maybeScheduleAutoAdvanceAfterSpeech();
   }
 }

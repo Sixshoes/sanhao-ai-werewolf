@@ -1504,15 +1504,19 @@ const stage3dVrm = {
       }
     }
 
-    // 1. Multi-Vowel Lip-Sync (a/i/u/e/o) + 12 Full Facial Expressions + Organic Asynchronous Blinking & Double-Blink
-    const blinkPeriod = 3.25 + ((Math.abs(Math.sin(seed * 4.71 + 0.3)) * 2.15));
+    // 1. Multi-Vowel Lip-Sync (a/i/u/e/o) + 12 Full Facial Expressions + Organic Asynchronous Blinking & Situational Modulation
+    const sitState = o.sitState || "standard";
+    const isUnderFire = sitState === "under_fire";
+    const isLastWordsMode = sitState === "last_words";
+    const blinkBasePeriod = 3.25 + ((Math.abs(Math.sin(seed * 4.71 + 0.3)) * 2.15));
+    const blinkPeriod = isUnderFire ? (blinkBasePeriod * 0.62) : blinkBasePeriod;
     const blinkPhase = (t + seed * 1.37) % blinkPeriod;
     const isPrimaryBlink = blinkPhase > (blinkPeriod - 0.14);
     const hasDoubleBlink = Math.sin(Math.floor((t + seed * 1.37) / blinkPeriod) * 3.1 + seed) > 0.62;
     const isSecondBlink = hasDoubleBlink && blinkPhase > 0.14 && blinkPhase < 0.26;
-    const isBlinking = !sleeping && emotion !== "shock" && emotion !== "nervous" && (isPrimaryBlink || isSecondBlink);
-    const isPlayfulWink = !sleeping && (emotion === "happy" || emotion === "laugh") && ((t + seed * 1.9) % 5.2 > 4.92);
-    const targetBlink = sleeping ? 1.0 : (isBlinking ? 1.0 : 0.0);
+    const isBlinking = !sleeping && !o.isLastWordsEnd && emotion !== "shock" && emotion !== "nervous" && (isPrimaryBlink || isSecondBlink);
+    const isPlayfulWink = !sleeping && !isLastWordsMode && (emotion === "happy" || emotion === "laugh") && ((t + seed * 1.9) % 5.2 > 4.92);
+    const targetBlink = (sleeping || o.isLastWordsEnd) ? 1.0 : (isBlinking ? 1.0 : 0.0);
     const targetWinkL = isPlayfulWink ? 0.88 : 0.0;
 
     let tA = 0, tI = 0, tU = 0, tE = 0, tO = 0;
@@ -1545,8 +1549,8 @@ const stage3dVrm = {
     const targetFun = (emotion === "laugh" || emotion === "proud" || o.act === "celebrate" || o.speechAct === "claim_role")
       ? 0.52
       : (emotion === "happy" ? 0.32 : (isNeutralIdle ? (arch.idleFun || 0.0) : 0.0));
-    const targetAngry = (emotion === "angry" || emotion === "suspect" || o.isPointingAccuse) ? 0.78 : 0.0;
-    const targetSorrow = o.alive === false ? 0.55 : ((emotion === "sorrow" || emotion === "sad") ? 0.72 : (emotion === "nervous" ? 0.25 : 0.0));
+    const targetAngry = (emotion === "angry" || emotion === "suspect" || o.isPointingAccuse) ? 0.78 : (isUnderFire ? 0.48 : 0.0);
+    const targetSorrow = (o.alive === false || o.isLastWordsEnd) ? 0.55 : ((emotion === "sorrow" || emotion === "sad" || isLastWordsMode) ? 0.62 : (emotion === "nervous" ? 0.25 : 0.0));
     const targetSurprised = (emotion === "shock" || emotion === "nervous" || o.act === "gasp_react") ? 0.80 : 0.0;
 
     const d45 = typeof dampFactor3D === "function" ? dampFactor3D(0.45, dt60) : 0.45;
@@ -1604,10 +1608,12 @@ const stage3dVrm = {
     const stretchYaw = (iname === "stretch_roll" && iw > 0.01)
       ? Math.sin(idleAct.phase * Math.PI * 2.0) * 0.28 * iw
       : 0;
-    const yawNow = clamp((o.headYaw || 0) + lookAroundYaw + stretchYaw, -0.88, 0.88);
+    const lwSweepYaw = (isLastWordsMode && talking && !o.isLastWordsEnd) ? Math.sin(t * 0.75 + seed) * 0.34 : 0;
+    const lwBowPitch = o.isLastWordsEnd ? 0.24 : 0;
+    const yawNow = clamp((o.headYaw || 0) + lookAroundYaw + stretchYaw + lwSweepYaw, -0.88, 0.88);
     const sipPitch = (iname === "sip_tea" && iw > 0.01) ? (-0.09 * iw) : 0;
     const glassesPitch = (iname === "glasses_adjust" && iw > 0.01) ? (-0.06 * iw) : 0;
-    const pitchNow = clamp((o.headPitch || 0) + sipPitch + glassesPitch, -0.44, 0.50);
+    const pitchNow = clamp((o.headPitch || 0) + sipPitch + glassesPitch + lwBowPitch, -0.44, 0.54);
 
     const listenNod = (!sleeping && !isActiveSpeaker && o.isListeningAgree)
       ? Math.max(0, Math.sin(t * 3.1 + seed)) * 0.115
@@ -1654,11 +1660,13 @@ const stage3dVrm = {
     const starLookPitch = (!sleeping && !isActiveSpeaker && (iname === "star_gaze" || (arch.starGaze && Math.sin(t * 0.42 + seed) > 0.72)))
       ? (-0.18 * (iname === "star_gaze" ? iw : 0.65))
       : 0;
+    const prepBreathLift = o.isPrepping ? 0.045 : 0;
+    const underFireLeanAdd = isUnderFire ? 0.088 : 0; // +5° forward lean when pressed / PK / accused
     const talkTorsoLean = talking
-      ? ((gStyle === "energetic" ? 0.125 : (gStyle === "classical" ? 0.055 : 0.095)) + beatPulse * 0.045 * tEnergy)
-      : (isFloorHolder ? 0.075 : 0);
+      ? ((gStyle === "energetic" ? 0.125 : (gStyle === "classical" ? 0.055 : 0.095)) + beatPulse * 0.045 * tEnergy + underFireLeanAdd)
+      : (isFloorHolder ? (0.075 + underFireLeanAdd * 0.6) : 0);
     const baseLean = o.isPointingAccuse
-      ? 0.145
+      ? (0.145 + underFireLeanAdd * 0.4)
       : (o.isAccusing
         ? -0.115
         : (o.act === "welcome_bow"
@@ -1668,7 +1676,7 @@ const stage3dVrm = {
             : (isActiveSpeaker
               ? talkTorsoLean
               : (sleeping ? 0.065 : (arch.spineLean + idleLeanDelta + (o.isListeningAgree ? 0.045 : 0)))))));
-    const breathWave = Math.sin(t * arch.breathFreq + seed) * arch.breathAmp;
+    const breathWave = Math.sin(t * arch.breathFreq + seed) * arch.breathAmp + prepBreathLift;
     const talkTorsoYaw = talking ? Math.sin(t * 1.9 + seed) * 0.11 * tEnergy : 0;
     const weightShiftRoll = sleeping
       ? 0
@@ -1728,16 +1736,21 @@ const stage3dVrm = {
         "YXZ"
       );
     }
-    // Expressive Eye-Bone Micro-Saccades (小雲 fastest scanning saccades; nervous wolves show quick sideways dart!)
+    // Expressive Eye-Bone Micro-Saccades (小雲 fastest scanning saccades; nervous wolves execute 180ms side-downward eye dart on accusation beat!)
     if (bm.leftEye || bm.rightEye) {
       const sacSpd = arch.gazeSaccadeSpeed || 1.0;
-      const dartEye = (!sleeping && (sweating || emotion === "nervous"))
-        ? Math.sin(t * 7.2 + seed * 1.3) * 0.16
-        : (!sleeping ? Math.sin(t * 1.65 * sacSpd + seed * 2.1) * (0.065 * Math.min(1.45, sacSpd)) : 0);
-      const eyeYaw = sleeping ? 0 : clamp(yawNow * 0.32 + dartEye, -0.26, 0.26);
-      const eyePitch = sleeping ? 0.14 : clamp(pitchNow * 0.26 + starLookPitch * 0.45, -0.20, 0.16);
-      if (bm.leftEye) this.slerpBoneModelDelta(bm.leftEye, eyePitch, eyeYaw, 0, 0.38, "YXZ");
-      if (bm.rightEye) this.slerpBoneModelDelta(bm.rightEye, eyePitch, eyeYaw, 0, 0.38, "YXZ");
+      const nowFrameMs = o.nowMs || (t * 1000);
+      const isWolfLieDart = Boolean(o.mentionBeat && o.mentionBeat.eyeDartUntil && nowFrameMs < o.mentionBeat.eyeDartUntil);
+      const dartEye = isWolfLieDart
+        ? ((seed % 2 > 1 ? 1 : -1) * 0.24)
+        : ((!sleeping && (sweating || emotion === "nervous"))
+          ? Math.sin(t * 7.2 + seed * 1.3) * 0.16
+          : (!sleeping ? Math.sin(t * 1.65 * sacSpd + seed * 2.1) * (0.065 * Math.min(1.45, sacSpd)) : 0));
+      const dartPitch = isWolfLieDart ? 0.15 : 0;
+      const eyeYaw = sleeping ? 0 : clamp(yawNow * 0.32 + dartEye, -0.30, 0.30);
+      const eyePitch = (sleeping || o.isLastWordsEnd) ? 0.16 : clamp(pitchNow * 0.26 + starLookPitch * 0.45 + dartPitch, -0.20, 0.22);
+      if (bm.leftEye) this.slerpBoneModelDelta(bm.leftEye, eyePitch, eyeYaw, 0, isWolfLieDart ? 0.65 : 0.38, "YXZ");
+      if (bm.rightEye) this.slerpBoneModelDelta(bm.rightEye, eyePitch, eyeYaw, 0, isWolfLieDart ? 0.65 : 0.38, "YXZ");
     }
 
     // Subtle Living Seated Lower-Body Micro-Rhythm (keeps thighWorld.z > 0.85; skirted avatars keep knees modestly together!)
@@ -1808,6 +1821,15 @@ const stage3dVrm = {
       shLiftR = 0.12; shFwdR = 0.06;
       rWristX = -0.14;
       rHandPose = o.act === "purify_cast" ? "tea_poise" : "open_palm";
+    } else if (o.isPrepping) {
+      // v18.0 220ms Pre-Speech Prep Beat: hand gently lifts off teacup, shoulders draw in breath before word 1!
+      rDrop = Math.max(0.54, arch.rDrop - 0.16);
+      rFwd = Math.min(0.86, arch.rFwd + 0.16);
+      rBend = Math.max(0.76, arch.rBend - 0.12);
+      rTwist = 0.22;
+      shLiftR = 0.065; shLiftL = 0.05;
+      rWristX = -0.14;
+      rHandPose = "tea_poise"; lHandPose = "relaxed";
     } else if (o.speechAct === "claim_role" && (!talking || beatIdx === 0 || beatIdx === 2)) {
       // Dramatic identity declaration on accent beats (alternates with open debate beats while speaking!)
       const oathPulse = Math.sin(t * 4.2 + seed);

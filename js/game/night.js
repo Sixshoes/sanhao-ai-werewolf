@@ -1037,7 +1037,7 @@ function settleNightCasualtiesOnElectionExplode() {
     addLog({ kind: "dawn", title: "警上自爆吞警徽・公布昨夜結果：昨晚平安夜，即刻黑燈入夜", text: "" });
   } else {
     if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation(casualties);
-    addLog({ kind: "dawn", title: "警上自爆吞警徽・公布昨夜死訊：" + names.join("、") + " 首夜倒牌離席，即刻黑燈入夜", text: "" });
+    addLog({ kind: "dawn", title: "警上自爆吞警徽・公布昨夜死訊：" + names.join("、") + " 首夜倒牌離席", text: "" });
     if (casualties.some(function (c) { return c.id === getPlayerId(); }) && typeof autoEnableSpectatorCompactPace === "function") {
       autoEnableSpectatorCompactPace();
     }
@@ -1051,7 +1051,25 @@ function settleNightCasualtiesOnElectionExplode() {
     finishMatch("wolf", wolfKnifeWinReason);
     return true;
   }
-  return checkAndHandleGameOver();
+  if (checkAndHandleGameOver()) return true;
+
+  // v18.0 標準規則：警上狼自爆雖吞警徽與遺言，但首夜遭狼刀（非清心茶毒殺）倒牌的直心糾察長仍可翻牌開槍帶人再入夜！
+  let explodeHunterSeat = null;
+  casualties.forEach(function (c) {
+    const seat = getSeat(c.id);
+    if (seat && seat.role === "hunter" && (c.cause === "wolf" || c.cause === "double_clash") && c.id !== poisonedId) {
+      explodeHunterSeat = seat;
+    }
+  });
+  if (explodeHunterSeat) {
+    const ffExpH = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+    if (!ffExpH && typeof voice !== "undefined" && voice.canSpeak()) {
+      voice.speakHost("雖有酸民狼警上自爆，但首夜倒牌的直心糾察長仍可發動正氣共鳴，請選擇一人一同離席後再進入黑夜。", undefined, "host_dawn");
+    }
+    triggerHunterResonance(explodeHunterSeat, "AFTER_ELECTION_EXPLODE");
+    return true;
+  }
+  return false;
 }
 
 function chooseAiHunterTarget(hunterSeat) {
@@ -1268,6 +1286,10 @@ function resumeAfterHunter() {
     state.match.phase = "DAY_VOTE_RESULT";
     updateAllUI();
     voice.speakHost(actText + "已結算，你可以選擇直接結束看底牌，或繼續往下看觀戰。");
+    return;
+  }
+  if (state.match.afterHunterNext === "AFTER_ELECTION_EXPLODE") {
+    beginNightPhase();
     return;
   }
   if (state.match.afterHunterNext === "AFTER_DAWN") {

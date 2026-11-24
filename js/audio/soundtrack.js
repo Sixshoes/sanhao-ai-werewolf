@@ -25,6 +25,7 @@ const sound = {
   comp: null,
   analyser: null,
   bgmGain: null,
+  bgmVocalCarve: null,
   sfxGain: null,
   voiceBus: null,
   voiceLowShelf: null,
@@ -68,12 +69,20 @@ const sound = {
         this.analyser.smoothingTimeConstant = 0.82;
 
         this.bgmGain = this.ctx.createGain();
+        // v18.0 Mid-Band Vocal-Carve Filter (1.25kHz peaking dip during speech replaces jarring volume drop!)
+        this.bgmVocalCarve = this.ctx.createBiquadFilter();
+        this.bgmVocalCarve.type = "peaking";
+        this.bgmVocalCarve.frequency.value = 1250;
+        this.bgmVocalCarve.Q.value = 0.85;
+        this.bgmVocalCarve.gain.value = 0;
+
         this.sfxGain = this.ctx.createGain();
         this.reverb = this.buildHallReverb(2.1);
         const revReturn = this.ctx.createGain();
         revReturn.gain.value = 0.38;
 
-        this.bgmGain.connect(this.comp);
+        this.bgmGain.connect(this.bgmVocalCarve);
+        this.bgmVocalCarve.connect(this.comp);
         this.sfxGain.connect(this.comp);
         this.reverb.connect(revReturn);
         revReturn.connect(this.comp);
@@ -200,36 +209,39 @@ const sound = {
     return conv;
   },
 
-  playPreSpeechBreath: function (personaKey, mood, seatId) {
+  playPreSpeechBreath: function (personaKey, mood, seatId, sitState) {
     if (this.muted || !this.ctx || typeof voice === "undefined" || voice.volume < 0.06) return;
     if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return;
     try {
       const eq = PERSONA_AUDIO_EQ[personaKey] || PERSONA_AUDIO_EQ["暖暖"];
       const rate = this.ctx.sampleRate;
-      const isUrgent = mood === "panic" || mood === "rebut" || mood === "claim_seer";
-      const isSlow = mood === "last_words" || mood === "host_night";
-      const dur = clamp((eq.breathDur || 0.11) * (isUrgent ? 0.80 : (isSlow ? 1.24 : 1.0)), 0.065, 0.18);
+      const isUrgent = sitState === "under_fire" || mood === "panic" || mood === "rebut" || mood === "claim_seer";
+      const isSlow = sitState === "last_words" || mood === "last_words" || mood === "host_night";
+      const isNervous = sitState === "wolf_nervous";
+      const dur = isUrgent ? 0.14 : (isSlow ? 0.18 : (isNervous ? 0.16 : clamp(eq.breathDur || 0.11, 0.08, 0.15)));
       const frames = Math.max(64, Math.floor(rate * dur));
       const bBuf = this.ctx.createBuffer(1, frames, rate);
       const data = bBuf.getChannelData(0);
       let prev = 0;
       for (let i = 0; i < frames; i++) {
         const u = i / frames;
-        // Natural human inhalation envelope: soft rise to 35%, gentle taper before vocal onset
-        const env = Math.sin(Math.PI * Math.pow(u, 0.78));
+        // Situational breath envelope: urgent sharp inhale vs gentle sigh vs soft nervous throat-catch
+        const env = isNervous
+          ? Math.sin(Math.PI * u) * (0.55 + 0.45 * Math.sin(u * Math.PI * 6))
+          : (isSlow ? Math.pow(1 - u, 1.35) * Math.sin(Math.PI * Math.min(1, u * 1.6)) : Math.sin(Math.PI * Math.pow(u, isUrgent ? 0.62 : 0.78)));
         const white = (Math.random() * 2 - 1);
-        prev = prev * 0.62 + white * 0.38;
+        prev = prev * (isNervous ? 0.78 : 0.62) + white * (isNervous ? 0.22 : 0.38);
         data[i] = prev * env;
       }
       const src = this.ctx.createBufferSource();
       src.buffer = bBuf;
       const bp = this.ctx.createBiquadFilter();
       bp.type = "bandpass";
-      bp.frequency.value = (eq.breathFreq || 1250) * (isUrgent ? 1.12 : 1.0);
-      bp.Q.value = 1.65;
+      bp.frequency.value = isNervous ? 680 : ((eq.breathFreq || 1250) * (isUrgent ? 1.18 : (isSlow ? 0.84 : 1.0)));
+      bp.Q.value = isNervous ? 2.4 : 1.65;
       const g = this.ctx.createGain();
-      const baseAmp = isUrgent ? 0.015 : (isSlow ? 0.013 : 0.010);
-      g.gain.value = clamp(baseAmp * voice.volume, 0.001, 0.020);
+      const baseAmp = isUrgent ? 0.017 : (isSlow ? 0.015 : (isNervous ? 0.014 : 0.010));
+      g.gain.value = clamp(baseAmp * voice.volume, 0.001, 0.024);
       src.connect(bp);
       if (typeof this.ctx.createStereoPanner === "function" && seatId && typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.computeSeatPan === "function") {
         const panNode = this.ctx.createStereoPanner();
@@ -256,6 +268,71 @@ const sound = {
         try { src.disconnect(); g.disconnect(); } catch (e) {}
       };
       src.start();
+    } catch (e) {}
+  },
+
+  playSeatFoley: function (kind, seatId) {
+    // v18.0 Subtle spatialized tabletop micro-foley (teacup lift/setdown & cloth rustle) panned to seat direction!
+    if (this.muted || !this.ctx || this.sfxVol < 0.05) return;
+    if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return;
+    try {
+      const now = this.ctx.currentTime;
+      const outG = this.ctx.createGain();
+      outG.gain.value = clamp(this.sfxVol * 0.22, 0.02, 0.20);
+      let destNode = outG;
+      if (typeof this.ctx.createStereoPanner === "function" && seatId && typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.computeSeatPan === "function") {
+        const pNode = this.ctx.createStereoPanner();
+        pNode.pan.value = clamp(stage3d.computeSeatPan(seatId) * 0.72, -0.78, 0.78);
+        pNode.connect(outG);
+        destNode = pNode;
+      }
+      outG.connect(this.comp || this.ctx.destination);
+
+      if (kind === "cup_set") {
+        // Gentle celadon teacup resting onto walnut wood (for dramatic post-bombshell pause!)
+        const oscWood = this.ctx.createOscillator();
+        const gWood = this.ctx.createGain();
+        oscWood.type = "triangle";
+        oscWood.frequency.setValueAtTime(192, now);
+        oscWood.frequency.exponentialRampToValueAtTime(118, now + 0.065);
+        gWood.gain.setValueAtTime(0.0001, now);
+        gWood.gain.linearRampToValueAtTime(0.28, now + 0.005);
+        gWood.gain.exponentialRampToValueAtTime(0.0001, now + 0.085);
+        oscWood.connect(gWood); gWood.connect(destNode);
+        oscWood.start(now); oscWood.stop(now + 0.095);
+
+        const oscCup = this.ctx.createOscillator();
+        const gCup = this.ctx.createGain();
+        oscCup.type = "sine";
+        oscCup.frequency.setValueAtTime(1640, now + 0.008);
+        gCup.gain.setValueAtTime(0.0001, now + 0.008);
+        gCup.gain.linearRampToValueAtTime(0.09, now + 0.015);
+        gCup.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+        oscCup.connect(gCup); gCup.connect(destNode);
+        oscCup.start(now + 0.008); oscCup.stop(now + 0.12);
+      } else {
+        // Soft sleeve/linen rustle + faint cup-lift tap during 220ms pre-speech prep beat
+        const frames = Math.max(64, Math.floor(this.ctx.sampleRate * 0.095));
+        const nBuf = this.ctx.createBuffer(1, frames, this.ctx.sampleRate);
+        const ch = nBuf.getChannelData(0);
+        let lp = 0;
+        for (let i = 0; i < frames; i++) {
+          const u = i / frames;
+          const env = Math.sin(Math.PI * u);
+          lp = lp * 0.72 + (Math.random() * 2 - 1) * 0.28;
+          ch[i] = lp * env * 0.45;
+        }
+        const nSrc = this.ctx.createBufferSource();
+        nSrc.buffer = nBuf;
+        const bp = this.ctx.createBiquadFilter();
+        bp.type = "bandpass";
+        bp.frequency.value = kind === "cup_lift" ? 1150 : 880;
+        bp.Q.value = 1.2;
+        const nG = this.ctx.createGain();
+        nG.gain.value = 0.16;
+        nSrc.connect(bp); bp.connect(nG); nG.connect(destNode);
+        nSrc.start(now);
+      }
     } catch (e) {}
   },
 
@@ -362,14 +439,15 @@ const sound = {
     } catch (e) {}
   },
 
-  applyPersonaVoiceChain: function (personaKey, mood, seatId) {
+  applyPersonaVoiceChain: function (personaKey, mood, seatId, sitState) {
     if (!this.ctx) return;
     const eq = PERSONA_AUDIO_EQ[personaKey] || PERSONA_AUDIO_EQ["暖暖"];
     const now = this.ctx.currentTime;
     try {
       if (this.voiceLowShelf) {
         this.voiceLowShelf.frequency.setTargetAtTime(eq.lowFreq, now, 0.04);
-        this.voiceLowShelf.gain.setTargetAtTime(eq.lowGain, now, 0.04);
+        const warmBoost = (sitState === "last_words" || mood === "last_words") ? 1.4 : 0;
+        this.voiceLowShelf.gain.setTargetAtTime(eq.lowGain + warmBoost, now, 0.04);
       }
       if (this.voiceMidPeak) {
         this.voiceMidPeak.frequency.setTargetAtTime(eq.midFreq, now, 0.04);
@@ -427,9 +505,33 @@ const sound = {
     } catch (e) {}
   },
 
+  computeMandarinCharVowels: function (ch, nowMs) {
+    // v18.0 Punctuation-aware Chinese syllable mouth shapes (closed lips on commas/periods!)
+    if (!ch || /^[\s，。！？、；：「」『』（）()—…·・\-~,.!?;:]+$/.test(ch)) {
+      return { a: 0, i: 0, u: 0, e: 0, o: 0, amp: 0 };
+    }
+    const pulse = 0.78 + 0.22 * Math.sin((nowMs || 0) * 0.018);
+    if (/[好大他她吧啦嗎啊哪發話打殺查怕假家那看張場把當方長講狼像剛幫想常上讓]/.test(ch)) {
+      return { a: 0.86 * pulse, i: 0.08, u: 0.10, e: 0.16, o: 0.28 * pulse, amp: 0.84 * pulse };
+    }
+    if (/[我多說過錯落護獨投出局錄部度不都公票座號就又手口後走有某否若桌]/.test(ch)) {
+      return { a: 0.22 * pulse, i: 0.05, u: 0.56 * pulse, e: 0.12, o: 0.80 * pulse, amp: 0.68 * pulse };
+    }
+    if (/[你是一起意氣理記仔細戲疑這得給誰別點先驗明清信民席警聽心定平輕]/.test(ch)) {
+      return { a: 0.14 * pulse, i: 0.72 * pulse, u: 0.08, e: 0.52 * pulse, o: 0.10, amp: 0.48 * pulse };
+    }
+    const code = ch.charCodeAt(0) || 1;
+    const bucket = code % 4;
+    if (bucket === 0) return { a: 0.68 * pulse, i: 0.12, u: 0.12, e: 0.22, o: 0.24, amp: 0.66 * pulse };
+    if (bucket === 1) return { a: 0.24, i: 0.56 * pulse, u: 0.14, e: 0.44 * pulse, o: 0.14, amp: 0.52 * pulse };
+    if (bucket === 2) return { a: 0.20, i: 0.10, u: 0.50 * pulse, e: 0.16, o: 0.64 * pulse, amp: 0.58 * pulse };
+    return { a: 0.46 * pulse, i: 0.24, u: 0.18, e: 0.54 * pulse, o: 0.22, amp: 0.56 * pulse };
+  },
+
   getVoiceVowelWeights: function (seatId, nowMs) {
     const amp = this.getVoiceMouthLevel();
-    if (this.voiceAnalyser && this.voiceFreqData && typeof voice !== "undefined" && voice.activeAudioNode) {
+    const hasLiveAudioSource = Boolean(typeof voice !== "undefined" && (voice.activeAudioNode || voice.activeAudioEl));
+    if (this.voiceAnalyser && this.voiceFreqData && hasLiveAudioSource) {
       try {
         this.voiceAnalyser.getByteFrequencyData(this.voiceFreqData);
         const fd = this.voiceFreqData;
@@ -445,12 +547,25 @@ const sound = {
         return { a: wA, i: wI, u: wU, e: wE, o: wO, amp: amp };
       } catch (e) {}
     }
-    const isSpeechWindow = Boolean(typeof state !== "undefined" && state.activeSpeechAnimUntil && (nowMs || performance.now()) < state.activeSpeechAnimUntil);
+    const nowT = nowMs || performance.now();
+    // During 220ms pre-speech prep beat, keep lips lightly poised/closed before first syllable!
+    if (typeof state !== "undefined" && state.speechPrepUntil && nowT < state.speechPrepUntil && state.speechPrepSeatId === seatId) {
+      return { a: 0.08, i: 0, u: 0, e: 0, o: 0.04, amp: 0.08 };
+    }
+    const isSpeechWindow = Boolean(typeof state !== "undefined" && state.activeSpeechAnimUntil && nowT < state.activeSpeechAnimUntil);
     const isSpeaking = Boolean((typeof voice !== "undefined" && voice.speaking) || (typeof state !== "undefined" && state.typewriter && state.typewriter.active) || isSpeechWindow);
     if (!isSpeaking && amp <= 0.01) {
       return { a: 0, i: 0, u: 0, e: 0, o: 0, amp: 0 };
     }
-    const t = (nowMs || 0) * 0.001;
+    // v18.0 Character-syllable lip-sync when falling back to speechSynthesis or silent reading window!
+    if (typeof voice !== "undefined" && voice.liveSpokenText && typeof voice.liveCharIndex === "number" && voice.liveCharIndex >= 0) {
+      if (voice.liveInPause) {
+        return { a: 0, i: 0, u: 0, e: 0, o: 0, amp: 0 };
+      }
+      const ch = voice.liveSpokenText.charAt(Math.min(voice.liveSpokenText.length - 1, voice.liveCharIndex));
+      return this.computeMandarinCharVowels(ch, nowT);
+    }
+    const t = nowT * 0.001;
     const s = (seatId || 1) * 1.7;
     const level = Math.max(amp, clamp(Math.abs(Math.sin(t * 14.5 + s)) * 0.65 + Math.abs(Math.sin(t * 6.3 + s * 0.4)) * 0.25, 0.14, 0.92));
     const phase = (t * 4.8 + s) % 5;
@@ -464,7 +579,8 @@ const sound = {
 
   getVoiceMouthLevel: function () {
     let level = 0;
-    if (this.voiceAnalyser && this.voiceAnalyserData && voice.activeAudioNode) {
+    const hasLiveSource = Boolean(typeof voice !== "undefined" && (voice.activeAudioNode || voice.activeAudioEl));
+    if (this.voiceAnalyser && this.voiceAnalyserData && hasLiveSource) {
       this.voiceAnalyser.getByteTimeDomainData(this.voiceAnalyserData);
       let sumSq = 0;
       const len = this.voiceAnalyserData.length;
@@ -485,9 +601,14 @@ const sound = {
   applyVolumes: function () {
     if (!this.ctx || !this.bgmGain || !this.sfxGain) return;
     const now = this.ctx.currentTime;
-    const duckMul = this._briefDuckActive ? 0.14 : (this.voiceDucking ? 0.22 : 1.0);
-    const rampSec = this._briefDuckActive ? 0.04 : (this.voiceDucking ? 0.14 : 0.48);
+    // v18.0 Mid-Band Vocal-Carve Mixing: keep warm BGM bed at 0.58 while carving 1.25kHz (-9dB) for crystal speech!
+    const duckMul = this._briefDuckActive ? 0.14 : (this.voiceDucking ? 0.58 : 1.0);
+    const rampSec = this._briefDuckActive ? 0.04 : (this.voiceDucking ? 0.14 : 0.45);
     this.bgmGain.gain.setTargetAtTime(this.muted ? 0.0001 : Math.max(0.0001, this.bgmVol * 0.52 * duckMul), now, rampSec);
+    if (this.bgmVocalCarve) {
+      const carveDb = this.voiceDucking ? -9.0 : 0.0;
+      this.bgmVocalCarve.gain.setTargetAtTime(carveDb, now, this.voiceDucking ? 0.10 : 0.36);
+    }
     this.sfxGain.gain.setTargetAtTime(this.muted ? 0.0001 : Math.max(0.0001, this.sfxVol * 0.82), now, 0.06);
     this.updateEqIndicator();
   },
@@ -537,12 +658,34 @@ const sound = {
     this.syncWithPhase();
   },
 
+  getCasualtyTensionCount: function () {
+    if (typeof state === "undefined" || !state.match || !state.match.started || !Array.isArray(state.match.seats)) return 0;
+    if (state.match.phase === "LOBBY" || state.match.phase === "GAME_OVER") return 0;
+    let dead = 0;
+    for (let i = 0; i < state.match.seats.length; i++) {
+      if (state.match.seats[i] && !state.match.seats[i].alive) dead += 1;
+    }
+    return dead;
+  },
+
+  getEffectiveBpm: function (trackKey) {
+    const tk = trackKey || this.currentTrack || "twilight";
+    const mv = MOVEMENTS[tk] || MOVEMENTS.twilight;
+    if (tk === "twilight" || tk === "finale") return mv.bpm;
+    const dead = this.getCasualtyTensionCount();
+    // v18.0 Escalation: +4 BPM per fallen player (capped cleanly at +20 BPM)
+    return mv.bpm + Math.min(20, dead * 4);
+  },
+
   syncWithPhase: function () {
     const next = this.resolveTargetTrack();
-    if (next !== this.currentTrack) {
-      this.currentTrack = next;
-      this.stepIdx = 0;
-      this.barIdx = 0;
+    const nextBpm = this.getEffectiveBpm(next);
+    if (next !== this.currentTrack || (this.seqTimer && Math.abs(nextBpm - (this._activeSeqBpm || nextBpm)) >= 4)) {
+      if (next !== this.currentTrack) {
+        this.currentTrack = next;
+        this.stepIdx = 0;
+        this.barIdx = 0;
+      }
       if (this.seqTimer) {
         this.startSequencer();
       }
@@ -552,12 +695,13 @@ const sound = {
 
   refreshMusicModalLabels: function () {
     const mv = MOVEMENTS[this.currentTrack] || MOVEMENTS.twilight;
+    const effBpm = this.getEffectiveBpm(this.currentTrack);
     const np = document.getElementById("nowPlayingLabel");
     const ch = document.getElementById("musicChordReadout");
     const bp = document.getElementById("musicBpmReadout");
     if (np) np.textContent = "正在播放：" + mv.name + (this.trackMode === "auto" ? "（自動跟隨）" : "（手動試聽）");
     if (ch) ch.textContent = mv.chordsLabel;
-    if (bp) bp.textContent = mv.bpm + " BPM";
+    if (bp) bp.textContent = effBpm + " BPM";
   },
 
   startSequencer: function () {
@@ -569,8 +713,9 @@ const sound = {
       this.updateEqIndicator();
       return;
     }
-    const mv = MOVEMENTS[this.currentTrack] || MOVEMENTS.twilight;
-    const eighthMs = Math.round((60 / mv.bpm) * 500);
+    const effBpm = this.getEffectiveBpm(this.currentTrack);
+    this._activeSeqBpm = effBpm;
+    const eighthMs = Math.round((60 / effBpm) * 500);
     const self = this;
     this.refreshMusicModalLabels();
     this.tickStep();
@@ -591,14 +736,21 @@ const sound = {
   tickStep: function () {
     if (!this.ctx || this.muted || this.bgmVol <= 0.01 || (typeof document !== "undefined" && document.hidden)) return;
     const mv = MOVEMENTS[this.currentTrack] || MOVEMENTS.twilight;
+    const effBpm = this.getEffectiveBpm(this.currentTrack);
     const now = this.ctx.currentTime + 0.02;
     const bar = this.barIdx % 4;
     const step = this.stepIdx % 8;
-    const stepDur = (60 / mv.bpm) * 0.5;
+    const stepDur = (60 / effBpm) * 0.5;
+    const deadTension = this.getCasualtyTensionCount();
 
-    // 1. Trigger warm extended Pad Chord on step 0 of every bar
+    // 1. Trigger warm extended Pad Chord on step 0 of every bar (+ deeper low bass string layers per casualty!)
     if (step === 0 && mv.pads[bar]) {
       this.voicePad(mv.pads[bar], now, stepDur * 7.8, this.currentTrack === "night" ? 0.11 : 0.09);
+      if (deadTension >= 1 && this.currentTrack !== "twilight" && this.currentTrack !== "finale") {
+        const rootBass = mv.pads[bar][0] - 12;
+        const bassVol = clamp(0.032 + Math.min(4, deadTension) * 0.014, 0.03, 0.095);
+        this.voicePad([rootBass], now, stepDur * 7.9, bassVol);
+      }
     }
 
     // 2. Plucked Zither / Acoustic Guitar Arpeggio

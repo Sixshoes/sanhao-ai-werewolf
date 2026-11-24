@@ -502,18 +502,18 @@ const voice = {
     });
   },
 
-  // Split long Mandarin text into safe <=22-char breathing clauses (defeats Chrome Web Speech ~14s remote cutoff & preserves zero truncation!)
-  splitMandarinClauses: function (cleanText) {
+  // Split long Mandarin text into safe breathing clauses (22-char default defeats Chrome Web Speech ~14s cutoff; 48-char for buffered studio TTS!)
+  splitMandarinClauses: function (cleanText, opts) {
+    const maxLen = (opts && typeof opts.maxLen === "number" && opts.maxLen >= 16) ? opts.maxLen : 22;
     const rawPieces = String(cleanText || "").match(/[^，。！？；：…,\.!?;:\n]+[，。！？；：…,\.!?;:\n]?/g) || [String(cleanText || "")];
     const pieces = [];
     rawPieces.forEach(function (part) {
       let s = part.trim();
       if (!s) return;
-      // Hard-split any unpunctuated run > 22 chars so Chrome Web Speech never hangs or drops long text
-      while (s.length > 22) {
-        let cut = 20;
-        const spIdx = s.lastIndexOf(" ", 21);
-        if (spIdx >= 10) cut = spIdx + 1;
+      while (s.length > maxLen) {
+        let cut = Math.max(12, maxLen - 2);
+        const spIdx = s.lastIndexOf(" ", maxLen - 1);
+        if (spIdx >= Math.floor(maxLen * 0.45)) cut = spIdx + 1;
         pieces.push(s.slice(0, cut).trim());
         s = s.slice(cut).trim();
       }
@@ -526,9 +526,9 @@ const voice = {
       const isTinyTail = p.length <= 4 && /^(過|先過|好了|對吧|喔|耶|吧|呢)[。！？]?$/.test(p);
       if (!buf) {
         buf = p;
-      } else if (isTinyTail && (buf.length + p.length) <= 26) {
+      } else if (isTinyTail && (buf.length + p.length) <= (maxLen + 4)) {
         buf += p;
-      } else if ((buf.length + p.length) <= 22 && !/[。！？…!?]$/.test(buf)) {
+      } else if ((buf.length + p.length) <= maxLen && !/[。！？…!?]$/.test(buf)) {
         buf += p;
       } else {
         chunks.push(buf);
@@ -537,6 +537,105 @@ const voice = {
     });
     if (buf) chunks.push(buf);
     return chunks.length ? chunks : [cleanText];
+  },
+
+  // v18.0 Four-State Situational Vocal Modulation (standard / under_fire / wolf_nervous / last_words)
+  resolveSituationalVoiceState: function (speaker, mood, opts) {
+    const m = mood || "normal";
+    const ph = (typeof state !== "undefined" && state.match) ? state.match.phase : "";
+    if (m === "last_words" || ph === "LAST_WORDS_SPEECH") {
+      return { key: "last_words", rateMul: 0.88, commaPauseMs: 145, periodPauseMs: 240, hesitateBeforeAccuseMs: 0, tailFadeSec: 0.45, tailVolMul: 0.94 };
+    }
+    const isPkNow = Boolean(typeof state !== "undefined" && state.match && Array.isArray(state.match.pkCandidates) && speaker && state.match.pkCandidates.indexOf(speaker.id) !== -1);
+    const isInterjectNow = Boolean(typeof state !== "undefined" && state.lastInterjectAt && (performance.now() - state.lastInterjectAt) < 4200);
+    if (m === "panic" || m === "rebut" || isPkNow || isInterjectNow || (opts && opts.underFire)) {
+      return { key: "under_fire", rateMul: 1.10, commaPauseMs: 45, periodPauseMs: 75, hesitateBeforeAccuseMs: 0, tailFadeSec: 0, tailVolMul: 1.0 };
+    }
+    if (speaker && speaker.role === "wolf" && (speaker.microPulse || 0) >= 72 && m !== "host_night" && m !== "host_dawn") {
+      return { key: "wolf_nervous", rateMul: 0.97, commaPauseMs: 120, periodPauseMs: 195, hesitateBeforeAccuseMs: 240, tailFadeSec: 0.30, tailVolMul: 0.88 };
+    }
+    return { key: "standard", rateMul: 1.0, commaPauseMs: 110, periodPauseMs: 180, hesitateBeforeAccuseMs: 0, tailFadeSec: 0, tailVolMul: 1.0 };
+  },
+
+  // v18.0 Pure-JS AudioBuffer -> WAV Blob URL encoder so HTMLAudioElement (preservesPitch = true) can speed up 1.5x with ZERO chipmunk pitch shift!
+  audioBufferToWavBlobUrl: function (audioBuf) {
+    if (!audioBuf || typeof Blob !== "function" || typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return null;
+    try {
+      const numCh = Math.min(2, audioBuf.numberOfChannels || 1);
+      const sampleRate = audioBuf.sampleRate || 24000;
+      const len = audioBuf.length || 0;
+      if (len < 32) return null;
+      const bytesPerSample = 2;
+      const blockAlign = numCh * bytesPerSample;
+      const dataSize = len * blockAlign;
+      const buf = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(buf);
+      const writeStr = function (off, s) {
+        for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
+      };
+      writeStr(0, "RIFF");
+      view.setUint32(4, 36 + dataSize, true);
+      writeStr(8, "WAVE");
+      writeStr(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numCh, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * blockAlign, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, 16, true);
+      writeStr(36, "data");
+      view.setUint32(40, dataSize, true);
+      const channels = [];
+      for (let c = 0; c < numCh; c++) channels.push(audioBuf.getChannelData(c));
+      let offset = 44;
+      for (let i = 0; i < len; i++) {
+        for (let c = 0; c < numCh; c++) {
+          const s = clamp(channels[c][i] || 0, -1, 1);
+          view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+          offset += 2;
+        }
+      }
+      const blob = new Blob([buf], { type: "audio/wav" });
+      return URL.createObjectURL(blob);
+    } catch (e) {
+      return null;
+    }
+  },
+
+  _extractMentionBeatPositions: function (text, speakerId) {
+    const out = [];
+    const str = String(text || "");
+    const re = /(1[0-2]|0?[1-9])號/g;
+    let m;
+    while ((m = re.exec(str)) !== null) {
+      const sid = parseInt(m[1], 10);
+      if (sid && sid !== speakerId) {
+        out.push({ charIdx: m.index, targetId: sid, fired: false });
+      }
+    }
+    return out;
+  },
+
+  _notifyCharProgress: function (charIdx, speakerId, sitKey) {
+    this.liveCharIndex = charIdx;
+    if (!this._liveMentionBeats || !this._liveMentionBeats.length || !speakerId) return;
+    const nowT = performance.now();
+    for (let i = 0; i < this._liveMentionBeats.length; i++) {
+      const b = this._liveMentionBeats[i];
+      if (!b.fired && charIdx >= b.charIdx) {
+        b.fired = true;
+        if (typeof state !== "undefined") {
+          state.activeMentionBeat = {
+            speakerId: speakerId,
+            targetId: b.targetId,
+            sitState: sitKey || "standard",
+            until: nowT + 1300,
+            eyeDartUntil: sitKey === "wolf_nervous" ? (nowT + 180) : 0
+          };
+        }
+      }
+    }
   },
 
   pickVoiceForProfile: function (profile) {
@@ -608,6 +707,34 @@ const voice = {
       clearTimeout(this.backchannelTimer);
       this.backchannelTimer = null;
     }
+    if (this.prepTimer) {
+      clearTimeout(this.prepTimer);
+      this.prepTimer = null;
+    }
+    if (this.charProgressTimer) {
+      clearInterval(this.charProgressTimer);
+      this.charProgressTimer = null;
+    }
+  },
+
+  _cleanupActiveAudioEl: function () {
+    if (this.activeAudioEl) {
+      try {
+        this.activeAudioEl.onended = null;
+        this.activeAudioEl.onerror = null;
+        this.activeAudioEl.pause();
+        this.activeAudioEl.src = "";
+      } catch (e) {}
+      this.activeAudioEl = null;
+    }
+    if (this.activeMediaElSrc) {
+      try { this.activeMediaElSrc.disconnect(); } catch (e) {}
+      this.activeMediaElSrc = null;
+    }
+    if (this.activeAudioBlobUrl) {
+      try { if (typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(this.activeAudioBlobUrl); } catch (e) {}
+      this.activeAudioBlobUrl = null;
+    }
   },
 
   stop: function () {
@@ -618,9 +745,19 @@ const voice = {
     this._resumePendingClause = null;
     this._resumeWatchdogFinish = null;
     this.activeUtterance = null;
+    this.liveSpokenText = "";
+    this.liveCharIndex = -1;
+    this.liveInPause = false;
+    this._liveMentionBeats = [];
+    this.activeSituationalState = "standard";
+    if (typeof state !== "undefined") {
+      state.speechPrepUntil = 0;
+      state.speechPrepSeatId = null;
+    }
     if (typeof sound !== "undefined" && typeof sound.stopBackchannels === "function") {
       sound.stopBackchannels();
     }
+    this._cleanupActiveAudioEl();
     if (this.activeAudioNode) {
       try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); this.activeAudioNode.disconnect(); } catch (e) {}
       this.activeAudioNode = null;
@@ -675,7 +812,11 @@ const voice = {
       if (typeof sound !== "undefined" && typeof sound.stopBackchannels === "function") {
         sound.stopBackchannels();
       }
-      if (this.activeAudioNode && this.pauseMeta && sound.ctx) {
+      if (this.activeAudioEl && this.pauseMeta) {
+        this.pauseMeta.offset = Math.min((this.pauseMeta.audioBuf ? this.pauseMeta.audioBuf.duration : 99) - 0.05, this.activeAudioEl.currentTime || 0);
+        this.clearTimers();
+        this._cleanupActiveAudioEl();
+      } else if (this.activeAudioNode && this.pauseMeta && sound.ctx) {
         const elapsed = Math.max(0, (sound.ctx.currentTime - this.pauseMeta.startedAt) * (this.pauseMeta.playbackRate || 1));
         this.pauseMeta.offset = Math.min(this.pauseMeta.audioBuf.duration - 0.05, (this.pauseMeta.offset || 0) + elapsed);
         this.clearTimers();
@@ -731,15 +872,16 @@ const voice = {
     if (sound.ctx.state === "suspended" && typeof sound.ctx.resume === "function") {
       sound.ctx.resume().catch(function () {});
     }
-    const src = sound.ctx.createBufferSource();
     const vGain = sound.ctx.createGain();
     const skipRateAdjust = Boolean(opts && opts.skipRateAdjust);
     const pKey = (opts && opts.personaKey) ? opts.personaKey : this.activePersonaName;
+    const sitCfg = (opts && opts.sitCfg) || { key: "standard", rateMul: 1.0, tailFadeSec: 0, tailVolMul: 1.0 };
+    const sitKey = sitCfg.key || "standard";
+    this.activeSituationalState = sitKey;
     if (typeof sound.applyPersonaVoiceChain === "function") {
-      sound.applyPersonaVoiceChain(pKey, (opts && opts.mood) || "normal", opts && opts.seatId);
+      sound.applyPersonaVoiceChain(pKey, (opts && opts.mood) || "normal", opts && opts.seatId, sitKey);
     }
 
-    // Differentiate voices (especially Taiwan-accent YunJheNeural which ignores server rate/pitch) via Web Audio playbackRate + detune!
     let twTrim = 1.0;
     let baseDetune = 0;
     const eqCfg = (typeof PERSONA_AUDIO_EQ !== "undefined" && PERSONA_AUDIO_EQ[pKey]) ? PERSONA_AUDIO_EQ[pKey] : null;
@@ -753,22 +895,16 @@ const voice = {
       }
     }
     const isYunJheFixed = Boolean(pKey === "阿松" || (this.accentMode === "tw" && (pKey === "你_男" || pKey === "小澄" || pKey === "阿竹" || pKey === "晨晨" || pKey === "墨白" || pKey === "阿朗")));
-    const userRateBlend = isYunJheFixed ? clamp(1.0 + (this.rate - 0.96) * 0.55, 0.94, 1.15) : (this.rate >= 1.15 ? 1.05 : 1.0);
-    const rateNudge = (opts && typeof opts.rateNudge === "number") ? opts.rateNudge : 1.0;
+    const userRateBlend = isYunJheFixed ? clamp(1.0 + (this.rate - 0.96) * 0.72, 0.92, 1.48) : clamp(this.rate / 0.96, 0.92, 1.48);
+    const rateNudge = ((opts && typeof opts.rateNudge === "number") ? opts.rateNudge : 1.0) * (sitCfg.rateMul || 1.0);
     const detuneNudge = (opts && typeof opts.detuneNudge === "number") ? opts.detuneNudge : 0;
+    // Allow true 1.5x speed without chipmunk pitch via HTMLAudioElement(preservesPitch=true)!
     const pbRate = skipRateAdjust
-      ? clamp(twTrim * rateNudge * userRateBlend, 0.88, 1.24)
-      : clamp(this.rate * twTrim * rateNudge, 0.88, 1.26);
+      ? clamp(twTrim * rateNudge * userRateBlend, 0.84, 1.52)
+      : clamp(this.rate * twTrim * rateNudge, 0.84, 1.52);
 
-    src.buffer = audioBuf;
-    src.playbackRate.value = pbRate;
-    if (src.detune && (baseDetune || detuneNudge)) {
-      try { src.detune.value = clamp(baseDetune + detuneNudge, -135, 135); } catch (e) {}
-    }
-    vGain.gain.value = clamp(this.volume, 0, 1);
-
-    // Route through Broadcast Vocal Chain (Per-Persona EQ + Presence + De-Ess + Compressor + 3D Spatial Panner + Live Lip-Sync Analyser!)
-    src.connect(vGain);
+    const effGain = clamp(this.volume * (sitCfg.tailVolMul || 1.0), 0, 1);
+    vGain.gain.value = effGain;
     if (sound.voiceBus) {
       vGain.connect(sound.voiceBus);
     } else {
@@ -786,7 +922,6 @@ const voice = {
       startedAt: sound.ctx.currentTime,
       playbackRate: pbRate
     };
-    // If user paused while async neural/Gemini TTS was still fetching, hold cleanly at offset 0 until resumed!
     if (this.paused) {
       this.activeAudioNode = null;
       this.activeAudioGain = null;
@@ -794,9 +929,8 @@ const voice = {
       this.syncPauseButtonUi();
       return true;
     }
-    if (this.humanBreath && startOffset === 0 && !(opts && opts.skipPreBreath) && pKey !== "主持" && typeof sound.playPreSpeechBreath === "function") {
-      sound.playPreSpeechBreath(pKey, (opts && opts.mood) || "normal", opts && opts.seatId);
-    }
+
+    this._cleanupActiveAudioEl();
     if (this.activeAudioNode) {
       try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); this.activeAudioNode.disconnect(); } catch (e) {}
       this.activeAudioNode = null;
@@ -805,35 +939,147 @@ const voice = {
       try { this.activeAudioGain.disconnect(); } catch (e) {}
       this.activeAudioGain = null;
     }
-    this.activeAudioNode = src;
     this.activeAudioGain = vGain;
     this.setVisualSpeaking(true);
     this.syncPauseButtonUi();
 
     const estPlayMs = (remainDur / pbRate) * 1000;
-    if (opts && typeof opts.onAudioReady === "function" && startOffset === 0) {
-      try { opts.onAudioReady(opts.totalDurationHintMs || estPlayMs); } catch (e) {}
-    } else if (audioBuf && audioBuf.duration && startOffset === 0 && !(opts && opts.skipTypewriterSync) && typeof syncTypewriterToAudioDuration === "function") {
-      syncTypewriterToAudioDuration(opts && opts.totalDurationHintMs ? opts.totalDurationHintMs : estPlayMs);
-    }
     const self = this;
-    const finishOnce = function () {
-      if (seq !== self.utteranceSeq || self.paused) return;
-      if (!(opts && opts.keepSeqOpen)) self.utteranceSeq += 1;
-      self.clearTimers();
-      try { src.onended = null; src.stop(); src.disconnect(); } catch (e) {}
-      try { vGain.disconnect(); } catch (e) {}
-      if (self.activeAudioNode === src) self.activeAudioNode = null;
-      if (self.activeAudioGain === vGain) self.activeAudioGain = null;
-      self.pauseMeta = null;
-      if (!(opts && opts.keepSeqOpen)) self.setVisualSpeaking(false);
-      self.syncPauseButtonUi();
-      if (typeof onDone === "function") onDone();
+    const seatIdNow = (opts && opts.seatId) || 0;
+    const needPrepBeat = Boolean(
+      startOffset === 0 &&
+      !(opts && opts.skipPrepBeat) &&
+      seatIdNow > 0 &&
+      pKey !== "主持" &&
+      !(typeof isSpectatorFastForward === "function" && isSpectatorFastForward())
+    );
+    const prepDelayMs = needPrepBeat ? 220 : 0;
+
+    if (opts && typeof opts.onAudioReady === "function" && startOffset === 0) {
+      try { opts.onAudioReady((opts.totalDurationHintMs || estPlayMs) + prepDelayMs); } catch (e) {}
+    } else if (audioBuf && audioBuf.duration && startOffset === 0 && !(opts && opts.skipTypewriterSync) && typeof syncTypewriterToAudioDuration === "function") {
+      syncTypewriterToAudioDuration((opts && opts.totalDurationHintMs ? opts.totalDurationHintMs : estPlayMs) + prepDelayMs);
+    }
+
+    const launchActualPlayback = function () {
+      if (seq !== self.utteranceSeq || self.paused || !sound.ctx) return;
+      const playStartAt = performance.now();
+      // Track live spoken char index & fire exact seat-mention gesture beats in sync with playback!
+      if (self.liveSpokenText && self.liveSpokenText.length > 0 && estPlayMs > 80) {
+        if (self.charProgressTimer) clearInterval(self.charProgressTimer);
+        self.charProgressTimer = setInterval(function () {
+          if (seq !== self.utteranceSeq || self.paused) return;
+          const frac = clamp((performance.now() - playStartAt) / estPlayMs, 0, 1);
+          const ci = Math.min(self.liveSpokenText.length - 1, Math.floor(frac * self.liveSpokenText.length));
+          self._notifyCharProgress(ci, seatIdNow, sitKey);
+        }, 55);
+      }
+
+      const finishOnce = function () {
+        if (seq !== self.utteranceSeq || self.paused) return;
+        if (!(opts && opts.keepSeqOpen)) self.utteranceSeq += 1;
+        self.clearTimers();
+        self._cleanupActiveAudioEl();
+        if (self.activeAudioNode) {
+          try { self.activeAudioNode.onended = null; self.activeAudioNode.stop(); self.activeAudioNode.disconnect(); } catch (e) {}
+          self.activeAudioNode = null;
+        }
+        try { vGain.disconnect(); } catch (e) {}
+        if (self.activeAudioGain === vGain) self.activeAudioGain = null;
+        self.pauseMeta = null;
+        if (!(opts && opts.keepSeqOpen)) self.setVisualSpeaking(false);
+        self.syncPauseButtonUi();
+        if (typeof onDone === "function") onDone();
+      };
+
+      const estMs = Math.max(3000, Math.round(estPlayMs) + 3500);
+      self.watchdogTimer = setTimeout(finishOnce, estMs);
+
+      // Smooth tail volume fade for Last Words & Nervous Wolf trailing cadence
+      if (sitCfg.tailFadeSec && sitCfg.tailFadeSec > 0 && estPlayMs > 900) {
+        try {
+          const endCtxT = sound.ctx.currentTime + (estPlayMs / 1000);
+          const fadeStart = Math.max(sound.ctx.currentTime + 0.1, endCtxT - sitCfg.tailFadeSec);
+          vGain.gain.setValueAtTime(effGain, fadeStart);
+          vGain.gain.linearRampToValueAtTime(Math.max(0.01, effGain * 0.28), endCtxT);
+        } catch (e) {}
+      }
+
+      // v18.0 True Pitch-Preserving Speed Playback via HTMLAudioElement (preservesPitch = true) + MediaElementAudioSourceNode!
+      const wantPitchPreserveEl = Boolean(
+        Math.abs(pbRate - 1.0) > 0.03 &&
+        typeof Audio === "function" &&
+        typeof sound.ctx.createMediaElementSource === "function" &&
+        audioBuf && typeof audioBuf.getChannelData === "function"
+      );
+      let usedPitchEl = false;
+      if (wantPitchPreserveEl) {
+        const blobUrl = self.audioBufferToWavBlobUrl(audioBuf);
+        if (blobUrl) {
+          try {
+            const aEl = new Audio(blobUrl);
+            aEl.preservesPitch = true;
+            aEl.mozPreservesPitch = true;
+            aEl.webkitPreservesPitch = true;
+            aEl.playbackRate = pbRate;
+            aEl.volume = 1.0;
+            if (startOffset > 0) {
+              try { aEl.currentTime = startOffset; } catch (e) {}
+            }
+            const mediaSrc = sound.ctx.createMediaElementSource(aEl);
+            mediaSrc.connect(vGain);
+            self.activeAudioEl = aEl;
+            self.activeMediaElSrc = mediaSrc;
+            self.activeAudioBlobUrl = blobUrl;
+            aEl.onended = finishOnce;
+            aEl.onerror = finishOnce;
+            const playP = aEl.play();
+            if (playP && typeof playP.catch === "function") {
+              playP.catch(function () { finishOnce(); });
+            }
+            usedPitchEl = true;
+          } catch (e) {
+            self._cleanupActiveAudioEl();
+            try { URL.revokeObjectURL(blobUrl); } catch (err) {}
+          }
+        }
+      }
+
+      if (!usedPitchEl) {
+        const src = sound.ctx.createBufferSource();
+        src.buffer = audioBuf;
+        src.playbackRate.value = pbRate;
+        if (src.detune && (baseDetune || detuneNudge)) {
+          try { src.detune.value = clamp(baseDetune + detuneNudge, -135, 135); } catch (e) {}
+        }
+        src.connect(vGain);
+        self.activeAudioNode = src;
+        src.onended = finishOnce;
+        src.start(0, startOffset);
+      }
     };
-    const estMs = Math.max(3000, Math.round(estPlayMs) + 3500);
-    this.watchdogTimer = setTimeout(finishOnce, estMs);
-    src.onended = finishOnce;
-    src.start(0, startOffset);
+
+    if (needPrepBeat) {
+      if (typeof state !== "undefined") {
+        state.speechPrepUntil = performance.now() + prepDelayMs;
+        state.speechPrepSeatId = seatIdNow;
+      }
+      if (this.humanBreath && !(opts && opts.skipPreBreath) && typeof sound.playPreSpeechBreath === "function") {
+        sound.playPreSpeechBreath(pKey, (opts && opts.mood) || "normal", seatIdNow, sitKey);
+      }
+      if (typeof sound.playSeatFoley === "function") {
+        sound.playSeatFoley(sitKey === "under_fire" ? "cloth_rustle" : "cup_lift", seatIdNow);
+      }
+      this.prepTimer = setTimeout(function () {
+        self.prepTimer = null;
+        launchActualPlayback();
+      }, prepDelayMs);
+    } else {
+      if (this.humanBreath && startOffset === 0 && !(opts && opts.skipPreBreath) && pKey !== "主持" && typeof sound.playPreSpeechBreath === "function") {
+        sound.playPreSpeechBreath(pKey, (opts && opts.mood) || "normal", seatIdNow, sitKey);
+      }
+      launchActualPlayback();
+    }
     return true;
   },
 
@@ -980,6 +1226,7 @@ const voice = {
       personaKey: effKey,
       mood: mood || "normal",
       seatId: opts && opts.seatId,
+      sitCfg: opts && opts.sitCfg,
       onAudioReady: opts && opts.onAudioReady,
       totalDurationHintMs: Math.round(audioBuf.duration * 1000)
     };
@@ -1080,9 +1327,10 @@ const voice = {
           if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
         }
       }
-      // Pure-static cloud fallback: call official Gemini 3.8 TTS Interactions API directly
+      // Pure-static cloud fallback: call official Gemini 2.5 Flash Preview TTS generateContent API directly
       if (!audioBytes) {
-        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+        const ttsPromptText = stylePrompt ? (stylePrompt + "：\n" + taggedTranscript) : taggedTranscript;
+        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1090,39 +1338,25 @@ const voice = {
           },
           signal: controller.signal,
           body: JSON.stringify({
-            model: "gemini-3.8-flash-tts",
-            store: false,
-            input: [{
-              type: "user_input",
-              content: [{
-                type: "text",
-                text: taggedTranscript,
-                annotations: [{
-                  type: "speech_metadata",
-                  style: stylePrompt
-                }]
-              }]
+            contents: [{
+              parts: [{ text: ttsPromptText }]
             }],
-            response_format: { type: "audio" },
-            generation_config: {
-              speech_config: [{ voice: voiceName }]
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: voiceName }
+                }
+              }
             }
           })
         });
         if (res && res.ok) {
           const data = await res.json();
           let b64 = null;
-          const steps = (data && Array.isArray(data.steps)) ? data.steps : [];
-          for (let si = steps.length - 1; si >= 0 && !b64; si--) {
-            if (steps[si] && steps[si].type === "model_output" && Array.isArray(steps[si].content)) {
-              for (let ci = steps[si].content.length - 1; ci >= 0; ci--) {
-                const blk = steps[si].content[ci];
-                if (blk && blk.type === "audio" && blk.data) { b64 = blk.data; break; }
-              }
-            }
-          }
-          if (!b64 && data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].inlineData) {
-            b64 = data.candidates[0].content.parts[0].inlineData.data;
+          if (data && data.candidates && data.candidates[0] && data.candidates[0].content && Array.isArray(data.candidates[0].content.parts)) {
+            const audioPart = data.candidates[0].content.parts.find(function (pt) { return pt && pt.inlineData && pt.inlineData.data; });
+            if (audioPart) b64 = audioPart.inlineData.data;
           }
           if (b64) {
             const rawBin = atob(b64);
@@ -1213,10 +1447,17 @@ const voice = {
     const effKey = this.resolvePersonaKey(personaName);
     const profile = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["你"];
     const seatId = (opts && opts.seatId) ? opts.seatId : profile.seatHint;
+    const speakerObj = (opts && opts.speaker) || (seatId && typeof getSeat === "function" ? getSeat(seatId) : null);
+    const sitCfg = this.resolveSituationalVoiceState(speakerObj, mood || "normal", opts);
     this.activePersonaName = effKey;
+    this.activeSituationalState = sitCfg.key;
+    this.liveSpokenText = clean;
+    this.liveCharIndex = 0;
+    this.liveInPause = false;
+    this._liveMentionBeats = this._extractMentionBeatPositions(clean, seatId || 0);
     this.lastSpokenPayload = { personaName: personaName, rawText: rawText, mood: mood || "normal", seatId: seatId };
     if (typeof sound.applyPersonaVoiceChain === "function") {
-      sound.applyPersonaVoiceChain(effKey, mood || "normal", seatId);
+      sound.applyPersonaVoiceChain(effKey, mood || "normal", seatId, sitCfg.key);
     }
 
     // Proactively ensure Web Audio Context is initialized before neural TTS check so we never accidentally leak browser Google TTS!
@@ -1233,6 +1474,8 @@ const voice = {
       seatId: seatId,
       personaKey: effKey,
       mood: mood || "normal",
+      sitCfg: sitCfg,
+      speaker: speakerObj,
       onAudioReady: opts && opts.onAudioReady
     };
 
@@ -1246,12 +1489,12 @@ const voice = {
           self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
             if (ok2 || seq !== self.utteranceSeq) return;
             if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-            self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
+            self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
           });
           return;
         }
         if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
+        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
       });
       return;
     }
@@ -1268,12 +1511,12 @@ const voice = {
           self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
             if (ok2 || seq !== self.utteranceSeq) return;
             if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-            self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
+            self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
           });
           return;
         }
         if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
+        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
       });
       return;
     }
@@ -1283,34 +1526,45 @@ const voice = {
       this.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
         if (ok || seq !== self.utteranceSeq) return;
         if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
+        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
       });
       return;
     }
 
     // Priority 3 (100% Free $0 Offline): Upgraded Browser Neural/OS TTS with Natural Clause Cadence
     if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-    this.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone);
+    this.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
   },
 
-  speakLocalBrowserTts: function (seq, profile, clean, mood, wasBusy, onDone) {
+  speakLocalBrowserTts: function (seq, profile, clean, mood, wasBusy, onDone, opts) {
     const self = this;
     try {
       const chosenVoice = this.pickVoiceForProfile(profile);
       const vScore = chosenVoice ? this.scoreVoiceQuality(chosenVoice) : 0;
       const isBasicVoice = vScore < 135;
       const missingMaleFallback = (profile && profile.gender === "m" && (!chosenVoice || !this.isMaleVoice(chosenVoice)));
+      const sitCfg = (opts && opts.sitCfg) || { key: "standard", rateMul: 1.0, commaPauseMs: 110, periodPauseMs: 180, hesitateBeforeAccuseMs: 0, tailVolMul: 1.0 };
+      const seatIdNow = (opts && opts.seatId) || 0;
+      const pKey = (opts && opts.personaKey) || this.activePersonaName;
 
-      // Expressive Per-Persona Vocal Range: clearly separate all 11 characters in pitch & cadence even on static Web Speech API!
-      const baseRate = clamp(this.rate * (profile.rateMul || 1.0), 0.80, 1.24);
+      // Expressive Per-Persona Vocal Range + 4-State Situational Speed Modulation
+      const baseRate = clamp(this.rate * (profile.rateMul || 1.0) * (sitCfg.rateMul || 1.0), 0.76, 1.44);
       const basePitch = missingMaleFallback
         ? clamp((profile.pitch || 0.94) - 0.14, 0.68, 0.94)
         : (isBasicVoice
           ? clamp(profile.basicPitch || 1.0, 0.76, 1.20)
           : clamp(profile.pitch || 1.0, 0.70, 1.30));
-      const effVol = clamp(this.volume * (isBasicVoice ? 0.92 : 1.0), 0, 1);
+      const effVol = clamp(this.volume * (isBasicVoice ? 0.92 : 1.0) * (sitCfg.tailVolMul || 1.0), 0, 1);
 
       const clauses = this.splitMandarinClauses(clean);
+      const clauseOffsets = [];
+      let scanPos = 0;
+      clauses.forEach(function (cl) {
+        const found = clean.indexOf(cl, scanPos);
+        const startPos = found !== -1 ? found : scanPos;
+        clauseOffsets.push(startPos);
+        scanPos = startPos + cl.length;
+      });
       if (!this.paused) this.setVisualSpeaking(true);
 
       const finishOnce = function () {
@@ -1318,6 +1572,7 @@ const voice = {
         self.utteranceSeq += 1;
         self.clearTimers();
         self.activeUtterance = null;
+        self.liveInPause = false;
         if (self.isSupported()) {
           try { window.speechSynthesis.cancel(); } catch (e) {}
         }
@@ -1348,6 +1603,10 @@ const voice = {
           clearTimeout(self.clauseWatchdogTimer);
           self.clauseWatchdogTimer = null;
         }
+        if (self.charProgressTimer) {
+          clearInterval(self.charProgressTimer);
+          self.charProgressTimer = null;
+        }
         if (self.paused) {
           self._resumePendingClause = speakNextClause;
           return;
@@ -1357,7 +1616,9 @@ const voice = {
           finishOnce();
           return;
         }
-        const clause = clauses[idx];
+        const curClauseIdx = idx;
+        const clause = clauses[curClauseIdx];
+        const clauseStartChar = clauseOffsets[curClauseIdx] || 0;
         idx += 1;
         const isQuestion = /[？?]$/.test(clause);
         const isExclaim = /[！!]$/.test(clause);
@@ -1370,26 +1631,51 @@ const voice = {
 
         let cRate = baseRate;
         let cPitch = basePitch;
-        if (mood === "panic") {
-          cRate = clamp(cRate * 1.04, 0.95, 1.16);
-          cPitch = clamp(cPitch + (isBasicVoice ? 0.01 : 0.025), 0.96, 1.06);
+        if (sitCfg.key === "under_fire") {
+          cRate = clamp(cRate * 1.03, 0.94, 1.46);
+          cPitch = clamp(cPitch + (isBasicVoice ? 0.01 : 0.025), 0.72, 1.28);
+        } else if (sitCfg.key === "last_words" && idx === clauses.length) {
+          cRate = clamp(cRate * 0.94, 0.72, 1.12);
         }
         if (isQuestion) {
-          cPitch = clamp(cPitch + (isBasicVoice ? 0.012 : 0.028), 0.96, 1.07);
-          cRate = clamp(cRate * 0.98, 0.90, 1.14);
+          cPitch = clamp(cPitch + (isBasicVoice ? 0.012 : 0.028), 0.72, 1.28);
+          cRate = clamp(cRate * 0.98, 0.76, 1.42);
         } else if (isExclaim) {
-          cRate = clamp(cRate * 1.03, 0.92, 1.16);
+          cRate = clamp(cRate * 1.03, 0.78, 1.46);
         }
 
         utter.rate = cRate;
         utter.pitch = cPitch;
-        utter.volume = effVol;
+        utter.volume = (sitCfg.key === "wolf_nervous" && idx === clauses.length) ? clamp(effVol * 0.84, 0.1, 1) : effVol;
         self.activeUtterance = utter;
+        self.liveInPause = false;
+        self._notifyCharProgress(clauseStartChar, seatIdNow, sitCfg.key);
+
+        const clauseStartAt = performance.now();
+        const estClauseMs = Math.max(380, Math.round((clause.length * 225) / Math.max(0.7, cRate)));
+        self.charProgressTimer = setInterval(function () {
+          if (seq !== self.utteranceSeq || self.paused || self.liveInPause) return;
+          const frac = clamp((performance.now() - clauseStartAt) / estClauseMs, 0, 0.99);
+          const curCi = clauseStartChar + Math.floor(frac * clause.length);
+          self._notifyCharProgress(curCi, seatIdNow, sitCfg.key);
+        }, 55);
+
+        utter.onboundary = function (ev) {
+          if (seq !== self.utteranceSeq) return;
+          if (ev && typeof ev.charIndex === "number") {
+            self._notifyCharProgress(clauseStartChar + ev.charIndex, seatIdNow, sitCfg.key);
+          }
+        };
 
         let clauseDone = false;
         const onClauseDone = function () {
           if (clauseDone || seq !== self.utteranceSeq) return;
           clauseDone = true;
+          self.liveInPause = true;
+          if (self.charProgressTimer) {
+            clearInterval(self.charProgressTimer);
+            self.charProgressTimer = null;
+          }
           if (self.clauseWatchdogTimer) {
             clearTimeout(self.clauseWatchdogTimer);
             self.clauseWatchdogTimer = null;
@@ -1398,7 +1684,14 @@ const voice = {
             finishOnce();
             return;
           }
-          const pauseMs = isEllipsis ? 195 : (isMajorStop ? 155 : 85);
+          const nextClause = clauses[idx] || "";
+          // v18.0 Nervous Wolf Micro-Hesitation: 240ms pause + light throat-clear right before accusing a seat!
+          const nextMentionsSeat = /(?:1[0-2]|0?[1-9])號/.test(nextClause);
+          const wolfHesitateAdd = (sitCfg.key === "wolf_nervous" && nextMentionsSeat && sitCfg.hesitateBeforeAccuseMs) ? sitCfg.hesitateBeforeAccuseMs : 0;
+          if (wolfHesitateAdd > 0 && typeof sound.playPreSpeechBreath === "function") {
+            sound.playPreSpeechBreath(pKey, mood || "normal", seatIdNow, "wolf_nervous");
+          }
+          const pauseMs = (isEllipsis ? 210 : (isMajorStop ? (sitCfg.periodPauseMs || 180) : (sitCfg.commaPauseMs || 110))) + wolfHesitateAdd;
           self._resumePendingClause = speakNextClause;
           self.clauseTimer = setTimeout(speakNextClause, pauseMs);
         };
@@ -1418,7 +1711,20 @@ const voice = {
         }
       }
 
-      const leadDelay = wasBusy ? 55 : (this.mode === "hybrid" ? 90 : 0);
+      const needPrepBrowser = Boolean(seatIdNow > 0 && pKey !== "主持" && !(typeof isSpectatorFastForward === "function" && isSpectatorFastForward()));
+      if (needPrepBrowser) {
+        if (typeof state !== "undefined") {
+          state.speechPrepUntil = performance.now() + 220;
+          state.speechPrepSeatId = seatIdNow;
+        }
+        if (this.humanBreath && typeof sound.playPreSpeechBreath === "function") {
+          sound.playPreSpeechBreath(pKey, mood || "normal", seatIdNow, sitCfg.key);
+        }
+        if (typeof sound.playSeatFoley === "function") {
+          sound.playSeatFoley(sitCfg.key === "under_fire" ? "cloth_rustle" : "cup_lift", seatIdNow);
+        }
+      }
+      const leadDelay = needPrepBrowser ? 220 : (wasBusy ? 55 : (this.mode === "hybrid" ? 90 : 0));
       if (leadDelay > 0) {
         this._resumePendingClause = speakNextClause;
         this.clauseTimer = setTimeout(speakNextClause, leadDelay);
@@ -1440,7 +1746,7 @@ const voice = {
 
   speakCharacter: function (speaker, text, mood, onDone, opts) {
     const nameKey = (!speaker || speaker.id === getPlayerId()) ? "你" : speaker.name;
-    this.speak(nameKey, text, mood || "normal", onDone, Object.assign({ seatId: speaker ? speaker.id : null }, opts || {}));
+    this.speak(nameKey, text, mood || "normal", onDone, Object.assign({ seatId: speaker ? speaker.id : null, speaker: speaker || null }, opts || {}));
   },
 
   replayLast: function () {

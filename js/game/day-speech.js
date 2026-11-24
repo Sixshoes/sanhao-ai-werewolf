@@ -821,9 +821,12 @@ async function executeAiTurnSpeech(speaker) {
     ? ("心虛 " + speaker.microPulse + "%")
     : speaker.trait;
 
+  const ffLog = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const deferLogDisplay = Boolean(!ffLog && typeof voice !== "undefined" && typeof voice.canSpeak === "function" && voice.canSpeak());
   addLog({
     kind: "speech",
     useTypewriter: true,
+    pendingReveal: deferLogDisplay,
     speakerId: speaker.id,
     title: badgeTitle,
     subBadge: subTag,
