@@ -5290,7 +5290,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const longUnpunct = "這是一段故意完全沒有標點符號用來測試瀏覽器語音長句子會不會在十四秒被卡斷的超長繁體中文狼人殺推理測試發言內容確認每個切片都不超過二十二個字元而且一個字都不會漏掉";
     const split136 = voice.splitMandarinClauses(longUnpunct);
     const longTtsClauseOk = split136.length >= 4 && split136.every(c => c.length <= 22) && split136.join("") === longUnpunct;
-    const spPrefTest = state.match.seats.find(s => s.role === "villager" && s.id !== getPlayerId() && s.id !== 8) || state.match.seats.find(s => s.id !== getPlayerId() && s.id !== 8) || state.match.seats[1];
+    const spPrefTest = state.match.seats.find(s => s.role === "villager" && s.id !== getPlayerId() && s.id !== 3 && s.id !== 8) || state.match.seats.find(s => s.id !== getPlayerId() && s.id !== 3 && s.id !== 8) || state.match.seats[1];
     const nonSeerOther = state.match.seats.find(s => s.id !== spPrefTest.id && s.claimedRole !== "seer") || state.match.seats[3];
     const origClaimPref = spPrefTest.claimedRole;
     spPrefTest.claimedRole = null;
@@ -6052,6 +6052,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     el("selectPreferredRole").value = "guard";
     el("selectModeCount").value = "8";
     el("chkGuardMode").checked = true;
+    el("chkSheriffMode").checked = false;
     startNewGame();
     state.match.day = 1;
     const gTarget = getAliveSeats().find(s => s.team === "good" && s.id !== getPlayerId());
@@ -6483,6 +6484,75 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const diag17 = collectFeedbackDiagnostics();
     const version17Ok = Boolean(diag17 && diag17.version === "v17.0 (公測 3.2)");
 
+    // 6. Standard Day-1 Werewolf Order: Sheriff Election FIRST, THEN Night-1 Death Reveal (+ Dead-Sheriff Transfer + Election Explode Settlement)
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    el("chkSheriffMode").checked = true;
+    el("chkGuardMode").checked = false;
+    state.autoPlay = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pidOrd = getPlayerId();
+    const pSeatOrd = getPlayerSeat();
+    // Night 1: Wolves kill Player Seer (unhealed)
+    state.match.day = 1;
+    state.match.nightState = { wolfTarget: pidOrd, guardTarget: null, seerTarget: null, witchSaved: false, witchPoisonTarget: null };
+    resolveDawn();
+    clearStepTimer();
+    // MUST enter SHERIFF_ELECTION BEFORE revealing Night-1 death — player is still alive and can run for Sheriff!
+    const sheriffBeforeDeathOk = Boolean(
+      state.match.phase === "SHERIFF_ELECTION" &&
+      state.match.pendingDawnAfterSheriff === true &&
+      pSeatOrd.alive === true &&
+      (!state.match.nightArchive || state.match.nightArchive.length === 0) &&
+      (!state.match.lastNightCasualties || state.match.lastNightCasualties.length === 0)
+    );
+    // Player runs for Sheriff and wins -> IMMEDIATELY after Sheriff Election ends, Night-1 death triggers -> SHERIFF_TRANSFER -> LAST_WORDS_PLAYER!
+    resolveSheriffElectionAction("run");
+    const shCtxOrd = state.match.sheriffElectionCtx;
+    // Force only player as remaining candidate so player definitely wins Sheriff to test dead-Sheriff transfer!
+    shCtxOrd.candidateIds = [pidOrd];
+    finalizeSheriffElectionWinner(pidOrd);
+    clearStepTimer();
+    const postSheriffDeathTransferOk = Boolean(
+      pSeatOrd.alive === false &&
+      state.match.pendingDawnAfterSheriff === false &&
+      state.match.nightArchive.length === 1 &&
+      state.match.lastNightCasualties.includes(pidOrd) &&
+      state.match.phase === "SHERIFF_TRANSFER"
+    );
+    const heirOrd = getAliveSeats().find(function (s) { return s.id !== pidOrd; });
+    resolvePlayerSheriffTransfer(heirOrd.id);
+    clearStepTimer();
+    const transferThenLastWordsOk = Boolean(
+      state.match.sheriffSeatId === heirOrd.id &&
+      state.match.phase === "LAST_WORDS_PLAYER"
+    );
+
+    // Wolf self-explodes DURING Day-1 pre-dawn Sheriff Election -> settles pending Night-1 death + forfeits badge + enters Night 2!
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "wolf";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pidExp = getPlayerId();
+    const n1VicExp = getAliveSeats().find(function (s) { return s.team === "good" && s.role === "villager"; });
+    state.match.day = 1;
+    state.match.nightState = { wolfTarget: n1VicExp.id, guardTarget: null, seerTarget: null, witchSaved: false, witchPoisonTarget: null };
+    resolveDawn();
+    clearStepTimer();
+    const expInElection = state.match.phase === "SHERIFF_ELECTION" && n1VicExp.alive === true && state.match.pendingDawnAfterSheriff === true;
+    triggerWolfSelfExplode(pidExp);
+    clearStepTimer();
+    const explodeSettlesN1Ok = Boolean(
+      expInElection &&
+      n1VicExp.alive === false &&
+      state.match.sheriffSeatId === null &&
+      state.match.pendingDawnAfterSheriff === false &&
+      state.match.nightArchive.length === 1 &&
+      state.match.day === 2
+    );
+
     antiCheatMonitor.strictThrow = prevAntiStrict;
     resetMatchToLobby();
 
@@ -6490,7 +6560,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       gazeResetOk, lanternResetOk, roleGuidesCleanOk, personaIdsOk, mobaiTitleOk,
       stylingAll11Ok, idleArchetypes11Ok, accAttachAll11Ok, dossiersAll11Ok, clubNetOk,
       goodHabitsOk, alangWolfSheriffOk, clubInsertOk, azhuWolfBusOk, dossierUnlockOk,
-      showcaseCardOk, version17Ok
+      showcaseCardOk, version17Ok,
+      sheriffBeforeDeathOk, postSheriffDeathTransferOk, transferThenLastWordsOk, explodeSettlesN1Ok
     };
   })()`, ctx);
 

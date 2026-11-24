@@ -260,6 +260,8 @@ function startJudgeShowcaseMatch() {
     spiritBet: { active: null, history: [], streak: 0, bestStreak: 0, totalBonusPts: 0 },
     sheriffRallyUsedDay: 0,
     sheriffElectionPending: false,
+    pendingDawnAfterSheriff: false,
+    dawnAfterSheriffRan: false,
     sheriffElectionCtx: null,
     sheriffVoteRecord: {
       day: 1,
@@ -638,6 +640,8 @@ function startNewGame() {
     spiritBet: { active: null, history: [], streak: 0, bestStreak: 0, totalBonusPts: 0 },
     sheriffRallyUsedDay: 0,
     sheriffElectionPending: Boolean(sheriffSeatId),
+    pendingDawnAfterSheriff: false,
+    dawnAfterSheriffRan: false,
     sheriffElectionCtx: null,
     sheriffVoteRecord: null,
     sheriffBadgeFlow: null,
@@ -733,14 +737,14 @@ function startNewGame() {
     if (state.match.sheriffElectionPending) {
       addLog({
         kind: "blessing",
-        title: "👑 本局已啟用警長制度：第 1 天天亮後將進行上警競選（1.5 票＆末置位歸票權）",
+        title: "本局已啟用警長制度：第 1 天天亮將先上警競選，競選結束後再公布首夜倒牌（1.5 票＆末置位歸票權）",
         text: ""
       });
     } else {
       const shSeat = getSeat(sheriffSeatId);
       addLog({
         kind: "blessing",
-        title: "👑 警長誕生：" + fmtSeatNum(sheriffSeatId) + "號 " + (shSeat ? shSeat.name : "") + "（公投擁有 1.5 票歸票權！）",
+        title: "警長誕生：" + fmtSeatNum(sheriffSeatId) + "號 " + (shSeat ? shSeat.name : "") + "（公投擁有 1.5 票歸票權！）",
         text: ""
       });
     }

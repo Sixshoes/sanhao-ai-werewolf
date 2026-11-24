@@ -728,7 +728,27 @@ function resolveDawn() {
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
   state.activeBubble = null;
-  sound.playDawn();
+
+  // 標準狼人殺規則：第 1 天若啟用警長制度，天亮先「上警競選」，全員在席完成競選後才公布首夜倒牌／平安夜！
+  if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof startSheriffElection === "function") {
+    sound.playDawn();
+    state.match.pendingDawnAfterSheriff = true;
+    state.match.dawnAfterSheriffRan = true;
+    playSkyCurtain("day", "", formatDayOrdinalZh(1), "天亮請睜眼・先進行上警競選");
+    startSheriffElection(function () {
+      if (!state.match.started || state.match.phase === "GAME_OVER") return;
+      state.match.pendingDawnAfterSheriff = false;
+      resolveDawn();
+    });
+    return;
+  }
+
+  const afterPreDawnSheriff = Boolean(state.match.day === 1 && state.match.dawnAfterSheriffRan);
+  state.match.pendingDawnAfterSheriff = false;
+  state.match.dawnAfterSheriffRan = false;
+  if (!afterPreDawnSheriff) {
+    sound.playDawn();
+  }
   if (typeof orchestrator !== "undefined") orchestrator.emit("phase:changed", { phase: "DAWN_RESOLVE", day: state.match.day });
 
   const ns = state.match.nightState;
@@ -842,9 +862,14 @@ function resolveDawn() {
   if (casualties.length === 0) {
     state.match.peaceNights.push(state.match.day);
     state.match.harmonyScore = clamp(state.match.harmonyScore + 4, 0, 100);
-    playSkyCurtain("day", "", formatDayOrdinalZh(state.match.day), "昨夜平安，全員在場");
-    addLog({ kind: "dawn", title: "天亮了：昨晚平安夜！沒人出局", text: "" });
-    dawnVoiceLine = "第" + state.match.day + "天，天亮請睜眼！昨晚是平安夜，沒有人出局，現在開始輪流發言。";
+    if (afterPreDawnSheriff) {
+      addLog({ kind: "dawn", title: "警長競選結束，公布昨夜結果：昨晚平安夜！沒人出局", text: "" });
+      dawnVoiceLine = "警長競選結束！現在公布昨夜結果，昨晚是平安夜，沒有人出局，準備開始輪流發言。";
+    } else {
+      playSkyCurtain("day", "", formatDayOrdinalZh(state.match.day), "昨夜平安，全員在場");
+      addLog({ kind: "dawn", title: "天亮了：昨晚平安夜！沒人出局", text: "" });
+      dawnVoiceLine = "第" + state.match.day + "天，天亮請睜眼！昨晚是平安夜，沒有人出局，現在開始輪流發言。";
+    }
     if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation([]);
   } else {
     casualties.forEach(function (c) {
@@ -857,9 +882,14 @@ function resolveDawn() {
     state.match.harmonyScore = clamp(state.match.harmonyScore - 6 * casualties.length, 0, 100);
     if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation(casualties);
     const noLwTag = state.match.day >= 2 ? "（第2夜起夜間離席一律覆杯閉麥、無遺言）" : "（首夜離席保留遺言）";
-    playSkyCurtain("day", "", formatDayOrdinalZh(state.match.day), "昨夜 " + names.join("、") + " 離席" + (state.match.day >= 2 ? "・覆杯無遺言" : ""));
-    addLog({ kind: "dawn", title: "天亮了：" + names.join("、") + " 昨夜離席冷靜" + noLwTag, text: "" });
-    dawnVoiceLine = "第" + state.match.day + "天，天亮請睜眼！昨晚" + names.join("、") + "離席冷靜了。" + (state.match.day >= 2 ? "第2夜起夜間離席一律無遺言，直接覆杯閉麥。" : "請發表首夜遺言。");
+    if (afterPreDawnSheriff) {
+      addLog({ kind: "dawn", title: "警長競選結束，公布首夜倒牌：" + names.join("、") + " 昨夜離席冷靜" + noLwTag, text: "" });
+      dawnVoiceLine = "警長競選結束！現在公布昨夜結果，昨晚" + names.join("、") + "首夜倒牌離席，請發表首夜遺言。";
+    } else {
+      playSkyCurtain("day", "", formatDayOrdinalZh(state.match.day), "昨夜 " + names.join("、") + " 離席" + (state.match.day >= 2 ? "・覆杯無遺言" : ""));
+      addLog({ kind: "dawn", title: "天亮了：" + names.join("、") + " 昨夜離席冷靜" + noLwTag, text: "" });
+      dawnVoiceLine = "第" + state.match.day + "天，天亮請睜眼！昨晚" + names.join("、") + "離席冷靜了。" + (state.match.day >= 2 ? "第2夜起夜間離席一律無遺言，直接覆杯閉麥。" : "請發表首夜遺言。");
+    }
   }
   if (typeof evaluateRoleMission === "function") evaluateRoleMission();
   if (typeof evaluateMatchPointState === "function") evaluateMatchPointState();
@@ -932,6 +962,96 @@ function resolveDawn() {
     return;
   }
   continueAfterDawnSheriff();
+}
+
+function settleNightCasualtiesOnElectionExplode() {
+  const m = state.match;
+  if (!m || !m.started) return false;
+  const ns = m.nightState || {};
+  if (typeof resolveSpiritRoundBet === "function") {
+    resolveSpiritRoundBet("night_kill", ns.wolfTarget || null);
+  }
+  const casualties = [];
+  const names = [];
+  const poisonedId = ns.witchPoisonTarget || null;
+  const guardedId = ns.guardTarget || null;
+  const isGuardedWolfTarget = Boolean(ns.wolfTarget && guardedId && ns.wolfTarget === guardedId);
+  const isDoubleSaveClash = Boolean(isGuardedWolfTarget && ns.witchSaved);
+  const wolfKillBlocked = Boolean((ns.witchSaved && !isGuardedWolfTarget) || (isGuardedWolfTarget && !ns.witchSaved));
+  const fogSealOn = m.variantMode === "fog_seal";
+  m.guardBlockedLastNight = Boolean(isGuardedWolfTarget && !ns.witchSaved);
+  if (m.guardBlockedLastNight) {
+    if (m.stats) m.stats.guardBlocks = (m.stats.guardBlocks || 0) + 1;
+    const gSeatChk = m.seats.find(function (s) { return s.role === "guard" && s.alive; });
+    if (gSeatChk && gSeatChk.id === getPlayerId()) {
+      m.guardAwakenBonusWeightDay = m.day;
+    }
+  }
+  let wolfKillSeat = null;
+  if (ns.wolfTarget && !wolfKillBlocked) {
+    const wk = getSeat(ns.wolfTarget);
+    if (wk && wk.alive) {
+      wk.alive = false;
+      wk.outReason = fogSealOn
+        ? "已離席（迷霧封牌）"
+        : ((poisonedId && poisonedId === wk.id) ? "清心茶請離" : (isDoubleSaveClash ? "同守同救破盾" : "夜間迷霧暫離"));
+      wolfKillSeat = wk;
+      const wCause = (poisonedId && poisonedId === wk.id) ? "purify" : (isDoubleSaveClash ? "double_clash" : "wolf");
+      casualties.push({ id: wk.id, cause: wCause });
+      names.push(wk.id + "號" + wk.name);
+    }
+  }
+  if (poisonedId && (!wolfKillSeat || poisonedId !== wolfKillSeat.id)) {
+    const ps = getSeat(poisonedId);
+    if (ps && ps.alive) {
+      ps.alive = false;
+      ps.outReason = fogSealOn ? "已離席（迷霧封牌）" : "清心茶請離";
+      casualties.push({ id: ps.id, cause: "purify" });
+      names.push(ps.id + "號" + ps.name);
+    }
+  }
+  const seerSeatObj = m.seats.find(function (s) { return s.role === "seer"; });
+  const witchSeatObj = m.seats.find(function (s) { return s.role === "witch"; });
+  const guardSeatObj = m.seats.find(function (s) { return s.role === "guard"; });
+  const seerChkSeat = ns.seerTarget ? getSeat(ns.seerTarget) : null;
+  if (!m.nightArchive) m.nightArchive = [];
+  m.nightArchive.push({
+    day: m.day,
+    wolfTarget: ns.wolfTarget || null,
+    guardId: guardSeatObj ? guardSeatObj.id : null,
+    guardTarget: guardedId,
+    doubleSaveClash: isDoubleSaveClash,
+    seerId: seerSeatObj ? seerSeatObj.id : null,
+    seerTarget: ns.seerTarget || null,
+    seerIsWolf: seerChkSeat ? (seerChkSeat.team === "wolf") : null,
+    witchId: witchSeatObj ? witchSeatObj.id : null,
+    witchSaved: Boolean(ns.witchSaved),
+    witchPoisonTarget: ns.witchPoisonTarget || null,
+    casualties: casualties.map(function (c) { return { id: c.id, cause: c.cause }; }),
+    hunterShot: null
+  });
+  m.lastNightCasualties = casualties.map(function (c) { return c.id; });
+  m.dawnAfterSheriffRan = false;
+  if (casualties.length === 0) {
+    m.peaceNights.push(m.day);
+    addLog({ kind: "dawn", title: "警上自爆吞警徽・公布昨夜結果：昨晚平安夜，即刻黑燈入夜", text: "" });
+  } else {
+    if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation(casualties);
+    addLog({ kind: "dawn", title: "警上自爆吞警徽・公布昨夜死訊：" + names.join("、") + " 首夜倒牌離席，即刻黑燈入夜", text: "" });
+    if (casualties.some(function (c) { return c.id === getPlayerId(); }) && typeof autoEnableSpectatorCompactPace === "function") {
+      autoEnableSpectatorCompactPace();
+    }
+  }
+  if (typeof evaluateRoleMission === "function") evaluateRoleMission();
+  if (typeof evaluateMatchPointState === "function") evaluateMatchPointState();
+  const wolfKnifeWinReason = (wolfKillSeat && typeof evaluateNightWolfKnifeWin === "function")
+    ? evaluateNightWolfKnifeWin(wolfKillSeat, poisonedId)
+    : null;
+  if (wolfKnifeWinReason) {
+    finishMatch("wolf", wolfKnifeWinReason);
+    return true;
+  }
+  return checkAndHandleGameOver();
 }
 
 function chooseAiHunterTarget(hunterSeat) {

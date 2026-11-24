@@ -693,12 +693,12 @@ function renderSheriffElectionPanel() {
   const headEl = el("sheriffElectionHeadline");
   if (headEl) {
     if (stage === "signup") {
-      headEl.textContent = "👑 第一天上警競選・決定上警或警下聽選";
+      headEl.textContent = "第一天上警競選（選完再公布首夜倒牌）・決定上警或警下聽選";
     } else if (stage === "speech") {
       const idxHuman = Math.min(orderIds.length, Math.max(1, (ctx.speechIndex || 0) + 1));
-      headEl.textContent = "👑 警上輪流發言（第 " + idxHuman + " / " + Math.max(1, orderIds.length) + " 位）";
+      headEl.textContent = "警上輪流發言（第 " + idxHuman + " / " + Math.max(1, orderIds.length) + " 位）";
     } else {
-      headEl.textContent = "🗳 警上發言完畢・請警下投票（結果納入排坑）";
+      headEl.textContent = "警上發言完畢・請警下投票（結果納入排坑）";
     }
   }
 

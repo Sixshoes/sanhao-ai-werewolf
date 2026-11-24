@@ -1209,6 +1209,7 @@ function triggerWolfSelfExplode(seatId, opts) {
 
   // 2. Flip the wolf card immediately and forfeit all remaining speeches, voting, and unfinished sheriff/badge-flow!
   const wasElection = (m.phase === "SHERIFF_ELECTION");
+  const hadPendingN1Dawn = Boolean(wasElection && m.pendingDawnAfterSheriff);
   const hadSheriffBadge = Boolean(m.sheriffSeatId === wolf.id);
   wolf.alive = false;
   wolf.outReason = "拂袖掀席自爆";
@@ -1220,6 +1221,8 @@ function triggerWolfSelfExplode(seatId, opts) {
   if (wasElection) {
     m.sheriffElectionCtx = null;
     m.sheriffElectionPending = false;
+    m.pendingDawnAfterSheriff = false;
+    m.dawnAfterSheriffRan = false;
     m.sheriffSeatId = null;
     m.sheriffBadgeFlow = null;
     m.sheriffBadgeFlowsBySeat = {};
@@ -1256,7 +1259,12 @@ function triggerWolfSelfExplode(seatId, opts) {
     autoEnableSpectatorCompactPace();
   }
 
-  // 3. Check win condition; if match continues, plunge straight into Night!
+  // 3. If self-explode aborted Day-1 pre-dawn Sheriff Election, settle & announce pending Night-1 casualties first!
+  if (hadPendingN1Dawn && typeof settleNightCasualtiesOnElectionExplode === "function") {
+    if (settleNightCasualtiesOnElectionExplode()) return true;
+  }
+
+  // 4. Check win condition; if match continues, plunge straight into Night!
   if (checkAndHandleGameOver()) return true;
   if (typeof beginNightPhase === "function") {
     beginNightPhase();
@@ -2158,7 +2166,7 @@ function startSheriffElection(onDone) {
   m.sheriffSeatId = null;
   const candNamesStr = cands.map(function (c) { return fmtSeatNum(c.id) + "號" + c.name; }).join("、");
   const dramaEvents = [
-    "👑 舉手上警名單：" + candNamesStr + "！請先決定要「上警競選」或「警下聽選」，隨即依序輪流發言拉票！"
+    "舉手上警名單：" + candNamesStr + "！請先決定「上警競選」或「警下聽選」，選完警長後再公布首夜倒牌！"
   ];
   if (cands.length >= 2 && typeof spawnBeam === "function") {
     spawnBeam(cands[0].id, cands[1].id, "#fbbf24", "grill");
@@ -2185,11 +2193,11 @@ function startSheriffElection(onDone) {
   m.phase = "SHERIFF_ELECTION";
   addLog({
     kind: "system",
-    title: "👑 第一天「上警競選」開始！目前 " + candNamesStr + " 舉手上警；請決定是否上警，隨即進入警上輪流發言與警下投票！",
+    title: "第一天「上警競選」開始（競選結束後再公布昨夜倒牌）：目前 " + candNamesStr + " 舉手上警；請決定是否上警，隨即進入警上輪流發言與警下投票！",
     text: ""
   });
   if (typeof voice !== "undefined" && voice.canSpeak()) {
-    voice.speakHost("第一天警長競選開始！目前共有" + cands.length + "位夥伴舉手上警，請決定是否上警，或直接開始候選人輪流發言！");
+    voice.speakHost("第1天，天亮請睜眼！先進行警長競選，競選結束後再公布昨夜結果。目前共有" + cands.length + "位夥伴舉手上警，請決定是否上警！");
   }
   updateAllUI();
   return true;

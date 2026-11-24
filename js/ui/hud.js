@@ -163,7 +163,7 @@ function updateAllUI() {
         ? (fmtSeatNum(m.lastHunterShot.hunterId) + "號 帶走 " + fmtSeatNum(m.lastHunterShot.targetId) + "號 " + m.lastHunterShot.targetName + "！")
         : "直心糾察長正氣共鳴結算"
     },
-    SHERIFF_ELECTION: { pill: "上警競選", head: "第一天警長競選（1.5 票＋末置位歸票權）" },
+    SHERIFF_ELECTION: { pill: "上警競選", head: "第一天先上警競選・選完再公布首夜倒牌" },
     SHERIFF_ORDER: { pill: "警長指序", head: "請警長決定今日順時針或逆時針輪流發言" },
     DAY_SPEECH: { pill: "第" + m.day + "天輪流發言", head: "依序輪流發言" + (m.speechOrderLabel ? ("（" + m.speechOrderLabel + "）") : "") },
     LAST_WORDS_PLAYER: { pill: "發表遺言", head: "請發表你的離席遺言！" },
@@ -635,10 +635,10 @@ function openRoleGuidePopover(mode) {
       misGuideHtml +
       '<div class="space-y-1"><div class="text-[10px] font-bold text-slate-300">目前可用道具與按鈕</div>' + toolsHtml + "</div>" +
       '<div class="pt-1 border-t border-slate-700/60 space-y-1">' +
-        '<div class="role-guide-row"><span class="font-bold text-amber-200">勝利目標：</span>' + escapeHtml(guide.winCond) + "</div>" +
-        '<div class="role-guide-row"><span class="font-bold text-indigo-300">夜晚職能：</span>' + escapeHtml(guide.nightAction) + "</div>" +
-        '<div class="role-guide-row"><span class="font-bold text-emerald-300">白天職能：</span>' + escapeHtml(guide.dayAction) + "</div>" +
-        '<div class="role-guide-reward"><span class="font-bold">三好心法：</span>' + escapeHtml(guide.threeGoodTip) + "</div>" +
+      '<div class="role-guide-row"><span class="font-bold text-amber-200">勝利目標：</span>' + escapeHtml(guide.winCond) + "</div>" +
+      '<div class="role-guide-row"><span class="font-bold text-indigo-300">夜晚職能：</span>' + escapeHtml(guide.nightAction) + "</div>" +
+      '<div class="role-guide-row"><span class="font-bold text-emerald-300">白天職能：</span>' + escapeHtml(guide.dayAction) + "</div>" +
+      '<div class="role-guide-reward"><span class="font-bold">三好心法：</span>' + escapeHtml(guide.threeGoodTip) + "</div>" +
       "</div>";
   }
   pop.classList.remove("hidden");
