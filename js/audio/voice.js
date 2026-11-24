@@ -652,12 +652,12 @@ const voice = {
   syncQuickSpeedButtonUi: function () {
     const btn = typeof document !== "undefined" ? document.getElementById("btnQuickVoiceSpeed") : null;
     if (!btn) return;
-    const label = this.rate >= 1.18 ? "1.3×" : (this.rate >= 1.05 ? "1.15×" : "1.0×");
+    const label = this.rate >= 1.34 ? "1.5×" : (this.rate >= 1.18 ? "1.3×" : (this.rate >= 1.05 ? "1.15×" : "1.0×"));
     btn.textContent = label;
   },
 
   cycleQuickRate: function () {
-    const next = this.rate < 1.05 ? 1.10 : (this.rate < 1.18 ? 1.22 : 0.96);
+    const next = this.rate < 1.05 ? 1.10 : (this.rate < 1.18 ? 1.22 : (this.rate < 1.34 ? 1.42 : 0.96));
     this.rate = next;
     this.syncQuickSpeedButtonUi();
     if (typeof syncPrefsToControls === "function") syncPrefsToControls();

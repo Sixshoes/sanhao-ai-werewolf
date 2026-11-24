@@ -389,3 +389,121 @@ function computeTableWindVane() {
     summaryText: parts.length ? ("📊 茶席風向｜" + parts.join(" · ")) : "📊 茶席風向｜目前尚無公開集火目標"
   };
 }
+
+/**
+ * v14.2 嚴格零洩漏跨輪「言票相關性與言行一致度矩陣」
+ * 僅讀取 createBlindMatchSnapshot 投影之公開發言、公投票軌、警長票軌與警徽流，絕不讀取他人隱藏底牌！
+ */
+function buildVoteSpeechMatrix(viewerSeat, snapArg) {
+  const snap = snapArg || (typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(viewerSeat || null, { module: "vote_speech_matrix" })
+    : null);
+  const empty = {
+    divergenceBySeat: {},
+    divergenceDetails: {},
+    coVoteOutBySeat: {},
+    badgeFlowLines: [],
+    summaryLines: []
+  };
+  if (!snap || !snap.started) return empty;
+
+  const allEvs = Array.isArray(snap.allSpeechEvents) ? snap.allSpeechEvents : [];
+  const voteHist = Array.isArray(snap.voteHistory) ? snap.voteHistory : [];
+  const bfSignals = Array.isArray(snap.badgeFlowSignals) ? snap.badgeFlowSignals : [];
+  const seats = Array.isArray(snap.seats) ? snap.seats : [];
+  const pid = snap.playerSeatId || (typeof getPlayerId === "function" ? getPlayerId() : 1);
+
+  const labelSeat = function (id) {
+    const s = snap.getSeat ? snap.getSeat(id) : seats.find(function (x) { return x.id === id; });
+    if (!s) return id + "號";
+    return s.id + "號" + (s.id === pid ? "你" : s.name);
+  };
+
+  const divergenceBySeat = {};
+  const divergenceDetails = {};
+  const coVoteOutBySeat = {};
+
+  // 1. Speech-vs-Vote Divergence: accused seat A on day D yet voted for seat B when A was an eligible target!
+  voteHist.forEach(function (vh) {
+    if (!vh || !Array.isArray(vh.ballots) || !vh.ballots.length) return;
+    const d = vh.day || 1;
+    const daySpeeches = allEvs.filter(function (ev) { return ev && (ev.day || 1) === d; });
+    const latestAccuseBySpeaker = {};
+    daySpeeches.forEach(function (ev) {
+      if (ev.speakerId && ev.accuseId) latestAccuseBySpeaker[ev.speakerId] = ev.accuseId;
+    });
+    const pkSet = (Array.isArray(vh.pkCandidates) && vh.pkCandidates.length > 0) ? vh.pkCandidates : null;
+    const eligibleTargets = {};
+    vh.ballots.forEach(function (b) {
+      if (b && b.voterId) eligibleTargets[b.voterId] = true;
+      if (b && b.targetId) eligibleTargets[b.targetId] = true;
+    });
+
+    vh.ballots.forEach(function (b) {
+      if (!b || !b.voterId || !b.targetId) return;
+      const vid = b.voterId;
+      const accused = latestAccuseBySpeaker[vid];
+      if (!accused || accused === b.targetId || accused === vid) return;
+      if (pkSet && pkSet.indexOf(accused) === -1) return;
+      if (!eligibleTargets[accused]) return;
+      divergenceBySeat[vid] = (divergenceBySeat[vid] || 0) + 1;
+      if (!divergenceDetails[vid]) divergenceDetails[vid] = [];
+      divergenceDetails[vid].push({ day: d, accused: accused, voted: b.targetId });
+    });
+
+    // 2. Public Co-Voting with Voted-Out Seats (strictly public outReason / ballots — zero hidden role reads!)
+    if (vh.outId) {
+      const outBallot = vh.ballots.find(function (b) { return b && b.voterId === vh.outId && b.targetId; });
+      if (outBallot && outBallot.targetId) {
+        vh.ballots.forEach(function (b) {
+          if (!b || !b.voterId || b.voterId === vh.outId || !b.targetId) return;
+          if (b.targetId === outBallot.targetId) {
+            coVoteOutBySeat[b.voterId] = (coVoteOutBySeat[b.voterId] || 0) + 1;
+          }
+        });
+      }
+    }
+  });
+
+  // 3. Public Badge Flow Signal Summary
+  const badgeFlowLines = [];
+  bfSignals.slice(-3).forEach(function (sig) {
+    if (!sig || !sig.ownerId) return;
+    if (sig.headline) {
+      badgeFlowLines.push(labelSeat(sig.ownerId) + " 警徽暗號：" + String(sig.headline).slice(0, 48));
+    }
+  });
+
+  const summaryLines = [];
+  Object.keys(divergenceDetails).forEach(function (k) {
+    const sid = parseInt(k, 10);
+    const sObj = snap.getSeat ? snap.getSeat(sid) : null;
+    if (!sObj || !sObj.alive) return;
+    const dets = divergenceDetails[sid];
+    const last = dets[dets.length - 1];
+    summaryLines.push(
+      labelSeat(sid) + " 第" + last.day + "天口頭點名 " + labelSeat(last.accused) +
+      " 卻在公投改投 " + labelSeat(last.voted) + "（言票背離 " + dets.length + " 次）"
+    );
+  });
+
+  Object.keys(coVoteOutBySeat).forEach(function (k) {
+    const sid = parseInt(k, 10);
+    const cnt = coVoteOutBySeat[sid];
+    const sObj = snap.getSeat ? snap.getSeat(sid) : null;
+    if (!sObj || !sObj.alive || cnt < 2) return;
+    summaryLines.push(labelSeat(sid) + " 連續 " + cnt + " 輪與已被公投離席者同票綁定，需檢視站邊動機");
+  });
+
+  badgeFlowLines.forEach(function (line) {
+    summaryLines.push(line);
+  });
+
+  return {
+    divergenceBySeat: divergenceBySeat,
+    divergenceDetails: divergenceDetails,
+    coVoteOutBySeat: coVoteOutBySeat,
+    badgeFlowLines: badgeFlowLines,
+    summaryLines: summaryLines.slice(0, 4)
+  };
+}

@@ -219,8 +219,35 @@ function buildAiPostMatchCoachInsights() {
     });
   }
 
-  // 3. Three-Goodness Communication Review
-  if ((st.rewritesUsed || 0) > 0) {
+  // 3. Three-Goodness Communication & Speech-Action Consistency Radar (Anti-Hypocrisy Check at GAME_OVER)
+  const vmPost = typeof buildVoteSpeechMatrix === "function" ? buildVoteSpeechMatrix(null) : null;
+  const selfDivPost = (vmPost && vmPost.divergenceBySeat && vmPost.divergenceBySeat[pid]) || 0;
+  let votesOnWolfPost = 0;
+  let votesOnGoodPost = 0;
+  vHist.forEach(function (vh) {
+    const myB = (vh && Array.isArray(vh.ballots)) ? vh.ballots.find(function (b) { return b && b.voterId === pid && b.targetId; }) : null;
+    if (!myB) return;
+    const tObj = getSeat(myB.targetId);
+    if (tObj && tObj.team === "wolf") votesOnWolfPost += 1;
+    else if (tObj && tObj.team === "good") votesOnGoodPost += 1;
+  });
+  const pSeatPost = getPlayerSeat();
+  const isPlayerGoodPost = Boolean(!pSeatPost || pSeatPost.team === "good");
+  const fgUsedPost = st.fourGCount || 0;
+
+  if (selfDivPost >= 1 && (st.goodWordsCount || 0) >= 1) {
+    insights.push({
+      icon: "🧭",
+      title: "言語溫度 × 言行一致度",
+      text: "你本局語氣溫和友善，但曾出現 " + selfDivPost + " 次「口頭指控與實際投票不一致」的言票落差；真正的反霸凌推理不只口氣好，更要讓查證與公投票表裡如一！"
+    });
+  } else if (isPlayerGoodPost && votesOnWolfPost >= 1 && selfDivPost === 0) {
+    insights.push({
+      icon: "🌿",
+      title: "言語溫度 × 言行一致度",
+      text: "表裡如一滿分！你以零言票背離、友善度 " + m.harmonyScore + " 精準把 " + votesOnWolfPost + " 票投向酸民狼" + (fgUsedPost > 0 ? ("，並善用 " + fgUsedPost + " 張四給錦囊化解對立") : "") + "，完美詮釋理性說好話與公道護友！"
+    });
+  } else if ((st.rewritesUsed || 0) > 0) {
     insights.push({
       icon: "🌿",
       title: "三好溝通亮點",

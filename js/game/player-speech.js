@@ -1486,10 +1486,20 @@ function submitPlayerSpeech() {
         }
       });
     };
+    // v14.2 Anti-Hypocrisy ("口蜜腹劍") Guard: strictly public speech-vs-vote check (Zero-Leak!)
+    const pubMatrixSelf = (state.match.day >= 2 && typeof buildVoteSpeechMatrix === "function")
+      ? buildVoteSpeechMatrix(null)
+      : null;
+    const playerDivCount = (pubMatrixSelf && pubMatrixSelf.divergenceBySeat && pubMatrixSelf.divergenceBySeat[pid]) || 0;
+    const hypocrisyPenalty = playerDivCount >= 1 ? 0.45 : 1.0;
+    if (playerDivCount >= 1) {
+      state.match.stats.hypocrisyFlags = (state.match.stats.hypocrisyFlags || 0) + 1;
+    }
     state.match.seats.forEach(function (ai) {
       const aiEffRole = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(ai) : ai.role;
       if (ai.id !== pid && ai.alive && (ai.suspicionMap[pid] || 0) < 100 && !(plClaimedGod && aiEffRole === plClaimedGod)) {
-        const trustBoost = Math.round((comboMult > 1 ? 11 : 8) * critMult);
+        const rawBoost = Math.round((comboMult > 1 ? 11 : 8) * critMult);
+        const trustBoost = Math.max(2, Math.round(rawBoost * hypocrisyPenalty));
         ai.suspicionMap[pid] = clamp((ai.suspicionMap[pid] || 50) - trustBoost, 5, 95);
       }
     });

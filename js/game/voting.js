@@ -965,6 +965,9 @@ function setSheriffBadgeFlow(ownerId, firstTargetId, secondTargetId, sourceTag) 
   if (m.sheriffSeatId === ownerId && !m.sheriffElectionPending) {
     m.sheriffBadgeFlow = flow;
   }
+  if ((sourceTag === "speech" || sourceTag === "panel" || sourceTag === "clear") && typeof bumpTableStateRev === "function") {
+    bumpTableStateRev(false);
+  }
   return flow;
 }
 

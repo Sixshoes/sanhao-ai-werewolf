@@ -4,25 +4,41 @@
  *
  * 環境變數設定（於 Vercel Project → Settings → Environment Variables）：
  * - GEMINI_API_KEY         (必填) Google AI Studio API Key
- * - GEMINI_DEFAULT_MODEL   (選填，預設 gemini-3.8-flash)
+ * - GEMINI_DEFAULT_MODEL   (選填，預設 gemini-2.5-flash)
  * - GEMINI_ALLOWED_ORIGINS (選填，逗號分隔自訂網域白名單，例如 https://game.example.com)
- * - GEMINI_MAX_RPM         (選填，每 IP 每分鐘上限，預設 24)
- * - GEMINI_MAX_RPD         (選填，每 IP 每日上限，預設 240)
+ * - GEMINI_SESSION_MAX_RPM (選填，每瀏覽器會話每分鐘上限，預設 24)
+ * - GEMINI_SESSION_MAX_RPD (選填，每瀏覽器會話每日上限，預設 200)
+ * - GEMINI_NAT_IP_MAX_RPM  (選填，帶會話標頭之同校網共用 IP 總上限，預設 96)
+ * - GEMINI_NAT_IP_MAX_RPD  (選填，帶會話標頭之同校網共用 IP 每日總上限，預設 1200)
+ * - GEMINI_MAX_RPM         (選填，無會話標頭舊版單 IP 每分鐘上限，預設 24)
+ * - GEMINI_MAX_RPD         (選填，無會話標頭舊版單 IP 每日上限，預設 240)
  */
 "use strict";
 
 const ALLOWED_PUBLIC_MODELS = new Set([
-  "gemini-3.8-flash",
-  "gemini-3.6-flash",
   "gemini-2.5-flash",
-  "gemini-2.5-flash-lite"
+  "gemini-2.5-flash-lite",
+  "gemini-3.8-flash",
+  "gemini-3.6-flash"
 ]);
 
 const MAX_PROMPT_CHARS = 14000;
 const RATE_WINDOW_MS = 60 * 1000;
 const DAY_WINDOW_MS = 24 * 60 * 60 * 1000;
+const BAD_MODEL_COOLDOWN_MS = 10 * 60 * 1000;
+const SESSION_ID_RE = /^[a-zA-Z0-9_-]{8,48}$/;
 const _rateStore = new Map();
+const _badModelCooldown = new Map();
 let _lastPruneAt = 0;
+
+function extractSessionId(req, body) {
+  const headers = (req && req.headers) || {};
+  const fromHeader = String(headers["x-tea-session"] || "").trim();
+  if (fromHeader && SESSION_ID_RE.test(fromHeader)) return fromHeader;
+  const fromBody = (body && typeof body.sessionId === "string") ? body.sessionId.trim() : "";
+  if (fromBody && SESSION_ID_RE.test(fromBody)) return fromBody;
+  return "";
+}
 
 function getClientIp(req) {
   const fwd = req && req.headers ? (req.headers["x-forwarded-for"] || req.headers["x-real-ip"] || "") : "";
@@ -83,22 +99,11 @@ function isAllowedOrigin(req) {
   return false;
 }
 
-function checkRateLimit(ip, nowMs) {
-  const now = typeof nowMs === "number" ? nowMs : Date.now();
-  const maxRpm = Math.max(4, Math.min(120, parseInt(process.env.GEMINI_MAX_RPM || "24", 10) || 24));
-  const maxRpd = Math.max(20, Math.min(2000, parseInt(process.env.GEMINI_MAX_RPD || "240", 10) || 240));
-
-  if (now - _lastPruneAt > 120000 || _rateStore.size > 500) {
-    _lastPruneAt = now;
-    for (const [k, entry] of _rateStore.entries()) {
-      if (now - entry.dayStart > DAY_WINDOW_MS) _rateStore.delete(k);
-    }
-  }
-
-  let rec = _rateStore.get(ip);
+function _checkSingleBucket(bucketKey, maxRpm, maxRpd, now, reasonPrefix) {
+  let rec = _rateStore.get(bucketKey);
   if (!rec) {
     rec = { minStamps: [], dayStart: now, dayCount: 0 };
-    _rateStore.set(ip, rec);
+    _rateStore.set(bucketKey, rec);
   }
   if (now - rec.dayStart > DAY_WINDOW_MS) {
     rec.dayStart = now;
@@ -109,23 +114,76 @@ function checkRateLimit(ip, nowMs) {
   if (rec.minStamps.length >= maxRpm) {
     const oldest = rec.minStamps[0] || now;
     const retryAfterSec = Math.max(2, Math.ceil((RATE_WINDOW_MS - (now - oldest)) / 1000));
-    return { allowed: false, reason: "rpm", retryAfterSec: retryAfterSec };
+    return { allowed: false, reason: (reasonPrefix ? (reasonPrefix + "_") : "") + "rpm", retryAfterSec: retryAfterSec, rec: rec };
   }
   if (rec.dayCount >= maxRpd) {
-    return { allowed: false, reason: "rpd", retryAfterSec: 300 };
+    return { allowed: false, reason: (reasonPrefix ? (reasonPrefix + "_") : "") + "rpd", retryAfterSec: 300, rec: rec };
+  }
+  return { allowed: true, reason: "", retryAfterSec: 0, rec: rec };
+}
+
+function checkRateLimit(ip, nowMs, sessionId) {
+  const now = typeof nowMs === "number" ? nowMs : Date.now();
+  const hasSession = Boolean(sessionId && SESSION_ID_RE.test(String(sessionId)));
+
+  if (now - _lastPruneAt > 120000 || _rateStore.size > 800) {
+    _lastPruneAt = now;
+    for (const [k, entry] of _rateStore.entries()) {
+      if (now - entry.dayStart > DAY_WINDOW_MS) _rateStore.delete(k);
+    }
   }
 
-  rec.minStamps.push(now);
-  rec.dayCount += 1;
+  if (hasSession) {
+    const sessRpm = Math.max(6, Math.min(120, parseInt(process.env.GEMINI_SESSION_MAX_RPM || "24", 10) || 24));
+    const sessRpd = Math.max(30, Math.min(2000, parseInt(process.env.GEMINI_SESSION_MAX_RPD || "200", 10) || 200));
+    const natIpRpm = Math.max(sessRpm, Math.min(300, parseInt(process.env.GEMINI_NAT_IP_MAX_RPM || "96", 10) || 96));
+    const natIpRpd = Math.max(sessRpd, Math.min(6000, parseInt(process.env.GEMINI_NAT_IP_MAX_RPD || "1200", 10) || 1200));
+
+    const sRes = _checkSingleBucket("sess:" + sessionId, sessRpm, sessRpd, now, "session");
+    if (!sRes.allowed) return { allowed: false, reason: sRes.reason, retryAfterSec: sRes.retryAfterSec };
+    const ipRes = _checkSingleBucket("natip:" + ip, natIpRpm, natIpRpd, now, "ip");
+    if (!ipRes.allowed) return { allowed: false, reason: ipRes.reason, retryAfterSec: ipRes.retryAfterSec };
+
+    sRes.rec.minStamps.push(now);
+    sRes.rec.dayCount += 1;
+    ipRes.rec.minStamps.push(now);
+    ipRes.rec.dayCount += 1;
+    return { allowed: true, reason: "", retryAfterSec: 0 };
+  }
+
+  const maxRpm = Math.max(4, Math.min(120, parseInt(process.env.GEMINI_MAX_RPM || "24", 10) || 24));
+  const maxRpd = Math.max(20, Math.min(2000, parseInt(process.env.GEMINI_MAX_RPD || "240", 10) || 240));
+  const legacyRes = _checkSingleBucket("ip:" + ip, maxRpm, maxRpd, now, "");
+  if (!legacyRes.allowed) return { allowed: false, reason: legacyRes.reason, retryAfterSec: legacyRes.retryAfterSec };
+  legacyRes.rec.minStamps.push(now);
+  legacyRes.rec.dayCount += 1;
   return { allowed: true, reason: "", retryAfterSec: 0 };
 }
 
-function resolveSafeModel(requestedModel) {
-  const defModel = String(process.env.GEMINI_DEFAULT_MODEL || "gemini-3.8-flash").trim();
+function isModelCoolingDown(modelId, nowMs) {
+  const until = _badModelCooldown.get(modelId);
+  if (!until) return false;
+  const now = typeof nowMs === "number" ? nowMs : Date.now();
+  if (now >= until) {
+    _badModelCooldown.delete(modelId);
+    return false;
+  }
+  return true;
+}
+
+function resolveSafeModel(requestedModel, tierHint, nowMs) {
+  const defModel = String(process.env.GEMINI_DEFAULT_MODEL || "gemini-2.5-flash").trim();
   const req = String(requestedModel || "").trim();
-  if (req && ALLOWED_PUBLIC_MODELS.has(req)) return req;
-  if (defModel && ALLOWED_PUBLIC_MODELS.has(defModel)) return defModel;
-  return "gemini-3.8-flash";
+  let chosen = "gemini-2.5-flash";
+  if (req && ALLOWED_PUBLIC_MODELS.has(req)) chosen = req;
+  else if (defModel && ALLOWED_PUBLIC_MODELS.has(defModel)) chosen = defModel;
+  if (tierHint === "lite" && chosen === "gemini-2.5-flash" && !isModelCoolingDown("gemini-2.5-flash-lite", nowMs)) {
+    chosen = "gemini-2.5-flash-lite";
+  }
+  if (chosen !== "gemini-2.5-flash" && isModelCoolingDown(chosen, nowMs)) {
+    chosen = "gemini-2.5-flash";
+  }
+  return chosen;
 }
 
 async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeoutMs) {
@@ -231,13 +289,6 @@ async function handler(req, res) {
     return sendJson(res, 503, { ok: false, error: "Server Gemini proxy not configured" });
   }
 
-  const ip = getClientIp(req);
-  const rl = checkRateLimit(ip);
-  if (!rl.allowed) {
-    res.setHeader("Retry-After", String(rl.retryAfterSec));
-    return sendJson(res, 429, { ok: false, error: "Rate limit exceeded (" + rl.reason + ")" });
-  }
-
   const body = await readJsonBody(req);
   if (!body || typeof body !== "object") {
     return sendJson(res, 400, { ok: false, error: "Invalid JSON body" });
@@ -246,17 +297,29 @@ async function handler(req, res) {
     return sendJson(res, 413, { ok: false, error: "Payload too large" });
   }
 
+  const ip = getClientIp(req);
+  const sessionId = extractSessionId(req, body);
+  const rl = checkRateLimit(ip, Date.now(), sessionId);
+  if (!rl.allowed) {
+    res.setHeader("Retry-After", String(rl.retryAfterSec));
+    return sendJson(res, 429, { ok: false, error: "Rate limit exceeded (" + rl.reason + ")" });
+  }
+
   const rawPrompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
   if (!rawPrompt) {
     return sendJson(res, 400, { ok: false, error: "Empty prompt" });
   }
   const promptText = rawPrompt.slice(0, MAX_PROMPT_CHARS);
   const jsonMode = Boolean(body.jsonMode);
-  const primaryModel = resolveSafeModel(body.model);
+  const tierHint = body.tier === "lite" ? "lite" : "standard";
+  const primaryModel = resolveSafeModel(body.model, tierHint);
 
   const first = await callUpstreamGemini(apiKey, primaryModel, promptText, jsonMode, 8500);
   if (first.ok && first.text) {
     return sendJson(res, 200, { ok: true, model: primaryModel, text: first.text });
+  }
+  if (primaryModel !== "gemini-2.5-flash" && (first.status === 400 || first.status === 404)) {
+    _badModelCooldown.set(primaryModel, Date.now() + BAD_MODEL_COOLDOWN_MS);
   }
 
   const canFallback = primaryModel !== "gemini-2.5-flash" &&
@@ -276,6 +339,10 @@ async function handler(req, res) {
 handler._isAllowedOrigin = isAllowedOrigin;
 handler._checkRateLimit = checkRateLimit;
 handler._resolveSafeModel = resolveSafeModel;
-handler._resetRateLimit = function () { _rateStore.clear(); };
+handler._extractSessionId = extractSessionId;
+handler._markBadModel = function (modelId, nowMs) {
+  _badModelCooldown.set(modelId, (typeof nowMs === "number" ? nowMs : Date.now()) + BAD_MODEL_COOLDOWN_MS);
+};
+handler._resetRateLimit = function () { _rateStore.clear(); _badModelCooldown.clear(); };
 
 module.exports = handler;

@@ -384,7 +384,7 @@ function bindAudioVoiceEvents() {
       sound.unlock();
       if (typeof voice.cycleQuickRate === "function") {
         const nextR = voice.cycleQuickRate();
-        const tag = nextR >= 1.18 ? "1.3× 疾風快節奏" : (nextR >= 1.05 ? "1.15× 輕快推理" : "1.0× 自然節奏");
+        const tag = nextR >= 1.34 ? "1.5× 極速快節奏" : (nextR >= 1.18 ? "1.3× 疾風快節奏" : (nextR >= 1.05 ? "1.15× 輕快推理" : "1.0× 自然節奏"));
         if (typeof showToast === "function") showToast("🎙️ 語音語速切換為：" + tag, "emerald");
       }
     });

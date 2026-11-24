@@ -17,6 +17,297 @@ function startGuidedBeginnerMatch() {
   if (typeof renderBeginnerCoachBanner === "function") renderBeginnerCoachBanner();
 }
 
+/**
+ * v14.2 評審三分鐘精華導覽局（固定高潮局面：第 2 天雙觀察員對跳＋言票背離矩陣＋四給逆轉＋三好蓮花差 1 瓣覺醒）
+ * 嚴格遵守零洩漏盲視結構：所有欄位與一般正規對局完全一致，僅將開局推進至第 2 天末段焦點回合。
+ */
+function startJudgeShowcaseMatch() {
+  sound.unlock();
+  clearStepTimer();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
+  if (el("modalTutorial")) el("modalTutorial").classList.add("hidden");
+  if (el("setupDrawer")) el("setupDrawer").classList.add("hidden");
+  if (typeof indieFlow !== "undefined" && typeof indieFlow.hideRoleDealRitual === "function") {
+    indieFlow.hideRoleDealRitual({ silent: true });
+  }
+  if (typeof stage3d !== "undefined" && stage3d.showcaseMode && typeof stage3d.setShowcaseMode === "function") {
+    stage3d.setShowcaseMode(false);
+  }
+  state.spectatorFastForward = false;
+  state.autoPlay = false;
+  state.aiDifficulty = "normal";
+  state.ruleDepth = "full";
+  state.sheriffMode = true;
+  state.guardMode = true;
+  if (el("selectModeCount")) el("selectModeCount").value = "8";
+  if (el("selectPreferredRole")) el("selectPreferredRole").value = "seer";
+  if (el("selectAiDifficulty")) el("selectAiDifficulty").value = "normal";
+  if (el("selectRuleDepth")) el("selectRuleDepth").value = "full";
+  if (el("chkSheriffMode")) el("chkSheriffMode").checked = true;
+  if (el("chkGuardMode")) el("chkGuardMode").checked = true;
+  if (typeof orchestrator !== "undefined") orchestrator.beginNewEpoch("judge_showcase");
+
+  const fixedSpecs = [
+    { id: 1, name: "你", trait: "玩家", deductionStyle: "balanced", color: "#f5b942", role: "seer", alive: true, claimedRole: "seer", microPulse: 18 },
+    { id: 2, pIdx: 0, role: "villager", alive: true, claimedRole: null, microPulse: 21 },
+    { id: 3, pIdx: 1, role: "witch", alive: true, claimedRole: "witch", microPulse: 24 },
+    { id: 4, pIdx: 2, role: "wolf", alive: true, claimedRole: "seer", fakeSeer: true, microPulse: 86 },
+    { id: 5, pIdx: 3, role: "hunter", alive: true, claimedRole: null, microPulse: 26 },
+    { id: 6, pIdx: 4, role: "villager", alive: false, outReason: "投票出局", claimedRole: null, microPulse: 28 },
+    { id: 7, pIdx: 5, role: "wolf", alive: true, claimedRole: null, microPulse: 79 },
+    { id: 8, pIdx: 6, role: "guard", alive: true, claimedRole: null, microPulse: 22 }
+  ];
+
+  const seats = fixedSpecs.map(function (sp) {
+    const pInfo = typeof sp.pIdx === "number" ? (AI_PERSONAS[sp.pIdx] || AI_PERSONAS[0]) : sp;
+    const sus = {};
+    for (let k = 1; k <= 8; k++) sus[k] = k === sp.id ? 0 : 48;
+    if (sp.role !== "wolf") {
+      sus[4] = 64;
+      sus[7] = 58;
+      sus[1] = 36;
+      sus[2] = 32;
+    } else {
+      sus[1] = 72;
+      sus[2] = 68;
+      sus[4] = 10;
+      sus[7] = 10;
+    }
+    return {
+      id: sp.id,
+      name: sp.id === 1 ? "你" : pInfo.name,
+      trait: sp.id === 1 ? "玩家" : pInfo.trait,
+      deductionStyle: pInfo.deductionStyle || "balanced",
+      color: sp.id === 1 ? "#f5b942" : pInfo.avatarColor,
+      role: sp.role,
+      team: ROLE_DEFS[sp.role].team,
+      alive: sp.alive,
+      outReason: sp.outReason || "",
+      emojiMood: "",
+      sweatExposed: false,
+      suspicionMap: sus,
+      trustShield: false,
+      microPulse: sp.microPulse,
+      fakeSeer: Boolean(sp.fakeSeer),
+      fakeCheckedIds: sp.id === 4 ? [7] : [],
+      isWolfKing: false,
+      isElder: false,
+      elderShieldUsed: false,
+      voteDisabled: false,
+      claimedRole: sp.claimedRole || null,
+      checkedHistory: sp.id === 1
+        ? [{ day: 1, targetId: 2, isWolf: false }, { day: 2, targetId: 4, isWolf: true }]
+        : [],
+      savedSeatId: sp.id === 3 ? 2 : null,
+      witchAnnouncedSave: sp.id === 3,
+      purifiedSeatId: null
+    };
+  });
+
+  const bf1 = {
+    ownerId: 1,
+    dayDeclared: 1,
+    firstTargetId: 4,
+    secondTargetId: 7,
+    mode: "dual",
+    claimedRole: "seer",
+    updatedFrom: "election"
+  };
+
+  const day1Speeches = [
+    { day: 1, speakerId: 1, claimRole: "seer", checkedGoodId: 2, vouchId: 2, accuseId: 4, wolfPits: [4], goodPits: [2], rawText: "我是真明心觀察員，昨夜靜心查驗 2號小澄是好人金水，警徽流先驗 4號阿松再看 7號阿竹，請大家理性聽盤。" },
+    { day: 1, speakerId: 4, claimRole: "seer", checkedGoodId: 7, vouchId: 7, accuseId: 1, wolfPits: [1, 6], goodPits: [7], hasToxicSlip: true, rawText: "別演了，1號根本亂跳！我才是觀察員，昨夜驗了 7號阿竹是好人，今天先把起鬨的 6號小雲請離！" },
+    { day: 1, speakerId: 7, claimRole: null, vouchId: 4, accuseId: 5, standWithSeerId: 4, wolfPits: [5], goodPits: [4], rawText: "我聽起來 4號阿松比較像真觀察員，前置位 5號星兒發言太滑水，我這輪準備把票點向 5號星兒。" },
+    { day: 1, speakerId: 2, claimRole: null, vouchId: 1, accuseId: 4, standWithSeerId: 1, wolfPits: [4], goodPits: [1], rawText: "我接了 1號的金水，對照警上邏輯 4號語氣太衝，我堅定站邊 1號觀察員。" }
+  ];
+
+  const day2PriorSpeeches = [
+    { day: 2, speakerId: 2, claimRole: null, vouchId: 1, accuseId: 4, standWithSeerId: 1, wolfPits: [4, 7], goodPits: [1, 3], rawText: "昨夜平安夜太關鍵了！回頭翻第 1 天票型，7號阿竹口頭喊打 5號卻改投 6號小雲，跟 4號同票綁定，這兩張牌高度像雙狼！" },
+    { day: 2, speakerId: 3, claimRole: "witch", vouchId: 2, accuseId: 4, standWithSeerId: 1, wolfPits: [4, 7], goodPits: [1, 2], rawText: "我亮滴水奉茶師身分作證，昨晚端暖心茶護回了 2號小澄所以才平安夜，2號雙重驗明好人，今天跟著 1號警長歸票！" },
+    { day: 2, speakerId: 5, claimRole: null, vouchId: 1, accuseId: 7, standWithSeerId: 1, wolfPits: [4, 7], goodPits: [1, 2, 3], rawText: "7號昨天嘴上說要投我，開票卻跑去衝 6號小雲，這言票背離也太明顯了吧！等下聽完 4號跟 7號解釋我就跟警長歸票。" },
+    { day: 2, speakerId: 8, claimRole: null, vouchId: 1, accuseId: 4, standWithSeerId: 1, wolfPits: [4], goodPits: [1, 2, 3], rawText: "目前 1號與 3號邏輯互補，等下重點盯住 4號阿松與 7號阿竹的回應，請 1號警長壓軸定調歸票。" }
+  ];
+
+  const day1Votes = {
+    day: 1,
+    outId: 6,
+    ballots: [
+      { voterId: 1, targetId: 4, weight: 1.5 },
+      { voterId: 2, targetId: 4, weight: 1 },
+      { voterId: 3, targetId: 6, weight: 1 },
+      { voterId: 4, targetId: 6, weight: 1 },
+      { voterId: 5, targetId: 4, weight: 1 },
+      { voterId: 6, targetId: 4, weight: 1 },
+      { voterId: 7, targetId: 6, weight: 1 },
+      { voterId: 8, targetId: 6, weight: 1 }
+    ]
+  };
+
+  state.selectedSeatId = 4;
+  state.cardPeek3D = false;
+  state.intelSeatId = null;
+  closeSeatIntel();
+  closeRadialMenu();
+  if (typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
+  state.speakingInFlight = false;
+  if (typeof clearCutInQueue === "function") clearCutInQueue();
+  state.seerReveal = null;
+  state.voteResultPayload = null;
+  state.activeSpeakerId = null;
+  state.activeClash = null;
+  state.lastWordsCtx = null;
+  state.voteFlight = null;
+  state.playerMarks = { 2: "good", 3: "good", 4: "wolf", 7: "wolf" };
+  state.activeBubble = null;
+  state.seatBubbles = {};
+  state.beamFx = [];
+  state.fxPopups = [];
+  state.burstParticles = [];
+  state.ripples = [];
+  state.seatMoods = {};
+  state.seatPhysics = {};
+  state.dragAction = { active: false, moved: false, fromId: null, startX: 0, startY: 0, curX: 0, curY: 0, snapId: null };
+
+  state.match = {
+    started: true,
+    judgeShowcase: true,
+    phase: "DAY_SPEECH",
+    day: 2,
+    totalSeats: 8,
+    playerSeatId: 1,
+    sheriffSeatId: 1,
+    goodwillVoteBonus: false,
+    convenienceRallyTargetId: null,
+    clearBreezeUsedDay: 0,
+    activeDirectorEvent: (typeof TEA_DIRECTOR_EVENTS !== "undefined")
+      ? (TEA_DIRECTOR_EVENTS.find(function (e) { return e.id === "fourg_echo"; }) || TEA_DIRECTOR_EVENTS[0])
+      : null,
+    usedDirectorEventIds: ["fourg_echo"],
+    directorEventClearedDay: 0,
+    orchestratorSummary: null,
+    quickReactedMap: {},
+    aiDifficulty: "normal",
+    ruleDepth: "full",
+    startOffset: 0,
+    spectatorPrompted: false,
+    harmonyScore: 78,
+    threeGood: { heart: 1, words: 1, deeds: 0, resonanceTriggered: false, milestones: { heart: true, words: true, deeds: false } },
+    combo: 2,
+    maxCombo: 2,
+    comboBoostReady: true,
+    pinnedClues: [
+      { id: "judge_clue_1", seatId: 7, tag: "📌 7號言票背離", summary: "第1天 7號阿竹口頭點名 5號星兒，實際公投卻改投 6號小雲並與 4號阿松同票！", kind: "contradiction" }
+    ],
+    caughtSpeechClues: {},
+    wolfGodMarks: {},
+    rewriteCritReady: false,
+    seats: seats,
+    playerKnownRoles: { 1: "seer", 2: "good_verified", 4: "wolf" },
+    witchPotions: { heal: false, purify: true },
+    nightState: { guardTarget: 1, wolfTarget: 2, seerTarget: 4, witchSaved: true, witchPoisonTarget: null },
+    lastGuardTargetId: 1,
+    nightArchive: [
+      { day: 1, wolfTarget: 3, guardTarget: 3, witchSaved: false, casualties: [] },
+      { day: 2, wolfTarget: 2, guardTarget: 1, witchSaved: true, casualties: [] }
+    ],
+    firstNightIntel: { seerTarget: 2, isWolf: false },
+    peaceNights: [1, 2],
+    detectedContradictions: [],
+    microInspectCountToday: 0,
+    microInspectedSeats: {},
+    wolfTactic: "fake_seer",
+    sheriffRallyUsedDay: 0,
+    sheriffElectionPending: false,
+    sheriffElectionCtx: null,
+    sheriffVoteRecord: {
+      day: 1,
+      winnerId: 1,
+      candidateIds: [1, 4],
+      seerClaimIds: [1, 4],
+      withdrawnIds: [],
+      ballots: [
+        { voterId: 2, targetId: 1 },
+        { voterId: 3, targetId: 1 },
+        { voterId: 5, targetId: 1 },
+        { voterId: 6, targetId: 4 },
+        { voterId: 7, targetId: 4 },
+        { voterId: 8, targetId: 1 }
+      ]
+    },
+    sheriffBadgeFlow: bf1,
+    sheriffBadgeFlowsBySeat: { 1: bf1 },
+    badgeFlowSignals: [],
+    sheriffOrderCtx: null,
+    pendingVotedHunterId: null,
+    pendingSheriffTransfer: null,
+    pendingEvidenceTargetId: null,
+    pendingEvidenceTag: "",
+    playerDraftPits: { wolfIds: [4, 7], goodIds: [2, 3], claimRole: "seer", standSeerId: null, evidenceClueId: null, turnKey: "" },
+    roleMission: typeof createRoleMission === "function" ? createRoleMission("seer") : null,
+    speechDirection: 1,
+    speechOrderLabel: "評審精華導覽・警長末置位歸票",
+    dayOrder: [2, 3, 5, 8, 4, 7, 1],
+    speechQueue: [4, 7, 1],
+    daySpeechEvents: day2PriorSpeeches.slice(),
+    todayEvents: { accusedYouId: 4, fakeSeerId: 4, toxicSlipId: 4 },
+    relations: [
+      { from: 1, to: 2, type: "trust" },
+      { from: 3, to: 2, type: "trust" },
+      { from: 4, to: 1, type: "accuse" },
+      { from: 7, to: 4, type: "trust" }
+    ],
+    voteHistory: [day1Votes],
+    allSpeechEvents: day1Speeches.concat(day2PriorSpeeches),
+    lastNightCasualties: [],
+    microPulseRevealed: false,
+    fourGivingsUsed: { confidence: false, joy: false, hope: false, convenience: false },
+    fourGJoySuspects: [],
+    fourGHopePair: null,
+    directorEventInteractedDay: 0,
+    fourGSynergyTriggered: false,
+    teaServedDay: 0,
+    spectatorGuess: typeof createEmptySpectatorGuess === "function" ? createEmptySpectatorGuess() : { wolfIds: [], godRoles: { seer: null, witch: null, hunter: null, guard: null }, activeRoleSlot: "seer", locked: false, lockedAtDay: 0, evaluated: null, godViewUnlocked: false },
+    afterHunterNext: null,
+    lastHunterShot: null,
+    winner: null,
+    winReason: "",
+    logs: [
+      { kind: "banner", title: "🏆 評審三分鐘精華導覽局｜第 2 天高潮回合", text: "你是 1號 明心觀察員（警長），首夜已驗 2號小澄＝金水、昨夜親驗 4號阿松＝酸民狼查殺！第 1 天 7號阿竹口頭打 5號卻改投 6號（言票背離），目前三好蓮花 2/3，施放任一「四給錦囊」或「奉暖茶」即可當場覺醒黃金善意票 +1！" },
+      { kind: "dawn", title: "第 2 天平安夜（3號滴水奉茶師暖茶護回 2號）", text: "前置位好人已表態完畢，緊接著由對跳假觀察員 4號阿松與 7號阿竹發言，下一棒即輪到 1號你壓軸歸票！" }
+    ],
+    stats: {
+      goodWordsCount: 1,
+      rewritesUsed: 0,
+      fourGCount: 0,
+      nightSkillUsed: 2,
+      toxicSentCount: 0,
+      cluesCaught: 1,
+      contradictionsFound: 0,
+      logicBreaksLanded: 0,
+      microInspectsUsed: 0,
+      microWolfSpotted: 0,
+      sheriffPassed: 0,
+      teaServedCount: 0,
+      kindDeescalations: 0,
+      fourGSynergies: 0,
+      elderExempted: 0,
+      wolfKingStrikes: 0,
+      sheriffDramaWins: 0,
+      hypocrisyFlags: 0
+    }
+  };
+
+  if (typeof orchestrator !== "undefined") {
+    orchestrator.emit("match:started", { totalSeats: 8, playerRole: "seer", judgeShowcase: true });
+    orchestrator.emit("phase:changed", { phase: "DAY_SPEECH", day: 2 });
+  }
+  updateAllUI();
+  showToast("✨ 評審三分鐘導覽局啟動：直切第 2 天雙觀察員對跳、言票背離矩陣與四給覺醒焦點！", "emerald");
+  if (typeof advanceSpeechQueue === "function") {
+    state.stepTimer = setTimeout(advanceSpeechQueue, 380);
+  }
+}
+
 // ==================== START GAME ====================
 function startNewGame() {
   sound.unlock();

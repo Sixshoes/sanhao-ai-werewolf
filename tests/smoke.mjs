@@ -3570,9 +3570,13 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const r1 = voice.cycleQuickRate();
     const r2 = voice.cycleQuickRate();
     const r3 = voice.cycleQuickRate();
+    const r4 = voice.cycleQuickRate();
     voice.rate = prevRate;
     voice.syncQuickSpeedButtonUi();
-    const rateCycleOk = [r1, r2, r3].some(v => Math.abs(v - 1.10) < 0.02) && [r1, r2, r3].some(v => Math.abs(v - 1.22) < 0.02) && [r1, r2, r3].some(v => Math.abs(v - 0.96) < 0.02);
+    const rateCycleOk = [r1, r2, r3, r4].some(v => Math.abs(v - 1.10) < 0.02)
+      && [r1, r2, r3, r4].some(v => Math.abs(v - 1.22) < 0.02)
+      && [r1, r2, r3, r4].some(v => Math.abs(v - 1.42) < 0.02)
+      && [r1, r2, r3, r4].some(v => Math.abs(v - 0.96) < 0.02);
 
     // 3. 10-player match setup (3 wolves, 10 seats, zero "010號")
     clearStepTimer();
@@ -5282,13 +5286,14 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const longUnpunct = "這是一段故意完全沒有標點符號用來測試瀏覽器語音長句子會不會在十四秒被卡斷的超長繁體中文狼人殺推理測試發言內容確認每個切片都不超過二十二個字元而且一個字都不會漏掉";
     const split136 = voice.splitMandarinClauses(longUnpunct);
     const longTtsClauseOk = split136.length >= 4 && split136.every(c => c.length <= 22) && split136.join("") === longUnpunct;
-    const spPrefTest = state.match.seats[1];
+    const spPrefTest = state.match.seats.find(s => s.role === "villager" && s.id !== getPlayerId()) || state.match.seats[1];
+    const nonSeerOther = state.match.seats.find(s => s.id !== spPrefTest.id && s.claimedRole !== "seer") || state.match.seats[3];
     const origClaimPref = spPrefTest.claimedRole;
     spPrefTest.claimedRole = null;
     const prefSynced = syncGeminiSpeechMeta(spPrefTest, { text: "fallback", claimSeer: true, claimRole: "seer" }, { parsedJson: true, text: "信 03號 狼坑是01跟04，今晚必驗03", claimRole: "seer", standWithSeerId: spPrefTest.id, accuseId: null, vouchId: null }, { deferSeatMutation: true });
     const prefetchNoMutateOk = spPrefTest.claimedRole === null && prefSynced.standWithSeerId === null && prefSynced.text.includes("1號跟4號") && prefSynced.text.includes("必驗3號");
     // v13.8 Guardrail checks: unauthorized role claim, non-seer standWith, checking rival Seer, hallucinated votes, wolf self-outing, & unspoken fabrication
-    const unauthSynced = syncGeminiSpeechMeta(spPrefTest, { text: "fallback" }, { parsedJson: true, text: "大家好", claimRole: "seer", standWithSeerId: state.match.seats[3].id, accuseId: null, vouchId: null }, { deferSeatMutation: true });
+    const unauthSynced = syncGeminiSpeechMeta(spPrefTest, { text: "fallback" }, { parsedJson: true, text: "大家好", claimRole: "seer", standWithSeerId: nonSeerOther.id, accuseId: null, vouchId: null }, { deferSeatMutation: true });
     const blockUnauthClaimMetaOk = unauthSynced.claimRole === null && !unauthSynced.claimSeer && unauthSynced.standWithSeerId === null;
     const blockUnauthTextOk = !validateGeminiSpeechReality(spPrefTest, { text: "fallback" }, { text: "其實我是明心觀察員，我昨晚驗了3號是好人！" }, { seats: [], voteHistory: [] }).ok;
     const blockRivalCheckOk = !validateGeminiSpeechReality(spPrefTest, { text: "fallback", claimSeer: true, claimRole: "seer" }, { text: "今晚我必驗3號確認身份" }, { seats: [{ id: 3, alive: true, claimedRole: "seer" }], voteHistory: [{ day: 1 }] }).ok;
@@ -5308,10 +5313,15 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const spotHtml139 = String((el("spotlightText") && el("spotlightText").innerHTML) || "");
     const spotAllPills139Ok = spotHtml139.includes('data-seat-id="6"') && spotHtml139.includes('>6號</span>') && spotHtml139.includes('data-seat-id="3"') && spotHtml139.includes('>3號</span>') && spotHtml139.includes('data-seat-id="5"') && spotHtml139.includes('>5號</span>') && spotHtml139.includes('data-seat-id="1"') && spotHtml139.includes('>1號</span>') && !spotHtml139.includes("站06") && !spotHtml139.includes("打01");
     const prevTotal139 = state.match.totalSeats;
+    const prevPid139 = state.match.playerSeatId;
     state.match.totalSeats = 12;
+    state.match.playerSeatId = 1;
     const nlpCnBare = analyzeThreeGoodSpeech("我覺得三號跟五很可疑，這輪投六，但十一號像好人");
     const nlpCnBareOk = nlpCnBare.seatMentions.includes(3) && nlpCnBare.seatMentions.includes(5) && nlpCnBare.seatMentions.includes(6) && nlpCnBare.seatMentions.includes(11) && nlpCnBare.accuseTargets.includes(3) && nlpCnBare.accuseTargets.includes(6) && nlpCnBare.vouchTargets.includes(11);
+    const v14PosNlp = analyzeThreeGoodSpeech("2號講得不錯，這輪懷疑4號");
+    const v14PosNlpOk = v14PosNlp.vouchTargets.includes(2) && v14PosNlp.accuseTargets.includes(4);
     state.match.totalSeats = prevTotal139;
+    state.match.playerSeatId = prevPid139;
     const bfCnBare = parseBadgeFlowFromText("今晚先驗三號再驗五", 1);
     const bfCnBareOk = Boolean(bfCnBare && bfCnBare.firstTargetId === 3 && bfCnBare.secondTargetId === 5);
     // v14.0 Major Release regressions: zero-overlap audio, multi-digit/4G guardrails, smart parens, dry-run prefetch, proven-Elder vote guard, Sheriff transfer spectator lock, 3Good/4G prompt
@@ -5321,8 +5331,6 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const v14SmartParenOk = !v14SmartParenOut.includes("冷笑") && v14SmartParenOut.includes("（酸民狼）");
     const v14StaleClear = syncGeminiSpeechMeta(spPrefTest, { text: "fb", accuseId: 4, vouchId: 4, standWithSeerId: 3 }, { parsedJson: true, text: "先聽後面表水再說。", accuseId: null, vouchId: null, standWithSeerId: null, claimRole: null }, { deferSeatMutation: true });
     const v14StaleClearOk = v14StaleClear.accuseId === null && v14StaleClear.vouchId === null && v14StaleClear.standWithSeerId === null;
-    const v14PosNlp = analyzeThreeGoodSpeech("2號講得不錯，這輪懷疑4號");
-    const v14PosNlpOk = v14PosNlp.vouchTargets.includes(2) && v14PosNlp.accuseTargets.includes(4);
     const v14PrevPhase = state.match.phase;
     const v14PlayerAlive = getPlayerSeat().alive;
     getPlayerSeat().alive = false;
@@ -5411,9 +5419,29 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     throw new Error("api/gemini.js must pass API key via x-goog-api-key header, never ?key=");
   }
   const apiGeminiHandler = (await import("../api/gemini.js")).default;
-  if (apiGeminiHandler._resolveSafeModel("gemini-4-argon") !== "gemini-3.8-flash") {
-    throw new Error("api/gemini.js must cap public proxy models to Flash tier");
+  if (apiGeminiHandler._resolveSafeModel("gemini-4-argon") !== "gemini-2.5-flash") {
+    throw new Error("api/gemini.js must cap public proxy models to Flash tier (gemini-2.5-flash)");
   }
+  if (apiGeminiHandler._resolveSafeModel("gemini-2.5-flash", "lite") !== "gemini-2.5-flash-lite") {
+    throw new Error("api/gemini.js must route lite tier hint to gemini-2.5-flash-lite");
+  }
+  apiGeminiHandler._resetRateLimit();
+  apiGeminiHandler._markBadModel("gemini-3.8-flash", 2000000);
+  if (apiGeminiHandler._resolveSafeModel("gemini-3.8-flash", "standard", 2000500) !== "gemini-2.5-flash") {
+    throw new Error("api/gemini.js bad-model circuit breaker failed to skip cooling-down model");
+  }
+  apiGeminiHandler._resetRateLimit();
+  // Verify Campus NAT Dual-Track Session Rate Limiter: 3 judges behind SAME IP each get 24 RPM without blocking each other!
+  for (let judgeIdx = 1; judgeIdx <= 3; judgeIdx++) {
+    const sid = "tea_judge_session_0" + judgeIdx;
+    for (let k = 0; k < 20; k++) {
+      const rNat = apiGeminiHandler._checkRateLimit("198.51.100.7", 3000000 + judgeIdx * 1000 + k * 10, sid);
+      if (!rNat.allowed) {
+        throw new Error("api/gemini.js campus NAT multi-judge session blocked prematurely: " + JSON.stringify({ judgeIdx, k, rNat }));
+      }
+    }
+  }
+  apiGeminiHandler._resetRateLimit();
   if (apiGeminiHandler._isAllowedOrigin({ headers: { host: "sanhao.vercel.app", origin: "https://evil.example" } })) {
     throw new Error("api/gemini.js must reject cross-origin requests");
   }
@@ -5450,6 +5478,36 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   if (gProbe.status !== 200 || gProbe.json.available !== false || pCross.status !== 403 || pNoKey.status !== 503) {
     throw new Error("api/gemini.js handler status check failed: " + JSON.stringify({ gProbe, pCross, pNoKey }));
   }
+
+  // v14.2 Judge Showcase + Zero-Leak Vote-Speech Correlation Matrix + Anti-Hypocrisy + CI checks
+  if (!fs.existsSync(path.join(ROOT, ".github/workflows/ci.yml"))) {
+    throw new Error("v14.2 CI workflow .github/workflows/ci.yml missing!");
+  }
+  const v142Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    startJudgeShowcaseMatch();
+    const judgeOk = Boolean(state.match && state.match.started && state.match.judgeShowcase && state.match.day === 2 && state.match.seats.length === 8 && state.match.sheriffSeatId === 1 && state.match.speechQueue.join(",") === "4,7,1");
+    // Verify Zero-Leak Vote-Speech Correlation Matrix catches Seat 7's Day-1 speech-vs-vote divergence (accused 5, voted 6) under strict Proxy trap!
+    const prevStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+    const seat2 = getSeat(2);
+    const snap2 = createBlindMatchSnapshot(seat2, { module: "smoke_v142_matrix" });
+    const vm2 = buildVoteSpeechMatrix(seat2, snap2);
+    const promptBuilt = buildBlindGeminiSpeechPrompt(seat2, { text: "對照第1天票型，7號言票背離。", accuseId: 4, vouchId: 1 });
+    antiCheatMonitor.strictThrow = prevStrict;
+    const matrixDetectsDivOk = Boolean(vm2 && vm2.divergenceBySeat && vm2.divergenceBySeat[7] === 1 && vm2.summaryLines.some(l => l.includes("7號") && l.includes("言票背離")));
+    const promptIncludesMatrixOk = Boolean(promptBuilt && promptBuilt.audit && promptBuilt.audit.ok && promptBuilt.prompt.includes("跨輪言票一致性與同票關聯矩陣") && promptBuilt.prompt.includes("言票背離"));
+    const postInsights = buildAiPostMatchCoachInsights();
+    const radarOk = Array.isArray(postInsights) && postInsights.length >= 3;
+    clearStepTimer();
+    resetMatchToLobby();
+    return { judgeOk, matrixDetectsDivOk, promptIncludesMatrixOk, radarOk };
+  })()`, ctx);
+  for (const [k, v] of Object.entries(v142Res)) {
+    if (!v) {
+      throw new Error("v14.2 UPGRADE check failed for " + k + ": " + JSON.stringify(v142Res));
+    }
+  }
 }
 
-console.log("[OK] Full v13.2 (Public Beta 2.0 + Multi-Device RWD + Live QA Bugfixes + 3D Framing + Realistic Voice Engine + Anti-Cheat) E2E smoke test PASSED!");
+console.log("[OK] Full v14.2 (Dual-Track NAT Proxy + Zero-Leak Vote-Speech Matrix + Anti-Hypocrisy Radar + Judge 3-Min Showcase + 1.5x Speed + CI) E2E smoke test PASSED!");

@@ -50,7 +50,7 @@ async function probeServerGeminiProxy() {
     const data = await res.json().catch(function () { return null; });
     if (data && data.ok && data.available) {
       state.serverGeminiAvailable = true;
-      state.serverGeminiModel = String(data.model || "gemini-3.8-flash");
+      state.serverGeminiModel = String(data.model || "gemini-2.5-flash");
       if (typeof updateAllUI === "function") updateAllUI();
       return true;
     }
@@ -62,17 +62,45 @@ async function probeServerGeminiProxy() {
   }
 }
 
+let _proxySessionIdMem = "";
+function getOrCreateProxySessionId() {
+  if (_proxySessionIdMem) return _proxySessionIdMem;
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const saved = window.sessionStorage.getItem("sanhao_proxy_sid_v1");
+      if (saved && /^[a-zA-Z0-9_-]{8,48}$/.test(saved)) {
+        _proxySessionIdMem = saved;
+        return saved;
+      }
+    }
+  } catch (e) { }
+  const sid = "tea_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+  _proxySessionIdMem = sid;
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      window.sessionStorage.setItem("sanhao_proxy_sid_v1", sid);
+    }
+  } catch (e) { }
+  return sid;
+}
+
 async function callServerGeminiProxyOnce(promptText, timeoutMs, opts) {
   if (typeof fetch !== "function") return { ok: false, status: 0, text: null };
   const controller = typeof AbortController === "function" ? new AbortController() : null;
   const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 14000) : null;
+  const sid = getOrCreateProxySessionId();
   try {
     const fetchOpts = {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Tea-Session": sid
+      },
       body: JSON.stringify({
         prompt: promptText,
-        model: state.serverGeminiModel || "gemini-3.8-flash",
+        model: state.serverGeminiModel || "gemini-2.5-flash",
+        tier: (opts && opts.lite) ? "lite" : "standard",
+        sessionId: sid,
         jsonMode: Boolean(opts && opts.jsonMode)
       })
     };
@@ -404,7 +432,7 @@ function parseGeminiStructuredSpeech(rawText) {
           emotion: emo
         };
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // Salvage clean speech text from truncated or slightly malformed JSON (NEVER leak raw {"text":...} to the UI!)
@@ -500,7 +528,7 @@ function validateGeminiSpeechReality(speaker, fallbackMeta, parsed, snap) {
     }
   } else {
     // Block claiming a DIFFERENT God role than allowedClaim
-    Object.keys(roleClaimMap).forEach(function () {});
+    Object.keys(roleClaimMap).forEach(function () { });
     for (const rk of Object.keys(roleClaimMap)) {
       if (rk === allowedClaim) continue;
       const otherRe = new RegExp(selfClaimPrefix + "(?!覺得|認為|想|幫|保|信)[^，。！？；;]{0,3}" + roleClaimMap[rk]);
@@ -748,9 +776,9 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
 
   const transcript = todayLogs.length > 0
     ? todayLogs.map(function (l) {
-        const badgeTag = (l.speakerId === pidNow && l.subBadge && /好話暴擊|酸言警告|三好好話/.test(l.subBadge)) ? ("［" + l.subBadge + "］") : "";
-        return l.title + badgeTag + "：「" + String(l.text || "").slice(0, 180) + "」";
-      }).join("\n")
+      const badgeTag = (l.speakerId === pidNow && l.subBadge && /好話暴擊|酸言警告|三好好話/.test(l.subBadge)) ? ("［" + l.subBadge + "］") : "";
+      return l.title + badgeTag + "：「" + String(l.text || "").slice(0, 180) + "」";
+    }).join("\n")
     : "（你是今天第一位發言者，目前還沒有任何人發言過！）";
 
   const spEffKey = self.effectiveRoleKey || (typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(speaker) : self.role);
@@ -804,9 +832,9 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
         : "  - （無發言紀錄）";
       const vtText = dVotes.length > 0
         ? dVotes.map(function (dv, idx) {
-            const label = dVotes.length > 1 && idx > 0 ? ("第 " + d + " 天 PK 票型：") : ("第 " + d + " 天公投票型：");
-            return "  - " + label + (dv.ballots || []).map(function (b) { return b.voterId + "號→" + (b.targetId ? (b.targetId + "號") : "棄票"); }).join("｜");
-          }).join("\n")
+          const label = dVotes.length > 1 && idx > 0 ? ("第 " + d + " 天 PK 票型：") : ("第 " + d + " 天公投票型：");
+          return "  - " + label + (dv.ballots || []).map(function (b) { return b.voterId + "號→" + (b.targetId ? (b.targetId + "號") : "棄票"); }).join("｜");
+        }).join("\n")
         : "  - （無投票紀錄）";
       roundBlocks.push("【第 " + d + " 輪回顧】\n" + spText + "\n" + vtText);
     }
@@ -815,8 +843,8 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   const todayTieVotes = voteHist.filter(function (vh) { return vh.day === day; });
   const todayTieNote = (todayTieVotes.length > 0)
     ? ("【今日剛開出的平票票型】：\n" + todayTieVotes.map(function (dv) {
-        return "- " + (dv.ballots || []).map(function (b) { return b.voterId + "號→" + (b.targetId ? (b.targetId + "號") : "棄票"); }).join("｜");
-      }).join("\n") + "\n")
+      return "- " + (dv.ballots || []).map(function (b) { return b.voterId + "號→" + (b.targetId ? (b.targetId + "號") : "棄票"); }).join("｜");
+    }).join("\n") + "\n")
     : "";
 
   const mindDesc = self.deductionStyle === "gullible"
@@ -940,6 +968,10 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   const ledgerNote = (ledgerObj && ledgerObj.lines && ledgerObj.lines.length)
     ? ("【跨日恩怨與矛盾記憶帳本】：\n- " + ledgerObj.lines.join("\n- ") + "\n")
     : "";
+  const voteMatrixObj = (day >= 2 && typeof buildVoteSpeechMatrix === "function") ? buildVoteSpeechMatrix(speaker, snap) : null;
+  const voteMatrixNote = (voteMatrixObj && voteMatrixObj.summaryLines && voteMatrixObj.summaryLines.length)
+    ? ("【跨輪言票一致性與同票關聯矩陣（嚴格公開事證，必納入排坑）】：\n- " + voteMatrixObj.summaryLines.join("\n- ") + "\n")
+    : "";
 
   const sheriffSpeechLogs = (day === 1)
     ? publicLogs.filter(function (l) { return l.day === 1 && l.kind === "system" && /警上/.test(l.title || ""); }).slice(-6)
@@ -969,9 +1001,9 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
       ? ("你本輪【必須且僅能】以「" + lockedClaimRoleDef + "」身分發言（JSON claimRole 固定填 \"" + lockedClaim + "\"）；絕不可改跳別的職能，也不可捏造未發生的查驗／救援。")
       : ("你本輪【嚴禁】自稱或冒充任何神職（禁止說自己是觀察員／奉茶師／糾察長／守衛／長老，也禁止說昨晚驗人／救人／守人；JSON claimRole 必須填 null）！")) + "\n" +
     "- 本輪推薦立場骨架：" +
-      (fallbackMeta && fallbackMeta.accuseId ? ("主要懷疑並傾向投 " + fallbackMeta.accuseId + "號；") : "") +
-      (fallbackMeta && fallbackMeta.vouchId ? ("傾向信任力挺 " + fallbackMeta.vouchId + "號；") : "") +
-      "請順著這套合乎盤面的邏輯骨架，用活生生的角色口語回應前面剛才發過言的人（特別是玩家「你」的真實發言與三好四給局勢），不要推翻既定事實！\n" +
+    (fallbackMeta && fallbackMeta.accuseId ? ("主要懷疑並傾向投 " + fallbackMeta.accuseId + "號；") : "") +
+    (fallbackMeta && fallbackMeta.vouchId ? ("傾向信任力挺 " + fallbackMeta.vouchId + "號；") : "") +
+    "請順著這套合乎盤面的邏輯骨架，用活生生的角色口語回應前面剛才發過言的人（特別是玩家「你」的真實發言與三好四給局勢），不要推翻既定事實！\n" +
     (self.role === "seer" && fallbackMeta && fallbackMeta.checkedWolfId
       ? ("- 真觀察員查殺鎖定：你親查出 " + fallbackMeta.checkedWolfId + "號是酸民狼，本輪必須明確報查殺並把 " + fallbackMeta.checkedWolfId + "號點進狼坑！\n")
       : "") +
@@ -991,6 +1023,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     subjectiveImpressionBlock +
     (pitContextNote ? (pitContextNote + "\n") : "") +
     ledgerNote +
+    voteMatrixNote +
     "【你的專屬身分玩法攻略（務必遵守）】：\n" + rolePlaybook + "\n" +
     "【當前局勢情報】：第 " + day + " 天白天｜昨夜結果：" + (lastCas.length > 0 ? (lastCas.map(function (id) { return id + "號離席"; }).join("、")) : "平安夜無人離席") + "｜" + sheriffLine + (fgNotes.length ? ("公開茶席線索（" + fgNotes.join("、") + "）｜") : "") + "在場座位：" + aliveList + "\n" +
     aowuEndgameNote + "\n" +
@@ -1024,7 +1057,11 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
     tryGenerateGeminiAiSpeech._lastRejectReason = "prompt_audit";
     return null;
   }
-  const rawOut = await callGeminiText(built.prompt, { jsonMode: true });
+  const totalSNow = (built.snap && built.snap.totalSeats) || 8;
+  const lockedRoleNow = getAllowedGeminiClaimRole(speaker, fallbackMeta);
+  const isSheriffNow = Boolean(built.snap && built.snap.sheriffSeatId === speaker.id);
+  const useLiteTier = Boolean(totalSNow >= 10 && !lockedRoleNow && !isSheriffNow && !(fallbackMeta && (fallbackMeta.checkedWolfId || fallbackMeta.accuseId)));
+  const rawOut = await callGeminiText(built.prompt, { jsonMode: true, lite: useLiteTier });
   const parsed = rawOut ? parseGeminiStructuredSpeech(rawOut) : null;
   if (!parsed) return null;
   const check = validateGeminiSpeechReality(speaker, fallbackMeta, parsed, built.snap);

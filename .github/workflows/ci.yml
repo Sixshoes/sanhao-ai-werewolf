@@ -1,0 +1,28 @@
+name: Sanhao AI Werewolf CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify-5-layers:
+    name: 5-Layer Verification (Backend + Smoke + 10 VRMs + Fuzz + Anti-Cheat)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run full 5-layer test suite
+        run: node tests/run_all.mjs

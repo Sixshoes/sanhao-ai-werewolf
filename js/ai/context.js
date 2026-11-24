@@ -235,6 +235,12 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
     }
   }
 
+  const matrixView = (snap.day >= 2 && typeof buildVoteSpeechMatrix === "function")
+    ? buildVoteSpeechMatrix(viewerSeat, snap)
+    : null;
+  const divMap = (matrixView && matrixView.divergenceBySeat) || {};
+  const coVoteMap = (matrixView && matrixView.coVoteOutBySeat) || {};
+
   // Estimate remaining alive wolf slots fairly from public check losses & role clashes
   let confirmedDeadWolves = 0;
   const uncontestedSeer = seerClaimants.length === 1 ? seerClaimants[0] : null;
@@ -322,6 +328,14 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
         if (toxicMap[c.id] || contraMap[c.id]) {
           pitScore += 20;
           reasons.push("語氣與邏輯有破綻");
+        }
+        if ((divMap[c.id] || 0) >= 1) {
+          pitScore += 10 * Math.min(2, divMap[c.id]);
+          reasons.push("言票背離（說一套投一套）");
+        }
+        if ((coVoteMap[c.id] || 0) >= 2) {
+          pitScore += 8;
+          reasons.push("多輪與離席位同票綁定");
         }
         const votedTrusted = voteHist.some(function (vh) {
           return (vh.ballots || []).some(function (b) { return b.voterId === c.id && b.targetId === trusted.id; });

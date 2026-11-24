@@ -259,6 +259,9 @@ function bindModalEvents() {
   });
   el("btnLaunchGuidedDemo").addEventListener("click", startGuidedBeginnerMatch);
   el("btnStartTutorialMatch").addEventListener("click", startGuidedBeginnerMatch);
+  if (el("btnStartJudgeShowcase") && typeof startJudgeShowcaseMatch === "function") {
+    el("btnStartJudgeShowcase").addEventListener("click", startJudgeShowcaseMatch);
+  }
 
   el("btnOpenGuide").addEventListener("click", function () {
     if (typeof switchGuideTab === "function") switchGuideTab("overview");
