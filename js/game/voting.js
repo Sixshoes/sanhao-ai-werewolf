@@ -578,7 +578,8 @@ function finalizeVoteRound(playerTargetId) {
       }
     }
 
-    if (outSeat.role === "hunter") {
+    const canWkShotOut = Boolean(outSeat.isWolfKing && getAliveSeats().some(function (s) { return s.team === "wolf"; }));
+    if (outSeat.role === "hunter" || canWkShotOut) {
       continueAfterVoteSheriff();
       return;
     }
@@ -1182,6 +1183,21 @@ function triggerWolfSelfExplode(seatId, opts) {
   const wolf = getSeat(seatId);
   if (!m || !m.started || !wolf || !canWolfSelfExplodeNow(wolf)) return false;
 
+  // 0. Snapshot interrupted speech state BEFORE voice.stop() clears prep beat & activeSpeakerId!
+  const nowExplodeMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const interruptedSpeakerId = state.activeSpeakerId;
+  const interruptedInPrepBeat = Boolean(
+    interruptedSpeakerId &&
+    state.speechPrepSeatId === interruptedSpeakerId &&
+    (
+      (state.speechPrepUntil && nowExplodeMs < state.speechPrepUntil) ||
+      (typeof voice !== "undefined" && voice.prepTimer)
+    )
+  );
+  const activeCommitRef = (m._activeSpeechCommit && m._activeSpeechCommit.speakerId === interruptedSpeakerId)
+    ? m._activeSpeechCommit
+    : null;
+
   // 1. Cleanly abort every active timer, TTS stream, typewriter, prefetch, and in-flight LLM callback!
   clearStepTimer();
   clearBlitzVoteTimer();
@@ -1194,10 +1210,73 @@ function triggerWolfSelfExplode(seatId, opts) {
   }
   if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
   m._prefetchedSpeech = null;
+  m._activeSpeechCommit = null;
+  state.speechPrepUntil = 0;
+  state.speechPrepSeatId = null;
   state.speakingInFlight = false;
   state.activeSpeakerId = null;
   state.activeClash = null;
   state.interjectOpen = false;
+
+  // 1B. Synchronize interrupted speech timeline & AI memory (rollback if never vocalized in 220ms prep beat, else reveal partial speech!)
+  if (interruptedInPrepBeat) {
+    if (Array.isArray(m.logs)) {
+      let logIdx = activeCommitRef && activeCommitRef.logEntry ? m.logs.indexOf(activeCommitRef.logEntry) : -1;
+      if (logIdx === -1) {
+        for (let li = m.logs.length - 1; li >= 0; li--) {
+          const it = m.logs[li];
+          if (it && it.kind === "speech" && it.speakerId === interruptedSpeakerId && it.day === m.day) {
+            logIdx = li;
+            break;
+          }
+        }
+      }
+      if (logIdx !== -1) m.logs.splice(logIdx, 1);
+    }
+    const removeSpeechEv = function (arr) {
+      if (!Array.isArray(arr)) return;
+      let evIdx = activeCommitRef && activeCommitRef.evObj ? arr.indexOf(activeCommitRef.evObj) : -1;
+      if (evIdx === -1) {
+        for (let ei = arr.length - 1; ei >= 0; ei--) {
+          const ev = arr[ei];
+          if (ev && ev.speakerId === interruptedSpeakerId && ev.day === m.day) {
+            evIdx = ei;
+            break;
+          }
+        }
+      }
+      if (evIdx !== -1) arr.splice(evIdx, 1);
+    };
+    removeSpeechEv(m.daySpeechEvents);
+    removeSpeechEv(m.allSpeechEvents);
+    if (activeCommitRef && activeCommitRef.hadContra) {
+      if (m.activeSpeechContra && m.activeSpeechContra.speakerId === interruptedSpeakerId) {
+        m.activeSpeechContra = null;
+      }
+      if (Array.isArray(m.detectedContradictions)) {
+        for (let ci = m.detectedContradictions.length - 1; ci >= 0; ci--) {
+          const ct = m.detectedContradictions[ci];
+          if (ct && ct.speakerId === interruptedSpeakerId && ct.day === m.day) {
+            m.detectedContradictions.splice(ci, 1);
+            break;
+          }
+        }
+      }
+    }
+    if (activeCommitRef && !activeCommitRef.wasAlreadyClaimed) {
+      const spRoll = getSeat(interruptedSpeakerId);
+      if (spRoll) spRoll.claimedRole = activeCommitRef.prevClaimedRole;
+    }
+  }
+  // Ensure no spoken/interrupted speech log remains stuck in pendingReveal=true
+  if (typeof commitPendingSpeechLog === "function") {
+    commitPendingSpeechLog();
+  } else if (Array.isArray(m.logs)) {
+    m.logs.forEach(function (it) { if (it && it.pendingReveal) it.pendingReveal = false; });
+  }
+  if (typeof renderTimeline === "function") {
+    renderTimeline({ deferIfHidden: true });
+  }
   if (state.voteFlight && Array.isArray(state.voteFlight.timers)) {
     state.voteFlight.timers.forEach(function (t) { clearTimeout(t); });
   }

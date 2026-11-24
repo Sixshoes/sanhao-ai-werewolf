@@ -108,6 +108,9 @@ function commitPendingSpeechLog(speakerId) {
       changed = true;
     }
   });
+  if (state.match._activeSpeechCommit && (!speakerId || state.match._activeSpeechCommit.speakerId === speakerId)) {
+    state.match._activeSpeechCommit = null;
+  }
   if (changed && typeof renderTimeline === "function") {
     renderTimeline({ deferIfHidden: true });
   }

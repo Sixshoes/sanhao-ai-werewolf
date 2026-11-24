@@ -505,6 +505,7 @@ function addLog(entry) {
     day: state.match.day,
     kind: entry.kind || "system",
     speakerId: entry.speakerId || null,
+    pendingReveal: Boolean(entry.pendingReveal),
     title: entry.title || "",
     text: entry.text || "",
     subBadge: entry.subBadge || ""

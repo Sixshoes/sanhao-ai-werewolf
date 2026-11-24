@@ -61,6 +61,7 @@ function buildInstancedOrGroup(geo, mat, specs, opts) {
   const canInstance = typeof THREE.InstancedMesh === "function" && typeof THREE.Matrix4 === "function" && specs.length > 1;
   if (canInstance) {
     const im = new THREE.InstancedMesh(geo, mat, specs.length);
+    im.frustumCulled = false;
     if (opts && opts.castShadow) im.castShadow = true;
     if (opts && opts.receiveShadow) im.receiveShadow = true;
     const dummy = new THREE.Object3D();

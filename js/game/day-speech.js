@@ -832,6 +832,15 @@ async function executeAiTurnSpeech(speaker) {
     subBadge: subTag,
     text: generated.text
   });
+  state.match._activeSpeechCommit = {
+    speakerId: speaker.id,
+    day: state.match.day,
+    logEntry: state.match.logs[state.match.logs.length - 1] || null,
+    evObj: aiEvObj,
+    hadContra: Boolean(contra),
+    wasAlreadyClaimed: wasAlreadyClaimed,
+    prevClaimedRole: wasAlreadyClaimed ? speaker.claimedRole : null
+  };
 
   // Launch a subtle visual stance beam on Canvas when an AI targets or vouches for someone!
   if (generated.targetId && generated.targetId !== speaker.id) {

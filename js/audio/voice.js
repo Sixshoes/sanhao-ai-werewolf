@@ -963,6 +963,10 @@ const voice = {
 
     const launchActualPlayback = function () {
       if (seq !== self.utteranceSeq || self.paused || !sound.ctx) return;
+      if (typeof state !== "undefined") {
+        state.speechPrepUntil = 0;
+        state.speechPrepSeatId = null;
+      }
       const playStartAt = performance.now();
       // Track live spoken char index & fire exact seat-mention gesture beats in sync with playback!
       if (self.liveSpokenText && self.liveSpokenText.length > 0 && estPlayMs > 80) {
@@ -1617,6 +1621,10 @@ const voice = {
           return;
         }
         const curClauseIdx = idx;
+        if (typeof state !== "undefined" && curClauseIdx === 0) {
+          state.speechPrepUntil = 0;
+          state.speechPrepSeatId = null;
+        }
         const clause = clauses[curClauseIdx];
         const clauseStartChar = clauseOffsets[curClauseIdx] || 0;
         idx += 1;

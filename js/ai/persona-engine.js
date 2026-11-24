@@ -431,7 +431,7 @@ function getPersonaToxicSlipScale(speaker) {
 }
 
 function getPersonaVotePersonalityDelta(voter, candidate, opts) {
-  if (!voter || !candidate) return 0;
+  if (!voter || !candidate || candidate.id == null) return 0;
   const o = opts || {};
   const p = getPersonaProfile(voter);
   const vName = voter && voter.name ? voter.name : "";

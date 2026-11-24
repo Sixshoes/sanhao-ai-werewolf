@@ -7008,4 +7008,180 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v19.0 + Performance Audit (Anon / 52 defer / InstancedMesh / Zero-GC / FaceSig / Lazy Modal / SW Cap / Vercel maxDuration) E2E smoke test PASSED!");
+// v19.2 INSTANCEDMESH CULLING, EXPLODE PREP ROLLBACK / MID-SPEECH REVEAL, VOICE.STOP & HUNTER-SHERIFF EDGE CASES
+{
+  const envSrc192 = fs.readFileSync(path.join(ROOT, "js/stage3d/environment.js"), "utf8");
+  const frustumCodeOk = envSrc192.includes("im.frustumCulled = false;");
+
+  const v192Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    const prevAntiStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = false;
+
+    // 1. InstancedMesh frustumCulled = false
+    const testIm = buildInstancedOrGroup(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), [{ px: 0 }, { px: 8 }]);
+    const instancedFrustumOk = Boolean(testIm && testIm.isInstancedMesh && testIm.frustumCulled === false);
+
+    // 2. voice.stop() clears prepTimer + speechPrep state
+    let prepFired = false;
+    voice.prepTimer = setTimeout(function () { prepFired = true; }, 5000);
+    state.speechPrepUntil = performance.now() + 5000;
+    state.speechPrepSeatId = 3;
+    voice.stop();
+    const voiceStopPrepOk = Boolean(voice.prepTimer === null && state.speechPrepUntil === 0 && state.speechPrepSeatId === null && !prepFired);
+
+    // 3. addLog preserves pendingReveal & wolf self-explode in 220ms prep beat rolls back unspoken log + speech events + claim
+    el("selectModeCount").value = "8";
+    el("selectRuleDepth").value = "full";
+    el("selectPreferredRole").value = "villager";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.phase = "DAY_SPEECH";
+    state.match.day = 1;
+    state.match.sheriffElectionPending = false;
+    state.match.daySpeechEvents = [];
+    state.match.allSpeechEvents = [];
+    const spPrep = state.match.seats.find(function (s) { return s.alive && s.team === "good" && s.id !== getPlayerId(); });
+    const wolfExp1 = state.match.seats.find(function (s) { return s.alive && s.role === "wolf"; });
+    spPrep.claimedRole = "seer";
+    const evPrep = { day: 1, speakerId: spPrep.id, speakerName: spPrep.name, claimRole: "seer", rawText: "未講出口的秘密台詞" };
+    state.match.daySpeechEvents.push(evPrep);
+    state.match.allSpeechEvents.push(evPrep);
+    addLog({ kind: "speech", speakerId: spPrep.id, pendingReveal: true, title: spPrep.id + "號", text: "未講出口的秘密台詞" });
+    const logPrepObj = state.match.logs[state.match.logs.length - 1];
+    const addLogPendingRevealOk = Boolean(logPrepObj && logPrepObj.pendingReveal === true);
+    state.match._activeSpeechCommit = {
+      speakerId: spPrep.id,
+      day: 1,
+      logEntry: logPrepObj,
+      evObj: evPrep,
+      hadContra: false,
+      wasAlreadyClaimed: false,
+      prevClaimedRole: null
+    };
+    state.activeSpeakerId = spPrep.id;
+    state.speechPrepSeatId = spPrep.id;
+    state.speechPrepUntil = performance.now() + 220;
+    const exploded1 = triggerWolfSelfExplode(wolfExp1.id);
+    const explodePrepRollbackOk = Boolean(
+      exploded1 &&
+      state.match.logs.indexOf(logPrepObj) === -1 &&
+      state.match.daySpeechEvents.indexOf(evPrep) === -1 &&
+      state.match.allSpeechEvents.indexOf(evPrep) === -1 &&
+      spPrep.claimedRole === null
+    );
+
+    // 4. Wolf self-explode AFTER prep beat (mid-speech) keeps log/events and flips pendingReveal -> false
+    el("selectModeCount").value = "8";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.phase = "DAY_SPEECH";
+    state.match.day = 1;
+    state.match.sheriffElectionPending = false;
+    state.match.daySpeechEvents = [];
+    state.match.allSpeechEvents = [];
+    const spMid = state.match.seats.find(function (s) { return s.alive && s.team === "good" && s.id !== getPlayerId(); });
+    const wolfExp2 = state.match.seats.find(function (s) { return s.alive && s.role === "wolf"; });
+    const evMid = { day: 1, speakerId: spMid.id, speakerName: spMid.name, rawText: "講到一半被掀席的台詞" };
+    state.match.daySpeechEvents.push(evMid);
+    state.match.allSpeechEvents.push(evMid);
+    addLog({ kind: "speech", speakerId: spMid.id, pendingReveal: true, title: spMid.id + "號", text: "講到一半被掀席的台詞" });
+    const logMidObj = state.match.logs[state.match.logs.length - 1];
+    state.match._activeSpeechCommit = {
+      speakerId: spMid.id,
+      day: 1,
+      logEntry: logMidObj,
+      evObj: evMid,
+      hadContra: false,
+      wasAlreadyClaimed: false,
+      prevClaimedRole: null
+    };
+    state.activeSpeakerId = spMid.id;
+    state.speechPrepSeatId = null;
+    state.speechPrepUntil = 0;
+    voice.prepTimer = null;
+    const exploded2 = triggerWolfSelfExplode(wolfExp2.id);
+    const explodeMidSpeechRevealOk = Boolean(
+      exploded2 &&
+      state.match.logs.indexOf(logMidObj) !== -1 &&
+      logMidObj.pendingReveal === false &&
+      state.match.allSpeechEvents.indexOf(evMid) !== -1
+    );
+
+    // 5A. Voted-out AI Hunter who is ALSO Sheriff: shoots first, transfers/tears badge after, NEVER gives badge to shot victim
+    el("selectModeCount").value = "8";
+    el("selectRuleDepth").value = "full";
+    el("selectPreferredRole").value = "villager";
+    state.sheriffMode = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.sheriffElectionPending = false;
+    state.match.phase = "DAY_VOTE";
+    const aiHunterSh = state.match.seats.find(function (s) { return s.role === "hunter" && s.id !== getPlayerId(); });
+    const shotVictimA = state.match.seats.find(function (s) { return s.alive && s.role === "villager" && s.id !== getPlayerId() && s.id !== aiHunterSh.id; });
+    state.match.sheriffSeatId = aiHunterSh.id;
+    // Make AI hunter strongly trust shotVictimA before shooting so if dead-check were broken it would have picked shotVictimA!
+    aiHunterSh.suspicionMap = {};
+    state.match.seats.forEach(function (s) { aiHunterSh.suspicionMap[s.id] = s.id === shotVictimA.id ? 5 : 40; });
+    aiHunterSh.alive = false;
+    state.match.pendingVotedHunterId = aiHunterSh.id;
+    triggerHunterResonance(aiHunterSh, "AFTER_VOTE");
+    executeHunterShotPresentation(aiHunterSh, shotVictimA);
+    if (typeof state.hunterResolveCommit === "function") state.hunterResolveCommit();
+    const newShSeatA = state.match.sheriffSeatId ? getSeat(state.match.sheriffSeatId) : null;
+    const aiHunterSheriffOk = Boolean(
+      !shotVictimA.alive &&
+      state.match.sheriffSeatId !== aiHunterSh.id &&
+      state.match.sheriffSeatId !== shotVictimA.id &&
+      (!newShSeatA || newShSeatA.alive)
+    );
+
+    // 5B. Voted-out Player Hunter who is ALSO Sheriff: shoots first -> enters SHERIFF_TRANSFER -> rejects dead victim -> accepts alive heir
+    el("selectModeCount").value = "8";
+    el("selectRuleDepth").value = "full";
+    el("selectPreferredRole").value = "hunter";
+    state.sheriffMode = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.sheriffElectionPending = false;
+    const pidH = getPlayerId();
+    const pHunterSh = getSeat(pidH);
+    const shotVictimB = state.match.seats.find(function (s) { return s.alive && s.role === "villager" && s.id !== pidH; });
+    const aliveHeirB = state.match.seats.find(function (s) { return s.alive && s.id !== pidH && s.id !== shotVictimB.id; });
+    state.match.sheriffSeatId = pidH;
+    pHunterSh.alive = false;
+    state.match.pendingVotedHunterId = pidH;
+    triggerHunterResonance(pHunterSh, "AFTER_VOTE");
+    executeHunterShotPresentation(pHunterSh, shotVictimB);
+    if (typeof state.hunterResolveCommit === "function") state.hunterResolveCommit();
+    const enteredTransferAfterShot = state.match.phase === "SHERIFF_TRANSFER" && state.match.sheriffSeatId === pidH;
+    resolvePlayerSheriffTransfer(shotVictimB.id);
+    const rejectedDeadVictim = state.match.phase === "SHERIFF_TRANSFER" && state.match.sheriffSeatId === pidH;
+    resolvePlayerSheriffTransfer(aliveHeirB.id);
+    const passedToAliveHeir = state.match.sheriffSeatId === aliveHeirB.id;
+    const playerHunterSheriffOk = Boolean(enteredTransferAfterShot && rejectedDeadVictim && passedToAliveHeir);
+
+    clearStepTimer();
+    antiCheatMonitor.strictThrow = prevAntiStrict;
+    resetMatchToLobby();
+
+    return {
+      instancedFrustumOk,
+      voiceStopPrepOk,
+      addLogPendingRevealOk,
+      explodePrepRollbackOk,
+      explodeMidSpeechRevealOk,
+      aiHunterSheriffOk,
+      playerHunterSheriffOk
+    };
+  })()`, ctx);
+
+  const v192All = Object.assign({ frustumCodeOk }, v192Res);
+  for (const [k, v] of Object.entries(v192All)) {
+    if (!v) {
+      throw new Error("v19.2 HOTFIX REGRESSION failed for " + k + ": " + JSON.stringify(v192All));
+    }
+  }
+}
+
+console.log("[OK] Full v19.0 + Performance Audit + v19.2 Hotfix (InstancedMesh Culling / Explode Prep Rollback & Reveal / Voice Stop / Hunter-Sheriff Transfer) E2E smoke test PASSED!");
