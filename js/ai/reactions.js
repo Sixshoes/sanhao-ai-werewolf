@@ -20,14 +20,18 @@ function tryDefendOrCounterClaim(speaker, ctx) {
   const {
     snap, getBlindSeat, aliveOthers, day, seatLabel, pickVoice, seerWolfOnMe, accuseOnMe, wolfPitOnMe,
     priorGodClaims, priorSameRoleSteal, slotPlan, dualSeerWorlds,
-    spokenOthers, unspokenOthers, spokeToday
+    spokenOthers, unspokenOthers, spokeToday, playerAnchorOnMe
   } = ctx;
   const readSeat = typeof getBlindSeat === "function" ? getBlindSeat : (snap ? snap.getSeat : getSeat);
 
   const pVoice = typeof pickVoice === "function" ? pickVoice : function () { return ""; };
-  const rebutLead = pVoice("rebutLead", 1);
+  const rawRebutLead = pVoice("rebutLead", 1);
+  const anchorPrefix = playerAnchorOnMe
+    ? ("你剛才問「" + playerAnchorOnMe + "」，我正面回答你：")
+    : "";
+  const rebutLead = anchorPrefix ? (anchorPrefix + rawRebutLead) : rawRebutLead;
   const stdLead = pVoice("lead", 2);
-  const signoff = pVoice("signoff", 3) || "先這樣，過！";
+  const signoff = pVoice("signoff", 3) || "";
 
   const baseGoodIds = (slotPlan && Array.isArray(slotPlan.goodPits))
     ? slotPlan.goodPits.map(function (s) { return s.id; })

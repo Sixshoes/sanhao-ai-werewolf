@@ -609,7 +609,7 @@ function triggerFourGSynergyCheck(cardKey) {
     if (typeof stage3d !== "undefined" && stage3d.isActive() && stage3d.hero && typeof triggerHeroAction === "function") {
       triggerHeroAction(stage3d.hero, "purify_cast", 2400);
     }
-    showToast("🎴 四給雙倍共鳴祭：清茗喝采，全場額外恢復 +10 友善度！", "emerald");
+    showToast("四給雙倍共鳴：清茗輕敲茶盤，全場額外恢復 +10 友善度。", "emerald");
   }
   if ((state.match.stats.fourGCount || 0) >= 2 && !state.match.fourGSynergyTriggered) {
     state.match.fourGSynergyTriggered = true;
@@ -621,8 +621,8 @@ function triggerFourGSynergyCheck(cardKey) {
       addThreeGoodPoint(bonusKind, "四給連心充能");
     }
     bumpCombo("四給連心共鳴");
-    triggerCutIn("🌸 四給連心・三好充能！", "連續運用「四給錦囊」帶動茶席正能量，友善度 +8 並點亮 1 瓣三好蓮花！", "emerald");
-    addLog({ kind: "blessing", title: "🌸 四給連心：善用雙重四給錦囊，友善度 +8 並額外點亮 1 瓣三好蓮花！", text: "" });
+    triggerCutIn("茶席連心・三好充能", "連續施展四給茶禮，友善度提升並點亮一瓣三好蓮心", "tea");
+    addLog({ kind: "blessing", title: "四給連心：善用雙重四給茶禮，友善度 +8 並額外點亮 1 瓣三好蓮花。", text: "" });
     if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
   }
 }
@@ -674,8 +674,8 @@ function useFourGConfidence() {
   setSeatEmotion(target.id, "happy", 3400);
   spawnBurst(target.id, ["#34d399", "#fbbf24", "#ffffff"], 22, "petal");
   // Fair Play: Unified public copy prevents leaking whether target is Good or Wolf before tally!
-  triggerCutIn("🛡 四給・給信心！", fmtSeatNum(target.id) + "號 " + target.name + " 獲得信任護盾・本輪少計 1 票！", "emerald");
-  spawnFx(target.id, "🛡 擋1票護盾!", "#34d399");
+  triggerCutIn("奉茶護席・給信心", "推盞予 " + fmtSeatNum(target.id) + "號 " + target.name + "，本輪公投少計 1 票", "tea");
+  spawnFx(target.id, "奉茶護席", "#34d399");
   bumpCombo("四給・給信心");
 
   const others = getAliveSeats().filter(function (s) { return s.id !== target.id; });
@@ -687,7 +687,7 @@ function useFourGConfidence() {
 
   addLog({
     kind: "blessing",
-    title: "🛡 給信心：" + fmtSeatNum(target.id) + "號 本輪擋1票護盾，並回應目前留意 " + (topSus ? (fmtSeatNum(topSus.id) + "號") : "未知"),
+    title: "奉茶護席（給信心）：推盞予 " + fmtSeatNum(target.id) + "號本輪少計 1 票，對方回應目前留意 " + (topSus ? (fmtSeatNum(topSus.id) + "號") : "未知"),
     text: ""
   });
   triggerFourGSynergyCheck("confidence");
@@ -707,7 +707,7 @@ function useFourGJoy() {
   sound.playBlessing();
   const joyJoke = FOURG_JOY_JOKES[((state.match.day || 1) + (state.match.stats.fourGCount || 0)) % FOURG_JOY_JOKES.length];
   setSeatBubble(getPlayerId(), "「" + joyJoke + "」", "trust", 4200);
-  triggerCutIn("☀️ 四給・給歡喜破冰！", joyJoke, "gold");
+  triggerCutIn("溫言破冰・給歡喜", joyJoke, "tea");
 
   // Fair Play: Trigger nervous sweat on 1 Wolf + 1 flustered Good partner so 4G-Joy creates real deduction rather than a 100% auto-reveal!
   const aliveAiWolves = getAliveSeats().filter(function (s) { return s.id !== getPlayerId() && s.role === "wolf"; });
@@ -734,16 +734,16 @@ function useFourGJoy() {
         s.microPulse = clamp(54 + ((s.id * 7 + state.match.day * 5) % 15), 52, 68);
       }
       setSeatEmotion(s.id, "nervous", 5200);
-      spawnFx(s.id, "💦 笑僵緊張!", "#fb7185");
-      spawnBurst(s.id, ["#fb7185", "#fbbf24"], 16, "spark");
+      spawnFx(s.id, "神色微僵", "#fb7185");
+      spawnBurst(s.id, ["#fb7185", "#fbbf24"], 14, "spark");
       setSeatBubble(s.id, awkwardLines[nervousIds.indexOf(s.id) % awkwardLines.length], "suspect", 4600);
       if (typeof stage3d !== "undefined" && stage3d.isActive()) {
         stage3d.triggerSkillFx("seer_scan", getPlayerId(), s.id, false);
       }
     } else {
       setSeatEmotion(s.id, "laugh", 4200);
-      spawnFx(s.id, "😄 開懷大笑!", "#6ee7b7");
-      spawnBurst(s.id, ["#6ee7b7", "#fde68a"], 12, "petal");
+      spawnFx(s.id, "莞爾一笑", "#6ee7b7");
+      spawnBurst(s.id, ["#6ee7b7", "#fde68a"], 10, "petal");
       setSeatBubble(s.id, PERSONA_LAUGH_LINES[s.name] || "哈哈氣氛輕鬆多了，大家開心推理！", "trust", 3400);
     }
   });
@@ -755,14 +755,14 @@ function useFourGJoy() {
     return fmtSeatNum(id) + "號" + (st ? (" " + st.name) : "");
   });
   const clueMsg = pairLabels.length >= 2
-    ? ("☀️ 給歡喜破冰成功！" + pairLabels.join(" 與 ") + " 笑容略顯僵硬，其中必藏酸民狼（點擊可細看心虛脈搏）！")
+    ? ("溫言破冰（給歡喜）：" + pairLabels.join(" 與 ") + " 神色略顯僵硬，其中必藏酸民狼（點擊可細看脈搏）")
     : (pairLabels.length === 1
-      ? ("☀️ 給歡喜破冰成功！唯有 " + pairLabels[0] + " 笑僵冒冷汗（心虛 " + getSeat(sortedNervous[0]).microPulse + "%）！")
-      : "☀️ 給歡喜破冰成功！全場氣氛大大回溫！");
+      ? ("溫言破冰（給歡喜）：唯有 " + pairLabels[0] + " 神色微僵（緊張度 " + getSeat(sortedNervous[0]).microPulse + "%）")
+      : "溫言破冰（給歡喜）：茶席笑語讓氣氛大幅回溫");
   addLog({ kind: "blessing", title: clueMsg, text: "" });
   showToast(pairLabels.length >= 2
-    ? ("👀 給歡喜試探：" + sortedNervous.map(function (id) { return fmtSeatNum(id) + "號"; }).join(" 與 ") + " 同時笑僵！可搭配【給希望】雙光交會鎖定！")
-    : (pairLabels.length === 1 ? ("👀 快看圓桌！" + pairLabels[0] + " 笑不出來正在冒冷汗！") : "全場笑聲驅散了酸言霧霾！"), "emerald");
+    ? ("溫言試探：" + sortedNervous.map(function (id) { return fmtSeatNum(id) + "號"; }).join(" 與 ") + " 同時神色僵硬，可搭配「給希望」交會比對。")
+    : (pairLabels.length === 1 ? ("留意茶席：" + pairLabels[0] + " 笑意僵硬，似有心虛。") : "茶席笑聲驅散了緊繃氣氛。"), "emerald");
   triggerFourGSynergyCheck("joy");
   if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
   updateAllUI();
@@ -790,10 +790,10 @@ function useFourGHope() {
     aliveGood.forEach(function (g) {
       g.suspicionMap[getPlayerId()] = clamp((g.suspicionMap[getPlayerId()] || 50) - 10, 5, 95);
     });
-    spawnBurst(getPlayerId(), ["#38bdf8", "#fde68a", "#ffffff"], 20, "petal");
-    spawnFx(getPlayerId(), "🌟 獨狼穩心 -18%!", "#38bdf8");
-    triggerCutIn("🌟 四給・給希望（獨狼穩心）！", "你以沉穩氣度化解全場緊繃，好人對你的懷疑度下降且心虛值平息！", "gold");
-    msg = "給希望（獨狼偽裝）：以善意穩住全場氣氛，心虛值降低且眾人戒心下降！";
+    spawnBurst(getPlayerId(), ["#38bdf8", "#fde68a", "#ffffff"], 18, "petal");
+    spawnFx(getPlayerId(), "定神穩心", "#38bdf8");
+    triggerCutIn("明燈定心・給希望", "以沉穩氣度化解席間緊繃，眾人對你的戒心隨之平息", "tea");
+    msg = "明燈定心（獨狼偽裝）：以善意穩住茶席氣氛，心虛值降低且眾人戒心下降。";
   } else if (aliveWolves.length > 0 && aliveGood.length > 0) {
     const pair = Math.random() < 0.5 ? [aliveWolves[0], aliveGood[0]] : [aliveGood[0], aliveWolves[0]];
     state.match.fourGHopePair = [pair[0].id, pair[1].id];
@@ -805,14 +805,14 @@ function useFourGHope() {
         if (stage3d.isActive()) stage3d.triggerSkillFx("seer_scan", getPlayerId(), pair[1].id, false);
       }, 260);
     }
-    spawnBurst(pair[0].id, ["#38bdf8", "#fde68a", "#ffffff"], 16, "star");
-    spawnBurst(pair[1].id, ["#38bdf8", "#fde68a", "#ffffff"], 16, "star");
+    spawnBurst(pair[0].id, ["#38bdf8", "#fde68a", "#ffffff"], 14, "star");
+    spawnBurst(pair[1].id, ["#38bdf8", "#fde68a", "#ffffff"], 14, "star");
     setSeatEmotion(pair[0].id, "shock", 2600);
     setSeatEmotion(pair[1].id, "shock", 2600);
-    spawnFx(pair[0].id, "二選一!", "#38bdf8");
-    spawnFx(pair[1].id, "二選一!", "#38bdf8");
-    triggerCutIn("🌟 四給・給希望！", "金色雙光鎖定：" + fmtSeatNum(pair[0].id) + "號 與 " + fmtSeatNum(pair[1].id) + "號 必有一狼！", "gold");
-    msg = "AI 二選一鎖定：【" + pair[0].id + "號】與【" + pair[1].id + "號】其中必有酸民狼！";
+    spawnFx(pair[0].id, "明燈映照", "#38bdf8");
+    spawnFx(pair[1].id, "明燈映照", "#38bdf8");
+    triggerCutIn("明燈指津・給希望", "微光映照：" + fmtSeatNum(pair[0].id) + "號 與 " + fmtSeatNum(pair[1].id) + "號 必藏一狼", "tea");
+    msg = "茶席雙光鎖定：【" + pair[0].id + "號】與【" + pair[1].id + "號】其中必藏酸民狼。";
 
     const joyList = Array.isArray(state.match.fourGJoySuspects) ? state.match.fourGJoySuspects : [];
     const overlapSeats = pair.filter(function (ps) { return joyList.indexOf(ps.id) !== -1; });
@@ -821,9 +821,9 @@ function useFourGHope() {
       state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + 6, 0, 100);
       if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
       bumpCombo("四給雙光交會");
-      spawnFx(ov.id, "✨ 雙光交會焦點!", "#fbbf24");
-      triggerCutIn("✨ 歡喜 × 希望・雙光交會！", fmtSeatNum(ov.id) + "號 " + ov.name + " 同時落在破冰緊張與雙光鎖定中，建議重點查證！", "gold");
-      addLog({ kind: "blessing", title: "✨ 歡喜×希望雙光交會：" + fmtSeatNum(ov.id) + "號 " + ov.name + " 同時重疊兩張四給線索！", text: "" });
+      spawnFx(ov.id, "雙光交會", "#fbbf24");
+      triggerCutIn("歡喜 × 希望・雙光交會", fmtSeatNum(ov.id) + "號 " + ov.name + " 同時落在破冰僵硬與明燈映照之中", "tea");
+      addLog({ kind: "blessing", title: "歡喜×希望雙光交會：" + fmtSeatNum(ov.id) + "號 " + ov.name + " 同時重疊兩項茶席線索。", text: "" });
     }
   }
   addLog({ kind: "blessing", title: msg, text: "" });
@@ -869,13 +869,13 @@ function useFourGConvenience() {
       if (typeof stage3d !== "undefined" && stage3d.isActive()) {
         stage3d.triggerSkillFx("seer_scan", getPlayerId(), sel.id, false);
       }
-      triggerCutIn("🧭 四給・給方便歸票！", "理清全場關係線，號召搖擺好人集中檢視 " + fmtSeatNum(sel.id) + "號 " + sel.name + "！", "gold");
+      triggerCutIn("溫言緩議・給方便", "理清席間關係線，請搖擺茶友集中覆議 " + fmtSeatNum(sel.id) + "號 " + sel.name, "tea");
       addLog({
         kind: "blessing",
-        title: "🧭 給方便歸票：已點亮連線並號召集中檢視 " + fmtSeatNum(sel.id) + "號 " + sel.name + "！（" + digestText + "）",
+        title: "溫言緩議（給方便）：已理清關係線並號召集中覆議 " + fmtSeatNum(sel.id) + "號 " + sel.name + "（" + digestText + "）",
         text: ""
       });
-      showToast("🧭 已理清關係線並號召好人歸票 " + fmtSeatNum(sel.id) + "號！（" + digestText + "）", "emerald");
+      showToast("已理清關係線並號召好人集中覆議 " + fmtSeatNum(sel.id) + "號（" + digestText + "）", "emerald");
     } else {
       // Find the seat with a real observable contradiction, toxic slip, or early claim
       const evs = state.match.daySpeechEvents || [];
@@ -889,18 +889,18 @@ function useFourGConvenience() {
       if (hs && hs.alive) {
         state.selectedSeatId = hs.id;
         state.match.convenienceRallyTargetId = hs.id;
-        spawnFx(hs.id, "🧭 焦點整理!", "#c084fc");
+        spawnFx(hs.id, "焦點覆議", "#c084fc");
         if (typeof stage3d !== "undefined" && stage3d.isActive()) {
           stage3d.triggerSkillFx("seer_scan", getPlayerId(), hs.id, false);
         }
       }
-      triggerCutIn("🧭 四給・給方便理清混亂！", hs ? ("已標記全場焦點 " + fmtSeatNum(hs.id) + "號 " + hs.name + " 並點亮關係連線！") : "已點亮全場 3D 關係連線與戰情懶人包！", "gold");
+      triggerCutIn("溫言緩議・給方便", hs ? ("已標記全場焦點 " + fmtSeatNum(hs.id) + "號 " + hs.name + " 並展開關係線") : "已展開全場關係連線與局勢摘要", "tea");
       addLog({
         kind: "blessing",
-        title: "🧭 給方便戰情懶人包：" + (hs ? ("焦點 " + fmtSeatNum(hs.id) + "號" + hs.name + "｜") : "") + digestText,
+        title: "溫言緩議（給方便）：" + (hs ? ("焦點 " + fmtSeatNum(hs.id) + "號" + hs.name + "｜") : "") + digestText,
         text: ""
       });
-      showToast("🧭 " + digestText + "（下次先點目標再按「給方便」還能直接歸票！）", "emerald");
+      showToast(digestText + "（下次先點選目標再施展「給方便」即可直接歸票覆議）", "emerald");
     }
     triggerFourGSynergyCheck("convenience");
     if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);

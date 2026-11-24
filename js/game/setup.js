@@ -196,8 +196,12 @@ function startJudgeShowcaseMatch() {
     maxCombo: 2,
     comboBoostReady: true,
     pinnedClues: [
-      { id: "judge_clue_1", seatId: 7, tag: "📌 7號言票背離", summary: "第1天 7號阿竹口頭點名 5號星兒，實際公投卻改投 6號小雲並與 4號阿松同票！", kind: "contradiction" }
+      { id: "judge_clue_1", seatId: 7, tag: "7號言票背離", summary: "第1天 7號阿竹口頭點名 5號星兒，實際公投卻改投 6號小雲並與 4號阿松同票！", kind: "contradiction" }
     ],
+    tableReactions: [],
+    publicInterjections: [],
+    interjectUsedDay: 0,
+    candlelitReview: null,
     caughtSpeechClues: {},
     wolfGodMarks: {},
     rewriteCritReady: false,
@@ -533,6 +537,10 @@ function startNewGame() {
     maxCombo: 0,
     comboBoostReady: false,
     pinnedClues: [],
+    tableReactions: [],
+    publicInterjections: [],
+    interjectUsedDay: 0,
+    candlelitReview: null,
     caughtSpeechClues: {},
     wolfGodMarks: {},
     rewriteCritReady: false,

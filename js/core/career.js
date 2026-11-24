@@ -8,7 +8,7 @@ const CAREER_STORAGE_KEY = "sanhao_ai_werewolf_career_v1";
 const ACHIEVEMENT_DEFS = [
   { id: "first_win",    icon: "🏆", title: "初露鋒芒",     desc: "贏得第一場三好AI狼人殺勝利" },
   { id: "zero_toxic",   icon: "🌿", title: "三好典範",     desc: "全程零嘴砲並贏得整場對局" },
-  { id: "kind_crit",    icon: "✨", title: "化戾氣為祥和", desc: "單局使用「AI 轉好話暴擊」並奪勝" },
+  { id: "kind_crit",    icon: "✨", title: "化戾氣為祥和", desc: "單局透過「婉轉潤飾詞句」陳詞並奪勝" },
   { id: "resonance",    icon: "🌟", title: "三好圓滿",     desc: "單局觸發存好心・說好話・做好事共鳴" },
   { id: "combo_master", icon: "🔥", title: "連擊神探",     desc: "單局達成 3 連擊以上偵探互動" },
   { id: "four_g_sage",  icon: "🎴", title: "四給智囊",     desc: "善用四給錦囊並帶領陣營獲勝" },
@@ -278,7 +278,7 @@ function buildMatchReplayReport() {
     "【三好AI狼人殺｜賽後上帝視角復盤戰報】",
     "局制：" + m.totalSeats + "人局｜難度：" + diffLabel + (m.sheriffSeatId ? ("｜警長：" + fmtSeatNum(m.sheriffSeatId) + "號") : ""),
     "結果：" + winnerLabel + (m.winReason ? ("（" + m.winReason + "）") : ""),
-    "友善度：" + m.harmonyScore + "｜說好話：" + (m.stats.goodWordsCount || 0) + "次｜轉好話暴擊：" + (m.stats.rewritesUsed || 0) + "次｜最高連擊：" + (m.maxCombo || 0),
+    "友善度：" + m.harmonyScore + "｜說好話：" + (m.stats.goodWordsCount || 0) + "次｜潤飾詞句：" + (m.stats.rewritesUsed || 0) + "次｜最高連擊：" + (m.maxCombo || 0),
     "",
     "■ 全員底牌揭曉："
   ];

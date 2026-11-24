@@ -94,10 +94,12 @@ class ServerTestCase(unittest.TestCase):
                         self.assertLessEqual(pitch_val, 5)
 
     def test_static_etag_and_304(self):
-        for path, cc_expect in (("/ai.html", "no-cache"), ("/assets/models/asong.vrm", "max-age=3600")):
+        for path, cc_expect in (("/", "no-cache"), ("/ai.html", "no-cache"), ("/assets/models/asong.vrm", "max-age=3600")):
             status, headers, data = dispatch_handler("GET", path)
             self.assertEqual(status, 200, path)
             self.assertGreater(len(data), 256)
+            if path == "/":
+                self.assertIn(b"focalCenterCard", data)
             etag = headers.get("ETag")
             self.assertTrue(etag)
             self.assertIn(cc_expect, headers.get("Cache-Control", ""))

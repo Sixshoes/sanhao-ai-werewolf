@@ -55,10 +55,10 @@ function renderSpeakerTurnStrip() {
       const seat = getSeat(sid);
       if (!seat || !seat.alive) return;
       if (idx > 0) {
-        const arrow = document.createElement("span");
-        arrow.className = "text-[9px] opacity-40 select-none";
-        arrow.textContent = "→";
-        container.appendChild(arrow);
+        const sep = document.createElement("span");
+        sep.className = "turn-sep-dot select-none";
+        sep.textContent = "·";
+        container.appendChild(sep);
       }
       const btn = document.createElement("button");
       btn.type = "button";
@@ -66,10 +66,10 @@ function renderSpeakerTurnStrip() {
       const isPending = remaining.indexOf(sid) !== -1;
       const isDone = !isCurrent && !isPending;
       btn.className = "turn-chip cursor-pointer hover:opacity-100" + (isCurrent ? " is-speaking" : (isDone ? " is-done" : ""));
-      const shPrefix = (shIdNow === sid) ? "👑" : "";
+      const shPrefix = (shIdNow === sid) ? "警 " : "";
       const shortName = shPrefix + (sid === pid ? (fmtSeatNum(sid) + " 你") : (fmtSeatNum(sid) + " " + seat.name));
-      btn.textContent = isCurrent ? (shortName + " 發言中") : (isDone ? (shortName + " 已講") : shortName);
-      btn.title = sid === pid ? "你的座位" : ("點擊查看 " + fmtSeatNum(sid) + "號 情報");
+      btn.textContent = isCurrent ? (shortName + " · 言") : shortName;
+      btn.title = sid === pid ? "你的座位" : ("點擊查看 " + fmtSeatNum(sid) + "號 情報" + (isDone ? "（今日已發言）" : ""));
       btn.addEventListener("click", function (ev) {
         ev.stopPropagation();
         if (sid !== pid) onSeatClick(sid);
@@ -85,6 +85,7 @@ function maybeScheduleAutoAdvanceAfterSpeech() {
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   if (!state.autoPlay && !ff) return;
   if (voice && voice.paused) return;
+  if (state.interjectOpen) return;
   const pNow = state.match.phase;
   const isSheriffSpeechAuto = Boolean(
     pNow === "SHERIFF_ELECTION" &&
@@ -649,12 +650,19 @@ function refreshQuickFreeInputHint() {
   const rwBtn = el("btnQuickInlineRewrite");
   if (!qIn || !rwBtn) return;
   const val = qIn.value.trim();
+  const tray = el("rephraseChoicesTray");
   if (!val) {
     rwBtn.classList.add("hidden");
+    if (tray) tray.classList.add("hidden");
     return;
   }
   const res = analyzeThreeGoodSpeech(val);
   rwBtn.classList.toggle("hidden", !res.isToxic);
+  if (res.isToxic && typeof renderRephraseChoicesTray === "function") {
+    renderRephraseChoicesTray(val);
+  } else if (tray && !state.rephraseTrayPinned) {
+    tray.classList.add("hidden");
+  }
 }
 
 function updateSpotlightBox(badge, trait, text, counterText) {

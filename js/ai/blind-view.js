@@ -278,6 +278,10 @@ function _sanitizeSpeechEventForViewer(ev, viewerIsPlayer) {
     hasToxicSlip: Boolean(ev.hasToxicSlip),
     isLastWord: Boolean(ev.isLastWord),
     contradiction: keepContra ? Object.assign({}, ev.contradiction) : null,
+    verbatimAnchor: ev.verbatimAnchor || "",
+    verbatimAnchorsByTarget: (ev.verbatimAnchorsByTarget && typeof ev.verbatimAnchorsByTarget === "object")
+      ? Object.freeze(Object.assign({}, ev.verbatimAnchorsByTarget))
+      : null,
     rawText: ev.rawText || ""
   });
 }
@@ -461,6 +465,28 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     return typeof clamp === "function" ? clamp(heat, 20, 98) : Math.max(20, Math.min(98, heat));
   };
 
+  const tableReactions = Array.isArray(m.tableReactions)
+    ? m.tableReactions.filter(function (r) { return r && r.day === (m.day || 1); }).map(function (r) {
+        return Object.freeze({
+          day: r.day || 1,
+          targetId: r.targetId || null,
+          targetName: r.targetName || "",
+          kind: r.kind === "frown" ? "frown" : "nod"
+        });
+      })
+    : [];
+  const publicInterjections = Array.isArray(m.publicInterjections)
+    ? m.publicInterjections.filter(function (it) { return it && it.day === (m.day || 1); }).map(function (it) {
+        return Object.freeze({
+          day: it.day || 1,
+          targetId: it.targetId || null,
+          targetName: it.targetName || "",
+          question: String(it.question || "").slice(0, 24),
+          reply: String(it.reply || "").slice(0, 36)
+        });
+      })
+    : [];
+
   return Object.freeze({
     started: true,
     module: moduleTag,
@@ -484,6 +510,8 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     fourGHopePair: Array.isArray(m.fourGHopePair) ? m.fourGHopePair.slice() : null,
     activeDirectorEvent: m.activeDirectorEvent ? Object.assign({}, m.activeDirectorEvent) : null,
     microPulseRevealed: Boolean(m.microPulseRevealed),
+    tableReactions: Object.freeze(tableReactions),
+    publicInterjections: Object.freeze(publicInterjections),
     // Viewer-authorized private match state ONLY
     wolfTactic: legalWolfTactic,
     lastGuardTargetId: legalLastGuardTargetId,

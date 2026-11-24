@@ -383,7 +383,7 @@
                     <div class="flex items-center gap-2.5 flex-wrap">
                       <div class="seal-chop" aria-hidden="true">善</div>
                       <div class="text-[11px] tracking-[0.26em] text-amber-300/90 font-medium">林美山書院・反假訊息推理之夜</div>
-                      <span class="title-release-badge">公測 2.0</span>
+                      <span class="title-release-badge">公測 2.1</span>
                     </div>
                     <h1
                       class="font-serif-craft text-3xl sm:text-4xl font-black text-amber-50 tracking-[0.14em] leading-tight">
@@ -419,7 +419,7 @@
                       title="直切第 2 天雙觀察員對跳、言票背離與四給逆轉精華局（適合評審 3 分鐘快速體驗）">評審三分鐘導覽</button>
                     <span>·</span>
                     <button id="btnTitleOpenGuide" type="button"
-                      class="hover:text-amber-300 transition underline underline-offset-4">三好與 AI 架構</button>
+                      class="hover:text-amber-300 transition underline underline-offset-4">書院規則與理念</button>
                     <span>·</span>
                     <button id="btnTitleOpenMusic" type="button"
                       class="hover:text-amber-300 transition underline underline-offset-4">語音與雅樂</button>
@@ -449,14 +449,43 @@
                     </div>
                   </div>
 
+                  <!-- CANDLELIT NIGHT REVIEW CARD (Civilians / Non-Acting Night 2+ Watch Picker) -->
+                  <div id="candlelitReviewCard" class="hidden candlelit-review-card msg-enter">
+                    <div class="flex items-center justify-between gap-2 mb-1.5">
+                      <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="candlelit-seal">燭下覆茶</span>
+                        <span class="text-[11px] text-amber-100/90 truncate">圈選明日盯防對象（最多 2 席・朱筆留記）</span>
+                      </div>
+                      <button id="btnCandlelitDone" type="button" class="cta-brass py-0.5 px-2.5 text-[10.5px] shrink-0">覆茶靜候天明</button>
+                    </div>
+                    <div id="candlelitSlipsList" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
+                  </div>
+
+                  <!-- TEA-CUP INTERJECTION POPOVER (Once Per Day Live Cross-Examination) -->
+                  <div id="interjectPopover" class="hidden interject-popover msg-enter">
+                    <div class="flex items-center justify-between gap-2 mb-1.5">
+                      <span id="interjectTargetTitle" class="text-[11px] font-serif-craft font-bold text-amber-200 truncate">舉杯當場追問（每日限 1 次）</span>
+                      <button id="btnInterjectCancel" type="button" class="cta-ink text-[10px] px-2 py-0.5 shrink-0">收盞</button>
+                    </div>
+                    <div id="interjectQuickPrompts" class="grid grid-cols-1 sm:grid-cols-3 gap-1 mb-1.5"></div>
+                    <div class="flex items-center gap-1.5">
+                      <input id="interjectCustomInput" type="text" maxlength="18" placeholder="或自訂 18 字內短問（如：你為何保他？）…"
+                        class="flex-1 min-w-0 rounded px-2 py-1 text-[11px] border focus:outline-none focus:border-amber-400" />
+                      <button id="btnInterjectSend" type="button" class="cta-brass px-2.5 py-1 text-[11px] shrink-0">舉杯發問</button>
+                    </div>
+                  </div>
+
                   <div class="stepper-action-row flex items-center justify-between gap-2 pt-1 border-t border-slate-800/70">
-                    <div id="detectiveMarkRow" class="flex items-center gap-1.5 flex-1 min-w-0">
+                    <div id="detectiveMarkRow" class="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
                       <button id="btnMarkGood" type="button"
                         class="cta-ink py-1 px-2.5 text-[11px] shrink-0"
-                        title="把這位發言者標記為可信好人（投票與發言時會同步提醒）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg>認同</button>
+                        title="聆聽席點頭認同：表露欣賞神色並記為可信夥伴（後位茶友會察覺你的反應）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg>點頭認同</button>
                       <button id="btnMarkWolf" type="button"
                         class="cta-ink py-1 px-2.5 text-[11px] shrink-0"
-                        title="把這位發言者標記為可疑對象（投票與發言時會同步提醒）"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9 9-9z"/><path d="M12 8.5v4.2"/><path d="M12 16h.01"/></svg>存疑</button>
+                        title="聆聽席皺眉存疑：表露懷疑神色並記為可疑對象（後位茶友會察覺你的反應）"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9 9-9z"/><path d="M12 8.5v4.2"/><path d="M12 16h.01"/></svg>皺眉存疑</button>
+                      <button id="btnTeaInterject" type="button"
+                        class="cta-brass py-1 px-2.5 text-[11px] shrink-0"
+                        title="每日限 1 次：趁對方發言露破綻時當場舉杯追問，逼出即時回防"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>舉杯追問</button>
                       <button id="btnPinCurrentSpeaker" type="button"
                         class="cta-ink cta-quiet py-1 px-2 text-[11px] shrink-0"
                         title="把他的立場存成重點便條，輪到你發言時一鍵引用"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-3.5L7 20V4z"/></svg>記重點</button>
@@ -542,14 +571,23 @@
                     <div id="pitBadgeFlowBar" class="hidden badge-flow-bar"></div>
                     <div id="playerPitBuilder" class="pit-builder-box"></div>
                     <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-700/50 text-[10px] text-slate-400">
-                      <span>點上方座號可自動組句，或試用 AI 語氣改寫：</span>
+                      <span>點上方座號可自動組句，或練習婉轉修辭：</span>
                       <button id="btnQuickSpiceDemo" type="button"
                         class="cta-ink cta-quiet px-2 py-0.5 text-[10px] shrink-0"
-                        title="填入一句吐槽範例，體驗『AI 轉好話 ×1.5 暴擊』說服力加成"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2.5 3.4 5.5 6 5.5 10a5.5 5.5 0 0 1-11 0"/></svg>試酸轉好</button>
+                        title="填入一句語氣較急的範例，體驗三選一婉轉潤飾靈感籤"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2.5 3.4 5.5 6 5.5 10a5.5 5.5 0 0 1-11 0"/></svg>語氣範例</button>
                     </div>
                   </div>
 
-                  <!-- Clean Single-Line Free Speech + Mic Voice Input + Auto-Appearing Kindness Rewrite -->
+                  <!-- Three-Option Diegetic Rephrase Slips Tray (Player retains agency!) -->
+                  <div id="rephraseChoicesTray" class="hidden rephrase-tray space-y-1 msg-enter">
+                    <div class="flex items-center justify-between gap-2 text-[10.5px]">
+                      <span id="rephraseTrayHint" class="text-amber-200/95 font-medium truncate">語氣稍急，不妨添一分婉轉（挑一張靈感籤潤飾詞句）：</span>
+                      <button id="btnCloseRephraseTray" type="button" class="text-[10px] text-slate-400 hover:text-amber-200 shrink-0">維持原句</button>
+                    </div>
+                    <div id="rephraseSlipsGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
+                  </div>
+
+                  <!-- Clean Single-Line Free Speech + Mic Voice Input + Auto-Appearing Gentle Rephrase -->
                   <div class="free-speech-bar flex items-center gap-1.5">
                     <button id="btnMicVoiceSpeech" type="button"
                       class="cta-ink px-2 py-1.5 text-[11px] shrink-0"
@@ -559,7 +597,7 @@
                     <span id="speechThreeGoodBadge" class="hidden speech-tg-badge shrink-0"></span>
                     <button id="btnQuickInlineRewrite" type="button"
                       class="hidden cta-brass px-2.5 py-1.5 text-[11px] shrink-0"
-                      title="把尖銳語氣改寫為溫和有力的三好推理，觸發 ×1.5 說服力暴擊"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>AI 轉好話 ×1.5</button>
+                      title="展開三選一茶席潤飾靈感籤，保留原意並添一分婉轉說服力"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>潤飾詞句</button>
                     <button id="btnQuickFreeSend" type="button"
                       class="cta-celadon px-3.5 py-1.5 text-xs shrink-0"
                       title="將輸入欄內的發言對全場送出">送出</button>
@@ -569,12 +607,12 @@
                   <!-- Consolidated hidden compatibility bridge (merged into single .free-speech-bar) -->
                   <div id="customSpeechDrawer" class="hidden" aria-hidden="true">
                     <span id="nlpFeedbackBadge">溫和有理</span>
-                    <button id="btnDemoToxicSample" type="button">填入酸言測試</button>
+                    <button id="btnDemoToxicSample" type="button">填入語氣範例</button>
                     <textarea id="playerSpeechInput" rows="1"></textarea>
                     <span id="scoreKindWords">85%</span><div id="barKindWords"></div>
                     <span id="scoreGoodHeart">80%</span><div id="barGoodHeart"></div>
                     <span id="scoreGoodDeed">75%</span><div id="barGoodDeed"></div>
-                    <button id="btnRewriteKindness" type="button">AI 轉好話 (×1.5)</button>
+                    <button id="btnRewriteKindness" type="button">潤飾詞句</button>
                     <button id="btnSubmitSpeech" type="button">送出自訂台詞</button>
                   </div>
                 </div>
@@ -723,25 +761,25 @@
                 <div id="fourGSynergyHint" class="hidden fourg-synergy-hint"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4c-2.2 3.8-2.6 7.5 0 12 2.6-4.5 2.2-8.2 0-12z"/><path d="M5 19.5h14"/></svg>再出 1 張觸發連心共鳴</div>
                 <div class="fourg-fan-tray">
                   <button id="btn4GConfidence" type="button" class="fourg-card card-confidence"
-                    title="給信心：替選定夥伴隱密擋 1 票；開票前不洩漏陣營！">
+                    title="給信心・奉茶護席：推盞予選定茶友隱密擋 1 票，開票前不洩漏陣營！">
                     <div class="fourg-card-title">給信心</div>
-                    <div id="tag4GConfidence" class="fourg-card-sub">替人擋1票</div>
+                    <div id="tag4GConfidence" class="fourg-card-sub">奉茶護席</div>
                   </button>
-                  <button id="btn4GJoy" type="button" class="fourg-card card-joy" title="給歡喜：全場笑場破冰，點出兩位緊張度偏高的可疑焦點！">
+                  <button id="btn4GJoy" type="button" class="fourg-card card-joy" title="給歡喜・溫言破冰：以清茶幽默破冰，觀察兩位神色微僵的茶友！">
                     <div class="fourg-card-title">給歡喜</div>
-                    <div id="tag4GJoy" class="fourg-card-sub">查2人緊張</div>
+                    <div id="tag4GJoy" class="fourg-card-sub">溫言破冰</div>
                   </button>
-                  <button id="btn4GHope" type="button" class="fourg-card card-hope" title="給希望：金色雙光柱鎖定 2 人必有 1 狼！">
+                  <button id="btn4GHope" type="button" class="fourg-card card-hope" title="給希望・明燈指津：微光雙照兩席，其中必藏一狼！">
                     <div class="fourg-card-title">給希望</div>
-                    <div id="tag4GHope" class="fourg-card-sub">2選1必藏狼</div>
+                    <div id="tag4GHope" class="fourg-card-sub">明燈指津</div>
                   </button>
                   <button id="btn4GConvenience" type="button" class="fourg-card card-convenience"
-                    title="給方便：點亮全局關係線並號召搖擺好人集中歸票！">
+                    title="給方便・緩議歸票：理清全局關係線並號召搖擺茶友集中覆議！">
                     <div class="fourg-card-title">給方便</div>
-                    <div id="tag4GConvenience" class="fourg-card-sub">連線助歸票</div>
+                    <div id="tag4GConvenience" class="fourg-card-sub">緩議歸票</div>
                   </button>
                 </div>
-                <button id="fourGDeckHeader" type="button" class="fourg-deck-head" title="懸停或點擊展開四給錦囊手牌"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>四給錦囊 · 4/4 ▴</button>
+                <button id="fourGDeckHeader" type="button" class="fourg-deck-head" title="懸停或點擊展開四給奉茶茶禮"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>四給奉茶 · 4/4 ▴</button>
                 <span id="fourGRemainBadge" class="hidden">4/4</span>
               </div>
 
@@ -1061,7 +1099,7 @@
           <button id="tabJournalLog" type="button"
             class="journal-tab-btn is-active px-2.5 py-1 rounded border border-slate-700 text-xs">對話紀錄</button>
           <button id="tabJournalMatrix" type="button"
-            class="journal-tab-btn px-2.5 py-1 rounded border border-slate-700 text-xs">局勢矩陣</button>
+            class="journal-tab-btn px-2.5 py-1 rounded border border-slate-700 text-xs">茶席言行錄</button>
           <button id="tabJournalVote" type="button"
             class="journal-tab-btn px-2.5 py-1 rounded border border-slate-700 text-xs">票型小抄</button>
           <button id="btnToggleGraphOverlay" type="button" class="cta-ink text-[11px] px-2 py-1">連線:開</button>
@@ -1073,7 +1111,7 @@
       </div>
       <div id="journalPaneMatrix"
         class="hidden flex-1 overflow-y-auto custom-scroll p-3.5 space-y-2.5 text-xs text-slate-200">
-        <p class="text-[11px] text-slate-400">全桌最新立場總覽（宣稱身分｜今日指控｜今日力挺｜昨日投票｜一鍵引用反駁）</p>
+        <p class="text-[11px] text-slate-400">茶席言行錄：全桌公開立場、言行比對、昨日票型與一鍵引用</p>
         <div id="matrixSheetBody" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
       </div>
       <div id="journalPaneVote"

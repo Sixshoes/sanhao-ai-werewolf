@@ -408,7 +408,7 @@ function bindIntelAndDetectiveEvents() {
     const selfPlayerChk = getPlayerSeat();
     const isWolfSelf = Boolean(selfPlayerChk && selfPlayerChk.role === "wolf");
     if (isWolfSelf && sp.role === "wolf") {
-      spawnFx(sp.id, "🐺 狼隊同伴", "#fb7185");
+      spawnFx(sp.id, "狼隊同伴", "#fb7185");
       return;
     }
     const key = (state.match.day || 0) + ":" + sp.id;
@@ -425,19 +425,35 @@ function bindIntelAndDetectiveEvents() {
 
     if (state.playerMarks[sp.id] === kind) {
       const fxLbl = isWolfSelf
-        ? (isGoodReaction ? "🛡️ 標記假保" : "🎯 標記甩鍋")
-        : (isGoodReaction ? "👍 認同好人" : "🤨 存疑懷疑");
+        ? (isGoodReaction ? "標記假保" : "標記甩鍋")
+        : (isGoodReaction ? "點頭認同" : "皺眉存疑");
       spawnFx(sp.id, fxLbl, isGoodReaction ? "#34d399" : "#fb7185");
       nudgeSeat(sp.id, { scale: isGoodReaction ? 1.12 : 0.90, vy: isGoodReaction ? -5 : 4, vTilt: isGoodReaction ? 0.06 : -0.14 });
       const selfPlayer = getPlayerSeat();
       const selfAlive = Boolean(selfPlayer && selfPlayer.alive);
+      // v15.0 Record strictly public table micro-reaction (nod/frown) & sync downstream AI prefetch cache!
+      if (state.match && state.match.phase === "DAY_SPEECH" && selfAlive) {
+        if (!Array.isArray(state.match.tableReactions)) state.match.tableReactions = [];
+        const reactKind = isGoodReaction ? "nod" : "frown";
+        state.match.tableReactions = state.match.tableReactions.filter(function (r) {
+          return !(r && r.day === state.match.day && r.targetId === sp.id);
+        });
+        state.match.tableReactions.push({
+          day: state.match.day,
+          targetId: sp.id,
+          targetName: sp.name,
+          kind: reactKind,
+          ts: Date.now()
+        });
+        if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
+      }
       if (firstTime && selfAlive) {
         if (isGoodReaction) {
           addThreeGoodPoint("words", "說好話鼓勵");
           setSeatEmotion(sp.id, "happy", 2800);
           const goodReply = sp.team === "wolf"
-            ? "哈哈謝謝你的信任～我一定幫大家找狼！"
-            : "謝謝你點頭認同！我們好人一定要團結！";
+            ? "謝謝你的信任，我也會一起幫大家理清楚。"
+            : "謝謝你點頭認同，我們好人這輪把線對齊。";
           setSeatBubble(sp.id, goodReply, "trust", 3000);
           if (typeof renderTargetReactionCard === "function") {
             renderTargetReactionCard(null, null, { seat: sp, kind: "trust", badge: sp.name + " · 回眸致謝", quote: "「" + goodReply + "」" });
@@ -451,11 +467,11 @@ function bindIntelAndDetectiveEvents() {
           if (sp.team === "wolf") {
             setSeatEmotion(sp.id, "nervous", 3000);
             sp.sweatExposed = (sp.microPulse >= 72);
-            doubtReply = "呃、你幹嘛突然瞪我？我哪有在帶風向啦…";
+            doubtReply = "欸、你剛剛皺眉看我是覺得哪裡怪嗎？我真的沒帶風向…";
             setSeatBubble(sp.id, doubtReply, "wolf", 3200);
           } else {
             setSeatEmotion(sp.id, "shock", 2600);
-            doubtReply = "欸真的不是我啦！等一下看我的票型就知道！";
+            doubtReply = "看你皺眉頭了，真不是我啦，等下看我的票型就知道。";
             setSeatBubble(sp.id, doubtReply, "suspect", 3000);
           }
           if (typeof renderTargetReactionCard === "function") {
@@ -466,6 +482,12 @@ function bindIntelAndDetectiveEvents() {
       }
     } else {
       spawnFx(sp.id, "清除標記", "#94a3b8");
+      if (state.match && Array.isArray(state.match.tableReactions)) {
+        state.match.tableReactions = state.match.tableReactions.filter(function (r) {
+          return !(r && r.day === state.match.day && r.targetId === sp.id);
+        });
+        if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
+      }
     }
     updateAllUI();
   }
@@ -564,7 +586,7 @@ function bindIntelAndDetectiveEvents() {
           }
           stopMicUi();
           if (el("quickFreeInput") && el("quickFreeInput").value.trim()) {
-            showToast("✓ 語音已轉入陳詞欄！確認內容後按「陳詞」或「AI 轉好話」送出", "emerald");
+            showToast("✓ 語音已轉入陳詞欄，確認後按「送出」即可，也可點「潤飾詞句」調整語氣。", "emerald");
           }
         };
         rec.start();
@@ -796,7 +818,7 @@ function bindSpeechInputEvents() {
     state.match.rewriteCritReady = false;
     el("playerSpeechInput").value = t.id + "號白癡亂玩喔！快滾啦";
     refreshLiveNlpUI();
-    showToast("已填入嘴砲！快按左下「 AI轉好話」觸發 1.5 倍暴擊！", "warn");
+    showToast("已填入語氣較衝的說法，不妨點選「潤飾詞句」換個更婉轉的切角。", "warn");
   });
 
   el("btnRewriteKindness").addEventListener("click", async function () {
@@ -804,19 +826,19 @@ function bindSpeechInputEvents() {
     const btn = el("btnRewriteKindness");
     const raw = (el("playerSpeechInput").value || "").trim();
     if (!raw) {
-      showToast("先輸入或點選一句發言，再按「AI 轉好話」觸發 1.5 倍暴擊！", "warn");
+      showToast("先輸入或點選一句發言，再按「潤飾詞句」換個更溫潤的說法。", "warn");
       return;
     }
     const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
     const alreadyCritThisTurn = Boolean(state.match && state.match.rewriteCritReady);
     btn.disabled = true;
-    btn.textContent = "轉譯中…";
+    btn.textContent = "潤飾中…";
     let niceText = "";
     try {
       niceText = await rewriteToThreeGoodness(raw);
     } finally {
       btn.disabled = false;
-      btn.textContent = "AI 轉好話 (x1.5)";
+      btn.textContent = "潤飾詞句";
     }
     if (!niceText || (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep))) return;
     el("playerSpeechInput").value = niceText;
@@ -824,14 +846,60 @@ function bindSpeechInputEvents() {
     if (!alreadyCritThisTurn) {
       state.match.stats.rewritesUsed += 1;
       state.match.rewriteCritReady = true;
-      addThreeGoodPoint("words", "說好話轉譯暴擊");
-      bumpCombo("三好轉譯暴擊");
+      addThreeGoodPoint("words", "溫潤潤飾詞句");
+      bumpCombo("以理服人");
     }
     sound.playBlessing();
-    spawnFx(getPlayerId(), "好話暴擊準備!", "#34d399");
+    spawnFx(getPlayerId(), "辭溫理正", "#34d399");
     refreshQuickFreeInputHint();
     refreshLiveNlpUI();
   });
+
+  if (el("btnCloseRephraseTray")) {
+    el("btnCloseRephraseTray").addEventListener("click", function () {
+      state.rephraseTrayPinned = false;
+      if (el("rephraseChoicesTray")) el("rephraseChoicesTray").classList.add("hidden");
+    });
+  }
+
+  if (el("btnTeaInterject")) {
+    el("btnTeaInterject").addEventListener("click", function () {
+      sound.unlock();
+      if (typeof openTeaInterjectPopover === "function") openTeaInterjectPopover();
+    });
+  }
+  if (el("btnInterjectCancel")) {
+    el("btnInterjectCancel").addEventListener("click", function () {
+      if (typeof closeTeaInterjectPopover === "function") closeTeaInterjectPopover(true);
+    });
+  }
+  if (el("btnInterjectSend")) {
+    el("btnInterjectSend").addEventListener("click", function () {
+      sound.unlock();
+      const inp = el("interjectCustomInput");
+      const q = inp ? inp.value.trim() : "";
+      if (!q) {
+        showToast("請點選一張追問短籤，或輸入 18 字內短問。", "warn");
+        return;
+      }
+      if (typeof executeTeaInterjection === "function") executeTeaInterjection(q);
+    });
+  }
+  if (el("interjectCustomInput")) {
+    el("interjectCustomInput").addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        const q = el("interjectCustomInput").value.trim();
+        if (q && typeof executeTeaInterjection === "function") executeTeaInterjection(q);
+      }
+    });
+  }
+  if (el("btnCandlelitDone")) {
+    el("btnCandlelitDone").addEventListener("click", function () {
+      sound.unlock();
+      if (typeof finishCandlelitNightReview === "function") finishCandlelitNightReview();
+    });
+  }
 
   el("btnSubmitSpeech").addEventListener("click", submitPlayerSpeech);
 
@@ -893,39 +961,20 @@ function bindSpeechInputEvents() {
       refreshQuickFreeInputHint();
       refreshLiveNlpUI();
       sound.tone(420, 0.07, "triangle", 0.045, 0);
-      showToast("🌶 已填入熱血吐槽！點右邊「AI 轉好話 ×1.5」立刻反轉神回覆！", "warn");
+      showToast("語氣稍急，不妨從上方三張靈感籤挑一句更婉轉的說法。", "warn");
     });
   }
 
   if (el("btnQuickInlineRewrite")) {
-    el("btnQuickInlineRewrite").addEventListener("click", async function () {
+    el("btnQuickInlineRewrite").addEventListener("click", function () {
       sound.unlock();
       const qIn = el("quickFreeInput");
-      const btn = el("btnQuickInlineRewrite");
       if (!qIn || !qIn.value.trim()) return;
-      const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
-      btn.disabled = true;
-      btn.textContent = "轉譯中…";
-      let niceText = "";
-      try {
-        niceText = await rewriteToThreeGoodness(qIn.value);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "✨轉好話×1.5";
+      state.rephraseTrayPinned = true;
+      if (typeof renderRephraseChoicesTray === "function") {
+        renderRephraseChoicesTray(qIn.value);
+        showToast("已展開三張換句話說靈感籤，請挑選最合心意的切角。", "emerald");
       }
-      if (!niceText || (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep))) return;
-      qIn.value = niceText;
-      el("playerSpeechInput").value = niceText;
-      state.match.stats.rewritesUsed += 1;
-      state.match.rewriteCritReady = true;
-      btn.classList.add("hidden");
-      addThreeGoodPoint("words", "說好話轉譯暴擊");
-      sound.playBlessing();
-      spawnFx(getPlayerId(), "✨ 好話暴擊×1.5 就緒!", "#34d399");
-      bumpCombo("三好轉譯暴擊");
-      refreshQuickFreeInputHint();
-      refreshLiveNlpUI();
-      showToast("已自動改寫成三好好話！直接按「陳詞」享 1.5 倍說服力暴擊！", "emerald");
     });
   }
 
@@ -1080,7 +1129,7 @@ function bindNightVoteAndFourGEvents() {
       const head = el("fourGDeckHeader");
       if (!head) return;
       head.classList.remove("is-previewing");
-      head.textContent = head.getAttribute("data-default-text") || "✨ 四給錦囊（點卡即用）";
+      head.textContent = head.getAttribute("data-default-text") || "四給奉茶 · 點盞施禮";
     };
     b.addEventListener("pointerenter", showPreview);
     b.addEventListener("focus", showPreview);

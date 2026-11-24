@@ -42,10 +42,14 @@ function startDayDiscussion(dawnVoiceLine, opts) {
   state.match.speechQueue = ordered;
   state.match.todayEvents = { accusedYouId: null, fakeSeerId: null, toxicSlipId: null };
   state.match.daySpeechEvents = [];
+  state.match.tableReactions = [];
+  state.match.publicInterjections = [];
+  state.match.candlelitReview = null;
   state.match.pkCandidates = null;
   state.match.pkUsedToday = false;
   state.activeSpeakerId = null;
   state.activeClash = null;
+  state.interjectOpen = false;
   state.match._prefetchedSpeech = null;
   if (typeof orchestrator !== "undefined") {
     if (typeof isClassicSimpleMode === "function" && isClassicSimpleMode()) {
@@ -112,6 +116,8 @@ function advanceSpeechQueue() {
   state.activeSpeakerId = speaker.id;
   state.currentTurnSpoken = false;
   state.activeClash = null;
+  state.interjectOpen = false;
+  if (el("interjectPopover")) el("interjectPopover").classList.add("hidden");
   if (typeof closeSeatIntel === "function") closeSeatIntel();
   if (typeof stage3d !== "undefined") {
     if (typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
@@ -164,6 +170,186 @@ function bumpTableStateRev(rePrefetch) {
   if (rePrefetch && state.match.phase === "DAY_SPEECH" && typeof prefetchNextAiSpeech === "function") {
     prefetchNextAiSpeech();
   }
+}
+
+// ==================== v15.0 ONCE-PER-DAY TEA-CUP INTERJECTION (舉杯當場追問) ====================
+function canUseTeaInterjectNow() {
+  if (!state.match || !state.match.started || state.match.phase !== "DAY_SPEECH") return false;
+  const p = getPlayerSeat();
+  const sp = getSeat(state.activeSpeakerId);
+  if (!p || !p.alive || !sp || !sp.alive || sp.id === p.id) return false;
+  return state.match.interjectUsedDay !== state.match.day;
+}
+
+function buildTeaInterjectQuickPrompts(targetSeat) {
+  const m = state.match || {};
+  const evs = Array.isArray(m.daySpeechEvents) ? m.daySpeechEvents : [];
+  const latestSpEv = targetSeat
+    ? evs.slice().reverse().find(function (ev) { return ev && ev.speakerId === targetSeat.id; })
+    : null;
+  const prompts = [];
+  if (latestSpEv && latestSpEv.vouchId) {
+    prompts.push("你剛才為何急著替 " + fmtSeatNum(latestSpEv.vouchId) + "號 緩頰？");
+  } else {
+    prompts.push("你這輪保人的依據是什麼？");
+  }
+  if (latestSpEv && latestSpEv.accuseId) {
+    prompts.push("踩 " + fmtSeatNum(latestSpEv.accuseId) + "號 的實證在哪裡？");
+  } else {
+    prompts.push("前後態度怎麼不太一樣？");
+  }
+  prompts.push("請再說清楚你的排坑理由？");
+  return prompts.slice(0, 3);
+}
+
+function openTeaInterjectPopover() {
+  if (!canUseTeaInterjectNow()) {
+    showToast("今日舉杯追問已用完，待明日茶席再啟。", "warn");
+    return false;
+  }
+  const sp = getSeat(state.activeSpeakerId);
+  const pop = el("interjectPopover");
+  const list = el("interjectQuickPrompts");
+  const titleEl = el("interjectTargetTitle");
+  if (!sp || !pop || !list) return false;
+  state.interjectOpen = true;
+  if (state.stepTimer) {
+    clearTimeout(state.stepTimer);
+    state.stepTimer = null;
+  }
+  if (titleEl) {
+    titleEl.textContent = "舉杯追問 · " + fmtSeatNum(sp.id) + "號 " + sp.name + "（每日限 1 次）";
+  }
+  const prompts = buildTeaInterjectQuickPrompts(sp);
+  list.innerHTML = "";
+  prompts.forEach(function (qText) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "interject-chip-btn";
+    btn.textContent = qText;
+    btn.addEventListener("click", function () {
+      executeTeaInterjection(qText);
+    });
+    list.appendChild(btn);
+  });
+  if (el("interjectCustomInput")) el("interjectCustomInput").value = "";
+  pop.classList.remove("hidden");
+  return true;
+}
+
+function closeTeaInterjectPopover(resumeAuto) {
+  state.interjectOpen = false;
+  if (el("interjectPopover")) el("interjectPopover").classList.add("hidden");
+  if (resumeAuto && typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
+    maybeScheduleAutoAdvanceAfterSpeech();
+  }
+}
+
+function buildBlindInterjectionReply(targetSeat, questionText) {
+  // Strictly Blind-View Safe: reads ONLY snap.self & public observable state!
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(targetSeat, { module: "tea_interject", phase: "DAY_SPEECH" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : targetSeat;
+  const q = String(questionText || "").trim();
+  const reg = typeof getPersonaRegister === "function" ? getPersonaRegister(self) : "balanced";
+  const isWolfSelf = Boolean(self && self.team === "wolf");
+  const isVouchQ = /保|緩頰|站邊|替/.test(q);
+  const isFlipQ = /前後|態度|棄票|改票|矛盾/.test(q);
+  let reply = "";
+
+  if (isWolfSelf) {
+    if (reg === "classical") {
+      reply = isFlipQ ? "局勢隨發言而變，哪算前後矛盾。" : "我只是照檯面線索判斷，別急著扣帽子。";
+    } else if (reg === "guzheng") {
+      reply = isVouchQ ? "晴嵐只是聽他語氣較穩，沒別的意思呀。" : "我只是想穩妥一點，怎麼反倒先問起我了？";
+    } else if (reg === "poetic") {
+      reply = isVouchQ ? "我只是覺得他聊得順耳，沒刻意偏袒誰。" : "茶都還沒涼呢，急著逼問我可問不出狼。";
+    } else {
+      reply = isFlipQ ? "盤面剛變了嘛，我照新線索調整很正常啊。" : "欸別這麼急著盯我啦，我只是講我看到的而已。";
+    }
+  } else {
+    if (reg === "classical") {
+      reply = isVouchQ ? "他陳詞前後貫通，我自然先列好人席。" : "我句句對照公開票型，經得起檢驗。";
+    } else if (reg === "guzheng") {
+      reply = isVouchQ ? "他剛才語氣清正誠懇，晴嵐才先保一手。" : "我的疑問都來自剛才發言，絕無私心。";
+    } else if (reg === "poetic") {
+      reply = isFlipQ ? "聽其言觀其行，新線索出來自然該修正。" : "我心裡坦蕩，這輪看票型自然見真章。";
+    } else {
+      reply = isVouchQ ? "他剛剛邏輯滿順的我才先保，後面有錯我會改票。" : "我全程照前面發言在盤，沒什麼好心虛的。";
+    }
+  }
+
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("tea_interject", self.id, "舉杯追問即時回防完成");
+  }
+  return {
+    text: reply.slice(0, 24),
+    tense: Boolean(isWolfSelf && (self.microPulse || 60) >= 72)
+  };
+}
+
+function executeTeaInterjection(questionText) {
+  if (!canUseTeaInterjectNow()) return null;
+  const sp = getSeat(state.activeSpeakerId);
+  const pid = getPlayerId();
+  if (!sp || !sp.alive || sp.id === pid) return null;
+  const cleanQ = String(questionText || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").trim().slice(0, 18);
+  if (!cleanQ) return null;
+
+  state.match.interjectUsedDay = state.match.day;
+  state.interjectOpen = false;
+  if (el("interjectPopover")) el("interjectPopover").classList.add("hidden");
+
+  const replyObj = buildBlindInterjectionReply(sp, cleanQ);
+  if (!Array.isArray(state.match.publicInterjections)) state.match.publicInterjections = [];
+  const entry = {
+    day: state.match.day,
+    targetId: sp.id,
+    targetName: sp.name,
+    question: cleanQ,
+    reply: replyObj.text,
+    ts: Date.now()
+  };
+  state.match.publicInterjections.push(entry);
+
+  if (replyObj.tense) {
+    sp.sweatExposed = true;
+    setSeatEmotion(sp.id, "nervous", 3600);
+  } else {
+    setSeatEmotion(sp.id, "shock", 2600);
+  }
+  setSeatBubble(sp.id, replyObj.text, replyObj.tense ? "wolf" : "suspect", 4200);
+  spawnBeam(pid, sp.id, "#d4af37", "grill", 540);
+  spawnFx(sp.id, "當場回防", "#fbbf24");
+  nudgeSeat(sp.id, { scale: 1.06, vy: 3, vTilt: -0.08 });
+  if (typeof sound !== "undefined" && typeof sound.tone === "function") {
+    sound.tone(740, 0.07, "sine", 0.05, 0);
+    sound.tone(520, 0.09, "triangle", 0.04, 0.07);
+  }
+  if (typeof renderTargetReactionCard === "function") {
+    renderTargetReactionCard(null, null, {
+      seat: sp,
+      kind: "accuse",
+      badge: sp.name + " · 臨場回防",
+      quote: "問「" + cleanQ + "」→「" + replyObj.text + "」"
+    });
+  }
+  if (typeof addThreeGoodPoint === "function") addThreeGoodPoint("heart", "舉杯追問求真");
+  addLog({
+    kind: "system",
+    title: "舉杯追問 · " + fmtSeatNum(sp.id) + "號 " + sp.name,
+    text: "你問：「" + cleanQ + "」｜" + fmtSeatNum(sp.id) + "號回防：「" + replyObj.text + "」"
+  });
+  showToast(fmtSeatNum(sp.id) + "號 " + sp.name + " 即時回防：「" + replyObj.text + "」", "gold");
+
+  // CRITICAL GUARDRAIL: immediately invalidate & refresh upcoming AI background prefetch cache!
+  bumpTableStateRev(true);
+  updateAllUI();
+  if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
+    maybeScheduleAutoAdvanceAfterSpeech();
+  }
+  return entry;
 }
 
 function _computeSpeechVoiceMood(speaker, generated) {

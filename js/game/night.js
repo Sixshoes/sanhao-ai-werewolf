@@ -3,9 +3,146 @@
  */
 "use strict";
 
+function playerHasActiveNightSkillNow() {
+  const p = getPlayerSeat();
+  if (!p || !p.alive || !state.match) return false;
+  if (p.role === "wolf" || p.role === "seer" || p.role === "guard") return true;
+  if (p.role === "witch" && state.match.witchPotions && (state.match.witchPotions.heal || state.match.witchPotions.purify)) {
+    return true;
+  }
+  return false;
+}
+
+function buildCandlelitNightSlips() {
+  if (!state.match || !state.match.started || state.match.day < 2) return [];
+  const prevDay = state.match.day - 1;
+  const pid = getPlayerId();
+  const evs = (state.match.allSpeechEvents || []).filter(function (ev) {
+    if (!ev || ev.day !== prevDay || ev.speakerId === pid) return false;
+    const s = getSeat(ev.speakerId);
+    return Boolean(s && s.alive && ev.rawText);
+  });
+  if (!evs.length) return [];
+  const scored = evs.map(function (ev) {
+    let pri = 10;
+    let tag = "昨日陳詞";
+    if (ev.contradiction) { pri += 45; tag = "語詞落差"; }
+    else if (ev.hasToxicSlip) { pri += 35; tag = "語氣偏急"; }
+    else if (ev.claimRole === "seer") { pri += 30; tag = "宣稱觀察員"; }
+    else if (ev.accuseId) { pri += 20; tag = "點名起疑"; }
+    const s = getSeat(ev.speakerId);
+    const raw = String(ev.rawText || "").replace(/\s+/g, " ").trim();
+    const excerpt = raw.length > 30 ? (raw.slice(0, 29) + "…") : raw;
+    return { seatId: ev.speakerId, name: s ? s.name : (ev.speakerName || ""), tag: tag, excerpt: excerpt, pri: pri };
+  });
+  scored.sort(function (a, b) { return b.pri - a.pri; });
+  const picked = [];
+  const seen = {};
+  scored.forEach(function (it) {
+    if (!seen[it.seatId] && picked.length < 3) {
+      seen[it.seatId] = true;
+      picked.push(it);
+    }
+  });
+  return picked;
+}
+
+function toggleCandlelitWatchSeat(seatId) {
+  if (!state.match || !state.match.candlelitReview || !state.match.candlelitReview.active) return;
+  const rev = state.match.candlelitReview;
+  if (!Array.isArray(rev.watchIds)) rev.watchIds = [];
+  const idx = rev.watchIds.indexOf(seatId);
+  const s = getSeat(seatId);
+  if (idx !== -1) {
+    rev.watchIds.splice(idx, 1);
+  } else {
+    if (rev.watchIds.length >= 2) {
+      rev.watchIds.shift();
+    }
+    rev.watchIds.push(seatId);
+    if (s && typeof pinClue === "function") {
+      pinClue(
+        s.id,
+        "燭下圈防 " + fmtSeatNum(s.id) + "號",
+        "昨夜覆茶時已用朱筆圈記 " + fmtSeatNum(s.id) + "號" + s.name + "，今天會特別盯緊他的發言與票型。",
+        "watch"
+      );
+    }
+  }
+  if (typeof sound !== "undefined" && typeof sound.tone === "function") {
+    sound.tone(idx !== -1 ? 420 : 620, 0.06, "triangle", 0.04, 0);
+  }
+  renderCandlelitNightSlips();
+}
+
+function renderCandlelitNightSlips() {
+  const list = el("candlelitSlipsList");
+  const rev = state.match && state.match.candlelitReview;
+  if (!list || !rev || !rev.active) return;
+  const watchIds = Array.isArray(rev.watchIds) ? rev.watchIds : [];
+  list.innerHTML = "";
+  (rev.slips || []).forEach(function (slip) {
+    const circled = watchIds.indexOf(slip.seatId) !== -1;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "candlelit-slip-btn" + (circled ? " is-circled" : "");
+    btn.innerHTML =
+      '<div class="candlelit-slip-head">' +
+      '<span>' + escapeHtml(fmtSeatNum(slip.seatId) + "號 " + slip.name + " · " + slip.tag) + '</span>' +
+      '<span class="candlelit-slip-mark">' + (circled ? "朱筆已圈" : "圈記盯防") + '</span>' +
+      '</div>' +
+      '<div class="candlelit-slip-quote">「' + escapeHtml(slip.excerpt) + '」</div>';
+    btn.addEventListener("click", function () {
+      toggleCandlelitWatchSeat(slip.seatId);
+    });
+    list.appendChild(btn);
+  });
+}
+
+function openCandlelitNightReview(onProceed) {
+  const slips = buildCandlelitNightSlips();
+  if (!slips.length) {
+    if (typeof onProceed === "function") onProceed();
+    return false;
+  }
+  state.match.candlelitReview = {
+    active: true,
+    slips: slips,
+    watchIds: [],
+    onProceed: onProceed || null,
+    finished: false
+  };
+  updateAllUI();
+  renderCandlelitNightSlips();
+  const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
+  if (isBrowserUi && state.autoPlay) {
+    state.stepTimer = scheduleNightStep(finishCandlelitNightReview, 6200);
+  }
+  return true;
+}
+
+function finishCandlelitNightReview() {
+  const rev = state.match && state.match.candlelitReview;
+  if (!rev || rev.finished) return;
+  rev.finished = true;
+  rev.active = false;
+  const watchIds = Array.isArray(rev.watchIds) ? rev.watchIds.slice() : [];
+  if (watchIds.length > 0 && typeof showToast === "function") {
+    showToast("燭下覆茶完成，已圈記明日盯防：" + watchIds.map(function (id) { return fmtSeatNum(id) + "號"; }).join("、"), "gold");
+  }
+  const cb = rev.onProceed;
+  rev.onProceed = null;
+  if (el("candlelitReviewCard")) el("candlelitReviewCard").classList.add("hidden");
+  updateAllUI();
+  if (typeof cb === "function") cb();
+}
+
 function scheduleNightStep(fn, ms) {
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-  const waitMs = ff ? Math.min(ms, 180) : ms;
+  const noPlayerNight = !playerHasActiveNightSkillNow();
+  // Compress idle AI night-resolution delays for non-acting civilians (~1.8s total across 3 roles!)
+  const tunedMs = noPlayerNight ? Math.min(ms, 560) : ms;
+  const waitMs = ff ? Math.min(ms, 180) : tunedMs;
   const wrapped = function () {
     if (!state.match || !state.match.started || state.match.phase === "LOBBY" || state.match.phase === "GAME_OVER") return;
     const dealOv = el("roleDealOverlay");
@@ -63,12 +200,23 @@ function beginNightPhase() {
   }
   addLog({ kind: "night", title: "第 " + state.match.day + "晚・天黑行動", text: "" });
 
-  const guardSeat = state.match.seats.find(function (s) { return s.role === "guard" && s.alive; });
-  if (guardSeat) {
-    proceedToNightGuard();
-    return;
+  const runNightRoles = function () {
+    const guardSeat = state.match.seats.find(function (s) { return s.role === "guard" && s.alive; });
+    if (guardSeat) {
+      proceedToNightGuard();
+      return;
+    }
+    proceedToNightWolf();
+  };
+
+  // v15.0 Civilians / Non-acting players on Night 2+ enter "燭下覆茶" quote review instead of staring at empty timers!
+  const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
+  const ffNow = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  if (isBrowserUi && !ffNow && state.match.day >= 2 && !playerHasActiveNightSkillNow()) {
+    const opened = openCandlelitNightReview(runNightRoles);
+    if (opened) return;
   }
-  proceedToNightWolf();
+  runNightRoles();
 }
 
 function chooseAiGuardTarget(guardSeat, rngVal) {

@@ -592,12 +592,12 @@ function openRoleGuidePopover(mode) {
         ? "三瓣全亮獎勵：觸發「深水三好光環」，全場好人對你的懷疑度大幅下降且心虛值平息！"
         : "三瓣全亮獎勵：獲得「🌟 黃金善意票（公投 +1 票權重）」，並感化 1 位好夥伴與你同步聚焦！");
     const synText = state.match.fourGSynergyTriggered
-      ? "✅ 「雙四給連心」已觸發（友善度 +8 並自動點亮 1 瓣蓮花）！"
-      : ("🌸 雙四給連心：已用 " + fgUsedCount + "/2 張四給手牌（累積 2 張額外友善 +8 並自動點亮 1 瓣！）");
+      ? "「雙四給連心」已觸發（友善度 +8 並自動點亮 1 瓣蓮花）"
+      : ("雙四給連心：已奉用 " + fgUsedCount + "/2 項茶禮（累積 2 項額外友善 +8 並點亮 1 瓣）");
     bodyEl.innerHTML =
-      rowHtml(tg.heart > 0, "💛", "存好心", tg.heart, "夜間查證、理性點出邏輯矛盾、打「存好心」卡牌或「給希望」。") +
-      rowHtml(tg.words > 0, "💚", "說好話", tg.words, "溫和陳詞、用「AI 轉好話 ×1.5 暴擊」、按「說好話化解」或打「給歡喜」。") +
-      rowHtml(tg.deeds > 0, "💙", "做好事", tg.deeds, "白天「奉暖茶」、奉茶師救人、守衛守護、或打「給信心／給方便」。") +
+      rowHtml(tg.heart > 0, "心", "存好心", tg.heart, "夜間查證、理性點出邏輯矛盾、打「存好心」陳詞卡或「給希望」。") +
+      rowHtml(tg.words > 0, "語", "說好話", tg.words, "溫和陳詞、用「潤飾詞句」靈感籤、按「說好話化解」或「給歡喜」。") +
+      rowHtml(tg.deeds > 0, "行", "做好事", tg.deeds, "白天「奉暖茶」、奉茶師救人、守衛守護、或「給信心／給方便」。") +
       '<div class="role-guide-reward">' + escapeHtml(rewardText) + "</div>" +
       '<div class="text-[10.5px] text-amber-200/90 pt-0.5">' + escapeHtml(synText) + "</div>";
   } else {
@@ -759,8 +759,8 @@ function renderFourGBlessings() {
   if (deck) deck.classList.toggle("is-synergy-ready", synReady);
   if (synHint) synHint.classList.toggle("hidden", !synReady);
   const defaultHeadText = remain > 0
-    ? ("✨ 四給錦囊 · " + remain + "/4 ▴")
-    : "✨ 四給錦囊 · 已全用";
+    ? ("四給奉茶 · " + remain + "/4 ▴")
+    : "四給奉茶 · 已全用";
   if (deckHead) {
     deckHead.setAttribute("data-default-text", defaultHeadText);
     if (!deckHead.classList.contains("is-previewing")) {
@@ -769,23 +769,23 @@ function renderFourGBlessings() {
   }
 
   const shortExplain = {
-    confidence: isWolf ? "給信心：幫好人隱密擋 1 票來博取好感！" : "給信心：替選定夥伴隱密擋 1 票（不洩漏陣營）！",
-    joy: "給歡喜：全場笑場破冰，點出 2 位最緊張的人！",
-    hope: "給希望：金色雙光柱鎖定 2 人，其中必藏 1 狼！",
-    convenience: "給方便：點亮全場關係線，號召搖擺票集中檢視！"
+    confidence: isWolf ? "給信心：替好人隱密擋 1 票" : "給信心：替選定茶友擋 1 票",
+    joy: "給歡喜：溫言破冰辨 2 人僵硬",
+    hope: "給希望：明燈雙照 2 席藏 1 狼",
+    convenience: "給方便：理線並號召集中覆議"
   };
 
   const goodTips = {
-    confidence: "【給信心・做好事】替選定夥伴隱密擋 1 票，好夥伴還會暗中信任並跟投（開票前不洩漏陣營）！",
-    joy: "【給歡喜・說好話】幽默破冰帶動全場笑容，同時揭露 2 位神色僵硬的緊張對象比對脈搏！",
-    hope: "【給希望・存好心】金色雙光柱鎖定 2 人其中必藏 1 狼，與給歡喜重疊可觸發雙光交會！",
-    convenience: "【給方便・做好事】展開全場關係連線，並號召搖擺好人集中檢視你鎖定的對象！"
+    confidence: "【給信心・奉茶護席】推盞予選定茶友隱密擋 1 票，好夥伴還會暗中信任並跟投（開票前不洩漏陣營）",
+    joy: "【給歡喜・溫言破冰】以茶席幽默帶動笑容，同時觀察 2 位神色僵硬的茶友比對脈搏",
+    hope: "【給希望・明燈指津】微光雙照 2 席其中必藏 1 狼，與給歡喜重疊可觸發雙光交會",
+    convenience: "【給方便・緩議歸票】展開全場關係連線，號召搖擺好人集中檢視你鎖定的對象"
   };
   const wolfTips = {
-    confidence: "【給信心・深水演技】幫好人擋 1 票拉攏信任與三好修為，讓好人對你放下戒心！",
-    joy: "【給歡喜・破冰洗白】用幽默笑話帶動氣氛，累積「說好話」瓣邁向深水信任光環！",
-    hope: "【給希望・帶偏節奏】雙光柱鎖定場上另 1 狼與 1 好人，可借機順勢推坑好人！",
-    convenience: "【給方便・引導歸票】點亮關係連線，引導搖擺好人集中檢視你指定的甩鍋對象！"
+    confidence: "【給信心・深水奉茶】幫好人擋 1 票拉攏信任與三好修為，讓好人對你放下戒心",
+    joy: "【給歡喜・溫言洗白】以輕鬆茶話帶動氣氛，累積「說好話」瓣邁向深水信任光環",
+    hope: "【給希望・借光移影】微光鎖定場上另 1 狼與 1 好人，可借機順勢帶向好人",
+    convenience: "【給方便・引導覆議】點亮關係連線，引導搖擺好人集中檢視你指定的對象"
   };
 
   [
@@ -798,18 +798,18 @@ function renderFourGBlessings() {
     const btnEl = el(it.btn);
     btnEl.disabled = it.key === "convenience" ? !state.match.started : (isUsed || !allow);
     btnEl.title = isWolf ? wolfTips[it.key] : goodTips[it.key];
-    btnEl.setAttribute("data-fg-explain", isUsed ? ("已使用（本局每張限 1 次）") : shortExplain[it.key]);
+    btnEl.setAttribute("data-fg-explain", isUsed ? ("已奉用（本局每禮限 1 次）") : shortExplain[it.key]);
     btnEl.classList.toggle("is-spent", Boolean(isUsed));
     const defSub = {
-      confidence: isWolf ? "假保擋1票" : "替人擋1票",
-      joy: "查2人緊張",
-      hope: "2選1必藏狼",
-      convenience: "連線助歸票"
+      confidence: isWolf ? "深水護席" : "奉茶護席",
+      joy: "溫言破冰",
+      hope: "明燈指津",
+      convenience: "緩議歸票"
     };
     if (!pAlive && state.match.started) {
       el(it.tag).textContent = it.key === "convenience" ? "看票型" : "觀戰中";
     } else {
-      el(it.tag).textContent = isUsed ? "已使用" : (allow ? defSub[it.key] : "待白天");
+      el(it.tag).textContent = isUsed ? "已奉用" : (allow ? defSub[it.key] : "待白天");
     }
   });
 }

@@ -511,6 +511,11 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             })
             return
 
+        if route == "/":
+            qs = self.path.split("?", 1)[1] if "?" in self.path else ""
+            self.path = "/ai.html" + (("?" + qs) if qs else "")
+            route = "/ai.html"
+
         unquoted = urllib.parse.unquote(route)
         parts = [p for p in unquoted.split("/") if p]
         blocked_top = ("server.py", "api", "tests", "tools", "__pycache__")
@@ -991,7 +996,7 @@ if __name__ == "__main__":
     prune_tts_cache()
     status = "已啟用免費微軟神經多角色語音 (edge-tts)" if HAS_EDGE_TTS else "未安裝 edge-tts（自動退回瀏覽器本機語音）"
     scope_note = "區網開放" if bind_host in ("::", "0.0.0.0") else "僅本機 127.0.0.1"
-    print(f"[三好AI狼人殺] 伺服器啟動：http://localhost:{PORT}/ai.html（{scope_note}） | {status}", flush=True)
+    print(f"[三好・雲起茶席] 伺服器啟動：http://localhost:{PORT}/ （{scope_note}） | {status}", flush=True)
     if HAS_EDGE_TTS:
         threading.Thread(target=prewarm_common_lines, daemon=True).start()
     httpd.serve_forever()

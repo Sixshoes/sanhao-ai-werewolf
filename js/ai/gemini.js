@@ -765,6 +765,15 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
       const caller = readSeat(slotCtx.wolfPitOnMe.speakerId);
       pitContextNote += "前置位 " + slotCtx.wolfPitOnMe.speakerId + "號" + (caller ? caller.name : "") + "剛才把你點進狼坑了，你必須第一句正面回應並解釋自己不在狼坑！";
     }
+    if (slotCtx.playerAnchorOnMe) {
+      pitContextNote += "\n【玩家原話必答錨點】：玩家剛才直接對你拋出這句核心質問「" + slotCtx.playerAnchorOnMe + "」，你必須第一句引用並正面回答這點，絕不可答非所問！";
+    }
+    if (slotCtx.recentTableReactionNote || slotCtx.recentInterjectionNote) {
+      const liveBits = [];
+      if (slotCtx.recentTableReactionNote) liveBits.push(slotCtx.recentTableReactionNote);
+      if (slotCtx.recentInterjectionNote) liveBits.push(slotCtx.recentInterjectionNote);
+      pitContextNote += "\n【方才席間神情與舉杯交鋒紀錄（可自然呼應）】：\n- " + liveBits.join("\n- ");
+    }
     if (slotCtx.dualSeerWorlds) {
       const dw = slotCtx.dualSeerWorlds;
       const aPits = dw.worldA.wolfPits.map(function (s) { return s.id + "號"; }).join("+");
@@ -776,7 +785,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
 
   const transcript = todayLogs.length > 0
     ? todayLogs.map(function (l) {
-      const badgeTag = (l.speakerId === pidNow && l.subBadge && /好話暴擊|酸言警告|三好好話/.test(l.subBadge)) ? ("［" + l.subBadge + "］") : "";
+      const badgeTag = (l.speakerId === pidNow && l.subBadge && /溫潤潤飾|語氣稍急|三好好話|好話暴擊|酸言警告/.test(l.subBadge)) ? ("［" + l.subBadge + "］") : "";
       return l.title + badgeTag + "：「" + String(l.text || "").slice(0, 180) + "」";
     }).join("\n")
     : "（你是今天第一位發言者，目前還沒有任何人發言過！）";
@@ -1038,9 +1047,9 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "1. 【最高優先】嚴守上方【本輪最高鎖定規則】與今日發言時序！被前置位點進狼坑或指認時第一句必須回應；雙觀察員對跳時務必比較站 A 坑與站 B 坑；若你自己就是跳明心觀察員且已有對跳對手，對方在你眼中已是定狼，絕對不可說「今晚再去驗對跳觀察員」，警徽流只能驗其他未驗的中立位（且你自己跳觀察員時 JSON 的 standWithSeerId 必為 null）！\n" +
     "2. 【獨立綜合判斷】你完全不知道其他人的真實底牌（除同伴或觀察員親查對象外）！必須參考前面「所有」已發言者的話與三好四給線索來綜合判斷誰在狼坑、誰在好人坑。\n" +
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
-    "4. 【嚴禁 AI 機器味與朗讀播報腔・像真實台灣人圍桌講話】提到任何座位請一律寫「阿拉伯數字＋號」（如 1號、3號、6號、11號），嚴禁寫前導零（01、06）、嚴禁省略「號」字（站3、抓6），也嚴禁寫中文數字（三號、六號）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或誇張卡通口號！現代角色請務必用台灣真人圓桌聊天碎句口語（可自然穿插「欸等一下」「老實說吼」「不是啊你看」「我剛聽下來覺得」等呼吸短句，只有墨白、晴嵐、阿竹保持古風或詩茶雅韻），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感），自然接前一位的話回嘴或讚聲，用專屬收尾結束。\n" +
+    "4. 【嚴禁 AI 機器味與朗讀播報腔・像真實台灣大學茶社同儕圍桌聊天】提到任何座位請一律寫「阿拉伯數字＋號」（如 1號、3號、6號、11號），嚴禁寫前導零（01、06）、嚴禁省略「號」字（站3、抓6），也嚴禁寫中文數字（三號、六號）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或生硬古文代詞（「吾、汝、諸君、妾身、夫、蓋」），亦禁止機械重複以「先這樣，過！」作結。全桌以自然台灣現代白話為基底（墨白、晴嵐、阿竹保留溫和書卷氣質與適度四字成語），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感），自然接前一位的話回嘴或點破剛剛的席間神情／追問。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
-    "6. 【嚴格控制字數與純口語格式】整段台詞必須為單一段落、嚴格控制在 " + (totalSeatsNow >= 10 ? "50～85字" : "55～95字") + "（切勿長篇大論、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
+    "6. 【三檔動態句長配額與純口語格式】本輪句長檔位為「" + ((fallbackMeta && fallbackMeta.lengthTier === "brief") ? "極短留白過水（嚴格 15～28 字，簡短自然表態即停）" : ((fallbackMeta && fallbackMeta.lengthTier === "intense") ? "焦點交鋒反詰（60～95 字，直面質疑拆解坑位）" : (totalSeatsNow >= 10 ? "標準推演（42～75 字）" : "標準推演（45～82 字）"))) + "」（切勿長篇大論、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
     '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":' + (lockedClaim ? ('"' + lockedClaim + '"') : 'null') + ',"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員且你本人非觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
 
   const audit = typeof auditLlmPromptLeak === "function"

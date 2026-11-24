@@ -414,15 +414,15 @@ function renderStepperPanel(p) {
     if (isWolfMateSpeaking) {
       el("btnMarkGood").disabled = true;
       el("btnMarkWolf").disabled = true;
-      el("btnMarkGood").textContent = "🐺 同伴發言中";
-      el("btnMarkWolf").textContent = "🛡️ 狼隊配合";
+      el("btnMarkGood").textContent = "同伴發言中";
+      el("btnMarkWolf").textContent = "狼隊配合";
       el("btnMarkGood").className = "py-1 px-2 text-[11px] shrink-0 cta-ink opacity-80";
       el("btnMarkWolf").className = "py-1 px-2 text-[11px] shrink-0 cta-ink opacity-80";
     } else if (isWolfListener) {
       el("btnMarkGood").disabled = false;
       el("btnMarkWolf").disabled = false;
-      el("btnMarkGood").textContent = curMark === "good" ? "✓ 已標假保" : "🛡️ 標記假保";
-      el("btnMarkWolf").textContent = curMark === "wolf" ? "🎯 已標甩鍋" : "🎯 標記甩鍋";
+      el("btnMarkGood").textContent = curMark === "good" ? "已標假保" : "標記假保";
+      el("btnMarkWolf").textContent = curMark === "wolf" ? "已標甩鍋" : "標記甩鍋";
       el("btnMarkGood").className = "py-1 px-2 text-[11px] shrink-0 " + (
         curMark === "good" ? "cta-celadon font-bold" : "cta-ink"
       );
@@ -432,8 +432,8 @@ function renderStepperPanel(p) {
     } else {
       el("btnMarkGood").disabled = false;
       el("btnMarkWolf").disabled = false;
-      el("btnMarkGood").textContent = curMark === "good" ? "✓ 已認同" : "👍 認同";
-      el("btnMarkWolf").textContent = curMark === "wolf" ? "⚠ 已存疑" : "🤨 存疑";
+      el("btnMarkGood").textContent = curMark === "good" ? "已點頭" : "點頭認同";
+      el("btnMarkWolf").textContent = curMark === "wolf" ? "已皺眉" : "皺眉存疑";
       el("btnMarkGood").className = "py-1 px-2 text-[11px] shrink-0 " + (
         curMark === "good" ? "cta-celadon font-bold" : "cta-ink"
       );
@@ -441,15 +441,27 @@ function renderStepperPanel(p) {
         curMark === "wolf" ? "cta-cinnabar" : "cta-ink"
       );
     }
-    if (el("btnPinCurrentSpeaker")) el("btnPinCurrentSpeaker").textContent = "📌 記重點";
+    if (el("btnPinCurrentSpeaker")) el("btnPinCurrentSpeaker").textContent = "記重點";
+    const interjBtn = el("btnTeaInterject");
+    if (interjBtn) {
+      const canInterj = typeof canUseTeaInterjectNow === "function" ? canUseTeaInterjectNow() : false;
+      const usedToday = Boolean(state.match && state.match.interjectUsedDay === state.match.day);
+      const pAliveHere = Boolean(pSeatLive && pSeatLive.alive);
+      interjBtn.classList.toggle("hidden", !pAliveHere);
+      interjBtn.disabled = !canInterj;
+      interjBtn.textContent = usedToday ? "今日已追問" : "舉杯追問 (1)";
+      interjBtn.title = usedToday
+        ? "今日舉杯追問次數已用完，明日刷新"
+        : "每日限 1 次：當場舉杯拋出短問，逼發言者即時回防";
+    }
     const mTxt = el("tableMomentumText");
     if (mTxt) {
       const pSus = Math.round(activeSpeaker.suspicionMap[getPlayerId()] || 50);
       if (pSus >= 62) {
-        mTxt.textContent = "⚠ 他正存疑你";
+        mTxt.textContent = "他正存疑你";
         mTxt.className = "text-[10.5px] text-rose-300 font-semibold truncate hidden sm:inline pl-1";
       } else if (pSus <= 38) {
-        mTxt.textContent = "✦ 他傾向信任你";
+        mTxt.textContent = "他傾向信任你";
         mTxt.className = "text-[10.5px] text-emerald-300 font-semibold truncate hidden sm:inline pl-1";
       } else {
         mTxt.textContent = "";
@@ -468,11 +480,23 @@ function renderStepperPanel(p) {
         const doneAlready = Boolean(state.match && state.match.microInspectedSeats && state.match.microInspectedSeats[dKey]);
         const canInspect = Boolean(pSelf && pSelf.alive && activeSpeaker.alive && mRem > 0 && !doneAlready);
         microBtn.disabled = !canInspect;
-        microBtn.textContent = doneAlready ? "🔍 已看心虛" : ("🔍 看心虛(" + mRem + ")");
+        microBtn.textContent = doneAlready ? "已看心虛" : ("看心虛(" + mRem + ")");
         microBtn.title = doneAlready
           ? "今天已查看過這位發言者的心虛緊張度"
           : (mRem > 0 ? "查看這位發言者此刻的心虛緊張值（每日限用 " + mMax + " 次）" : "今日看心虛次數已用完，明天刷新");
       }
+    }
+  } else {
+    if (el("interjectPopover")) el("interjectPopover").classList.add("hidden");
+    state.interjectOpen = false;
+  }
+
+  const candleBox = el("candlelitReviewCard");
+  if (candleBox) {
+    const showCandle = Boolean(isNightWait && state.match && state.match.candlelitReview && state.match.candlelitReview.active);
+    candleBox.classList.toggle("hidden", !showCandle);
+    if (showCandle && typeof renderCandlelitNightSlips === "function") {
+      renderCandlelitNightSlips();
     }
   }
 
@@ -484,22 +508,22 @@ function renderStepperPanel(p) {
     if (warmBtn) {
       const canWarm = Boolean(showWatch && (state.activeClash.kind === "toxic_slip" || state.activeClash.kind === "accuse_you"));
       warmBtn.classList.toggle("hidden", !canWarm);
-      if (canWarm) warmBtn.textContent = "✨ 說好話化解 (+說好話)";
+      if (canWarm) warmBtn.textContent = "溫言化解";
     }
     if (showWatch) {
       const cSp = getSeat(state.activeClash.speakerId);
       const wTxt = el("turnWatchText");
       if (wTxt && cSp) {
         if (state.activeClash.kind === "fake_seer") {
-          wTxt.textContent = "🔮 " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 冒充明心觀察員！已備好反駁牌，輪到你的順位再拆穿。";
+          wTxt.textContent = fmtSeatNum(cSp.id) + "號 " + cSp.name + " 冒充明心觀察員，已備好反駁牌，輪到你的順位即可拆穿。";
         } else if (state.activeClash.kind === "contradiction" && state.activeClash.contradiction) {
-          wTxt.textContent = "⚡ 抓到矛盾（" + state.activeClash.contradiction.label + "）：" + state.activeClash.contradiction.detail + "｜按「記進筆記」解鎖呈堂證供卡！";
+          wTxt.textContent = "抓到矛盾（" + state.activeClash.contradiction.label + "）：" + state.activeClash.contradiction.detail + "｜按「記進筆記」可於發言時直接引用。";
         } else if (state.activeClash.kind === "toxic_slip") {
-          wTxt.textContent = "⚠ " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 語氣帶刺！可靜默記進筆記，輪到你再點出破綻。";
+          wTxt.textContent = fmtSeatNum(cSp.id) + "號 " + cSp.name + " 語氣帶刺，可先記進筆記，輪到你再點出破綻。";
         } else {
           wTxt.textContent = state.activeClash.inWolfPit
-            ? ("📌 前置位 " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 把你點進狼坑！輪到你的順位即可正面回應並反盤狼坑。")
-            : ("📌 " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 點名懷疑你！嚴守輪流發言，輪到你時即可回擊。");
+            ? ("前置位 " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 把你點進狼坑，輪到你的順位即可正面回應。")
+            : (fmtSeatNum(cSp.id) + "號 " + cSp.name + " 點名懷疑你，輪到你的順位即可正面回應。");
         }
       }
     }

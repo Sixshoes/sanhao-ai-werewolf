@@ -94,9 +94,9 @@ function analyzeThreeGoodSpeech(rawText) {
 
   const isToxic = toxicHits.length > 0;
   let badge = "溫和有理";
-  if (isToxic) badge = "酸言警告！快按左下 AI 轉好話！";
-  else if (state.match.rewriteCritReady) badge = "好話暴擊 ×1.5 就緒！";
-  else if (kindScore >= 86) badge = "高說服力好話！";
+  if (isToxic) badge = "語氣稍急，不妨添一分婉轉（可點選下方潤飾靈感籤）";
+  else if (state.match.rewriteCritReady) badge = "溫潤修辭・以理服人";
+  else if (kindScore >= 86) badge = "言辭溫潤有理";
 
   return {
     kindScore: Math.round(kindScore),
@@ -111,6 +111,139 @@ function analyzeThreeGoodSpeech(rawText) {
     badge: badge,
     isToxic: isToxic
   };
+}
+
+function buildRephraseChoiceSlips(rawText) {
+  const text = (rawText || "").trim();
+  const analysis = analyzeThreeGoodSpeech(text);
+  const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+  const targetNum = analysis.primaryAccuseId
+    || analysis.seatMentions.find(function (n) { return n !== pid; })
+    || (state.selectedSeatId && state.selectedSeatId !== pid ? state.selectedSeatId : null)
+    || (pid === 1 ? 2 : 1);
+  const targetSeat = typeof getSeat === "function" ? getSeat(targetNum) : null;
+  const targetLabel = targetSeat ? (fmtSeatNum(targetSeat.id) + "號" + targetSeat.name) : (fmtSeatNum(targetNum) + "號");
+  const isVouchIntent = Boolean(analysis.primaryVouchId && !analysis.primaryAccuseId && !analysis.isToxic);
+
+  if (isVouchIntent) {
+    return [
+      {
+        angle: "肯定條理",
+        desc: "點出邏輯順暢處",
+        text: "剛剛細聽 " + targetLabel + " 的陳詞，前後脈絡很清楚也沒有亂扣帽子，這輪我先站在他這邊。"
+      },
+      {
+        angle: "溫言互保",
+        desc: "呼籲好人莫內耗",
+        text: "大家先別急著懷疑 " + targetLabel + "，他剛剛的說法滿誠懇的，我們不妨把焦點轉去查前後對不上的座位。"
+      },
+      {
+        angle: "留白觀察",
+        desc: "暫信但保留複驗",
+        text: "目前我暫時把 " + targetLabel + " 放偏可信的位置，等後置位全部講完再一起對票型確認。"
+      }
+    ];
+  }
+
+  return [
+    {
+      angle: "直指矛盾",
+      desc: "點破票型或邏輯落差",
+      text: "我們心平氣和對一下線索，" + targetLabel + " 剛才的立場跟前面票型有點對不上，這輪我建議重點檢視 " + fmtSeatNum(targetNum) + "號。"
+    },
+    {
+      angle: "溫言請教",
+      desc: "請對方補充理由",
+      text: "先別急著定調，我想溫和請教 " + targetLabel + " 剛才為何這樣站邊？如果理由講不清楚，這輪我會先留意 " + fmtSeatNum(targetNum) + "號。"
+    },
+    {
+      angle: "留白觀望",
+      desc: "先保留態度聽後位",
+      text: "聽完 " + targetLabel + " 這段我心裡還是有點存疑，先記一筆，等後置位全部說完我們再一起比對。"
+    }
+  ];
+}
+
+function applyRephraseSlip(choice) {
+  if (!choice || !choice.text) return;
+  const alreadyCritThisTurn = Boolean(state.match && state.match.rewriteCritReady);
+  const qIn = el("quickFreeInput");
+  if (qIn) qIn.value = choice.text;
+  if (el("playerSpeechInput")) el("playerSpeechInput").value = choice.text;
+  if (!alreadyCritThisTurn && state.match) {
+    state.match.stats.rewritesUsed = (state.match.stats.rewritesUsed || 0) + 1;
+    state.match.rewriteCritReady = true;
+    if (typeof addThreeGoodPoint === "function") addThreeGoodPoint("words", "溫潤潤飾詞句");
+    if (typeof bumpCombo === "function") bumpCombo("以理服人");
+  }
+  state.rephraseTrayPinned = false;
+  const tray = el("rephraseChoicesTray");
+  if (tray) tray.classList.add("hidden");
+  const rwBtn = el("btnQuickInlineRewrite");
+  if (rwBtn) rwBtn.classList.add("hidden");
+  if (typeof sound !== "undefined" && typeof sound.playBlessing === "function") sound.playBlessing();
+  if (typeof spawnFx === "function") spawnFx(getPlayerId(), "辭溫理正", "#34d399");
+  if (typeof refreshLiveNlpUI === "function") refreshLiveNlpUI();
+  if (typeof showToast === "function") {
+    showToast("已換成「" + choice.angle + "」說法，可直接按「送出」或再微調字句。", "emerald");
+  }
+}
+
+function renderRephraseChoicesTray(rawText) {
+  const tray = el("rephraseChoicesTray");
+  const grid = el("rephraseSlipsGrid");
+  if (!tray || !grid) return [];
+  const slips = buildRephraseChoiceSlips(rawText);
+  grid.innerHTML = "";
+  slips.forEach(function (item) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "rephrase-slip-btn text-left";
+    btn.title = item.text;
+    btn.innerHTML =
+      '<div class="flex items-center justify-between gap-1">' +
+      '<span class="rephrase-slip-angle">' + escapeHtml(item.angle) + '</span>' +
+      '<span class="rephrase-slip-desc">' + escapeHtml(item.desc) + '</span>' +
+      '</div>' +
+      '<div class="rephrase-slip-quote">' + escapeHtml(item.text) + '</div>';
+    btn.addEventListener("click", function () {
+      applyRephraseSlip(item);
+    });
+    grid.appendChild(btn);
+  });
+  tray.classList.remove("hidden");
+  return slips;
+}
+
+function extractPlayerVerbatimAnchor(rawText, targetSeat) {
+  const clean = String(rawText || "").replace(/\s+/g, " ").trim();
+  if (!clean) return "";
+  const tId = targetSeat && typeof targetSeat === "object" ? targetSeat.id : Number(targetSeat || 0);
+  const tSeatObj = (targetSeat && typeof targetSeat === "object") ? targetSeat : (tId && typeof getSeat === "function" ? getSeat(tId) : null);
+  const tName = tSeatObj ? String(tSeatObj.name || "") : "";
+  const clauses = clean.split(/[，。！？；;\n]+/).map(function (c) {
+    return c.replace(/^[欸喂哈喔嗯那其實我覺得老實說先說一下]+/, "").trim();
+  }).filter(function (c) { return c.length >= 4; });
+  if (!clauses.length) return clean.slice(0, 16);
+
+  const mentionsTarget = function (c) {
+    if (!tId) return false;
+    const reNum = new RegExp("(?:^|\\D)0?" + tId + "\\s*號");
+    return reNum.test(c) || (tName && c.indexOf(tName) !== -1);
+  };
+  const isQuestionOrChallenge = function (c) {
+    return /[？?]|為何|為什麼|怎麼|哪裡|根據|解釋|棄票|改票|保他|護航|矛盾|對不上|破綻|帶風向|狼坑|可疑|漏洞|理由/.test(c);
+  };
+
+  let picked = clauses.find(function (c) { return mentionsTarget(c) && isQuestionOrChallenge(c); })
+    || clauses.find(function (c) { return mentionsTarget(c); })
+    || clauses.find(function (c) { return isQuestionOrChallenge(c); })
+    || clauses[0];
+
+  if (picked.length > 18) {
+    picked = picked.slice(0, 18);
+  }
+  return picked;
 }
 
 async function rewriteToThreeGoodness(rawText) {
@@ -1222,13 +1355,13 @@ function refreshLiveNlpUI() {
     if (!hasText) {
       inlineTg.classList.add("hidden");
     } else if (res.isToxic) {
-      inlineTg.textContent = "🌶 轉好話 ×1.5";
+      inlineTg.textContent = "語氣稍急";
       inlineTg.className = "speech-tg-badge is-warn shrink-0";
     } else if (state.match && state.match.rewriteCritReady) {
-      inlineTg.textContent = "✨ 說好話暴擊 ×1.5";
+      inlineTg.textContent = "溫潤修辭";
       inlineTg.className = "speech-tg-badge is-crit shrink-0";
     } else if (res.kindScore >= 84) {
-      inlineTg.textContent = "🌸 說好話加持";
+      inlineTg.textContent = "溫和有理";
       inlineTg.className = "speech-tg-badge is-kind shrink-0";
     } else {
       inlineTg.classList.add("hidden");
@@ -1351,6 +1484,19 @@ function submitPlayerSpeech() {
   if (!state.match.allSpeechEvents) state.match.allSpeechEvents = [];
   const standSeerSeat = vouchId ? getSeat(vouchId) : null;
   const standSeerId = draft.standSeerId || ((standSeerSeat && standSeerSeat.claimedRole === "seer") ? standSeerSeat.id : null);
+  const verbatimAnchorsByTarget = {};
+  const anchorTargetIds = [];
+  if (accuseId) anchorTargetIds.push(accuseId);
+  plWolfPits.forEach(function (id) { if (anchorTargetIds.indexOf(id) === -1) anchorTargetIds.push(id); });
+  (res.seatMentions || []).forEach(function (id) { if (id !== pid && anchorTargetIds.indexOf(id) === -1) anchorTargetIds.push(id); });
+  anchorTargetIds.forEach(function (tid) {
+    const anc = extractPlayerVerbatimAnchor(text, tid);
+    if (anc) verbatimAnchorsByTarget[tid] = anc;
+  });
+  const primaryAnchor = (accuseId && verbatimAnchorsByTarget[accuseId])
+    || (targetNum && verbatimAnchorsByTarget[targetNum])
+    || extractPlayerVerbatimAnchor(text, targetNum);
+
   const plEvObj = {
     day: state.match.day,
     turnOrderIndex: state.match.daySpeechEvents.length,
@@ -1365,6 +1511,8 @@ function submitPlayerSpeech() {
     checkedWolfId: isWolfCheckClaim ? accuseId : null,
     checkedGoodId: (claimedSeerNow && vouchId) ? vouchId : null,
     hasToxicSlip: res.isToxic,
+    verbatimAnchor: primaryAnchor || "",
+    verbatimAnchorsByTarget: verbatimAnchorsByTarget,
     rawText: text
   };
   state.match.daySpeechEvents.push(plEvObj);
@@ -1452,19 +1600,18 @@ function submitPlayerSpeech() {
       const bonusKind = tgNow.words === 0 ? "words" : (tgNow.deeds === 0 ? "deeds" : "heart");
       addThreeGoodPoint(bonusKind, "好話接龍賞蓮");
     }
-    spawnFx(pid, critMult > 1 ? "✨ 好話暴擊×1.5!" : (bobaActive ? "🍵 冬瓜青說服+25%!" : (isKindDuel ? "🌸 好話接龍+10!" : (comboMult > 1 ? "🔥 連擊說服UP!" : "說服力UP!"))), "#fde68a");
+    spawnFx(pid, critMult > 1 ? "溫潤服眾" : (bobaActive ? "暖飲加溫" : (isKindDuel ? "善語相承" : (comboMult > 1 ? "言行共振" : "以理服人"))), "#fde68a");
     if (critMult > 1) {
       setSeatEmotion(pid, "proud", 3200);
-      spawnBurst(pid, ["#34d399", "#fbbf24", "#fde68a"], 28, "petal");
-      spawnBurst(pid, ["#34d399", "#fbbf24", "#ffffff"], 16, "ring");
-      if (typeof triggerScreenFlash === "function") triggerScreenFlash("#34d399", 440, 0.34);
+      spawnBurst(pid, ["#34d399", "#fbbf24", "#fde68a"], 24, "petal");
+      spawnBurst(pid, ["#34d399", "#fbbf24", "#ffffff"], 12, "ring");
       if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive()) {
         if (typeof stage3d.triggerCameraPunch === "function") {
-          stage3d.triggerCameraPunch(accuseId || vouchId || pid, { fov: 40, durationMs: 1200 });
+          stage3d.triggerCameraPunch(accuseId || vouchId || pid, { fov: 40, durationMs: 1100 });
         }
-        if (typeof stage3d.triggerHeroBeat === "function") stage3d.triggerHeroBeat("celebrate", 2200);
+        if (typeof stage3d.triggerHeroBeat === "function") stage3d.triggerHeroBeat("celebrate", 1900);
       }
-      triggerCutIn("✨ 三好好話暴擊 ×1.5！", "理性溫和的說服力席捲全場！", "emerald");
+      triggerCutIn("溫潤服眾・以理服人", "從容懇切的陳詞讓席間茶友紛紛頷首", "tea");
     } else {
       setSeatEmotion(pid, "happy", 2400);
     }
@@ -1568,7 +1715,7 @@ function submitPlayerSpeech() {
 
   sound.playSpeak();
   setCanvasBubble(pid, text, res.isToxic ? "wolf" : "trust");
-  const subTag = res.isToxic ? "酸言警告" : (critMult > 1 ? "好話暴擊×1.5" : (comboMult > 1 ? "連擊說服強化" : "三好好話"));
+  const subTag = res.isToxic ? "語氣稍急" : (critMult > 1 ? "溫潤潤飾" : (comboMult > 1 ? "言行共振" : "三好好話"));
   addLog({
     kind: "speech",
     useTypewriter: true,
@@ -1580,6 +1727,8 @@ function submitPlayerSpeech() {
 
   state.match.rewriteCritReady = false;
   state.match.comboBoostReady = false;
+  state.rephraseTrayPinned = false;
+  if (el("rephraseChoicesTray")) el("rephraseChoicesTray").classList.add("hidden");
   state.match.playerDraftPits = createEmptyPlayerDraftPits();
   el("playerSpeechInput").value = "";
   if (el("quickFreeInput")) el("quickFreeInput").value = "";

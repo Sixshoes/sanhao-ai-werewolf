@@ -2592,6 +2592,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const cbAfter = buildPriorCallbackPhrase(pXing, state.match.daySpeechEvents, s => "0" + s.id + "號");
 
     getSeat(2).claimedRole = "seer";
+    getSeat(3).role = "villager";
+    getSeat(3).team = "good";
+    getSeat(4).alive = true;
+    getSeat(7).alive = true;
     const parsedMeta = parseGeminiStructuredSpeech(JSON.stringify({
       text: "04號剛才視角縮得很緊，我先接手這張好人盤面。",
       wolfPits: [4, 7],
@@ -3832,7 +3836,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const escClosesGuideOk = el("roleGuidePopover").classList.contains("hidden");
     el("quickFreeInput").value = "好了啦別演了，邏輯死亡";
     el("quickFreeInput").dispatchEvent({ type: "input" });
-    const inlineBadgeWarnOk = !el("speechThreeGoodBadge").classList.contains("hidden") && el("speechThreeGoodBadge").textContent.includes("轉好話");
+    const inlineBadgeWarnOk = !el("speechThreeGoodBadge").classList.contains("hidden") && el("speechThreeGoodBadge").textContent.includes("語氣稍急");
 
     // Verify Wolf player NEVER gets false "替查殺狼洗白" contradiction when AI vouches for a Wolf teammate,
     // Wolf 0D counter-claim against Guard/Elder NEVER mutates claimedRole while returning null,
@@ -3985,7 +3989,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     updateAllUI();
     const stripShown = !el("liveToolkitStrip").classList.contains("hidden") && el("liveToolkitStrip").innerHTML.includes("心虛1") && el("liveToolkitStrip").innerHTML.includes("四給4");
     const microLabelClear = el("btnMicroInspect").textContent.includes("看心虛");
-    const fourGHeadInit = el("fourGDeckHeader").textContent.includes("四給錦囊") && el("fourGDeckHeader").textContent.includes("4/4");
+    const fourGHeadInit = el("fourGDeckHeader").textContent.includes("四給奉茶") && el("fourGDeckHeader").textContent.includes("4/4");
 
     // Hovering a Four-Givings card shows plain-language explanation in #fourGDeckHeader
     el("btn4GConfidence").dispatchEvent({ type: "pointerenter" });
@@ -4198,20 +4202,20 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       const sp = buildHeuristicAiSpeech(s);
       openTexts.add(sp.text);
       if (s.name === "墨白") {
-        mobaiClassicalOk = /[吾諸君乃此]/.test(sp.text) && !/超扯|哈哈|嗚哇/.test(sp.text);
+        mobaiClassicalOk = /素箋|是非|條理|脈絡|妄下|斷言|對照|破綻|明辨|點到為止|清白/.test(sp.text) && !/[吾汝妾身]|諸君|小生|超扯|哈哈|嗚哇/.test(sp.text);
         const built = buildBlindGeminiSpeechPrompt(s, sp);
-        mobaiLlmPromptOk = Boolean(built && built.audit && built.audit.ok && built.prompt.includes("魏晉純文言判詞"));
+        mobaiLlmPromptOk = Boolean(built && built.audit && built.audit.ok && built.prompt.includes("國學社清冷思辨") && !built.prompt.includes("魏晉純文言判詞"));
       }
-      if (s.name === "晴嵐") qinglanGuzhengOk = /妾身|晴嵐|清音|調弦|雅音/.test(sp.text);
-      if (s.name === "阿竹") azhuPoeticOk = /小生|阿竹|茶|同窗/.test(sp.text);
-      if (s.name === "阿朗") alangDebateOk = /辯|立論|質詢|證據|申論/.test(sp.text);
+      if (s.name === "晴嵐") qinglanGuzhengOk = /晴嵐|清音|琴弦|弦外|茶煙|清茶|溫雅|清濁|平和/.test(sp.text) && !/妾身|諸君|吾/.test(sp.text);
+      if (s.name === "阿竹") azhuPoeticOk = /阿竹|茶|凍頂|清風|同窗|留白|清正/.test(sp.text) && !/小生|諸君|矣/.test(sp.text);
+      if (s.name === "阿朗") alangDebateOk = /辯|立論|質詢|證據|申論|漏洞|邏輯|線索|先聽/.test(sp.text);
     });
     const all11UniqueSpeeches = openTexts.size === 11;
 
     // Intel popover badge & Showcase persona dossier + audition UI
     const mobaiSeat = state.match.seats.find(s => s.name === "墨白");
     openSeatIntel(mobaiSeat.id);
-    const intelBadgeOk = el("intelPersonaBadge").textContent.includes("魏晉純文言判詞");
+    const intelBadgeOk = el("intelPersonaBadge").textContent.includes("國學社清冷思辨");
     closeSeatIntel();
 
     stage3d.showcaseTarget = "9";
@@ -4415,7 +4419,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 {
   const vercelCfgOk = fs.existsSync(path.join(ROOT, "vercel.json")) && fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8").includes("/ai.html");
   const vercelIgnOk = fs.existsSync(path.join(ROOT, ".vercelignore")) && fs.readFileSync(path.join(ROOT, ".vercelignore"), "utf8").includes("tests/");
-  const cardRitualHtmlOk = html.includes('id="roleDealFlipper"') && html.includes('id="roleDealCardBack"') && html.includes("deal-back-wax-seal") && /公測\s*2\.0/.test(html);
+  const cardRitualHtmlOk = html.includes('id="roleDealFlipper"') && html.includes('id="roleDealCardBack"') && html.includes("deal-back-wax-seal") && /公測\s*2\.[0-9]+/.test(html);
   const cardRitualCssOk = compCss.includes("dealFlipReveal") && compCss.includes(".deal-card-back") && compCss.includes(".deal-burst-ring") && compCss.includes(".title-release-badge");
   const vrmSource11 = fs.readFileSync(path.join(ROOT, "js/stage3d/vrm-loader.js"), "utf8");
   const multiJointSrcOk = vrmSource11.includes("bm.neck") && vrmSource11.includes("bm.rightShoulder") && vrmSource11.includes("bm.rightHand") && vrmSource11.includes("rightIndexProximal") && vrmSource11.includes("FINGER_PRESETS");
@@ -4453,7 +4457,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 
     // 5. Public Release 2.0 diagnostics & anonymous host helper
     const diag11 = collectFeedbackDiagnostics();
-    const version11Ok = diag11.version.includes("公測 2.0") && typeof isAnonymousReviewHost === "function";
+    const version11Ok = /公測\\s*2\\.[0-9]+/.test(diag11.version) && typeof isAnonymousReviewHost === "function";
 
     clearStepTimer();
     resetMatchToLobby();
@@ -5508,6 +5512,182 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       throw new Error("v14.2 UPGRADE check failed for " + k + ": " + JSON.stringify(v142Res));
     }
   }
+
+  // v15.0 DE-AI TEA-ACADEMY EXPERIENCE VERIFICATION:
+  // 1. De-AI visible HTML copy & zero-emoji check
+  const v15VisibleHtml = html
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "");
+  if (
+    v15VisibleHtml.includes("AI 轉好話") ||
+    v15VisibleHtml.includes("好話暴擊") ||
+    v15VisibleHtml.includes("×1.5") ||
+    v15VisibleHtml.includes("局勢矩陣")
+  ) {
+    throw new Error("v15.0 DE-AI: ai.html still contains arcade/AI tool wording (AI 轉好話 / 好話暴擊 / ×1.5 / 局勢矩陣)!");
+  }
+  for (const mustHave of ["茶席言行錄", "潤飾詞句", "舉杯追問", "燭下覆茶", "四給奉茶"]) {
+    if (!v15VisibleHtml.includes(mustHave)) {
+      throw new Error("v15.0 DE-AI: ai.html missing expected diegetic element text: " + mustHave);
+    }
+  }
+
+  // 2. Runtime verification: 3-option rephrase slips, 3-tier dynamic length, Scheme A literary tone,
+  //    Verbatim Anchor, live Nod/Frown + Tea-Cup Interjection + prefetch cache invalidation, and Candlelit Night Review
+  const v150Res = vm.runInContext(`(() => {
+    const noEmojiRe = /[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}]/u;
+    const noStiffClassicalRe = /吾|汝|諸君|妾身|小生/;
+
+    // A. Scheme A (溫和書卷化) & zero repetitive "先這樣，過！" signoffs
+    const noRobotSignoffOk = Object.values(PERSONA_VOICE_STYLES).every(v =>
+      Array.isArray(v.signoff) && v.signoff.every(s => !s.includes("先這樣，過"))
+    );
+    const schemeACleanOk = ["墨白", "晴嵐", "阿竹"].every(nm => {
+      const p = PERSONA_COGNITIVE_PROFILES[nm];
+      const f = PERSONA_FLAVORS[nm];
+      const vs = PERSONA_VOICE_STYLES[nm];
+      const blob = JSON.stringify({ sampleQuote: p.sampleQuote, registerBadge: p.registerBadge, f, vs });
+      return !noStiffClassicalRe.test(blob);
+    });
+
+    // B. 3-Option Rephrase Choice Slips (player keeps agency, zero emoji/AI jargon)
+    clearStepTimer();
+    startJudgeShowcaseMatch();
+    state.match.phase = "DAY_PLAYER_TURN";
+    state.selectedSeatId = 4;
+    el("quickFreeInput").value = "";
+    el("btnQuickSpiceDemo").click();
+    const trayEl = el("rephraseChoicesTray");
+    const gridEl = el("rephraseSlipsGrid");
+    const slips = buildRephraseChoiceSlips(el("quickFreeInput").value);
+    const rephraseTrayOk = Boolean(
+      trayEl && !trayEl.classList.contains("hidden") &&
+      slips.length === 3 &&
+      slips[0].angle === "直指矛盾" && slips[1].angle === "溫言請教" && slips[2].angle === "留白觀望" &&
+      slips.every(s => !noEmojiRe.test(s.text))
+    );
+    applyRephraseSlip(slips[0]);
+    const applySlipOk = Boolean(
+      state.match.rewriteCritReady === true &&
+      el("quickFreeInput").value === slips[0].text &&
+      trayEl.classList.contains("hidden") &&
+      !noEmojiRe.test(el("speechThreeGoodBadge").textContent)
+    );
+
+    // C. Verbatim Anchor (真人原話咬合) under strict Blind-View Proxy trap
+    const prevStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+    state.match.phase = "DAY_PLAYER_TURN";
+    el("playerSpeechInput").value = "我心平氣和問一句，4號阿松你昨天為何棄票不投可疑的人？這輪我懷疑4號。";
+    submitPlayerSpeech();
+    const lastPlEv = state.match.daySpeechEvents[state.match.daySpeechEvents.length - 1];
+    const anchorExtracted = lastPlEv && lastPlEv.verbatimAnchorsByTarget && lastPlEv.verbatimAnchorsByTarget[4];
+    const seat4 = getSeat(4);
+    const defSp4 = buildHeuristicAiSpeech(seat4);
+    const defPrompt4 = buildBlindGeminiSpeechPrompt(seat4, defSp4);
+    const verbatimAnchorOk = Boolean(
+      anchorExtracted && anchorExtracted.includes("為何棄票") &&
+      defSp4 && defSp4.text.includes(anchorExtracted) &&
+      defPrompt4 && defPrompt4.audit && defPrompt4.audit.ok &&
+      defPrompt4.prompt.includes("玩家原話必答錨點") &&
+      defPrompt4.prompt.includes(anchorExtracted)
+    );
+
+    // D. 3-Tier Dynamic Speech Length Quota
+    const briefTierHits = [];
+    const intenseTierHits = [];
+    const calmCtxMock = {
+      snap: createBlindMatchSnapshot(getSeat(3), { module: "smoke_v150_len" }),
+      day: 2, spokenIdsToday: [2, 3], spokenOthers: [getSeat(2)], unspokenOthers: [getSeat(5)],
+      seatLabel: s => s ? (s.id + "號" + s.name) : "",
+      isFirstToday: false, seerWolfOnMe: null, wolfPitOnMe: null, accuseOnMe: null,
+      priorSameRoleSteal: null, dualSeerWorlds: null, playerAnchorOnMe: "",
+      priorSeerWolfEv: null, vouchOnMe: null, publicInterjections: []
+    };
+    for (let sid = 2; sid <= 8; sid++) {
+      const st = Object.assign({}, getSeat(sid), { role: "villager", suspicionMap: {} });
+      const t = determineSpeechLengthTier(st, calmCtxMock);
+      if (t === "brief") briefTierHits.push(sid);
+    }
+    if (defSp4.lengthTier === "intense") intenseTierHits.push(4);
+    const briefSample = buildBriefPassSpeech(getSeat(briefTierHits[0] || 3), calmCtxMock);
+    const dynamicLenOk = Boolean(
+      briefTierHits.length >= 2 &&
+      intenseTierHits.length >= 1 &&
+      briefSample && briefSample.lengthTier === "brief" &&
+      briefSample.text.length >= 12 && briefSample.text.length <= 36 &&
+      !briefSample.text.includes("先這樣，過")
+    );
+
+    // E. Listening Nod/Frown Micro-Reaction + Once-Per-Day Tea-Cup Interjection + Prefetch Cache Sync
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = 7;
+    delete state.playerMarks[7];
+    state.match.speechQueue = [5, 1];
+    state.match.interjectUsedDay = 0;
+    state.match.tableReactions = [];
+    state.match.publicInterjections = [];
+    state.match._prefetchedSpeech = { key: "stale_before_frown", seatId: 5, resolvedMeta: { text: "stale" } };
+    const revBeforeFrown = state.match.tableStateRev || 0;
+    el("btnMarkWolf").click();
+    const seat5 = getSeat(5);
+    const frownPrompt5 = buildBlindGeminiSpeechPrompt(seat5, buildHeuristicAiSpeech(seat5));
+    const frownSyncOk = Boolean(
+      (state.match.tableStateRev || 0) > revBeforeFrown &&
+      state.match._prefetchedSpeech === null &&
+      state.match.tableReactions.some(r => r.targetId === 7 && r.kind === "frown") &&
+      frownPrompt5 && frownPrompt5.audit && frownPrompt5.audit.ok &&
+      frownPrompt5.prompt.includes("皺了眉頭")
+    );
+
+    state.match._prefetchedSpeech = { key: "stale_before_interject", seatId: 5, resolvedMeta: { text: "stale" } };
+    const revBeforeInterj = state.match.tableStateRev || 0;
+    const openedInterj = openTeaInterjectPopover();
+    const interjEntry = executeTeaInterjection("你剛才為何急著替他緩頰？");
+    const downstreamPrompt5 = buildBlindGeminiSpeechPrompt(seat5, buildHeuristicAiSpeech(seat5));
+    const interjectSyncOk = Boolean(
+      openedInterj &&
+      interjEntry &&
+      interjEntry.reply &&
+      interjEntry.reply.length <= 24 &&
+      !noEmojiRe.test(interjEntry.reply) &&
+      state.match.interjectUsedDay === state.match.day &&
+      !canUseTeaInterjectNow() &&
+      (state.match.tableStateRev || 0) > revBeforeInterj &&
+      state.match._prefetchedSpeech === null &&
+      downstreamPrompt5 && downstreamPrompt5.audit && downstreamPrompt5.audit.ok &&
+      downstreamPrompt5.prompt.includes("方才席間神情與舉杯交鋒紀錄") &&
+      downstreamPrompt5.prompt.includes("為何急著替他緩頰")
+    );
+
+    // F. Civilian Candlelit Night Review (燭下覆茶)
+    const slipsNight = buildCandlelitNightSlips();
+    let proceededNight = false;
+    const openedCandle = openCandlelitNightReview(() => { proceededNight = true; });
+    if (slipsNight[0]) toggleCandlelitWatchSeat(slipsNight[0].seatId);
+    const watchCount = (state.match.candlelitReview && state.match.candlelitReview.watchIds) ? state.match.candlelitReview.watchIds.length : 0;
+    finishCandlelitNightReview();
+    const candlelitOk = Boolean(
+      slipsNight.length >= 2 &&
+      openedCandle &&
+      watchCount === 1 &&
+      proceededNight &&
+      state.match.pinnedClues.some(c => c.tag.includes("燭下圈防") && !noEmojiRe.test(c.tag))
+    );
+
+    antiCheatMonitor.strictThrow = prevStrict;
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      noRobotSignoffOk, schemeACleanOk, rephraseTrayOk, applySlipOk,
+      verbatimAnchorOk, dynamicLenOk, frownSyncOk, interjectSyncOk, candlelitOk
+    };
+  })()`, ctx);
+  for (const [k, v] of Object.entries(v150Res)) {
+    if (!v) {
+      throw new Error("v15.0 DE-AI EXPERIENCE check failed for " + k + ": " + JSON.stringify(v150Res));
+    }
+  }
 }
 
-console.log("[OK] Full v14.2 (Dual-Track NAT Proxy + Zero-Leak Vote-Speech Matrix + Anti-Hypocrisy Radar + Judge 3-Min Showcase + 1.5x Speed + CI) E2E smoke test PASSED!");
+console.log("[OK] Full v15.0 (De-AI Tea-Academy UI + 3-Slip Rephrase + Scheme A Literary Tone + 3-Tier Length + Verbatim Anchor + Nod/Frown & Tea Interjection Prefetch Sync + Candlelit Night Review) E2E smoke test PASSED!");

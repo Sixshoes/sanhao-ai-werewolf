@@ -821,6 +821,43 @@ function buildSpeechContext(speaker) {
     return pickPersonaVoice(speaker, slotKey, salt);
   };
 
+  // v15.0 Strictly Public Verbatim Anchor, Live Table Micro-Reactions & Tea-Cup Interjections (Zero-Leak!)
+  const pidSnap = snap ? snap.playerSeatId : (typeof getPlayerId === "function" ? getPlayerId() : 1);
+  let playerAnchorOnMe = "";
+  const playerChallengeEv = dayEvents.slice().reverse().find(function (ev) {
+    if (!ev || ev.speakerId !== pidSnap || speaker.id === pidSnap) return false;
+    const hitMe = ev.accuseId === speaker.id
+      || (Array.isArray(ev.wolfPits) && ev.wolfPits.indexOf(speaker.id) !== -1)
+      || (ev.verbatimAnchorsByTarget && ev.verbatimAnchorsByTarget[speaker.id]);
+    return Boolean(hitMe);
+  });
+  if (playerChallengeEv) {
+    playerAnchorOnMe = (playerChallengeEv.verbatimAnchorsByTarget && playerChallengeEv.verbatimAnchorsByTarget[speaker.id])
+      || playerChallengeEv.verbatimAnchor
+      || "";
+  }
+
+  const pubReactions = (snap && Array.isArray(snap.tableReactions)) ? snap.tableReactions : [];
+  const pubInterjects = (snap && Array.isArray(snap.publicInterjections)) ? snap.publicInterjections : [];
+  const latestReact = pubReactions.length > 0 ? pubReactions[pubReactions.length - 1] : null;
+  let recentTableReactionNote = "";
+  if (latestReact && latestReact.targetId && latestReact.targetId !== speaker.id) {
+    const rSeat = getBlindSeat(latestReact.targetId);
+    if (rSeat && rSeat.alive) {
+      recentTableReactionNote = latestReact.kind === "frown"
+        ? ("我看你剛才聽 " + seatLabel(rSeat) + " 發言時皺了眉頭，你也覺得他那段不太對勁吧？")
+        : ("剛才看你對 " + seatLabel(rSeat) + " 點了頭，不過我還是想再對一下他前後的說法。");
+    }
+  }
+  const latestInterj = pubInterjects.length > 0 ? pubInterjects[pubInterjects.length - 1] : null;
+  let recentInterjectionNote = "";
+  if (latestInterj && latestInterj.targetId && latestInterj.targetId !== speaker.id) {
+    const iSeat = getBlindSeat(latestInterj.targetId);
+    if (iSeat && iSeat.alive) {
+      recentInterjectionNote = "剛才你當場舉杯追問 " + seatLabel(iSeat) + "「" + latestInterj.question + "」，聽他那句回防我反倒多留了個心眼。";
+    }
+  }
+
   return {
     snap: snap,
     getBlindSeat: getBlindSeat,
@@ -859,7 +896,12 @@ function buildSpeechContext(speaker) {
     priorGodClaims: priorGodClaims,
     priorSameRoleSteal: priorSameRoleSteal,
     slotPlan: slotPlan,
-    dualSeerWorlds: slotPlan.dualSeerWorlds
+    dualSeerWorlds: slotPlan.dualSeerWorlds,
+    playerAnchorOnMe: playerAnchorOnMe,
+    recentTableReactionNote: recentTableReactionNote,
+    recentInterjectionNote: recentInterjectionNote,
+    tableReactions: pubReactions,
+    publicInterjections: pubInterjects
   };
 }
 

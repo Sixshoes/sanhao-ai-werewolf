@@ -1,10 +1,10 @@
 /**
- * v10.0 百態群像：11 位 AI 角色全維度人格引擎（7 維盲視認知邏輯＋11 格語風與文言文系統）
+ * v15.0 百態群像：11 位 AI 角色全維度人格引擎（7 維盲視認知邏輯＋現代大學茶社書卷語風）
  *
  * 設計原則：
  * 1. 嚴格盲視零作弊（100% 僅讀取 BlindMatchSnapshot 公開與自身合法視野，絕不偷看他人底牌）。
- * 2. 11 位角色皆有專屬語風（含純正魏晉文言文「墨白」、宋詞樂府雅言「晴嵐」、江南詩茶半文言「阿竹」
- *    與 8 位極鮮明現代社團性格），貫穿開局、雙預對跳、單預反應、反駁狼坑、平票 PK、遺言、狼隊密談與大廳互動。
+ * 2. 11 位角色皆以自然現代台灣大學茶社白話為基底，保留國學社「墨白」、國樂社「晴嵐」、茶藝社「阿竹」
+ *    的溫和書卷氣質與適度四字成語點綴（全面移除生硬文言代詞與虛詞），貫穿全流程互動。
  * 3. 7 維認知參數實際驅動懷疑值敏感度、記仇反推、酸言懲罰、跟票／獨立反骨、神職藏牌與狼隊悍跳傾向。
  */
 "use strict";
@@ -24,8 +24,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.56,
     godHideBias: 0.72,
     talkCadence: 1.05,
-    sampleQuote: "欸等一下，我剛順了一遍大家講的時間點，這邊前後根本兜不起來啊…照刪去法看這輪我先投這張喔，過。",
-    llmStyleRule: "使用真實自然的台灣資工系男大生日常聊天口吻（常帶『欸等一下、我剛順了一遍、前後兜不攏耶、照刪去法看、先這樣，過』），短句自然呼吸停頓，像朋友圍桌推理；嚴禁使用『邏輯閉環、高置信度、異常值、行為向量、算力、載入模型』或演講稿腔。"
+    sampleQuote: "欸等一下，我剛順了一遍大家講的時間點，這邊前後根本兜不起來啊…照刪去法看這輪我先投這張。",
+    llmStyleRule: "使用真實自然的台灣資工系男大生日常聊天口吻（常帶『欸等一下、我剛順了一遍、前後兜不攏耶、照刪去法看』），短句自然呼吸停頓，像朋友圍桌推理；不重複喊制式『先這樣，過！』，嚴禁使用『邏輯閉環、高置信度、異常值、算力』或演講稿腔。"
   }),
   "暖暖": Object.freeze({
     register: "warm",
@@ -97,10 +97,10 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
   }),
   "阿竹": Object.freeze({
     register: "poetic",
-    shortTag: "詩茶",
+    shortTag: "茶藝",
     iconKey: "bamboo",
     iconTone: "jade",
-    registerBadge: "江南詩茶半文言",
+    registerBadge: "茶藝社詩茶從容",
     logicTags: "風雅平衡・重三好氣度・從容藏鋒",
     credulity: 0.88,
     grudgeMemory: 0.72,
@@ -109,8 +109,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.35,
     godHideBias: 0.58,
     talkCadence: 0.85,
-    sampleQuote: "且慢，一盞凍頂未涼，席間破綻已浮茶面矣。古人云聽其言而觀其行，小生便以此茶敬奉諸君明辨。",
-    llmStyleRule: "江南書院詩茶文青的『半文言雅韻』口吻（自稱『小生』或『阿竹』，常帶『且慢、一盞茶未涼、古人云、清者自清、席間破綻、莫急莫躁』），從容幽默不說教。"
+    sampleQuote: "別急，這杯凍頂茶都還沒涼呢，破綻其實已經浮出來了。聽其言觀其行，我這輪會先盯緊前後對不上的那位。",
+    llmStyleRule: "現代大學茶藝社成員的自然白話口吻，從容帶點幽默與書卷氣（偶爾點綴『一盞茶還沒涼、聽其言觀其行、清者自清』等自然詞句），嚴禁使用『吾、汝、諸君、妾身、小生、夫、蓋』等生硬古文代詞與虛詞。"
   }),
   "晨晨": Object.freeze({
     register: "sport",
@@ -131,10 +131,10 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
   }),
   "墨白": Object.freeze({
     register: "classical",
-    shortTag: "文言",
+    shortTag: "書卷",
     iconKey: "brush",
     iconTone: "indigo",
-    registerBadge: "魏晉純文言判詞",
+    registerBadge: "國學社清冷思辨",
     logicTags: "極度審慎・最強反骨・深水控場",
     credulity: 0.42,
     grudgeMemory: 1.42,
@@ -143,15 +143,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.28,
     godHideBias: 0.85,
     talkCadence: 0.68,
-    sampleQuote: "觀此席間，破綻昭然。此人言辭閃爍、顛倒黑白，實乃酸民狼無疑。諸君莫為浮言所惑，當共逐之。言盡於此，請公決之。",
-    llmStyleRule: "【最高優先文言文規範】全程必須使用簡練冷峻、易懂有氣勢的純正魏晉文言文！自稱『吾』、稱眾人『諸君』、稱對手『此人／彼輩』，結尾用『言盡於此，請公決之。』或『吾言畢，過。』；絕對禁用『欸、啦、超扯、哈哈、喔』等現代白話語氣詞，標點以句號與分號為主，克制沉穩。"
+    sampleQuote: "把剛才幾位的說法對照來看，破綻已經昭然若揭。語氣閃爍又急著定調，權衡再三，我這票會投出去。",
+    llmStyleRule: "【溫和書卷化規範】現代大學中文系／書法社長的清冷理性白話口吻，簡練克制、少口水字，僅在關鍵處自然點綴四字成語（如『破綻昭然、言之成理、權衡再三、是非分明』）；以『我、大家、各位』自然稱呼，嚴禁使用『吾、汝、諸君、妾身、夫、蓋、彼輩、矣、哉』等生硬文言詞彙。"
   }),
   "晴嵐": Object.freeze({
     register: "guzheng",
-    shortTag: "古箏",
+    shortTag: "國樂",
     iconKey: "guzheng",
     iconTone: "gold",
-    registerBadge: "宋詞樂府雅言",
+    registerBadge: "國樂社溫雅聽音",
     logicTags: "溫雅審慎・極重清音和氣・深藏不露",
     credulity: 0.75,
     grudgeMemory: 0.82,
@@ -160,8 +160,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.26,
     godHideBias: 0.76,
     talkCadence: 0.76,
-    sampleQuote: "細聆諸君方才清談，唯有此人弦外生躁、宮商失序，恐非良善同道。妾身願護茶席清音不濁，還請諸君明鑒。",
-    llmStyleRule: "【古典音律雅言規範】以溫婉典雅的宋詞樂府半文言發言（自稱『妾身』或『晴嵐』，常以『弦外之音、宮商失序、清音不濁、撥弦定調、明鑒、一曲終罷』入詞），柔中帶剛、優雅從容。"
+    sampleQuote: "剛剛安靜聽完大家聊下來，這位語氣裡有種藏不住的弦外之音，越聽越覺得微躁，我這輪會先多留意他。",
+    llmStyleRule: "【溫和書卷化規範】現代大學國樂社古箏學姊的自然溫雅白話口吻，柔和而有主見，偶爾點綴『弦外之音、清濁分明、聽話聽音』等雅致詞彙；以『我、晴嵐、大家』自然稱呼，嚴禁使用『妾身、吾、汝、諸君、夫、蓋』等古文代詞。"
   }),
   "阿朗": Object.freeze({
     register: "debate",
@@ -335,20 +335,20 @@ const PERSONA_LOBBY_GREETINGS = Object.freeze({
     "開局前記得留心每個人前後有沒有自相矛盾，細節不會說謊。"
   ],
   "阿竹": [
-    "幸會同窗，清茶已備、山嵐正雅，待開局且與小生共品席間真偽。",
-    "茶都還沒涼呢，選好席次便入座對弈吧，清者自清、妄言難藏。"
+    "幸會呀，茶剛泡好、山風剛好，開局後咱們邊品茶邊辨真偽。",
+    "茶都還沒涼呢，選好席次就上桌聊聊吧，清者自清、破綻藏不住的。"
   ],
   "晨晨": [
     "走吧夥伴，熱身完畢就差開局了，這場我們穩穩守住好人防線！",
     "氣勢到位，等等跟著一起看票型抓破綻，把酸民狼送下場。"
   ],
   "墨白": [
-    "幸會。墨池已研、茶席將啟，待會觀諸君言行，真偽自見分曉。",
-    "既臨書院茶席，便當明辨是非。請即開局，吾已備好判詞待之。"
+    "幸會。茶席快開了，等會仔細對照每個人的言行，真假自然分明。",
+    "既然坐進書院茶席，就以理辨是非。開局吧，我先靜觀其變。"
   ],
   "晴嵐": [
-    "同窗安好，古箏初調、清茶微暖，願今日席間和氣清音，共辨真偽。",
-    "輕撥一弦迎君入席，開局後不妨細聆眾人弦外之音，破綻自然浮現。"
+    "同窗安好，古箏剛收好、清茶微暖，願今天席間和氣清朗，一起辨明真偽。",
+    "歡迎入席，開局後不妨細聽每個人的弦外之音，破綻自然會浮出來。"
   ],
   "阿朗": [
     "歡迎來到林美山辯論茶席，準備好一起用交叉質詢拆穿漏洞了嗎？",
@@ -385,13 +385,13 @@ function formatUnspokenNoteByPersona(speaker, unspokenOthers, seatLabelFn) {
   const firstLbl = seatLabelFn(unspokenOthers[0]);
   const more = unspokenOthers.length > 1;
   if (reg === "classical") {
-    return "後席 " + firstLbl + (more ? " 諸君" : "") + "尚未啟口，且俟其陳詞再行裁奪。";
+    return "後席 " + firstLbl + (more ? " 幾位" : "") + "還沒開口，等聽完再做定奪。";
   }
   if (reg === "guzheng") {
-    return "後席 " + firstLbl + (more ? " 等同窗" : "") + "猶未撥弦發聲，且待聞其清音再議。";
+    return "後席 " + firstLbl + (more ? " 幾位同學" : "") + "還沒發言，等聽聽他們的語氣再說。";
   }
   if (reg === "poetic") {
-    return "後置位 " + firstLbl + (more ? " 諸位" : "") + "茶尚未舉、言猶未發，且待後聞再補全圖。";
+    return "後置位 " + firstLbl + (more ? " 幾位" : "") + "還沒開口，先留半盞茶聽聽後面怎麼講。";
   }
   if (reg === "data") {
     return "後置位 " + firstLbl + (more ? " 幾位" : "") + "還沒發言，等他們講完再補齊狼坑。";
@@ -429,24 +429,24 @@ function buildPersonaDualSeerText(speaker, data) {
 
   if (reg === "classical") {
     return leadPrefix +
-      "若站 " + sALbl + "，則 " + sBLbl + " 必居狼位" + aSecondStr + aConflict + "；" +
-      "若改站 " + sBLbl + "，則 " + sALbl + " 必為偽徒" + bSecondStr + bConflict + "。" +
-      "權衡再三，吾決意站邊 " + trustedLbl + "，" + goodSideText +
-      "此輪當先逐偽牌 " + fakeLbl + "！" + unspokenNote + signoffPhrase;
+      "如果站 " + sALbl + "，那 " + sBLbl + " 必佔狼位" + aSecondStr + aConflict + "；" +
+      "若改站 " + sBLbl + "，則 " + sALbl + " 反成假牌" + bSecondStr + bConflict + "。" +
+      "權衡再三，我站邊 " + trustedLbl + "，" + goodSideText +
+      "這輪先出 " + fakeLbl + "。" + unspokenNote + signoffPhrase;
   }
   if (reg === "guzheng") {
     return leadPrefix +
-      "若站 " + sALbl + " 一脈，則 " + sBLbl + " 音律必濁居於狼坑" + aSecondStr + aConflict + "；" +
-      "若轉站 " + sBLbl + " 一脈，則 " + sALbl + " 反成失調偽音" + bSecondStr + bConflict + "。" +
-      "細辨清濁之後，妾身站邊 " + trustedLbl + "，" + goodSideText +
-      "本輪請共送 " + fakeLbl + " 離席歇心。" + unspokenNote + signoffPhrase;
+      "如果站 " + sALbl + " 這邊，那 " + sBLbl + " 語氣微躁明顯落在狼坑" + aSecondStr + aConflict + "；" +
+      "如果改站 " + sBLbl + "，就換 " + sALbl + " 變成走音的假牌" + bSecondStr + bConflict + "。" +
+      "細聽兩邊清濁後，晴嵐站邊 " + trustedLbl + "，" + goodSideText +
+      "這輪先請 " + fakeLbl + " 離席歇心。" + unspokenNote + signoffPhrase;
   }
   if (reg === "poetic") {
     return leadPrefix +
-      "若站 " + sALbl + "，這局 " + sBLbl + " 必佔一狼" + aSecondStr + aConflict + "；" +
-      "若改站 " + sBLbl + "，則換 " + sALbl + " 落入狼坑" + bSecondStr + bConflict + "。" +
-      "一盞茶間勝負已分，小生站邊 " + trustedLbl + "，" + goodSideText +
-      "這輪便先請 " + fakeLbl + " 退席品茗！" + unspokenNote + signoffPhrase;
+      "如果站 " + sALbl + "，這局 " + sBLbl + " 必佔一狼" + aSecondStr + aConflict + "；" +
+      "要是改站 " + sBLbl + "，就換 " + sALbl + " 落進狼坑" + bSecondStr + bConflict + "。" +
+      "一盞茶間其實高下已判，我站邊 " + trustedLbl + "，" + goodSideText +
+      "這輪先請 " + fakeLbl + " 退席品茶。" + unspokenNote + signoffPhrase;
   }
   if (reg === "data") {
     return leadPrefix +
@@ -518,13 +518,13 @@ function buildPersonaPitRebutText(speaker, mode, d) {
   // CRITICAL INVARIANT: every pit rebuttal preserves "點進狼坑" for clarity & test verification!
   if (mode === "hunter") {
     if (reg === "classical") {
-      return rebutLead + "方才 " + accName + " 妄將吾點進狼坑，誠乃自撞鐵壁！吾實為直心糾察長，若遭誤逐，臨行必以正氣共鳴攜 " + accName + " 同退！目下狼坑首察 " + accName + (secondLbl ? (" 及 " + secondLbl) : "") + "，" + signoff;
+      return rebutLead + "剛才 " + accName + " 貿然把我點進狼坑，恐怕是撞上鐵壁了。我正是直心糾察長，若被誤投離席，臨走必啟共鳴帶走 " + accName + "。目前狼坑首察 " + accName + (secondLbl ? (" 與 " + secondLbl) : "") + "。" + signoff;
     }
     if (reg === "guzheng") {
-      return rebutLead + "方才 " + accName + " 將妾身點進狼坑，未免誤判清濁了！妾身實執直心糾察長之印，若此輪遭誤逐，臨別定啟正氣共鳴帶走 " + accName + "！目前疑點首在 " + accName + (secondLbl ? (" 與 " + secondLbl) : "") + "，" + signoff;
+      return rebutLead + "剛才 " + accName + " 把晴嵐點進狼坑，實在聽錯音了。我其實是直心糾察長，要是這輪被誤送離席，我一定開共鳴帶走 " + accName + "。目前疑點首在 " + accName + (secondLbl ? (" 跟 " + secondLbl) : "") + "。" + signoff;
     }
     if (reg === "poetic") {
-      return rebutLead + "哎呀，" + accName + " 把小生點進狼坑可真是看走眼矣！小生亮明直心糾察長正氣之身，若誤送我出局必共鳴帶走 " + accName + "！眼前狼坑當察 " + accName + (secondLbl ? (" 與 " + secondLbl) : "") + "，" + signoff;
+      return rebutLead + "哎呀，" + accName + " 把我點進狼坑可是看走眼了。我直接亮明直心糾察長，要是誤推我出局一定共鳴帶走 " + accName + "。眼前狼坑該查 " + accName + (secondLbl ? (" 跟 " + secondLbl) : "") + "。" + signoff;
     }
     if (reg === "debate") {
       return rebutLead + "我方正式異議！對方辯友 " + accName + " 把我點進狼坑直接撞上鐵證——我就是直心糾察長！投我出局我就開共鳴帶走 " + accName + "，這輪狼坑鎖定 " + accName + (secondLbl ? (" 與 " + secondLbl) : "") + "，" + signoff;
@@ -537,19 +537,19 @@ function buildPersonaPitRebutText(speaker, mode, d) {
 
   if (mode === "calm") {
     if (reg === "classical") {
-      return rebutLead + "方才 " + accName + " 將吾點進狼坑，然吾自知清白，切莫內耗抗推！" +
-        (allyLbl ? (allyLbl + " 言辭醇正可列善席，") : "") +
-        (realSusLbl ? ("真當深究之狼坑實乃 " + realSusLbl + "。") : "且俟後席陳詞再定狼籍。") + unspokenTail + signoff;
+      return rebutLead + "剛才 " + accName + " 把我點進狼坑，但我自知清白，切忌內耗抗推。" +
+        (allyLbl ? (allyLbl + " 言辭沉穩可先列好人席，") : "") +
+        (realSusLbl ? ("真正該深究的狼坑反而是 " + realSusLbl + "。") : "先聽後席發言再做定奪。") + unspokenTail + signoff;
     }
     if (reg === "guzheng") {
-      return rebutLead + "回應方才 " + accName + " 將妾身點進狼坑一事：妾身清白可鑒，萬勿因一時誤解傷及同道！" +
-        (allyLbl ? (allyLbl + " 語調溫潤似屬好人，") : "") +
-        (realSusLbl ? ("真正失調可疑者反在 " + realSusLbl + "。") : "待聞後席諸君高見再齊心定奪。") + unspokenTail + signoff;
+      return rebutLead + "先溫和回應剛才 " + accName + " 把我點進狼坑這件事：我是清白好人，大家別因一時誤會互相傷了和氣。" +
+        (allyLbl ? (allyLbl + " 語氣溫潤像好人，") : "") +
+        (realSusLbl ? ("真正讓人起疑的反而在 " + realSusLbl + "。") : "等聽完後位幾位同學再一起定奪。") + unspokenTail + signoff;
     }
     if (reg === "poetic") {
-      return rebutLead + "先答覆方才 " + accName + " 將小生點進狼坑：清者自清，茶席好人切莫自相誤傷！" +
-        (allyLbl ? (allyLbl + " 詞氣端方先放善席，") : "") +
-        (realSusLbl ? ("真該細查的狼坑倒是 " + realSusLbl + "。") : "且待後席表水再論。") + unspokenTail + signoff;
+      return rebutLead + "先答覆剛才 " + accName + " 把我點進狼坑：清者自清，茶席好人可別自相誤傷。" +
+        (allyLbl ? (allyLbl + " 語氣端正先放好人席，") : "") +
+        (realSusLbl ? ("真正該細查的狼坑倒是 " + realSusLbl + "。") : "等聽完後位表水再論。") + unspokenTail + signoff;
     }
     return rebutLead + "先正面回應前置位 " + accName + " 把我點進狼坑：我自己知道我的底牌，我絕對不在狼坑裡，別因為誤解互相抗推！" +
       (allyLbl ? (allyLbl + " 比較像好人坑，") : "") +
@@ -558,10 +558,10 @@ function buildPersonaPitRebutText(speaker, mode, d) {
 
   if (mode === "dual") {
     if (reg === "classical") {
-      return rebutLead + "方才 " + accName + " 妄將吾點進狼坑，吾必折衝！吾身正影直，正好剖析雙觀察員之局：站 " + standLbl + " 狼坑為 " + fakeALbl + "，站 " + rivalLbl + " 狼坑始為 " + fakeBLbl + "！汝硬塞吾入坑莫非為偽牌掩護？吾站邊 " + standLbl + "，反將 " + accName + " 列入狼籍！" + signoff;
+      return rebutLead + "剛才 " + accName + " 硬把我點進狼坑，我必須正面拆解。正好剖析雙觀察員之局：站 " + standLbl + " 狼坑是 " + fakeALbl + "，站 " + rivalLbl + " 狼坑才變 " + fakeBLbl + "。你硬塞我入坑反倒像替假牌掩護，我站邊 " + standLbl + "，反把 " + accName + " 列入狼坑。" + signoff;
     }
     if (reg === "guzheng") {
-      return rebutLead + "方才 " + accName + " 將妾身點進狼坑，妾身定當澄明清白！藉此辨析雙觀察員：站 " + standLbl + " 則狼坑落在 " + fakeALbl + "，站 " + rivalLbl + " 則狼坑轉至 " + fakeBLbl + "。妾身站邊 " + standLbl + "，反觀 " + accName + " 強塞好人入坑實難令人安心！" + signoff;
+      return rebutLead + "剛才 " + accName + " 把晴嵐點進狼坑，我一定要說清楚。剛好把兩位觀察員理一遍：站 " + standLbl + " 狼坑落在 " + fakeALbl + "，站 " + rivalLbl + " 狼坑才轉到 " + fakeBLbl + "。我站邊 " + standLbl + "，反觀 " + accName + " 急著塞人進坑實在讓人不安心。" + signoff;
     }
     if (reg === "debate") {
       return rebutLead + "反對！" + accName + " 把我點進狼坑完全邏輯崩壞！雙觀察員結構攤開看：站 " + standLbl + " 狼坑是 " + fakeALbl + "，站 " + rivalLbl + " 狼坑才變 " + fakeBLbl + "！你硬擠我進坑根本像幫假牌墊腳，我站邊 " + standLbl + "，反打 " + accName + " 進狼坑！" + signoff;
@@ -571,13 +571,13 @@ function buildPersonaPitRebutText(speaker, mode, d) {
 
   if (mode === "wolf") {
     if (reg === "classical") {
-      return rebutLead + "方才 " + accName + " 竟無憑將吾點進狼坑，何其草率！欲以吾為替罪之羔羊乎？吾觀擾亂視聽之狼坑首推 " + accName + (d.secClause ? ("，" + d.secClause) : "") + "，此輪吾反指 " + accName + "！" + signoff;
+      return rebutLead + "剛才 " + accName + " 毫無憑據就把我點進狼坑，未免過於草率。刻意拿我當替罪羊嗎？依我看擾亂視聽的狼坑首推 " + accName + (d.secClause ? ("，" + d.secClause) : "") + "，這輪我反指 " + accName + "。" + signoff;
     }
     if (reg === "guzheng") {
-      return rebutLead + "方才 " + accName + " 未經深察便將妾身點進狼坑，實令茶席生寒。反觀真正意圖撥亂視聽者正是 " + accName + (d.secClause ? ("，" + d.secClause) : "") + "，妾身此輪只好反點 " + accName + "！" + signoff;
+      return rebutLead + "剛才 " + accName + " 沒細聽就把晴嵐點進狼坑，語氣實在急了些。真正急於帶偏風向的正是 " + accName + (d.secClause ? ("，" + d.secClause) : "") + "，我這輪只好反點 " + accName + "。" + signoff;
     }
     if (reg === "poetic") {
-      return rebutLead + "且慢！方才 " + accName + " 輕率將小生點進狼坑，豈非欲借刀殺人？小生細思之下，最似混水摸魚者反是 " + accName + (d.secClause ? ("，" + d.secClause) : "") + "，這輪反投 " + accName + "！" + signoff;
+      return rebutLead + "慢著，剛才 " + accName + " 輕率把我點進狼坑，這不是借刀殺人嗎？細想下來最像渾水摸魚的反而是 " + accName + (d.secClause ? ("，" + d.secClause) : "") + "，這輪反投 " + accName + "。" + signoff;
     }
     if (reg === "warm") {
       return rebutLead + "嗚怎麼可以這樣～剛才 " + accName + " 沒問清楚就把暖暖點進狼坑好讓人傷心喔！這樣急著找替罪羊反而超像酸民狼耶，我看最可疑的就是 " + accName + (d.secClause ? ("，" + d.secClause) : "") + "，暖暖這輪只好反點 " + accName + " 囉！" + signoff;
@@ -590,16 +590,16 @@ function buildPersonaPitRebutText(speaker, mode, d) {
 
   // Default good rebuttal
   if (reg === "classical") {
-    return rebutLead + "方才 " + accName + " 遽將吾點進狼坑，吾斷難苟同！吾始終循理察言，豈在狼籍之中？反觀 " + accName + " 無實據而妄興風波；若論坑位，" +
-      (allyLbl ? (allyLbl + " 先列善席，") : "") + "吾所疑之狼坑實乃 " + pitNamesStr + "！" + unspokenTail + signoff;
+    return rebutLead + "剛才 " + accName + " 急著把我點進狼坑，這點我難以苟同。我始終循理分析，何來破綻？反觀 " + accName + " 欠缺實據卻急於生波；若論坑位，" +
+      (allyLbl ? (allyLbl + " 先放好人席，") : "") + "我懷疑的狼坑是 " + pitNamesStr + "。" + unspokenTail + signoff;
   }
   if (reg === "guzheng") {
-    return rebutLead + "方才 " + accName + " 將妾身點進狼坑，此誤解不得不辯：妾身一心守望清音，絕非酸民狼！反倒是 " + accName + " 欠缺憑據卻急於生波；依妾身所見，" +
-      (allyLbl ? (allyLbl + " 音色清正先列善席，") : "") + "真正可疑之狼坑乃 " + pitNamesStr + "！" + unspokenTail + signoff;
+    return rebutLead + "剛才 " + accName + " 把晴嵐點進狼坑，這誤會得先澄清：我一路都在安靜聽線索，絕不是狼。反倒是 " + accName + " 語氣微躁急著扣帽子；依我看，" +
+      (allyLbl ? (allyLbl + " 語氣清正先放好人席，") : "") + "真正可疑的狼坑是 " + pitNamesStr + "。" + unspokenTail + signoff;
   }
   if (reg === "poetic") {
-    return rebutLead + "方才 " + accName + " 把小生點進狼坑，這杯苦茶小生可不飲！我一路以理品局從未挑撥，反是 " + accName + " 捕風捉影急於扣帽；若要畫坑，" +
-      (allyLbl ? (allyLbl + " 先歸好人席，") : "") + "小生所指狼坑為 " + pitNamesStr + "！" + unspokenTail + signoff;
+    return rebutLead + "剛才 " + accName + " 把我點進狼坑，這杯苦茶我可不接。我一路照邏輯慢慢品，反倒是 " + accName + " 捕風捉影急著貼標籤；真要畫坑，" +
+      (allyLbl ? (allyLbl + " 先歸好人席，") : "") + "阿竹點出的狼坑是 " + pitNamesStr + "。" + unspokenTail + signoff;
   }
   if (reg === "data") {
     return rebutLead + "前置位 " + accName + " 把我點進狼坑根本站不住腳，我前面立場跟發言前後一致，哪來的破綻？反倒是 " + accName + " 沒拿出證據就急著拉仇恨；重新理過一輪，" +
@@ -629,24 +629,24 @@ function buildPersonaPkText(speaker, roleKind, d) {
   const reg = getPersonaRegister(speaker);
   const { rebutLead, rName, extraProof, signoff } = d;
   if (reg === "classical") {
-    if (roleKind === "seer") return rebutLead + "值此平票決選，吾不得不揭明心觀察員之印！" + extraProof + "若逐吾離席則全場失目，請非平票諸君齊票逐 " + rName + "！" + signoff;
-    if (roleKind === "witch") return rebutLead + "平票危局，吾亮滴水奉茶師之職！" + extraProof + "切莫誤逐核心神職，請諸君集中票決 " + rName + "！" + signoff;
-    if (roleKind === "hunter") return rebutLead + "平票之際吾明示直心糾察長底牌！誤逐吾者，吾臨行必啟共鳴攜 " + rName + " 同退；不如共投 " + rName + " 以定大局！" + signoff;
-    if (roleKind === "guard") return rebutLead + "既入平票，吾亮護心守衛之印！" + extraProof + "失盾則神職危矣，懇請諸君集票投 " + rName + "！" + signoff;
-    if (roleKind === "elder") return rebutLead + "吾乃清心長老！" + extraProof + "萬勿虛耗公投輪次於吾身，請諸君共逐 " + rName + "！" + signoff;
-    return rebutLead + "既至平票決選，吾再申明：吾始終循理察言、不興浮議；反觀 " + rName + " 立場游移且多破綻，懇請諸君明鑒，集票投予 " + rName + "！" + signoff;
+    if (roleKind === "seer") return rebutLead + "走到平票決選，我不得不亮明心觀察員底牌。" + extraProof + "如果把我投出局全場就失去視野，請非平票的各位把票集中給 " + rName + "。" + signoff;
+    if (roleKind === "witch") return rebutLead + "平票危局，我直接亮滴水奉茶師身分。" + extraProof + "切莫誤傷核心神職，請大家集中票投 " + rName + "。" + signoff;
+    if (roleKind === "hunter") return rebutLead + "平票之際我明說直心糾察長底牌。誤投我的話，我離席必開共鳴帶走 " + rName + "，不如一起投 " + rName + " 定局。" + signoff;
+    if (roleKind === "guard") return rebutLead + "既入平票，我亮出護心守衛身分。" + extraProof + "失盾之後神職就很危險，懇請大家集中投 " + rName + "。" + signoff;
+    if (roleKind === "elder") return rebutLead + "我是清心長老。" + extraProof + "別把公投輪次浪費在我身上，請大家集中投 " + rName + "。" + signoff;
+    return rebutLead + "既到平票決選，我再說一次：我始終循理分析、不興浮議；反觀 " + rName + " 立場游移破綻甚多，請各位明辨，把票集中給 " + rName + "。" + signoff;
   }
   if (reg === "guzheng") {
     if (roleKind === "seer" || roleKind === "witch" || roleKind === "guard" || roleKind === "hunter" || roleKind === "elder") {
-      return rebutLead + "平票之際妾身只得亮明底牌以安人心：" + extraProof + "懇請諸君莫傷良善神職，將此輪珍貴一票集中投予 " + rName + "。" + signoff;
+      return rebutLead + "平票之際晴嵐只好亮明底牌讓大家安心：" + extraProof + "別傷到神職夥伴，請把這一票集中投給 " + rName + "。" + signoff;
     }
-    return rebutLead + "平票拉票之際，妾身懇切再陳：一路以來皆盼茶席清音和睦，從無挑撥之意；相較之下 " + rName + " 弦音屢亂，還望諸君明察改投 " + rName + "。" + signoff;
+    return rebutLead + "平票拉票我就誠懇再說一句：一路下來我都盼茶席和氣清朗；相比之下 " + rName + " 語氣屢次走調，還請大家改投 " + rName + "。" + signoff;
   }
   if (reg === "poetic") {
     if (roleKind === "seer" || roleKind === "witch" || roleKind === "guard" || roleKind === "hunter" || roleKind === "elder") {
-      return rebutLead + "平票當前，小生不敢再藏鋒：" + extraProof + "留得青山在方能清狼患，還請諸君齊心票投 " + rName + "！" + signoff;
+      return rebutLead + "平票當前我也不能再藏了：" + extraProof + "留得青山在才好抓狼，還請大家齊心投 " + rName + "。" + signoff;
     }
-    return rebutLead + "平票之局如品雙茶，清濁自見！小生堂堂好人若遭誤投實屬可惜，反觀 " + rName + " 破綻更深，請諸位把票集中給 " + rName + "！" + signoff;
+    return rebutLead + "平票就像品兩杯茶，清濁一喝便知。我這好人若被誤投太可惜，反觀 " + rName + " 破綻更深，請各位把票集中給 " + rName + "。" + signoff;
   }
   if (reg === "debate") {
     return rebutLead + "進入平票最終結辯！" + (extraProof || "") + "對比我與 " + rName + " 的論證完整度與立場一致性，高下立判！請全場非平票評審把決定性一票投給 " + rName + "！" + signoff;
@@ -662,47 +662,47 @@ function buildPersonaLastWordsText(self, kind, d) {
   const { isFirstNight, tLbl, isWolf, callouts, topSusLbl, wolfTotal } = d;
   if (reg === "classical") {
     if (kind === "seer") {
-      return "諸君明鑒！吾實為明心觀察員，臨去遺言相告：昨夜親驗 " + tLbl + "，確乃" + (isWolf ? ("酸民狼無疑！來日務必共逐 " + tLbl + "！") : "清白良善，諸君萬勿誤傷！");
+      return "各位明辨！我是真明心觀察員，離席前留這條關鍵查驗：昨晚親驗 " + tLbl + "，確認是" + (isWolf ? ("酸民狼無疑，明天務必齊票出 " + tLbl + "。") : "清白好人，大家千萬別誤傷。");
     }
     if (kind === "witch") {
       return tLbl
-        ? ("吾亮滴水奉茶師留遺言！前夜正以暖心回甘茶護回 " + tLbl + "，其清白無瑕，餘局託付諸君明辨！")
-        : "惜哉吾執滴水奉茶師之印竟先退席！諸君務須謹辨妄言，勿為酸民狼所惑！";
+        ? ("我亮滴水奉茶師留遺言：前晚正是我用暖心回甘茶護回 " + tLbl + "，他清白無瑕，剩下的局勢就交給各位明辨了。")
+        : "可惜我拿滴水奉茶師卻先離席，請各位審慎對照票型，別被假風向帶偏。";
     }
     if (kind === "guard") {
       return tLbl
-        ? ("吾亮護心守衛留此遺言！昨夜結界曾護 " + tLbl + "，奉茶師慎防同守破盾，餘事拜託諸君！")
-        : "吾乃護心守衛先一步退席！請諸君細察誰人迴避昨夜守護脈絡，早日清朗茶席！";
+        ? ("我亮護心守衛留遺言：昨晚曾守護 " + tLbl + "，奉茶師留意別同守破盾，後面就拜託各位了。")
+        : "我是護心守衛先走一步，請各位細察誰在迴避昨晚守護的脈絡。";
     }
     if (kind === "hunter") {
-      return "吾乃直心糾察長留最後一言！" + (tLbl ? ("觀全場最疑者首推 " + tLbl + "，") : "") + "願諸君循票型邏輯盡逐酸民狼！";
+      return "我是直心糾察長留最後一句，" + (tLbl ? ("全場最可疑的首推 " + tLbl + "，") : "") + "願大家循票型把酸民狼找出來。";
     }
     if (kind === "good_voted" && callouts) {
-      return "冤哉！吾實乃清白好人，竟遭誤逐！方才帶頭投吾之 " + callouts + " 中必藏酸民狼，請諸君回溯票型以正是非！";
+      return "冤枉了，我確是清白好人。剛才帶頭投我的 " + callouts + " 之中必藏酸民狼，請各位回看票型辨明是非。";
     }
     if (kind === "good_night1") {
-      return "首夜遽遭請離，甚為可惜！吾本善良同道，請諸君今日細聽誰人急於生風，盡擒席間 " + wolfTotal + " 隻酸民狼！";
+      return "首夜就離席確實可惜。我是好人，請大家今天細聽誰急著挑起節奏，找出這 " + wolfTotal + " 隻酸民狼。";
     }
   }
   if (reg === "guzheng") {
     if (kind === "seer") {
-      return "諸君且聽妾身最後一弦清音：吾實乃明心觀察員，昨夜探明 " + tLbl + " 確係" + (isWolf ? ("酸民狼，務請集中票投 " + tLbl + "！") : "善良同道，切莫誤傷！");
+      return "請大家聽晴嵐最後這句清音：我是明心觀察員，昨晚查驗 " + tLbl + " 確認是" + (isWolf ? ("酸民狼，務必把票集中給 " + tLbl + "。") : "善良夥伴，千萬別誤投。");
     }
     if (kind === "witch") {
       return tLbl
-        ? ("妾身以滴水奉茶師之名留此一言：前夜暖心回甘茶所護乃 " + tLbl + "，請護此清音勿投錯人！")
-        : "惜哉滴水奉茶師先別茶席，願諸君靜心細辨弦外之音，早日尋得真相。";
+        ? ("我以滴水奉茶師身分留這句提醒：前晚暖心回甘茶護回的是 " + tLbl + "，請大家保護他別投錯了。")
+        : "可惜滴水奉茶師先別茶席，願大家靜心聽出弦外之音，早日看清真相。";
     }
     if (kind === "good_voted" && callouts) {
-      return "一曲未竟竟遭誤投…妾身確為好夥伴，臨別提醒諸君細查方才齊投妾身的 " + callouts + "，內中必藏失調之狼！";
+      return "這局還沒聽完就被誤投了…晴嵐真是好夥伴，離席前提醒大家回頭看剛才齊投我的 " + callouts + "，裡頭肯定藏著走調的狼。";
     }
   }
   if (reg === "poetic") {
     if (kind === "seer") {
-      return "茶未涼而人先別！小生實乃明心觀察員，昨夜親驗 " + tLbl + " 實屬" + (isWolf ? ("酸民狼，請諸位同窗共逐 " + tLbl + "！") : "清白好人，莫令忠良蒙冤！");
+      return "茶還沒涼人就先離席了！我是真明心觀察員，昨晚親驗 " + tLbl + " 確定是" + (isWolf ? ("酸民狼，請各位同窗齊票出 " + tLbl + "。") : "清白好人，可別誤傷好夥伴。");
     }
     if (kind === "good_voted" && callouts) {
-      return "哈哈，清者自清！小生好人一枚竟先退席，還望眾同窗回顧剛才合力推我的 " + callouts + "，狼跡正在其中！";
+      return "哈哈，清者自清。我好人一枚先退席了，麻煩各位回頭檢視剛才聯手推我的 " + callouts + "，狼跡就在裡面。";
     }
   }
   if (reg === "debate") {
@@ -735,34 +735,34 @@ function buildPersonaLastWordsText(self, kind, d) {
 function buildPersonaWolfNightLine(mate, targetLbl, mode) {
   const reg = getPersonaRegister(mate);
   if (mode === "fake_seer_plan") {
-    if (reg === "classical") return "噤聲…今夜吾等先鎖 " + targetLbl + "，明日白晝由吾偽託明心觀察員執掌輿論！";
-    if (reg === "guzheng") return "輕聲…今夜且先請 " + targetLbl + " 暫離茶席，明晨由妾身假借觀察員之名擾其清音。";
-    if (reg === "poetic") return "噓…今夜先請 " + targetLbl + " 歇茶，明日小生便冒充明心觀察員攪動風雲！";
+    if (reg === "classical") return "小聲點…今晚我們先鎖定 " + targetLbl + "，明天白天由我冒充明心觀察員掌握話語權。";
+    if (reg === "guzheng") return "輕聲說…今晚先請 " + targetLbl + " 暫離茶席，明早由晴嵐假借觀察員名義帶偏節奏。";
+    if (reg === "poetic") return "噓…今晚先請 " + targetLbl + " 歇茶，明天由我冒充明心觀察員攪動風向。";
     if (reg === "debate") return "噓！今晚先消掉 " + targetLbl + "，明天我直接悍跳觀察員用辯論壓爆全場！";
     if (reg === "sport") return "衝啊！今晚先抄截掉 " + targetLbl + "，明天我直接悍跳觀察員全場帶節奏！";
     return "噓…今晚我們先鎖定 " + targetLbl + "，明天白天我幫你冒充明心觀察員帶風向！";
   }
   if (mode === "stealth_plan") {
-    if (reg === "classical") return "噤聲…吾觀 " + targetLbl + " 頗似神職要員，今夜先請彼暫退如何？已為汝標定！";
-    if (reg === "guzheng") return "輕聲…妾身覺察 " + targetLbl + " 似為席間主心骨，今夜先請他歇息可好？";
-    if (reg === "poetic") return "噓…小生觀 " + targetLbl + " 氣度不凡恐為核心好人，今夜先請他喝杯靜心茶吧！";
+    if (reg === "classical") return "小聲點…我看 " + targetLbl + " 頗像核心神職，今晚先請他退席如何？我先標好了。";
+    if (reg === "guzheng") return "輕聲說…晴嵐感覺 " + targetLbl + " 很像席間主心骨，今晚先請他歇息好不好？";
+    if (reg === "poetic") return "噓…我看 " + targetLbl + " 氣度沉穩像核心好人，今晚先請他喝杯靜心茶吧。";
     if (reg === "data") return "照場上表現看，" + targetLbl + " 最像核心好人，建議今晚先請他離席，我先標起來了。";
     if (reg === "pastry") return "噓～柚子覺得 " + targetLbl + " 看起來好厲害喔，今晚我們偷偷先把他請去休息好不好？";
     return "噓…我感覺 " + targetLbl + " 很像核心好夥伴，今晚先請他暫離如何？已幫你標起來！";
   }
   // Wolf night tactic replies
   if (mode === "reply_fake_seer") {
-    if (reg === "classical") return "領命！明日白晝吾便偽跳觀察員奪其話語權，汝於席下策應衝票即可！";
-    if (reg === "guzheng") return "依君所言，明晨妾身便假託觀察員擾亂視聽，還請暗中呼應。";
+    if (reg === "classical") return "沒問題，明天白天我來悍跳觀察員搶話語權，你在席下策應衝票即可。";
+    if (reg === "guzheng") return "好，明早由晴嵐假託觀察員擾亂風向，再麻煩你暗中呼應。";
     if (reg === "debate") return "收到！明天我直接悍跳觀察員強勢立論，你在下面幫我把票灌滿！";
     return "收到！明天白天我直接悍跳明心觀察員搶警徽帶風向，你在下面幫我衝票！";
   }
   if (mode === "reply_deep_stealth") {
-    if (reg === "classical") return "善！吾等俱潛深水、不動聲色，坐觀好人自相疑忌！";
-    if (reg === "guzheng") return "極妙，妾身定當收斂鋒芒、深水藏身，靜待彼輩自亂陣腳。";
+    if (reg === "classical") return "好計策，我們沉住氣低調倒鉤，靜觀好人自相疑忌。";
+    if (reg === "guzheng") return "明白，晴嵐會收斂鋒芒深水藏身，靜待他們自己露出破綻。";
     return "明白！我們全員低調深水倒鉤、絕不露破綻，等好人自己內訌！";
   }
-  if (reg === "classical") return "善！明日白晝吾必與汝合兵一處、齊指同一目標逐之！";
+  if (reg === "classical") return "好，明天白天我們合兵一處、齊指同一目標。";
   if (reg === "sport") return "收到！明天全場快攻配合你集火同一個目標，一波帶走！";
   return "好！明天白天發言跟投票我全力配合你集火同一目標，一口氣沖出去！";
 }

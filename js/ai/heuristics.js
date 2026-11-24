@@ -3,20 +3,116 @@
  */
 "use strict";
 
+function determineSpeechLengthTier(speaker, ctx) {
+  if (!speaker || !ctx) return "standard";
+  const inPk = Boolean(ctx.snap && ctx.snap.pkActive && Array.isArray(ctx.snap.pkCandidates) && ctx.snap.pkCandidates.indexOf(speaker.id) !== -1);
+  const hasInterjOnMe = Boolean(
+    Array.isArray(ctx.publicInterjections) &&
+    ctx.publicInterjections.some(function (it) { return it && it.targetId === speaker.id; })
+  );
+  if (
+    inPk ||
+    ctx.seerWolfOnMe ||
+    ctx.wolfPitOnMe ||
+    ctx.accuseOnMe ||
+    ctx.priorSameRoleSteal ||
+    ctx.dualSeerWorlds ||
+    ctx.playerAnchorOnMe ||
+    hasInterjOnMe
+  ) {
+    return "intense";
+  }
+  const hasKeyRoleIntel = Boolean(
+    (speaker.role === "seer" && Array.isArray(speaker.checkedHistory) && speaker.checkedHistory.length > 0) ||
+    (speaker.role === "witch" && speaker.savedSeatId && !speaker.witchAnnouncedSave) ||
+    ctx.priorSeerWolfEv ||
+    ctx.vouchOnMe ||
+    ctx.isFirstToday
+  );
+  if (hasKeyRoleIntel) return "standard";
+  const topSusScore = (ctx.spokenOthers || []).reduce(function (mx, s) {
+    return Math.max(mx, (speaker.suspicionMap && speaker.suspicionMap[s.id]) || 50);
+  }, 50);
+  if (topSusScore >= 64) return "standard";
+  // ~35-40% of calm edge/plain seats speak concisely (15-28 chars) so table rhythm breathes naturally!
+  const h = (speaker.id * 7 + (ctx.day || 1) * 13 + (ctx.spokenIdsToday ? ctx.spokenIdsToday.length : 0) * 5) % 10;
+  return h < 4 ? "brief" : "standard";
+}
+
+function buildBriefPassSpeech(speaker, ctx) {
+  const { spokenOthers, unspokenOthers, seatLabel, recentTableReactionNote, recentInterjectionNote } = ctx;
+  const reg = typeof getPersonaRegister === "function" ? getPersonaRegister(speaker) : "balanced";
+  const nextOne = unspokenOthers && unspokenOthers[0] ? seatLabel(unspokenOthers[0]) : "";
+  const ally = (spokenOthers || []).slice().sort(function (a, b) {
+    return ((speaker.suspicionMap && speaker.suspicionMap[a.id]) || 50) - ((speaker.suspicionMap && speaker.suspicionMap[b.id]) || 50);
+  })[0] || null;
+  if (recentInterjectionNote) {
+    return {
+      targetId: null, relationType: null, accuseId: null, vouchId: null, wolfPits: [], goodPits: [],
+      hasToxicSlip: false, lengthTier: "brief",
+      text: recentInterjectionNote
+    };
+  }
+  if (recentTableReactionNote) {
+    return {
+      targetId: null, relationType: null, accuseId: null, vouchId: null, wolfPits: [], goodPits: [],
+      hasToxicSlip: false, lengthTier: "brief",
+      text: recentTableReactionNote
+    };
+  }
+  let text = "";
+  if (reg === "classical") {
+    text = nextOne
+      ? ("前面幾位還算言之成理，暫無確鑿破綻，先聽 " + nextOne + " 怎麼說。")
+      : "目前線索未明，點到為止，等下一輪再細看票型。";
+  } else if (reg === "guzheng") {
+    text = nextOne
+      ? ("剛才聽下來大致還算清正，晴嵐先聽 " + nextOne + " 開口再定。")
+      : "目前聽起來都還平和，我先記個印象，後面再對。";
+  } else if (reg === "poetic") {
+    text = nextOne
+      ? ("前面幾位聊得都還算順，我先喝口茶聽 " + nextOne + " 怎麼接。")
+      : "這輪茶味還算清正，沒特別抓到毛病，先留白。";
+  } else if (ally) {
+    text = "前面聊得滿乾淨的，" + seatLabel(ally) + " 聽著還行，我這輪先聽後位。";
+  } else {
+    text = nextOne
+      ? ("前面這幾位還沒抓到明顯破綻，先聽 " + nextOne + " 怎麼說。")
+      : "我這輪沒特別抓到漏洞，先聽完一圈再看票型。";
+  }
+  return {
+    targetId: ally ? ally.id : null,
+    relationType: ally ? "trust" : null,
+    accuseId: null,
+    vouchId: ally ? ally.id : null,
+    wolfPits: [],
+    goodPits: ally ? [ally.id] : [],
+    hasToxicSlip: false,
+    lengthTier: "brief",
+    text: text
+  };
+}
+
 function buildGoodTeamDeductionSpeech(speaker, ctx) {
   const {
     snap, getBlindSeat, aliveOthers, day, spokenIdsToday, spokenOthers, unspokenOthers, spokeToday,
     isFirstToday, isLateSeat, flv, seatLabel, fill, pickVoice, callbackPhrase,
     prevVoteNote, prevVoteSuspect, vouchOnMe, priorSeerWolfEv, priorGodClaims,
-    slotPlan, dualSeerWorlds
+    slotPlan, dualSeerWorlds, recentTableReactionNote, recentInterjectionNote
   } = ctx;
   const readSeat = typeof getBlindSeat === "function" ? getBlindSeat : (snap ? snap.getSeat : getSeat);
+
+  const lengthTier = determineSpeechLengthTier(speaker, ctx);
+  if (lengthTier === "brief" && !prevVoteNote && (!priorGodClaims || !priorGodClaims.length)) {
+    return buildBriefPassSpeech(speaker, ctx);
+  }
 
   const pVoice = typeof pickVoice === "function" ? pickVoice : function () { return ""; };
   const leadPhrase = pVoice("lead", 1);
   const dualLeadPhrase = pVoice("dualLead", 2);
-  const signoffPhrase = pVoice("signoff", 3) || "先這樣，過！";
-  const cbNote = (!isFirstToday && callbackPhrase) ? callbackPhrase : "";
+  const signoffPhrase = pVoice("signoff", 3) || "";
+  const liveTableBeat = recentInterjectionNote || recentTableReactionNote || "";
+  const cbNote = (!isFirstToday && (liveTableBeat || callbackPhrase)) ? (liveTableBeat || callbackPhrase) : "";
 
   const baseGoodIds = (slotPlan && Array.isArray(slotPlan.goodPits)) ? slotPlan.goodPits.map(function (s) { return s.id; }) : [];
   const baseWolfIds = (slotPlan && Array.isArray(slotPlan.wolfPits)) ? slotPlan.wolfPits.map(function (s) { return s.id; }) : [];
@@ -105,7 +201,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
         : ("好人坑可以先認 " + goodSidePits.map(seatLabel).join("、") + "。"))
       : "";
     const leadPrefix = isLateSeat
-      ? (leadPhrase + (spReg === "classical" ? "吾居末席總攬雙邊狼籍：" : (spReg === "guzheng" ? "妾身居末席為諸君理清雙音脈絡：" : "我在末置位幫全場盤清兩邊狼坑：")))
+      ? (leadPhrase + (spReg === "classical" ? "我居末席總覽兩邊狼坑：" : (spReg === "guzheng" ? "晴嵐在末位幫大家理清兩邊脈絡：" : "我在末置位幫全場盤清兩邊狼坑：")))
       : (dualLeadPhrase || ("場上 " + sALbl + " 跟 " + sBLbl + " 對跳明心觀察員，我直接對比兩邊的坑位："));
 
     const dualText = typeof buildPersonaDualSeerText === "function"
@@ -169,11 +265,11 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
       ? ("目前後置位 " + seatLabel(unspokenOthers[0]) + " 還沒講話，先等後面表水再開狼坑。")
       : (spokenPits.length > 0 ? ("目前前面發言較可疑的狼坑位是 " + formatSeatList(spokenPits).join(" 跟 ") + "。") : "");
     const vouchText = spReg === "classical"
-      ? (leadPhrase + "多謝前席 " + seatLabel(vSeat) + " 明察秋毫列吾於善席！觀其論述章法秩然，吾亦先互保 " + seatLabel(vSeat) + " 居好人坑；" + unspokenPitHint + signoffPhrase)
+      ? (leadPhrase + "多謝前席 " + seatLabel(vSeat) + " 明察把我放在好人席，觀其推論條理分明，我也先互保 " + seatLabel(vSeat) + "；" + unspokenPitHint + signoffPhrase)
       : (spReg === "guzheng"
-        ? (leadPhrase + "謝過方才 " + seatLabel(vSeat) + " 知音相護、將妾身列入善席！聽其音色清正，晴嵐亦願先保 " + seatLabel(vSeat) + "；" + unspokenPitHint + signoffPhrase)
+        ? (leadPhrase + "謝謝剛才 " + seatLabel(vSeat) + " 願意信任晴嵐，聽你語氣清正誠懇，我也先保 " + seatLabel(vSeat) + "；" + unspokenPitHint + signoffPhrase)
         : (spReg === "poetic"
-          ? (leadPhrase + "多謝同窗 " + seatLabel(vSeat) + " 仗義相保！一席清談投緣，小生這廂也先互保 " + seatLabel(vSeat) + " 站好人坑；" + unspokenPitHint + signoffPhrase)
+          ? (leadPhrase + "多謝同窗 " + seatLabel(vSeat) + " 仗義相保，聊得滿投緣的，我這邊也先互保 " + seatLabel(vSeat) + " 站好人坑；" + unspokenPitHint + signoffPhrase)
           : (leadPhrase + "謝謝剛剛前置位 " + seatLabel(vSeat) + " 把我放進好人坑！聽完他剛才的盤法我覺得邏輯順暢，我這邊也先互保 " + seatLabel(vSeat) + " 站好人坑；" + unspokenPitHint + signoffPhrase)));
     return {
       targetId: susCandidate ? susCandidate.id : vouchOnMe.speakerId,
@@ -361,32 +457,32 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     const secSus = wolfSlots[1] || null;
     const goodText = goodSlots.length > 0
       ? (spReg === "classical"
-        ? (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 方才陳詞醇正，吾先列之於善席；")
+        ? (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 剛才陳詞穩重，我先列在好人席；")
         : (spReg === "guzheng"
-          ? (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 音色清朗真誠，妾身先列善席；")
+          ? (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 語氣清朗真誠，晴嵐先放好人席；")
           : (spReg === "poetic"
-            ? (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 言辭坦蕩茶味清正，小生先置好人坑；")
+            ? (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 說法坦蕩，我先放進好人坑；")
             : (goodSlots.slice(0, 2).map(seatLabel).join("、") + " 前面講話比較誠懇，我先放進好人坑；"))))
       : "";
     const wolfText = wolfSlots.length > 0
       ? (spReg === "classical"
-        ? ("綜觀前席已言諸人，狼籍首當深究 " + wolfSlots.map(seatLabel).join(" 及 ") + "！")
+        ? ("對照前面已發言的幾位，狼坑首推 " + wolfSlots.map(seatLabel).join(" 與 ") + "。")
         : (spReg === "guzheng"
-          ? ("細辨前席餘韻，失調可疑之狼坑首在 " + wolfSlots.map(seatLabel).join(" 與 ") + "！")
+          ? ("細聽前面幾位的語氣，比較失調的狼坑落在 " + wolfSlots.map(seatLabel).join(" 與 ") + "。")
           : (spReg === "poetic"
-            ? ("細品前面幾番對答，小生重點圈定的狼坑是 " + wolfSlots.map(seatLabel).join(" 跟 ") + "！")
-            : ("目前前面講過的人裡，狼坑我重點圈 " + wolfSlots.map(seatLabel).join(" 跟 ") + "！"))))
+            ? ("細品前面幾番對答，阿竹重點圈定的狼坑是 " + wolfSlots.map(seatLabel).join(" 跟 ") + "。")
+            : ("目前前面講過的人裡，狼坑我重點圈 " + wolfSlots.map(seatLabel).join(" 跟 ") + "。"))))
       : "";
     const openPrefix = isLateSeat
-      ? (leadPhrase + (spReg === "classical" ? "吾居末席總覽全場是非：" : (spReg === "guzheng" ? "晴嵐居末席為諸君收束餘韻：" : "我在末置位幫大家總結前面坑位：")))
+      ? (leadPhrase + (spReg === "classical" ? "我在末席幫大家總覽全場是非：" : (spReg === "guzheng" ? "晴嵐在末位收束一下前面的脈絡：" : "我在末置位幫大家總結前面坑位：")))
       : (leadPhrase + cbNote);
 
     if (topSus && (speaker.suspicionMap[topSus.id] || 50) >= 54) {
       const focusTail = spReg === "classical"
-        ? ("此輪吾票先指 " + seatLabel(topSus) + (secSus ? ("，並嚴察 " + seatLabel(secSus)) : "") + "！")
+        ? ("這輪我這票先指 " + seatLabel(topSus) + (secSus ? ("，並留意 " + seatLabel(secSus)) : "") + "。")
         : (spReg === "guzheng"
-          ? ("本輪妾身焦點先落於 " + seatLabel(topSus) + (secSus ? ("，兼察 " + seatLabel(secSus)) : "") + "！")
-          : ("這輪我的焦點先掛在 " + seatLabel(topSus) + (secSus ? ("，順便緊盯 " + seatLabel(secSus)) : "") + "！"));
+          ? ("這輪晴嵐的焦點先落在 " + seatLabel(topSus) + (secSus ? ("，同時留意 " + seatLabel(secSus)) : "") + "。")
+          : ("這輪我的焦點先掛在 " + seatLabel(topSus) + (secSus ? ("，順便緊盯 " + seatLabel(secSus)) : "") + "。"));
       return {
         targetId: topSus.id,
         relationType: "suspect",
@@ -507,9 +603,11 @@ function sanitizeSpeechMeta(speaker, out, snapArg) {
 
 function buildHeuristicAiSpeech(speaker) {
   const ctx = buildSpeechContext(speaker);
+  const lengthTier = typeof determineSpeechLengthTier === "function" ? determineSpeechLengthTier(speaker, ctx) : "standard";
   const res = tryDefendOrCounterClaim(speaker, ctx)
     || tryRoleSpecificSpeech(speaker, ctx)
     || buildGoodTeamDeductionSpeech(speaker, ctx);
+  if (res && !res.lengthTier) res.lengthTier = lengthTier;
   if (typeof antiCheatMonitor !== "undefined" && speaker) {
     antiCheatMonitor.recordDecision("day_speech", speaker.id, "盲視發言推理完成");
   }

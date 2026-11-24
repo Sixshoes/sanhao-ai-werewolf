@@ -12,7 +12,7 @@ const TEA_DIRECTOR_EVENTS = [
     id: "boba_truce",
     shortTitle: "學長請喝冬瓜青",
     title: "🍵 清茗插播・學長請喝冬瓜青",
-    desc: "暖飲撫慰人心！本輪好話或 AI 轉好話說服力額外 +25%，友善度雙倍回升！",
+    desc: "暖飲撫慰人心！本輪溫和陳詞或潤飾好話說服力額外提升，友善度雙倍回升。",
     badge: "說服+25%"
   },
   {
