@@ -294,7 +294,7 @@ function cycleWolfGodMark(seatId) {
   else delete state.match.wolfGodMarks[seatId];
   sound.tone(next.key ? 560 : 340, 0.06, "triangle", 0.045, 0);
   if (next.key) {
-    spawnFx(seatId, "🔍 " + next.label, "#fbbf24");
+    spawnFx(seatId, next.label, "#fbbf24");
   }
   renderPlayerPitBuilder();
   if (typeof renderSeatIntelPopover === "function") renderSeatIntelPopover();
@@ -1201,11 +1201,11 @@ function preparePlayerSpeechPanel() {
     const evSeat = getSeat(evClue.seatId);
     cards.push({
       tgKind: "evidence",
-      tgTag: "⚡呈堂證供",
+      tgTag: "呈堂證供",
       isEvidenceCard: true,
       evidenceClueId: evClue.id,
       evidenceTargetId: evSeat.id,
-      label: "【⚡呈堂證供・邏輯破防】對 " + fmtSeatNum(evSeat.id) + "號 " + evSeat.name + " 打出關鍵線索！",
+      label: "【呈堂證供・邏輯破防】對 " + fmtSeatNum(evSeat.id) + "號 " + evSeat.name + " 打出關鍵線索！",
       text: evClue.summary
     });
   } else if (player.role === "wolf") {
@@ -1350,6 +1350,7 @@ function refreshLiveNlpUI() {
   badge.className = res.isToxic ? "text-rose-400 font-black" : "text-emerald-300 font-bold";
 
   const inlineTg = el("speechThreeGoodBadge");
+  if (typeof refreshSpeechCharCounter === "function") refreshSpeechCharCounter();
   if (inlineTg) {
     const hasText = Boolean(val && val.trim().length > 0);
     if (!hasText) {
@@ -1403,7 +1404,7 @@ function submitPlayerSpeech() {
     spawnFx(getPlayerId(), otherSeer ? "對跳觀察員!" : "亮明心觀察員!", "#fbbf24");
     if (otherSeer) {
       triggerShake(300);
-      triggerCutIn("🔮 真假明心觀察員對跳！", "全場焦點鎖定，誰才是真正的明心觀察員？", "gold");
+      triggerCutIn("真假明心觀察員對跳", "全場焦點鎖定，誰才是真正的明心觀察員？", "gold");
     }
   } else if (claimedWitchNow) {
     player.claimedRole = "witch";
@@ -1539,7 +1540,7 @@ function submitPlayerSpeech() {
       }
     }
     if (dayFlow && typeof formatBadgeFlowSummary === "function") {
-      showToast("👑 已更新公開警徽流：" + formatBadgeFlowSummary(dayFlow), "gold");
+      showToast("已更新公開警徽流：" + formatBadgeFlowSummary(dayFlow), "gold");
     }
   }
   plWolfPits.forEach(function (wpId) {
@@ -1695,7 +1696,7 @@ function submitPlayerSpeech() {
         }
       });
       setSeatEmotion(evTarget.id, "shock", 4200);
-      spawnFx(evTarget.id, "⚡ 邏輯破防 +24!", "#fbbf24", { scale: 1.25, durationMs: 1900 });
+      spawnFx(evTarget.id, "邏輯破防 +24", "#fbbf24", { scale: 1.25, durationMs: 1900 });
       spawnBeam(pid, evTarget.id, "#fbbf24", "logic_break", 680);
       spawnBurst(evTarget.id, ["#fbbf24", "#f43f5e", "#ffffff"], 28, "slash");
       if (typeof triggerScreenFlash === "function") triggerScreenFlash("#fbbf24", 480, 0.42);
@@ -1705,13 +1706,13 @@ function submitPlayerSpeech() {
         if (typeof stage3d.triggerHeroBeat === "function") stage3d.triggerHeroBeat("celebrate", 2200);
       }
       triggerShake(280);
-      triggerCutIn("⚡ 呈堂證供・邏輯破防！", "鐵證命中 " + fmtSeatNum(evTarget.id) + "號 " + evTarget.name + " 破綻，全場好人高度警覺！", "gold");
+      triggerCutIn("呈堂證供・邏輯破防", "鐵證命中 " + fmtSeatNum(evTarget.id) + "號 " + evTarget.name + " 破綻，全場好人高度警覺！", "gold");
       triggerAiCrowdReactions("crit", evTarget.id);
       bumpCombo("邏輯破防");
       addThreeGoodPoint("heart", "存好心照破矛盾");
       addLog({
         kind: "blessing",
-        title: "⚡ 邏輯破防！你出示蒐證鐵證直指 " + fmtSeatNum(evTarget.id) + "號 " + evTarget.name + " 矛盾，好人陣營大幅提高警戒！",
+        title: "邏輯破防！你出示蒐證鐵證直指 " + fmtSeatNum(evTarget.id) + "號 " + evTarget.name + " 矛盾，好人陣營大幅提高警戒。",
         text: ""
       });
     }

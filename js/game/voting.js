@@ -487,12 +487,12 @@ function finalizeVoteRound(playerTargetId) {
       text: ""
     });
 
-    if (outSeat.team === "wolf" && state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "tea_master_blessing") {
+    if (outSeat.team === "wolf" && state.match.variantMode !== "fog_seal" && state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "tea_master_blessing") {
       const playerVotedOutWolf = ballots.some(function (b) { return b.voterId === getPlayerId() && b.targetId === outSeat.id; });
       if (playerVotedOutWolf) {
         state.match.harmonyScore = clamp(state.match.harmonyScore + 12, 0, 100);
-        spawnFx(getPlayerId(), "🏮 清茗賞茶 +12!", "#fbbf24");
-        addLog({ kind: "blessing", title: "🏮 清茗奉茶公道席：精準請離酸民狼，全場友善度額外 +12！", text: "" });
+        spawnFx(getPlayerId(), "清茗賞茶 +12", "#fbbf24");
+        addLog({ kind: "blessing", title: "清茗奉茶公道席：精準請離酸民狼，全場友善度額外 +12。", text: "" });
         if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
       }
     }
@@ -1182,8 +1182,13 @@ function triggerWolfSelfExplode(seatId, opts) {
   state.activeSpeakerId = null;
   state.activeClash = null;
   state.interjectOpen = false;
+  if (state.voteFlight && Array.isArray(state.voteFlight.timers)) {
+    state.voteFlight.timers.forEach(function (t) { clearTimeout(t); });
+  }
   state.voteFlight = null;
+  state.voteLeaderId = null;
   state.voteResultPayload = null;
+  if (el("voteFlightBanner")) el("voteFlightBanner").classList.add("hidden");
   if (el("interjectPopover")) el("interjectPopover").classList.add("hidden");
 
   // 2. Flip the wolf card immediately and forfeit all remaining speeches, voting, and unfinished sheriff/badge-flow!
@@ -1216,6 +1221,7 @@ function triggerWolfSelfExplode(seatId, opts) {
     : (wLbl + " 亮牌自爆！強制截斷當日剩餘發言與公投，茶席即刻黑燈入夜");
 
   if (typeof sound !== "undefined" && typeof sound.playHunterShot === "function") sound.playHunterShot();
+  if (typeof triggerLanternOutSilhouette === "function") triggerLanternOutSilhouette(wolf.id);
   triggerShake(520);
   spawnBurst(wolf.id, ["#e11d48", "#fbbf24", "#ffffff"], 36, "slash");
   if (typeof triggerScreenFlash === "function") triggerScreenFlash("#be123c", 480, 0.36);

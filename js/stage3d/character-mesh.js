@@ -118,6 +118,9 @@ const stage3dCharGeos = {
     this.beltBuckle = new THREE.BoxGeometry(0.095, 0.095, 0.05);
 
     this.teasaucer = new THREE.CylinderGeometry(0.155, 0.125, 0.022, 16);
+    this.teaLidRim = new THREE.CylinderGeometry(0.082, 0.112, 0.032, 16);
+    this.teaLidKnob = new THREE.SphereGeometry(0.022, 10, 8);
+    this.fogSealStrip = new THREE.BoxGeometry(0.11, 0.008, 0.25);
     this.contactShadow = new THREE.PlaneGeometry(1.95, 1.95);
     this.candleGlow = new THREE.PlaneGeometry(1.15, 1.15);
     this.collar = new THREE.TorusGeometry(0.21, 0.052, 10, 22);
@@ -1010,7 +1013,33 @@ function create3DSeatActor(seat) {
   );
   teaLiquid.rotation.x = -Math.PI * 0.5;
   teaLiquid.position.y = 0.125;
-  teaGroup.add(saucer, teacup, teaLiquid);
+
+  // Eliminated Seat Teacup Cover Lid (合蓋覆杯) & Fog-Seal Plain Parchment Strip (迷霧封牌素色封條)
+  const teaLidGroup = new THREE.Group();
+  const lidBody = new THREE.Mesh(G.teaLidRim, celadonMat);
+  const lidKnob = new THREE.Mesh(G.teaLidKnob, celadonMat);
+  lidKnob.position.y = 0.026;
+  teaLidGroup.add(lidBody, lidKnob);
+  teaLidGroup.position.y = 0.24;
+  teaLidGroup.visible = false;
+
+  const sealTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createFogSealStripTexture === "function")
+    ? stage3dTextures.createFogSealStripTexture()
+    : null;
+  const fogSealStrip = new THREE.Mesh(
+    G.fogSealStrip,
+    new THREE.MeshStandardMaterial({
+      color: sealTex ? 0xffffff : 0xe5d8bc,
+      map: sealTex || null,
+      roughness: 0.85,
+      metalness: 0.02
+    })
+  );
+  fogSealStrip.position.set(0, 0.184, 0);
+  fogSealStrip.rotation.y = 0.28;
+  fogSealStrip.visible = false;
+
+  teaGroup.add(saucer, teacup, teaLiquid, teaLidGroup, fogSealStrip);
   tablePropGroup.add(teaGroup);
 
   const markCrystalMat = new THREE.MeshStandardMaterial({
@@ -1079,10 +1108,16 @@ function create3DSeatActor(seat) {
     candleGlowMat: candleGlowMat,
     candleHit: candleHit,
     teaGroup: teaGroup,
+    teaLiquid: teaLiquid,
+    teaLidGroup: teaLidGroup,
+    fogSealStrip: fogSealStrip,
     teaWorldPos: new THREE.Vector3(),
     lastSteamAt: 0,
     candleSparkBoost: 0,
     outFade: 0,
+    lidProgress: 0,
+    _wasAlive: true,
+    extinguishedAt: 0,
     markCrystal: markCrystal,
     markCrystalMat: markCrystalMat,
     idCardPivot: idCardPivot,

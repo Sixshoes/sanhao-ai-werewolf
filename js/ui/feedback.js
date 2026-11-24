@@ -14,10 +14,10 @@ const FEEDBACK_CONFIG = {
 };
 
 const FEEDBACK_CATEGORIES = {
-  bug: { key: "bug", label: "🐞 問題回報", ghLabel: "bug" },
-  ui: { key: "ui", label: "🎨 畫面與視角", ghLabel: "ui-ux" },
-  gameplay: { key: "gameplay", label: "🧠 AI 與規則", ghLabel: "gameplay" },
-  idea: { key: "idea", label: "💡 許願與建議", ghLabel: "enhancement" }
+  bug: { key: "bug", label: "問題回報", ghLabel: "bug" },
+  ui: { key: "ui", label: "畫面與視角", ghLabel: "ui-ux" },
+  gameplay: { key: "gameplay", label: "角色與規則", ghLabel: "gameplay" },
+  idea: { key: "idea", label: "許願與建議", ghLabel: "enhancement" }
 };
 
 const FEEDBACK_RATING_LABELS = {
@@ -101,7 +101,7 @@ function collectFeedbackDiagnostics() {
     : "未開局或已遮蔽";
 
   return {
-    version: "v16.0 (公測 3.0)",
+    version: "v16.1 (公測 3.1)",
     timestamp: new Date().toISOString(),
     started: Boolean(m.started),
     phase: String(m.phase || "LOBBY"),
@@ -369,16 +369,16 @@ async function submitUserFeedback() {
   if (bodyEl) bodyEl.value = "";
   if (btnEl) {
     btnEl.disabled = false;
-    btnEl.textContent = "📨 送出反饋";
+    btnEl.textContent = "送出反饋";
   }
 
   if (resultCard && resultMsg) {
     if (delivery.channel === "server") {
-      resultMsg.textContent = "✅ 已直接送達主辦者電腦（.feedback_inbox）！你也可以順手複製或送至 GitHub 備份：";
+      resultMsg.textContent = "已直接送達主辦者電腦（.feedback_inbox），也可順手複製或送至 GitHub 備份：";
     } else if (delivery.channel === "webhook") {
-      resultMsg.textContent = "✅ 已成功送達開發者雲端反饋箱！非常感謝你的試玩意見：";
+      resultMsg.textContent = "已送達雲端反饋箱，感謝你的試玩意見：";
     } else {
-      resultMsg.textContent = "✅ 已為你整理並暫存反饋報告！請點下方任一按鈕回傳給作者：";
+      resultMsg.textContent = "已整理並暫存反饋報告，請點下方按鈕回傳給作者：";
     }
     resultCard.classList.remove("hidden");
   }
@@ -390,10 +390,10 @@ async function submitUserFeedback() {
     const anonHost = typeof isAnonymousReviewHost === "function" && isAnonymousReviewHost();
     showToast(
       delivery.delivered
-        ? "💌 感謝你的反饋，已成功送達開發者！"
+        ? "感謝你的反饋，已順利送達。"
         : (anonHost
-          ? "💌 反饋已整理完成，點「複製貼給作者」即可回傳！"
-          : "💌 反饋已整理完成，點「送至 GitHub」或「複製貼給作者」即可回傳！"),
+          ? "反饋已整理完成，點「複製貼給作者」即可回傳。"
+          : "反饋已整理完成，點「送至 GitHub」或「複製貼給作者」即可回傳。"),
       "emerald"
     );
   }
@@ -419,12 +419,12 @@ function exportFeedbackHistoryJson() {
       a.click();
       document.body.removeChild(a);
       setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-      if (typeof showToast === "function") showToast("📥 已匯出 " + list.length + " 筆玩家反饋（JSON）！", "emerald");
+      if (typeof showToast === "function") showToast("已匯出 " + list.length + " 筆玩家反饋（JSON）。", "emerald");
       return true;
     }
   } catch (e) {}
   copyFeedbackText(text);
-  if (typeof showToast === "function") showToast("📋 已複製全部反饋 JSON 到剪貼簿！", "emerald");
+  if (typeof showToast === "function") showToast("已複製全部反饋 JSON 到剪貼簿。", "emerald");
   return true;
 }
 
@@ -468,7 +468,7 @@ function bindFeedbackEvents() {
       if (!target) return;
       copyFeedbackText(buildFeedbackReportText(target)).then(function (ok) {
         if (typeof showToast === "function") {
-          showToast(ok ? "📋 已複製完整反饋！可直接貼到 LINE / Discord 給作者" : "無法自動複製，請手動選取內容", ok ? "emerald" : "warn");
+          showToast(ok ? "已複製完整反饋，可直接貼給作者。" : "無法自動複製，請手動選取內容", ok ? "emerald" : "warn");
         }
       });
     });

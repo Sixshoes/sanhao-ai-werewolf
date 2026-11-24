@@ -243,6 +243,7 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
     const reg = (speaker && typeof getPersonaRegister === "function") ? getPersonaRegister(speaker) : "";
     const isClassical = (reg === "classical" || reg === "guzheng" || reg === "poetic");
     stageBox.classList.toggle("is-classical-speech", isClassical);
+    stageBox.style.borderLeftColor = (speaker && speaker.color) ? speaker.color : "";
   }
   if (speaker) {
     if (med) {
@@ -396,7 +397,7 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
 
     if (isContraHit) {
       contraEmitted = true;
-      html += '<span class="clue-token clue-contradiction' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="⚡ 發現邏輯破綻：「' + escapeHtml(activeContraRec.label) + '」！點擊立即收入呈堂證供！">' + escapeHtml(tok) + (contraCaught ? ' ✓' : ' ⚡') + '</span>';
+      html += '<span class="clue-token clue-contradiction' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="發現邏輯破綻：「' + escapeHtml(activeContraRec.label) + '」，點擊收入呈堂證供">' + escapeHtml(tok) + (contraCaught ? ' ✓' : ' ·破綻') + '</span>';
     } else if (seatMatch) {
       const sid = parseInt(seatMatch[1], 10);
       html += '<span class="clue-token clue-seat" data-clue-type="seat" data-seat-id="' + sid + '" title="點擊查看 ' + fmtSeatNum(sid) + '號情報並鎖定">' + escapeHtml(tok) + '</span>';
@@ -415,7 +416,7 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
   }
   html += isPartial ? "" : "」";
   if (activeContraRec && !contraEmitted && !isPartial && speaker && speaker.id !== getPlayerId()) {
-    html += ' <span class="clue-token clue-contradiction ml-1' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="⚡破綻" data-speaker-id="' + spId + '" title="⚡ 點擊收入「' + escapeHtml(activeContraRec.label) + '」呈堂證供">⚡收證：' + escapeHtml(activeContraRec.label) + (contraCaught ? ' ✓' : '') + '</span>';
+    html += ' <span class="clue-token clue-contradiction ml-1' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="破綻" data-speaker-id="' + spId + '" title="點擊收入「' + escapeHtml(activeContraRec.label) + '」呈堂證供">收證：' + escapeHtml(activeContraRec.label) + (contraCaught ? ' ✓' : '') + '</span>';
   }
   pEl.innerHTML = html;
 }
@@ -449,7 +450,7 @@ function handleSpotlightClueClick(targetEl) {
   }
   state.match.caughtSpeechClues[key] = true;
   targetEl.classList.add("clue-caught");
-  if (targetEl.textContent.indexOf("✓") === -1) targetEl.textContent = targetEl.textContent.replace(/\s*⚡$/, "") + " ✓";
+  if (targetEl.textContent.indexOf("✓") === -1) targetEl.textContent = targetEl.textContent.replace(/\s*·破綻$/, "") + " ✓";
 
   if (type === "contradiction") {
     const contraRec = (state.match.activeSpeechContra && state.match.activeSpeechContra.speakerId === sp.id)
@@ -465,12 +466,12 @@ function handleSpotlightClueClick(targetEl) {
     if (!(pSelfClue && pSelfClue.role === "wolf" && sp.role === "wolf")) {
       state.playerMarks[sp.id] = "wolf";
     }
-    spawnFx(sp.id, "⚡ 抓包" + labelStr + "!", "#fbbf24", { scale: 1.15, durationMs: 1800 });
+    spawnFx(sp.id, "抓破" + labelStr, "#fbbf24", { scale: 1.15, durationMs: 1800 });
     spawnBurst(sp.id, ["#fbbf24", "#fde68a", "#ffffff"], 22, "slash");
     if (typeof triggerScreenFlash === "function") triggerScreenFlash("#fbbf24", 380, 0.3);
     nudgeSeat(sp.id, { scale: 0.9, vTilt: 0.24 });
     sound.tone(720, 0.12, "triangle", 0.06, 0);
-    pinClue(sp.id, "⚡" + labelStr, rebText, "contradiction");
+    pinClue(sp.id, labelStr, rebText, "contradiction");
     addThreeGoodPoint("heart", "存好心抓破矛盾");
     bumpCombo("抓破矛盾" + (extraFeast ? "（茶點×2）" : ""));
     if (extraFeast) bumpCombo("茶點加碼連擊");
@@ -645,9 +646,27 @@ function startSpotlightTypewriter(opts) {
   }
 }
 
+function refreshSpeechCharCounter() {
+  const counterEl = el("speechCharCounter");
+  if (!counterEl) return;
+  const limit = typeof getActiveSpeechCharLimit === "function" ? getActiveSpeechCharLimit() : 0;
+  if (!limit || limit <= 0) {
+    counterEl.classList.add("hidden");
+    counterEl.classList.remove("is-over");
+    return;
+  }
+  const qIn = el("quickFreeInput");
+  const curLen = qIn ? String(qIn.value || "").trim().length : 0;
+  counterEl.textContent = curLen + " / " + limit;
+  counterEl.title = "當前模式發言上限 " + limit + " 字（超出送出時將自動精簡）";
+  counterEl.classList.remove("hidden");
+  counterEl.classList.toggle("is-over", curLen > limit);
+}
+
 function refreshQuickFreeInputHint() {
   const qIn = el("quickFreeInput");
   const rwBtn = el("btnQuickInlineRewrite");
+  refreshSpeechCharCounter();
   if (!qIn || !rwBtn) return;
   const val = qIn.value.trim();
   const tray = el("rephraseChoicesTray");

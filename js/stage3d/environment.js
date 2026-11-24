@@ -2434,6 +2434,27 @@ function apply3DMoodPalette(scene, env, moodKey) {
   env.skyTex.needsUpdate = true;
 }
 
+function isDramaticFocusActive(nowMs) {
+  if (typeof state === "undefined" || !state.match || !state.match.started) return false;
+  const p = state.match.phase;
+  if (p === "LOBBY" || p === "GAME_OVER") return false;
+  const now = typeof nowMs === "number" ? nowMs : (typeof performance !== "undefined" ? performance.now() : Date.now());
+  if (state.interjectOpen || (state.lastInterjectAt && (now - state.lastInterjectAt) < 4600)) return true;
+  if (state.match.hopeConfrontation && state.match.hopeConfrontation.active) return true;
+  if (typeof isPkVoteActive === "function" && isPkVoteActive() && (p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "DAY_VOTE")) return true;
+  if (p === "LAST_WORDS_SPEECH") return true;
+  if ((p === "DAY_SPEECH" || p === "SHERIFF_ELECTION") && state.activeSpeakerId) {
+    const dayEvs = state.match.daySpeechEvents || [];
+    const latest = dayEvs.length ? dayEvs[dayEvs.length - 1] : null;
+    if (latest && latest.speakerId === state.activeSpeakerId && (latest.claimRole || latest.accuseId)) {
+      return true;
+    }
+    const sp = typeof getSeat === "function" ? getSeat(state.activeSpeakerId) : null;
+    if (sp && sp.claimedRole) return true;
+  }
+  return false;
+}
+
 function update3DEnvironment(scene, env, f, seatAnchors) {
   const t = f.tSec;
   const p = f.p;
@@ -2521,21 +2542,40 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
 
   const isMatchPointNow = Boolean(typeof state !== "undefined" && state.match && state.match.started && state.match.isMatchPoint && state.match.phase !== "GAME_OVER");
   const mpFlicker = isMatchPointNow ? (0.86 + Math.sin(t * 14.3) * 0.08 + Math.sin(t * 23.7) * 0.05) : 1.0;
-  const hazeDim = (isToxicHaze ? 0.82 : (isClearBreeze ? 1.06 : 1.0)) * (isMatchPointNow ? 0.86 : 1.0);
+  const dramaticFocusNow = isDramaticFocusActive(f.nowMs);
+  env.focusDimBlend = (env.focusDimBlend || 0) + ((dramaticFocusNow ? 1 : 0) - (env.focusDimBlend || 0)) * d08;
+  // Smoothly dim ambient/distant IBL & backdrop lighting by 35% (down to 0.65) during dramatic focus beats!
+  const focusDimMul = 1.0 - env.focusDimBlend * 0.35;
+  const blackoutNow = Boolean(env.lanternBlackoutUntil && f.nowMs < env.lanternBlackoutUntil);
+  const blackoutMul = blackoutNow ? 0.14 : 1.0;
+  const hazeDim = (isToxicHaze ? 0.82 : (isClearBreeze ? 1.06 : 1.0)) * (isMatchPointNow ? 0.86 : 1.0) * focusDimMul * blackoutMul;
   env.hemiLight.color.lerp(env.targetColors.hemiSky, lerpAmt);
   env.hemiLight.groundColor.lerp(env.targetColors.hemiGnd, lerpAmt);
   env.hemiLight.intensity += (((f.daylight ? (0.64 + env.dawnSweep * 0.18) : (f.night ? 0.42 : 0.54)) * hazeDim) - env.hemiLight.intensity) * lerpAmt;
   env.dirLight.color.lerp(env.targetColors.dir, lerpAmt);
   env.dirLight.intensity += (((f.daylight ? (0.95 + env.dawnSweep * 0.25) : (f.night ? 0.58 : 0.78)) * hazeDim) - env.dirLight.intensity) * lerpAmt;
   env.dirLight.position.x = 11 - env.dawnSweep * 9;
+
+  // Dim distant 360° sky dome subtly during dramatic focus so distant mountains recede behind the lit speaker!
+  const skyBright = clamp(focusDimMul * (blackoutNow ? 0.25 : 1.0), 0.2, 1.0);
+  if (env.skyPhotoDayMat && env.skyPhotoDayMat.color && typeof env.skyPhotoDayMat.color.setRGB === "function" && moodKey === "day") {
+    env.skyPhotoDayMat.color.setRGB(skyBright, skyBright, skyBright);
+  }
+  if (env.skyPhotoCelestialMat && env.skyPhotoCelestialMat.color && typeof env.skyPhotoCelestialMat.color.setRGB === "function" && moodKey === "day") {
+    env.skyPhotoCelestialMat.color.setRGB(skyBright, skyBright, skyBright);
+  }
+  if (env.skyPhotoDuskMat && env.skyPhotoDuskMat.color && typeof env.skyPhotoDuskMat.color.setRGB === "function" && moodKey === "twilight") {
+    env.skyPhotoDuskMat.color.setRGB(skyBright, skyBright, skyBright);
+  }
+
   if (env.rimLight) {
     if (isMatchPointNow) {
       if (!env._mpCrimsonColor) env._mpCrimsonColor = new THREE.Color(0xdc2626);
       env.rimLight.color.lerp(env._mpCrimsonColor, lerpAmt * 1.4);
-      env.rimLight.intensity += ((0.74 * mpFlicker) - env.rimLight.intensity) * lerpAmt;
+      env.rimLight.intensity += ((0.74 * mpFlicker * focusDimMul * blackoutMul) - env.rimLight.intensity) * lerpAmt;
     } else {
       env.rimLight.color.lerp(env.targetColors.rim, lerpAmt);
-      env.rimLight.intensity += ((f.daylight ? 0.36 : (f.night ? 0.48 : 0.42)) - env.rimLight.intensity) * lerpAmt;
+      env.rimLight.intensity += (((f.daylight ? 0.36 : (f.night ? 0.48 : 0.42)) * focusDimMul * blackoutMul) - env.rimLight.intensity) * lerpAmt;
     }
   }
   if (isMatchPointNow) {
@@ -2616,7 +2656,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   }
 
   // Hanging Silk Lanterns (Halos + Tassel Secondary Sway), Incense Embers, Zero-GC Tea Steam & Clouds
-  const lanternGlow = (f.daylight ? 0.52 : 1.48) * (isToxicHaze ? 0.58 : 1.0);
+  const lanternGlow = (f.daylight ? 0.52 : 1.48) * (isToxicHaze ? 0.58 : 1.0) * blackoutMul;
   env.lanternBodyMat.emissiveIntensity += (lanternGlow - env.lanternBodyMat.emissiveIntensity) * d05;
   if (env.lanternHaloMat) {
     const haloTarget = (f.daylight ? 0.08 : 0.25) * (isToxicHaze ? 0.55 : 1.0) + Math.sin(t * 3.6) * 0.025;
@@ -2800,14 +2840,16 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
 
   if (spotAnchor) {
     env.currentSpotPos.lerp(spotAnchor.worldPos, d14);
-    env.spotTarget.position.set(env.currentSpotPos.x, 1.3, env.currentSpotPos.z);
-    env.speakerSpot.position.set(env.currentSpotPos.x * 0.35, 11.2, env.currentSpotPos.z * 0.35);
-    env.speakerSpot.color.setHex(spotColorHex);
-    env.speakerSpot.intensity += (2.5 - env.speakerSpot.intensity) * d12;
+    env.spotTarget.position.set(env.currentSpotPos.x, 1.35, env.currentSpotPos.z);
+    env.speakerSpot.position.set(env.currentSpotPos.x * 0.32, 10.8, env.currentSpotPos.z * 0.32);
+    env.speakerSpot.color.setHex(dramaticFocusNow ? 0xffdf9e : spotColorHex);
+    const targetSpotInt = (dramaticFocusNow ? 3.65 : 2.5) * blackoutMul;
+    env.speakerSpot.intensity += (targetSpotInt - env.speakerSpot.intensity) * d12;
 
     env.spotCone.position.set(env.currentSpotPos.x, 9.6, env.currentSpotPos.z);
-    env.spotCone.material.color.setHex(spotColorHex);
-    env.spotCone.material.opacity += ((f.daylight ? 0.025 : 0.16) - env.spotCone.material.opacity) * d12;
+    env.spotCone.material.color.setHex(dramaticFocusNow ? 0xffdf9e : spotColorHex);
+    const coneTargetOp = (dramaticFocusNow ? (f.daylight ? 0.07 : 0.22) : (f.daylight ? 0.025 : 0.16)) * blackoutMul;
+    env.spotCone.material.opacity += (coneTargetOp - env.spotCone.material.opacity) * d12;
   } else {
     env.speakerSpot.intensity += (0 - env.speakerSpot.intensity) * d10;
     env.spotCone.material.opacity += (0 - env.spotCone.material.opacity) * d10;

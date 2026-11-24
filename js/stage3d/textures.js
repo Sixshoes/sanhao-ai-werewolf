@@ -498,41 +498,85 @@ const stage3dTextures = {
     c.width = w;
     c.height = h;
     const ctx = c.getContext("2d");
-    const bg = ctx.createLinearGradient(0, 0, 0, h);
-    bg.addColorStop(0, "#3b2216");
-    bg.addColorStop(0.5, "#26150d");
-    bg.addColorStop(1, "#1a0e08");
+    // Carved walnut-wood tally tile (刻紋木籌) with subtle natural wood grain
+    const bg = ctx.createLinearGradient(0, 0, w, h);
+    bg.addColorStop(0, "#6b472b");
+    bg.addColorStop(0.48, "#52341e");
+    bg.addColorStop(1, "#3a2313");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = "#f5c451";
-    ctx.lineWidth = 10;
+    ctx.strokeStyle = "rgba(26, 14, 8, 0.24)";
+    ctx.lineWidth = 2;
+    for (let gy = 14; gy < h; gy += 16) {
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.quadraticCurveTo(w * 0.5, gy + ((gy % 32 === 0) ? 4 : -4), w, gy);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = "#b88946";
+    ctx.lineWidth = 8;
     ctx.strokeRect(10, 10, w - 20, h - 20);
-    ctx.strokeStyle = "rgba(253, 230, 138, 0.48)";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(232, 198, 132, 0.42)";
+    ctx.lineWidth = 2.5;
     ctx.strokeRect(24, 24, w - 48, h - 48);
 
-    // Vermilion seal stamp
-    ctx.fillStyle = "#c83b2e";
-    ctx.fillRect(w / 2 - 58, h / 2 - 66, 116, 132);
-    ctx.strokeStyle = "#fde68a";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(w / 2 - 52, h / 2 - 60, 104, 120);
+    // Carved cinnabar wax/lacquer seal stamp
+    ctx.fillStyle = "#9e2b22";
+    ctx.fillRect(w / 2 - 54, h / 2 - 62, 108, 124);
+    ctx.strokeStyle = "#e6c47e";
+    ctx.lineWidth = 3.5;
+    ctx.strokeRect(w / 2 - 48, h / 2 - 56, 96, 112);
 
-    ctx.fillStyle = "#fff8eb";
+    ctx.fillStyle = "#fbf3e4";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "900 72px 'Noto Serif TC', serif";
+    ctx.font = "900 70px 'Noto Serif TC', serif";
     ctx.fillText("票", w / 2, h / 2 + 2);
 
-    ctx.fillStyle = "#f5d487";
-    ctx.font = "700 22px 'Noto Serif TC', serif";
+    ctx.fillStyle = "#e5c589";
+    ctx.font = "700 20px 'Noto Serif TC', serif";
     ctx.fillText("雲起茶席", w / 2, 66);
-    ctx.fillText("公投決議", w / 2, h - 62);
+    ctx.fillText("木籌落定", w / 2, h - 62);
 
     const tex = new THREE.CanvasTexture(c);
     tex.encoding = THREE.sRGBEncoding;
     this.cache.ballotCard = tex;
+    return tex;
+  },
+
+  createFogSealStripTexture: function () {
+    if (this.cache.fogSealStrip) return this.cache.fogSealStrip;
+    const w = 128;
+    const h = 256;
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext("2d");
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, "#e9dfc8");
+    bg.addColorStop(0.5, "#dfd2b5");
+    bg.addColorStop(1, "#d3c3a2");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = "rgba(122, 95, 58, 0.55)";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(8, 8, w - 16, h - 16);
+
+    ctx.strokeStyle = "rgba(154, 44, 34, 0.72)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(w / 2 - 30, h / 2 - 30, 60, 60);
+    ctx.fillStyle = "#8f271e";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "900 40px 'Noto Serif TC', serif";
+    ctx.fillText("封", w / 2, h / 2 + 2);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    this.cache.fogSealStrip = tex;
     return tex;
   },
 

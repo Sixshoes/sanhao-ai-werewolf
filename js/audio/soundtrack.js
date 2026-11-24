@@ -485,11 +485,34 @@ const sound = {
   applyVolumes: function () {
     if (!this.ctx || !this.bgmGain || !this.sfxGain) return;
     const now = this.ctx.currentTime;
-    const duckMul = this.voiceDucking ? 0.22 : 1.0;
-    const rampSec = this.voiceDucking ? 0.14 : 0.48;
+    const duckMul = this._briefDuckActive ? 0.14 : (this.voiceDucking ? 0.22 : 1.0);
+    const rampSec = this._briefDuckActive ? 0.04 : (this.voiceDucking ? 0.14 : 0.48);
     this.bgmGain.gain.setTargetAtTime(this.muted ? 0.0001 : Math.max(0.0001, this.bgmVol * 0.52 * duckMul), now, rampSec);
     this.sfxGain.gain.setTargetAtTime(this.muted ? 0.0001 : Math.max(0.0001, this.sfxVol * 0.82), now, 0.06);
     this.updateEqIndicator();
+  },
+
+  duckBgmBrief: function (durationMs) {
+    const dur = clamp(Number(durationMs) || 350, 120, 1200);
+    this._briefDuckActive = true;
+    this.applyVolumes();
+    if (this._briefDuckTimer) clearTimeout(this._briefDuckTimer);
+    const selfSnd = this;
+    this._briefDuckTimer = setTimeout(function () {
+      selfSnd._briefDuckTimer = null;
+      selfSnd._briefDuckActive = false;
+      selfSnd.applyVolumes();
+    }, dur);
+  },
+
+  playWoodTokenDrop: function () {
+    if (this.muted || !this.ctx) return;
+    try {
+      // Crisp walnut-wood tally landing knock + faint porcelain teacup resonance
+      this.tone(176, 0.055, "triangle", 0.075, 0);
+      this.tone(118, 0.075, "sine", 0.060, 0.012);
+      this.tone(1320, 0.055, "sine", 0.022, 0.024);
+    } catch (e) {}
   },
 
   updateEqIndicator: function () {

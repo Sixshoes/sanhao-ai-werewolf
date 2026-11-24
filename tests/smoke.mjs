@@ -3681,7 +3681,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const ledgerRes = buildCrossDayMemoryLedger(getSeat(3));
     const ledgerOk = ledgerRes && ledgerRes.flipIds.includes(2) && ledgerRes.grudgeIds.includes(2);
     const coachRes = buildAiPostMatchCoachInsights();
-    const coachOk = Array.isArray(coachRes) && coachRes.length === 3 && buildMatchReplayReport().includes("AI 名偵探覆盤教練重點");
+    const coachOk = Array.isArray(coachRes) && coachRes.length === 3 && buildMatchReplayReport().includes("本局茶席覆盤重點");
 
     // 7. v6.1 Upgrades: Direct WolfKing/Elder role picks (auto-10p), Matrix cross-day flip alert badge & 20 achievements
     renderTableMatrixIntoBody();
@@ -4043,7 +4043,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 {
   const begRes = vm.runInContext(`(() => {
     clearStepTimer();
-    const tut1ZeroExpOk = Boolean(TUTORIAL_SLIDES[0] && TUTORIAL_SLIDES[0].title.includes("沒玩過也能懂") && TUTORIAL_SLIDES[0].html.includes("抓出誰在說謊"));
+    const tut1ZeroExpOk = Boolean(TUTORIAL_SLIDES[0] && TUTORIAL_SLIDES[0].title === "基本規則" && TUTORIAL_SLIDES[0].html.includes("投票請他離席") && !TUTORIAL_SLIDES[0].html.includes("一句話秒懂"));
 
     // startGuidedBeginnerMatch sets 6p Seer + easy + no sheriff + guidedBeginner=true and does NOT auto-dismiss role card!
     startGuidedBeginnerMatch();
@@ -4419,7 +4419,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 {
   const vercelCfgOk = fs.existsSync(path.join(ROOT, "vercel.json")) && fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8").includes("/ai.html");
   const vercelIgnOk = fs.existsSync(path.join(ROOT, ".vercelignore")) && fs.readFileSync(path.join(ROOT, ".vercelignore"), "utf8").includes("tests/");
-  const cardRitualHtmlOk = html.includes('id="roleDealFlipper"') && html.includes('id="roleDealCardBack"') && html.includes("deal-back-wax-seal") && /公測\s*2\.[0-9]+/.test(html);
+  const cardRitualHtmlOk = html.includes('id="roleDealFlipper"') && html.includes('id="roleDealCardBack"') && html.includes("deal-back-wax-seal") && /公測\s*[2-9]\.[0-9]+/.test(html);
   const cardRitualCssOk = compCss.includes("dealFlipReveal") && compCss.includes(".deal-card-back") && compCss.includes(".deal-burst-ring") && compCss.includes(".title-release-badge");
   const vrmSource11 = fs.readFileSync(path.join(ROOT, "js/stage3d/vrm-loader.js"), "utf8");
   const multiJointSrcOk = vrmSource11.includes("bm.neck") && vrmSource11.includes("bm.rightShoulder") && vrmSource11.includes("bm.rightHand") && vrmSource11.includes("rightIndexProximal") && vrmSource11.includes("FINGER_PRESETS");
@@ -6128,4 +6128,184 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v16.0 (Dynamic Night-1 / No Night-2+ Last Words / Hope 15s Duel / Wolf Self-Explode / Match Point / Wolf Screen / Spirit Bets / Mission Awakening / 4 Cloud Variants) E2E smoke test PASSED!");
+// v16.1 VISUAL / TACTILE PHYSICAL FX, FRAMELESS UI SUBTRACTION, DE-AI COPY & 8-BUGFIX SUITE
+{
+  const v161Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    const prevAntiStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+
+    // 1. Collective Gaze pure logic (~50% split to mentioned target, speaker looks at mentioned target)
+    let splitSpeaker = 0;
+    let splitMention = 0;
+    for (let sid = 2; sid <= 11; sid++) {
+      if (sid === 3 || sid === 6) continue;
+      const g = computeCollectiveGazeTarget(sid, 3, 6, 1);
+      if (g === 3) splitSpeaker++;
+      else if (g === 6) splitMention++;
+    }
+    const speakerSelfNull = computeCollectiveGazeTarget(3, 3, 6, 1) === null;
+    const mentionLooksSpeaker = computeCollectiveGazeTarget(6, 3, 6, 1) === 3;
+    const gazeOk = Boolean(speakerSelfNull && mentionLooksSpeaker && splitSpeaker >= 2 && splitMention >= 2);
+
+    // 2. Dramatic Focus trigger logic
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    el("selectAiDifficulty").value = "normal";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = 2;
+    state.match.daySpeechEvents = [{ speakerId: 2, claimRole: "seer", accuseId: 4 }];
+    const focusOnGodClaim = isDramaticFocusActive(performance.now());
+    state.match.daySpeechEvents = [];
+    state.match.phase = "LAST_WORDS_SPEECH";
+    const focusOnLastWords = isDramaticFocusActive(performance.now());
+    state.match.phase = "DAY_SPEECH";
+    state.lastInterjectAt = performance.now();
+    const focusOnInterject = isDramaticFocusActive(performance.now());
+    state.lastInterjectAt = 0;
+    state.match.phase = "GAME_OVER";
+    const focusOffGameOver = !isDramaticFocusActive(performance.now());
+    const dramaticFocusOk = Boolean(focusOnGodClaim && focusOnLastWords && focusOnInterject && focusOffGameOver);
+
+    // 3. Bug #4: stage3d.clearCloseUp() clears cameraPunch.until & pending
+    stage3d.cameraPunch.pending = true;
+    stage3d.cameraPunch.until = performance.now() + 5000;
+    stage3d.cameraPunch.seatId = 1;
+    stage3d.clearCloseUp();
+    const cameraPunchResetOk = Boolean(!stage3d.cameraPunch.pending && stage3d.cameraPunch.until === 0 && stage3d.closeUpSeatId === null);
+
+    // 4. Bug #7 + 70ms Hit-Stop + BGM Brief Duck + Wood Token Drop + Lantern-Out Silhouette
+    const t0 = performance.now();
+    triggerScreenFlash("#fbbf24", 350, 0.3);
+    const flashUntilOk = Boolean(state.screenFlash && state.screenFlash.until >= t0 + 300);
+    triggerHitStop(70);
+    const hitStopOk = Boolean(state.fxHitStopUntil >= t0 + 50);
+    sound.duckBgmBrief(350);
+    const bgmDuckOk = Boolean(sound._briefDuckActive === true);
+    let woodDropOk = false;
+    try { sound.playWoodTokenDrop(); woodDropOk = true; } catch (e) { woodDropOk = false; }
+    triggerLanternOutSilhouette(2);
+    const lanternVeilOk = Boolean(el("lanternOutVeil") && el("lanternOutVeil").classList.contains("is-active"));
+
+    // 5. Bug #1: triggerWolfSelfExplode clears voteFlight timers & hides voteFlightBanner
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "wolf";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.phase = "DAY_VOTE";
+    let phantomTimerFired = false;
+    state.voteFlight = {
+      timers: [setTimeout(function () { phantomTimerFired = true; }, 5000)],
+      liveTallies: { 2: 3 },
+      total: 3,
+      done: 1
+    };
+    state.voteLeaderId = 2;
+    el("voteFlightBanner").classList.remove("hidden");
+    const wolfSelf = getPlayerSeat();
+    triggerWolfSelfExplode(wolfSelf.id);
+    const explodeTimerCleanOk = Boolean(
+      state.voteFlight === null &&
+      state.voteLeaderId === null &&
+      el("voteFlightBanner").classList.contains("hidden") &&
+      !phantomTimerFired
+    );
+
+    // 6. Bug #2: fog_seal suppresses tea_master_blessing wolf reveal & masks hunter outReason
+    state.activeVariant = "fog_seal";
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const deadWolfFog = state.match.seats.find(function (s) { return s.role === "wolf"; });
+    deadWolfFog.alive = false;
+    state.match.activeDirectorEvent = { id: "tea_master_blessing" };
+    const beforeLogLen = state.match.logs.length;
+    // Simulate resolveVotes path guard check directly via source contract & hunter presentation
+    const hSeatFog = state.match.seats.find(function (s) { return s.role === "hunter"; }) || state.match.seats[1];
+    const tSeatFog = state.match.seats.find(function (s) { return s.id !== hSeatFog.id && s.alive; });
+    executeHunterShotPresentation(hSeatFog, tSeatFog);
+    const fogHunterMaskOk = Boolean(tSeatFog.outReason === "已離席（迷霧封牌）" && state.match.logs.length >= beforeLogLen);
+    state.activeVariant = "standard";
+
+    // 7. Bug #3: clearTransientMatchTimers / finishMatch cleans match-point & vignette classes
+    document.body.classList.add("is-match-point", "is-seat-focus-vignette");
+    el("matchPointBadge").classList.remove("hidden");
+    finishMatch("good", "測試收尾");
+    const cleanFinishOk = Boolean(
+      !document.body.classList.contains("is-match-point") &&
+      !document.body.classList.contains("is-seat-focus-vignette") &&
+      el("matchPointBadge").classList.contains("hidden") &&
+      !el("lanternOutVeil").classList.contains("is-active")
+    );
+
+    // 8. Minimalist Match Point Badge ("聽牌") + Live Speech Char Counter (0 / 28 & 0 / 22 over-limit)
+    el("selectModeCount").value = "6";
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.seats.forEach(function (s, i) { if (i >= 5) s.alive = false; });
+    evaluateMatchPointState();
+    const mpConciseBadgeOk = Boolean(el("matchPointBadge").textContent === "聽牌" && !el("matchPointBadge").classList.contains("hidden"));
+    el("quickFreeInput").value = "";
+    refreshSpeechCharCounter();
+    const counterMp28Ok = Boolean(!el("speechCharCounter").classList.contains("hidden") && el("speechCharCounter").textContent === "0 / 28" && !el("speechCharCounter").classList.contains("is-over"));
+    state.match.variantMode = "blitz_3m";
+    el("quickFreeInput").value = "這是一段超過二十二個字的閃電局測試台詞看看字數計數器有沒有紅字";
+    refreshSpeechCharCounter();
+    const counterBlitz22OverOk = Boolean(el("speechCharCounter").textContent.endsWith("/ 22") && el("speechCharCounter").classList.contains("is-over"));
+    el("quickFreeInput").value = "";
+
+    // 9. Auto-dismiss #dragGestureHint + Ordinal Sky Curtains
+    state.dragHintDismissed = false;
+    el("dragGestureHint").classList.remove("is-dismissed");
+    dismissDragGestureHint();
+    const dragHintDismissOk = Boolean(state.dragHintDismissed === true && el("dragGestureHint").classList.contains("is-dismissed"));
+    const ordinalOk = Boolean(formatNightOrdinalZh(1) === "第壹夜" && formatDayOrdinalZh(2) === "第貳天");
+
+    // 10. Full-Site De-AI Copy & Zero-Emoji Check across constants, feedback, career, modals
+    const emojiRe = /[\\u{1F300}-\\u{1FAFF}\\u2600-\\u27BF]/u;
+    const fbCleanOk = Object.values(FEEDBACK_CATEGORIES).every(function (c) { return !emojiRe.test(c.label); }) &&
+      FEEDBACK_CATEGORIES.gameplay.label === "角色與規則";
+    const tutCleanOk = TUTORIAL_SLIDES.length === 6 && TUTORIAL_SLIDES.every(function (sl) {
+      return !emojiRe.test(sl.tab) && !emojiRe.test(sl.title) && !emojiRe.test(sl.html) &&
+        !sl.title.includes("30秒看懂") && !sl.html.includes("一句話秒懂");
+    });
+    const achCleanOk = ACHIEVEMENT_DEFS.every(function (a) { return !emojiRe.test(a.icon) && !emojiRe.test(a.title) && !emojiRe.test(a.desc) && !a.desc.includes("高情商"); });
+    const varCleanOk = CLOUD_VARIANT_DEFS.every(function (v) { return !emojiRe.test(v.badge) && !emojiRe.test(v.desc) && !v.desc.includes("瞬間白熱化"); }) &&
+      CLOUD_VARIANT_DEFS.find(function (v) { return v.id === "fog_seal"; }).badge === "不翻身分牌";
+    state.match.logs = [];
+    renderTimeline();
+    const tlTxt = ((el("chatTimeline")._children || []).map(function (c) { return c.textContent || c.innerHTML || ""; }).join(" ")) || el("chatTimeline").textContent || "";
+    const timelineEmptyCleanOk = Boolean(tlTxt.includes("入夜查探線索") && !tlTxt.includes("3 秒鐘規則速看"));
+
+    antiCheatMonitor.strictThrow = prevAntiStrict;
+    resetMatchToLobby();
+
+    return {
+      gazeOk, dramaticFocusOk, cameraPunchResetOk, flashUntilOk, hitStopOk,
+      bgmDuckOk, woodDropOk, lanternVeilOk, explodeTimerCleanOk, fogHunterMaskOk,
+      cleanFinishOk, mpConciseBadgeOk, counterMp28Ok, counterBlitz22OverOk,
+      dragHintDismissOk, ordinalOk, fbCleanOk, tutCleanOk, achCleanOk, varCleanOk, timelineEmptyCleanOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v161Res)) {
+    if (!v) {
+      throw new Error("v16.1 Visual/FX/Subtraction/Bugfix check failed for " + k + ": " + JSON.stringify(v161Res));
+    }
+  }
+  // Verify fog_seal guard exists on tea_master_blessing in voting.js & zero !important / blur in CSS
+  const votingSrc = fs.readFileSync(path.join(ROOT, "js/game/voting.js"), "utf8");
+  if (!votingSrc.includes('state.match.variantMode !== "fog_seal"')) {
+    throw new Error("Bug #2 guard missing: tea_master_blessing must check fog_seal in js/game/voting.js!");
+  }
+  const compCssV161 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  if (compCssV161.includes("!important") || compCssV161.includes("backdrop-filter: blur(")) {
+    throw new Error("CSS invariant violated in css/components.css (!important or backdrop-filter: blur found)!");
+  }
+}
+
+console.log("[OK] Full v16.1 (3D Collective Gaze / Focus Dimming / Carved Wood Ballots / 70ms Hit-Stop / Frameless Subtraction / De-AI Copy / 8 Bugfixes) E2E smoke test PASSED!");

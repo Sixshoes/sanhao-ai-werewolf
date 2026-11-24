@@ -3,6 +3,25 @@
  */
 "use strict";
 
+function clearTransientMatchTimers() {
+  if (state.voteFlight && Array.isArray(state.voteFlight.timers)) {
+    state.voteFlight.timers.forEach(function (t) { clearTimeout(t); });
+  }
+  state.voteFlight = null;
+  state.voteLeaderId = null;
+  if (el("voteFlightBanner")) el("voteFlightBanner").classList.add("hidden");
+  if (typeof clearWolfScreenTacticTimer === "function") clearWolfScreenTacticTimer();
+  if (typeof clearBlitzVoteTimer === "function") clearBlitzVoteTimer();
+  if (typeof closeHopeConfrontationModal === "function") closeHopeConfrontationModal();
+  if (typeof closeSpiritRoundBet === "function") closeSpiritRoundBet(false);
+  if (typeof document !== "undefined" && document.body && document.body.classList) {
+    document.body.classList.remove("is-match-point", "is-seat-focus-vignette");
+  }
+  if (el("matchPointBadge")) el("matchPointBadge").classList.add("hidden");
+  if (el("lanternOutVeil")) el("lanternOutVeil").classList.remove("is-active");
+  if (state.match) state.match.isMatchPoint = false;
+}
+
 function startGuidedBeginnerMatch() {
   if (el("modalTutorial")) el("modalTutorial").classList.add("hidden");
   el("selectModeCount").value = "6";
@@ -24,6 +43,7 @@ function startGuidedBeginnerMatch() {
 function startJudgeShowcaseMatch() {
   sound.unlock();
   clearStepTimer();
+  clearTransientMatchTimers();
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   if (el("modalTutorial")) el("modalTutorial").classList.add("hidden");
   if (el("setupDrawer")) el("setupDrawer").classList.add("hidden");
@@ -324,6 +344,7 @@ function startJudgeShowcaseMatch() {
 function startNewGame() {
   sound.unlock();
   clearStepTimer();
+  clearTransientMatchTimers();
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   if (typeof indieFlow !== "undefined" && typeof indieFlow.hideRoleDealRitual === "function") {
     indieFlow.hideRoleDealRitual({ silent: true });
@@ -799,6 +820,7 @@ function checkAndHandleGameOver() {
 
 function finishMatch(winnerTeam, reason) {
   clearStepTimer();
+  clearTransientMatchTimers();
   if (typeof orchestrator !== "undefined") orchestrator.clearAllTimers();
   state.match.phase = "GAME_OVER";
   state.match.winner = winnerTeam;
@@ -850,6 +872,7 @@ function finishMatch(winnerTeam, reason) {
 
 function finishEarlyAsSpectator(reason) {
   clearStepTimer();
+  clearTransientMatchTimers();
   if (typeof orchestrator !== "undefined") orchestrator.clearAllTimers();
   voice.stop();
   state.voteResultPayload = null;

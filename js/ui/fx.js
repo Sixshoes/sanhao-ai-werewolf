@@ -231,11 +231,11 @@ function bumpCombo(reasonText) {
     state.match.comboBoostReady = true;
     state.match.harmonyScore = clamp(state.match.harmonyScore + 3, 0, 100);
     if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
-    spawnFx(getPlayerId(), "🔥 " + c + "連擊・發言強化!", "#fbbf24");
+    spawnFx(getPlayerId(), c + " 連擊・發言強化", "#fbbf24");
     spawnBurst(getPlayerId(), ["#fbbf24", "#fde68a", "#34d399"], 24, "star");
     setSeatEmotion(getPlayerId(), "proud", 3200);
-    triggerCutIn("🔥 推理連擊 ×" + c + "！", "全場聚焦・下一次發言說服力強化！", "gold");
-    showToast("🔥 達成 " + c + " 連擊偵探專注！下一次發言說服力額外提升！", "emerald");
+    triggerCutIn("推理連擊 ×" + c, "全場聚焦・下一次發言說服力提升", "gold");
+    showToast("達成 " + c + " 連擊專注，下一次發言說服力提升。", "emerald");
   }
   renderComboBadge();
 }
@@ -249,7 +249,7 @@ function renderComboBadge() {
     return;
   }
   b.classList.remove("hidden");
-  b.textContent = state.match.comboBoostReady ? ("🔥 連擊 x" + c + " (說服UP)") : ("⚡ 連擊 x" + c);
+  b.textContent = state.match.comboBoostReady ? ("連擊 ×" + c + " · 說服升") : ("連擊 ×" + c);
   b.classList.remove("combo-pop");
   void b.offsetWidth;
   b.classList.add("combo-pop");
@@ -310,12 +310,46 @@ function renderPinnedCluesTray() {
   });
 }
 
+function triggerHitStop(ms) {
+  if (typeof state === "undefined") return;
+  const dur = clamp(Number(ms) || 70, 25, 160);
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  state.fxHitStopUntil = Math.max(state.fxHitStopUntil || 0, now + dur);
+}
+
+function triggerLanternOutSilhouette(seatId) {
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const veil = el("lanternOutVeil");
+  if (veil) {
+    veil.classList.remove("is-active");
+    if (typeof veil.offsetWidth === "number") void veil.offsetWidth;
+    veil.classList.add("is-active");
+    if (state._lanternVeilTimer) clearTimeout(state._lanternVeilTimer);
+    state._lanternVeilTimer = setTimeout(function () {
+      state._lanternVeilTimer = null;
+      const vNow = el("lanternOutVeil");
+      if (vNow) vNow.classList.remove("is-active");
+    }, 280);
+  }
+  if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive()) {
+    if (stage3d.env) {
+      stage3d.env.lanternBlackoutUntil = now + 680;
+    }
+    if (seatId && typeof stage3d.extinguishSeatCandleFx === "function") {
+      stage3d.extinguishSeatCandleFx(seatId);
+    }
+  }
+}
+
 function triggerScreenFlash(color, durationMs, intensity) {
   if (typeof state === "undefined") return;
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const dur = durationMs || 420;
   state.screenFlash = {
     color: color || "#fbbf24",
-    born: performance.now(),
-    duration: durationMs || 420,
+    born: now,
+    duration: dur,
+    until: now + dur,
     intensity: intensity !== undefined ? intensity : 0.36
   };
 }

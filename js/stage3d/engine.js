@@ -553,6 +553,10 @@ const stage3d = {
 
   clearCloseUp: function () {
     this.closeUpSeatId = null;
+    if (this.cameraPunch) {
+      this.cameraPunch.pending = false;
+      this.cameraPunch.until = 0;
+    }
   },
 
   triggerCameraPunch: function (seatId, opts) {
@@ -595,11 +599,19 @@ const stage3d = {
   extinguishSeatCandleFx: function (seatId) {
     if (!this.isActive() || !this.seats || !this.fx || !this.seats.anchors[seatId]) return;
     const anchor = this.seats.anchors[seatId];
-    if (typeof spawn3DCandleSmoke === "function") {
-      spawn3DCandleSmoke(this.fx, anchor.worldPos, performance.now());
-      spawn3DCandleSmoke(this.fx, anchor.worldPos, performance.now() + 90);
+    const actor = this.seats.slots ? this.seats.slots[seatId] : null;
+    const nowMs = performance.now();
+    let smokeOrigin = anchor.worldPos;
+    if (actor && actor.candleGroup) {
+      actor.candleGroup.getWorldPosition(actor.candleWorldPos);
+      smokeOrigin = actor.candleWorldPos;
+      actor.extinguishedAt = nowMs;
     }
-    spawn3DShockwave(this.fx, anchor.worldPos, "#94a3b8", performance.now(), 0.28, 3.6);
+    if (typeof spawn3DCandleSmoke === "function") {
+      spawn3DCandleSmoke(this.fx, smokeOrigin, nowMs, { isExtinguish: true });
+      spawn3DCandleSmoke(this.fx, smokeOrigin, nowMs + 85, { isExtinguish: true });
+    }
+    spawn3DShockwave(this.fx, smokeOrigin, "#94a3b8", nowMs, Math.max(0.28, smokeOrigin.y - 0.06), 2.4);
   },
 
   triggerHeroBeat: function (actionName, durationMs) {
@@ -1387,6 +1399,9 @@ const stage3d = {
       // Keep orbit camera gracefully above tabletop height
       this.orbit.targetPitch = clamp(this.orbit.targetPitch + dy * 0.0055, 0.16, 1.22);
     }
+    if (Math.abs(dx) + Math.abs(dy) >= 4 && typeof dismissDragGestureHint === "function") {
+      dismissDragGestureHint();
+    }
     this.orbit.userOverrideUntil = performance.now() + 9000;
   },
 
@@ -1512,8 +1527,13 @@ const stage3d = {
         }
       }
 
+      const dramaFocusFp = typeof isDramaticFocusActive === "function" && isDramaticFocusActive(nowMs);
+      if (typeof document !== "undefined" && document.body && document.body.classList) {
+        document.body.classList.toggle("is-seat-focus-vignette", Boolean(dramaFocusFp));
+      }
       if (typeof this.camera.fov === "number") {
-        const targetFpFov = clamp(this.getFirstPersonBaseFov() + (o.fpFovOffset || 0) + fpFocusLeanFov, 40, 78);
+        const rawFpFov = this.getFirstPersonBaseFov() + (o.fpFovOffset || 0) + fpFocusLeanFov;
+        const targetFpFov = clamp(dramaFocusFp ? (rawFpFov * 0.92) : rawFpFov, 37, 78);
         const diffFpFov = targetFpFov - this.camera.fov;
         if (Math.abs(diffFpFov) > 0.05) {
           this.camera.fov += diffFpFov * dampFactor3D(0.12, dt60);
@@ -1675,9 +1695,14 @@ const stage3d = {
       }
     }
 
+    if (typeof document !== "undefined" && document.body && document.body.classList) {
+      document.body.classList.remove("is-seat-focus-vignette");
+    }
     if (typeof this.camera.fov === "number" && !this.showcaseMode && this.camPreset !== "firstperson") {
+      const dramaFocusCin = this.camPreset === "cinema" && typeof isDramaticFocusActive === "function" && isDramaticFocusActive(nowMs);
       const baseFov = frontShotFov !== null ? frontShotFov : (this.camPreset === "overview" ? 46 : 44);
-      const targetFov = isPunchActive ? (punch.fovTarget || 37) : baseFov;
+      const focusedBaseFov = dramaFocusCin ? clamp(baseFov * 0.92, 33, 50) : baseFov;
+      const targetFov = isPunchActive ? (punch.fovTarget || 37) : focusedBaseFov;
       const diffFov = targetFov - this.camera.fov;
       if (Math.abs(diffFov) > 0.04) {
         this.camera.fov += diffFov * dampFactor3D(0.14, dt60);
@@ -1773,7 +1798,8 @@ const stage3d = {
     const dpr = this.getOverlayDpr();
     const rawDtMs = this._lastRenderMs ? (nowMs - this._lastRenderMs) : 16.6667;
     this._lastRenderMs = nowMs;
-    const dtSec = clamp(rawDtMs * 0.001, 0.001, 0.05);
+    const inHitStop = Boolean(typeof state !== "undefined" && state.fxHitStopUntil && nowMs < state.fxHitStopUntil);
+    const dtSec = clamp(rawDtMs * 0.001, 0.001, 0.05) * (inHitStop ? 0.12 : 1.0);
     const dt60 = dtSec * 60;
 
     const f = {
@@ -1817,7 +1843,8 @@ const stage3d = {
 
     const punch = this.cameraPunch;
     const isPunchGlow = Boolean(punch && f.nowMs < punch.until && (punch.until - f.nowMs) < 5000);
-    const isFlashGlow = Boolean(state.screenFlash && f.nowMs < state.screenFlash.until && (state.screenFlash.until - f.nowMs) < 5000);
+    const flashEnd = state.screenFlash ? (state.screenFlash.until || ((state.screenFlash.born || 0) + (state.screenFlash.duration || 0))) : 0;
+    const isFlashGlow = Boolean(state.screenFlash && f.nowMs < flashEnd && (flashEnd - f.nowMs) < 5000);
     const harmonyBoost = (f.daylight && state.match && typeof state.match.harmonyScore === "number" && state.match.harmonyScore >= 75) ? 0.05 : 0;
     const dynExpBoost = harmonyBoost + (isPunchGlow ? 0.05 : 0) + (isFlashGlow ? 0.06 : 0);
 

@@ -28,9 +28,9 @@
   <div id="dayNightCurtain" aria-hidden="true">
     <div class="curtain-inner text-center px-6 flex flex-col items-center">
       <div id="curtainIcon" class="curtain-orb mb-5"></div>
-      <div class="curtain-rule mb-2">雲起茶席・節氣流轉</div>
-      <div id="curtainTitle" class="text-2xl sm:text-4xl font-black tracking-wider">天黑請閉眼</div>
-      <div id="curtainSub" class="text-sm sm:text-base font-medium mt-2 opacity-85">山城入夜，茶席靜候查證…</div>
+      <div class="curtain-rule mb-2">雲起茶席</div>
+      <div id="curtainTitle" class="text-2xl sm:text-4xl font-black tracking-wider">第壹夜</div>
+      <div id="curtainSub" class="text-sm sm:text-base font-medium mt-2 opacity-85"></div>
     </div>
   </div>
 
@@ -52,6 +52,9 @@
                 </div>
               </div>
             </div>
+
+            <!-- v16.1 Lantern-Extinguish Silhouette Veil (Wolf Self-Explode 0.25s Beat) -->
+            <div id="lanternOutVeil" aria-hidden="true"></div>
 
             <!-- Tactile Silent Detective Radial Wheel -->
             <div id="radialSeatMenu" class="hidden" aria-label="靜默偵探輪盤">
@@ -147,9 +150,8 @@
                 <span id="harmonyText" class="text-[11px] font-bold text-amber-300 math-font">70</span>
               </div>
               <span id="comboBadge"
-                class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-200 border border-amber-400/40">連擊
-                x2</span>
-              <span id="matchPointBadge" class="hidden match-point-badge">茶涼聽牌 · 限 28 字決死</span>
+                class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-200 border border-amber-400/40">連擊 ×2</span>
+              <span id="matchPointBadge" class="hidden match-point-badge" title="茶涼聽牌：當輪發言限 28 字短兵相接">聽牌</span>
               <button id="directorEventPill" type="button"
                 class="hidden text-[10.5px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-200 border border-emerald-400/45 hover:bg-emerald-500/25 transition truncate max-w-[155px]"
                 title="清茗茶席導演事件（點擊查看詳細效果）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>突發事件</button>
@@ -384,7 +386,7 @@
                     <div class="flex items-center gap-2.5 flex-wrap">
                       <div class="seal-chop" aria-hidden="true">善</div>
                       <div class="text-[11px] tracking-[0.26em] text-amber-300/90 font-medium">林美山書院・反假訊息推理之夜</div>
-                      <span class="title-release-badge">公測 2.1</span>
+                      <span class="title-release-badge">公測 3.1</span>
                     </div>
                     <h1
                       class="font-serif-craft text-3xl sm:text-4xl font-black text-amber-50 tracking-[0.14em] leading-tight">
@@ -635,6 +637,7 @@
                       title="開口說話輸入發言（瀏覽器原生繁中語音辨識，再按一次停止）"><svg class="sh-ico sh-ico-jade sh-ico-solo" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9v6M12 5v14M16 9v6M4 11v2M20 11v2"/></svg></button>
                     <input id="quickFreeInput" type="text" placeholder="點上方卡牌直接講，或自行輸入發言／點左側麥克風開口說…"
                       class="flex-1 min-w-0 rounded px-2.5 py-1.5 text-xs border focus:outline-none focus:border-emerald-400" />
+                    <span id="speechCharCounter" class="hidden speech-char-counter shrink-0" aria-live="polite">0 / 28</span>
                     <span id="speechThreeGoodBadge" class="hidden speech-tg-badge shrink-0"></span>
                     <button id="btnQuickInlineRewrite" type="button"
                       class="hidden cta-brass px-2.5 py-1.5 text-[11px] shrink-0"
@@ -811,9 +814,9 @@
                     <div class="fourg-card-title">給歡喜</div>
                     <div id="tag4GJoy" class="fourg-card-sub">溫言破冰</div>
                   </button>
-                  <button id="btn4GHope" type="button" class="fourg-card card-hope" title="給希望・明燈指津：微光雙照兩席，其中必藏一狼！">
+                  <button id="btn4GHope" type="button" class="fourg-card card-hope" title="給希望・明燈對質：點名兩席展開 15 秒雙向對質，比對言票矛盾與各自狼坑！">
                     <div class="fourg-card-title">給希望</div>
-                    <div id="tag4GHope" class="fourg-card-sub">明燈指津</div>
+                    <div id="tag4GHope" class="fourg-card-sub">明燈對質</div>
                   </button>
                   <button id="btn4GConvenience" type="button" class="fourg-card card-convenience"
                     title="給方便・緩議歸票：理清全局關係線並號召搖擺茶友集中覆議！">
@@ -1055,7 +1058,7 @@
           <div id="roleDealActionList" class="role-deal-actions"></div>
           <div class="deal-cta-stack">
             <button id="btnRoleDealConfirm" type="button" class="cta-cinnabar deal-confirm-btn">入席對弈</button>
-            <button id="btnRoleDealOpenTut" type="button" class="deal-tut-link"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v17H5.5A2.5 2.5 0 0 0 3 22V5.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v17h6.5a2.5 2.5 0 0 1 2.5 2V5.5z"/></svg>初次遊玩？查看 30 秒規則說明</button>
+            <button id="btnRoleDealOpenTut" type="button" class="deal-tut-link"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v17H5.5A2.5 2.5 0 0 0 3 22V5.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v17h6.5a2.5 2.5 0 0 1 2.5 2V5.5z"/></svg>初次入席？查看茶席基本規則</button>
           </div>
         </div>
       </div>
@@ -1583,7 +1586,7 @@
       <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2">
         <div>
           <h3 class="modal-title-serif text-sm font-bold text-amber-300 tracking-wider"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7.5a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13V5.5z"/><path d="M8.5 8.5h7M8.5 11.5h4.5"/></svg>玩家使用反饋</h3>
-          <div class="text-[10.5px] text-slate-400 mt-0.5">歡迎回報問題、畫面建議或 AI 邏輯心得，協助讓茶席更加完善。</div>
+          <div class="text-[10.5px] text-slate-400 mt-0.5">歡迎回報問題、畫面建議或規則心得，協助讓茶席更加完善。</div>
         </div>
         <button id="btnCloseFeedback" type="button" class="cta-ink text-xs px-2.5 py-1 shrink-0">關閉</button>
       </div>
@@ -1609,7 +1612,7 @@
           <div id="feedbackCatGroup" class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
             <button type="button" data-fb-cat="bug" class="fb-cat-btn"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9.5 16.5h-19L12 3z"/><path d="M12 9.5v4.5M12 16.8h.01"/></svg>問題回報</button>
             <button type="button" data-fb-cat="ui" class="fb-cat-btn"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.5 3.5l2 2-9.5 9.5-3.2 1.2 1.2-3.2 9.5-9.5z"/></svg>畫面與視角</button>
-            <button type="button" data-fb-cat="gameplay" class="fb-cat-btn"><svg class="sh-ico sh-ico-indigo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/></svg>AI 與規則</button>
+            <button type="button" data-fb-cat="gameplay" class="fb-cat-btn"><svg class="sh-ico sh-ico-indigo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/></svg>角色與規則</button>
             <button type="button" data-fb-cat="idea" class="fb-cat-btn is-active"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>許願與建議</button>
           </div>
         </div>

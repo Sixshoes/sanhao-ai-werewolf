@@ -297,6 +297,16 @@ function getStageSeatListFor3D() {
     });
 }
 
+function computeCollectiveGazeTarget(seatId, activeSpeakerId, activeMentionId, day) {
+  if (!activeSpeakerId || seatId === activeSpeakerId) return null;
+  if (activeMentionId && activeMentionId !== seatId && activeMentionId !== activeSpeakerId) {
+    // ~50% of alive table seats instinctively turn toward the seat being accused/mentioned!
+    const splitHash = ((Number(seatId) || 0) + (Number(day) || 1) + (Number(activeMentionId) || 0)) % 2;
+    if (splitHash === 0) return activeMentionId;
+  }
+  return activeSpeakerId;
+}
+
 function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
   const seats = getStageSeatListFor3D();
   const nSeats = seats.length;
@@ -335,8 +345,23 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
   const activeClaimRole = (latestSpEv && latestSpEv.speakerId === state.activeSpeakerId && latestSpEv.claimRole)
     ? latestSpEv.claimRole
     : null;
-  const activeFocusSeatId = activeAccuseTargetId || activeVouchTargetId || null;
-  const glanceAtFocus = Boolean(activeFocusSeatId && (nowMs % 3800) > 1750);
+  const activeCheckedTargetId = (latestSpEv && latestSpEv.speakerId === state.activeSpeakerId && (latestSpEv.checkedWolfId || latestSpEv.checkedGoodId))
+    ? (latestSpEv.checkedWolfId || latestSpEv.checkedGoodId)
+    : null;
+  const hopePairIds = (state.match && state.match.hopeConfrontation && state.match.hopeConfrontation.active && Array.isArray(state.match.hopeConfrontation.pair))
+    ? state.match.hopeConfrontation.pair
+    : null;
+  const activeFocusSeatId = activeAccuseTargetId || activeVouchTargetId || activeCheckedTargetId || (hopePairIds ? hopePairIds[1] : null) || null;
+  const effectiveSpeakerId = state.activeSpeakerId || (hopePairIds ? hopePairIds[0] : null) || null;
+  if (pool._lastGazeSpeakerId !== effectiveSpeakerId) {
+    pool._prevGazeSpeakerId = pool._lastGazeSpeakerId || null;
+    pool._lastGazeSpeakerId = effectiveSpeakerId;
+    pool._gazeSpeakerChangedAt = nowMs;
+  }
+  if (pool._lastGazeMentionId !== activeFocusSeatId) {
+    pool._lastGazeMentionId = activeFocusSeatId;
+    pool._gazeMentionChangedAt = nowMs;
+  }
   const isCelebration = (p === "GAME_OVER" && state.match.winner === "good");
 
   const sc = getAnimScratch();
@@ -468,15 +493,29 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       while (diff < -Math.PI) diff += Math.PI * 2;
       targetHeadYaw = clamp(diff, -0.95, 0.95);
       if (activeVouchTargetId) targetHeadPitch = -0.04 + Math.sin(t * 2.8) * 0.03;
-    } else if (!isSpeaking && state.activeSpeakerId && seatWorldMap[state.activeSpeakerId]) {
-      const lookSeatId = (glanceAtFocus && activeFocusSeatId && activeFocusSeatId !== s.id && seatWorldMap[activeFocusSeatId])
-        ? activeFocusSeatId
-        : state.activeSpeakerId;
+    } else if (!isSpeaking && effectiveSpeakerId && seatWorldMap[effectiveSpeakerId]) {
+      // Collective Gaze (全席視線齊聚): staggered ~0.3s delay + ~50% of table turning to mentioned seat!
+      const seatGazeDelayMs = ((s.id * 97) % 320);
+      const speakerReady = (nowMs - (pool._gazeSpeakerChangedAt || 0)) >= seatGazeDelayMs;
+      const mentionReady = Boolean(activeFocusSeatId && (nowMs - (pool._gazeMentionChangedAt || 0)) >= seatGazeDelayMs);
+      const rawLookId = computeCollectiveGazeTarget(
+        s.id,
+        speakerReady ? effectiveSpeakerId : (pool._prevGazeSpeakerId || effectiveSpeakerId),
+        mentionReady ? activeFocusSeatId : null,
+        state.match ? state.match.day : 1
+      ) || effectiveSpeakerId;
+      const lookSeatId = seatWorldMap[rawLookId] ? rawLookId : effectiveSpeakerId;
       const sp = seatWorldMap[lookSeatId];
       let diff = Math.atan2(sp.x - pos.x, sp.z - pos.z) - baseFacingY;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      targetHeadYaw = clamp(diff * (lookSeatId === activeFocusSeatId ? 0.85 : 1.0), -0.85, 0.85);
+      // Smooth realistic 12°–30° head turn toward speaker or mentioned seat
+      const scaledTurn = diff * (lookSeatId === activeFocusSeatId ? 0.88 : 0.78);
+      targetHeadYaw = clamp(scaledTurn, -0.58, 0.58);
+      if (Math.abs(diff) > 0.14 && Math.abs(targetHeadYaw) < 0.22) {
+        targetHeadYaw = (diff > 0 ? 1 : -1) * 0.22;
+      }
+      targetHeadPitch = lookSeatId === activeFocusSeatId ? -0.04 : -0.02;
     } else {
       targetHeadYaw = Math.sin(t * 0.52 + s.id * 1.9) * 0.30 + Math.cos(t * 0.24 + s.id * 2.7) * 0.14;
       targetHeadPitch = Math.sin(t * 0.68 + s.id * 1.3) * 0.06;
@@ -621,7 +660,30 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       actor.idCardPivot.rotation.z = Math.sin(fp * Math.PI) * 0.18;
     }
 
-    // Tabletop Candle Flame + Warm Tabletop Reflection Glow + Rising Teacup Steam vs Extinguished Smoke!
+    // Tabletop Candle Flame + Warm Tabletop Reflection Glow + Rising Teacup Steam vs Cup-Cap, 2s Extinguished Smoke & Fog Seal Strip!
+    if (actor._wasAlive && !s.alive) {
+      actor.extinguishedAt = nowMs;
+    } else if (s.alive) {
+      actor.extinguishedAt = 0;
+    }
+    actor._wasAlive = Boolean(s.alive);
+
+    // Smooth Teacup Cover Lid & Fog-Seal Parchment Strip on Eliminated Seats
+    const targetLid = s.alive ? 0.0 : 1.0;
+    actor.lidProgress = (actor.lidProgress || 0) + (targetLid - (actor.lidProgress || 0)) * d14;
+    if (actor.teaLidGroup) {
+      actor.teaLidGroup.visible = actor.lidProgress > 0.03;
+      actor.teaLidGroup.position.y = 0.24 - actor.lidProgress * 0.104;
+      actor.teaLidGroup.rotation.z = (1 - actor.lidProgress) * 0.26;
+    }
+    if (actor.teaLiquid) {
+      actor.teaLiquid.visible = s.alive || actor.lidProgress < 0.72;
+    }
+    if (actor.fogSealStrip) {
+      const showFogStrip = Boolean(!s.alive && state.match && state.match.started && state.match.variantMode === "fog_seal" && p !== "GAME_OVER" && actor.lidProgress > 0.65);
+      actor.fogSealStrip.visible = showFogStrip;
+    }
+
     actor.candleSparkBoost *= candleDecay;
     actor.candleFlame.visible = s.alive;
     if (actor.candleGlow) actor.candleGlow.visible = s.alive;
@@ -633,15 +695,16 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         actor.candleGlowMat.opacity = (f.night ? 0.68 : 0.36) + Math.sin(t * 11 + s.id) * 0.08 + boost * 0.25;
       }
       // Subtle warm tea steam puff rising from celadon teacup!
-      if (fx3d && actor.teaGroup && state.quality3D !== "eco" && nowMs - (actor.lastSteamAt || 0) > (1850 + s.id * 170)) {
+      if (fx3d && actor.teaGroup && state.quality3D !== "eco" && nowMs - (actor.lastSteamAt || 0) > (1750 + s.id * 165)) {
         actor.lastSteamAt = nowMs;
         actor.teaGroup.getWorldPosition(actor.teaWorldPos);
-        spawn3DCandleSmoke(fx3d, actor.teaWorldPos, nowMs);
+        spawn3DCandleSmoke(fx3d, actor.teaWorldPos, nowMs, { isSteam: true });
       }
-    } else if (fx3d && nowMs - actor.lastSmokeAt > 440) {
+    } else if (fx3d && actor.extinguishedAt && (nowMs - actor.extinguishedAt) < 2200 && nowMs - actor.lastSmokeAt > 210) {
+      // Crisp 2-second thin blue-grey wisp rising from the extinguished candle wick
       actor.lastSmokeAt = nowMs;
       actor.candleGroup.getWorldPosition(actor.candleWorldPos);
-      spawn3DCandleSmoke(fx3d, actor.candleWorldPos, nowMs);
+      spawn3DCandleSmoke(fx3d, actor.candleWorldPos, nowMs, { isExtinguish: true });
     }
 
     // Tabletop Portrait Nameplate Texture Update (Refreshes cleanly on portrait load, style toggle, or player gender!)
@@ -760,8 +823,8 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         talking: isTalkingNow,
         sweating: sweating,
         emotion: moodNow,
-        gazeX: clamp(actor.headYaw * 0.6, -1, 1),
-        gazeY: clamp(actor.headPitch * 0.5, -1, 1)
+        gazeX: clamp(actor.headYaw * 1.15, -1, 1),
+        gazeY: clamp(actor.headPitch * 0.7, -1, 1)
       });
       actor.faceBundle.tex.needsUpdate = true;
     }
@@ -775,6 +838,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       actor.headPivot.getWorldPosition(actor.headWorldPos);
     }
     actor.rightHand.getWorldPosition(actor.handWorldPos);
+    if (actor.teaGroup) actor.teaGroup.getWorldPosition(actor.teaWorldPos);
 
     if (!hideSelfBodyInFP) hitMeshes.push(actor.hitMesh);
     if (actor.candleHit) candleHitMeshes.push(actor.candleHit);
@@ -785,7 +849,8 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         seat: s,
         worldPos: actor.worldPos.clone(),
         headPos: actor.headWorldPos.clone(),
-        handPos: actor.handWorldPos.clone()
+        handPos: actor.handWorldPos.clone(),
+        teaPos: actor.teaWorldPos.clone()
       };
     } else {
       actor._anchorObj.id = s.id;
@@ -793,6 +858,8 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       actor._anchorObj.worldPos.copy(actor.worldPos);
       actor._anchorObj.headPos.copy(actor.headWorldPos);
       actor._anchorObj.handPos.copy(actor.handWorldPos);
+      if (actor._anchorObj.teaPos) actor._anchorObj.teaPos.copy(actor.teaWorldPos);
+      else actor._anchorObj.teaPos = actor.teaWorldPos.clone();
     }
     nextAnchors[s.id] = actor._anchorObj;
 

@@ -8,6 +8,35 @@
  */
 "use strict";
 
+function dismissDragGestureHint() {
+  if (typeof state !== "undefined") {
+    state.dragHintDismissed = true;
+    if (state._dragHintTimer) {
+      clearTimeout(state._dragHintTimer);
+      state._dragHintTimer = null;
+    }
+  }
+  const hint = el("dragGestureHint");
+  if (hint) hint.classList.add("is-dismissed");
+}
+
+function scheduleDragGestureHintAutoHide(delayMs) {
+  if (typeof state === "undefined" || state.dragHintDismissed) {
+    const hint = el("dragGestureHint");
+    if (hint && typeof state !== "undefined" && state.dragHintDismissed) hint.classList.add("is-dismissed");
+    return;
+  }
+  if (state._dragHintTimer) {
+    clearTimeout(state._dragHintTimer);
+    state._dragHintTimer = null;
+  }
+  const ms = Math.max(1000, Number(delayMs) || 8000);
+  state._dragHintTimer = setTimeout(function () {
+    state._dragHintTimer = null;
+    dismissDragGestureHint();
+  }, ms);
+}
+
 const indieFlow = {
   dealTimer: null,
   cardPeekTimer: null,
@@ -379,7 +408,10 @@ const indieFlow = {
       el("cornerFourGDeck").classList.toggle("is-compact-fan", p === "DAY_PLAYER_TURN");
     }
     if (el("seatButtonStrip")) el("seatButtonStrip").classList.toggle("hidden", !showSeatBar);
-    if (!isTitle) this.openSetupDrawer(false);
+    if (!isTitle) {
+      this.openSetupDrawer(false);
+      if (typeof scheduleDragGestureHintAutoHide === "function") scheduleDragGestureHintAutoHide(8000);
+    }
 
     // Sync Three-Goodness SVG Lotus Petals in bottom-left secret role tile!
     const tg = (state.match && state.match.threeGood) || { heart: 0, words: 0, deeds: 0 };
@@ -768,7 +800,7 @@ const indieFlow = {
           const line = "歡迎蒞臨林美山雲起茶席！我是清茗，今晚且看諸位同窗如何明辨是非、說好話抓出酸民狼。";
           if (typeof voice !== "undefined" && typeof voice.speakHost === "function") voice.speakHost(line, undefined, "normal");
           if (typeof stage3d !== "undefined" && typeof stage3d.setHeroAction === "function") stage3d.setHeroAction("speak_gesture", 3200);
-          if (typeof showToast === "function") showToast("🎙 清茗：「" + line + "」", "emerald");
+          if (typeof showToast === "function") showToast("清茗：「" + line + "」", "emerald");
           return;
         }
         const sid = parseInt(tgt, 10);
@@ -785,7 +817,7 @@ const indieFlow = {
           stage3d.setHeroAction("speak_gesture", 3200);
         }
         if (typeof showToast === "function") {
-          showToast("🎙 " + s.name + "（" + ((pProf && pProf.registerBadge) || "角色語風") + "）：「" + sample + "」", "emerald");
+          showToast(s.name + "（" + ((pProf && pProf.registerBadge) || "角色語風") + "）：「" + sample + "」", "emerald");
         }
       });
     }
@@ -826,6 +858,9 @@ const indieFlow = {
         const f = el("inputHeroGlb").files && el("inputHeroGlb").files[0];
         if (f && typeof stage3d !== "undefined") stage3d.loadCustomHeroGlb(f);
       });
+    }
+    if (typeof scheduleDragGestureHintAutoHide === "function") {
+      scheduleDragGestureHintAutoHide(8000);
     }
   }
 };

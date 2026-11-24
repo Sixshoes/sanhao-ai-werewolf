@@ -9,14 +9,8 @@ function renderTimeline() {
 
   if (state.match.logs.length === 0) {
     const empty = document.createElement("div");
-    empty.className = "p-3.5 rounded-xl border border-slate-800 bg-slate-900/60 text-xs text-slate-300 space-y-2";
-    empty.innerHTML =
-      '<div class="font-black text-amber-300 text-sm">3 秒鐘規則速看</div>' +
-      '<div class="grid grid-cols-1 gap-1.5">' +
-      '<div class="p-2 rounded-lg bg-slate-950/70"> <strong>晚上</strong>：迷霧鎖定、明心觀察員查證、滴水奉茶師護場</div>' +
-      '<div class="p-2 rounded-lg bg-slate-950/70"> <strong>白天</strong>：嚴守凹嗚輪流發言，靜默標記與記筆記！</div>' +
-      '<div class="p-2 rounded-lg bg-slate-950/70"> <strong>投票</strong>：公投／平票 PK，把全場酸民狼送出場！</div>' +
-      '</div>';
+    empty.className = "p-4 rounded-xl border border-slate-800 bg-slate-900/60 text-xs text-slate-300 text-center leading-relaxed";
+    empty.textContent = "入夜查探線索，天亮依序發言，公投請出混在席間的說謊者。";
     container.appendChild(empty);
     return;
   }
@@ -40,7 +34,7 @@ function renderTimeline() {
         '<span class="font-black text-amber-200">' + escapeHtml(item.title) + '</span>' +
         '<div class="flex items-center gap-1">' +
         (item.subBadge ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-950/80 text-slate-300">' + escapeHtml(item.subBadge) + '</span>' : '') +
-        (canQuote ? '<button type="button" data-quote-seat="' + item.speakerId + '" class="cta-ink text-[9.5px] px-1.5 py-0.5">📌 引用反駁</button>' : '') +
+        (canQuote ? '<button type="button" data-quote-seat="' + item.speakerId + '" class="cta-ink text-[9.5px] px-1.5 py-0.5">引用反駁</button>' : '') +
         '</div>' +
         '</div>' +
         '<div class="text-slate-100 mt-0.5">' + escapeHtml(item.text) + '</div>';
@@ -68,7 +62,7 @@ function quoteSpeechForRebuttal(seatId, rawSnippet) {
   const cleanClip = String(rawSnippet || "").replace(/^「|」$/g, "").trim().slice(0, 26);
   const rebLine = "針對剛剛 " + num + "號" + s.name + " 提到「" + cleanClip + "…」，我比對了全場邏輯發現有矛盾點，建議大家這輪重點檢視 " + num + "號！";
   if (typeof pinClue === "function") {
-    pinClue(s.id, "📌引用反駁 " + num + "號", rebLine, "contradiction");
+    pinClue(s.id, "引用反駁 " + num + "號", rebLine, "contradiction");
   }
   const qIn = el("quickFreeInput");
   if (qIn && state.match.phase === "DAY_PLAYER_TURN") {
@@ -76,9 +70,9 @@ function quoteSpeechForRebuttal(seatId, rawSnippet) {
     if (typeof refreshQuickFreeInputHint === "function") refreshQuickFreeInputHint();
     if (el("modalJournal")) el("modalJournal").classList.add("hidden");
     qIn.focus();
-    showToast("📌 已帶入引用反駁台詞到你的陳詞欄！", "emerald");
+    showToast("已帶入引用反駁台詞到你的陳詞欄。", "emerald");
   } else {
-    showToast("📌 已收藏「引用 " + num + "號原話」進筆記，輪到你發言時可一鍵帶出！", "emerald");
+    showToast("已收藏「引用 " + num + "號原話」進筆記，輪到你發言時可一鍵帶出。", "emerald");
   }
 }
 
@@ -122,30 +116,30 @@ function renderTableMatrixIntoBody() {
     const godNoteKey = (isWolfMat && !isWolfMateCard && state.match.wolfGodMarks) ? (state.match.wolfGodMarks[s.id] || "") : "";
     const godNoteLbl = (godNoteKey && typeof getWolfGodMarkDef === "function") ? getWolfGodMarkDef(godNoteKey).label : "";
     const markBadge = isWolfMateCard
-      ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-600/35 text-rose-100">🐺 同伴</span>'
+      ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-600/35 text-rose-100">同伴</span>'
       : (godNoteLbl
-        ? ('<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-500/30 text-amber-100">🔍 ' + escapeHtml(godNoteLbl) + '</span>')
+        ? ('<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-500/30 text-amber-100">' + escapeHtml(godNoteLbl) + '</span>')
         : (mark === "wolf"
           ? ('<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-500/25 text-rose-200">' + (isWolfMat ? "你標:甩鍋" : "你標:懷疑") + '</span>')
           : (mark === "good"
             ? ('<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/25 text-emerald-200">' + (isWolfMat ? "你標:假保" : "你標:認同") + '</span>')
             : "")));
     const alertBadge = (s.isElder && s.voteDisabled)
-      ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-teal-500/25 text-teal-200">🛡️ 免票</span>'
+      ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-teal-500/25 text-teal-200">免票</span>'
       : (flipSet.indexOf(s.id) !== -1
-        ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-600/35 text-rose-100">⚡ 跨日反水</span>'
+        ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-600/35 text-rose-100">跨日反水</span>'
         : (wolfProtSet.indexOf(s.id) !== -1
-          ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-600/30 text-amber-200">⚠ 曾保公投離席者</span>'
+          ? '<span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-600/30 text-amber-200">曾保公投離席者</span>'
           : ""));
-    const accStr = latestEv && latestEv.accuseId ? ('<span class="text-rose-300 font-bold">🎯 打 ' + escapeHtml(fmtTag(latestEv.accuseId)) + '</span>') : '<span class="text-slate-400">🎯 打 —</span>';
-    const vchStr = latestEv && latestEv.vouchId ? ('<span class="text-emerald-300 font-bold">✅ 保 ' + escapeHtml(fmtTag(latestEv.vouchId)) + '</span>') : '<span class="text-slate-400">✅ 保 —</span>';
-    const voteStr = lastBallot ? (lastBallot.targetId ? ("🗳 投 " + fmtTag(lastBallot.targetId)) : "🗳 棄票") : "🗳 尚無票型";
+    const accStr = latestEv && latestEv.accuseId ? ('<span class="text-rose-300 font-bold">打 ' + escapeHtml(fmtTag(latestEv.accuseId)) + '</span>') : '<span class="text-slate-400">打 —</span>';
+    const vchStr = latestEv && latestEv.vouchId ? ('<span class="text-emerald-300 font-bold">保 ' + escapeHtml(fmtTag(latestEv.vouchId)) + '</span>') : '<span class="text-slate-400">保 —</span>';
+    const voteStr = lastBallot ? (lastBallot.targetId ? ("投 " + fmtTag(lastBallot.targetId)) : "棄票") : "尚無票型";
 
     card.innerHTML =
       '<div class="flex items-center justify-between gap-1.5">' +
         '<div class="flex items-center gap-1.5 min-w-0">' +
           '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black shrink-0" style="background:' + escapeHtml(s.color || "#64748b") + ';color:#0f172a;">' + num + '</span>' +
-          '<span class="font-black text-amber-100 truncate">' + (isSh ? "👑 " : "") + escapeHtml(s.id === pid ? "你" : s.name) + (!s.alive ? "（離席）" : "") + '</span>' +
+          '<span class="font-black text-amber-100 truncate">' + (isSh ? "[警] " : "") + escapeHtml(s.id === pid ? "你" : s.name) + (!s.alive ? "（離席）" : "") + '</span>' +
         '</div>' +
         '<div class="flex items-center gap-1 shrink-0">' +
           alertBadge +
@@ -160,7 +154,7 @@ function renderTableMatrixIntoBody() {
       (latestEv && latestEv.rawText
         ? ('<div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/70">' +
             '<span class="text-[10px] text-slate-300 truncate">「' + escapeHtml(latestEv.rawText.slice(0, 32)) + '…」</span>' +
-            (s.id !== pid ? '<button type="button" data-mat-quote="' + s.id + '" class="cta-ink text-[9.5px] px-1.5 py-0.5 shrink-0">📌 引用</button>' : '') +
+            (s.id !== pid ? '<button type="button" data-mat-quote="' + s.id + '" class="cta-ink text-[9.5px] px-1.5 py-0.5 shrink-0">引用</button>' : '') +
           '</div>')
         : '<div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">第 ' + day + ' 天尚未發言</div>');
 
@@ -212,20 +206,20 @@ function renderVoteSheetIntoBody() {
     const st = m.stats || {};
     const mvpParts = [];
     if (m.winner === "wolf" && String(m.winReason || "").indexOf("狼刀在先") !== -1) {
-      mvpParts.push("🐺 關鍵勝負手：酸民狼精準掌握「狼刀在先」完成屠邊終局");
+      mvpParts.push("關鍵勝負手：酸民狼精準掌握「狼刀在先」完成屠邊終局");
     } else if (m.winner === "good" && (m.nightArchive || []).some(function (n) { return n.hunterShot; })) {
-      mvpParts.push("⚖️ 關鍵轉折：直心糾察長正氣共鳴精準帶走酸民狼，鎖定好人勝局");
+      mvpParts.push("關鍵轉折：直心糾察長正氣共鳴精準帶走酸民狼，鎖定好人勝局");
     } else if ((m.nightArchive || []).some(function (n) { return n.guardTarget && n.wolfTarget && n.guardTarget === n.wolfTarget && !n.doubleSaveClash; })) {
-      mvpParts.push("🛡️ 關鍵守護：護心守衛結界成功擋下夜間迷霧，替好人爭取重要輪次");
+      mvpParts.push("關鍵守護：護心守衛結界成功擋下夜間迷霧，替好人爭取重要輪次");
     } else if ((st.logicBreaksLanded || 0) >= 1) {
-      mvpParts.push("⚡ 推理 MVP：玩家親手擊出 " + st.logicBreaksLanded + " 次呈堂證供邏輯破防，引領全場看清偽裝");
+      mvpParts.push("推理亮點：親手擊出 " + st.logicBreaksLanded + " 次呈堂證供邏輯破防，引領全場看清偽裝");
     } else {
       mvpParts.push(m.winner === "good"
-        ? "🌟 團隊勝利：三好推理穩定投票、成功請離所有酸民狼"
-        : (m.winner === "wolf" ? "🌑 酸民狼奇襲得手，成功製造視角混亂" : "👁 即時上帝視角觀戰中"));
+        ? "團隊勝利：三好推理穩定投票、成功請離所有酸民狼"
+        : (m.winner === "wolf" ? "酸民狼奇襲得手，成功製造視角混亂" : "即時上帝視角觀戰中"));
     }
     html += '<div class="rounded-2xl p-3 bg-amber-500/10 border border-amber-400/40 text-xs space-y-1">' +
-      '<div class="font-black text-amber-300">🏆 本局關鍵轉折與勝負複盤</div>' +
+      '<div class="font-black text-amber-300">本局關鍵轉折與勝負覆盤</div>' +
       '<div class="text-slate-100 leading-relaxed">' + escapeHtml(mvpParts.join("；")) + '（友善度 ' + m.harmonyScore + ' · 好話 ' + (st.goodWordsCount || 0) + ' · 矛盾抓包 ' + (st.contradictionsFound || 0) + '）</div>' +
     '</div>';
   }
@@ -245,28 +239,28 @@ function renderVoteSheetIntoBody() {
     };
     html += '<div class="space-y-2.5">';
     html += '<div class="flex items-center justify-between">' +
-      '<h4 class="text-xs font-black tracking-wide text-emerald-300">📜 上帝視角逐日故事軸（夜間秘密行動 → 白天結果）</h4>' +
+      '<h4 class="text-xs font-black tracking-wide text-emerald-300">上帝視角逐日故事軸（夜間秘密行動 → 白天結果）</h4>' +
       '<span class="text-[11px] text-slate-400">共 ' + state.match.nightArchive.length + ' 輪</span>' +
       '</div>';
     state.match.nightArchive.forEach(function (nr) {
       const guardLine = nr.guardTarget
-        ? ('<div class="text-cyan-200">🛡️ 護心守衛' + (nr.guardId ? ("(" + escapeHtml(seatPlain(nr.guardId)) + ")") : "") + '守護：' + escapeHtml(seatTag(nr.guardTarget)) + (nr.doubleSaveClash ? ' <span class="text-amber-300 font-black">［⚠ 同守同救破盾］</span>' : (nr.wolfTarget === nr.guardTarget ? ' <span class="text-emerald-300 font-black">［✓ 成功擋霧］</span>' : '')) + '</div>')
+        ? ('<div class="text-cyan-200">護心守衛' + (nr.guardId ? ("(" + escapeHtml(seatPlain(nr.guardId)) + ")") : "") + '守護：' + escapeHtml(seatTag(nr.guardTarget)) + (nr.doubleSaveClash ? ' <span class="text-amber-300 font-black">［同守同救破盾］</span>' : (nr.wolfTarget === nr.guardTarget ? ' <span class="text-emerald-300 font-black">［成功擋霧］</span>' : '')) + '</div>')
         : "";
-      const wolfLine = nr.wolfTarget ? ("🐺 酸民狼散播迷霧：" + escapeHtml(seatTag(nr.wolfTarget))) : "🐺 酸民狼：未鎖定目標";
+      const wolfLine = nr.wolfTarget ? ("酸民狼散播迷霧：" + escapeHtml(seatTag(nr.wolfTarget))) : "酸民狼：未鎖定目標";
       const seerLine = nr.seerTarget
-        ? ("🔮 明心觀察員" + (nr.seerId ? ("(" + escapeHtml(seatPlain(nr.seerId)) + ")") : "") + "查證：" + escapeHtml(seatTag(nr.seerTarget)) + " → " + (nr.seerIsWolf ? '<span class="text-rose-300 font-black">酸民狼</span>' : '<span class="text-emerald-300 font-black">好夥伴</span>'))
-        : "🔮 明心觀察員：未查證／已離席";
+        ? ("明心觀察員" + (nr.seerId ? ("(" + escapeHtml(seatPlain(nr.seerId)) + ")") : "") + "查證：" + escapeHtml(seatTag(nr.seerTarget)) + " → " + (nr.seerIsWolf ? '<span class="text-rose-300 font-black">酸民狼</span>' : '<span class="text-emerald-300 font-black">好夥伴</span>'))
+        : "明心觀察員：未查證／已離席";
       const witchActs = [];
       if (nr.witchSaved && nr.wolfTarget) witchActs.push("暖心回甘茶護回 " + escapeHtml(seatTag(nr.wolfTarget)));
       if (nr.witchPoisonTarget) witchActs.push("清心醒神茶請離 " + escapeHtml(seatTag(nr.witchPoisonTarget)));
-      const witchLine = "🍵 滴水奉茶師" + (nr.witchId ? ("(" + escapeHtml(seatPlain(nr.witchId)) + ")") : "") + "：" + (witchActs.length ? witchActs.join("、") : "未奉茶");
+      const witchLine = "滴水奉茶師" + (nr.witchId ? ("(" + escapeHtml(seatPlain(nr.witchId)) + ")") : "") + "：" + (witchActs.length ? witchActs.join("、") : "未奉茶");
       const dawnLine = (nr.casualties && nr.casualties.length > 0)
-        ? ("☀️ 天亮離席：" + nr.casualties.map(function (c) { return escapeHtml(seatTag(c.id)) + (c.cause === "purify" ? "［清心茶請離］" : (c.cause === "double_clash" ? "［同守破盾］" : "［夜間迷霧］")); }).join("、"))
-        : "☀️ 天亮結果：平安夜（全員在場）";
+        ? ("天亮離席：" + nr.casualties.map(function (c) { return escapeHtml(seatTag(c.id)) + (c.cause === "purify" ? "［清心茶請離］" : (c.cause === "double_clash" ? "［同守破盾］" : "［夜間迷霧］")); }).join("、"))
+        : "天亮結果：平安夜（全員在場）";
       const hunterShooter = (nr.hunterShot && nr.hunterShot.hunterId) ? getSeat(nr.hunterShot.hunterId) : null;
       const isWkShot = Boolean(hunterShooter && hunterShooter.isWolfKing);
       const hunterLine = nr.hunterShot
-        ? ('<div class="text-amber-300 font-bold">' + (isWkShot ? "🐺 流言首領反撲：" : "⚡ 直心糾察長共鳴：") + escapeHtml(seatTag(nr.hunterShot.hunterId)) + ' 請離 ' + escapeHtml(seatTag(nr.hunterShot.targetId)) + '</div>')
+        ? ('<div class="text-amber-300 font-bold">' + (isWkShot ? "流言首領反撲：" : "直心糾察長共鳴：") + escapeHtml(seatTag(nr.hunterShot.hunterId)) + ' 請離 ' + escapeHtml(seatTag(nr.hunterShot.targetId)) + '</div>')
         : "";
       const dayVoteRec = (state.match.voteHistory || []).filter(function (vh) { return vh.day === nr.day; });
       let dayVoteLine = "";
@@ -275,11 +269,11 @@ function renderVoteSheetIntoBody() {
         const maxV = Math.max.apply(null, Object.values(lastRound.tallies || { _: 0 }));
         const topK = Object.keys(lastRound.tallies || {}).filter(function (k) { return lastRound.tallies[k] === maxV && maxV > 0; });
         if (lastRound.outId) {
-          dayVoteLine = '<div class="text-amber-200">🗳 第 ' + nr.day + ' 天公投請離：' + escapeHtml(seatTag(lastRound.outId)) + '（' + maxV + ' 票）</div>';
+          dayVoteLine = '<div class="text-amber-200">第 ' + nr.day + ' 天公投請離：' + escapeHtml(seatTag(lastRound.outId)) + '（' + maxV + ' 票）</div>';
         } else if (topK.length === 1) {
-          dayVoteLine = '<div class="text-teal-300">🛡️ 第 ' + nr.day + ' 天公投豁免：' + escapeHtml(seatTag(parseInt(topK[0], 10))) + ' 亮清心長老免離席（' + maxV + ' 票）</div>';
+          dayVoteLine = '<div class="text-teal-300">第 ' + nr.day + ' 天公投豁免：' + escapeHtml(seatTag(parseInt(topK[0], 10))) + ' 亮清心長老免離席（' + maxV + ' 票）</div>';
         } else {
-          dayVoteLine = '<div class="text-slate-300">🗳 第 ' + nr.day + ' 天公投：平票／棄票無人離席</div>';
+          dayVoteLine = '<div class="text-slate-300">第 ' + nr.day + ' 天公投：平票／棄票無人離席</div>';
         }
       }
       html += '<div class="rounded-2xl p-3 bg-slate-950/85 border border-emerald-500/30 space-y-1 text-[11.5px]">' +
@@ -309,7 +303,7 @@ function renderVoteSheetIntoBody() {
       const isSeerStand = (shVoteRec.seerClaimIds || []).indexOf(cid) !== -1;
       return '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-bold border ' +
         (isWin ? 'bg-amber-500/25 text-amber-200 border-amber-400/60' : 'bg-slate-800/90 text-slate-200 border-slate-700') +
-        '">' + (isWin ? '👑 ' : '') + fmtSeatNum(cid) + ' ' + escapeHtml(cs ? (cid === getPlayerId() ? "你" : cs.name) : '') + (isSeerStand ? '・跳明心' : '') + '</span>';
+        '">' + (isWin ? '[警] ' : '') + fmtSeatNum(cid) + ' ' + escapeHtml(cs ? (cid === getPlayerId() ? "你" : cs.name) : '') + (isSeerStand ? '・跳明心' : '') + '</span>';
     }).join("");
     const shWithHtml = (shVoteRec.withdrawnIds || []).length > 0
       ? ('<div class="flex items-center flex-wrap gap-1.5 text-[10.5px]"><span class="font-bold text-slate-400">警上退水：</span>' +
@@ -379,7 +373,7 @@ function renderVoteSheetIntoBody() {
 
     html += '<div class="rounded-2xl p-3 bg-amber-500/10 border border-amber-400/45 space-y-2">' +
       '<div class="flex items-center justify-between flex-wrap gap-1.5 pb-1.5 border-b border-amber-400/25">' +
-        '<span class="text-xs font-black text-amber-200">👑 第 ' + (shVoteRec.day || 1) + ' 天・警長競選票型（排坑重點依據）</span>' +
+        '<span class="text-xs font-black text-amber-200">第 ' + (shVoteRec.day || 1) + ' 天・警長競選票型（排坑重點依據）</span>' +
         '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/25 text-amber-100 border border-amber-400/50">警長：' + escapeHtml(shWinnerLbl) + '</span>' +
       '</div>' +
       '<div class="flex items-center flex-wrap gap-1.5 text-[10.5px]"><span class="font-bold text-amber-200/80">警上候選：</span>' + shCandHtml + '</div>' +
@@ -409,7 +403,7 @@ function renderVoteSheetIntoBody() {
     });
     html += '<div class="bf-modal-card space-y-2">' +
       '<div class="bf-modal-head">' +
-        '<span class="text-xs font-black">🧭 警徽流追蹤 ＆ 暗號解讀</span>' +
+        '<span class="text-xs font-black">警徽流追蹤 ＆ 暗號解讀</span>' +
         '<span class="text-[10px] font-bold opacity-80">' + (bfSigsModal.length ? ("已解讀 " + bfSigsModal.length + " 條暗號") : "進行中") + '</span>' +
       '</div>' +
       bfBodyHtml +
@@ -631,7 +625,7 @@ function renderOrchestratorTracePanel() {
     }).join(" · ");
     acBox.innerHTML =
       '<div class="flex items-center justify-between gap-2 flex-wrap">' +
-        '<span class="font-serif-craft text-xs font-bold text-emerald-300">🛡️ v9.0 反作弊盲視隔離防火牆（即時稽核）</span>' +
+        '<span class="font-serif-craft text-xs font-bold text-emerald-300">反作弊盲視隔離防火牆（即時稽核）</span>' +
         statusBadge +
       '</div>' +
       '<div class="grid grid-cols-3 gap-1.5 text-center text-[10.5px]">' +

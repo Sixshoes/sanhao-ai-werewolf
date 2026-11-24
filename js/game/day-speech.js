@@ -40,11 +40,11 @@ function evaluateMatchPointState() {
   if (mpBadge) {
     mpBadge.classList.toggle("hidden", !active);
     if (active) {
-      mpBadge.textContent = m.variantMode === "blitz_3m"
-        ? "茶涼聽牌 · 限 22 字決死"
-        : "茶涼聽牌 · 限 28 字決死";
+      mpBadge.textContent = "聽牌";
+      mpBadge.title = m.variantMode === "blitz_3m" ? "茶涼聽牌・發言上限 22 字" : "茶涼聽牌・發言上限 28 字";
     }
   }
+  if (typeof refreshSpeechCharCounter === "function") refreshSpeechCharCounter();
   if (active && !wasActive) {
     addLog({
       kind: "dawn",
@@ -412,13 +412,26 @@ function executeTeaInterjection(questionText) {
   } else {
     setSeatEmotion(sp.id, "shock", 2600);
   }
+  state.lastInterjectAt = typeof performance !== "undefined" ? performance.now() : Date.now();
   setSeatBubble(sp.id, replyObj.text, replyObj.tense ? "wolf" : "suspect", 4200);
   spawnBeam(pid, sp.id, "#d4af37", "grill", 540);
   spawnFx(sp.id, "當場回防", "#fbbf24");
   nudgeSeat(sp.id, { scale: 1.06, vy: 3, vTilt: -0.08 });
-  if (typeof sound !== "undefined" && typeof sound.tone === "function") {
-    sound.tone(740, 0.07, "sine", 0.05, 0);
-    sound.tone(520, 0.09, "triangle", 0.04, 0.07);
+  const spNodeInt = (state.seatCoords || []).find(function (c) { return c.id === sp.id; });
+  if (spNodeInt && spNodeInt.visibleInView !== false && typeof spawnRipple === "function") {
+    spawnRipple(spNodeInt.x, spNodeInt.y, "#d4a657", 58);
+  }
+  if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && stage3d.fx && stage3d.seats && stage3d.seats.anchors && stage3d.seats.anchors[sp.id] && typeof spawn3DShockwave === "function") {
+    const tPos = stage3d.seats.anchors[sp.id].teaPos || stage3d.seats.anchors[sp.id].worldPos;
+    spawn3DShockwave(stage3d.fx, tPos, "#d4a657", performance.now(), 1.22, 2.5);
+  }
+  if (typeof sound !== "undefined") {
+    if (typeof sound.duckBgmBrief === "function") sound.duckBgmBrief(350);
+    if (typeof sound.tone === "function") {
+      sound.tone(1180, 0.055, "sine", 0.045, 0);
+      sound.tone(740, 0.07, "sine", 0.05, 0.03);
+      sound.tone(520, 0.09, "triangle", 0.04, 0.09);
+    }
   }
   if (typeof renderTargetReactionCard === "function") {
     renderTargetReactionCard(null, null, {

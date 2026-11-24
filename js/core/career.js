@@ -6,34 +6,34 @@
 const CAREER_STORAGE_KEY = "sanhao_ai_werewolf_career_v1";
 
 const ACHIEVEMENT_DEFS = [
-  { id: "first_win",    icon: "🏆", title: "初露鋒芒",     desc: "贏得第一場三好AI狼人殺勝利" },
-  { id: "zero_toxic",   icon: "🌿", title: "三好典範",     desc: "全程零嘴砲並贏得整場對局" },
-  { id: "kind_crit",    icon: "✨", title: "化戾氣為祥和", desc: "單局透過「婉轉潤飾詞句」陳詞並奪勝" },
-  { id: "resonance",    icon: "🌟", title: "三好圓滿",     desc: "單局觸發存好心・說好話・做好事共鳴" },
-  { id: "combo_master", icon: "🔥", title: "連擊神探",     desc: "單局達成 3 連擊以上偵探互動" },
-  { id: "four_g_sage",  icon: "🎴", title: "四給智囊",     desc: "善用四給錦囊並帶領陣營獲勝" },
-  { id: "pro_slayer",      icon: "🧠", title: "凹嗚高手",   desc: "在「凹嗚高手局」難度下奪得勝利" },
-  { id: "wolf_actor",      icon: "🎭", title: "深水影帝",   desc: "扮演酸民狼成功騙過全場獲勝" },
-  { id: "ghost_detective", icon: "🔍", title: "席外名偵探", desc: "好人離席觀戰時精準猜中全場所有酸民狼" },
-  { id: "shadow_oracle",   icon: "🎯", title: "暗影獵神手", desc: "酸民狼離席觀戰時全數猜中好人真神職" },
-  { id: "logic_breaker",   icon: "⚡", title: "矛盾終結者", desc: "單局打出一張「呈堂證供」成功觸發邏輯破防" },
-  { id: "micro_reader",    icon: "🔮", title: "觀微察心",   desc: "單局透過靜心觀微識破真正心虛的酸民狼" },
-  { id: "crown_heir",      icon: "👑", title: "警徽傳承",   desc: "完成警長歸票或警徽移交並帶領陣營獲勝" },
-  { id: "mission_ace",     icon: "🎖️", title: "密令達人",   desc: "完成本局專屬角色秘密任務並贏得對局" },
-  { id: "tea_host",        icon: "🍵", title: "奉茶結緣師", desc: "單局曾於茶席間奉上暖茶結緣、拉近夥伴信任" },
-  { id: "peacemaker",      icon: "🕊️", title: "化戾氣金句王", desc: "現場用「說好話化解」高情商接招尖銳發言" },
-  { id: "fourg_combo",     icon: "🌸", title: "四給連心大師", desc: "單局打出雙四給錦囊觸發「四給連心・三好充能」" },
-  { id: "elder_shield",    icon: "🛡️", title: "泰山壓頂",     desc: "身為清心長老觸發亮牌豁免並帶領好人陣營獲勝" },
-  { id: "wolf_king_strike",icon: "🐺", title: "臨走翻盤",     desc: "身為流言首領在公投離席時成功發動最後帶風向反撲" },
-  { id: "sheriff_drama",   icon: "🎙️", title: "警上戲精",     desc: "親身上警競選並高人氣奪下警徽" }
+  { id: "first_win",    icon: "勝", title: "初露鋒芒",     desc: "贏得第一場雲起茶席勝利" },
+  { id: "zero_toxic",   icon: "善", title: "三好典範",     desc: "全程平穩有禮並贏得整場對局" },
+  { id: "kind_crit",    icon: "辭", title: "化戾氣為祥和", desc: "單局透過「婉轉潤飾詞句」陳詞並奪勝" },
+  { id: "resonance",    icon: "蓮", title: "三好圓滿",     desc: "單局點亮存好心、說好話、做好事三瓣修為" },
+  { id: "combo_master", icon: "連", title: "連擊神探",     desc: "單局達成 3 連擊以上推理互動" },
+  { id: "four_g_sage",  icon: "茶", title: "四給智囊",     desc: "善用四給奉茶並帶領陣營獲勝" },
+  { id: "pro_slayer",      icon: "弈", title: "高階弈手",   desc: "在高階難度下奪得勝利" },
+  { id: "wolf_actor",      icon: "影", title: "深水影帝",   desc: "扮演酸民狼成功騙過全場獲勝" },
+  { id: "ghost_detective", icon: "察", title: "席外名偵探", desc: "好人離席觀戰時精準猜中全場所有酸民狼" },
+  { id: "shadow_oracle",   icon: "獵", title: "暗影獵神手", desc: "酸民狼離席觀戰時全數猜中好人真神職" },
+  { id: "logic_breaker",   icon: "破", title: "矛盾終結者", desc: "單局打出一張「呈堂證供」成功觸發邏輯破防" },
+  { id: "micro_reader",    icon: "微", title: "觀微察心",   desc: "單局透過靜心觀微識破真正心虛的酸民狼" },
+  { id: "crown_heir",      icon: "徽", title: "警徽傳承",   desc: "完成警長歸票或警徽移交並帶領陣營獲勝" },
+  { id: "mission_ace",     icon: "令", title: "密令達人",   desc: "完成本局專屬角色秘密任務並贏得對局" },
+  { id: "tea_host",        icon: "暖", title: "奉茶結緣師", desc: "單局曾於茶席間奉上暖茶結緣、拉近夥伴信任" },
+  { id: "peacemaker",      icon: "和", title: "化戾氣金句王", desc: "面對質疑未帶情緒字眼，平穩回應並化解對立" },
+  { id: "fourg_combo",     icon: "心", title: "四給連心大師", desc: "同一局內兩度奉茶相助同席茶友，觸發四給連心" },
+  { id: "elder_shield",    icon: "泰", title: "泰山壓頂",     desc: "身為清心長老觸發亮牌豁免並帶領好人陣營獲勝" },
+  { id: "wolf_king_strike",icon: "風", title: "臨走翻盤",     desc: "身為流言首領在公投離席時成功發動最後帶風向反撲" },
+  { id: "sheriff_drama",   icon: "警", title: "警上名嘴",     desc: "親身上警競選並高票奪下警徽" }
 ];
 
 const CLOUD_VARIANT_DEFS = [
   {
     id: "fog_seal",
     title: "迷霧封牌局",
-    badge: "盲推極限",
-    desc: "出局者一律暗牌封存，不公布真實陣營、職能與離席死因，AI 與玩家同處完全盲推。",
+    badge: "不翻身分牌",
+    desc: "出局者一律暗牌封存，不公布真實陣營、職能與離席死因，全場同處對等盲推。",
     needWins: 1,
     needBadges: 2
   },
@@ -49,7 +49,7 @@ const CLOUD_VARIANT_DEFS = [
     id: "twin_tea",
     title: "雙刃毒茗局",
     badge: "首夜解禁清心",
-    desc: "首夜滴水奉茶師不可自救，同時首夜立即解禁清心醒神茶，夜間博弈瞬間白熱化。",
+    desc: "首夜滴水奉茶師不可自救，但第一晚就能動用清心茶。",
     needWins: 3,
     needBadges: 6
   },
@@ -175,8 +175,8 @@ function recordMatchCareer(winnerTeam) {
   saveCareerStats(career);
 
   if (newlyUnlocked.length > 0) {
-    const names = newlyUnlocked.map(function (b) { return b.icon + b.title; }).join("、");
-    showToast("🏅 解鎖新成就：" + names + "！", "emerald");
+    const names = newlyUnlocked.map(function (b) { return "【" + b.title + "】"; }).join("、");
+    showToast("解鎖新印記：" + names, "emerald");
   }
   return newlyUnlocked;
 }
@@ -205,7 +205,7 @@ function openCareerModal() {
         ? "bg-emerald-950/40 border-emerald-400/50"
         : "bg-slate-950/60 border-slate-800 opacity-55") + '">' +
       '<div class="flex items-center gap-1.5">' +
-      '<span class="text-base">' + (unlocked ? a.icon : "🔒") + '</span>' +
+      '<span class="inline-flex items-center justify-center w-5 h-5 rounded text-[10.5px] font-serif-craft font-black border ' + (unlocked ? "bg-amber-500/20 text-amber-200 border-amber-400/50" : "bg-slate-900 text-slate-500 border-slate-700") + '">' + (unlocked ? escapeHtml(a.icon) : "鎖") + '</span>' +
       '<span class="text-xs font-black ' + (unlocked ? "text-amber-200" : "text-slate-400") + '">' + escapeHtml(a.title) + '</span>' +
       '</div>' +
       '<div class="text-[10.5px] text-slate-300 mt-1 leading-snug">' + escapeHtml(a.desc) + '</div>' +
@@ -241,19 +241,19 @@ function buildAiPostMatchCoachInsights() {
   });
   if (wolfOutRound) {
     insights.push({
-      icon: "🏆",
+      icon: "勝",
       title: "關鍵轉折票",
-      text: "第 " + (wolfOutRound.day || 1) + " 天成功公投請離酸民狼 " + nameOf(wolfOutRound.outId) + "，是全場局勢翻轉的關鍵分水嶺！"
+      text: "第 " + (wolfOutRound.day || 1) + " 天成功公投請離酸民狼 " + nameOf(wolfOutRound.outId) + "，是全場局勢翻轉的分水嶺。"
     });
   } else if (goodMisvote) {
     insights.push({
-      icon: "⚖️",
+      icon: "衡",
       title: "關鍵轉折票",
       text: "第 " + (goodMisvote.day || 1) + " 天誤投了好夥伴 " + nameOf(goodMisvote.outId) + "，讓酸民狼趁勢掌控節奏；下次可多比對警上與票型交叉驗證。"
     });
   } else {
     insights.push({
-      icon: "⚖️",
+      icon: "衡",
       title: "節奏觀察",
       text: "本局共歷經 " + (m.day || 1) + " 天茶席博弈，關鍵勝負取決於夜間技能配合與白天站邊速度。"
     });
@@ -264,21 +264,21 @@ function buildAiPostMatchCoachInsights() {
   const toxicEv = (m.allSpeechEvents || []).find(function (ev) { return ev && ev.hasToxicSlip; });
   if (contras.length > 0) {
     insights.push({
-      icon: "🔍",
+      icon: "察",
       title: "最大邏輯破綻",
-      text: "全場共抓出 " + contras.length + " 處發言矛盾，其中 " + nameOf(contras[0].speakerId) + " 的前後說法不一致成為重要突破口！"
+      text: "全場共抓出 " + contras.length + " 處發言矛盾，其中 " + nameOf(contras[0].speakerId) + " 的前後說法不一致成為重要突破口。"
     });
   } else if (toxicEv) {
     insights.push({
-      icon: "🔍",
+      icon: "察",
       title: "語氣破綻偵測",
       text: nameOf(toxicEv.speakerId) + " 曾在發言中露出急躁酸言破綻，留意「急著貼標籤催票」往往是酸民狼的特徵。"
     });
   } else {
     insights.push({
-      icon: "🔍",
+      icon: "察",
       title: "推理精準度",
-      text: "本局偵探互動達 " + (m.maxCombo || 0) + " 連擊、觀微察心 " + (st.microInspectsUsed || 0) + " 次，善用「呈堂證供」可直接破防狼人話術！"
+      text: "本局偵探互動達 " + (m.maxCombo || 0) + " 連擊、觀微察心 " + (st.microInspectsUsed || 0) + " 次，善用「呈堂證供」可直接破防狼人話術。"
     });
   }
 
@@ -300,33 +300,33 @@ function buildAiPostMatchCoachInsights() {
 
   if (selfDivPost >= 1 && (st.goodWordsCount || 0) >= 1) {
     insights.push({
-      icon: "🧭",
+      icon: "言",
       title: "言語溫度 × 言行一致度",
-      text: "你本局語氣溫和友善，但曾出現 " + selfDivPost + " 次「口頭指控與實際投票不一致」的言票落差；真正的反霸凌推理不只口氣好，更要讓查證與公投票表裡如一！"
+      text: "你本局語氣溫和友善，但曾出現 " + selfDivPost + " 次「口頭指控與實際投票不一致」的言票落差；真正的推理不只口氣好，更要讓查證與公投票表裡如一。"
     });
   } else if (isPlayerGoodPost && votesOnWolfPost >= 1 && selfDivPost === 0) {
     insights.push({
-      icon: "🌿",
+      icon: "善",
       title: "言語溫度 × 言行一致度",
-      text: "表裡如一滿分！你以零言票背離、友善度 " + m.harmonyScore + " 精準把 " + votesOnWolfPost + " 票投向酸民狼" + (fgUsedPost > 0 ? ("，並善用 " + fgUsedPost + " 張四給錦囊化解對立") : "") + "，完美詮釋理性說好話與公道護友！"
+      text: "表裡如一滿分！你以零言票背離、友善度 " + m.harmonyScore + " 精準把 " + votesOnWolfPost + " 票投向酸民狼" + (fgUsedPost > 0 ? ("，並善用 " + fgUsedPost + " 次四給奉茶化解對立") : "") + "，展現理性說好話與公道護友。"
     });
   } else if ((st.rewritesUsed || 0) > 0) {
     insights.push({
-      icon: "🌿",
+      icon: "善",
       title: "三好溝通亮點",
-      text: "你成功運用「AI 說好話轉譯」" + st.rewritesUsed + " 次並維持友善度 " + m.harmonyScore + "，展現用理性與善意化解對立的高情商！"
+      text: "你本局運用「婉轉潤飾詞句」" + st.rewritesUsed + " 次並維持友善度 " + m.harmonyScore + "，以沉穩理性的口吻化解對立，讓席間更願意傾聽。"
     });
   } else if (m.harmonyScore >= 85) {
     insights.push({
-      icon: "🌿",
-      title: "三好氣場滿點",
-      text: "茶席友善度高達 " + m.harmonyScore + "，正向發言讓好夥伴更容易凝聚共識、識破酸民挑撥！"
+      icon: "善",
+      title: "三好氣場圓融",
+      text: "茶席友善度達 " + m.harmonyScore + "，正向發言讓同席夥伴更容易凝聚共識、識破酸民挑撥。"
     });
   } else {
     insights.push({
-      icon: "🌿",
-      title: "三好進階建議",
-      text: "本局友善度 " + m.harmonyScore + "；下次遇到火藥味發言，可試著按「說好話化解」或開啟四給錦囊，賺取 1.5 倍說服力暴擊！"
+      icon: "善",
+      title: "茶席陳詞建議",
+      text: "本局友善度 " + m.harmonyScore + "；下次遇見火藥味發言，可試著以「說好話化解」或四給奉茶緩議，更能凝聚好人票源。"
     });
   }
 
@@ -350,7 +350,7 @@ function buildMatchReplayReport() {
     const rName = ROLE_DEFS[rKey] ? ROLE_DEFS[rKey].name : (ROLE_DEFS[s.role] ? ROLE_DEFS[s.role].name : s.role);
     const tag = s.id === getPlayerId() ? "（你）" : "";
     const status = s.alive ? "存活" : ("離席：" + (s.outReason || "出局"));
-    const sh = m.sheriffSeatId === s.id ? " [👑警長]" : "";
+    const sh = m.sheriffSeatId === s.id ? " [警長]" : "";
     lines.push("  " + fmtSeatNum(s.id) + "號 " + s.name + tag + sh + " — " + rName + "｜" + status);
   });
 
@@ -390,9 +390,9 @@ function buildMatchReplayReport() {
   );
   const coachList = buildAiPostMatchCoachInsights();
   if (coachList.length > 0) {
-    lines.push("", "■ AI 名偵探覆盤教練重點：");
+    lines.push("", "■ 本局茶席覆盤重點：");
     coachList.forEach(function (ci) {
-      lines.push("  " + ci.icon + " " + ci.title + "：" + ci.text);
+      lines.push("  [" + ci.icon + "] " + ci.title + "：" + ci.text);
     });
   }
   return lines.join("\n");
@@ -402,7 +402,7 @@ function copyMatchReplayReport() {
   const report = buildMatchReplayReport();
   if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(report).then(function () {
-      showToast("📋 已複製本局上帝視角復盤戰報到剪貼簿！", "emerald");
+      showToast("已複製本局上帝視角復盤戰報到剪貼簿。", "emerald");
     }).catch(function () {
       downloadMatchReplayReport(report);
     });
@@ -418,10 +418,10 @@ function downloadMatchReplayReport(reportText) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "三好AI狼人殺_復盤戰報.txt";
+    a.download = "三好雲起茶席_復盤戰報.txt";
     a.click();
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    showToast("📄 已下載本局復盤戰報！", "emerald");
+    showToast("已下載本局復盤戰報。", "emerald");
   } catch (e) {
     showToast("目前環境無法匯出檔案", "warn");
   }

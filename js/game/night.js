@@ -177,6 +177,20 @@ function scheduleNightStep(fn, ms) {
     : setTimeout(wrapped, waitMs);
 }
 
+function formatNightOrdinalZh(n) {
+  const nums = ["零", "壹", "貳", "參", "肆", "伍", "陸", "柒", "捌", "玖", "拾"];
+  const v = Math.max(1, Number(n) || 1);
+  if (v <= 10) return "第" + nums[v] + "夜";
+  return "第 " + v + " 夜";
+}
+
+function formatDayOrdinalZh(n) {
+  const nums = ["零", "壹", "貳", "參", "肆", "伍", "陸", "柒", "捌", "玖", "拾"];
+  const v = Math.max(1, Number(n) || 1);
+  if (v <= 10) return "第" + nums[v] + "天";
+  return "第 " + v + " 天";
+}
+
 // ==================== NIGHT ENGINE ====================
 function beginNightPhase() {
   clearStepTimer();
@@ -213,7 +227,7 @@ function beginNightPhase() {
 
   sound.playNight();
   if (state.match.day > 1) {
-    playSkyCurtain("night", "", "第 " + state.match.day + "晚・天黑請閉眼", "夜幕降臨，神秘角色悄悄行動中…");
+    playSkyCurtain("night", "", formatNightOrdinalZh(state.match.day), "");
   }
   addLog({ kind: "night", title: "第 " + state.match.day + "晚・天黑行動", text: "" });
 
@@ -819,7 +833,7 @@ function resolveDawn() {
   if (casualties.length === 0) {
     state.match.peaceNights.push(state.match.day);
     state.match.harmonyScore = clamp(state.match.harmonyScore + 4, 0, 100);
-    playSkyCurtain("day", "", "第 " + state.match.day + "天・天亮請睜眼！", "陽光普照！昨晚是平安夜，全員在場！");
+    playSkyCurtain("day", "", formatDayOrdinalZh(state.match.day), "昨夜平安，全員在場");
     addLog({ kind: "dawn", title: "天亮了：昨晚平安夜！沒人出局", text: "" });
     dawnVoiceLine = "第" + state.match.day + "天，天亮請睜眼！昨晚是平安夜，沒有人出局，現在開始輪流發言。";
     if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation([]);
@@ -834,7 +848,7 @@ function resolveDawn() {
     state.match.harmonyScore = clamp(state.match.harmonyScore - 6 * casualties.length, 0, 100);
     if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation(casualties);
     const noLwTag = state.match.day >= 2 ? "（第2夜起夜間離席一律覆杯閉麥、無遺言）" : "（首夜離席保留遺言）";
-    playSkyCurtain("day", "", "第 " + state.match.day + "天・晨曦雲開！", "昨晚 " + names.join("、") + "離席冷靜！" + noLwTag);
+    playSkyCurtain("day", "", formatDayOrdinalZh(state.match.day), "昨夜 " + names.join("、") + " 離席" + (state.match.day >= 2 ? "・覆杯無遺言" : ""));
     addLog({ kind: "dawn", title: "天亮了：" + names.join("、") + " 昨夜離席冷靜" + noLwTag, text: "" });
     dawnVoiceLine = "第" + state.match.day + "天，天亮請睜眼！昨晚" + names.join("、") + "離席冷靜了。" + (state.match.day >= 2 ? "第2夜起夜間離席一律無遺言，直接覆杯閉麥。" : "請發表首夜遺言。");
   }
@@ -1005,7 +1019,9 @@ function executeHunterShotPresentation(hunterSeat, targetSeat) {
   const iconLabel = isWK ? "🐺" : "⚖️";
   clearStepTimer();
   targetSeat.alive = false;
-  targetSeat.outReason = isWK ? "流言反撲請離" : "正氣共鳴請離";
+  targetSeat.outReason = state.match.variantMode === "fog_seal"
+    ? "已離席（迷霧封牌）"
+    : (isWK ? "流言反撲請離" : "正氣共鳴請離");
   recordRelation(hunterSeat.id, targetSeat.id, "suspect");
   const lastNightRec = state.match.nightArchive && state.match.nightArchive[state.match.nightArchive.length - 1];
   if (lastNightRec) lastNightRec.hunterShot = { hunterId: hunterSeat.id, targetId: targetSeat.id };

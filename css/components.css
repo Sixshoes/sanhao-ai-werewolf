@@ -1253,11 +1253,13 @@ body.hero-showcase-active #dragGestureHint {
   top: 12px;
   left: 14px;
   right: 14px;
+  max-width: calc(100% - 28px);
+  box-sizing: border-box;
   z-index: 25;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   pointer-events: none;
 }
 
@@ -1269,14 +1271,17 @@ body.hero-showcase-active #dragGestureHint {
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 6px 13px;
+  gap: 8px;
+  min-width: 0;
+  max-width: calc(100vw - 380px);
+  flex: 0 1 auto;
+  padding: 6px 12px;
   border-radius: 8px;
   background: var(--surface-panel-grad);
   border: 1px solid var(--border-accent);
   box-shadow: inset 0 1px 0 var(--border-inner-highlight), 0 8px 24px rgba(0, 0, 0, 0.28);
   opacity: 0.92;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.18s ease, border-color 0.22s ease, box-shadow 0.22s ease;
 }
 
 .hud-pill-shell:hover {
@@ -1463,36 +1468,24 @@ body.screen-ingame #focalCenterCard {
   max-width: 720px;
   max-height: calc(100dvh - 104px);
   overflow-y: auto;
-  padding: 8px 14px;
-  border-radius: 8px;
-  background: var(--surface-panel-grad);
-  border: 1px solid var(--border-accent);
-  border-top: 2px solid var(--accent-gold);
-  box-shadow: var(--shadow-focal), inset 0 0 0 1px var(--border-inner-highlight);
+  padding: 10px 16px 9px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(16, 13, 10, 0.42) 0%, rgba(16, 13, 10, 0.86) 38%, rgba(12, 10, 8, 0.94) 100%);
+  border: none;
+  border-top: 1px solid rgba(212, 166, 87, 0.24);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
+}
+
+body.craft-ui.theme-day.screen-ingame #focalCenterCard {
+  background: linear-gradient(180deg, rgba(248, 242, 230, 0.64) 0%, rgba(248, 242, 230, 0.92) 38%, rgba(244, 236, 220, 0.96) 100%);
+  border-top: 1px solid rgba(154, 104, 35, 0.30);
+  box-shadow: 0 10px 26px rgba(56, 39, 19, 0.14);
 }
 
 body.screen-ingame #focalCenterCard::before,
 body.screen-ingame #focalCenterCard::after {
-  content: "";
-  position: absolute;
-  top: 5px;
-  width: 12px;
-  height: 12px;
-  pointer-events: none;
-  border-top: 1.5px solid var(--frame-ornament);
-  opacity: 0.85;
-}
-
-body.screen-ingame #focalCenterCard::before {
-  left: 6px;
-  border-left: 1.5px solid var(--frame-ornament);
-  border-top-left-radius: 3px;
-}
-
-body.screen-ingame #focalCenterCard::after {
-  right: 6px;
-  border-right: 1.5px solid var(--frame-ornament);
-  border-top-right-radius: 3px;
+  display: none;
+  content: none;
 }
 
 body.screen-ingame.phase-pick-seat #focalCenterCard {
@@ -1527,13 +1520,15 @@ body.screen-gameover #focalCenterCard {
 }
 
 
-/* Visual Novel Bust-Out Portrait & Horizontal Dialogue Strip */
+/* Visual Novel Bust-Out Portrait & Minimalist Frameless Horizontal Dialogue Strip */
 #spotlightStageBox {
   position: relative;
   background: transparent;
   border: none;
-  padding: 0;
+  border-left: 3px solid var(--accent-cinnabar);
+  padding: 1px 0 1px 11px;
   margin-bottom: 8px;
+  transition: border-left-color 0.22s ease;
 }
 
 
@@ -2184,7 +2179,7 @@ body.craft-ui.theme-day #spotlightTraitTag {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 10px;
 }
 
 .role-nameplate {
@@ -3043,6 +3038,15 @@ body.craft-ui.theme-day .intel-skill-btn.is-jade {
   background: rgba(18, 14, 11, 0.82);
   border: 1px solid rgba(206, 170, 108, 0.24);
   color: #cbbda7;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+#dragGestureHint.is-dismissed {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 body.screen-title #dragGestureHint {
@@ -5323,11 +5327,16 @@ body.craft-ui.theme-day .vote-goodwill-badge.is-hint {
   }
 
   .corner-role-tile {
-    flex: 0 1 192px;
-    width: auto;
-    min-width: 156px;
-    max-width: 204px;
-    padding: 7px 9px;
+    flex: 0 0 218px;
+    width: 218px;
+    min-width: 214px;
+    max-width: 224px;
+    padding: 7px 10px;
+  }
+
+  .corner-role-tile .role-nameplate {
+    font-size: 12.5px;
+    letter-spacing: 0.03em;
   }
 
   .corner-hand-fan {
@@ -6911,20 +6920,21 @@ body.craft-ui.theme-day .gpu-dual-hint {
   color: #6b4310;
 }
 
-/* ==================== v16.0 MATCH POINT, SELF-EXPLODE, HOPE DUEL, SPIRIT BET & VARIANTS ==================== */
+/* ==================== v16.0 / v16.1 MATCH POINT, VIGNETTES, LANTERN VEIL, HUD COMPACTION & CHAR COUNTER ==================== */
 .match-point-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-size: 10.5px;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   color: #fecaca;
-  background: rgba(153, 27, 27, 0.72);
+  background: rgba(153, 27, 27, 0.78);
   border: 1px solid rgba(248, 113, 113, 0.72);
-  box-shadow: 0 0 12px rgba(220, 38, 38, 0.35);
-  animation: matchPointPulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(185, 28, 28, 0.32);
+  animation: matchPointPulse 1.6s ease-in-out infinite;
   white-space: nowrap;
 }
 
@@ -6934,24 +6944,140 @@ body.craft-ui.theme-day .gpu-dual-hint {
 
 @keyframes matchPointPulse {
   0%, 100% {
-    box-shadow: 0 0 8px rgba(220, 38, 38, 0.28);
+    box-shadow: 0 0 6px rgba(185, 28, 28, 0.26);
     border-color: rgba(248, 113, 113, 0.55);
   }
   50% {
-    box-shadow: 0 0 18px rgba(239, 68, 68, 0.65);
-    border-color: rgba(254, 202, 202, 0.92);
+    box-shadow: 0 0 14px rgba(220, 38, 38, 0.58);
+    border-color: rgba(254, 202, 202, 0.9);
   }
 }
 
-body.is-match-point .top-hud-bar {
-  border-color: rgba(220, 38, 38, 0.6);
-  box-shadow: 0 6px 24px rgba(153, 27, 27, 0.28);
+body.is-match-point #inGameTopHud .hud-pill-shell {
+  border-color: rgba(220, 38, 38, 0.58);
+  box-shadow: inset 0 1px 0 rgba(254, 202, 202, 0.14), 0 6px 22px rgba(127, 29, 29, 0.28);
 }
 
 body.craft-ui.theme-day .match-point-badge {
   color: #991b1b;
-  background: rgba(254, 226, 226, 0.92);
+  background: rgba(254, 226, 226, 0.94);
   border-color: rgba(185, 28, 28, 0.65);
+}
+
+/* v16.1 Pure-CSS 4-Corner Crimson Ink Vignette during Match Point */
+body.is-match-point #canvasStageWrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  background: radial-gradient(ellipse at center, transparent 54%, rgba(112, 20, 20, 0.44) 100%);
+}
+
+/* v16.1 First-Person Seat Focus Subtle Over-the-Shoulder Framing Vignette */
+body.is-seat-focus-vignette #canvasStageWrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: radial-gradient(ellipse 80% 72% at 50% 42%, transparent 52%, rgba(8, 6, 5, 0.44) 100%);
+}
+
+/* v16.1 Wolf Self-Explode 0.25s Lantern-Extinguish Silhouette Veil */
+#lanternOutVeil {
+  position: absolute;
+  inset: 0;
+  z-index: 28;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 48%, rgba(12, 8, 7, 0.84) 0%, rgba(4, 3, 3, 0.97) 74%);
+  transition: opacity 0.12s ease;
+}
+
+#lanternOutVeil.is-active {
+  opacity: 1;
+}
+
+/* v16.1 Live Speech Character Limit Counter (28-char Match Point / 22-char Blitz) */
+.speech-char-counter {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #e6d5b8;
+  background: rgba(34, 28, 21, 0.85);
+  border: 1px solid rgba(212, 166, 87, 0.36);
+}
+
+.speech-char-counter.hidden {
+  display: none;
+}
+
+.speech-char-counter.is-over {
+  color: #fecaca;
+  background: rgba(153, 27, 27, 0.82);
+  border-color: rgba(248, 113, 113, 0.82);
+}
+
+body.craft-ui.theme-day .speech-char-counter {
+  color: #4f3a20;
+  background: rgba(246, 237, 219, 0.94);
+  border-color: rgba(154, 104, 35, 0.36);
+}
+
+body.craft-ui.theme-day .speech-char-counter.is-over {
+  color: #991b1b;
+  background: rgba(254, 226, 226, 0.95);
+  border-color: rgba(185, 28, 28, 0.65);
+}
+
+/* v16.1 Medium-Desktop & Tablet Top-Right HUD Anti-Clip Compaction */
+@media (max-width: 1180px) and (min-width: 768px) {
+  #inGameTopHud {
+    left: 10px;
+    right: 10px;
+    max-width: calc(100% - 20px);
+    gap: 6px;
+  }
+
+  #inGameTopHud .hud-pill-shell {
+    max-width: calc(100vw - 320px);
+    padding: 5px 9px;
+    gap: 6px;
+  }
+
+  #inGameTopHud .hud-icon-btn {
+    padding: 5px 8px;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  #inGameTopHud .hud-rail-btn {
+    padding: 5px 7px;
+    gap: 3px;
+    font-size: 11px;
+  }
+
+  #inGameTopHud .harmony-track {
+    width: 34px;
+  }
+}
+
+@media (max-width: 960px) and (min-width: 768px) {
+  #inGameTopHud .hud-pill-shell {
+    max-width: calc(100vw - 265px);
+  }
+
+  #hudAutoLabel,
+  #hudSceneLabel,
+  #inGameTopHud .feedback-btn-label {
+    display: none;
+  }
 }
 
 .wolf-explode-bar {
