@@ -557,6 +557,7 @@ function finalizeVoteRound(playerTargetId) {
         title: "💬 " + fmtSeatNum(outSeat.id) + "號 " + outSeat.name + "（公投遺言）",
         text: aiLw.text
       });
+      const voteLwLogRef = state.match.logs[state.match.logs.length - 1] || null;
       const lastWord = "「" + aiLw.text + "」";
 
       state.voteResultPayload = {
@@ -572,6 +573,20 @@ function finalizeVoteRound(playerTargetId) {
       state.match.phase = "DAY_VOTE_RESULT";
       updateAllUI();
       const ffOut = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+      if (!ffOut && typeof isExternalLlmActive === "function" && isExternalLlmActive() && typeof tryGenerateGeminiLastWords === "function") {
+        const epVoteLw = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+        const payloadRef = state.voteResultPayload;
+        tryGenerateGeminiLastWords(outSeat, "vote_out", aiLw).then(function (liveLw) {
+          if (!liveLw) return;
+          if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epVoteLw)) return;
+          if (voteLwLogRef) voteLwLogRef.text = liveLw;
+          if (state.voteResultPayload === payloadRef && state.match && state.match.phase === "DAY_VOTE_RESULT") {
+            payloadRef.lastWord = "「" + liveLw + "」";
+            if (typeof renderTimeline === "function") renderTimeline({ deferIfHidden: true });
+            updateAllUI();
+          }
+        }).catch(function () { });
+      }
       if (!ffOut) voice.speakHost("開票完成，" + outSeat.id + "號" + outSeat.name + "獲得最高票離席休息，請點擊進入夜晚。");
       if (state.autoPlay || ffOut) {
         state.stepTimer = setTimeout(beginNightPhase, ffOut ? 650 : 5000);
@@ -1101,10 +1116,45 @@ function executeHopeConfrontation(seatAId, seatBId) {
     text: lineA.speakerLabel + "：「" + lineA.text + "」｜" + lineB.speakerLabel + "：「" + lineB.text + "」" +
       (contradictions.length ? ("｜矛盾紀錄：" + contradictions.join("；")) : "")
   });
+  const hcLogRef = state.match.logs[state.match.logs.length - 1] || null;
   showToast(summaryMsg, "emerald");
   triggerFourGSynergyCheck("hope");
   if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
   renderHopeConfrontationModal();
+
+  // Live Gemini hydration for Hope Confrontation (strictly Blind-View & non-blocking!)
+  const ffHc = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  if (!ffHc && typeof isExternalLlmActive === "function" && isExternalLlmActive() && typeof tryGenerateGeminiConfrontationLine === "function") {
+    const epHc = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+    const hcObjRef = state.match.hopeConfrontation;
+    Promise.all([
+      tryGenerateGeminiConfrontationLine(sA, sB, lineA).catch(function () { return null; }),
+      tryGenerateGeminiConfrontationLine(sB, sA, lineB).catch(function () { return null; })
+    ]).then(function (pairRes) {
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epHc)) return;
+      let changed = false;
+      if (pairRes[0]) {
+        lineA.text = pairRes[0];
+        setSeatBubble(sA.id, lineA.text.slice(0, 32) + (lineA.text.length > 32 ? "…" : ""), "suspect", 4600);
+        changed = true;
+      }
+      if (pairRes[1]) {
+        lineB.text = pairRes[1];
+        setSeatBubble(sB.id, lineB.text.slice(0, 32) + (lineB.text.length > 32 ? "…" : ""), "suspect", 4600);
+        changed = true;
+      }
+      if (changed) {
+        if (hcLogRef) {
+          hcLogRef.text = lineA.speakerLabel + "：「" + lineA.text + "」｜" + lineB.speakerLabel + "：「" + lineB.text + "」" +
+            (contradictions.length ? ("｜矛盾紀錄：" + contradictions.join("；")) : "");
+          if (typeof renderTimeline === "function") renderTimeline({ deferIfHidden: true });
+        }
+        if (state.match && state.match.hopeConfrontation === hcObjRef && hcObjRef.active) {
+          renderHopeConfrontationModal();
+        }
+      }
+    }).catch(function () { });
+  }
 
   const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
   if (isBrowserUi && !state.autoPlay) {
@@ -1984,6 +2034,7 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
         tag: "⚡ 對跳明心",
         tone: "clash",
         rivalId: priorSeerSpeech.id,
+        checkTargetId: seerCheckTarget ? seerCheckTarget.id : null,
         badgeFlow: badgeFlowObj,
         text: "「等等！" + rLbl + " 你居然敢跟我對跳明心？！全場聽好，我才是真明心！昨晚查了 " + checkLbl + "（" + checkVerdict + "），" + flowPhrase + "，敢跟我拍到底我就直接出你！」"
       };
@@ -1992,6 +2043,7 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
       tag: "🔮 強拍明心",
       tone: "seer",
       rivalId: null,
+      checkTargetId: seerCheckTarget ? seerCheckTarget.id : null,
       badgeFlow: badgeFlowObj,
       text: "「我先拍明心身分拿警徽！昨晚查了 " + checkLbl + "（" + checkVerdict + "），" + flowPhrase + "！等等誰敢對跳直接標記悍跳狼！」"
     };
@@ -2356,6 +2408,8 @@ function startSheriffCampaignSpeeches() {
 function advanceSheriffSpeechTurn() {
   clearStepTimer();
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
+  state.speakingInFlight = false;
+  state._sheriffTurnSeq = (state._sheriffTurnSeq || 0) + 1;
   const m = state.match;
   const ctx = m ? m.sheriffElectionCtx : null;
   if (!m || !ctx || m.phase !== "SHERIFF_ELECTION") return false;
@@ -2444,76 +2498,122 @@ function advanceSheriffSpeechTurn() {
   const bluffRoll = ((cand.id * 23 + (m.day || 1) * 11 + (ctx.spokenSpeeches || []).length * 7) % 100) / 100;
   const aiBluffWithdraw = Boolean(isBluffEligible && bluffRoll < 0.42);
   const finalTag = aiBluffWithdraw ? "詐身分退水" : built.tag;
-  const finalText = aiBluffWithdraw
+  const fallbackFinalText = aiBluffWithdraw
     ? (built.text.replace(/」$/, "") + "——我先試探完後置位反應，這就拱手退水回警下投票！」")
     : built.text;
 
-  const spObj = {
-    id: cand.id,
-    name: cand.name,
-    tag: finalTag,
-    tone: built.tone,
-    rivalId: built.rivalId,
-    badgeFlow: built.badgeFlow || null,
-    withdrewAfterSpeech: aiBluffWithdraw,
-    text: finalText
-  };
-  ctx.spokenSpeeches.push(spObj);
-  ctx.speeches.push(spObj);
+  const commitAiSheriffSpeech = function (resolvedText) {
+    const finalText = resolvedText || fallbackFinalText;
+    const spObj = {
+      id: cand.id,
+      name: cand.name,
+      tag: finalTag,
+      tone: built.tone,
+      rivalId: built.rivalId,
+      badgeFlow: built.badgeFlow || null,
+      withdrewAfterSpeech: aiBluffWithdraw,
+      text: finalText
+    };
+    ctx.spokenSpeeches.push(spObj);
+    ctx.speeches.push(spObj);
 
-  if (aiBluffWithdraw) {
-    ctx.candidateIds = ctx.candidateIds.filter(function (id) { return id !== cand.id; });
-    if (!Array.isArray(ctx.withdrawnIds)) ctx.withdrawnIds = [];
-    if (ctx.withdrawnIds.indexOf(cand.id) === -1) ctx.withdrawnIds.push(cand.id);
-    if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
-    ctx.dramaEvents.unshift("拱手退水：" + fmtSeatNum(cand.id) + "號 " + cand.name + " 試探後置位後主動退水回警下，警上局勢生變。");
-    if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
-    addLog({
-      kind: "system",
-      speakerId: cand.id,
-      title: "警上拱手退水 · " + fmtSeatNum(cand.id) + "號 " + cand.name + "（詐身分後退水）",
-      text: finalText.replace(/^「|」$/g, "")
-    });
-  } else {
-    if (built.tone === "seer" || built.tone === "clash") {
-      cand.claimedRole = "seer";
-      if (built.badgeFlow && built.badgeFlow.firstTargetId) {
-        setSheriffBadgeFlow(cand.id, built.badgeFlow.firstTargetId, built.badgeFlow.secondTargetId, "election");
+    if (aiBluffWithdraw) {
+      ctx.candidateIds = ctx.candidateIds.filter(function (id) { return id !== cand.id; });
+      if (!Array.isArray(ctx.withdrawnIds)) ctx.withdrawnIds = [];
+      if (ctx.withdrawnIds.indexOf(cand.id) === -1) ctx.withdrawnIds.push(cand.id);
+      if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
+      ctx.dramaEvents.unshift("拱手退水：" + fmtSeatNum(cand.id) + "號 " + cand.name + " 試探後置位後主動退水回警下，警上局勢生變。");
+      if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
+      addLog({
+        kind: "system",
+        speakerId: cand.id,
+        title: "警上拱手退水 · " + fmtSeatNum(cand.id) + "號 " + cand.name + "（詐身分後退水）",
+        text: finalText.replace(/^「|」$/g, "")
+      });
+    } else {
+      if (built.tone === "seer" || built.tone === "clash") {
+        cand.claimedRole = "seer";
+        if (built.badgeFlow && built.badgeFlow.firstTargetId) {
+          setSheriffBadgeFlow(cand.id, built.badgeFlow.firstTargetId, built.badgeFlow.secondTargetId, "election");
+        }
+        if (built.tone === "clash") {
+          const firstSeer = ctx.spokenSpeeches.find(function (sp) {
+            return sp.id !== cand.id && (sp.tone === "seer" || sp.tone === "clash");
+          });
+          if (firstSeer) triggerSheriffDoubleSeerClashDrama(firstSeer, spObj, ctx);
+        }
       }
-      if (built.tone === "clash") {
-        const firstSeer = ctx.spokenSpeeches.find(function (sp) {
-          return sp.id !== cand.id && (sp.tone === "seer" || sp.tone === "clash");
-        });
-        if (firstSeer) triggerSheriffDoubleSeerClashDrama(firstSeer, spObj, ctx);
+      addLog({
+        kind: "system",
+        speakerId: cand.id,
+        title: "警上發言 · " + fmtSeatNum(cand.id) + "號 " + cand.name + "（" + built.tag + "）",
+        text: finalText.replace(/^「|」$/g, "")
+      });
+    }
+    if (typeof setSeatEmotion === "function") setSeatEmotion(cand.id, built.tone === "clash" ? "angry" : "proud", 4200);
+    if (typeof setSeatBubble === "function") setSeatBubble(cand.id, finalText.replace(/^「|」$/g, "").slice(0, 26) + (finalText.length > 28 ? "…" : ""), built.tone === "clash" ? "wolf" : "trust", 4400);
+    if (built.rivalId && typeof spawnBeam === "function") {
+      spawnBeam(cand.id, built.rivalId, built.tone === "clash" ? "#f43f5e" : "#fbbf24", "clash");
+    }
+    if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.triggerCameraPunch === "function") {
+      stage3d.triggerCameraPunch(cand.id, { fov: 38, durationMs: 1400 });
+    }
+
+    updateAllUI();
+    if (typeof startSpotlightTypewriter === "function") {
+      startSpotlightTypewriter({
+        speaker: cand,
+        badge: fmtSeatNum(cand.id) + "號 " + cand.name + (aiBluffWithdraw ? " · 拱手退水" : " · 警上發言"),
+        trait: finalTag,
+        rawText: finalText,
+        voiceMood: built.tone === "clash" ? "accuse" : (built.tone === "seer" ? "claim_seer" : "normal"),
+        holdMs: 2400
+      });
+    }
+  };
+
+  const ffSh = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const useLiveSheriffLlm = Boolean(
+    !ffSh &&
+    typeof isExternalLlmActive === "function" && isExternalLlmActive() &&
+    typeof tryGenerateGeminiSheriffSpeech === "function"
+  );
+  if (!useLiveSheriffLlm) {
+    commitAiSheriffSpeech(fallbackFinalText);
+    return true;
+  }
+
+  // Live Gemini Sheriff Campaign Speech with gentle 350ms cue + full matchEpoch / turnSeq abort protection!
+  const epSh = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const shSeq = (state._sheriffTurnSeq = (state._sheriffTurnSeq || 0) + 1);
+  state.speakingInFlight = true;
+  updateAllUI();
+  let shCueTimer = setTimeout(function () {
+    if (state._sheriffTurnSeq === shSeq && state.match && state.match.phase === "SHERIFF_ELECTION" && state.activeSpeakerId === cand.id && state.speakingInFlight) {
+      if (typeof syncSpeakerBannerVisuals === "function") {
+        syncSpeakerBannerVisuals(cand, fmtSeatNum(cand.id) + "號 · " + cand.name, finalTag, false);
+      }
+      if (typeof updateSpotlightBox === "function") {
+        updateSpotlightBox(fmtSeatNum(cand.id) + "號 · " + cand.name + " · 警上發言", finalTag, "舉手清了清嗓子，準備發表警上競選宣言…");
       }
     }
-    addLog({
-      kind: "system",
-      speakerId: cand.id,
-      title: "警上發言 · " + fmtSeatNum(cand.id) + "號 " + cand.name + "（" + built.tag + "）",
-      text: built.text.replace(/^「|」$/g, "")
-    });
-  }
-  if (typeof setSeatEmotion === "function") setSeatEmotion(cand.id, built.tone === "clash" ? "angry" : "proud", 4200);
-  if (typeof setSeatBubble === "function") setSeatBubble(cand.id, finalText.replace(/^「|」$/g, "").slice(0, 26) + (finalText.length > 28 ? "…" : ""), built.tone === "clash" ? "wolf" : "trust", 4400);
-  if (built.rivalId && typeof spawnBeam === "function") {
-    spawnBeam(cand.id, built.rivalId, built.tone === "clash" ? "#f43f5e" : "#fbbf24", "clash");
-  }
-  if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive() && typeof stage3d.triggerCameraPunch === "function") {
-    stage3d.triggerCameraPunch(cand.id, { fov: 38, durationMs: 1400 });
-  }
+  }, 350);
 
-  updateAllUI();
-  if (typeof startSpotlightTypewriter === "function") {
-    startSpotlightTypewriter({
-      speaker: cand,
-      badge: fmtSeatNum(cand.id) + "號 " + cand.name + (aiBluffWithdraw ? " · 拱手退水" : " · 警上發言"),
-      trait: finalTag,
-      rawText: finalText,
-      voiceMood: built.tone === "clash" ? "accuse" : (built.tone === "seer" ? "claim_seer" : "normal"),
-      holdMs: 2400
+  tryGenerateGeminiSheriffSpeech(cand, ctx.spokenSpeeches, built, { aiBluffWithdraw: aiBluffWithdraw })
+    .then(function (liveText) {
+      if (shCueTimer) clearTimeout(shCueTimer);
+      if (state._sheriffTurnSeq === shSeq) state.speakingInFlight = false;
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epSh)) return;
+      if (!state.match || state.match.phase !== "SHERIFF_ELECTION" || state.match.sheriffElectionCtx !== ctx || ctx.activeReelSeatId !== cand.id) return;
+      commitAiSheriffSpeech(liveText || fallbackFinalText);
+    })
+    .catch(function () {
+      if (shCueTimer) clearTimeout(shCueTimer);
+      if (state._sheriffTurnSeq === shSeq) state.speakingInFlight = false;
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epSh)) return;
+      if (!state.match || state.match.phase !== "SHERIFF_ELECTION" || state.match.sheriffElectionCtx !== ctx || ctx.activeReelSeatId !== cand.id) return;
+      commitAiSheriffSpeech(fallbackFinalText);
     });
-  }
   return true;
 }
 
@@ -2794,6 +2894,30 @@ function finalizeSheriffElectionWinner(chosenCandId, opts) {
         const playerCanVotePk = Boolean(pSeatPk && pSeatPk.alive && !ctx.playerRunning && ctx.candidateIds.indexOf(pid) === -1 && !isFfPk);
         if (!finOpts.isQuickPass || playerCanVotePk) {
           updateAllUI();
+          // Non-blocking live Gemini PK rally quotes for tied AI candidates while awaiting re-vote!
+          if (!isFfPk && typeof isExternalLlmActive === "function" && isExternalLlmActive() && typeof tryGenerateGeminiSheriffSpeech === "function") {
+            const epPk = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+            const tiedAiCands = tiedTop.filter(function (c) { return c && c.id !== pid; });
+            Promise.all(tiedAiCands.map(function (c) {
+              const prevSp = standSpeeches.find(function (sp) { return sp && sp.id === c.id; }) || { tone: c.claimedRole === "seer" ? "seer" : "bold", badgeFlow: null };
+              return tryGenerateGeminiSheriffSpeech(c, standSpeeches, prevSp, { isPkRound: true })
+                .then(function (txt) { return txt ? { cand: c, text: txt } : null; })
+                .catch(function () { return null; });
+            })).then(function (pkQuotes) {
+              if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epPk)) return;
+              if (!state.match || state.match.phase !== "SHERIFF_ELECTION" || state.match.sheriffElectionCtx !== ctx || !ctx.isPkRound) return;
+              let addedAny = false;
+              pkQuotes.forEach(function (item) {
+                if (!item || !item.text) return;
+                const cleanPk = item.text.replace(/^「|」$/g, "");
+                ctx.dramaEvents = [fmtSeatNum(item.cand.id) + "號 " + item.cand.name + " PK 拉票：「" + cleanPk + "」"].concat((ctx.dramaEvents || []).slice(0, 3));
+                addLog({ kind: "system", speakerId: item.cand.id, title: "警上 PK 拉票 · " + fmtSeatNum(item.cand.id) + "號 " + item.cand.name, text: cleanPk });
+                if (typeof setSeatBubble === "function") setSeatBubble(item.cand.id, cleanPk.slice(0, 28) + (cleanPk.length > 28 ? "…" : ""), "trust", 4400);
+                addedAny = true;
+              });
+              if (addedAny) updateAllUI();
+            }).catch(function () { });
+          }
           return null;
         }
         // 快速開票模式（玩家無法於警下重投時）自動執行第 2 輪 PK 投票，不帶入首輪無效舊票

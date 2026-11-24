@@ -259,6 +259,8 @@ function advanceLastWordsQueue() {
   clearStepTimer();
   stopTypewriterOnly();
   voice.stop();
+  state.speakingInFlight = false;
+  state._lastWordsTurnSeq = (state._lastWordsTurnSeq || 0) + 1;
   const ctx = state.lastWordsCtx;
   if (!ctx) return;
   if (!ctx.queue || ctx.queue.length === 0) {
@@ -293,31 +295,77 @@ function advanceLastWordsQueue() {
   }
 
   const lwObj = buildAiLastWords(seat, ctx.mode);
-  applyLastWordsInfluence(seat, lwObj.text, lwObj);
-  ctx.lastRecordedText = "「" + lwObj.text + "」";
-  state.match.phase = "LAST_WORDS_SPEECH";
-  setSeatBubble(seat.id, lwObj.text, lwObj.isWolf ? "suspect" : "trust", 4800);
-  if (lwObj.claimRole === "seer") {
-    triggerCutIn("🕯️ 明心觀察員" + lwLabel + "！", fmtSeatNum(seat.id) + "號 " + seat.name + " 臨走前公開查驗真相！", "gold");
+  const commitAiLastWords = function (liveTextOverride) {
+    if (liveTextOverride) lwObj.text = liveTextOverride;
+    applyLastWordsInfluence(seat, lwObj.text, lwObj);
+    ctx.lastRecordedText = "「" + lwObj.text + "」";
+    state.match.phase = "LAST_WORDS_SPEECH";
+    setSeatBubble(seat.id, lwObj.text, lwObj.isWolf ? "suspect" : "trust", 4800);
+    if (lwObj.claimRole === "seer") {
+      triggerCutIn("🕯️ 明心觀察員" + lwLabel + "！", fmtSeatNum(seat.id) + "號 " + seat.name + " 臨走前公開查驗真相！", "gold");
+    }
+    addLog({
+      kind: "speech",
+      useTypewriter: true,
+      speakerId: seat.id,
+      title: fmtSeatNum(seat.id) + "號 · " + seat.name + "（" + lwLabel + "）",
+      subBadge: lwLabel,
+      text: lwObj.text
+    });
+    updateAllUI();
+    startSpotlightTypewriter({
+      speaker: seat,
+      badge: fmtSeatNum(seat.id) + "號 " + seat.name + "（遺言）",
+      trait: lwLabel,
+      rawText: lwObj.text,
+      voiceMood: "last_words",
+      charDelay: 32,
+      holdMs: 2600
+    });
+  };
+
+  const ffLw = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const useLiveLw = Boolean(
+    !ffLw &&
+    typeof isExternalLlmActive === "function" && isExternalLlmActive() &&
+    typeof tryGenerateGeminiLastWords === "function"
+  );
+  if (!useLiveLw) {
+    commitAiLastWords(null);
+    return;
   }
-  addLog({
-    kind: "speech",
-    useTypewriter: true,
-    speakerId: seat.id,
-    title: fmtSeatNum(seat.id) + "號 · " + seat.name + "（" + lwLabel + "）",
-    subBadge: lwLabel,
-    text: lwObj.text
-  });
+
+  state.match.phase = "LAST_WORDS_SPEECH";
+  state.speakingInFlight = true;
+  const epLw = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const lwSeq = (state._lastWordsTurnSeq = (state._lastWordsTurnSeq || 0) + 1);
   updateAllUI();
-  startSpotlightTypewriter({
-    speaker: seat,
-    badge: fmtSeatNum(seat.id) + "號 " + seat.name + "（遺言）",
-    trait: lwLabel,
-    rawText: lwObj.text,
-    voiceMood: "last_words",
-    charDelay: 32,
-    holdMs: 2600
-  });
+  let lwCueTimer = setTimeout(function () {
+    if (state._lastWordsTurnSeq === lwSeq && state.lastWordsCtx === ctx && state.activeSpeakerId === seat.id && state.speakingInFlight) {
+      if (typeof syncSpeakerBannerVisuals === "function") {
+        syncSpeakerBannerVisuals(seat, fmtSeatNum(seat.id) + "號 " + seat.name + "（遺言）", lwLabel, false);
+      }
+      if (typeof updateSpotlightBox === "function") {
+        updateSpotlightBox(fmtSeatNum(seat.id) + "號 " + seat.name + "（遺言）", lwLabel, "整理離席前的最後線索…");
+      }
+    }
+  }, 350);
+
+  tryGenerateGeminiLastWords(seat, ctx.mode, lwObj)
+    .then(function (liveText) {
+      if (lwCueTimer) clearTimeout(lwCueTimer);
+      if (state._lastWordsTurnSeq === lwSeq) state.speakingInFlight = false;
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epLw)) return;
+      if (state.lastWordsCtx !== ctx || state.activeSpeakerId !== seat.id) return;
+      commitAiLastWords(liveText);
+    })
+    .catch(function () {
+      if (lwCueTimer) clearTimeout(lwCueTimer);
+      if (state._lastWordsTurnSeq === lwSeq) state.speakingInFlight = false;
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epLw)) return;
+      if (state.lastWordsCtx !== ctx || state.activeSpeakerId !== seat.id) return;
+      commitAiLastWords(null);
+    });
 }
 
 function preparePlayerLastWordsPanel(mode) {

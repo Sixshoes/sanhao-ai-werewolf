@@ -433,12 +433,18 @@ function executeTeaInterjection(questionText) {
       sound.tone(520, 0.09, "triangle", 0.04, 0.09);
     }
   }
+  const ffInt = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const wantLiveInt = Boolean(
+    !ffInt &&
+    typeof isExternalLlmActive === "function" && isExternalLlmActive() &&
+    typeof tryGenerateGeminiInterjectionReply === "function"
+  );
   if (typeof renderTargetReactionCard === "function") {
     renderTargetReactionCard(null, null, {
       seat: sp,
       kind: "accuse",
-      badge: sp.name + " · 臨場回防",
-      quote: "問「" + cleanQ + "」→「" + replyObj.text + "」"
+      badge: sp.name + (wantLiveInt ? " · 臨場回應中" : " · 臨場回防"),
+      quote: wantLiveInt ? ("問「" + cleanQ + "」→ 微微一頓，正準備回應你的追問…") : ("問「" + cleanQ + "」→「" + replyObj.text + "」")
     });
   }
   if (typeof addThreeGoodPoint === "function") addThreeGoodPoint("heart", "舉杯追問求真");
@@ -447,12 +453,48 @@ function executeTeaInterjection(questionText) {
     title: "舉杯追問 · " + fmtSeatNum(sp.id) + "號 " + sp.name,
     text: "你問：「" + cleanQ + "」｜" + fmtSeatNum(sp.id) + "號回防：「" + replyObj.text + "」"
   });
-  showToast(fmtSeatNum(sp.id) + "號 " + sp.name + " 即時回防：「" + replyObj.text + "」", "gold");
+  const intLogRef = state.match.logs[state.match.logs.length - 1] || null;
+  if (!wantLiveInt) {
+    showToast(fmtSeatNum(sp.id) + "號 " + sp.name + " 即時回防：「" + replyObj.text + "」", "gold");
+  }
 
   // CRITICAL GUARDRAIL: immediately invalidate & refresh upcoming AI background prefetch cache!
   bumpTableStateRev(true);
   updateAllUI();
-  if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
+  if (wantLiveInt) {
+    const epInt = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+    tryGenerateGeminiInterjectionReply(sp, cleanQ, replyObj)
+      .then(function (liveReply) {
+        if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epInt)) return;
+        const finalIntText = liveReply || replyObj.text;
+        entry.reply = finalIntText;
+        if (intLogRef) {
+          intLogRef.text = "你問：「" + cleanQ + "」｜" + fmtSeatNum(sp.id) + "號回防：「" + finalIntText + "」";
+          if (typeof renderTimeline === "function") renderTimeline({ deferIfHidden: true });
+        }
+        setSeatBubble(sp.id, finalIntText, replyObj.tense ? "wolf" : "suspect", 4600);
+        if (typeof renderTargetReactionCard === "function") {
+          renderTargetReactionCard(null, null, {
+            seat: sp,
+            kind: "accuse",
+            badge: sp.name + " · 臨場回防",
+            quote: "問「" + cleanQ + "」→「" + finalIntText + "」"
+          });
+        }
+        showToast(fmtSeatNum(sp.id) + "號 " + sp.name + " 即時回防：「" + finalIntText + "」", "gold");
+        if (liveReply && typeof bumpTableStateRev === "function") bumpTableStateRev(true);
+        if (typeof voice !== "undefined" && voice.canSpeak() && !voice.speaking && state.activeSpeakerId === sp.id) {
+          voice.speakCharacter(sp, finalIntText, replyObj.tense ? "panic" : "rebut", function () {
+            if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
+          });
+        } else if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
+          maybeScheduleAutoAdvanceAfterSpeech();
+        }
+      })
+      .catch(function () {
+        if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
+      });
+  } else if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
     maybeScheduleAutoAdvanceAfterSpeech();
   }
   return entry;

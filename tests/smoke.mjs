@@ -7184,4 +7184,103 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v19.0 + Performance Audit + v19.2 Hotfix (InstancedMesh Culling / Explode Prep Rollback & Reveal / Voice Stop / Hunter-Sheriff Transfer) E2E smoke test PASSED!");
+// v19.3 FULL-STAGE LIVE GEMINI (SHERIFF / PK / LAST WORDS / INTERJECT / CONFRONTATION / DE-TEMPLATED DAYTIME PROMPT)
+{
+  const apiGemSrc = fs.readFileSync(path.join(ROOT, "api/gemini.js"), "utf8");
+  const clientGemSrc = fs.readFileSync(path.join(ROOT, "js/ai/gemini.js"), "utf8");
+  const temp078Ok = apiGemSrc.includes("temperature: 0.78") && clientGemSrc.includes("genCfg.temperature = 0.78");
+  const noFallbackDumpInPromptOk = !clientGemSrc.includes("【本輪基礎戰術參考】");
+
+  const v193Res = await vm.runInContext(`(async () => {
+    clearStepTimer();
+    const prevAntiStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+
+    el("selectModeCount").value = "8";
+    el("selectRuleDepth").value = "full";
+    el("selectPreferredRole").value = "villager";
+    state.sheriffMode = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.day = 1;
+    state.match.phase = "DAY_SPEECH";
+    state.match.daySpeechEvents = [];
+    state.match.allSpeechEvents = [];
+
+    const pid193 = getPlayerId();
+    const seerSeat = state.match.seats.find(function (s) { return s.role === "seer" && s.id !== pid193; }) || state.match.seats[1];
+    const wolfSeat = state.match.seats.find(function (s) { return s.role === "wolf" && s.id !== pid193; });
+    const vilSeat = state.match.seats.find(function (s) { return s.role === "villager" && s.id !== pid193; });
+    const otherTarget = state.match.seats.find(function (s) { return s.alive && s.id !== seerSeat.id && s.id !== wolfSeat.id && s.id !== vilSeat.id; });
+
+    // 1. Daytime prompt does NOT paste fallbackText verbatim & passes strict Blind-View audit
+    const sentinelTemplate = "SENTINEL_TEMPLATE_DO_NOT_COPY_999";
+    const dayBuilt = buildBlindGeminiSpeechPrompt(vilSeat, { text: sentinelTemplate, accuseId: wolfSeat.id, vouchId: seerSeat.id });
+    const dayDeTemplatedOk = Boolean(dayBuilt && dayBuilt.audit && dayBuilt.audit.ok && !dayBuilt.prompt.includes(sentinelTemplate));
+
+    // 2. All 4 new Blind-View prompt builders pass strict antiCheatMonitor + auditLlmPromptLeak (including Wolf fake-seer!)
+    const shPromptSeer = buildBlindGeminiSheriffPrompt(seerSeat, [], { tone: "seer", checkTargetId: vilSeat.id, badgeFlow: { firstTargetId: otherTarget.id, secondTargetId: wolfSeat.id } }, {});
+    const shPromptWolf = buildBlindGeminiSheriffPrompt(wolfSeat, [{ id: seerSeat.id, name: seerSeat.name, tag: "強拍明心", text: "昨晚驗了2號金水" }], { tone: "clash", rivalId: seerSeat.id, checkTargetId: vilSeat.id, badgeFlow: { firstTargetId: otherTarget.id, secondTargetId: null } }, {});
+    const lwPromptWolf = buildBlindGeminiLastWordsPrompt(wolfSeat, "vote_out", { claimRole: "witch", targetId: otherTarget.id, isWolf: false, isFakeGodBluff: true });
+    const intPrompt = buildBlindGeminiInterjectionPrompt(wolfSeat, "你剛剛為什麼幫3號講話？", { tense: true });
+    const hcPrompt = buildBlindGeminiConfrontationPrompt(vilSeat, wolfSeat, { wolfPits: [wolfSeat.id, otherTarget.id] });
+    const all4AuditsOk = Boolean(
+      shPromptSeer && shPromptSeer.audit && shPromptSeer.audit.ok &&
+      shPromptWolf && shPromptWolf.audit && shPromptWolf.audit.ok &&
+      lwPromptWolf && lwPromptWolf.audit && lwPromptWolf.audit.ok &&
+      intPrompt && intPrompt.audit && intPrompt.audit.ok &&
+      hcPrompt && hcPrompt.audit && hcPrompt.audit.ok
+    );
+
+    // 3. End-to-end live mocked callGeminiText for Sheriff, Last Words, Interjection, Confrontation + guardrails!
+    const origCallGemini = callGeminiText;
+    const prevHits = orchestrator.stats.geminiHits;
+    let mockResponse = "";
+    callGeminiText = async function () { return mockResponse; };
+
+    // 3a. Sheriff Seer valid response
+    mockResponse = "我這輪直接拍明心觀察員拿警徽，昨晚驗過 " + vilSeat.id + "號是好人，警徽流先看 " + otherTarget.id + "號，大家安心把票交給我。";
+    const shLive = await tryGenerateGeminiSheriffSpeech(seerSeat, [], { tone: "seer", checkTargetId: vilSeat.id, badgeFlow: { firstTargetId: otherTarget.id, secondTargetId: null } }, {});
+    // 3b. Guardrail blocks wolf self-outing on Sheriff stand
+    mockResponse = "其實我是酸民狼，警徽流先看 " + otherTarget.id + "號，拜託投我。";
+    const shWolfOutBlocked = (await tryGenerateGeminiSheriffSpeech(wolfSeat, [], { tone: "bold" }, {})) === null;
+    // 3c. Guardrail blocks unauthorized God-role claim on non-Seer stand
+    mockResponse = "我才是這局真正的滴水奉茶師，警徽請直接交給我來控場。";
+    const shUnauthClaimBlocked = (await tryGenerateGeminiSheriffSpeech(vilSeat, [], { tone: "bold" }, {})) === null;
+    // 3d. Last words live response
+    mockResponse = "我只是清白茶客被誤投離席，大家回頭好好重聽 " + wolfSeat.id + "號剛才帶節奏的話，別再被他騙票了。";
+    const lwLive = await tryGenerateGeminiLastWords(vilSeat, "vote_out", { claimRole: null, targetId: wolfSeat.id });
+    // 3e. Interjection live reply
+    mockResponse = "我只是聽他前段邏輯順口才順帶提一句，後面有矛盾我照樣改票。";
+    const intLive = await tryGenerateGeminiInterjectionReply(wolfSeat, "你剛剛為什麼幫他緩頰？", { tense: true });
+    // 3f. Hope confrontation live line
+    mockResponse = wolfSeat.id + "號你剛才發言避重就輕，照我目前盤下來狼坑就是 " + wolfSeat.id + "號跟 " + otherTarget.id + "號。";
+    const hcLive = await tryGenerateGeminiConfrontationLine(vilSeat, wolfSeat, { wolfPits: [wolfSeat.id, otherTarget.id] });
+
+    callGeminiText = origCallGemini;
+    const hitsIncreasedOk = (orchestrator.stats.geminiHits - prevHits) >= 4;
+    antiCheatMonitor.strictThrow = prevAntiStrict;
+    resetMatchToLobby();
+
+    return {
+      dayDeTemplatedOk,
+      all4AuditsOk,
+      shLiveOk: Boolean(shLive && shLive.startsWith("「") && shLive.includes(otherTarget.id + "號")),
+      shWolfOutBlocked,
+      shUnauthClaimBlocked,
+      lwLiveOk: Boolean(lwLive && lwLive.includes(wolfSeat.id + "號")),
+      intLiveOk: Boolean(intLive && intLive.length >= 10),
+      hcLiveOk: Boolean(hcLive && hcLive.includes(wolfSeat.id + "號")),
+      hitsIncreasedOk
+    };
+  })()`, ctx);
+
+  const v193All = Object.assign({ temp078Ok, noFallbackDumpInPromptOk }, v193Res);
+  for (const [k, v] of Object.entries(v193All)) {
+    if (!v) {
+      throw new Error("v19.3 FULL-STAGE LIVE GEMINI check failed for " + k + ": " + JSON.stringify(v193All));
+    }
+  }
+}
+
+console.log("[OK] Full v19.0 + Perf + v19.2 Hotfix + v19.3 Full-Stage Live Gemini (Sheriff/PK/LastWords/Interject/Confrontation) E2E smoke test PASSED!");
