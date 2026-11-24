@@ -112,12 +112,13 @@ function updatePhaseTrackUI() {
 }
 
 function updateAllUI() {
+  if (typeof invalidate3DOverlayCache === "function") invalidate3DOverlayCache();
   const m = state.match;
   syncWorldTheme();
   updatePhaseTrackUI();
 
   el("harmonyBar").style.width = m.harmonyScore + "%";
-  const auraTag = m.started ? (m.harmonyScore >= 85 ? " 🍃" : (m.harmonyScore <= 48 ? " 🌫" : "")) : "";
+  const auraTag = m.started ? (m.harmonyScore >= 85 ? "・清風" : (m.harmonyScore <= 48 ? "・陰霾" : "")) : "";
   el("harmonyText").textContent = String(m.harmonyScore) + auraTag;
   const tg = m.threeGood || { heart: 0, words: 0, deeds: 0 };
   if (el("tgHeartPill")) el("tgHeartPill").textContent = (tg.heart > 0 ? "✦" : "") + "存好心 " + tg.heart;

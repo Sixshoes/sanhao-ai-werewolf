@@ -5693,6 +5693,178 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       throw new Error("v15.0 DE-AI EXPERIENCE check failed for " + k + ": " + JSON.stringify(v150Res));
     }
   }
+
+  // ==================== v15.2 ZERO-COMPROMISE 144Hz+ VSYNC, 4K DIRTY-FLAG CACHE & DUAL-GPU DIAGNOSTICS ====================
+  const v152Res = vm.runInContext(`(() => {
+    const prevReady = stage3d.ready;
+    const prevFailed = stage3d.failed;
+    const prevIgpu = stage3d.isIntegratedGpu;
+    const prevSoft = stage3d.isSoftwareRenderer;
+    const prevGpuStr = stage3d.gpuRendererStr;
+    const prevGpuLbl = stage3d.gpuShortLabel;
+    const prevView = state.viewMode;
+    const prevQ = state.quality3D;
+    const prevEma = stage3d._perfEmaMs;
+
+    // 1. Native VSync unlock on discrete GPU (high/balanced) vs smooth 60fps cap on iGPU/eco/software
+    stage3d.ready = true;
+    stage3d.failed = false;
+    state.viewMode = "3d";
+    stage3d.isIntegratedGpu = false;
+    stage3d.isSoftwareRenderer = false;
+    state.quality3D = "high";
+    const dgpuHighUnlockOk = !shouldCapFrameRate60() && stage3d.getShadowUpdateStride() === 1;
+    state.quality3D = "balanced";
+    const dgpuBalUnlockOk = !shouldCapFrameRate60() && stage3d.getShadowUpdateStride() === 2;
+    state.quality3D = "eco";
+    const dgpuEcoCapOk = shouldCapFrameRate60() && stage3d.getShadowUpdateStride() === 3;
+    stage3d.isIntegratedGpu = true;
+    state.quality3D = "high";
+    const igpuCapOk = shouldCapFrameRate60() && stage3d.getShadowUpdateStride() === 3;
+    stage3d.isSoftwareRenderer = true;
+    const softCapOk = shouldCapFrameRate60() && stage3d.getShadowUpdateStride() === 4;
+
+    // 2. Framerate-independent exponential damping invariance (60Hz vs 144Hz vs 240Hz)
+    const rem60 = 1 - dampFactor3D(0.14, 1);
+    const rem144 = Math.pow(1 - dampFactor3D(0.14, 60 / 144), 144 / 60);
+    const rem240 = Math.pow(1 - dampFactor3D(0.14, 60 / 240), 240 / 60);
+    const dtInvarianceOk = Math.abs(rem60 - rem144) < 1e-6 && Math.abs(rem60 - rem240) < 1e-6;
+
+    // 3. 4K 2D Overlay Dirty-Flag signature caching & transient FX bypass
+    const mockF = { nowMs: 10000, w: 3840, h: 2160, dpr: 1.5, p: "DAY_SPEECH", daylight: true };
+    const mockCoords = [
+      { id: 1, x: 1000, y: 800, r: 42, visibleInView: true, offScreenDir: 0, seat: { id: 1, alive: true, claimedRole: null, sweatExposed: false, microPulse: 20 } },
+      { id: 2, x: 1400, y: 720, r: 40, visibleInView: true, offScreenDir: 0, seat: { id: 2, alive: true, claimedRole: "seer", sweatExposed: false, microPulse: 35 } }
+    ];
+    state.seatBubbles = {};
+    state.fxPopups = [];
+    state.burstParticles = [];
+    state.ripples = [];
+    state.pointerTrail = [];
+    state.screenFlash = null;
+    state.shakeUntil = 0;
+    state.selectedSeatId = null;
+    const sigA = compute3DOverlaySignature(mockF, mockCoords);
+    // Tiny 0.4px breathing micro-drift stays cached
+    const mockCoordsTinyBob = [
+      Object.assign({}, mockCoords[0], { y: 800.4 }),
+      mockCoords[1]
+    ];
+    const sigB = compute3DOverlaySignature(mockF, mockCoordsTinyBob);
+    // Selection change or meaningful camera movement invalidates immediately
+    state.selectedSeatId = 2;
+    const sigSel = compute3DOverlaySignature(mockF, mockCoords);
+    state.selectedSeatId = null;
+    const mockCoordsMoved = [
+      Object.assign({}, mockCoords[0], { x: 1025 }),
+      mockCoords[1]
+    ];
+    const sigMove = compute3DOverlaySignature(mockF, mockCoordsMoved);
+    // Transient FX returns null so dynamic animations are never cached
+    state.fxPopups = [{ born: 9900, duration: 1200, x: 100, y: 100, text: "清風照破", color: "#34d399" }];
+    const sigDyn = compute3DOverlaySignature(mockF, mockCoords);
+    state.fxPopups = [];
+    const overlayCacheSigOk = Boolean(
+      typeof sigA === "string" && sigA.length > 10 &&
+      sigA === sigB &&
+      sigA !== sigSel &&
+      sigA !== sigMove &&
+      sigDyn === null
+    );
+
+    // 4. Desktop Dual-GPU (12700K Intel UHD 770) detection, cleaned GPU name & true 144Hz+ FPS readout (zero emoji!)
+    const noEmojiRe152 = /[\u{1F300}-\u{1FAFF}\u26A1]/u;
+    stage3d.gpuRendererStr = "ANGLE (Intel, Intel(R) UHD Graphics 770 Direct3D11 vs_5_0 ps_5_0)";
+    stage3d.gpuShortLabel = "Intel(R) UHD Graphics 770";
+    stage3d.isIntegratedGpu = true;
+    stage3d.isSoftwareRenderer = false;
+    const cleanUhdOk = stage3d.getCleanGpuName() === "Intel(R) UHD Graphics 770";
+    const warnDesktopUhdOk = stage3d.shouldWarnDesktopIntegratedGpu(2560, false) === true;
+    const noWarnMobileUhdOk = stage3d.shouldWarnDesktopIntegratedGpu(2560, true) === false;
+    const noWarnSmallLaptopOk = stage3d.shouldWarnDesktopIntegratedGpu(1440, false) === false;
+    stage3d.updateGpuStatusUi();
+    const hintShownOnUhdOk = el("gpuDualCardHint") && !noEmojiRe152.test(el("gpuPerfStatusLine").textContent);
+
+    stage3d.gpuRendererStr = "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)";
+    stage3d.gpuShortLabel = "RTX 5080";
+    stage3d.isIntegratedGpu = false;
+    stage3d.isSoftwareRenderer = false;
+    state.quality3D = "high";
+    stage3d._perfEmaMs = 1000 / 144;
+    stage3d.updateGpuStatusUi();
+    const perfLineTxt = String((el("gpuPerfStatusLine") && el("gpuPerfStatusLine").textContent) || "");
+    const cleanRtx5080Ok = stage3d.getCleanGpuName() === "NVIDIA GeForce RTX 5080"
+      && stage3d.shouldWarnDesktopIntegratedGpu(2560, false) === false
+      && perfLineTxt.includes("NVIDIA GeForce RTX 5080")
+      && perfLineTxt.includes("144 FPS")
+      && !noEmojiRe152.test(perfLineTxt);
+
+    // 5. Rounded dimension resize cache prevents 125%/150% DPI micro-jitter thrashing
+    //    AND applyQualityMode() followed by resize() ALWAYS executes renderer.setSize() (never leaves 300x150 default canvas!)
+    const prevRenderer = stage3d.renderer;
+    const prevCam = stage3d.camera;
+    const prevPostfx = stage3d.postfx;
+    let setSizeCalls = 0;
+    let lastSizeArgs = null;
+    stage3d.renderer = {
+      shadowMap: { enabled: true, autoUpdate: false, needsUpdate: false },
+      setPixelRatio() {},
+      setSize(w, h) { setSizeCalls += 1; lastSizeArgs = [w, h]; }
+    };
+    stage3d.camera = { aspect: 1, updateProjectionMatrix() {} };
+    stage3d.postfx = { resize() {} };
+    stage3d._lastResizeW = 0;
+    stage3d._lastResizeH = 0;
+    stage3d._lastResizeDpr = 0;
+    const stageWrap = el("canvasStageWrap") || el("canvasContainer");
+    const prevGetRect = stageWrap.getBoundingClientRect;
+    stageWrap.getBoundingClientRect = () => ({ width: 1280.2, height: 720.3 });
+    stage3d.applyQualityMode();
+    const initApplySizedOk = setSizeCalls === 1 && lastSizeArgs && lastSizeArgs[0] === 1280 && lastSizeArgs[1] === 720;
+    const r1AfterApply = stage3d.resize();
+    stageWrap.getBoundingClientRect = () => ({ width: 1280.4, height: 719.8 });
+    const r2 = stage3d.resize();
+    stageWrap.getBoundingClientRect = () => ({ width: 1920.0, height: 1080.0 });
+    const r3 = stage3d.resize();
+    stageWrap.getBoundingClientRect = prevGetRect;
+    stage3d.renderer = prevRenderer;
+    stage3d.camera = prevCam;
+    stage3d.postfx = prevPostfx;
+    const resizeCacheOk = initApplySizedOk && r1AfterApply === false && r2 === false && r3 === true && setSizeCalls === 2 && lastSizeArgs[0] === 1920 && lastSizeArgs[1] === 1080;
+
+    // Restore state
+    stage3d.ready = prevReady;
+    stage3d.failed = prevFailed;
+    stage3d.isIntegratedGpu = prevIgpu;
+    stage3d.isSoftwareRenderer = prevSoft;
+    stage3d.gpuRendererStr = prevGpuStr;
+    stage3d.gpuShortLabel = prevGpuLbl;
+    state.viewMode = prevView;
+    state.quality3D = prevQ;
+    stage3d._perfEmaMs = prevEma;
+
+    return {
+      dgpuHighUnlockOk, dgpuBalUnlockOk, dgpuEcoCapOk, igpuCapOk, softCapOk,
+      dtInvarianceOk, overlayCacheSigOk,
+      cleanUhdOk, warnDesktopUhdOk, noWarnMobileUhdOk, noWarnSmallLaptopOk, hintShownOnUhdOk, cleanRtx5080Ok,
+      resizeCacheOk
+    };
+  })()`, ctx);
+  for (const [k, v] of Object.entries(v152Res)) {
+    if (!v) {
+      throw new Error("v15.2 144Hz+ & 4K PERF check failed for " + k + ": " + JSON.stringify(v152Res));
+    }
+  }
+
+  // Verify zero leftover leaf emoji in js/game/day-speech.js & pre-aligned toneMapping + smart antialias in engine.js
+  const daySpeechSrc = fs.readFileSync(path.join(ROOT, "js/game/day-speech.js"), "utf8");
+  const engineSrc = fs.readFileSync(path.join(ROOT, "js/stage3d/engine.js"), "utf8");
+  if (daySpeechSrc.includes("\u{1F343}")) {
+    throw new Error("v15.2 check failed: leftover leaf emoji found in js/game/day-speech.js");
+  }
+  if (!engineSrc.includes("antialias: useMainAa") || !engineSrc.includes("willUsePostFxInit")) {
+    throw new Error("v15.2 check failed: engine.js missing postfx-aware antialias or init toneMapping pre-alignment");
+  }
 }
 
-console.log("[OK] Full v15.0 (De-AI Tea-Academy UI + 3-Slip Rephrase + Scheme A Literary Tone + 3-Tier Length + Verbatim Anchor + Nod/Frown & Tea Interjection Prefetch Sync + Candlelit Night Review) E2E smoke test PASSED!");
+console.log("[OK] Full v15.2 (144Hz+ Native VSync + dt-Independent 3D + 4K Overlay Dirty-Flag Cache + Dual-GPU Diagnostics + De-AI Tea-Academy Experience) E2E smoke test PASSED!");

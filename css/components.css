@@ -6893,3 +6893,20 @@ body.craft-ui.theme-day .candlelit-slip-btn.is-circled .candlelit-slip-mark {
   line-height: 1.4;
   color: var(--text-main);
 }
+
+/* v15.2 Desktop Dual-GPU Diagnostic Notice inside Pause Modal */
+.gpu-dual-hint {
+  border-radius: 6px;
+  border: 1px solid rgba(212, 166, 87, 0.45);
+  background: rgba(92, 54, 14, 0.28);
+  padding: 6px 10px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #f3d79e;
+}
+
+body.craft-ui.theme-day .gpu-dual-hint {
+  border-color: rgba(180, 120, 32, 0.45);
+  background: rgba(245, 226, 184, 0.55);
+  color: #6b4310;
+}

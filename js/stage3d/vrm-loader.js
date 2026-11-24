@@ -25,19 +25,19 @@ const SEAT_MODEL_SLUGS = {
 };
 
 const VRM_IDLE_ARCHETYPES = {
-  "你":   { gestureStyle: "balanced",   breathFreq: 1.95, breathAmp: 0.024, spineLean: 0.022, headRollAmp: 0.036, headTiltBias: 0.0,    idleHappy: 0.10, idleFun: 0.05, rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.13, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.036, talkArmAmp: 1.14, legTempo: 0.75, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] },
-  "小澄": { gestureStyle: "analytical", breathFreq: 1.85, breathAmp: 0.020, spineLean: 0.040, headRollAmp: 0.032, headTiltBias: 0.030,  idleHappy: 0.02, idleFun: 0.0,  rDrop: 1.09, rFwd: 0.28, rBend: 1.02, lDrop: 1.14, lFwd: 0.22, lBend: 0.84, armSwayAmp: 0.030, talkArmAmp: 1.10, legTempo: 0.55, idlePool: ["glasses_adjust", "chin_rest", "table_tap", "sip_tea"] },
-  "暖暖": { gestureStyle: "graceful",   breathFreq: 2.15, breathAmp: 0.028, spineLean: 0.022, headRollAmp: 0.058, headTiltBias: -0.03,  idleHappy: 0.28, idleFun: 0.18, rDrop: 1.10, rFwd: 0.28, rBend: 0.98, lDrop: 1.11, lFwd: 0.27, lBend: 0.96, armSwayAmp: 0.042, talkArmAmp: 1.08, legTempo: 0.70, idlePool: ["sip_tea", "hands_clasp", "playful_sway", "look_around"] },
-  "阿松": { gestureStyle: "steady",     breathFreq: 1.38, breathAmp: 0.024, spineLean: -0.022, headRollAmp: 0.024, headTiltBias: 0.0,   idleHappy: 0.09, idleFun: 0.0,  rDrop: 1.14, rFwd: 0.22, rBend: 0.86, lDrop: 1.14, lFwd: 0.22, lBend: 0.86, armSwayAmp: 0.026, talkArmAmp: 1.00, legTempo: 0.40, idlePool: ["arms_fold", "sip_tea", "stretch_roll", "chin_rest"] },
-  "星兒": { gestureStyle: "expressive", breathFreq: 2.85, breathAmp: 0.032, spineLean: 0.032, headRollAmp: 0.074, headTiltBias: 0.04,   idleHappy: 0.22, idleFun: 0.30, rDrop: 1.06, rFwd: 0.31, rBend: 1.08, lDrop: 1.12, lFwd: 0.25, lBend: 0.90, armSwayAmp: 0.052, talkArmAmp: 1.44, legTempo: 1.35, idlePool: ["playful_sway", "chin_rest", "look_around", "sip_tea", "hands_clasp"] },
+  "你": { gestureStyle: "balanced", breathFreq: 1.95, breathAmp: 0.024, spineLean: 0.022, headRollAmp: 0.036, headTiltBias: 0.0, idleHappy: 0.10, idleFun: 0.05, rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.13, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.036, talkArmAmp: 1.14, legTempo: 0.75, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] },
+  "小澄": { gestureStyle: "analytical", breathFreq: 1.85, breathAmp: 0.020, spineLean: 0.040, headRollAmp: 0.032, headTiltBias: 0.030, idleHappy: 0.02, idleFun: 0.0, rDrop: 1.09, rFwd: 0.28, rBend: 1.02, lDrop: 1.14, lFwd: 0.22, lBend: 0.84, armSwayAmp: 0.030, talkArmAmp: 1.10, legTempo: 0.55, idlePool: ["glasses_adjust", "chin_rest", "table_tap", "sip_tea"] },
+  "暖暖": { gestureStyle: "graceful", breathFreq: 2.15, breathAmp: 0.028, spineLean: 0.022, headRollAmp: 0.058, headTiltBias: -0.03, idleHappy: 0.28, idleFun: 0.18, rDrop: 1.10, rFwd: 0.28, rBend: 0.98, lDrop: 1.11, lFwd: 0.27, lBend: 0.96, armSwayAmp: 0.042, talkArmAmp: 1.08, legTempo: 0.70, idlePool: ["sip_tea", "hands_clasp", "playful_sway", "look_around"] },
+  "阿松": { gestureStyle: "steady", breathFreq: 1.38, breathAmp: 0.024, spineLean: -0.022, headRollAmp: 0.024, headTiltBias: 0.0, idleHappy: 0.09, idleFun: 0.0, rDrop: 1.14, rFwd: 0.22, rBend: 0.86, lDrop: 1.14, lFwd: 0.22, lBend: 0.86, armSwayAmp: 0.026, talkArmAmp: 1.00, legTempo: 0.40, idlePool: ["arms_fold", "sip_tea", "stretch_roll", "chin_rest"] },
+  "星兒": { gestureStyle: "expressive", breathFreq: 2.85, breathAmp: 0.032, spineLean: 0.032, headRollAmp: 0.074, headTiltBias: 0.04, idleHappy: 0.22, idleFun: 0.30, rDrop: 1.06, rFwd: 0.31, rBend: 1.08, lDrop: 1.12, lFwd: 0.25, lBend: 0.90, armSwayAmp: 0.052, talkArmAmp: 1.44, legTempo: 1.35, idlePool: ["playful_sway", "chin_rest", "look_around", "sip_tea", "hands_clasp"] },
   "小雲": { gestureStyle: "analytical", breathFreq: 1.75, breathAmp: 0.022, spineLean: 0.032, headRollAmp: 0.040, headTiltBias: -0.038, idleHappy: 0.08, idleFun: 0.05, rDrop: 1.09, rFwd: 0.29, rBend: 1.04, lDrop: 1.14, lFwd: 0.23, lBend: 0.88, armSwayAmp: 0.034, talkArmAmp: 1.20, legTempo: 0.65, idlePool: ["arms_fold", "chin_rest", "table_tap", "look_around"] },
-  "阿竹": { gestureStyle: "poetic",     breathFreq: 1.55, breathAmp: 0.020, spineLean: 0.022, headRollAmp: 0.034, headTiltBias: 0.022,  idleHappy: 0.08, idleFun: 0.03, rDrop: 1.12, rFwd: 0.26, rBend: 0.98, lDrop: 1.13, lFwd: 0.25, lBend: 0.94, armSwayAmp: 0.030, talkArmAmp: 0.98, legTempo: 0.42, idlePool: ["sip_tea", "sleeve_poise", "chin_rest", "look_around"] },
-  "晨晨": { gestureStyle: "energetic",  breathFreq: 2.48, breathAmp: 0.030, spineLean: 0.040, headRollAmp: 0.054, headTiltBias: 0.0,    idleHappy: 0.20, idleFun: 0.16, rDrop: 1.08, rFwd: 0.30, rBend: 0.92, lDrop: 1.10, lFwd: 0.28, lBend: 0.88, armSwayAmp: 0.048, talkArmAmp: 1.46, legTempo: 1.45, idlePool: ["stretch_roll", "table_tap", "arms_fold", "look_around", "playful_sway"] },
-  "墨白": { gestureStyle: "classical",  breathFreq: 1.32, breathAmp: 0.018, spineLean: 0.010, headRollAmp: 0.022, headTiltBias: 0.014,  idleHappy: 0.0,  idleFun: 0.0,  rDrop: 1.13, rFwd: 0.24, rBend: 0.96, lDrop: 1.14, lFwd: 0.22, lBend: 0.92, armSwayAmp: 0.024, talkArmAmp: 0.92, legTempo: 0.32, idlePool: ["sleeve_poise", "sip_tea", "arms_fold", "chin_rest"] },
-  "晴嵐": { gestureStyle: "graceful",   breathFreq: 1.65, breathAmp: 0.023, spineLean: 0.018, headRollAmp: 0.044, headTiltBias: -0.028, idleHappy: 0.22, idleFun: 0.12, rDrop: 1.11, rFwd: 0.27, rBend: 1.00, lDrop: 1.13, lFwd: 0.25, lBend: 0.94, armSwayAmp: 0.035, talkArmAmp: 0.98, legTempo: 0.50, idlePool: ["sip_tea", "sleeve_poise", "hands_clasp", "look_around"] },
-  "阿朗": { gestureStyle: "energetic",  breathFreq: 2.15, breathAmp: 0.026, spineLean: 0.038, headRollAmp: 0.038, headTiltBias: 0.020,  idleHappy: 0.08, idleFun: 0.08, rDrop: 1.08, rFwd: 0.29, rBend: 0.96, lDrop: 1.13, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.040, talkArmAmp: 1.38, legTempo: 0.95, idlePool: ["arms_fold", "table_tap", "chin_rest", "stretch_roll"] },
-  "柚子": { gestureStyle: "expressive", breathFreq: 2.70, breathAmp: 0.031, spineLean: 0.025, headRollAmp: 0.068, headTiltBias: -0.03,  idleHappy: 0.32, idleFun: 0.26, rDrop: 1.07, rFwd: 0.30, rBend: 1.04, lDrop: 1.09, lFwd: 0.28, lBend: 1.00, armSwayAmp: 0.050, talkArmAmp: 1.40, legTempo: 1.38, idlePool: ["playful_sway", "sip_tea", "hands_clasp", "look_around"] },
-  default:{ gestureStyle: "balanced",   breathFreq: 2.05, breathAmp: 0.024, spineLean: 0.020, headRollAmp: 0.038, headTiltBias: 0.0,    idleHappy: 0.06, idleFun: 0.0,  rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.12, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.035, talkArmAmp: 1.12, legTempo: 0.72, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] }
+  "阿竹": { gestureStyle: "poetic", breathFreq: 1.55, breathAmp: 0.020, spineLean: 0.022, headRollAmp: 0.034, headTiltBias: 0.022, idleHappy: 0.08, idleFun: 0.03, rDrop: 1.12, rFwd: 0.26, rBend: 0.98, lDrop: 1.13, lFwd: 0.25, lBend: 0.94, armSwayAmp: 0.030, talkArmAmp: 0.98, legTempo: 0.42, idlePool: ["sip_tea", "sleeve_poise", "chin_rest", "look_around"] },
+  "晨晨": { gestureStyle: "energetic", breathFreq: 2.48, breathAmp: 0.030, spineLean: 0.040, headRollAmp: 0.054, headTiltBias: 0.0, idleHappy: 0.20, idleFun: 0.16, rDrop: 1.08, rFwd: 0.30, rBend: 0.92, lDrop: 1.10, lFwd: 0.28, lBend: 0.88, armSwayAmp: 0.048, talkArmAmp: 1.46, legTempo: 1.45, idlePool: ["stretch_roll", "table_tap", "arms_fold", "look_around", "playful_sway"] },
+  "墨白": { gestureStyle: "classical", breathFreq: 1.32, breathAmp: 0.018, spineLean: 0.010, headRollAmp: 0.022, headTiltBias: 0.014, idleHappy: 0.0, idleFun: 0.0, rDrop: 1.13, rFwd: 0.24, rBend: 0.96, lDrop: 1.14, lFwd: 0.22, lBend: 0.92, armSwayAmp: 0.024, talkArmAmp: 0.92, legTempo: 0.32, idlePool: ["sleeve_poise", "sip_tea", "arms_fold", "chin_rest"] },
+  "晴嵐": { gestureStyle: "graceful", breathFreq: 1.65, breathAmp: 0.023, spineLean: 0.018, headRollAmp: 0.044, headTiltBias: -0.028, idleHappy: 0.22, idleFun: 0.12, rDrop: 1.11, rFwd: 0.27, rBend: 1.00, lDrop: 1.13, lFwd: 0.25, lBend: 0.94, armSwayAmp: 0.035, talkArmAmp: 0.98, legTempo: 0.50, idlePool: ["sip_tea", "sleeve_poise", "hands_clasp", "look_around"] },
+  "阿朗": { gestureStyle: "energetic", breathFreq: 2.15, breathAmp: 0.026, spineLean: 0.038, headRollAmp: 0.038, headTiltBias: 0.020, idleHappy: 0.08, idleFun: 0.08, rDrop: 1.08, rFwd: 0.29, rBend: 0.96, lDrop: 1.13, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.040, talkArmAmp: 1.38, legTempo: 0.95, idlePool: ["arms_fold", "table_tap", "chin_rest", "stretch_roll"] },
+  "柚子": { gestureStyle: "expressive", breathFreq: 2.70, breathAmp: 0.031, spineLean: 0.025, headRollAmp: 0.068, headTiltBias: -0.03, idleHappy: 0.32, idleFun: 0.26, rDrop: 1.07, rFwd: 0.30, rBend: 1.04, lDrop: 1.09, lFwd: 0.28, lBend: 1.00, armSwayAmp: 0.050, talkArmAmp: 1.40, legTempo: 1.38, idlePool: ["playful_sway", "sip_tea", "hands_clasp", "look_around"] },
+  default: { gestureStyle: "balanced", breathFreq: 2.05, breathAmp: 0.024, spineLean: 0.020, headRollAmp: 0.038, headTiltBias: 0.0, idleHappy: 0.06, idleFun: 0.0, rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.12, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.035, talkArmAmp: 1.12, legTempo: 0.72, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] }
 };
 
 /**
@@ -47,17 +47,17 @@ const VRM_IDLE_ARCHETYPES = {
  * - 校正既有角色髮色／衣色與專屬配件（星兒紫髮星夾、阿松銀鬢綠衣、阿竹墨黑青衫玉佩、晨晨橘頭帶等）
  */
 const VRM_PERSONA_STYLING = Object.freeze({
-  "小澄": Object.freeze({ baseSlug: "azhu",        hairHex: "#1c283d", hairStr: 0.88, topsHex: "#31587d", topsStr: 0.82, neckHex: "#e8decb", eyeHex: "#24354d", vrmAcc: "glasses" }),
-  "暖暖": Object.freeze({ baseSlug: "nuannuan",    hairHex: "#623d26", hairStr: 0.45, topsHex: "#c2893b", topsStr: 0.76, neckHex: "#f3e6cc", eyeHex: "#523220", vrmAcc: "ribbon" }),
-  "阿松": Object.freeze({ baseSlug: "asong",       hairHex: "#5f6872", hairStr: 0.72, topsHex: "#2a5c46", topsStr: 0.76, neckHex: "#82ab95", eyeHex: "#30261d", vrmAcc: null }),
-  "星兒": Object.freeze({ baseSlug: "xinger",      hairHex: "#54366e", hairStr: 0.90, topsHex: "#876094", topsStr: 0.84, neckHex: "#e0be72", eyeHex: "#553b75", vrmAcc: "star_clip" }),
-  "小雲": Object.freeze({ baseSlug: "xiaoyun",     hairHex: "#3a1e2b", hairStr: 0.68, topsHex: "#2d303a", topsStr: 0.72, neckHex: "#943548", eyeHex: "#422130", vrmAcc: null }),
-  "阿竹": Object.freeze({ baseSlug: "azhu",        hairHex: "#1f242b", hairStr: 0.88, topsHex: "#35615b", topsStr: 0.78, neckHex: "#232a30", eyeHex: "#283635", vrmAcc: "jade_pendant" }),
-  "晨晨": Object.freeze({ baseSlug: "chenchen",    hairHex: "#573724", hairStr: 0.78, topsHex: "#b8552a", topsStr: 0.84, neckHex: "#e39c3e", eyeHex: "#42281a", vrmAcc: "headband" }),
-  "墨白": Object.freeze({ baseSlug: "chenchen",    hairHex: "#151923", hairStr: 0.88, topsHex: "#31405c", topsStr: 0.86, neckHex: "#ece2d0", eyeHex: "#242c47", vrmAcc: "ink_scroll" }),
-  "晴嵐": Object.freeze({ baseSlug: "player",      hairHex: "#523325", hairStr: 0.65, topsHex: "#c98f96", topsStr: 0.82, neckHex: "#f2e8dc", eyeHex: "#593524", vrmAcc: "jade_hairpin" }),
+  "小澄": Object.freeze({ baseSlug: "azhu", hairHex: "#1c283d", hairStr: 0.88, topsHex: "#31587d", topsStr: 0.82, neckHex: "#e8decb", eyeHex: "#24354d", vrmAcc: "glasses" }),
+  "暖暖": Object.freeze({ baseSlug: "nuannuan", hairHex: "#623d26", hairStr: 0.45, topsHex: "#c2893b", topsStr: 0.76, neckHex: "#f3e6cc", eyeHex: "#523220", vrmAcc: "ribbon" }),
+  "阿松": Object.freeze({ baseSlug: "asong", hairHex: "#5f6872", hairStr: 0.72, topsHex: "#2a5c46", topsStr: 0.76, neckHex: "#82ab95", eyeHex: "#30261d", vrmAcc: null }),
+  "星兒": Object.freeze({ baseSlug: "xinger", hairHex: "#54366e", hairStr: 0.90, topsHex: "#876094", topsStr: 0.84, neckHex: "#e0be72", eyeHex: "#553b75", vrmAcc: "star_clip" }),
+  "小雲": Object.freeze({ baseSlug: "xiaoyun", hairHex: "#3a1e2b", hairStr: 0.68, topsHex: "#2d303a", topsStr: 0.72, neckHex: "#943548", eyeHex: "#422130", vrmAcc: null }),
+  "阿竹": Object.freeze({ baseSlug: "azhu", hairHex: "#1f242b", hairStr: 0.88, topsHex: "#35615b", topsStr: 0.78, neckHex: "#232a30", eyeHex: "#283635", vrmAcc: "jade_pendant" }),
+  "晨晨": Object.freeze({ baseSlug: "chenchen", hairHex: "#573724", hairStr: 0.78, topsHex: "#b8552a", topsStr: 0.84, neckHex: "#e39c3e", eyeHex: "#42281a", vrmAcc: "headband" }),
+  "墨白": Object.freeze({ baseSlug: "chenchen", hairHex: "#151923", hairStr: 0.88, topsHex: "#31405c", topsStr: 0.86, neckHex: "#ece2d0", eyeHex: "#242c47", vrmAcc: "ink_scroll" }),
+  "晴嵐": Object.freeze({ baseSlug: "player", hairHex: "#523325", hairStr: 0.65, topsHex: "#c98f96", topsStr: 0.82, neckHex: "#f2e8dc", eyeHex: "#593524", vrmAcc: "jade_hairpin" }),
   "阿朗": Object.freeze({ baseSlug: "player_male", hairHex: "#3a251b", hairStr: 0.76, topsHex: "#a37944", topsStr: 0.84, neckHex: "#f0eee8", eyeHex: "#7a511e", vrmAcc: "gavel_brooch" }),
-  "柚子": Object.freeze({ baseSlug: "nuannuan",    hairHex: "#a36c33", hairStr: 0.78, topsHex: "#829e5a", topsStr: 0.84, neckHex: "#f6efe0", eyeHex: "#4f642c", vrmAcc: "yuzu_clip" })
+  "柚子": Object.freeze({ baseSlug: "nuannuan", hairHex: "#a36c33", hairStr: 0.78, topsHex: "#829e5a", topsStr: 0.84, neckHex: "#f6efe0", eyeHex: "#4f642c", vrmAcc: "yuzu_clip" })
 });
 
 const stage3dVrm = {
@@ -139,7 +139,7 @@ const stage3dVrm = {
     Object.keys(this._recolorCache || {}).forEach(function (k) {
       const tex = self._recolorCache[k];
       if (tex && typeof tex.dispose === "function") {
-        try { tex.dispose(); } catch (e) {}
+        try { tex.dispose(); } catch (e) { }
       }
     });
     this._recolorCache = {};
@@ -184,7 +184,7 @@ const stage3dVrm = {
         const nr = Math.min(255, tr * lift + specBoost);
         const ng = Math.min(255, tg * lift + specBoost);
         const nb = Math.min(255, tb * lift + specBoost);
-        d[i]     = Math.round(r * (1 - blend) + nr * blend);
+        d[i] = Math.round(r * (1 - blend) + nr * blend);
         d[i + 1] = Math.round(g * (1 - blend) + ng * blend);
         d[i + 2] = Math.round(b * (1 - blend) + nb * blend);
       }
@@ -206,7 +206,7 @@ const stage3dVrm = {
           if (oldestKey && oldestKey !== cacheKey && this._recolorCache[oldestKey]) {
             const oldTex = this._recolorCache[oldestKey];
             if (oldTex && typeof oldTex.dispose === "function") {
-              try { oldTex.dispose(); } catch (e) {}
+              try { oldTex.dispose(); } catch (e) { }
             }
             delete this._recolorCache[oldestKey];
           }
@@ -316,7 +316,7 @@ const stage3dVrm = {
           if (oldestKey && oldestKey !== cacheKey && this._recolorCache[oldestKey]) {
             const oldTex = this._recolorCache[oldestKey];
             if (oldTex && typeof oldTex.dispose === "function") {
-              try { oldTex.dispose(); } catch (e) {}
+              try { oldTex.dispose(); } catch (e) { }
             }
             delete this._recolorCache[oldestKey];
           }
@@ -874,13 +874,15 @@ const stage3dVrm = {
 
   slerpBoneModelDelta: function (meta, rx, ry, rz, alpha, order) {
     if (!meta || !meta.obj) return;
+    const baseA = alpha !== undefined ? alpha : 0.16;
+    const dt60 = clamp(Number(this._curDt60) || 1, 0.05, 3.0);
+    const a = typeof dampFactor3D === "function" ? dampFactor3D(baseA, dt60) : baseA;
     if (typeof THREE.Quaternion === "function" && meta.obj.quaternion && typeof meta.obj.quaternion.slerp === "function") {
       const sc = this.ensureScratch();
       const qDelta = this.makeModelEulerDelta(rx, ry, rz, order || "YXZ", sc ? sc.qDelta : null);
       const qTarget = this.computeModelSpaceBoneQuat(meta, qDelta, sc ? sc.qTarget : null);
-      if (qTarget) meta.obj.quaternion.slerp(qTarget, alpha !== undefined ? alpha : 0.16);
+      if (qTarget) meta.obj.quaternion.slerp(qTarget, a);
     } else if (meta.obj.rotation) {
-      const a = alpha !== undefined ? alpha : 0.16;
       meta.obj.rotation.x += ((rx || 0) - meta.obj.rotation.x) * a;
       meta.obj.rotation.y += ((ry || 0) - meta.obj.rotation.y) * a;
       meta.obj.rotation.z += ((rz || 0) - meta.obj.rotation.z) * a;
@@ -1145,9 +1147,7 @@ const stage3dVrm = {
         });
 
         child.material = isArr ? nextMats : nextMats[0];
-        // Skip shadow casting on high-poly VRM face/hair/facial-detail submeshes (saves ~118 skinned shadow draw calls & ~300k shadow tris/frame while Body + chair contact shadow stay crisp!)
-        const isSkipShadowMesh = /face|hair|eyelash|eyebrow|brow|eyewhite|eyehighlight|eyeextra|eyeiris|iris|mouth|teeth|tongue|blush|highlight|glass|lens/i.test(childName + " " + origMats.map(function (mm) { return mm && mm.name ? mm.name : ""; }).join(" "));
-        child.castShadow = !hasOutlineOnly && !isSkipShadowMesh;
+        child.castShadow = !hasOutlineOnly;
         child.receiveShadow = !isFaceMesh && !allUnlitBasic;
         child.frustumCulled = false;
       });
@@ -1234,6 +1234,8 @@ const stage3dVrm = {
     if (!inst) return;
     const o = opts || {};
     const t = o.tSec || 0;
+    const dt60 = clamp(Number(o.dt60) || 1, 0.05, 3.0);
+    this._curDt60 = dt60;
     const seed = o.seed || 0;
     const sleeping = Boolean(o.sleeping) || o.alive === false;
     const talking = Boolean(o.talking) && o.alive !== false;
@@ -1344,21 +1346,27 @@ const stage3dVrm = {
     const targetSorrow = o.alive === false ? 0.55 : ((emotion === "sorrow" || emotion === "sad") ? 0.72 : (emotion === "nervous" ? 0.25 : 0.0));
     const targetSurprised = (emotion === "shock" || emotion === "nervous" || o.act === "gasp_react") ? 0.80 : 0.0;
 
-    inst.blinkAmt += (targetBlink - inst.blinkAmt) * 0.45;
-    inst.winkLAmt += (targetWinkL - inst.winkLAmt) * 0.45;
-    inst.mouthAmt += (tA - inst.mouthAmt) * 0.42;
-    if (!inst.vowelAmts) inst.vowelAmts = { aa: 0, ih: 0, ou: 0, ee: 0, oh: 0 };
-    inst.vowelAmts.aa += (tA - inst.vowelAmts.aa) * 0.45;
-    inst.vowelAmts.ih += (tI - inst.vowelAmts.ih) * 0.45;
-    inst.vowelAmts.ou += (tU - inst.vowelAmts.ou) * 0.45;
-    inst.vowelAmts.ee += (tE - inst.vowelAmts.ee) * 0.45;
-    inst.vowelAmts.oh += (tO - inst.vowelAmts.oh) * 0.45;
+    const d45 = typeof dampFactor3D === "function" ? dampFactor3D(0.45, dt60) : 0.45;
+    const d42 = typeof dampFactor3D === "function" ? dampFactor3D(0.42, dt60) : 0.42;
+    const d18 = typeof dampFactor3D === "function" ? dampFactor3D(0.18, dt60) : 0.18;
+    const d20 = typeof dampFactor3D === "function" ? dampFactor3D(0.20, dt60) : 0.20;
+    const d22 = typeof dampFactor3D === "function" ? dampFactor3D(0.22, dt60) : 0.22;
 
-    inst.happyAmt += (targetHappy - inst.happyAmt) * 0.18;
-    inst.funAmt = (inst.funAmt || 0) + (targetFun - (inst.funAmt || 0)) * 0.18;
-    inst.angryAmt = (inst.angryAmt || 0) + (targetAngry - (inst.angryAmt || 0)) * 0.20;
-    inst.sorrowAmt = (inst.sorrowAmt || 0) + (targetSorrow - (inst.sorrowAmt || 0)) * 0.18;
-    inst.surprisedAmt += (targetSurprised - inst.surprisedAmt) * 0.22;
+    inst.blinkAmt += (targetBlink - inst.blinkAmt) * d45;
+    inst.winkLAmt += (targetWinkL - inst.winkLAmt) * d45;
+    inst.mouthAmt += (tA - inst.mouthAmt) * d42;
+    if (!inst.vowelAmts) inst.vowelAmts = { aa: 0, ih: 0, ou: 0, ee: 0, oh: 0 };
+    inst.vowelAmts.aa += (tA - inst.vowelAmts.aa) * d45;
+    inst.vowelAmts.ih += (tI - inst.vowelAmts.ih) * d45;
+    inst.vowelAmts.ou += (tU - inst.vowelAmts.ou) * d45;
+    inst.vowelAmts.ee += (tE - inst.vowelAmts.ee) * d45;
+    inst.vowelAmts.oh += (tO - inst.vowelAmts.oh) * d45;
+
+    inst.happyAmt += (targetHappy - inst.happyAmt) * d18;
+    inst.funAmt = (inst.funAmt || 0) + (targetFun - (inst.funAmt || 0)) * d18;
+    inst.angryAmt = (inst.angryAmt || 0) + (targetAngry - (inst.angryAmt || 0)) * d20;
+    inst.sorrowAmt = (inst.sorrowAmt || 0) + (targetSorrow - (inst.sorrowAmt || 0)) * d18;
+    inst.surprisedAmt += (targetSurprised - inst.surprisedAmt) * d22;
 
     this.applyMorphWeight(inst.morphs.blink, inst.blinkAmt);
     if (inst.winkLAmt > 0.02) this.applyMorphWeight(inst.morphs.blink_l, inst.winkLAmt);
@@ -1839,11 +1847,11 @@ const stage3dVrm = {
           rHandPose = "open_palm"; lHandPose = "open_palm";
         }
         rDrop = rDrop + (tRD - rDrop) * iw;
-        rFwd  = rFwd  + (tRF - rFwd)  * iw;
+        rFwd = rFwd + (tRF - rFwd) * iw;
         rBend = rBend + (tRB - rBend) * iw;
         rTwist = rTwist + (tRT - rTwist) * iw;
         lDrop = lDrop + (tLD - lDrop) * iw;
-        lFwd  = lFwd  + (tLF - lFwd)  * iw;
+        lFwd = lFwd + (tLF - lFwd) * iw;
         lBend = lBend + (tLB - lBend) * iw;
         lTwist = lTwist + (tLT - lTwist) * iw;
       }
@@ -1869,11 +1877,11 @@ const stage3dVrm = {
 
     // Expressive Finger Pose Articulation (optional proximal finger bones — graceful natural curl/point/open palm!)
     const FINGER_PRESETS = {
-      relaxed:     [0.24, 0.32, 0.40, 0.48, 0.18],
-      open_palm:   [0.06, 0.08, 0.12, 0.16, 0.06],
+      relaxed: [0.24, 0.32, 0.40, 0.48, 0.18],
+      open_palm: [0.06, 0.08, 0.12, 0.16, 0.06],
       point_index: [0.04, 0.96, 1.04, 1.08, 0.56],
-      fist_cheer:  [1.02, 1.08, 1.12, 1.14, 0.65],
-      tea_poise:   [0.14, 0.26, 0.40, 0.20, 0.14]
+      fist_cheer: [1.02, 1.08, 1.12, 1.14, 0.65],
+      tea_poise: [0.14, 0.26, 0.40, 0.20, 0.14]
     };
     const rCurls = FINGER_PRESETS[rHandPose] || FINGER_PRESETS.relaxed;
     const lCurls = FINGER_PRESETS[lHandPose] || FINGER_PRESETS.relaxed;
@@ -1891,7 +1899,7 @@ const stage3dVrm = {
     // 3. SpringBone Hair, Ribbons & Skirt Model-Space Physics (lively follow-through hair sway, flip-free seated skirt!)
     const dYaw = clamp(yawNow - (inst.prevHeadYaw || 0), -0.32, 0.32);
     inst.prevHeadYaw = yawNow;
-    inst.headInertia = (inst.headInertia || 0) * 0.85 + dYaw * 1.85;
+    inst.headInertia = (inst.headInertia || 0) * Math.pow(0.85, dt60) + dYaw * 1.85;
 
     const qMode = (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high";
     const springStride = o.isPriority ? 1 : (qMode === "eco" ? 3 : (qMode === "balanced" ? 2 : 1));

@@ -308,6 +308,13 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
   const t = f.tSec;
   const p = f.p;
   const nowMs = f.nowMs;
+  const dt60 = clamp(Number(f.dt60) || 1, 0.05, 3.0);
+  const d08 = typeof dampFactor3D === "function" ? dampFactor3D(0.08, dt60) : 0.08;
+  const d14 = typeof dampFactor3D === "function" ? dampFactor3D(0.14, dt60) : 0.14;
+  const d16 = typeof dampFactor3D === "function" ? dampFactor3D(0.16, dt60) : 0.16;
+  const d18 = typeof dampFactor3D === "function" ? dampFactor3D(0.18, dt60) : 0.18;
+  const physDamp = Math.pow(0.72, dt60);
+  const candleDecay = Math.pow(0.90, dt60);
   const pid = getPlayerId();
   pool.frameCounter += 1;
 
@@ -399,20 +406,20 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       liveAmp = clamp(0.32 + Math.abs(Math.sin(t * 11.4 + s.id * 1.9)) * 0.42 + Math.abs(Math.sin(t * 4.7 + s.id)) * 0.18, 0.18, 0.85);
     }
 
-    // Shared spring-damper physics
+    // Shared spring-damper physics (dt-independent across 60Hz–240Hz!)
     const phys = ensureSeatPhys(s.id);
     const targetScale = isDragSnap ? 1.15 : (isHovered ? 1.06 : 1.0);
-    phys.vScale = (phys.vScale + (targetScale - phys.scale) * 0.22) * 0.72;
-    phys.scale = clamp(phys.scale + phys.vScale, 0.82, 1.32);
-    phys.vx = (phys.vx + (0 - phys.ox) * 0.20) * 0.72;
-    phys.vy = (phys.vy + (0 - phys.oy) * 0.20) * 0.72;
-    phys.ox = clamp(phys.ox + phys.vx, -20, 20);
-    phys.oy = clamp(phys.oy + phys.vy, -20, 20);
-    phys.vTilt = (phys.vTilt + (0 - phys.tilt) * 0.18) * 0.72;
-    phys.tilt = clamp(phys.tilt + phys.vTilt, -0.4, 0.4);
+    phys.vScale = (phys.vScale + (targetScale - phys.scale) * 0.22 * dt60) * physDamp;
+    phys.scale = clamp(phys.scale + phys.vScale * dt60, 0.82, 1.32);
+    phys.vx = (phys.vx + (0 - phys.ox) * 0.20 * dt60) * physDamp;
+    phys.vy = (phys.vy + (0 - phys.oy) * 0.20 * dt60) * physDamp;
+    phys.ox = clamp(phys.ox + phys.vx * dt60, -20, 20);
+    phys.oy = clamp(phys.oy + phys.vy * dt60, -20, 20);
+    phys.vTilt = (phys.vTilt + (0 - phys.tilt) * 0.18 * dt60) * physDamp;
+    phys.tilt = clamp(phys.tilt + phys.vTilt * dt60, -0.4, 0.4);
 
     // Smooth Farewell Out-Slide & Bow Transition when Eliminated
-    actor.outFade += ((s.alive ? 0 : 1) - actor.outFade) * 0.08;
+    actor.outFade += ((s.alive ? 0 : 1) - actor.outFade) * d08;
     const radialOut = 1.0 + actor.outFade * 0.14;
     actor.root.position.set(pos.x * radialOut, -actor.outFade * 0.12, pos.z * radialOut);
     const baseFacingY = Math.atan2(-pos.x, -pos.z);
@@ -474,8 +481,8 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       targetHeadYaw = Math.sin(t * 0.52 + s.id * 1.9) * 0.30 + Math.cos(t * 0.24 + s.id * 2.7) * 0.14;
       targetHeadPitch = Math.sin(t * 0.68 + s.id * 1.3) * 0.06;
     }
-    actor.headYaw += (targetHeadYaw - actor.headYaw) * 0.14;
-    actor.headPitch += (targetHeadPitch - actor.headPitch) * 0.14;
+    actor.headYaw += (targetHeadYaw - actor.headYaw) * d14;
+    actor.headPitch += (targetHeadPitch - actor.headPitch) * d14;
     actor.headPivot.rotation.set(
       actor.headPitch + (isTalkingNow ? (liveAmp * 0.08 + Math.sin(t * 9 + s.id) * 0.03) : 0),
       actor.headYaw,
@@ -537,12 +544,12 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         rShX = -1.15; rShZ = -0.32; rElbX = -0.85 + Math.sin(t * 9) * 0.28;
       }
 
-      actor.rightArmPivot.rotation.x += (rShX - actor.rightArmPivot.rotation.x) * 0.16;
-      actor.rightArmPivot.rotation.z += (rShZ - actor.rightArmPivot.rotation.z) * 0.16;
-      actor.rightElbowPivot.rotation.x += (rElbX - actor.rightElbowPivot.rotation.x) * 0.18;
-      actor.leftArmPivot.rotation.x += (lShX - actor.leftArmPivot.rotation.x) * 0.16;
-      actor.leftArmPivot.rotation.z += (lShZ - actor.leftArmPivot.rotation.z) * 0.16;
-      actor.leftElbowPivot.rotation.x += (lElbX - actor.leftElbowPivot.rotation.x) * 0.18;
+      actor.rightArmPivot.rotation.x += (rShX - actor.rightArmPivot.rotation.x) * d16;
+      actor.rightArmPivot.rotation.z += (rShZ - actor.rightArmPivot.rotation.z) * d16;
+      actor.rightElbowPivot.rotation.x += (rElbX - actor.rightElbowPivot.rotation.x) * d18;
+      actor.leftArmPivot.rotation.x += (lShX - actor.leftArmPivot.rotation.x) * d16;
+      actor.leftArmPivot.rotation.z += (lShZ - actor.leftArmPivot.rotation.z) * d16;
+      actor.leftElbowPivot.rotation.x += (lElbX - actor.leftElbowPivot.rotation.x) * d18;
     }
     actor.voteCard.visible = isVotingNow && !hideSelfBodyInFP;
 
@@ -564,7 +571,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     actor.ringMat.emissiveIntensity = !s.alive ? 0.04 : (isSpeaking || isSelected || isDragSnap ? 1.25 : 0.42);
 
     const showHalo = s.alive && (isSpeaking || isSelected || isDragSnap || Boolean(s.claimedRole));
-    actor.haloMat.opacity += ((showHalo ? (isSpeaking ? (0.85 + liveAmp * 0.15) : 0.55) : 0.0) - actor.haloMat.opacity) * 0.16;
+    actor.haloMat.opacity += ((showHalo ? (isSpeaking ? (0.85 + liveAmp * 0.15) : 0.55) : 0.0) - actor.haloMat.opacity) * d16;
     actor.haloMat.color.set(isSpeaking ? "#fde047" : (isSelected ? "#f59e0b" : (s.claimedRole === "seer" ? "#a78bfa" : "#38bdf8")));
     actor.haloRing.position.y = actor.useVrm ? 0.24 : 0.68;
     actor.haloRing.rotation.z = t * (isSpeaking ? 2.2 : 1.4);
@@ -607,7 +614,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         actor.idCardMesh.material[3].needsUpdate = true;
       }
       const targetFlip = state.cardPeek3D ? 1.0 : 0.0;
-      actor.cardFlipProgress += (targetFlip - actor.cardFlipProgress) * 0.14;
+      actor.cardFlipProgress += (targetFlip - actor.cardFlipProgress) * d14;
       const fp = actor.cardFlipProgress;
       actor.idCardPivot.position.y = 0.04 + fp * 0.72 + (fp > 0.1 ? Math.sin(t * 3.2) * 0.04 : 0);
       actor.idCardPivot.rotation.x = fp * Math.PI * 0.84;
@@ -615,7 +622,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     }
 
     // Tabletop Candle Flame + Warm Tabletop Reflection Glow + Rising Teacup Steam vs Extinguished Smoke!
-    actor.candleSparkBoost *= 0.90;
+    actor.candleSparkBoost *= candleDecay;
     actor.candleFlame.visible = s.alive;
     if (actor.candleGlow) actor.candleGlow.visible = s.alive;
     if (s.alive) {
@@ -708,6 +715,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       );
       stage3dVrm.updateVrmAvatar(actor.vrmAvatar, {
         tSec: t,
+        dt60: dt60 * vrmStride,
         seed: s.id * 1.7,
         personaName: s.name,
         moodKey: curMoodKey,

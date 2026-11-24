@@ -7,6 +7,12 @@
  */
 "use strict";
 
+function dampFactor3D(k60, dt60) {
+  const k = clamp(Number(k60) || 0, 0, 0.999);
+  const s = clamp(Number(dt60) || 1, 0.05, 3.0);
+  return 1 - Math.pow(1 - k, s);
+}
+
 const stage3d = {
   ready: false,
   failed: false,
@@ -160,6 +166,66 @@ const stage3d = {
     return this.detectGpuProfile(renderer).isIntegratedGpu;
   },
 
+  getCleanGpuName: function () {
+    const raw = String(this.gpuRendererStr || "").trim();
+    if (!raw) return this.gpuShortLabel || (this.isIntegratedGpu ? "內顯最佳化" : "獨立/標準顯卡");
+    const mAngle = raw.match(/ANGLE\s*\([^,]+,\s*([^,(]+?)(?:\s*\(0x[0-9a-f]+\))?(?:\s+Direct3D|\s+OpenGL|\s+Vulkan|,|\))/i);
+    if (mAngle && mAngle[1]) return mAngle[1].replace(/\s+/g, " ").trim();
+    return this.gpuShortLabel || raw.replace(/\s+/g, " ").trim().slice(0, 48);
+  },
+
+  shouldWarnDesktopIntegratedGpu: function (screenW, isMobileUa) {
+    const sw = typeof screenW === "number"
+      ? screenW
+      : (typeof window !== "undefined" && window.screen
+        ? Math.max(window.screen.width || 0, window.innerWidth || 0)
+        : 0);
+    const mobile = typeof isMobileUa === "boolean"
+      ? isMobileUa
+      : (typeof navigator !== "undefined" && /android|iphone|ipad|ipod|mobile/i.test(String(navigator.userAgent || "")));
+    if (mobile || sw < 1920) return false;
+    if (this.isSoftwareRenderer) return true;
+    const raw = String(this.gpuRendererStr || "");
+    return Boolean(this.isIntegratedGpu || /intel.*(uhd|hd graphics|iris)|radeon\(tm\) graphics|amd radeon graphics|vega \d/i.test(raw));
+  },
+
+  getShadowUpdateStride: function () {
+    if (this.isSoftwareRenderer) return 4;
+    const q = (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high";
+    if (this.isIntegratedGpu || q === "eco") return 3;
+    if (q === "balanced") return 2;
+    return 1;
+  },
+
+  updateGpuStatusUi: function () {
+    const q = (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high";
+    const baseLbl = q === "eco" ? "省電流暢" : (q === "balanced" ? "均衡畫質" : "極致畫質");
+    const fpsTag = (this._perfEmaMs && this._perfEmaMs > 1)
+      ? (" · " + Math.min(240, Math.round(1000 / this._perfEmaMs)) + " FPS")
+      : "";
+    const gpuName = this.getCleanGpuName();
+    const perfStr = gpuName + "｜" + baseLbl + fpsTag;
+    const qBtn = el("btnToggle3DQuality");
+    if (qBtn) {
+      qBtn.textContent = baseLbl;
+      qBtn.title = perfStr;
+    }
+    const perfLine = el("gpuPerfStatusLine");
+    if (perfLine) {
+      perfLine.textContent = "3D 狀態：" + perfStr;
+    }
+    const hintEl = el("gpuDualCardHint");
+    if (hintEl) {
+      const warnDesktop = this.shouldWarnDesktopIntegratedGpu();
+      hintEl.classList.toggle("hidden", !warnDesktop);
+      if (warnDesktop) {
+        hintEl.textContent = this.isSoftwareRenderer
+          ? "偵測到瀏覽器目前以 CPU 軟體渲染 3D。請至瀏覽器設定開啟「使用圖形加速」並重啟瀏覽器，即可恢復獨立顯卡流暢度。"
+          : ("偵測到桌機高解析度畫面正由內顯（" + gpuName + "）執行。若本機配有多顯卡（如 RTX 獨顯），請至 Windows「設定 → 系統 → 顯示器 → 圖形」將瀏覽器指定為「高效能」後重開分頁，即可發揮高更新率原生滿幀。");
+      }
+    }
+  },
+
   getTargetDpr: function (quality) {
     const q = quality === "eco" ? "eco" : (quality === "balanced" ? "balanced" : "high");
     const cap = this.isSoftwareRenderer
@@ -185,9 +251,11 @@ const stage3d = {
       return false;
     }
     try {
+      // Skip redundant 4K default-framebuffer MSAA whenever PostFX offscreen RenderTarget + FXAA pipeline is loaded
+      const useMainAa = typeof build3DPostFx !== "function";
       const renderer = new THREE.WebGLRenderer({
         canvas: canvas3d,
-        antialias: true,
+        antialias: useMainAa,
         alpha: false,
         powerPreference: "high-performance"
       });
@@ -207,16 +275,21 @@ const stage3d = {
       } else if (this.isIntegratedGpu && !this._manualQualityLock && !state.qualityUserChosen && state.quality3D === "high") {
         state.quality3D = "balanced";
       }
+      if (!this.isSoftwareRenderer && !this._dualGpuWarned && this.shouldWarnDesktopIntegratedGpu()) {
+        this._dualGpuWarned = true;
+        const cleanGpuMsg = this.getCleanGpuName();
+        setTimeout(function () {
+          if (typeof showToast === "function") {
+            showToast("偵測到目前由內顯（" + cleanGpuMsg + "）執行 3D；若本機配有獨立顯卡，可至 Windows「圖形設定」將瀏覽器設為高效能以解放流暢度。", "warn");
+          }
+        }, 2200);
+      }
       renderer.setPixelRatio(this.getTargetDpr(state.quality3D));
       renderer.shadowMap.enabled = !this.isSoftwareRenderer;
       renderer.shadowMap.type = (this.isIntegratedGpu || this.isWindowsAngle) && THREE.PCFShadowMap !== undefined
         ? THREE.PCFShadowMap
         : THREE.PCFSoftShadowMap;
       renderer.outputEncoding = THREE.sRGBEncoding;
-      if (THREE.ACESFilmicToneMapping !== undefined) {
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.02;
-      }
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(44, 16 / 9, 0.2, 130);
@@ -243,6 +316,19 @@ const stage3d = {
           isSoftwareRenderer: this.isSoftwareRenderer
         })
         : null;
+      // Pre-align renderer.toneMapping BEFORE the first draw call to avoid a Frame-1 shader recompilation hitch!
+      const willUsePostFxInit = Boolean(
+        this.postfx &&
+        !this.isSoftwareRenderer &&
+        state.quality3D !== "eco" &&
+        (!this.isIntegratedGpu || state.quality3D === "high")
+      );
+      if (willUsePostFxInit && THREE.NoToneMapping !== undefined) {
+        renderer.toneMapping = THREE.NoToneMapping;
+      } else if (THREE.ACESFilmicToneMapping !== undefined) {
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.02;
+      }
       this.fpHandsGroup = this.buildFirstPersonHands(scene);
       this.ready = true;
       this.checkAutoHeroGlb();
@@ -284,22 +370,11 @@ const stage3d = {
     if (this.env && this.env.petalGroup) this.env.petalGroup.visible = q === "high";
     if (this.env && this.env.godRaysGroup) this.env.godRaysGroup.visible = !isEco;
     if (typeof this.syncSceneThemeUi === "function") this.syncSceneThemeUi();
-    if (this.postfx) {
-      const c = el("canvasStageWrap") || el("canvasContainer");
-      const r = c ? c.getBoundingClientRect() : { width: 800, height: 450 };
-      this.postfx.resize(Math.max(300, Math.floor(r.width)), Math.max(220, Math.floor(r.height)), dpr);
-    }
-    const qBtn = el("btnToggle3DQuality");
-    if (qBtn) {
-      const baseLbl = isEco ? "省電流暢" : (isBal ? "均衡畫質" : "極致畫質");
-      qBtn.textContent = baseLbl;
-      const fpsTag = (this._perfEmaMs && this._perfEmaMs > 1) ? (" · " + Math.min(60, Math.round(1000 / this._perfEmaMs)) + " FPS") : "";
-      const gpuLbl = this.gpuShortLabel || (this.isIntegratedGpu ? "內顯最佳化" : "獨立/標準顯卡");
-      const perfStr = gpuLbl + "｜" + baseLbl + fpsTag;
-      qBtn.title = perfStr;
-      const perfLine = el("gpuPerfStatusLine");
-      if (perfLine) perfLine.textContent = "⚡ 3D 狀態：" + perfStr;
-    }
+    // Reset cached DPR and delegate to resize() so renderer.setSize(), camera.aspect & postfx ALWAYS stay 100% in sync!
+    this._lastResizeDpr = 0;
+    this.resize();
+    if (typeof invalidate3DOverlayCache === "function") invalidate3DOverlayCache();
+    this.updateGpuStatusUi();
   },
 
   toggleQualityMode: function () {
@@ -1251,6 +1326,7 @@ const stage3d = {
     } else {
       state.viewMode = "2d";
     }
+    if (typeof invalidate3DOverlayCache === "function") invalidate3DOverlayCache();
     this.applyBodyModeClass();
     resizeCanvas();
     saveUserPrefs();
@@ -1262,17 +1338,24 @@ const stage3d = {
   },
 
   resize: function () {
-    if (!this.ready || !this.renderer || !this.camera) return;
+    if (!this.ready || !this.renderer || !this.camera) return false;
     const container = el("canvasStageWrap") || el("canvasContainer");
-    if (!container) return;
+    if (!container) return false;
     const rect = container.getBoundingClientRect();
-    const w = Math.max(300, Math.floor(rect.width));
-    const h = Math.max(220, Math.floor(rect.height));
+    const w = Math.max(300, Math.round(rect.width));
+    const h = Math.max(220, Math.round(rect.height));
     const dpr = this.getTargetDpr(state.quality3D);
+    if (this._lastResizeW === w && this._lastResizeH === h && this._lastResizeDpr === dpr) return false;
+    this._lastResizeW = w;
+    this._lastResizeH = h;
+    this._lastResizeDpr = dpr;
+    this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (this.postfx) this.postfx.resize(w, h, dpr);
+    if (typeof invalidate3DOverlayCache === "function") invalidate3DOverlayCache();
+    return true;
   },
 
   beginOrbit: function (clientX, clientY) {
@@ -1349,6 +1432,7 @@ const stage3d = {
     const o = this.orbit;
     const nowMs = f.nowMs;
     const p = f.p;
+    const dt60 = clamp(Number(f.dt60) || 1, 0.05, 3.0);
 
     if (this.showcaseMode && this.hero) {
       const tgt = this.showcaseTarget || "hero";
@@ -1357,13 +1441,13 @@ const stage3d = {
         : null;
       const hp = anchorObj || this.hero.root.position;
       if (!o.dragging && nowMs > o.userOverrideUntil) {
-        o.targetYaw += 0.0045;
+        o.targetYaw += 0.0045 * dt60;
         o.targetPitch = anchorObj ? 0.24 : 0.18;
         o.targetRadius = clamp(o.targetRadius, 2.6, 5.4);
         o.targetLookAt.set(hp.x, hp.y + (anchorObj ? 1.50 : 1.58), hp.z);
       }
       o.targetPitch = clamp(o.targetPitch, 0.06, 0.68);
-      const smS = o.dragging ? 0.25 : 0.09;
+      const smS = dampFactor3D(o.dragging ? 0.25 : 0.09, dt60);
       o.yaw += (o.targetYaw - o.yaw) * smS;
       o.pitch += (o.targetPitch - o.pitch) * smS;
       o.radius += (o.targetRadius - o.radius) * smS;
@@ -1432,7 +1516,7 @@ const stage3d = {
         const targetFpFov = clamp(this.getFirstPersonBaseFov() + (o.fpFovOffset || 0) + fpFocusLeanFov, 40, 78);
         const diffFpFov = targetFpFov - this.camera.fov;
         if (Math.abs(diffFpFov) > 0.05) {
-          this.camera.fov += diffFpFov * 0.12;
+          this.camera.fov += diffFpFov * dampFactor3D(0.12, dt60);
           this.camera.updateProjectionMatrix();
         } else if (this.camera.fov !== targetFpFov) {
           this.camera.fov = targetFpFov;
@@ -1440,7 +1524,7 @@ const stage3d = {
         }
       }
 
-      const sm = o.dragging ? 0.28 : (isFpPunch ? 0.14 : 0.09);
+      const sm = dampFactor3D(o.dragging ? 0.28 : (isFpPunch ? 0.14 : 0.09), dt60);
       o.fpYaw += (o.fpTargetYaw - o.fpYaw) * sm;
       o.fpPitch += (o.fpTargetPitch - o.fpPitch) * sm;
 
@@ -1596,7 +1680,7 @@ const stage3d = {
       const targetFov = isPunchActive ? (punch.fovTarget || 37) : baseFov;
       const diffFov = targetFov - this.camera.fov;
       if (Math.abs(diffFov) > 0.04) {
-        this.camera.fov += diffFov * 0.14;
+        this.camera.fov += diffFov * dampFactor3D(0.14, dt60);
         this.camera.updateProjectionMatrix();
       } else if (this.camera.fov !== targetFov) {
         this.camera.fov = targetFov;
@@ -1604,7 +1688,7 @@ const stage3d = {
       }
     }
 
-    const smooth = o.dragging ? 0.24 : (this.closeUpSeatId ? 0.135 : ((isPunchActive || isFrontShot) ? 0.115 : 0.07));
+    const smooth = dampFactor3D(o.dragging ? 0.24 : (this.closeUpSeatId ? 0.135 : ((isPunchActive || isFrontShot) ? 0.115 : 0.07)), dt60);
     let dYaw = o.targetYaw - o.yaw;
     while (dYaw > Math.PI) dYaw -= Math.PI * 2;
     while (dYaw < -Math.PI) dYaw += Math.PI * 2;
@@ -1655,14 +1739,7 @@ const stage3d = {
           if (!this._fpsLabelLastMs || nowMs - this._fpsLabelLastMs > 1200) {
             this._fpsLabelLastMs = nowMs;
             if (this._perfEmaMs > 1) {
-              const qNow = state.quality3D === "eco" ? "省電流暢" : (state.quality3D === "balanced" ? "均衡畫質" : "極致畫質");
-              const fpsVal = Math.min(60, Math.round(1000 / this._perfEmaMs));
-              const gpuLbl = this.gpuShortLabel || (this.isIntegratedGpu ? "內顯最佳化" : "獨立/標準顯卡");
-              const perfStr = gpuLbl + "｜" + qNow + " · " + fpsVal + " FPS";
-              const qBtnLive = el("btnToggle3DQuality");
-              if (qBtnLive) qBtnLive.title = perfStr;
-              const perfLine = el("gpuPerfStatusLine");
-              if (perfLine) perfLine.textContent = "⚡ 3D 狀態：" + perfStr;
+              this.updateGpuStatusUi();
             }
           }
           if (!this._manualQualityLock && state.quality3D !== "eco" && this._perfEmaMs > 44) {
@@ -1694,9 +1771,15 @@ const stage3d = {
     const night = isNightPhase(p) || (p === "GAME_OVER" && state.match.winner === "wolf");
     const daylight = state.match.started && !night && p !== "LOBBY";
     const dpr = this.getOverlayDpr();
+    const rawDtMs = this._lastRenderMs ? (nowMs - this._lastRenderMs) : 16.6667;
+    this._lastRenderMs = nowMs;
+    const dtSec = clamp(rawDtMs * 0.001, 0.001, 0.05);
+    const dt60 = dtSec * 60;
 
     const f = {
       nowMs: nowMs,
+      dt: dtSec,
+      dt60: dt60,
       tSec: nowMs * 0.001,
       p: p,
       night: night,
@@ -1740,7 +1823,7 @@ const stage3d = {
 
     if (this.renderer && this.renderer.shadowMap && this.renderer.shadowMap.enabled) {
       this._shadowFrameCounter = (this._shadowFrameCounter || 0) + 1;
-      const shadowStride = (this.isIntegratedGpu || state.quality3D === "balanced") ? 3 : 2;
+      const shadowStride = this.getShadowUpdateStride();
       if (this._shadowFrameCounter % shadowStride === 0) {
         this.renderer.shadowMap.needsUpdate = true;
       }
@@ -1758,7 +1841,7 @@ const stage3d = {
         this.renderer.toneMapping = THREE.NoToneMapping;
       }
       if (typeof this.postfx.setDynamicExposure === "function") {
-        this.postfx.setDynamicExposure(dynExpBoost);
+        this.postfx.setDynamicExposure(dynExpBoost, f.dt60);
       }
       this.postfx.updateMood(f, (state.match && typeof state.match.harmonyScore === "number") ? state.match.harmonyScore : 72);
       this.postfx.render();
@@ -1767,7 +1850,7 @@ const stage3d = {
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         if (typeof this.renderer.toneMappingExposure === "number") {
           const targetExposure = 1.02 + dynExpBoost;
-          this.renderer.toneMappingExposure += (targetExposure - this.renderer.toneMappingExposure) * 0.14;
+          this.renderer.toneMappingExposure += (targetExposure - this.renderer.toneMappingExposure) * dampFactor3D(0.14, f.dt60);
         }
       }
       this.renderer.render(this.scene, this.camera);
@@ -1974,7 +2057,8 @@ function draw3DOverlayHud(ctx, f, coords) {
   // Subtle identity nameplate for standing Academy Tea Host「清茗」so players immediately recognize her even in settled overview!
   if (typeof stage3d !== "undefined" && stage3d.hero && stage3d.hero.root && stage3d.hero.root.visible && !stage3d.showcaseMode && stage3d.camera && typeof THREE !== "undefined") {
     const hp = stage3d.hero.root.position;
-    const hostHead = new THREE.Vector3(hp.x, hp.y + 2.28, hp.z);
+    const hostHead = draw3DOverlayHud._hostHeadVec || (draw3DOverlayHud._hostHeadVec = new THREE.Vector3());
+    hostHead.set(hp.x, hp.y + 2.28, hp.z);
     hostHead.project(stage3d.camera);
     if (hostHead.z > -1 && hostHead.z < 1 && Math.abs(hostHead.x) < 0.96 && hostHead.y > -0.95 && hostHead.y < 1.14) {
       const hx = (hostHead.x * 0.5 + 0.5) * f.w;

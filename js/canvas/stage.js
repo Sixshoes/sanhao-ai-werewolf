@@ -26,14 +26,99 @@ function resizeCanvas() {
   const dpr = (typeof stage3d !== "undefined" && typeof stage3d.getOverlayDpr === "function")
     ? stage3d.getOverlayDpr()
     : Math.min(window.devicePixelRatio || 1, (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu) ? 1.25 : 1.5);
-  canvas.width = Math.max(300, Math.floor(rect.width * dpr));
-  canvas.height = Math.max(220, Math.floor(rect.height * dpr));
+  const nextW = Math.max(300, Math.round(rect.width * dpr));
+  const nextH = Math.max(220, Math.round(rect.height * dpr));
+  if (canvas.width !== nextW || canvas.height !== nextH) {
+    canvas.width = nextW;
+    canvas.height = nextH;
+  }
+  invalidate3DOverlayCache();
   if (typeof closeRadialMenu === "function") closeRadialMenu();
   if (typeof positionSeatIntelPopover === "function") positionSeatIntelPopover();
   if (typeof stage3d !== "undefined" && stage3d.ready) {
     stage3d.resize();
   }
   drawSanctuaryFrame(performance.now());
+}
+
+function shouldCapFrameRate60() {
+  if (typeof stage3d === "undefined" || !stage3d.isActive()) return true;
+  if (stage3d.isSoftwareRenderer || stage3d.isIntegratedGpu) return true;
+  if (typeof state !== "undefined" && state.quality3D === "eco") return true;
+  return false;
+}
+
+function invalidate3DOverlayCache() {
+  drawSanctuaryFrame._lastOverlaySig = "";
+  if (typeof draw3DOverlayHud === "function" && draw3DOverlayHud._safeCache) {
+    draw3DOverlayHud._safeCache.at = 0;
+  }
+}
+
+function compute3DOverlaySignature(f, coords) {
+  if (!f || !Array.isArray(coords)) return null;
+  if (
+    (state.seatBubbles && Object.keys(state.seatBubbles).length > 0) ||
+    (state.dragAction && state.dragAction.active && state.dragAction.moved) ||
+    (state.pointerTrail && state.pointerTrail.length > 0) ||
+    (state.ripples && state.ripples.length > 0) ||
+    (state.burstParticles && state.burstParticles.length > 0) ||
+    (state.fxPopups && state.fxPopups.length > 0) ||
+    state.screenFlash ||
+    (state.shakeUntil && f.nowMs < state.shakeUntil)
+  ) {
+    return null;
+  }
+
+  const m = state.match || {};
+  const dpr = Math.max(1, f.dpr || 1);
+  const dragging = Boolean(typeof stage3d !== "undefined" && stage3d.orbit && stage3d.orbit.dragging);
+  // Quantize steady-state projected positions to ~2.5 CSS px so subtle character breathing never forces 4K 2D clearRect every frame,
+  // while active drag tracks smoothly at 1 CSS px!
+  const qStep = dragging ? dpr : (2.5 * dpr);
+  const activelyVoicing = Boolean((state.typewriter && state.typewriter.active) || (typeof voice !== "undefined" && voice.speaking));
+  const showTruth = f.p === "GAME_OVER" || (typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive());
+  const camPreset = (typeof stage3d !== "undefined" && stage3d.camPreset) ? stage3d.camPreset : "cinema";
+  const showcase = Boolean(typeof stage3d !== "undefined" && stage3d.showcaseMode);
+  const fpOffCenter = (camPreset === "firstperson" && typeof stage3d !== "undefined" && stage3d.orbit)
+    ? ((Math.abs(stage3d.orbit.fpYaw || 0) > 0.34 || Math.abs(stage3d.orbit.fpFovOffset || 0) > 3) ? 1 : 0)
+    : 0;
+  const safeCache = (typeof draw3DOverlayHud === "function" && draw3DOverlayHud._safeCache) ? draw3DOverlayHud._safeCache : null;
+  const safeStr = safeCache ? (Math.round(safeCache.top) + ":" + Math.round(safeCache.bottom)) : "";
+  const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+
+  let sig = f.w + "x" + f.h + "@" + dpr.toFixed(2) + "|" + f.p + "|" + (f.daylight ? 1 : 0)
+    + "|" + (m.started ? 1 : 0) + "|" + (m.sheriffSeatId || 0) + "|" + (m.sheriffElectionPending ? 1 : 0)
+    + "|" + (m.microPulseRevealed ? 1 : 0) + "|" + (state.activeSpeakerId || 0) + "|" + (state.selectedSeatId || 0)
+    + "|" + (state.hoverSeatId || 0) + "|" + (state.hoverFpGlanceKey || "") + "|" + (state.hidePlayerRole ? 1 : 0)
+    + "|" + (activelyVoicing ? 1 : 0) + "|" + (showTruth ? 1 : 0) + "|" + camPreset + "|" + (showcase ? 1 : 0)
+    + "|" + fpOffCenter + "|" + safeStr;
+
+  if (typeof stage3d !== "undefined" && stage3d.hero && stage3d.hero.root && stage3d.hero.root.visible && !showcase && stage3d.camera && typeof THREE !== "undefined") {
+    const hv = compute3DOverlaySignature._hostVec || (compute3DOverlaySignature._hostVec = new THREE.Vector3());
+    const hp = stage3d.hero.root.position;
+    hv.set(hp.x, hp.y + 2.28, hp.z).project(stage3d.camera);
+    if (hv.z > -1 && hv.z < 1) {
+      sig += "|H:" + Math.round(((hv.x * 0.5 + 0.5) * f.w) / qStep) + "," + Math.round(((-hv.y * 0.5 + 0.5) * f.h) / qStep);
+    } else {
+      sig += "|H:off";
+    }
+  }
+
+  for (let i = 0; i < coords.length; i++) {
+    const c = coords[i];
+    const s = c.seat || {};
+    const mark = (state.playerMarks && state.playerMarks[c.id]) || "";
+    const wMark = (m.wolfGodMarks && m.wolfGodMarks[c.id]) || "";
+    const hoverSus = (state.hoverSeatId === c.id && m.started && s.suspicionMap)
+      ? ((s.suspicionMap[pid] || 50) >= 62 ? 2 : ((s.suspicionMap[pid] || 50) <= 38 ? 0 : 1))
+      : -1;
+    sig += "|" + c.id + ":" + (c.visibleInView === false ? 0 : 1) + ":" + (c.offScreenDir || 0)
+      + ":" + Math.round(c.x / qStep) + "," + Math.round(c.y / qStep) + "," + Math.round(c.r / qStep)
+      + ":" + (s.alive === false ? 0 : 1) + ":" + (s.claimedRole || "") + ":" + (s.sweatExposed ? 1 : 0)
+      + ":" + (s.microPulse || 0) + ":" + mark + ":" + wMark + ":" + hoverSus;
+  }
+  return sig;
 }
 
 function drawStageOverlays(ctx, f, coords, skipBeams) {
@@ -314,14 +399,16 @@ function drawStageOverlays(ctx, f, coords, skipBeams) {
     ctx.restore();
   });
 
+  const dt60 = clamp(Number(f.dt60) || 1, 0.05, 3.0);
+  const bpDrag = Math.pow(0.965, dt60);
   state.burstParticles = state.burstParticles.filter(function (bp) { return nowMs - bp.born < bp.ttl; });
   state.burstParticles.forEach(function (bp) {
     const prog = (nowMs - bp.born) / bp.ttl;
-    bp.x += bp.vx * dpr;
-    bp.y += bp.vy * dpr;
-    bp.vx *= 0.965;
-    bp.vy = bp.vy * 0.965 + (bp.style === "petal" ? 0.045 : 0.08);
-    bp.rot += bp.vRot;
+    bp.x += bp.vx * dpr * dt60;
+    bp.y += bp.vy * dpr * dt60;
+    bp.vx *= bpDrag;
+    bp.vy = bp.vy * bpDrag + (bp.style === "petal" ? 0.045 : 0.08) * dt60;
+    bp.rot += bp.vRot * dt60;
     ctx.save();
     ctx.translate(bp.x, bp.y);
     ctx.rotate(bp.rot);
@@ -419,15 +506,32 @@ function drawSanctuaryFrame(nowMs) {
     ? stage3d.getOverlayDpr()
     : Math.min(window.devicePixelRatio || 1, (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu) ? 1.25 : 1.5);
 
-  // 3D Mode: Render Three.js WebGL Sanctuary + Crisp Transparent 2D HUD Overlay!
+  // 3D Mode: Render Three.js WebGL Sanctuary + Dirty-Flag Cached 4K Transparent 2D HUD Overlay!
   if (typeof stage3d !== "undefined" && stage3d.isActive()) {
-    ctx.clearRect(0, 0, w, h);
     const res3d = stage3d.render(nowMs, canvas);
     if (res3d) {
+      const stats = drawSanctuaryFrame._overlayCacheStats || (drawSanctuaryFrame._overlayCacheStats = { hits: 0, draws: 0 });
+      const sig = compute3DOverlaySignature(res3d.f, res3d.coords);
+      if (sig !== null && !drawSanctuaryFrame._hadTransientFx && sig === drawSanctuaryFrame._lastOverlaySig) {
+        stats.hits += 1;
+        return;
+      }
+      ctx.clearRect(0, 0, w, h);
       draw3DOverlayHud(ctx, res3d.f, res3d.coords);
+      stats.draws += 1;
+      if (sig === null) {
+        drawSanctuaryFrame._hadTransientFx = true;
+        drawSanctuaryFrame._lastOverlaySig = "";
+      } else {
+        drawSanctuaryFrame._hadTransientFx = false;
+        drawSanctuaryFrame._lastOverlaySig = sig;
+      }
       return;
     }
   }
+
+  drawSanctuaryFrame._lastOverlaySig = "";
+  drawSanctuaryFrame._hadTransientFx = false;
 
   const p = state.match.phase;
   const night = isNightPhase(p) || (p === "GAME_OVER" && state.match.winner === "wolf");
@@ -442,8 +546,13 @@ function drawSanctuaryFrame(nowMs) {
   }
 
   const inGame2D = Boolean(state.match && state.match.started && p !== "GAME_OVER");
+  const rawDt2D = drawSanctuaryFrame._last2DMs ? (nowMs - drawSanctuaryFrame._last2DMs) : 16.6667;
+  drawSanctuaryFrame._last2DMs = nowMs;
+  const dt2D = clamp(rawDt2D * 0.001, 0.001, 0.05);
   const f = {
     nowMs: nowMs,
+    dt: dt2D,
+    dt60: dt2D * 60,
     w: w,
     h: h,
     dpr: dpr,
@@ -468,17 +577,24 @@ function drawSanctuaryFrame(nowMs) {
 function startAnimationLoop() {
   if (state.animFrame) cancelAnimationFrame(state.animFrame);
   let lastDrawMs = 0;
+  const CAP_60_MS = 1000 / 60;
   function frame(now) {
     if (typeof document !== "undefined" && document.hidden) {
       state.animFrame = null;
       return;
     }
-    // Smooth 60fps pacing cap so 144Hz/240Hz monitors never saturate single-threaded WebGL/ANGLE!
-    if (lastDrawMs && (now - lastDrawMs) < 15.2) {
-      state.animFrame = requestAnimationFrame(frame);
-      return;
+    // Discrete GPU in 3D high/balanced unlocks native display VSync (120/144/165/240Hz);
+    // iGPU / software / eco / 2D uses remainder-accumulated smooth 60fps pacing without beat-frequency judder!
+    if (shouldCapFrameRate60()) {
+      const elapsed = lastDrawMs ? (now - lastDrawMs) : CAP_60_MS;
+      if (lastDrawMs && elapsed < (CAP_60_MS - 0.8)) {
+        state.animFrame = requestAnimationFrame(frame);
+        return;
+      }
+      lastDrawMs = lastDrawMs ? (now - Math.min(CAP_60_MS, elapsed % CAP_60_MS)) : now;
+    } else {
+      lastDrawMs = now;
     }
-    lastDrawMs = now;
     drawSanctuaryFrame(now);
     drawSpotlightPortrait(now);
     state.animFrame = requestAnimationFrame(frame);

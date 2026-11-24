@@ -164,9 +164,10 @@ function build3DPostFx(renderer, scene, camera, opts) {
           gradePass.uniforms.uTexelSize.value.set(1 / Math.max(1, width * effDpr), 1 / Math.max(1, height * effDpr));
         }
       },
-      setDynamicExposure: function (boost) {
+      setDynamicExposure: function (boost, dt60) {
         if (gradePass.uniforms && gradePass.uniforms.uExposureBoost) {
-          gradePass.uniforms.uExposureBoost.value += ((boost || 0) - gradePass.uniforms.uExposureBoost.value) * 0.14;
+          const dExp = typeof dampFactor3D === "function" ? dampFactor3D(0.14, dt60 || 1) : 0.14;
+          gradePass.uniforms.uExposureBoost.value += ((boost || 0) - gradePass.uniforms.uExposureBoost.value) * dExp;
         }
       },
       updateMood: function (f, harmony) {
@@ -212,19 +213,20 @@ function build3DPostFx(renderer, scene, camera, opts) {
           sx = 0.006; sy = 0.008; sz = 0.016;
         }
 
-        bloomPass.strength += ((tStrength + harmBoost) - bloomPass.strength) * 0.08;
-        bloomPass.threshold += (tThresh - bloomPass.threshold) * 0.08;
+        const dMood = typeof dampFactor3D === "function" ? dampFactor3D(0.08, (f && f.dt60) || 1) : 0.08;
+        bloomPass.strength += ((tStrength + harmBoost) - bloomPass.strength) * dMood;
+        bloomPass.threshold += (tThresh - bloomPass.threshold) * dMood;
         const u = gradePass.uniforms;
-        u.uExposure.value += (tExp - u.uExposure.value) * 0.08;
-        u.uContrast.value += (tContrast - u.uContrast.value) * 0.08;
-        u.uVignette.value += (tVig - u.uVignette.value) * 0.08;
+        u.uExposure.value += (tExp - u.uExposure.value) * dMood;
+        u.uContrast.value += (tContrast - u.uContrast.value) * dMood;
+        u.uVignette.value += (tVig - u.uVignette.value) * dMood;
         if (u.uTime) u.uTime.value = (f.tSec || 0) % 60;
         tmpWarm.set(rx, gy, bz);
         tmpShadowTint.set(stx, sty, stz);
         tmpShadow.set(sx, sy, sz);
-        u.uWarmTint.value.lerp(tmpWarm, 0.08);
-        u.uShadowTint.value.lerp(tmpShadowTint, 0.08);
-        u.uShadowLift.value.lerp(tmpShadow, 0.08);
+        u.uWarmTint.value.lerp(tmpWarm, dMood);
+        u.uShadowTint.value.lerp(tmpShadowTint, dMood);
+        u.uShadowLift.value.lerp(tmpShadow, dMood);
       },
       render: function () {
         composer.render();

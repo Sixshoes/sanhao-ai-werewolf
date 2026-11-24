@@ -640,14 +640,18 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
   if (!hero) return;
   const t = f.tSec;
   const nowMs = f.nowMs;
+  const dt60 = clamp(Number(f.dt60) || 1, 0.05, 3.0);
+  const d10 = typeof dampFactor3D === "function" ? dampFactor3D(0.10, dt60) : 0.10;
+  const d12 = typeof dampFactor3D === "function" ? dampFactor3D(0.12, dt60) : 0.12;
+  const d14 = typeof dampFactor3D === "function" ? dampFactor3D(0.14, dt60) : 0.14;
 
   // Keep Qingming's dais smoothly clear of the outer seat ring on 10 / 12-player tables!
   if (typeof get3DTableLayout === "function" && typeof getActive3DSeatCount === "function" && hero.root && hero.root.position) {
     const hLayout = get3DTableLayout(getActive3DSeatCount());
     const tx = HERO_STAGE_ANCHOR.x * (hLayout.heroMul || 1.0);
     const tz = HERO_STAGE_ANCHOR.z * (hLayout.heroMul || 1.0);
-    hero.root.position.x += (tx - hero.root.position.x) * 0.14;
-    hero.root.position.z += (tz - hero.root.position.z) * 0.14;
+    hero.root.position.x += (tx - hero.root.position.x) * d14;
+    hero.root.position.z += (tz - hero.root.position.z) * d14;
   }
 
   if (hero.actionUntil > 0 && nowMs > hero.actionUntil) {
@@ -668,7 +672,7 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
 
   // Smooth showcase rim lighting
   const targetRim = isShowcase ? 1.45 : (act === "purify_cast" ? 1.2 : 0.36);
-  hero.showcaseLight.intensity += (targetRim - hero.showcaseLight.intensity) * 0.1;
+  hero.showcaseLight.intensity += (targetRim - hero.showcaseLight.intensity) * d10;
 
   // Organic Gaze: track active speaking seat during debate, camera/pointer in showcase, gentle sanctuary scan in lobby!
   let targetYaw = Math.sin(t * 0.55) * 0.16;
@@ -687,8 +691,8 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
     targetYaw = clamp(diffH * 0.85, -0.72, 0.72);
     targetPitch = 0.08;
   }
-  hero.headYaw += (targetYaw - hero.headYaw) * 0.10;
-  hero.headPitch += (targetPitch - hero.headPitch) * 0.10;
+  hero.headYaw += (targetYaw - hero.headYaw) * d10;
+  hero.headPitch += (targetPitch - hero.headPitch) * d10;
 
   const isTalking = act === "speak_gesture" || (typeof voice !== "undefined" && voice.speaking && !state.activeSpeakerId);
   const mouthOpenNow = isTalking || act === "gasp_react";
@@ -700,7 +704,7 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
     const bounce = act === "celebrate" ? Math.abs(Math.sin(t * 6.5)) * 0.12 : Math.sin(t * 2.1) * 0.022;
     hero.bodyPivot.position.y = 0.58 + bounce;
     const bowTilt = act === "welcome_bow" ? (0.07 + Math.sin(t * 1.6) * 0.04) : (act === "gasp_react" ? -0.10 : 0.0);
-    hero.bodyPivot.rotation.x += (bowTilt - hero.bodyPivot.rotation.x) * 0.12;
+    hero.bodyPivot.rotation.x += (bowTilt - hero.bodyPivot.rotation.x) * d12;
     hero.headPivot.rotation.set(hero.headPitch, hero.headYaw, Math.sin(t * 1.2) * 0.025);
 
     // Throttled Seamless Storybook Face Update (blinking, pupil gaze & voice lip-sync!)
@@ -747,12 +751,12 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
       lShX = -1.12 + Math.cos(t * 7) * 0.12; lShZ = 0.26; lElbX = -0.68;
     }
 
-    hero.leftArm.shoulder.rotation.x += (lShX - hero.leftArm.shoulder.rotation.x) * 0.14;
-    hero.leftArm.shoulder.rotation.z += (lShZ - hero.leftArm.shoulder.rotation.z) * 0.14;
-    hero.leftArm.elbow.rotation.x += (lElbX - hero.leftArm.elbow.rotation.x) * 0.14;
-    hero.rightArm.shoulder.rotation.x += (rShX - hero.rightArm.shoulder.rotation.x) * 0.14;
-    hero.rightArm.shoulder.rotation.z += (rShZ - hero.rightArm.shoulder.rotation.z) * 0.14;
-    hero.rightArm.elbow.rotation.x += (rElbX - hero.rightArm.elbow.rotation.x) * 0.14;
+    hero.leftArm.shoulder.rotation.x += (lShX - hero.leftArm.shoulder.rotation.x) * d14;
+    hero.leftArm.shoulder.rotation.z += (lShZ - hero.leftArm.shoulder.rotation.z) * d14;
+    hero.leftArm.elbow.rotation.x += (lElbX - hero.leftArm.elbow.rotation.x) * d14;
+    hero.rightArm.shoulder.rotation.x += (rShX - hero.rightArm.shoulder.rotation.x) * d14;
+    hero.rightArm.shoulder.rotation.z += (rShZ - hero.rightArm.shoulder.rotation.z) * d14;
+    hero.rightArm.elbow.rotation.x += (rElbX - hero.rightArm.elbow.rotation.x) * d14;
   }
 
   // Summoned Lotus Lantern spin (rig hand vs orbiting lantern when .GLB is active!)
@@ -772,6 +776,7 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
         : null;
       stage3dVrm.updateVrmAvatar(hero.vrmAvatar, {
         tSec: t,
+        dt60: dt60,
         seed: 0.5,
         moodKey: heroMoodKey,
         alive: true,

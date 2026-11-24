@@ -101,7 +101,7 @@ function collectFeedbackDiagnostics() {
     : "未開局或已遮蔽";
 
   return {
-    version: "v15.0 (公測 2.1)",
+    version: "v15.2 (公測 2.2)",
     timestamp: new Date().toISOString(),
     started: Boolean(m.started),
     phase: String(m.phase || "LOBBY"),
@@ -110,6 +110,7 @@ function collectFeedbackDiagnostics() {
     selfRole: selfRole,
     view: cam,
     quality3D: (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high",
+    gpu: (typeof stage3d !== "undefined" && typeof stage3d.getCleanGpuName === "function") ? stage3d.getCleanGpuName() : "",
     aiEngine: aiEngine,
     viewport: w + "x" + h,
     antiCheat: ac ? (ac.decisionsAudited + "次審計/" + ac.violationsBlocked + "違規") : "未啟用",

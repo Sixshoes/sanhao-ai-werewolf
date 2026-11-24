@@ -2483,6 +2483,15 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     apply3DMoodPalette(scene, env, moodKey);
   }
 
+  const dt60 = clamp(Number(f.dt60) || 1, 0.05, 3.0);
+  const d04 = typeof dampFactor3D === "function" ? dampFactor3D(0.04, dt60) : 0.04;
+  const d05 = typeof dampFactor3D === "function" ? dampFactor3D(0.05, dt60) : 0.05;
+  const d06 = typeof dampFactor3D === "function" ? dampFactor3D(0.06, dt60) : 0.06;
+  const d08 = typeof dampFactor3D === "function" ? dampFactor3D(0.08, dt60) : 0.08;
+  const d10 = typeof dampFactor3D === "function" ? dampFactor3D(0.10, dt60) : 0.10;
+  const d12 = typeof dampFactor3D === "function" ? dampFactor3D(0.12, dt60) : 0.12;
+  const d14 = typeof dampFactor3D === "function" ? dampFactor3D(0.14, dt60) : 0.14;
+
   if (env.skyPhotoDayMat && env.skyPhotoNightMat) {
     const useCelestialSky = Boolean(isCelestialTheme && env.hasPhotoCelestial && moodKey !== "night");
     const useDuskNow = Boolean(!useCelestialSky && env.hasPhotoDusk && (moodKey === "twilight" || moodKey === "vote"));
@@ -2490,10 +2499,10 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     const targetDayOp = (!useCelestialSky && env.hasPhotoDay && f.daylight && !useDuskNow) ? (isVote ? 0.62 : 0.98) : 0.0;
     const targetDuskOp = useDuskNow ? (isVote ? 0.94 : 0.98) : (useCelestialSky && moodKey === "vote" && env.hasPhotoDusk ? 0.38 : 0.0);
     const targetNightOp = (env.hasPhotoNight && moodKey === "night") ? 0.96 : 0.0;
-    env.skyPhotoDayMat.opacity += (targetDayOp - env.skyPhotoDayMat.opacity) * 0.08;
-    if (env.skyPhotoCelestialMat) env.skyPhotoCelestialMat.opacity += (targetCelOp - env.skyPhotoCelestialMat.opacity) * 0.08;
-    if (env.skyPhotoDuskMat) env.skyPhotoDuskMat.opacity += (targetDuskOp - env.skyPhotoDuskMat.opacity) * 0.08;
-    env.skyPhotoNightMat.opacity += (targetNightOp - env.skyPhotoNightMat.opacity) * 0.08;
+    env.skyPhotoDayMat.opacity += (targetDayOp - env.skyPhotoDayMat.opacity) * d08;
+    if (env.skyPhotoCelestialMat) env.skyPhotoCelestialMat.opacity += (targetCelOp - env.skyPhotoCelestialMat.opacity) * d08;
+    if (env.skyPhotoDuskMat) env.skyPhotoDuskMat.opacity += (targetDuskOp - env.skyPhotoDuskMat.opacity) * d08;
+    env.skyPhotoNightMat.opacity += (targetNightOp - env.skyPhotoNightMat.opacity) * d08;
     // Gently anchor sky domes so directional sunlight stays aligned with the painted sky sun!
     const skyDrift = Math.sin(t * 0.03) * 0.015;
     env.skyPhotoDayMesh.rotation.y = skyDrift;
@@ -2502,10 +2511,10 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     env.skyPhotoNightMesh.rotation.y = skyDrift * 0.8;
   }
 
-  if (env.dawnSweep > 0.005) env.dawnSweep *= 0.965;
+  if (env.dawnSweep > 0.005) env.dawnSweep *= Math.pow(0.965, dt60);
   else env.dawnSweep = 0;
 
-  const lerpAmt = 0.05;
+  const lerpAmt = d05;
   const targetFogDens = (f.daylight ? 0.0040 : (f.night ? 0.0072 : 0.0056)) + (isToxicHaze ? 0.0035 : (isClearBreeze ? -0.0012 : 0));
   scene.fog.color.lerp(env.targetColors.fog, lerpAmt);
   scene.fog.density += (targetFogDens - scene.fog.density) * lerpAmt;
@@ -2537,27 +2546,27 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     env.guishanBeacon.scale.setScalar(pulseOn ? 1.1 : 0.45);
   }
 
-  env.sunMesh.position.y += ((f.daylight ? 17.5 : -12) - env.sunMesh.position.y) * 0.04;
+  env.sunMesh.position.y += ((f.daylight ? 17.5 : -12) - env.sunMesh.position.y) * d04;
   env.sunHalo.rotation.z = t * 0.25;
   env.sunHalo.scale.setScalar(1 + env.dawnSweep * 0.45);
-  env.moonGroup.position.y += ((f.daylight ? -12 : 16.5) - env.moonGroup.position.y) * 0.04;
-  env.starPoints.material.opacity += (((f.daylight ? 0.0 : (f.night ? 0.88 : 0.52))) - env.starPoints.material.opacity) * 0.05;
+  env.moonGroup.position.y += ((f.daylight ? -12 : 16.5) - env.moonGroup.position.y) * d04;
+  env.starPoints.material.opacity += (((f.daylight ? 0.0 : (f.night ? 0.88 : 0.52))) - env.starPoints.material.opacity) * d05;
   env.starPoints.rotation.y = t * 0.008;
   if (env.lanyangLights) {
     const targetCity = f.daylight ? 0.05 : (f.night ? 0.90 : 0.58);
-    env.lanyangLights.material.opacity += (targetCity - env.lanyangLights.material.opacity) * 0.05;
+    env.lanyangLights.material.opacity += (targetCity - env.lanyangLights.material.opacity) * d05;
   }
   if (env.guishanMat) {
     env.guishanMat.color.setHex(f.daylight ? 0x2f5a67 : (f.night ? 0x151e38 : 0x233852));
   }
 
   // Interactive Lotus Core + Live 3-Petal Three-Goodness Awakening!
-  env.lotusSpinBoost *= 0.94;
+  env.lotusSpinBoost *= Math.pow(0.94, dt60);
   const tg = (state.match && state.match.threeGood) || { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
   const litCount = (tg.heart > 0 ? 1 : 0) + (tg.words > 0 ? 1 : 0) + (tg.deeds > 0 ? 1 : 0);
   const pulse = 1 + Math.sin(t * 2.6) * 0.06 + env.lotusSpinBoost * 0.22 + litCount * 0.035;
   env.lotusGroup.position.y = 1.48 + Math.sin(t * 1.9) * 0.055 + env.lotusSpinBoost * 0.18;
-  env.lotusGroup.rotation.y += 0.012 + (isVote ? 0.015 : 0) + env.lotusSpinBoost * 0.18 + (tg.resonanceTriggered ? 0.014 : 0);
+  env.lotusGroup.rotation.y += (0.012 + (isVote ? 0.015 : 0) + env.lotusSpinBoost * 0.18 + (tg.resonanceTriggered ? 0.014 : 0)) * dt60;
   env.lotusCore.scale.setScalar(pulse);
   env.lotusCore.material.emissive.lerp(env.targetColors.lotus, lerpAmt);
   const dayLotusScale = f.daylight ? 0.34 : 1.0;
@@ -2570,7 +2579,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   env.floorMandala.material.color.lerp(env.targetColors.lotus, lerpAmt);
   if (env.latticeScreenMat) {
     const targetLatEm = f.daylight ? 0.14 : (f.night ? 0.56 : 0.42);
-    env.latticeScreenMat.emissiveIntensity += (targetLatEm - env.latticeScreenMat.emissiveIntensity) * 0.06;
+    env.latticeScreenMat.emissiveIntensity += (targetLatEm - env.latticeScreenMat.emissiveIntensity) * d06;
   }
 
   if (env.threeGoodPetals) {
@@ -2585,9 +2594,9 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
       const targetSc = isLit ? 1.12 : 0.96;
       for (let li = 0; li < list.length; li++) {
         const item = list[li];
-        item.mat.emissiveIntensity += (targetEm - item.mat.emissiveIntensity) * 0.1;
-        item.mesh.position.y += (targetY - item.mesh.position.y) * 0.1;
-        item.mesh.rotation.x += (targetTilt - item.mesh.rotation.x) * 0.1;
+        item.mat.emissiveIntensity += (targetEm - item.mat.emissiveIntensity) * d10;
+        item.mesh.position.y += (targetY - item.mesh.position.y) * d10;
+        item.mesh.rotation.x += (targetTilt - item.mesh.rotation.x) * d10;
         item.mesh.scale.setScalar(targetSc);
       }
     }
@@ -2595,10 +2604,10 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
 
   // Hanging Silk Lanterns (Halos + Tassel Secondary Sway), Incense Embers, Zero-GC Tea Steam & Clouds
   const lanternGlow = (f.daylight ? 0.52 : 1.48) * (isToxicHaze ? 0.58 : 1.0);
-  env.lanternBodyMat.emissiveIntensity += (lanternGlow - env.lanternBodyMat.emissiveIntensity) * 0.05;
+  env.lanternBodyMat.emissiveIntensity += (lanternGlow - env.lanternBodyMat.emissiveIntensity) * d05;
   if (env.lanternHaloMat) {
     const haloTarget = (f.daylight ? 0.08 : 0.25) * (isToxicHaze ? 0.55 : 1.0) + Math.sin(t * 3.6) * 0.025;
-    env.lanternHaloMat.opacity += (haloTarget - env.lanternHaloMat.opacity) * 0.06;
+    env.lanternHaloMat.opacity += (haloTarget - env.lanternHaloMat.opacity) * d06;
   }
   const windBoost = isToxicHaze ? 1.55 : (isClearBreeze ? 1.25 : 1.0);
   for (let i = 0; i < env.lanterns.length; i++) {
@@ -2688,7 +2697,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     const stoneTarget = f.daylight ? 0.22 : (1.15 + Math.sin(t * 4.2) * 0.10);
     for (let si = 0; si < env.stoneLanternCores.length; si++) {
       const cMat = env.stoneLanternCores[si];
-      cMat.emissiveIntensity += (stoneTarget - cMat.emissiveIntensity) * 0.08;
+      cMat.emissiveIntensity += (stoneTarget - cMat.emissiveIntensity) * d08;
     }
   }
 
@@ -2704,18 +2713,18 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
       );
       cl.mesh.lookAt(0, cl.y + 1.8, 0);
       cl.mat.color.lerp(env.targetColors.cloud, lerpAmt);
-      cl.mat.opacity += (cloudTargetOp - cl.mat.opacity) * 0.05;
+      cl.mat.opacity += (cloudTargetOp - cl.mat.opacity) * d05;
     }
   }
 
   if (env.mistRing) {
     env.mistRing.rotation.y = t * (isToxicHaze ? 0.048 : 0.025);
     const mistTargetOp = (f.night ? 0.09 : 0.05) + (isToxicHaze ? 0.10 : (isClearBreeze ? -0.02 : 0));
-    env.mistRing.material.opacity += (mistTargetOp - env.mistRing.material.opacity) * 0.05;
+    env.mistRing.material.opacity += (mistTargetOp - env.mistRing.material.opacity) * d05;
   }
   if (env.resonancePillar) {
     const targetOp = tg.resonanceTriggered ? (0.16 + Math.sin(t * 3.5) * 0.05) : 0.0;
-    env.resonancePillar.material.opacity += (targetOp - env.resonancePillar.material.opacity) * 0.08;
+    env.resonancePillar.material.opacity += (targetOp - env.resonancePillar.material.opacity) * d08;
     env.resonancePillar.rotation.y = -t * 0.5;
   }
 
@@ -2728,7 +2737,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     for (let ri = 0; ri < env.godRays.length; ri++) {
       const gr = env.godRays[ri];
       const targetOp = gr.baseOp * rayMoodMul * themeRayMul * breezeRayMul * (0.85 + Math.sin(t * 0.7 + gr.phase) * 0.15);
-      gr.mat.opacity += (targetOp - gr.mat.opacity) * 0.06;
+      gr.mat.opacity += (targetOp - gr.mat.opacity) * d06;
       gr.mesh.visible = gr.mat.opacity > 0.005;
       gr.mesh.material.color.setHex(
         isVote ? 0xfdba74 : (isCelestialTheme ? 0xdffcf2 : (isClearBreeze ? 0xfff3b0 : (f.daylight ? 0xfff7d6 : 0xffdf9e)))
@@ -2777,17 +2786,17 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   }
 
   if (spotAnchor) {
-    env.currentSpotPos.lerp(spotAnchor.worldPos, 0.14);
+    env.currentSpotPos.lerp(spotAnchor.worldPos, d14);
     env.spotTarget.position.set(env.currentSpotPos.x, 1.3, env.currentSpotPos.z);
     env.speakerSpot.position.set(env.currentSpotPos.x * 0.35, 11.2, env.currentSpotPos.z * 0.35);
     env.speakerSpot.color.setHex(spotColorHex);
-    env.speakerSpot.intensity += (2.5 - env.speakerSpot.intensity) * 0.12;
+    env.speakerSpot.intensity += (2.5 - env.speakerSpot.intensity) * d12;
 
     env.spotCone.position.set(env.currentSpotPos.x, 9.6, env.currentSpotPos.z);
     env.spotCone.material.color.setHex(spotColorHex);
-    env.spotCone.material.opacity += ((f.daylight ? 0.025 : 0.16) - env.spotCone.material.opacity) * 0.12;
+    env.spotCone.material.opacity += ((f.daylight ? 0.025 : 0.16) - env.spotCone.material.opacity) * d12;
   } else {
-    env.speakerSpot.intensity += (0 - env.speakerSpot.intensity) * 0.1;
-    env.spotCone.material.opacity += (0 - env.spotCone.material.opacity) * 0.1;
+    env.speakerSpot.intensity += (0 - env.speakerSpot.intensity) * d10;
+    env.spotCone.material.opacity += (0 - env.spotCone.material.opacity) * d10;
   }
 }

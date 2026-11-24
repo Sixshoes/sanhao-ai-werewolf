@@ -139,9 +139,9 @@ function advanceSpeechQueue() {
         state.match.clearBreezeUsedDay = state.match.day;
         const shSeat = getSeat(sharpEv.speakerId);
         if (shSeat && shSeat.alive) {
-          pinClue(shSeat.id, "🍃清風圈出 " + fmtSeatNum(shSeat.id) + "號", "剛剛三好清風幫我注意到 " + fmtSeatNum(shSeat.id) + "號" + shSeat.name + " 的語氣與立場有矛盾，建議大家重點檢視 " + fmtSeatNum(shSeat.id) + "號！", "clash");
-          spawnFx(shSeat.id, "🍃 清風照破!", "#34d399");
-          showToast("🍃 三好清風吹拂（友善度 ≥ 85）：已自動圈出 " + fmtSeatNum(shSeat.id) + "號的發言破綻到你的筆記！", "emerald");
+          pinClue(shSeat.id, "清風圈出 " + fmtSeatNum(shSeat.id) + "號", "剛剛三好清風幫我注意到 " + fmtSeatNum(shSeat.id) + "號" + shSeat.name + " 的語氣與立場有矛盾，建議大家重點檢視 " + fmtSeatNum(shSeat.id) + "號！", "clash");
+          spawnFx(shSeat.id, "清風照破", "#34d399");
+          showToast("三好清風吹拂（友善度 ≥ 85）：已自動圈出 " + fmtSeatNum(shSeat.id) + "號的發言破綻到你的筆記！", "emerald");
         }
       }
     }

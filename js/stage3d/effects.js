@@ -496,6 +496,7 @@ function update3DEffects(fx, anchors, f) {
   }
 
   // 6. Update Pooled Candle Smoke Puffs
+  const dt60Fx = clamp(Number(f && f.dt60) || 1, 0.05, 3.0);
   for (let i = 0; i < fx.smokePool.length; i++) {
     const sp = fx.smokePool[i];
     if (!sp.active) continue;
@@ -505,9 +506,9 @@ function update3DEffects(fx, anchors, f) {
       sp.mesh.visible = false;
       continue;
     }
-    sp.mesh.position.y += 0.014;
-    sp.mesh.position.x += sp.vx + Math.sin(t * 3 + sp.born) * 0.002;
-    sp.mesh.position.z += sp.vz;
+    sp.mesh.position.y += 0.014 * dt60Fx;
+    sp.mesh.position.x += (sp.vx + Math.sin(t * 3 + sp.born) * 0.002) * dt60Fx;
+    sp.mesh.position.z += sp.vz * dt60Fx;
     sp.mesh.scale.setScalar(0.7 + prog * 2.1);
     sp.mat.opacity = (1 - prog) * 0.36;
   }
