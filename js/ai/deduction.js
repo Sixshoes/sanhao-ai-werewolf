@@ -7,41 +7,57 @@ const ROLE_MISSION_DEFS = {
   seer: {
     title: "火眼破迷",
     desc: "查出酸民狼並見證其被請離茶席",
+    awakenLabel: "額外觀微 1 次",
+    awakenDesc: "當場額外獲得 1 次「靜心觀微」機會",
     bonusPts: 15
   },
   witch: {
     title: "暖茶濟世",
     desc: "用暖心茶護回好夥伴或用清心茶請離酸民狼",
+    awakenLabel: "茶韻回甘",
+    awakenDesc: "全場友善度立即 +10 並重整今日奉暖茶次數",
     bonusPts: 15
   },
   hunter: {
     title: "正氣壓陣",
     desc: "好人勝時仍在場或正氣共鳴帶走酸民狼",
+    awakenLabel: "正氣加權 +0.5 票",
+    awakenDesc: "下輪公投暗中增加 0.5 票正氣護航權重",
     bonusPts: 15
   },
   guard: {
     title: "護心屏風",
     desc: "成功擋下酸民狼夜襲或守護好人獲勝",
+    awakenLabel: "暗中護航 +0.5 票",
+    awakenDesc: "隔日公投自動獲得 0.5 票暗中護航權重",
     bonusPts: 15
   },
   villager: {
     title: "察言清風",
     desc: "全程零酸言且蒐證／抓矛盾達 2 次",
+    awakenLabel: "額外舉杯追問 +1",
+    awakenDesc: "當場額外獲得 1 次「舉杯當場追問」權限",
     bonusPts: 15
   },
   elder: {
     title: "泰山定海",
     desc: "發動清心長老豁免護盾，或以零酸言率領好人陣營獲勝",
+    awakenLabel: "長老威望",
+    awakenDesc: "全場好夥伴對你的信任提升並恢復友善度 +8",
     bonusPts: 15
   },
   wolf: {
     title: "暗影帶風",
     desc: "帶隊奪勝或成功誘導好人錯投好人 2 票",
+    awakenLabel: "沉著偽裝",
+    awakenDesc: "立即平息心虛脈搏並降低好人對你的戒心",
     bonusPts: 15
   },
   wolf_king: {
     title: "流言策動",
     desc: "成功發動流言首領臨離反撲，或帶領酸民狼陣營奪勝",
+    awakenLabel: "流言壓場",
+    awakenDesc: "立即平息心虛脈搏並削弱好人對你的懷疑",
     bonusPts: 15
   }
 };
@@ -53,8 +69,11 @@ function createRoleMission(role) {
     role: r,
     title: def.title,
     desc: def.desc,
+    awakenLabel: def.awakenLabel || "",
+    awakenDesc: def.awakenDesc || "",
     bonusPts: def.bonusPts,
     completed: false,
+    awakened: false,
     progressText: "0/1 進行中"
   };
 }
@@ -143,6 +162,47 @@ function evaluateRoleMission() {
 
   mis.completed = ok;
   mis.progressText = prog;
+
+  // v16.0 Live In-Match Role Mission Awakening ("當局即時覺醒")
+  if (ok && !mis.awakened && m.started && m.phase !== "GAME_OVER" && m.phase !== "LOBBY") {
+    mis.awakened = true;
+    if (mis.role === "villager") {
+      m.interjectBonusCharges = (m.interjectBonusCharges || 0) + 1;
+    } else if (mis.role === "guard") {
+      m.guardAwakenBonusWeightDay = Math.max(m.guardAwakenBonusWeightDay || 0, m.day || 1);
+    } else if (mis.role === "seer") {
+      m.microInspectCountToday = Math.max(-1, (m.microInspectCountToday || 0) - 1);
+    } else if (mis.role === "witch") {
+      m.harmonyScore = clamp((m.harmonyScore || 70) + 10, 0, 100);
+      m.teaServedDay = 0;
+    } else if (mis.role === "hunter") {
+      m.guardAwakenBonusWeightDay = Math.max(m.guardAwakenBonusWeightDay || 0, m.day || 1);
+    } else if (mis.role === "elder") {
+      m.harmonyScore = clamp((m.harmonyScore || 70) + 8, 0, 100);
+      (m.seats || []).forEach(function (ai) {
+        if (ai && ai.alive && ai.id !== p.id && ai.team === "good" && ai.suspicionMap) {
+          ai.suspicionMap[p.id] = clamp((ai.suspicionMap[p.id] || 50) - 10, 5, 95);
+        }
+      });
+    } else if (mis.role === "wolf" || mis.role === "wolf_king") {
+      p.microPulse = Math.max(20, (p.microPulse || 70) - 18);
+      (m.seats || []).forEach(function (ai) {
+        if (ai && ai.alive && ai.id !== p.id && ai.team === "good" && ai.suspicionMap) {
+          ai.suspicionMap[p.id] = clamp((ai.suspicionMap[p.id] || 50) - 8, 5, 95);
+        }
+      });
+    }
+    const awText = mis.title + "即時覺醒：" + (mis.awakenDesc || "本局獲得額外微能力加持");
+    if (typeof addLog === "function") {
+      addLog({ kind: "blessing", title: "角色密令覺醒 · " + awText, text: "" });
+    }
+    if (typeof showToast === "function") {
+      showToast("密令覺醒｜" + awText, "emerald");
+    }
+    if (typeof triggerCutIn === "function") {
+      triggerCutIn("角色密令・當局覺醒", awText, "gold", 1800);
+    }
+  }
   return mis;
 }
 

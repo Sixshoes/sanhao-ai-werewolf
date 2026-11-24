@@ -1378,6 +1378,15 @@ function submitPlayerSpeech() {
   if (typeof normalizeSeatRefsInText === "function") {
     text = normalizeSeatRefsInText(text);
   }
+  const speechCapNow = typeof getActiveSpeechCharLimit === "function" ? getActiveSpeechCharLimit() : 0;
+  if (speechCapNow > 0 && text.length > speechCapNow) {
+    text = typeof clampSpeechToCharLimit === "function"
+      ? clampSpeechToCharLimit(text, speechCapNow)
+      : text.slice(0, speechCapNow);
+    if (typeof showToast === "function") {
+      showToast("已依當前聽牌／閃電局規壓縮至 " + speechCapNow + " 字短兵相接。", "gold");
+    }
+  }
   const res = analyzeThreeGoodSpeech(text);
   const player = getPlayerSeat();
   const strippedPlClaim = text

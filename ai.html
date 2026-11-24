@@ -149,6 +149,7 @@
               <span id="comboBadge"
                 class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-200 border border-amber-400/40">連擊
                 x2</span>
+              <span id="matchPointBadge" class="hidden match-point-badge">茶涼聽牌 · 限 28 字決死</span>
               <button id="directorEventPill" type="button"
                 class="hidden text-[10.5px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-200 border border-emerald-400/45 hover:bg-emerald-500/25 transition truncate max-w-[155px]"
                 title="清茗茶席導演事件（點擊查看詳細效果）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>突發事件</button>
@@ -429,6 +430,40 @@
                   </div>
                 </div>
 
+                <!-- v16.0 WOLF SELF-EXPLODE BAR (Alive Human Wolf in Sheriff/Day/Vote) -->
+                <div id="wolfSelfExplodeBar" class="hidden wolf-explode-bar msg-enter">
+                  <span class="wolf-explode-hint">酸民狼決死指令：亮牌離席，沒收當日剩餘發言、警徽流與公投直入黑夜</span>
+                  <button id="btnWolfSelfExplode" type="button" class="wolf-explode-btn shrink-0">拂袖掀席（自爆）</button>
+                </div>
+
+                <!-- v16.0 FOUR-G HOPE 15s TWO-WAY CONFRONTATION PANEL (Zero God-View) -->
+                <div id="hopeConfrontationModal" class="hidden hope-confront-card msg-enter">
+                  <div class="flex items-center justify-between gap-2 mb-1.5">
+                    <span id="hopeConfrontTitle" class="font-serif-craft text-xs font-bold text-sky-200 truncate">明燈雙向對質</span>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <span id="hopeConfrontTimer" class="hope-timer-pill">15 秒</span>
+                      <button id="btnHopeConfrontClose" type="button" class="cta-ink text-[10px] px-2 py-0.5">收燈</button>
+                    </div>
+                  </div>
+                  <div id="hopeConfrontPicker" class="hidden grid grid-cols-3 sm:grid-cols-4 gap-1.5 mb-2"></div>
+                  <div id="hopeConfrontResult" class="hidden space-y-1.5"></div>
+                  <div class="flex justify-end mt-1.5">
+                    <button id="btnHopeConfrontStart" type="button" class="hidden cta-brass py-1 px-3 text-[11px]" disabled>開啟 15 秒明燈對質</button>
+                  </div>
+                </div>
+
+                <!-- v16.0 SPECTATOR 5s SPIRIT ROUND INTUITION BET BANNER -->
+                <div id="spiritBetBanner" class="hidden spirit-bet-banner msg-enter">
+                  <div class="flex items-center justify-between gap-2 mb-1">
+                    <span id="spiritBetTitle" class="text-[11px] font-serif-craft font-bold text-amber-200 truncate">席外茶靈直覺押注</span>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <span id="spiritBetTimer" class="hope-timer-pill">5 秒</span>
+                      <button id="btnSpiritBetSkip" type="button" class="cta-ink text-[10px] px-2 py-0.5">略過</button>
+                    </div>
+                  </div>
+                  <div id="spiritBetChips" class="flex items-center gap-1.5 flex-wrap"></div>
+                </div>
+
                 <!-- 2. AI SPEAKING / NIGHT WAIT ACTION BAR -->
                 <div id="panelStepper" class="hidden space-y-1.5">
                   <div id="stepperWaitRow"
@@ -522,10 +557,16 @@
                     <button id="btnWitchHeal" type="button" class="cta-celadon py-2 px-3 text-xs">暖心茶護回</button>
                     <button id="btnWitchPurify" type="button" class="cta-ink py-2 px-3 text-xs">清心茶請離</button>
                   </div>
-                  <div id="wolfTacticRow" class="hidden flex items-center justify-center gap-1.5 flex-wrap">
-                    <button type="button" data-wolf-tactic="fake_seer" class="wolf-tactic-btn is-active"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6c2.5-1.5 5.5-1.5 8 0 2.5-1.5 5.5-1.5 8 0v5.5c0 4.5-3.5 7.5-8 8.5-4.5-1-8-4-8-8.5V6z"/></svg>同伴跳觀察員</button>
-                    <button type="button" data-wolf-tactic="deep_stealth" class="wolf-tactic-btn"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5c-7 0-12 4.5-13 13 8.5-1 13-6 13-13z"/><path d="M6 18l6-6"/></svg>同伴深水倒鉤</button>
-                    <button type="button" data-wolf-tactic="pack_push" class="wolf-tactic-btn"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2.5 3.4 5.5 6 5.5 10a5.5 5.5 0 0 1-11 0c0-2.5 1.3-4.7 2.8-6.4"/></svg>聯手集火目標</button>
+                  <div id="wolfTacticRow" class="hidden space-y-1">
+                    <div class="flex items-center justify-between gap-2 text-[10.5px] px-1">
+                      <span class="font-serif-craft font-bold text-rose-200">屏風戰術三選一（隔日 AI 同伴照劇本演戲）</span>
+                      <span id="wolfTacticTimerLabel" class="text-amber-300 font-bold tabular-nums"></span>
+                    </div>
+                    <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                      <button type="button" data-wolf-tactic="mate_fake_seer_gold" class="wolf-tactic-btn is-active">同伴悍跳發我金水</button>
+                      <button type="button" data-wolf-tactic="player_fake_seer_push" class="wolf-tactic-btn">我親自悍跳同伴衝票</button>
+                      <button type="button" data-wolf-tactic="deep_stealth_bus" class="wolf-tactic-btn">全員深水倒鉤互踩做身分</button>
+                    </div>
                   </div>
                   <div id="targetActionBtnsRow" class="flex items-center justify-center gap-2">
                     <button id="btnConfirmTarget" type="button"
@@ -629,6 +670,7 @@
                         點選席間座位投出公投票</div>
                       <div class="flex items-center gap-2 text-[11px]">
                         <span id="selectedVoteBadge" class="text-amber-300 font-medium">尚未鎖定對象</span>
+                        <span id="blitzVoteTimerBadge" class="hidden blitz-vote-badge"></span>
                         <span id="voteTargetIntelLine" class="hidden text-slate-400 truncate"></span>
                       </div>
                     </div>
@@ -713,7 +755,7 @@
                     <button id="btnSheriffRun" type="button" class="cta-brass py-1.5 px-3 text-xs"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M7.5 10.5L12 6l4.5 4.5M5 19h14"/></svg>我要上警競選</button>
                     <button id="btnSheriffStartSpeech" type="button" class="cta-celadon py-1.5 px-3 text-xs">警下聽選（開始輪流發言）</button>
                     <button id="btnSheriffNextSpeech" type="button" class="hidden cta-brass py-1.5 px-4 text-xs">下一位候選人 → <kbd class="ui-kbd ml-1">Space</kbd></button>
-                    <button id="btnSheriffWithdraw" type="button" class="hidden cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-muted" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v18M6 4h11l-2.5 4.2L17 12.5H6"/></svg>退水退出</button>
+                    <button id="btnSheriffWithdraw" type="button" class="hidden cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-muted" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v18M6 4h11l-2.5 4.2L17 12.5H6"/></svg>拱手退水</button>
                     <button id="btnSheriffPass" type="button" class="cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><polygon points="15.5 8.5 13.4 13.4 8.5 15.5 10.6 10.6 15.5 8.5"/></svg>略過發言・直接決選</button>
                   </div>
                 </div>
@@ -946,6 +988,14 @@
           <div class="text-[10px] text-slate-400">8人局替換1名書院生・不可連守、同守同救破盾</div>
         </div>
         <button id="btnSetupGuardToggle" type="button" class="seg-choice text-[11px] shrink-0">未開啟</button>
+      </div>
+
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-medium text-slate-400">雲起奇局（生涯勝場／勳章解鎖）</div>
+          <span id="setupVariantStatus" class="text-[10px] text-amber-300/90">標準席</span>
+        </div>
+        <div id="setupVariantsGrid" class="grid grid-cols-1 gap-1.5"></div>
       </div>
 
       <div class="setup-drawer-footer mt-auto pt-2">

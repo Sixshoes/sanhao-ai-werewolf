@@ -26,6 +26,7 @@ const state = {
   cardPeek3D: false,
   aiDifficulty: "normal", // "easy" | "normal" | "pro"
   ruleDepth: "full", // "full" | "classic"
+  activeVariant: "standard", // "standard" | "fog_seal" | "blitz_3m" | "twin_tea" | "lone_wolf_king"
   sheriffMode: false,
   guardMode: false,
   spectatorFastForward: false,
@@ -104,7 +105,15 @@ const state = {
     detectedContradictions: [],
     microInspectCountToday: 0,
     microInspectedSeats: {},
-    wolfTactic: "fake_seer",
+    wolfTactic: "mate_fake_seer_gold",
+    variantMode: "standard",
+    isMatchPoint: false,
+    hopeConfrontation: null,
+    wolfExplodedToday: false,
+    interjectBonusCharges: 0,
+    guardAwakenBonusWeightDay: 0,
+    guardBlockedLastNight: false,
+    spiritBet: { active: null, history: [], streak: 0, bestStreak: 0, totalBonusPts: 0 },
     sheriffRallyUsedDay: 0,
     sheriffElectionPending: false,
     sheriffElectionCtx: null,
@@ -187,6 +196,7 @@ function saveUserPrefs() {
       portraitPrefVersion: 2,
       aiDifficulty: state.aiDifficulty || "normal",
       ruleDepth: state.ruleDepth === "classic" ? "classic" : "full",
+      activeVariant: state.activeVariant || "standard",
       sheriffMode: Boolean(state.sheriffMode),
       guardMode: Boolean(state.guardMode),
       geminiModel: state.geminiModel || "gemini-3.8-flash",
@@ -240,7 +250,7 @@ function loadUserPrefs() {
     if (typeof p.bgmVol === "number" && p.bgmVol >= 0 && p.bgmVol <= 1) sound.bgmVol = p.bgmVol;
     if (typeof p.sfxVol === "number" && p.sfxVol >= 0 && p.sfxVol <= 1) sound.sfxVol = p.sfxVol;
     if (p.timbre === "zen" || p.timbre === "folk" || p.timbre === "cinema") sound.timbre = p.timbre;
-    if (["auto", "twilight", "night", "day", "vote", "finale"].indexOf(p.trackMode) !== -1) sound.trackMode = p.trackMode;
+    if (["auto", "twilight", "night", "day", "vote", "matchpoint", "finale"].indexOf(p.trackMode) !== -1) sound.trackMode = p.trackMode;
     if (typeof p.autoPlay === "boolean") state.autoPlay = p.autoPlay;
     if (typeof p.showRelations === "boolean") state.showRelationsOnCanvas = p.showRelations;
     if (p.viewMode === "2d" || p.viewMode === "3d") state.viewMode = p.viewMode;
@@ -252,6 +262,7 @@ function loadUserPrefs() {
     if ((p.portraitPrefVersion >= 2) && (p.portraitStyle === "vrm3d" || p.portraitStyle === "painted")) state.portraitStyle = p.portraitStyle;
     if (p.aiDifficulty === "easy" || p.aiDifficulty === "normal" || p.aiDifficulty === "pro") state.aiDifficulty = p.aiDifficulty;
     if (p.ruleDepth === "classic" || p.ruleDepth === "full") state.ruleDepth = p.ruleDepth;
+    if (["standard", "fog_seal", "blitz_3m", "twin_tea", "lone_wolf_king"].indexOf(p.activeVariant) !== -1) state.activeVariant = p.activeVariant;
     if (typeof p.sheriffMode === "boolean") state.sheriffMode = p.sheriffMode;
     if (typeof p.guardMode === "boolean") state.guardMode = p.guardMode;
     if (typeof p.geminiModel === "string" && p.geminiModel) state.geminiModel = p.geminiModel;

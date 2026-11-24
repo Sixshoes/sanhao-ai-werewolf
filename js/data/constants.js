@@ -95,7 +95,7 @@ const TUTORIAL_SLIDES = [
           '<div class="grid grid-cols-2 gap-1.5">' +
             '<div><strong>給信心：</strong>替選定夥伴隱密擋 1 票</div>' +
             '<div><strong>給歡喜：</strong>破冰找出 2 位最緊張的人</div>' +
-            '<div><strong>給希望：</strong>金光鎖定 2 人其中必藏 1 狼</div>' +
+            '<div><strong>給希望：</strong>點名 2 席展開 15 秒明燈雙向對質，比對言票矛盾與各自狼坑（絕不洩漏底牌）</div>' +
             '<div><strong>給方便：</strong>開關係線並號召大家歸票</div>' +
           '</div>' +
         '</div>' +

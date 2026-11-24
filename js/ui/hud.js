@@ -473,7 +473,7 @@ function buildLiveAvailableTools(p, phase) {
   const unused4GNames = [];
   if (!used4G.confidence) unused4GNames.push("給信心(擋1票)");
   if (!used4G.joy) unused4GNames.push("給歡喜(查2人緊張)");
-  if (!used4G.hope) unused4GNames.push("給希望(2選1藏狼)");
+  if (!used4G.hope) unused4GNames.push("給希望(15秒明燈對質)");
   if (!used4G.convenience) unused4GNames.push("給方便(連線歸票)");
   items.push({
     key: "fourg",
@@ -772,20 +772,20 @@ function renderFourGBlessings() {
   const shortExplain = {
     confidence: isWolf ? "給信心：替好人隱密擋 1 票" : "給信心：替選定茶友擋 1 票",
     joy: "給歡喜：溫言破冰辨 2 人僵硬",
-    hope: "給希望：明燈雙照 2 席藏 1 狼",
+    hope: "給希望：點名 2 席明燈對質",
     convenience: "給方便：理線並號召集中覆議"
   };
 
   const goodTips = {
     confidence: "【給信心・奉茶護席】推盞予選定茶友隱密擋 1 票，好夥伴還會暗中信任並跟投（開票前不洩漏陣營）",
     joy: "【給歡喜・溫言破冰】以茶席幽默帶動笑容，同時觀察 2 位神色僵硬的茶友比對脈搏",
-    hope: "【給希望・明燈指津】微光雙照 2 席其中必藏 1 狼，與給歡喜重疊可觸發雙光交會",
+    hope: "【給希望・明燈雙向對質】指定 2 名可疑席位展開 15 秒公開對質，互指漏洞並檢視系統公開言票矛盾（絕不洩漏底牌）",
     convenience: "【給方便・緩議歸票】展開全場關係連線，號召搖擺好人集中檢視你鎖定的對象"
   };
   const wolfTips = {
     confidence: "【給信心・深水奉茶】幫好人擋 1 票拉攏信任與三好修為，讓好人對你放下戒心",
     joy: "【給歡喜・溫言洗白】以輕鬆茶話帶動氣氛，累積「說好話」瓣邁向深水信任光環",
-    hope: "【給希望・借光移影】微光鎖定場上另 1 狼與 1 好人，可借機順勢帶向好人",
+    hope: "【給希望・明燈雙向對質】點名 2 席互咬對質攪動風向，系統僅比對公開言票矛盾（絕不洩漏底牌）",
     convenience: "【給方便・引導覆議】點亮關係連線，引導搖擺好人集中檢視你指定的對象"
   };
 
@@ -804,7 +804,7 @@ function renderFourGBlessings() {
     const defSub = {
       confidence: isWolf ? "深水護席" : "奉茶護席",
       joy: "溫言破冰",
-      hope: "明燈指津",
+      hope: "明燈對質",
       convenience: "緩議歸票"
     };
     if (!pAlive && state.match.started) {

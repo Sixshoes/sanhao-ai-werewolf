@@ -6910,3 +6910,322 @@ body.craft-ui.theme-day .gpu-dual-hint {
   background: rgba(245, 226, 184, 0.55);
   color: #6b4310;
 }
+
+/* ==================== v16.0 MATCH POINT, SELF-EXPLODE, HOPE DUEL, SPIRIT BET & VARIANTS ==================== */
+.match-point-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #fecaca;
+  background: rgba(153, 27, 27, 0.72);
+  border: 1px solid rgba(248, 113, 113, 0.72);
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.35);
+  animation: matchPointPulse 1.4s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+.match-point-badge.hidden {
+  display: none;
+}
+
+@keyframes matchPointPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(220, 38, 38, 0.28);
+    border-color: rgba(248, 113, 113, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(239, 68, 68, 0.65);
+    border-color: rgba(254, 202, 202, 0.92);
+  }
+}
+
+body.is-match-point .top-hud-bar {
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow: 0 6px 24px rgba(153, 27, 27, 0.28);
+}
+
+body.craft-ui.theme-day .match-point-badge {
+  color: #991b1b;
+  background: rgba(254, 226, 226, 0.92);
+  border-color: rgba(185, 28, 28, 0.65);
+}
+
+.wolf-explode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(225, 29, 72, 0.55);
+  background: rgba(76, 15, 28, 0.72);
+}
+
+.wolf-explode-bar.hidden {
+  display: none;
+}
+
+.wolf-explode-hint {
+  font-size: 10.5px;
+  color: #fecdd3;
+  line-height: 1.35;
+}
+
+.wolf-explode-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(251, 113, 133, 0.8);
+  background: linear-gradient(180deg, #b91c1c, #7f1d1d);
+  color: #fff1f2;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 0.14s ease, filter 0.14s ease;
+}
+
+.wolf-explode-btn:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+body.craft-ui.theme-day .wolf-explode-bar {
+  background: rgba(254, 226, 226, 0.9);
+  border-color: rgba(185, 28, 28, 0.52);
+}
+
+body.craft-ui.theme-day .wolf-explode-hint {
+  color: #7f1d1d;
+}
+
+.hope-confront-card {
+  border-radius: 7px;
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  background: rgba(14, 28, 46, 0.92);
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.hope-confront-card.hidden {
+  display: none;
+}
+
+.hope-timer-pill {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+
+.hope-seat-pick-btn {
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(24, 34, 52, 0.85);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.hope-seat-pick-btn.is-picked {
+  border-color: rgba(56, 189, 248, 0.9);
+  background: rgba(14, 116, 144, 0.48);
+  color: #f0f9ff;
+}
+
+.hope-duel-card {
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.hope-duel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #bae6fd;
+  margin-bottom: 2px;
+}
+
+.hope-duel-pit {
+  font-size: 10px;
+  color: #fda4af;
+}
+
+.hope-duel-quote {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #f8fafc;
+}
+
+.hope-contra-box {
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(245, 194, 102, 0.35);
+  background: rgba(44, 30, 14, 0.55);
+}
+
+.hope-contra-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fcd34d;
+  margin-bottom: 2px;
+}
+
+.hope-contra-item {
+  font-size: 10.5px;
+  color: #fef3c7;
+  line-height: 1.4;
+}
+
+body.craft-ui.theme-day .hope-confront-card {
+  background: rgba(240, 249, 255, 0.95);
+  border-color: rgba(2, 132, 199, 0.5);
+  color: #0c4a6e;
+}
+
+body.craft-ui.theme-day .hope-seat-pick-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(148, 163, 184, 0.5);
+  color: #1e293b;
+}
+
+body.craft-ui.theme-day .hope-seat-pick-btn.is-picked {
+  background: rgba(224, 242, 254, 0.95);
+  border-color: #0284c7;
+  color: #075985;
+}
+
+body.craft-ui.theme-day .hope-duel-card {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(2, 132, 199, 0.32);
+}
+
+body.craft-ui.theme-day .hope-duel-head {
+  color: #0369a1;
+}
+
+body.craft-ui.theme-day .hope-duel-pit {
+  color: #be123c;
+}
+
+body.craft-ui.theme-day .hope-duel-quote {
+  color: #1e293b;
+}
+
+body.craft-ui.theme-day .hope-contra-box {
+  background: rgba(254, 243, 199, 0.72);
+  border-color: rgba(180, 83, 9, 0.35);
+}
+
+body.craft-ui.theme-day .hope-contra-title,
+body.craft-ui.theme-day .hope-contra-item {
+  color: #78350f;
+}
+
+.spirit-bet-banner {
+  border-radius: 6px;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  background: rgba(34, 24, 15, 0.9);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.spirit-bet-banner.hidden {
+  display: none;
+}
+
+.spirit-bet-chip {
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  background: rgba(48, 36, 22, 0.85);
+  color: #fef3c7;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.spirit-bet-chip.is-picked {
+  border-color: rgba(52, 211, 153, 0.85);
+  background: rgba(6, 95, 70, 0.65);
+  color: #ecfdf5;
+}
+
+body.craft-ui.theme-day .spirit-bet-banner {
+  background: rgba(255, 251, 235, 0.95);
+  border-color: rgba(180, 120, 32, 0.55);
+}
+
+body.craft-ui.theme-day .spirit-bet-chip {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(180, 120, 32, 0.42);
+  color: #451a03;
+}
+
+.blitz-vote-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fecaca;
+  background: rgba(153, 27, 27, 0.72);
+  border: 1px solid rgba(248, 113, 113, 0.68);
+  font-variant-numeric: tabular-nums;
+}
+
+.blitz-vote-badge.hidden {
+  display: none;
+}
+
+.variant-pick-card {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.62);
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.variant-pick-card.is-selected {
+  border-color: rgba(245, 194, 102, 0.85);
+  background: rgba(120, 72, 18, 0.34);
+}
+
+.variant-pick-card.is-locked {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.variant-pill {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  color: #fde68a;
+  background: rgba(68, 45, 16, 0.45);
+  white-space: nowrap;
+}
+
+.variant-pill.is-locked {
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
+  background: rgba(30, 41, 59, 0.6);
+}

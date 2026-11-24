@@ -2519,7 +2519,9 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   scene.fog.color.lerp(env.targetColors.fog, lerpAmt);
   scene.fog.density += (targetFogDens - scene.fog.density) * lerpAmt;
 
-  const hazeDim = isToxicHaze ? 0.82 : (isClearBreeze ? 1.06 : 1.0);
+  const isMatchPointNow = Boolean(typeof state !== "undefined" && state.match && state.match.started && state.match.isMatchPoint && state.match.phase !== "GAME_OVER");
+  const mpFlicker = isMatchPointNow ? (0.86 + Math.sin(t * 14.3) * 0.08 + Math.sin(t * 23.7) * 0.05) : 1.0;
+  const hazeDim = (isToxicHaze ? 0.82 : (isClearBreeze ? 1.06 : 1.0)) * (isMatchPointNow ? 0.86 : 1.0);
   env.hemiLight.color.lerp(env.targetColors.hemiSky, lerpAmt);
   env.hemiLight.groundColor.lerp(env.targetColors.hemiGnd, lerpAmt);
   env.hemiLight.intensity += (((f.daylight ? (0.64 + env.dawnSweep * 0.18) : (f.night ? 0.42 : 0.54)) * hazeDim) - env.hemiLight.intensity) * lerpAmt;
@@ -2527,11 +2529,22 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   env.dirLight.intensity += (((f.daylight ? (0.95 + env.dawnSweep * 0.25) : (f.night ? 0.58 : 0.78)) * hazeDim) - env.dirLight.intensity) * lerpAmt;
   env.dirLight.position.x = 11 - env.dawnSweep * 9;
   if (env.rimLight) {
-    env.rimLight.color.lerp(env.targetColors.rim, lerpAmt);
-    env.rimLight.intensity += ((f.daylight ? 0.36 : (f.night ? 0.48 : 0.42)) - env.rimLight.intensity) * lerpAmt;
+    if (isMatchPointNow) {
+      if (!env._mpCrimsonColor) env._mpCrimsonColor = new THREE.Color(0xdc2626);
+      env.rimLight.color.lerp(env._mpCrimsonColor, lerpAmt * 1.4);
+      env.rimLight.intensity += ((0.74 * mpFlicker) - env.rimLight.intensity) * lerpAmt;
+    } else {
+      env.rimLight.color.lerp(env.targetColors.rim, lerpAmt);
+      env.rimLight.intensity += ((f.daylight ? 0.36 : (f.night ? 0.48 : 0.42)) - env.rimLight.intensity) * lerpAmt;
+    }
   }
-  env.tableLight.color.lerp(env.targetColors.table, lerpAmt);
-  env.tableLight.intensity = ((f.night ? 1.05 : 0.72) + env.dawnSweep * 0.22) * hazeDim + Math.sin(t * 5.2) * 0.08 + Math.sin(t * 11.7) * 0.03;
+  if (isMatchPointNow) {
+    if (!env._mpTableCrimson) env._mpTableCrimson = new THREE.Color(0xe11d48);
+    env.tableLight.color.lerp(env._mpTableCrimson, lerpAmt * 1.2);
+  } else {
+    env.tableLight.color.lerp(env.targetColors.table, lerpAmt);
+  }
+  env.tableLight.intensity = ((f.night ? 1.05 : 0.72) + env.dawnSweep * 0.22) * hazeDim * mpFlicker + Math.sin(t * 5.2) * 0.08 + Math.sin(t * 11.7) * 0.03;
 
   // Pacific Ocean Shimmer Shader + Gentle Wave Ripples + Guishan Lighthouse Beacon
   if (env.oceanUniforms && env.oceanUniforms.uTime) {

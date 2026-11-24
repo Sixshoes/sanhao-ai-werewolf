@@ -103,6 +103,21 @@ const orchestrator = {
     return this.matchEpoch;
   },
 
+  // Mid-match hard interrupt (e.g., Wolf Self-Explode / Sheriff Withdraw): advances matchEpoch & clears timers WITHOUT wiping match stats!
+  bumpInterruptEpoch: function (reason) {
+    this.matchEpoch += 1;
+    this.clearAllTimers();
+    this.recordTrace({
+      agent: "MatchDirector",
+      tier: "Interrupt",
+      ms: 0,
+      compliance: true,
+      summary: "中斷推進世代 #" + this.matchEpoch + "（" + (reason || "interrupt") + "）"
+    });
+    this.emit("match:interrupt", { epoch: this.matchEpoch, reason: reason || "interrupt" });
+    return this.matchEpoch;
+  },
+
   isEpochValid: function (ep) {
     return ep === this.matchEpoch;
   },

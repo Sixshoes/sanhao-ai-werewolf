@@ -504,16 +504,20 @@ function tryDefendOrCounterClaim(speaker, ctx) {
   }
 
   // 0D. DYNAMIC WOLF COUNTER-CLAIM DECISION! When a non-wolf claimed a God/Elder role earlier, Wolves decide via Blind-View whether to counter-claim!
-  if (speaker.role === "wolf" && wolfTactic !== "deep_stealth" && priorGodClaims.length > 0 && !speaker.claimedRole) {
+  const isDeepStealth0D = (wolfTactic === "deep_stealth" || wolfTactic === "deep_stealth_bus");
+  const isPlayerFakeSeerPush0D = (wolfTactic === "player_fake_seer_push" || wolfTactic === "pack_push");
+  if (speaker.role === "wolf" && !isDeepStealth0D && priorGodClaims.length > 0 && !speaker.claimedRole) {
     const latestGodEv = priorGodClaims[priorGodClaims.length - 1];
     const godSeat = readSeat(latestGodEv.speakerId);
     const godName = seatLabel(godSeat);
     const claimedR = latestGodEv.claimRole;
-    const wolfTeamAlreadyCountered = (snap ? snap.seats : []).some(function (s) {
-      return (s.id === speaker.id || s.isWolfMate) && s.claimedRole === claimedR;
-    });
-
-    if (!wolfTeamAlreadyCountered && godSeat && !godSeat.isWolfMate && ROLE_DEFS[claimedR]) {
+    if (isPlayerFakeSeerPush0D && claimedR === "seer") {
+      // Player wolf owns the Seer claim in player_fake_seer_push script; AI mate does not steal Seer!
+    } else {
+      const wolfTeamAlreadyCountered = (snap ? snap.seats : []).some(function (s) {
+        return (s.id === speaker.id || s.isWolfMate) && s.claimedRole === claimedR;
+      });
+      if (!wolfTeamAlreadyCountered && godSeat && !godSeat.isWolfMate && ROLE_DEFS[claimedR]) {
       const counterProb = typeof getPersonaWolfCounterChance === "function"
         ? getPersonaWolfCounterChance(speaker, claimedR)
         : (claimedR === "seer" ? 0.78 : (claimedR === "witch" ? 0.45 : 0.35));
@@ -587,6 +591,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
           hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 5),
           text: stdLead + "聽到 " + godName + " 跳出來自稱" + rName + "，老實說大家先別急著百分百相信耶，萬一是酸民狼演戲博同情怎麼辦？目前看下來 " + seatLabel(otherGood) + " 反應也很可疑，建議這輪先把票集中在 " + seatLabel(otherGood) + "！" + signoff
         };
+      }
       }
     }
   }
@@ -729,15 +734,46 @@ function tryRoleSpecificSpeech(speaker, ctx) {
 
   // 2. Fake-Seer Wolf weaving an in-character deceptive counter-claim (ZERO hidden Good-role peeking!)
   const curWolfTactic = (snap && snap.wolfTactic) ? snap.wolfTactic : "auto";
+  const isMateGoldScript = (curWolfTactic === "mate_fake_seer_gold" || curWolfTactic === "fake_seer");
+  const isPlayerPushScript = (curWolfTactic === "player_fake_seer_push" || curWolfTactic === "pack_push");
+  const isDeepBusScript = (curWolfTactic === "deep_stealth_bus" || curWolfTactic === "deep_stealth");
   const wolfTeamHasSeerClaim = (snap ? snap.seats : []).some(function (s) {
     return (s.id === speaker.id || s.isWolfMate) && s.claimedRole === "seer";
   });
-  const wantFakeSeer = (speaker.fakeSeer || (curWolfTactic === "fake_seer" && !wolfTeamHasSeerClaim))
-    && curWolfTactic !== "deep_stealth";
+  const wantFakeSeer = (speaker.fakeSeer || (isMateGoldScript && !wolfTeamHasSeerClaim))
+    && !isDeepBusScript && !isPlayerPushScript;
   if (speaker.role === "wolf" && wantFakeSeer) {
     speaker.claimedRole = "seer";
     if (!speaker.fakeCheckedIds) speaker.fakeCheckedIds = [];
     const nonWolves = aliveOthers.filter(function (s) { return !s.isWolfMate; });
+    const pidWolfNow = snap ? snap.playerSeatId : (typeof getPlayerId === "function" ? getPlayerId() : 1);
+    const playerWolfMate = isMateGoldScript
+      ? aliveOthers.find(function (s) { return s.id === pidWolfNow && s.isWolfMate; })
+      : null;
+
+    if (playerWolfMate && nonWolves.length > 0) {
+      // v16.0 Wolf Screen Script 1: "同伴悍跳發我金水" — AI wolf fake-claims Seer & gives Human Wolf Gold Water!
+      const frameForGold = spokenOthers.find(function (s) { return !s.isWolfMate && s.claimedRole === "seer"; }) || nonWolves[0];
+      if (speaker.fakeCheckedIds.indexOf(playerWolfMate.id) === -1) {
+        speaker.fakeCheckedIds.push(playerWolfMate.id);
+      }
+      return {
+        targetId: playerWolfMate.id,
+        relationType: "trust",
+        claimSeer: true,
+        claimRole: "seer",
+        accuseId: frameForGold ? frameForGold.id : null,
+        vouchId: playerWolfMate.id,
+        standWithSeerId: speaker.id,
+        wolfPits: frameForGold ? [frameForGold.id] : [],
+        goodPits: [playerWolfMate.id],
+        checkedWolfId: null,
+        checkedGoodId: playerWolfMate.id,
+        hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 2),
+        text: "我起跳明心觀察員先報昨晚驗人：我查驗了 " + seatLabel(playerWolfMate) + " 是鐵金水好人，大家放心保他！至於 " + seatLabel(frameForGold) + " 立場最可疑，這輪先盯住他。"
+      };
+    }
+
     if (nonWolves.length > 0) {
       // Zero-Leak: Wolf only sees observable claimedRole === "seer" on non-wolves (NEVER peeks s.role === "seer"!)
       const rivalSeerSpoke = spokenOthers.find(function (s) { return !s.isWolfMate && s.claimedRole === "seer"; });
@@ -883,28 +919,49 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     // Zero-Leak: Wolf only sees observable Seer claim by a non-wolf (NEVER reads s.role === "seer"!)
     const rivalSeerExposed = spokenOthers.find(function (s) { return !s.isWolfMate && s.claimedRole === "seer"; });
 
-    if (curWolfTactic === "pack_push") {
+    if (isPlayerPushScript) {
       const pidNow = snap ? snap.playerSeatId : (typeof getPlayerId === "function" ? getPlayerId() : 1);
+      const playerSeatView = readSeat(pidNow);
+      const playerClaimedSeer = Boolean(playerSeatView && playerSeatView.claimedRole === "seer");
       const playerAccEv = (snap ? snap.daySpeechEvents : []).find(function (ev) { return ev.speakerId === pidNow && ev.accuseId; });
-      const playerTarget = playerAccEv ? readSeat(playerAccEv.accuseId) : null;
+      const playerTarget = playerAccEv ? readSeat(playerAccEv.accuseId) : (rivalSeerExposed || goodSpoken[0] || goodAll[0]);
       if (playerTarget && playerTarget.alive && !playerTarget.isWolfMate && playerTarget.id !== speaker.id) {
         const ptSpoke = spokeToday(playerTarget.id);
         return {
           targetId: playerTarget.id,
           relationType: "suspect",
           accuseId: playerTarget.id,
-          vouchId: null,
+          vouchId: (playerSeatView && playerSeatView.alive) ? pidNow : null,
+          standWithSeerId: playerClaimedSeer ? pidNow : null,
           wolfPits: [playerTarget.id],
-          goodPits: [],
+          goodPits: (playerSeatView && playerSeatView.alive) ? [pidNow] : [],
           hasToxicSlip: false,
-          text: wolfLead + "聽完前面分析，我也跟 " + seatLabel(readSeat(pidNow)) + " 有同感，" +
-            (ptSpoke ? (seatLabel(playerTarget) + " 剛才的發言確實破綻最多，") : (seatLabel(playerTarget) + " 雖然今天還沒開口，但前面立場很讓人懷疑，")) +
-            "這輪我們先放一格狼坑在 " + seatLabel(playerTarget) + "！" + wolfSignoff
+          text: wolfLead + (playerClaimedSeer
+            ? ("我聽下來堅定站邊 " + seatLabel(playerSeatView) + " 這張觀察員，")
+            : ("聽完前面分析，我也跟 " + seatLabel(playerSeatView) + " 有同感，")) +
+            (ptSpoke ? (seatLabel(playerTarget) + " 剛才的發言破綻最多，") : (seatLabel(playerTarget) + " 的立場很讓人起疑，")) +
+            "這輪我全力把票衝在 " + seatLabel(playerTarget) + " 身上。" + wolfSignoff
         };
       }
     }
 
-    if (curWolfTactic === "deep_stealth") {
+    if (isDeepBusScript) {
+      const hotMate = spokenOthers.find(function (s) {
+        return s.isWolfMate && snap && snap.getObservableHeatOnSeat(s.id) >= 64;
+      });
+      if (hotMate) {
+        // v16.0 Wolf Screen Script 3: "全員深水倒鉤互踩做身分" — lightly distance/bus hot wolf mate!
+        return {
+          targetId: hotMate.id,
+          relationType: "suspect",
+          accuseId: hotMate.id,
+          vouchId: null,
+          wolfPits: [hotMate.id],
+          goodPits: [],
+          hasToxicSlip: false,
+          text: wolfLead + "老實說前面聽下來，我覺得 " + seatLabel(hotMate) + " 的說法確實有點勉強，我先不盲保，這輪先記他一格觀察，大家再細盤。"
+        };
+      }
       const stealthTarget = goodSpoken[0] || goodAll[0] || aliveOthers[0];
       if (!stealthTarget) return null;
       const stSpoke = spokeToday(stealthTarget.id);
@@ -918,8 +975,8 @@ function tryRoleSpecificSpeech(speaker, ctx) {
         goodPits: [],
         hasToxicSlip: false,
         text: stSpoke
-          ? (wolfLead + "大家心平氣和把前面幾位盤一盤，我自己聽下來覺得前置位 " + seatLabel(stealthTarget) + " 講得有點保留，暫時記半格狼坑再檢視，" + wolfSignoff)
-          : ("因為目前我順位比較靠前，" + seatLabel(stealthTarget) + (secGood ? (" 跟 " + seatLabel(secGood)) : "") + " 都還沒輪到發言，我就不亂點實狼坑了，先留著聽後面表水，" + wolfSignoff)
+          ? (wolfLead + "大家心平氣和把前面幾位盤一盤，我自己聽下來覺得前置位 " + seatLabel(stealthTarget) + " 講得有點保留，暫時記半格狼坑再檢視。")
+          : ("目前我順位比較靠前，" + seatLabel(stealthTarget) + (secGood ? (" 跟 " + seatLabel(secGood)) : "") + " 都還沒發言，先不急著點死狼坑，聽完後面表水再定。")
       };
     }
 

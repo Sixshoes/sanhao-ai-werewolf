@@ -24,8 +24,53 @@ function isPlayerEligibleToVote() {
   return true;
 }
 
+function clearBlitzVoteTimer() {
+  if (state.blitzVoteInterval) {
+    clearInterval(state.blitzVoteInterval);
+    state.blitzVoteInterval = null;
+  }
+  state.blitzVoteSecondsLeft = 0;
+  const badge = el("blitzVoteTimerBadge");
+  if (badge) {
+    badge.classList.add("hidden");
+    badge.textContent = "";
+  }
+}
+
+function startBlitzVoteTimer() {
+  clearBlitzVoteTimer();
+  const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
+  if (!isBrowserUi || !state.match || !state.match.started || state.match.phase !== "DAY_VOTE") return;
+  if (state.match.variantMode !== "blitz_3m") return;
+  state.blitzVoteSecondsLeft = 15;
+  const syncBadge = function () {
+    const badge = el("blitzVoteTimerBadge");
+    if (!badge) return;
+    badge.textContent = "閃電快投倒數 " + state.blitzVoteSecondsLeft + " 秒";
+    badge.classList.remove("hidden");
+  };
+  syncBadge();
+  state.blitzVoteInterval = setInterval(function () {
+    if (!state.match || !state.match.started || state.match.phase !== "DAY_VOTE") {
+      clearBlitzVoteTimer();
+      return;
+    }
+    state.blitzVoteSecondsLeft = Math.max(0, (state.blitzVoteSecondsLeft || 0) - 1);
+    syncBadge();
+    if (state.blitzVoteSecondsLeft <= 0) {
+      clearBlitzVoteTimer();
+      const autoPick = (state.selectedSeatId && isValidVoteTarget(state.selectedSeatId)) ? state.selectedSeatId : null;
+      if (typeof showToast === "function") {
+        showToast(autoPick ? ("閃電快投時限到，已自動投出 " + fmtSeatNum(autoPick) + "號。") : "閃電快投時限到，本輪自動棄票。", "warn");
+      }
+      finalizeVoteRound(autoPick);
+    }
+  }, 1000);
+}
+
 function startVotingPhase() {
   clearStepTimer();
+  clearBlitzVoteTimer();
   voice.stop();
   state.activeSpeakerId = null;
   state.selectedSeatId = null;
@@ -42,7 +87,7 @@ function startVotingPhase() {
     const ffVote = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
     updateAllUI();
     if (elderNoVote && typeof showToast === "function") {
-      showToast("🛡️ 你身為已亮牌的清心長老，本輪不具投票權，由其餘夥伴計票！", "emerald");
+      showToast("你身為已亮牌的清心長老，本輪不具投票權，由其餘夥伴計票。", "emerald");
     }
     if (!ffVote) {
       voice.speakHost(inPk
@@ -51,10 +96,19 @@ function startVotingPhase() {
           ? "你身為已亮牌的清心長老失去投票權，本輪由其餘夥伴計票。"
           : "全員發言結束，開始計票。"));
     }
-    state.stepTimer = setTimeout(function () { finalizeVoteRound(null); }, ffVote ? 240 : 1100);
+    const triggerVoteTally = function () {
+      if (!state.match || state.match.phase !== "DAY_VOTE") return;
+      finalizeVoteRound(null);
+    };
+    if (!inPk && !elderNoVote && typeof openSpiritRoundBet === "function") {
+      const openedBet = openSpiritRoundBet("vote_out", triggerVoteTally);
+      if (openedBet) return;
+    }
+    state.stepTimer = setTimeout(triggerVoteTally, ffVote ? 240 : 1100);
     return;
   }
   updateAllUI();
+  startBlitzVoteTimer();
   if (isPkVoteActive()) {
     const pkStr = state.match.pkCandidates.map(function (id) { return id + "號"; }).join("、");
     voice.speakHost("平票 PK 發言結束，請從" + pkStr + "中投選一人，或選擇棄票。");
@@ -82,10 +136,19 @@ function chooseAiVoteTarget(voter, opts) {
 
   if (self.role === "wolf") {
     const nonWolves = others.filter(function (t) { return snap ? !t.isWolfMate : (t.role !== "wolf"); });
-    const pool = nonWolves.length > 0 ? nonWolves : others;
+    const rawTac = snap ? snap.wolfTactic : null;
+    const isDeepBus = (rawTac === "deep_stealth_bus" || rawTac === "deep_stealth");
+    const isPlayerPush = (rawTac === "player_fake_seer_push" || rawTac === "pack_push");
+    // In deep_stealth_bus mode, if a wolf mate is already heavily under fire (observable heat >= 78), wolf may bus-vote to build good credibility!
+    const pool = (isDeepBus && others.length > 0 && nonWolves.length > 0 && snap)
+      ? others.filter(function (t) {
+          if (!t.isWolfMate) return true;
+          return snap.getObservableHeatOnSeat(t.id) >= 78;
+        })
+      : (nonWolves.length > 0 ? nonWolves : others);
     const dayEvs = snap ? snap.daySpeechEvents : (state.match.daySpeechEvents || []);
     const readSeat = snap ? snap.getSeat : getSeat;
-    const playerWolfPush = (snap && snap.wolfTactic === "pack_push")
+    const playerWolfPush = isPlayerPush
       ? dayEvs.find(function (ev) { return ev.speakerId === pidVote && ev.accuseId && ev.accuseId !== self.id; })
       : null;
     const wolfPushEv = playerWolfPush || dayEvs.find(function (ev) {
@@ -95,8 +158,10 @@ function chooseAiVoteTarget(voter, opts) {
     });
     const teamTargetId = wolfPushEv ? wolfPushEv.accuseId : null;
     pool.sort(function (a, b) {
-      const sA = (a.id === teamTargetId ? 28 : 0) + (a.id === self.publicVoteIntent ? 30 : 0) + (a.id === self.publicVouchId ? -18 : 0) + (a.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
-      const sB = (b.id === teamTargetId ? 28 : 0) + (b.id === self.publicVoteIntent ? 30 : 0) + (b.id === self.publicVouchId ? -18 : 0) + (b.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
+      const busBonusA = (isDeepBus && a.isWolfMate && snap && snap.getObservableHeatOnSeat(a.id) >= 78) ? 26 : 0;
+      const busBonusB = (isDeepBus && b.isWolfMate && snap && snap.getObservableHeatOnSeat(b.id) >= 78) ? 26 : 0;
+      const sA = busBonusA + (a.id === teamTargetId ? (isPlayerPush ? 42 : 28) : 0) + (a.id === self.publicVoteIntent ? 30 : 0) + (a.id === self.publicVouchId ? -18 : 0) + (a.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+      const sB = busBonusB + (b.id === teamTargetId ? (isPlayerPush ? 42 : 28) : 0) + (b.id === self.publicVoteIntent ? 30 : 0) + (b.id === self.publicVouchId ? -18 : 0) + (b.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
       return sB - sA;
     });
     chosen = pool[0] ? pool[0].id : null;
@@ -134,11 +199,12 @@ function chooseAiVoteTarget(voter, opts) {
       const inJoy = joyIds.indexOf(t.id) !== -1;
       const inHope = hopePair.indexOf(t.id) !== -1;
       if (inJoy) d += (typeof t.microPulse === "number" && t.microPulse >= 72) ? 10 : 5;
+      // v16.0 Hope Confrontation is purely public logic/contradiction spotlight (zero god-view guarantee!)
       if (inHope) {
-        if (selfInHopePair && t.id !== self.id) d += 32;
-        else d += 6;
+        if (selfInHopePair && t.id !== self.id) d += 12;
+        else d += 4;
       }
-      if (inJoy && inHope) d += 14;
+      if (inJoy && inHope) d += 8;
       return d;
     };
 
@@ -194,6 +260,7 @@ function chooseAiVoteTarget(voter, opts) {
 
 function finalizeVoteRound(playerTargetId) {
   clearStepTimer();
+  clearBlitzVoteTimer();
   sound.playVote();
   if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") {
     stage3d.clearCloseUp();
@@ -209,6 +276,7 @@ function finalizeVoteRound(playerTargetId) {
     ? alive.filter(function (v) { return state.match.pkCandidates.indexOf(v.id) === -1; })
     : alive).filter(function (v) { return !v.voteDisabled; });
 
+  let guardBonusUsedThisRound = false;
   eligibleVoters.forEach(function (voter) {
     let chosen = null;
     if (voter.id === getPlayerId()) {
@@ -222,6 +290,11 @@ function finalizeVoteRound(playerTargetId) {
       if (voter.id === getPlayerId() && state.match.goodwillVoteBonus) {
         voteWeight += 1;
       }
+      if (voter.id === getPlayerId() && state.match.guardAwakenBonusWeightDay && state.match.guardAwakenBonusWeightDay <= state.match.day && !state.match.guardAwakenBonusUsed) {
+        voteWeight += 0.5;
+        state.match.guardAwakenBonusUsed = true;
+        guardBonusUsedThisRound = true;
+      }
       tallies[chosen] = Math.round(((tallies[chosen] || 0) + voteWeight) * 10) / 10;
       recordRelation(voter.id, chosen, "vote");
       ballots.push({ voterId: voter.id, targetId: chosen, weight: voteWeight });
@@ -229,6 +302,9 @@ function finalizeVoteRound(playerTargetId) {
       ballots.push({ voterId: voter.id, targetId: null, weight: 0 });
     }
   });
+  if (guardBonusUsedThisRound) {
+    addLog({ kind: "blessing", title: "護心屏風覺醒生效：你本輪獲得 +0.5 票暗中護航權重。", text: "" });
+  }
 
   state.match.convenienceRallyTargetId = null;
   state.match.seats.forEach(function (s) { s.ironFollowPlayer = false; });
@@ -388,8 +464,15 @@ function finalizeVoteRound(playerTargetId) {
     }
 
     outSeat.alive = false;
-    outSeat.outReason = "投票出局";
+    outSeat.outReason = state.match.variantMode === "fog_seal" ? "已離席（迷霧封牌）" : "投票出局";
     voteRecord.outId = outSeat.id;
+    if (typeof resolveSpiritRoundBet === "function") {
+      resolveSpiritRoundBet("vote_out", outSeat.id);
+    }
+    if (outSeat.id === getPlayerId() && typeof autoEnableSpectatorCompactPace === "function") {
+      autoEnableSpectatorCompactPace();
+    }
+    if (typeof evaluateMatchPointState === "function") evaluateMatchPointState();
     triggerShake(320);
     spawnBurst(outSeat.id, ["#fb7185", "#fbbf24", "#ffffff"], 28, "slash");
     if (typeof triggerScreenFlash === "function") triggerScreenFlash("#f43f5e", 460, 0.34);
@@ -768,69 +851,430 @@ function useFourGJoy() {
   updateAllUI();
 }
 
-function useFourGHope() {
-  sound.unlock();
-  if (!canUseFourGNow() || state.match.fourGivingsUsed.hope) return;
+function clearHopeConfrontationTimer() {
+  if (state.hopeConfrontInterval) {
+    clearInterval(state.hopeConfrontInterval);
+    state.hopeConfrontInterval = null;
+  }
+}
+
+function closeHopeConfrontationModal() {
+  clearHopeConfrontationTimer();
+  const modal = el("hopeConfrontationModal");
+  if (modal) modal.classList.add("hidden");
+  if (state.match && state.match.hopeConfrontation) {
+    state.match.hopeConfrontation.pickerOpen = false;
+    state.match.hopeConfrontation.active = false;
+  }
+}
+
+function buildBlindConfrontationLine(speaker, rival) {
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(speaker, { module: "hope_confrontation" })
+    : null;
+  const self = (snap && snap.self) ? snap.self : speaker;
+  const readSeat = snap ? snap.getSeat : getSeat;
+  const rivalView = readSeat(rival.id);
+  const pid = snap ? snap.playerSeatId : getPlayerId();
+  const labelOf = function (s) {
+    if (!s) return "";
+    return fmtSeatNum(s.id) + "號" + (s.id === pid ? "你" : s.name);
+  };
+  const rLbl = labelOf(rivalView || rival);
+  const others = (snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== speaker.id; }))
+    .filter(function (s) { return s.id !== rival.id; });
+  const rankedPits = others.slice().sort(function (a, b) {
+    const sA = (self.role === "wolf" && (snap ? a.isWolfMate : a.role === "wolf")) ? -40 : ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+    const sB = (self.role === "wolf" && (snap ? b.isWolfMate : b.role === "wolf")) ? -40 : ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
+    return sB - sA;
+  });
+  const secondPit = rankedPits[0] || null;
+  const dayEvs = snap ? snap.daySpeechEvents : (state.match.daySpeechEvents || []);
+  const rivalEv = dayEvs.slice().reverse().find(function (ev) { return ev && ev.speakerId === rival.id; });
+  const vm = typeof buildVoteSpeechMatrix === "function" ? buildVoteSpeechMatrix(speaker, snap) : null;
+  const rivalDiv = (vm && vm.divergenceBySeat && vm.divergenceBySeat[rival.id]) || 0;
+
+  let flawBit = "";
+  if (rivalDiv > 0) {
+    flawBit = "你前輪口頭喊打與實際票型根本對不上";
+  } else if (rivalEv && rivalEv.hasToxicSlip) {
+    flawBit = "你剛才語氣急躁又急著貼標籤，明顯在帶風向";
+  } else if (rivalEv && rivalEv.claimRole && self.claimedRole === rivalEv.claimRole) {
+    flawBit = "你冒充我的身分搶跳，邏輯根本圓不回來";
+  } else if (rivalEv && rivalEv.vouchId) {
+    const vSeat = readSeat(rivalEv.vouchId);
+    flawBit = "你剛才急著替 " + labelOf(vSeat) + " 緩頰卻拿不出實證";
+  } else {
+    flawBit = "你整場發言立場模糊、始終不敢把狼坑點死";
+  }
+
+  const pitList = secondPit ? (rLbl + " 與 " + labelOf(secondPit)) : rLbl;
+  if (typeof antiCheatMonitor !== "undefined" && self) {
+    antiCheatMonitor.recordDecision("hope_confrontation", self.id, "對質反指 " + rival.id + "號");
+  }
+  return {
+    speakerId: speaker.id,
+    speakerLabel: labelOf(self),
+    rivalId: rival.id,
+    wolfPits: secondPit ? [rival.id, secondPit.id] : [rival.id],
+    text: rLbl + "，我直說破綻：" + flawBit + "！照我現在盤的狼坑就是 " + pitList + "，大家聽清楚別被他糊弄。"
+  };
+}
+
+function renderHopeConfrontationModal() {
+  const modal = el("hopeConfrontationModal");
+  const titleEl = el("hopeConfrontTitle");
+  const timerEl = el("hopeConfrontTimer");
+  const pickerEl = el("hopeConfrontPicker");
+  const resultEl = el("hopeConfrontResult");
+  const actionBtn = el("btnHopeConfrontStart");
+  if (!modal) return;
+  const hc = state.match && state.match.hopeConfrontation;
+  if (!hc || (!hc.pickerOpen && !hc.active)) {
+    modal.classList.add("hidden");
+    return;
+  }
+  modal.classList.remove("hidden");
+  const pid = getPlayerId();
+
+  if (hc.pickerOpen) {
+    if (titleEl) titleEl.textContent = "明燈雙向對質・請指定 2 名可疑席位";
+    if (timerEl) timerEl.textContent = "已選 " + (hc.draftIds || []).length + "/2 席";
+    if (pickerEl) {
+      pickerEl.classList.remove("hidden");
+      pickerEl.innerHTML = "";
+      getAliveSeats().forEach(function (s) {
+        if (s.id === pid) return;
+        const picked = (hc.draftIds || []).indexOf(s.id) !== -1;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "hope-seat-pick-btn" + (picked ? " is-picked" : "");
+        btn.textContent = fmtSeatNum(s.id) + "號 " + s.name;
+        btn.addEventListener("click", function () {
+          toggleHopeConfrontationSeat(s.id);
+        });
+        pickerEl.appendChild(btn);
+      });
+    }
+    if (resultEl) resultEl.classList.add("hidden");
+    if (actionBtn) {
+      actionBtn.classList.remove("hidden");
+      actionBtn.disabled = (hc.draftIds || []).length !== 2;
+      actionBtn.textContent = (hc.draftIds || []).length === 2 ? "開啟 15 秒明燈對質" : "請先點選 2 位席位";
+    }
+    return;
+  }
+
+  if (titleEl) titleEl.textContent = "15 秒明燈雙向對質・言票比對";
+  if (timerEl) timerEl.textContent = "剩餘 " + Math.max(0, hc.secondsLeft || 0) + " 秒";
+  if (pickerEl) pickerEl.classList.add("hidden");
+  if (actionBtn) actionBtn.classList.add("hidden");
+  if (resultEl) {
+    resultEl.classList.remove("hidden");
+    const linesHtml = (hc.lines || []).map(function (ln) {
+      const pitStr = (ln.wolfPits || []).map(function (id) { return fmtSeatNum(id) + "號"; }).join("、");
+      return '<div class="hope-duel-card">' +
+        '<div class="hope-duel-head"><span>' + escapeHtml(ln.speakerLabel) + '</span><span class="hope-duel-pit">點狼坑：' + escapeHtml(pitStr || "待確認") + '</span></div>' +
+        '<div class="hope-duel-quote">「' + escapeHtml(ln.text) + '」</div>' +
+      '</div>';
+    }).join("");
+    const contraHtml = (hc.contradictions && hc.contradictions.length > 0)
+      ? ('<div class="hope-contra-box"><div class="hope-contra-title">系統公開言票矛盾紀錄（絕不洩漏底牌）</div>' +
+          hc.contradictions.map(function (c) { return '<div class="hope-contra-item">· ' + escapeHtml(c) + '</div>'; }).join("") +
+        '</div>')
+      : '<div class="hope-contra-box"><div class="hope-contra-title">系統公開言票矛盾紀錄（絕不洩漏底牌）</div><div class="hope-contra-item">· 目前二人尚無公開言票背離紀錄，請依方才對質邏輯自行裁量。</div></div>';
+    resultEl.innerHTML = linesHtml + contraHtml;
+  }
+}
+
+function toggleHopeConfrontationSeat(seatId) {
+  const hc = state.match && state.match.hopeConfrontation;
+  if (!hc || !hc.pickerOpen) return;
+  if (!Array.isArray(hc.draftIds)) hc.draftIds = [];
+  const idx = hc.draftIds.indexOf(seatId);
+  if (idx !== -1) {
+    hc.draftIds.splice(idx, 1);
+  } else {
+    if (hc.draftIds.length >= 2) hc.draftIds.shift();
+    hc.draftIds.push(seatId);
+  }
+  if (typeof sound !== "undefined" && typeof sound.tone === "function") {
+    sound.tone(idx !== -1 ? 420 : 620, 0.06, "triangle", 0.04, 0);
+  }
+  renderHopeConfrontationModal();
+}
+
+function executeHopeConfrontation(seatAId, seatBId) {
+  if (!canUseFourGNow() || state.match.fourGivingsUsed.hope) return null;
+  const pid = getPlayerId();
+  const sA = getSeat(seatAId);
+  const sB = getSeat(seatBId);
+  if (!sA || !sB || !sA.alive || !sB.alive || sA.id === sB.id || sA.id === pid || sB.id === pid) {
+    showToast("請指定 2 位不同的在席茶友展開明燈對質。", "warn");
+    return null;
+  }
+
   animateFourGCardCast("btn4GHope");
   state.match.fourGivingsUsed.hope = true;
   state.match.stats.fourGCount += 1;
   state.match.harmonyScore = clamp(state.match.harmonyScore + 10, 0, 100);
   if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
-  addThreeGoodPoint("heart", "存好心・給希望");
+  addThreeGoodPoint("heart", "存好心・明燈雙向對質");
   sound.playBlessing();
 
-  const aliveWolves = getAliveSeats().filter(function (s) { return s.role === "wolf" && s.id !== getPlayerId(); });
-  const aliveGood = getAliveSeats().filter(function (s) { return s.role !== "wolf" && s.id !== getPlayerId(); });
-  const pHope = getPlayerSeat();
-
-  let msg = "給希望線索：酸民狼已快現形！";
-  if (pHope && pHope.role === "wolf" && aliveWolves.length === 0) {
-    // Solo surviving Wolf: meaningful stealth benefit instead of wasting the card!
-    pHope.microPulse = Math.max(20, (pHope.microPulse || 70) - 18);
-    aliveGood.forEach(function (g) {
-      g.suspicionMap[getPlayerId()] = clamp((g.suspicionMap[getPlayerId()] || 50) - 10, 5, 95);
-    });
-    spawnBurst(getPlayerId(), ["#38bdf8", "#fde68a", "#ffffff"], 18, "petal");
-    spawnFx(getPlayerId(), "定神穩心", "#38bdf8");
-    triggerCutIn("明燈定心・給希望", "以沉穩氣度化解席間緊繃，眾人對你的戒心隨之平息", "tea");
-    msg = "明燈定心（獨狼偽裝）：以善意穩住茶席氣氛，心虛值降低且眾人戒心下降。";
-  } else if (aliveWolves.length > 0 && aliveGood.length > 0) {
-    const pair = Math.random() < 0.5 ? [aliveWolves[0], aliveGood[0]] : [aliveGood[0], aliveWolves[0]];
-    state.match.fourGHopePair = [pair[0].id, pair[1].id];
-    spawnBeam(getPlayerId(), pair[0].id, "#38bdf8", "emote");
-    spawnBeam(getPlayerId(), pair[1].id, "#38bdf8", "emote");
-    if (typeof stage3d !== "undefined" && stage3d.isActive()) {
-      stage3d.triggerSkillFx("seer_scan", getPlayerId(), pair[0].id, false);
-      setTimeout(function () {
-        if (stage3d.isActive()) stage3d.triggerSkillFx("seer_scan", getPlayerId(), pair[1].id, false);
-      }, 260);
-    }
-    spawnBurst(pair[0].id, ["#38bdf8", "#fde68a", "#ffffff"], 14, "star");
-    spawnBurst(pair[1].id, ["#38bdf8", "#fde68a", "#ffffff"], 14, "star");
-    setSeatEmotion(pair[0].id, "shock", 2600);
-    setSeatEmotion(pair[1].id, "shock", 2600);
-    spawnFx(pair[0].id, "明燈映照", "#38bdf8");
-    spawnFx(pair[1].id, "明燈映照", "#38bdf8");
-    triggerCutIn("明燈指津・給希望", "微光映照：" + fmtSeatNum(pair[0].id) + "號 與 " + fmtSeatNum(pair[1].id) + "號 必藏一狼", "tea");
-    msg = "茶席雙光鎖定：【" + pair[0].id + "號】與【" + pair[1].id + "號】其中必藏酸民狼。";
-
-    const joyList = Array.isArray(state.match.fourGJoySuspects) ? state.match.fourGJoySuspects : [];
-    const overlapSeats = pair.filter(function (ps) { return joyList.indexOf(ps.id) !== -1; });
-    if (overlapSeats.length === 1) {
-      const ov = overlapSeats[0];
-      state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + 6, 0, 100);
-      if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
-      bumpCombo("四給雙光交會");
-      spawnFx(ov.id, "雙光交會", "#fbbf24");
-      triggerCutIn("歡喜 × 希望・雙光交會", fmtSeatNum(ov.id) + "號 " + ov.name + " 同時落在破冰僵硬與明燈映照之中", "tea");
-      addLog({ kind: "blessing", title: "歡喜×希望雙光交會：" + fmtSeatNum(ov.id) + "號 " + ov.name + " 同時重疊兩項茶席線索。", text: "" });
-    }
+  // Strictly Blind-View: NEVER inspect sA.role/sB.role or sA.team/sB.team!
+  const lineA = buildBlindConfrontationLine(sA, sB);
+  const lineB = buildBlindConfrontationLine(sB, sA);
+  const pSeat = getPlayerSeat();
+  if (pSeat && pSeat.role === "wolf") {
+    pSeat.microPulse = Math.max(20, (pSeat.microPulse || 70) - 14);
   }
-  addLog({ kind: "blessing", title: msg, text: "" });
-  showToast(msg, "emerald");
+  const pSnap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(pSeat, { module: "hope_confrontation_records" })
+    : null;
+  const vmPub = typeof buildVoteSpeechMatrix === "function" ? buildVoteSpeechMatrix(pSeat, pSnap) : null;
+  const contradictions = [];
+  [sA, sB].forEach(function (st) {
+    const lbl = fmtSeatNum(st.id) + "號" + st.name;
+    const divs = (vmPub && vmPub.divergenceDetails && vmPub.divergenceDetails[st.id]) || [];
+    if (divs.length > 0) {
+      const lastD = divs[divs.length - 1];
+      contradictions.push(lbl + " 第" + lastD.day + "天口頭點名 " + fmtSeatNum(lastD.accused) + "號，公投卻改投 " + fmtSeatNum(lastD.voted) + "號（言票背離）");
+    }
+    const pubContras = (pSnap ? pSnap.detectedContradictions : (state.match.detectedContradictions || []))
+      .filter(function (c) { return c && c.isPublic !== false && c.speakerId === st.id; });
+    pubContras.slice(-2).forEach(function (c) {
+      contradictions.push(lbl + "：" + (c.detail || c.label || "前後陳詞衝突"));
+    });
+  });
+
+  state.match.fourGHopePair = [sA.id, sB.id];
+  state.match.hopeConfrontation = {
+    active: true,
+    pickerOpen: false,
+    day: state.match.day,
+    seatIds: [sA.id, sB.id],
+    draftIds: [sA.id, sB.id],
+    lines: [lineA, lineB],
+    contradictions: contradictions,
+    secondsLeft: 15
+  };
+
+  spawnBeam(sA.id, sB.id, "#38bdf8", "clash", 900);
+  spawnBurst(sA.id, ["#38bdf8", "#fde68a", "#ffffff"], 14, "star");
+  spawnBurst(sB.id, ["#38bdf8", "#fde68a", "#ffffff"], 14, "star");
+  setSeatEmotion(sA.id, "angry", 3600);
+  setSeatEmotion(sB.id, "angry", 3600);
+  setSeatBubble(sA.id, lineA.text.slice(0, 32) + "…", "suspect", 4600);
+  setSeatBubble(sB.id, lineB.text.slice(0, 32) + "…", "suspect", 4600);
+  spawnFx(sA.id, "明燈對質", "#38bdf8");
+  spawnFx(sB.id, "明燈對質", "#38bdf8");
+  if (typeof stage3d !== "undefined" && stage3d.isActive()) {
+    stage3d.triggerSkillFx("seer_scan", pid, sA.id, false);
+    setTimeout(function () {
+      if (stage3d.isActive()) stage3d.triggerSkillFx("seer_scan", pid, sB.id, false);
+    }, 240);
+  }
+  triggerCutIn("明燈雙向對質・給希望", fmtSeatNum(sA.id) + "號 " + sA.name + " 與 " + fmtSeatNum(sB.id) + "號 " + sB.name + " 當面互指邏輯漏洞", "tea");
+
+  const summaryMsg = "明燈雙向對質（給希望）：" + fmtSeatNum(sA.id) + "號" + sA.name + " 與 " + fmtSeatNum(sB.id) + "號" + sB.name + " 亮出各自狼坑並完成 15 秒言票對質。";
+  addLog({
+    kind: "blessing",
+    title: summaryMsg,
+    text: lineA.speakerLabel + "：「" + lineA.text + "」｜" + lineB.speakerLabel + "：「" + lineB.text + "」" +
+      (contradictions.length ? ("｜矛盾紀錄：" + contradictions.join("；")) : "")
+  });
+  showToast(summaryMsg, "emerald");
   triggerFourGSynergyCheck("hope");
   if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
+  renderHopeConfrontationModal();
+
+  const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
+  if (isBrowserUi && !state.autoPlay) {
+    clearHopeConfrontationTimer();
+    state.hopeConfrontInterval = setInterval(function () {
+      const hcNow = state.match && state.match.hopeConfrontation;
+      if (!hcNow || !hcNow.active) {
+        clearHopeConfrontationTimer();
+        return;
+      }
+      hcNow.secondsLeft = Math.max(0, (hcNow.secondsLeft || 0) - 1);
+      renderHopeConfrontationModal();
+      if (hcNow.secondsLeft <= 0) {
+        closeHopeConfrontationModal();
+      }
+    }, 1000);
+  }
   updateAllUI();
+  return state.match.hopeConfrontation;
+}
+
+function useFourGHope(seatAId, seatBId) {
+  sound.unlock();
+  if (!canUseFourGNow() || state.match.fourGivingsUsed.hope) return null;
+  if (seatAId && seatBId) {
+    return executeHopeConfrontation(seatAId, seatBId);
+  }
+  const pid = getPlayerId();
+  const aliveOthers = getAliveSeats().filter(function (s) { return s.id !== pid; });
+  if (aliveOthers.length < 2) {
+    showToast("場上可對質席位不足 2 人。", "warn");
+    return null;
+  }
+  const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
+  if (!isBrowserUi || state.autoPlay) {
+    // Strictly Blind-View auto-selection: pick top 2 observable heat seats (NEVER peeks s.role or s.team!)
+    const pSnap = typeof createBlindMatchSnapshot === "function"
+      ? createBlindMatchSnapshot(getPlayerSeat(), { module: "hope_confrontation_pick" })
+      : null;
+    const ranked = aliveOthers.slice().sort(function (a, b) {
+      const hA = pSnap ? pSnap.getObservableHeatOnSeat(a.id) : 40;
+      const hB = pSnap ? pSnap.getObservableHeatOnSeat(b.id) : 40;
+      return hB - hA;
+    });
+    return executeHopeConfrontation(ranked[0].id, ranked[1].id);
+  }
+  // Open clean 2-seat picker modal in browser UI
+  const draft = [];
+  if (state.selectedSeatId && state.selectedSeatId !== pid) {
+    const selS = getSeat(state.selectedSeatId);
+    if (selS && selS.alive) draft.push(selS.id);
+  }
+  state.match.hopeConfrontation = {
+    active: false,
+    pickerOpen: true,
+    day: state.match.day,
+    seatIds: [],
+    draftIds: draft,
+    lines: [],
+    contradictions: [],
+    secondsLeft: 15
+  };
+  renderHopeConfrontationModal();
+  return state.match.hopeConfrontation;
+}
+
+// ==================== v16.0 WOLF SELF-EXPLODE (拂袖掀席・白天自爆) ====================
+function canWolfSelfExplodeNow(seat) {
+  const m = state.match;
+  if (!m || !m.started || !seat || !seat.alive || seat.role !== "wolf") return false;
+  return m.phase === "SHERIFF_ELECTION" || m.phase === "DAY_SPEECH" || m.phase === "DAY_PLAYER_TURN" || m.phase === "DAY_VOTE";
+}
+
+function triggerWolfSelfExplode(seatId, opts) {
+  const m = state.match;
+  const wolf = getSeat(seatId);
+  if (!m || !m.started || !wolf || !canWolfSelfExplodeNow(wolf)) return false;
+
+  // 1. Cleanly abort every active timer, TTS stream, typewriter, prefetch, and in-flight LLM callback!
+  clearStepTimer();
+  clearBlitzVoteTimer();
+  closeHopeConfrontationModal();
+  if (typeof clearWolfScreenTacticTimer === "function") clearWolfScreenTacticTimer();
+  if (typeof stopTypewriterOnly === "function") stopTypewriterOnly();
+  if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
+  if (typeof orchestrator !== "undefined" && typeof orchestrator.bumpInterruptEpoch === "function") {
+    orchestrator.bumpInterruptEpoch("wolf_explode");
+  }
+  if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
+  m._prefetchedSpeech = null;
+  state.speakingInFlight = false;
+  state.activeSpeakerId = null;
+  state.activeClash = null;
+  state.interjectOpen = false;
+  state.voteFlight = null;
+  state.voteResultPayload = null;
+  if (el("interjectPopover")) el("interjectPopover").classList.add("hidden");
+
+  // 2. Flip the wolf card immediately and forfeit all remaining speeches, voting, and unfinished sheriff/badge-flow!
+  const wasElection = (m.phase === "SHERIFF_ELECTION");
+  const hadSheriffBadge = Boolean(m.sheriffSeatId === wolf.id);
+  wolf.alive = false;
+  wolf.outReason = "拂袖掀席自爆";
+  wolf.claimedRole = "wolf";
+  m.wolfExplodedToday = true;
+  m.speechQueue = [];
+  m.pkCandidates = null;
+  m.sheriffOrderCtx = null;
+  if (wasElection) {
+    m.sheriffElectionCtx = null;
+    m.sheriffElectionPending = false;
+    m.sheriffSeatId = null;
+    m.sheriffBadgeFlow = null;
+    m.sheriffBadgeFlowsBySeat = {};
+  } else if (hadSheriffBadge) {
+    m.sheriffSeatId = null;
+    m.sheriffBadgeFlow = null;
+    m.sheriffBadgeFlowsBySeat = {};
+  }
+  if (m.stats) m.stats.wolfExplosions = (m.stats.wolfExplosions || 0) + 1;
+
+  const pid = getPlayerId();
+  const wLbl = fmtSeatNum(wolf.id) + "號 " + (wolf.id === pid ? "你" : wolf.name);
+  const cutSub = wasElection
+    ? (wLbl + " 亮牌自爆！沒收今日警長競選、警徽流與全體發言公投，茶席即刻黑燈入夜")
+    : (wLbl + " 亮牌自爆！強制截斷當日剩餘發言與公投，茶席即刻黑燈入夜");
+
+  if (typeof sound !== "undefined" && typeof sound.playHunterShot === "function") sound.playHunterShot();
+  triggerShake(520);
+  spawnBurst(wolf.id, ["#e11d48", "#fbbf24", "#ffffff"], 36, "slash");
+  if (typeof triggerScreenFlash === "function") triggerScreenFlash("#be123c", 480, 0.36);
+  spawnFx(wolf.id, "拂袖掀席", "#e11d48", { scale: 1.3, durationMs: 2000 });
+  setSeatBubble(wolf.id, "不必多談了，這盞茶掀了，直接入夜！", "wolf", 3200);
+  triggerCutIn("拂袖掀席・酸民狼自爆", cutSub, "crimson", 2000);
+  addLog({
+    kind: "dawn",
+    title: "拂袖掀席（白天自爆）：" + cutSub,
+    text: ""
+  });
+  showToast("拂袖掀席：" + wLbl + " 自爆離席，直接黑燈進入夜晚。", "warn");
+  if (typeof evaluateMatchPointState === "function") evaluateMatchPointState();
+
+  if (wolf.id === pid && typeof autoEnableSpectatorCompactPace === "function") {
+    autoEnableSpectatorCompactPace();
+  }
+
+  // 3. Check win condition; if match continues, plunge straight into Night!
+  if (checkAndHandleGameOver()) return true;
+  if (typeof beginNightPhase === "function") {
+    beginNightPhase();
+  }
+  return true;
+}
+
+function maybeTriggerAiWolfSelfExplode(speaker, opts) {
+  const m = state.match;
+  if (!m || !m.started || !speaker || !speaker.alive || speaker.role !== "wolf" || speaker.id === getPlayerId()) return false;
+  if (opts && opts.disableSelfExplode) return false;
+  if (!canWolfSelfExplodeNow(speaker)) return false;
+  const snap = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(speaker, { module: "wolf_explode_check" })
+    : null;
+  const diff = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
+  if (diff === "easy") return false;
+  const aliveMates = snap
+    ? (snap.knownWolfMates || []).filter(function (mt) { return mt && mt.alive; })
+    : getAliveSeats().filter(function (s) { return s.role === "wolf" && s.id !== speaker.id; });
+  if (aliveMates.length < 1) return false; // Never self-explode as the last surviving wolf!
+
+  const heat = snap ? snap.getObservableHeatOnSeat(speaker.id) : 40;
+  const checkedWolfBySeer = (snap ? snap.daySpeechEvents : []).some(function (ev) {
+    return ev && ev.checkedWolfId === speaker.id;
+  });
+  const isElectionClash = Boolean(
+    m.phase === "SHERIFF_ELECTION" && m.sheriffElectionCtx && m.sheriffElectionCtx.hasDoubleSeerClash
+  );
+  if (!checkedWolfBySeer && heat < 78 && !isElectionClash) return false;
+
+  const prob = diff === "pro" ? (checkedWolfBySeer ? 0.36 : 0.22) : (checkedWolfBySeer ? 0.24 : 0.14);
+  const roll = (opts && typeof opts.rngVal === "number") ? opts.rngVal : Math.random();
+  if (roll < prob) {
+    if (typeof antiCheatMonitor !== "undefined") {
+      antiCheatMonitor.recordDecision("wolf_explode_check", speaker.id, "觸發拂袖掀席自爆");
+    }
+    return triggerWolfSelfExplode(speaker.id);
+  }
+  return false;
 }
 
 function useFourGConvenience() {
@@ -1830,39 +2274,74 @@ function advanceSheriffSpeechTurn() {
   }
 
   const built = buildSheriffCandidateLine(cand, ctx.spokenSpeeches);
+
+  // v16.0 AI Sheriff Bluff-Then-Withdraw ("上警詐後置位後拱手退水") for sharp Good AIs / disruptive Wolves!
+  const bSnapW = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(cand, { module: "sheriff_bluff_withdraw" })
+    : null;
+  const bSelfW = (bSnapW && bSnapW.self) ? bSnapW.self : cand;
+  const remainingOthersOnStand = (ctx.candidateIds || []).filter(function (id) { return id !== cand.id; });
+  const isBluffEligible = Boolean(
+    remainingOthersOnStand.length >= 1 &&
+    built.tone !== "seer" && built.tone !== "clash" &&
+    bSelfW.role !== "seer" && !(bSelfW.role === "wolf" && bSelfW.fakeSeer) &&
+    (bSelfW.role === "guard" || bSelfW.role === "witch" || bSelfW.deductionStyle === "skeptical" || bSelfW.role === "wolf")
+  );
+  const bluffRoll = ((cand.id * 23 + (m.day || 1) * 11 + (ctx.spokenSpeeches || []).length * 7) % 100) / 100;
+  const aiBluffWithdraw = Boolean(isBluffEligible && bluffRoll < 0.42);
+  const finalTag = aiBluffWithdraw ? "詐身分退水" : built.tag;
+  const finalText = aiBluffWithdraw
+    ? (built.text.replace(/」$/, "") + "——我先試探完後置位反應，這就拱手退水回警下投票！」")
+    : built.text;
+
   const spObj = {
     id: cand.id,
     name: cand.name,
-    tag: built.tag,
+    tag: finalTag,
     tone: built.tone,
     rivalId: built.rivalId,
     badgeFlow: built.badgeFlow || null,
-    text: built.text
+    withdrewAfterSpeech: aiBluffWithdraw,
+    text: finalText
   };
   ctx.spokenSpeeches.push(spObj);
   ctx.speeches.push(spObj);
 
-  if (built.tone === "seer" || built.tone === "clash") {
-    cand.claimedRole = "seer";
-    if (built.badgeFlow && built.badgeFlow.firstTargetId) {
-      setSheriffBadgeFlow(cand.id, built.badgeFlow.firstTargetId, built.badgeFlow.secondTargetId, "election");
+  if (aiBluffWithdraw) {
+    ctx.candidateIds = ctx.candidateIds.filter(function (id) { return id !== cand.id; });
+    if (!Array.isArray(ctx.withdrawnIds)) ctx.withdrawnIds = [];
+    if (ctx.withdrawnIds.indexOf(cand.id) === -1) ctx.withdrawnIds.push(cand.id);
+    if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
+    ctx.dramaEvents.unshift("拱手退水：" + fmtSeatNum(cand.id) + "號 " + cand.name + " 試探後置位後主動退水回警下，警上局勢生變。");
+    if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
+    addLog({
+      kind: "system",
+      speakerId: cand.id,
+      title: "警上拱手退水 · " + fmtSeatNum(cand.id) + "號 " + cand.name + "（詐身分後退水）",
+      text: finalText.replace(/^「|」$/g, "")
+    });
+  } else {
+    if (built.tone === "seer" || built.tone === "clash") {
+      cand.claimedRole = "seer";
+      if (built.badgeFlow && built.badgeFlow.firstTargetId) {
+        setSheriffBadgeFlow(cand.id, built.badgeFlow.firstTargetId, built.badgeFlow.secondTargetId, "election");
+      }
+      if (built.tone === "clash") {
+        const firstSeer = ctx.spokenSpeeches.find(function (sp) {
+          return sp.id !== cand.id && (sp.tone === "seer" || sp.tone === "clash");
+        });
+        if (firstSeer) triggerSheriffDoubleSeerClashDrama(firstSeer, spObj, ctx);
+      }
     }
-    if (built.tone === "clash") {
-      const firstSeer = ctx.spokenSpeeches.find(function (sp) {
-        return sp.id !== cand.id && (sp.tone === "seer" || sp.tone === "clash");
-      });
-      if (firstSeer) triggerSheriffDoubleSeerClashDrama(firstSeer, spObj, ctx);
-    }
+    addLog({
+      kind: "system",
+      speakerId: cand.id,
+      title: "警上發言 · " + fmtSeatNum(cand.id) + "號 " + cand.name + "（" + built.tag + "）",
+      text: built.text.replace(/^「|」$/g, "")
+    });
   }
-
-  addLog({
-    kind: "system",
-    speakerId: cand.id,
-    title: "👑 警上發言・" + fmtSeatNum(cand.id) + "號 " + cand.name + "（" + built.tag + "）",
-    text: built.text.replace(/^「|」$/g, "")
-  });
   if (typeof setSeatEmotion === "function") setSeatEmotion(cand.id, built.tone === "clash" ? "angry" : "proud", 4200);
-  if (typeof setSeatBubble === "function") setSeatBubble(cand.id, built.text.replace(/^「|」$/g, "").slice(0, 26) + (built.text.length > 28 ? "…" : ""), built.tone === "clash" ? "wolf" : "trust", 4400);
+  if (typeof setSeatBubble === "function") setSeatBubble(cand.id, finalText.replace(/^「|」$/g, "").slice(0, 26) + (finalText.length > 28 ? "…" : ""), built.tone === "clash" ? "wolf" : "trust", 4400);
   if (built.rivalId && typeof spawnBeam === "function") {
     spawnBeam(cand.id, built.rivalId, built.tone === "clash" ? "#f43f5e" : "#fbbf24", "clash");
   }
@@ -1874,9 +2353,9 @@ function advanceSheriffSpeechTurn() {
   if (typeof startSpotlightTypewriter === "function") {
     startSpotlightTypewriter({
       speaker: cand,
-      badge: fmtSeatNum(cand.id) + "號 " + cand.name + "・警上發言",
-      trait: built.tag,
-      rawText: built.text,
+      badge: fmtSeatNum(cand.id) + "號 " + cand.name + (aiBluffWithdraw ? " · 拱手退水" : " · 警上發言"),
+      trait: finalTag,
+      rawText: finalText,
       voiceMood: built.tone === "clash" ? "accuse" : (built.tone === "seer" ? "claim_seer" : "normal"),
       holdMs: 2400
     });
@@ -2342,15 +2821,24 @@ function resolveSheriffElectionAction(actionOrVoteId) {
     if (!Array.isArray(ctx.withdrawnIds)) ctx.withdrawnIds = [];
     if (ctx.withdrawnIds.indexOf(pid) === -1) ctx.withdrawnIds.push(pid);
     if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
+    // Guardrail: cleanly clear stale audio/prefetch on withdraw!
+    if (typeof orchestrator !== "undefined" && typeof orchestrator.bumpInterruptEpoch === "function") {
+      orchestrator.bumpInterruptEpoch("sheriff_withdraw");
+    }
+    if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
+    if (wasPlayerTurn) {
+      if (typeof stopTypewriterOnly === "function") stopTypewriterOnly();
+      if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
+    }
     const topAi = ctx.candidateIds.map(getSeat).filter(Boolean)[0];
     if (topAi) {
-      const smirkLine = "😏 " + fmtSeatNum(topAi.id) + "號" + topAi.name + " 笑道：「哈哈，詐完身分退水了嗎？那這枚警徽我就笑納囉！」";
+      const smirkLine = fmtSeatNum(topAi.id) + "號 " + topAi.name + " 笑道：「詐完身分便拱手退水了嗎？那這枚警徽我就笑納了。」";
       ctx.dramaEvents.unshift(smirkLine);
       if (typeof setSeatEmotion === "function") setSeatEmotion(topAi.id, "proud", 3200);
-      if (typeof setSeatBubble === "function") setSeatBubble(topAi.id, "退水了？警徽我收下囉！", "suspect", 3600);
+      if (typeof setSeatBubble === "function") setSeatBubble(topAi.id, "拱手退水了？警徽我收下囉！", "suspect", 3600);
     }
     sound.tone(420, 0.12, "sine", 0.05, 0);
-    addLog({ kind: "system", title: "🏳 你華麗退水回到警下，稍後可參與警下投票決選。", text: "" });
+    addLog({ kind: "system", title: "拱手退水：你已主動退出警長競選回到警下，稍後可參與警下投票決選。", text: "" });
     if (wasPlayerTurn) {
       advanceSheriffSpeechTurn();
     } else {

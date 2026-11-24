@@ -153,6 +153,11 @@ function createBlindSeatView(viewerSeat, rawSeat, opts) {
   const viewerIsGuard = Boolean(viewerSeat && viewerSeat.role === "guard");
   const viewerIsPlayer = Boolean(viewerSeat && viewerId === pid);
   const pulsePublic = Boolean(m.microPulseRevealed || rawSeat.sweatExposed);
+  const fogSealMode = Boolean(m.variantMode === "fog_seal");
+  const isSealedDead = Boolean(fogSealMode && !rawSeat.alive && !isSelf);
+  const visibleOutReason = isSealedDead
+    ? (rawSeat.outReason ? "已離席（迷霧封牌）" : "")
+    : (rawSeat.outReason || "");
 
   // Strictly public observable fields (identical for every player on the table)
   const view = {
@@ -162,7 +167,8 @@ function createBlindSeatView(viewerSeat, rawSeat, opts) {
     deductionStyle: rawSeat.deductionStyle || "balanced",
     color: rawSeat.color,
     alive: Boolean(rawSeat.alive),
-    outReason: rawSeat.outReason || "",
+    outReason: visibleOutReason,
+    fogSealed: isSealedDead,
     claimedRole: rawSeat.claimedRole || null,
     voteDisabled: Boolean(rawSeat.voteDisabled),
     trustShield: Boolean(rawSeat.trustShield),
@@ -231,9 +237,13 @@ function createBlindSeatView(viewerSeat, rawSeat, opts) {
       view.wasLastGuardedByMe = true;
     }
     if (viewerIsPlayer && m.playerKnownRoles && m.playerKnownRoles[rawSeat.id]) {
-      view.playerKnownRole = m.playerKnownRoles[rawSeat.id];
-      if (view.playerKnownRole === "wolf") view.knownTeam = "wolf";
-      else if (view.playerKnownRole === "good_verified") view.knownTeam = "good";
+      const pkr = m.playerKnownRoles[rawSeat.id];
+      // In Fog-Seal variant, never auto-reveal unverified dead seat role from playerKnownRoles unless player personally verified or is Wolf mate
+      if (!isSealedDead || pkr === "wolf" || pkr === "good_verified") {
+        view.playerKnownRole = pkr;
+        if (view.playerKnownRole === "wolf") view.knownTeam = "wolf";
+        else if (view.playerKnownRole === "good_verified") view.knownTeam = "good";
+      }
     }
   }
 
@@ -440,8 +450,20 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
 
   const hasGuardMode = Boolean(
     m.totalSeats >= 12 ||
+    m.variantMode === "lone_wolf_king" ||
     (m.totalSeats >= 8 && typeof state !== "undefined" && state.guardMode)
   );
+  const variantModeNow = m.variantMode || "standard";
+  const fogSealModeNow = variantModeNow === "fog_seal";
+  const isMatchPointNow = Boolean(m.isMatchPoint);
+  const speechCharCapNow = variantModeNow === "blitz_3m" ? 22 : (isMatchPointNow ? 28 : 0);
+  const hopeConfSnap = (m.hopeConfrontation && Array.isArray(m.hopeConfrontation.seatIds) && m.hopeConfrontation.seatIds.length === 2)
+    ? Object.freeze({
+        day: m.hopeConfrontation.day || m.day || 1,
+        seatIds: m.hopeConfrontation.seatIds.slice(),
+        contradictions: Array.isArray(m.hopeConfrontation.contradictions) ? m.hopeConfrontation.contradictions.slice() : []
+      })
+    : null;
 
   // Publicly observable table heat on any seat (ZERO mind-reading of other seats' suspicionMap!)
   const getObservableHeatOnSeat = function (targetSeatId) {
@@ -508,6 +530,13 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     firstNightIntel: m.firstNightIntel ? Object.assign({}, m.firstNightIntel) : null,
     fourGJoySuspects: Array.isArray(m.fourGJoySuspects) ? m.fourGJoySuspects.slice() : [],
     fourGHopePair: Array.isArray(m.fourGHopePair) ? m.fourGHopePair.slice() : null,
+    hopeConfrontation: hopeConfSnap,
+    variantMode: variantModeNow,
+    fogSealMode: fogSealModeNow,
+    isMatchPoint: isMatchPointNow,
+    speechCharCap: speechCharCapNow,
+    witchCanPurifyNight1: variantModeNow === "twin_tea",
+    witchCanSelfHealNight1: variantModeNow !== "twin_tea",
     activeDirectorEvent: m.activeDirectorEvent ? Object.assign({}, m.activeDirectorEvent) : null,
     microPulseRevealed: Boolean(m.microPulseRevealed),
     tableReactions: Object.freeze(tableReactions),

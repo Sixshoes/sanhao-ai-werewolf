@@ -4457,7 +4457,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 
     // 5. Public Release 2.0 diagnostics & anonymous host helper
     const diag11 = collectFeedbackDiagnostics();
-    const version11Ok = /公測\\s*2\\.[0-9]+/.test(diag11.version) && typeof isAnonymousReviewHost === "function";
+    const version11Ok = /公測\\s*[2-9]\\.[0-9]+/.test(diag11.version) && typeof isAnonymousReviewHost === "function";
 
     clearStepTimer();
     resetMatchToLobby();
@@ -5867,4 +5867,265 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v15.2 (144Hz+ Native VSync + dt-Independent 3D + 4K Overlay Dirty-Flag Cache + Dual-GPU Diagnostics + De-AI Tea-Academy Experience) E2E smoke test PASSED!");
+// 29. v16.0 High-Tension Gameplay, Zero-Leak Hope Duel, Self-Explode, Night-2+ No Last Words, Match Point, Wolf Screen, Spirit Bets, Mission Awakening & Cloud Variants
+{
+  const v16Res = vm.runInContext(`(() => {
+    const prevAntiStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+    const prevCareerRaw = localStorage.getItem(CAREER_STORAGE_KEY);
+    // Unlock all variants for variant tests
+    saveCareerStats({ gamesPlayed: 10, wins: 5, goodWins: 3, wolfWins: 2, totalGoodWords: 20, totalRewrites: 5, bestCombo: 4, zeroToxicWins: 2, spiritBetScore: 0, bestSpiritStreak: 0, unlockedBadges: ["first_win","zero_toxic","kind_crit","resonance","combo_master","four_g_sage","pro_slayer","wolf_actor"] });
+
+    // (1) Dynamic Night-1 AI Witch Heal + Night-1 AI Wolf Self-Knife Bait
+    state.activeVariant = "standard";
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    el("selectAiDifficulty").value = "pro";
+    el("chkSheriffMode").checked = true;
+    el("chkGuardMode").checked = true;
+    startNewGame();
+    state.match.day = 1;
+    state.match.phase = "NIGHT_WITCH";
+    const witchS = state.match.seats.find(s => s.role === "witch");
+    const goodVictim = state.match.seats.find(s => s.team === "good" && s.id !== witchS.id);
+    state.match.nightState.wolfTarget = goodVictim.id;
+    const healLowRoll = chooseAiWitchNightAction(witchS, 0.15);
+    const healHighRoll = chooseAiWitchNightAction(witchS, 0.92);
+    const dynamicWitchHealOk = Boolean(healLowRoll.heal === true && healHighRoll.heal === false);
+
+    state.match.phase = "NIGHT_WOLF";
+    const wolfA = state.match.seats.find(s => s.role === "wolf");
+    const selfKnifePick = chooseAiWolfTargetBlind(wolfA, 0.05);
+    const normalKnifePick = chooseAiWolfTargetBlind(wolfA, 0.65);
+    const wolfSelfKnifeOk = Boolean(selfKnifePick && selfKnifePick.id === wolfA.id && normalKnifePick && normalKnifePick.id !== wolfA.id && getSeat(normalKnifePick.id).role !== "wolf");
+
+    // (2) High-Intensity Night-2+ ZERO Last Words + High-Diff Voted-Out Wolf Fake God Last Words
+    state.match.day = 2;
+    state.match.phase = "DAWN_RESOLVE";
+    let lwDoneCalled = false;
+    startLastWordsSequence([goodVictim.id], "first_night", () => { lwDoneCalled = true; });
+    const night2NoLastWordsOk = Boolean(lwDoneCalled && state.lastWordsCtx === null && state.match.phase !== "LAST_WORDS_SPEECH");
+    let fakeGodFound = false;
+    for (let d = 1; d <= 6; d++) {
+      state.match.day = d;
+      const lwWolf = buildAiLastWords(wolfA, "vote_out");
+      if (lwWolf && lwWolf.isFakeGodBluff && (lwWolf.claimRole === "witch" || lwWolf.claimRole === "guard")) {
+        fakeGodFound = true;
+        break;
+      }
+    }
+    const wolfFakeGodLwOk = fakeGodFound;
+
+    // (3) De-Cheated Four-G Hope ("15s 明燈雙向對質") — Zero God-View Leak under strictThrow!
+    state.match.day = 2;
+    state.match.phase = "DAY_SPEECH";
+    state.match.fourGivingsUsed.hope = false;
+    const violBeforeHope = antiCheatMonitor.stats.violationsBlocked;
+    const aliveNonP = getAliveSeats().filter(s => s.id !== getPlayerId());
+    const hopeRes = useFourGHope(aliveNonP[0].id, aliveNonP[1].id);
+    const hopeDuelOk = Boolean(
+      hopeRes && hopeRes.active && hopeRes.lines.length === 2 &&
+      state.match.fourGivingsUsed.hope === true &&
+      antiCheatMonitor.stats.violationsBlocked === violBeforeHope &&
+      !hopeRes.lines.some(l => /必藏一狼|上帝視角/.test(l.text))
+    );
+    closeHopeConfrontationModal();
+
+    // (4) Wolf Self-Explode ("拂袖掀席") during SHERIFF_ELECTION & DAY_SPEECH -> interrupts & jumps straight to NIGHT!
+    el("selectPreferredRole").value = "wolf";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    state.match.day = 1;
+    state.match.phase = "SHERIFF_ELECTION";
+    state.match.sheriffElectionCtx = { stage: "speech", candidateIds: [getPlayerId(), 2], speechOrderIds: [getPlayerId(), 2], speechIndex: 0, speeches: [], spokenSpeeches: [], withdrawnIds: [] };
+    state.match.sheriffBadgeFlow = { ownerId: 2, firstTargetId: 3, secondTargetId: 4 };
+    state.match._prefetchedSpeech = { key: "stale", seatId: 2 };
+    const epBeforeExp = orchestrator.matchEpoch;
+    const expOk1 = triggerWolfSelfExplode(getPlayerId());
+    const explodeElectionOk = Boolean(
+      expOk1 && !getPlayerSeat().alive && getPlayerSeat().outReason === "拂袖掀席自爆" &&
+      state.match.sheriffElectionCtx === null && state.match.sheriffBadgeFlow === null &&
+      state.match._prefetchedSpeech === null && orchestrator.matchEpoch > epBeforeExp &&
+      isNightPhase(state.match.phase) && state.match.day === 2
+    );
+
+    // Also test AI Wolf Self-Explode during DAY_SPEECH forfeiting remaining speechQueue
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    state.match.day = 1;
+    state.match.phase = "DAY_SPEECH";
+    const wExpAi = state.match.seats.find(s => s.role === "wolf" && s.alive);
+    state.match.speechQueue = [1, 2, 3, 4];
+    const expOk2 = triggerWolfSelfExplode(wExpAi.id);
+    const explodeDaySpeechOk = Boolean(
+      expOk2 && !wExpAi.alive && state.match.speechQueue.length === 0 && isNightPhase(state.match.phase) && state.match.day === 2
+    );
+
+    // (5) Sheriff "拱手退水" + Match Point ("茶涼聽牌") <= 28-char cap + matchpoint track
+    el("selectPreferredRole").value = "seer";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    state.match.day = 1;
+    state.match.phase = "SHERIFF_ELECTION";
+    const pidSh = getPlayerId();
+    const otherCandId = state.match.seats.find(s => s.id !== pidSh).id;
+    state.match.sheriffElectionCtx = { stage: "speech", candidateIds: [pidSh, otherCandId], speechOrderIds: [pidSh, otherCandId], speechIndex: 0, activeReelSeatId: pidSh, playerRunning: true, playerWithdrew: false, speeches: [], spokenSpeeches: [], withdrawnIds: [], dramaEvents: [] };
+    const epBeforeWd = orchestrator.matchEpoch;
+    const wdRes = resolveSheriffElectionAction("withdraw");
+    const sheriffWithdrawOk = Boolean(
+      wdRes && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.withdrawnIds.indexOf(pidSh) !== -1 &&
+      orchestrator.matchEpoch > epBeforeWd
+    );
+
+    // Trigger Match Point by leaving 5 alive seats
+    state.match.phase = "DAY_SPEECH";
+    state.match.sheriffElectionCtx = null;
+    const aliveListMp = getAliveSeats();
+    for (let i = 5; i < aliveListMp.length; i++) aliveListMp[i].alive = false;
+    const mpOn = evaluateMatchPointState();
+    const mpTrackOk = sound.resolveTargetTrack() === "matchpoint";
+    const mpSpeaker = getAliveSeats().find(s => s.id !== getPlayerId());
+    const mpSpeech = buildHeuristicAiSpeech(mpSpeaker);
+    const mpCapOk = Boolean(mpOn && mpTrackOk && mpSpeech && mpSpeech.text && mpSpeech.text.length <= 28);
+
+    // (6) Human Wolf Screen 3 Tactics ("mate_fake_seer_gold", "player_fake_seer_push", "deep_stealth_bus")
+    el("selectPreferredRole").value = "wolf";
+    el("selectModeCount").value = "8";
+    startNewGame();
+    state.match.day = 1;
+    state.match.phase = "NIGHT_WOLF";
+    const wMate = state.match.seats.find(s => s.id !== getPlayerId() && s.role === "wolf");
+    applyWolfNightTactic("mate_fake_seer_gold");
+    state.match.phase = "DAY_SPEECH";
+    state.match.daySpeechEvents = [];
+    const goldSp = buildHeuristicAiSpeech(wMate);
+    const tactic1GoldOk = Boolean(goldSp && goldSp.claimSeer && goldSp.checkedGoodId === getPlayerId());
+
+    state.match.phase = "NIGHT_WOLF";
+    wMate.claimedRole = null;
+    applyWolfNightTactic("player_fake_seer_push");
+    state.match.phase = "DAY_SPEECH";
+    const goodTgtP = state.match.seats.find(s => s.team === "good");
+    getPlayerSeat().claimedRole = "seer";
+    state.match.daySpeechEvents = [{ day: 1, speakerId: getPlayerId(), claimRole: "seer", accuseId: goodTgtP.id, wolfPits: [goodTgtP.id], rawText: "我是觀察員驗出他是狼" }];
+    const pushSp = buildHeuristicAiSpeech(wMate);
+    const tactic2PushOk = Boolean(pushSp && pushSp.accuseId === goodTgtP.id && pushSp.standWithSeerId === getPlayerId());
+
+    state.match.phase = "NIGHT_WOLF";
+    wMate.claimedRole = null;
+    applyWolfNightTactic("deep_stealth_bus");
+    state.match.phase = "DAY_SPEECH";
+    const deepSp = buildHeuristicAiSpeech(wMate);
+    const tactic3DeepOk = Boolean(deepSp && !deepSp.claimSeer && !deepSp.hasToxicSlip);
+
+    // (7) Spectator Spirit Intuition Bet Streak & Career Persistence
+    el("selectPreferredRole").value = "villager";
+    startNewGame();
+    getPlayerSeat().alive = false;
+    state.match.phase = "DAY_VOTE";
+    const betTargetA = getAliveSeats()[0];
+    const betTargetB = getAliveSeats()[1];
+    ensureSpiritBetState().active = { open: false, kind: "vote_out", day: 1, targetId: null, secondsLeft: 5, onDone: null };
+    placeSpiritRoundBet(betTargetA.id);
+    const sb1 = resolveSpiritRoundBet("vote_out", betTargetA.id);
+    ensureSpiritBetState().active = { open: false, kind: "night_kill", day: 2, targetId: null, secondsLeft: 5, onDone: null };
+    placeSpiritRoundBet(betTargetB.id);
+    const sb2 = resolveSpiritRoundBet("night_kill", betTargetB.id);
+    const careerAfterBet = loadCareerStats();
+    const spiritBetOk = Boolean(sb1 && sb1.hit && sb1.earned === 10 && sb2 && sb2.hit && sb2.earned === 15 && careerAfterBet.spiritBetScore >= 25 && careerAfterBet.bestSpiritStreak >= 2);
+
+    // (8) Role Mission Live Awakening (Villager extra interject + Guard +0.5 ballot weight)
+    el("selectPreferredRole").value = "villager";
+    el("selectRuleDepth").value = "full";
+    startNewGame();
+    state.match.day = 1;
+    state.match.phase = "DAY_SPEECH";
+    state.match.interjectUsedDay = 1;
+    state.match.stats.cluesCaught = 2;
+    state.match.stats.toxicSentCount = 0;
+    const vilMis = evaluateRoleMission();
+    const activeAiSp = getAliveSeats().find(s => s.id !== getPlayerId());
+    state.activeSpeakerId = activeAiSp.id;
+    const canBonusInterject = canUseTeaInterjectNow();
+    const villAwakenOk = Boolean(vilMis && vilMis.awakened && state.match.interjectBonusCharges === 1 && canBonusInterject);
+
+    el("selectPreferredRole").value = "guard";
+    el("selectModeCount").value = "8";
+    el("chkGuardMode").checked = true;
+    startNewGame();
+    state.match.day = 1;
+    const gTarget = getAliveSeats().find(s => s.team === "good" && s.id !== getPlayerId());
+    state.match.nightState = { guardTarget: gTarget.id, wolfTarget: gTarget.id, seerTarget: null, witchSaved: false, witchPoisonTarget: null };
+    resolveDawn();
+    const guardAwakenOk = Boolean(state.match.roleMission && state.match.roleMission.awakened && state.match.guardAwakenBonusWeightDay >= 1);
+
+    // (9) Four Cloud Variants ("fog_seal", "blitz_3m", "twin_tea", "lone_wolf_king")
+    state.activeVariant = "lone_wolf_king";
+    el("selectPreferredRole").value = "random";
+    startNewGame();
+    const lwkSeers = state.match.seats.filter(s => s.role === "seer").length;
+    const lwkWolves = state.match.seats.filter(s => s.role === "wolf");
+    const lwkOk = Boolean(state.match.totalSeats === 6 && lwkSeers === 0 && lwkWolves.length === 1 && lwkWolves[0].isWolfKing === true);
+
+    state.activeVariant = "twin_tea";
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "witch";
+    startNewGame();
+    state.match.day = 1;
+    state.match.phase = "NIGHT_WITCH";
+    state.match.nightState.wolfTarget = getPlayerId();
+    const twinSelfCheck = chooseAiWitchNightAction(getPlayerSeat(), 0.05);
+    const twinTeaOk = Boolean(twinSelfCheck.heal === false && state.match.variantMode === "twin_tea");
+
+    state.activeVariant = "blitz_3m";
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    state.match.phase = "DAY_SPEECH";
+    const blitzSp = buildHeuristicAiSpeech(getAliveSeats().find(s => s.id !== getPlayerId()));
+    const blitzOk = Boolean(getActiveSpeechCharLimit() === 22 && blitzSp && blitzSp.text.length <= 22);
+
+    state.activeVariant = "fog_seal";
+    startNewGame();
+    const deadSeatFog = state.match.seats.find(s => s.id !== getPlayerId());
+    deadSeatFog.alive = false;
+    deadSeatFog.outReason = "清心茶請離";
+    const fogSnap = createBlindMatchSnapshot(getPlayerSeat(), { module: "fog_seal_smoke" });
+    const fogViewDead = fogSnap.getSeat(deadSeatFog.id);
+    const fogSealOk = Boolean(fogSnap.fogSealMode === true && fogViewDead && fogViewDead.fogSealed === true && fogViewDead.outReason === "已離席（迷霧封牌）");
+
+    // Restore clean state
+    state.activeVariant = "standard";
+    antiCheatMonitor.strictThrow = prevAntiStrict;
+    if (prevCareerRaw === null) localStorage.removeItem(CAREER_STORAGE_KEY);
+    else localStorage.setItem(CAREER_STORAGE_KEY, prevCareerRaw);
+    resetMatchToLobby();
+
+    return {
+      dynamicWitchHealOk, wolfSelfKnifeOk, night2NoLastWordsOk, wolfFakeGodLwOk,
+      hopeDuelOk, explodeElectionOk, explodeDaySpeechOk, sheriffWithdrawOk, mpCapOk,
+      tactic1GoldOk, tactic2PushOk, tactic3DeepOk, spiritBetOk,
+      villAwakenOk, guardAwakenOk, lwkOk, twinTeaOk, blitzOk, fogSealOk
+    };
+  })()`, ctx);
+  for (const [k, v] of Object.entries(v16Res)) {
+    if (!v) {
+      throw new Error("v16.0 High-Tension Gameplay check failed for " + k + ": " + JSON.stringify(v16Res));
+    }
+  }
+  // Zero-Emoji check on all newly added v16.0 HTML blocks
+  const htmlV16 = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const v16HtmlSnippets = [
+    htmlV16.match(/<span id="matchPointBadge"[\s\S]*?<\/span>/)?.[0] || "",
+    htmlV16.match(/<div id="wolfSelfExplodeBar"[\s\S]*?<\/div>/)?.[0] || "",
+    htmlV16.match(/<div id="hopeConfrontationModal"[\s\S]*?<\/div>\s*<\/div>/)?.[0] || "",
+    htmlV16.match(/<div id="spiritBetBanner"[\s\S]*?<\/div>\s*<\/div>/)?.[0] || ""
+  ];
+  const emojiReV16 = /[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u;
+  for (const snip of v16HtmlSnippets) {
+    if (emojiReV16.test(snip)) {
+      throw new Error("v16.0 Zero-Emoji violation found in ai.html block: " + snip);
+    }
+  }
+}
+
+console.log("[OK] Full v16.0 (Dynamic Night-1 / No Night-2+ Last Words / Hope 15s Duel / Wolf Self-Explode / Match Point / Wolf Screen / Spirit Bets / Mission Awakening / 4 Cloud Variants) E2E smoke test PASSED!");

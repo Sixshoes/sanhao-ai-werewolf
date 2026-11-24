@@ -598,6 +598,16 @@ function sanitizeSpeechMeta(speaker, out, snapArg) {
   });
   out.goodPits = cleanGoods;
 
+  // v16.0 Match Point (<= 28 chars) & Blitz (<= 22 chars) speech length enforcement
+  const capLimit = (snapArg && typeof snapArg.speechCharCap === "number" && snapArg.speechCharCap > 0)
+    ? snapArg.speechCharCap
+    : (typeof getActiveSpeechCharLimit === "function" ? getActiveSpeechCharLimit() : 0);
+  if (capLimit > 0 && out.text && out.text.length > capLimit) {
+    out.text = typeof clampSpeechToCharLimit === "function"
+      ? clampSpeechToCharLimit(out.text, capLimit)
+      : (out.text.slice(0, Math.max(1, capLimit - 1)) + "。");
+  }
+
   return out;
 }
 

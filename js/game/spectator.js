@@ -310,6 +310,184 @@ function evaluateSpectatorGuess() {
   return res;
 }
 
+function autoEnableSpectatorCompactPace() {
+  if (!state.match || !state.match.started) return false;
+  if (state.fxPacing !== "fast") {
+    if (typeof state._preSpectatorFxPacing !== "string") {
+      state._preSpectatorFxPacing = state.fxPacing || "cinematic";
+    }
+    state.fxPacing = "fast";
+    if (typeof document !== "undefined" && document.body && document.body.classList) {
+      document.body.classList.add("fx-pacing-fast");
+    }
+    if (el("btnToggleFxPacing")) el("btnToggleFxPacing").textContent = "演出:快節奏";
+  }
+  return true;
+}
+
+// ==================== v16.0 SPIRIT ROUND INTUITION BET (席外茶靈輪次押注) ====================
+function ensureSpiritBetState() {
+  if (!state.match) return { active: null, history: [], streak: 0, bestStreak: 0, totalBonusPts: 0 };
+  if (!state.match.spiritBet || typeof state.match.spiritBet !== "object") {
+    state.match.spiritBet = { active: null, history: [], streak: 0, bestStreak: 0, totalBonusPts: 0 };
+  }
+  return state.match.spiritBet;
+}
+
+function getSpiritBetMultiplier(streak) {
+  if (streak >= 3) return 3.0;
+  if (streak === 2) return 2.0;
+  if (streak === 1) return 1.5;
+  return 1.0;
+}
+
+function clearSpiritBetTimer() {
+  if (state.spiritBetInterval) {
+    clearInterval(state.spiritBetInterval);
+    state.spiritBetInterval = null;
+  }
+}
+
+function closeSpiritRoundBet(runCallback) {
+  clearSpiritBetTimer();
+  const sb = ensureSpiritBetState();
+  const cb = (sb.active && sb.active.onDone) ? sb.active.onDone : null;
+  if (sb.active) {
+    sb.active.open = false;
+    sb.active.onDone = null;
+  }
+  const banner = el("spiritBetBanner");
+  if (banner) banner.classList.add("hidden");
+  if (runCallback && typeof cb === "function") cb();
+}
+
+function renderSpiritBetBanner() {
+  const banner = el("spiritBetBanner");
+  const titleEl = el("spiritBetTitle");
+  const timerEl = el("spiritBetTimer");
+  const chipsEl = el("spiritBetChips");
+  if (!banner) return;
+  const sb = ensureSpiritBetState();
+  if (!sb.active || !sb.active.open || !isSpectatorGuessActive()) {
+    banner.classList.add("hidden");
+    return;
+  }
+  banner.classList.remove("hidden");
+  const mult = getSpiritBetMultiplier(sb.streak || 0);
+  if (titleEl) {
+    titleEl.textContent = sb.active.kind === "night_kill"
+      ? ("席外茶靈直覺押注 · 預測今晚狼隊夜襲目標（連勝 " + (sb.streak || 0) + "｜" + mult + "x）")
+      : ("席外茶靈直覺押注 · 預測本輪公投離席者（連勝 " + (sb.streak || 0) + "｜" + mult + "x）");
+  }
+  if (timerEl) {
+    timerEl.textContent = Math.max(0, sb.active.secondsLeft || 0) + " 秒";
+  }
+  if (chipsEl) {
+    chipsEl.innerHTML = "";
+    const aliveList = getAliveSeats();
+    aliveList.forEach(function (s) {
+      const picked = sb.active.targetId === s.id;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "spirit-bet-chip" + (picked ? " is-picked" : "");
+      btn.textContent = fmtSeatNum(s.id) + "號 " + s.name;
+      btn.addEventListener("click", function () {
+        placeSpiritRoundBet(s.id);
+      });
+      chipsEl.appendChild(btn);
+    });
+  }
+}
+
+function openSpiritRoundBet(kind, onDone) {
+  const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
+  if (!isBrowserUi || !isSpectatorGuessActive() || isSpectatorFastForward() || isSpectatorGodViewActive()) {
+    return false;
+  }
+  const alive = getAliveSeats();
+  if (alive.length < 2) return false;
+  clearSpiritBetTimer();
+  const sb = ensureSpiritBetState();
+  sb.active = {
+    open: true,
+    kind: kind === "night_kill" ? "night_kill" : "vote_out",
+    day: (state.match && state.match.day) || 1,
+    targetId: null,
+    secondsLeft: 5,
+    onDone: typeof onDone === "function" ? onDone : null
+  };
+  renderSpiritBetBanner();
+  state.spiritBetInterval = setInterval(function () {
+    const cur = ensureSpiritBetState().active;
+    if (!cur || !cur.open) {
+      clearSpiritBetTimer();
+      return;
+    }
+    cur.secondsLeft = Math.max(0, (cur.secondsLeft || 0) - 1);
+    renderSpiritBetBanner();
+    if (cur.secondsLeft <= 0) {
+      closeSpiritRoundBet(true);
+    }
+  }, 1000);
+  return true;
+}
+
+function placeSpiritRoundBet(targetId) {
+  const sb = ensureSpiritBetState();
+  const act = sb.active;
+  const seat = getSeat(targetId);
+  if (!act || !seat || !seat.alive) return false;
+  act.targetId = seat.id;
+  if (typeof sound !== "undefined" && typeof sound.tone === "function") {
+    sound.tone(660, 0.08, "triangle", 0.05, 0);
+  }
+  if (typeof showToast === "function") {
+    showToast("席外茶靈押注鎖定：" + fmtSeatNum(seat.id) + "號 " + seat.name + "。", "gold");
+  }
+  if (act.open) {
+    closeSpiritRoundBet(true);
+  }
+  return true;
+}
+
+function resolveSpiritRoundBet(kind, actualSeatId) {
+  const sb = ensureSpiritBetState();
+  const act = sb.active;
+  if (!act || act.kind !== kind || !act.targetId) {
+    if (act && act.kind === kind) sb.active = null;
+    return null;
+  }
+  const hit = Boolean(actualSeatId && act.targetId === actualSeatId);
+  let earned = 0;
+  let mult = 1.0;
+  if (hit) {
+    mult = getSpiritBetMultiplier(sb.streak || 0);
+    sb.streak = (sb.streak || 0) + 1;
+    sb.bestStreak = Math.max(sb.bestStreak || 0, sb.streak);
+    earned = Math.round(10 * mult);
+    sb.totalBonusPts = (sb.totalBonusPts || 0) + earned;
+    if (state.match && state.match.stats) {
+      state.match.stats.spiritBetsWon = (state.match.stats.spiritBetsWon || 0) + 1;
+    }
+    if (typeof recordSpiritBetCareerBonus === "function") {
+      recordSpiritBetCareerBonus(earned, sb.streak);
+    }
+    if (typeof showToast === "function") {
+      showToast("席外茶靈押注命中！連勝 " + sb.streak + "（" + mult + "x）計入生涯積分 +" + earned + "。", "emerald");
+    }
+    if (typeof addLog === "function") {
+      addLog({ kind: "blessing", title: "席外茶靈押注命中（" + (kind === "night_kill" ? "夜襲預測" : "公投預測") + "）：連勝 " + sb.streak + "，生涯積分 +" + earned, text: "" });
+    }
+  } else {
+    sb.streak = 0;
+  }
+  const rec = { day: act.day, kind: kind, predictedId: act.targetId, actualId: actualSeatId || null, hit: hit, mult: mult, earned: earned };
+  if (!Array.isArray(sb.history)) sb.history = [];
+  sb.history.push(rec);
+  sb.active = null;
+  return rec;
+}
+
 function isSpectatorFastForward() {
   return Boolean(state.spectatorFastForward && isSpectatorGuessActive());
 }

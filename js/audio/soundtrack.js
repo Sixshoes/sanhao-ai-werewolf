@@ -504,9 +504,14 @@ const sound = {
     if (!state.match.started || state.match.phase === "LOBBY") return "twilight";
     const p = state.match.phase;
     if (p === "NIGHT_GUARD" || p === "NIGHT_WOLF" || p === "NIGHT_SEER" || p === "NIGHT_WITCH") return "night";
-    if (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT" || p === "HUNTER_TRIGGER") return "vote";
     if (p === "GAME_OVER") return "finale";
+    if (state.match.isMatchPoint) return "matchpoint";
+    if (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT" || p === "HUNTER_TRIGGER") return "vote";
     return "day";
+  },
+
+  syncAtmosphere: function () {
+    this.syncWithPhase();
   },
 
   syncWithPhase: function () {

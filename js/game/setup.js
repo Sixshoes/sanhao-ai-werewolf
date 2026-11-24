@@ -219,7 +219,15 @@ function startJudgeShowcaseMatch() {
     detectedContradictions: [],
     microInspectCountToday: 0,
     microInspectedSeats: {},
-    wolfTactic: "fake_seer",
+    wolfTactic: "mate_fake_seer_gold",
+    variantMode: "standard",
+    isMatchPoint: false,
+    hopeConfrontation: null,
+    wolfExplodedToday: false,
+    interjectBonusCharges: 0,
+    guardAwakenBonusWeightDay: 0,
+    guardBlockedLastNight: false,
+    spiritBet: { active: null, history: [], streak: 0, bestStreak: 0, totalBonusPts: 0 },
     sheriffRallyUsedDay: 0,
     sheriffElectionPending: false,
     sheriffElectionCtx: null,
@@ -324,6 +332,13 @@ function startNewGame() {
     state.autoPlay = state._preSpectatorAutoPlay;
     state._preSpectatorAutoPlay = null;
   }
+  if (typeof state._preSpectatorFxPacing === "string") {
+    state.fxPacing = state._preSpectatorFxPacing;
+    state._preSpectatorFxPacing = null;
+    if (typeof document !== "undefined" && document.body && document.body.classList) {
+      document.body.classList.toggle("fx-pacing-fast", state.fxPacing === "fast");
+    }
+  }
   state.spectatorFastForward = false;
   if (typeof orchestrator !== "undefined") orchestrator.beginNewEpoch("start_match");
 
@@ -336,32 +351,51 @@ function startNewGame() {
   }
   if (el("chkSheriffMode")) state.sheriffMode = Boolean(el("chkSheriffMode").checked);
   if (el("chkGuardMode")) state.guardMode = Boolean(el("chkGuardMode").checked);
+  let variantMode = state.activeVariant || "standard";
+  if (["standard", "fog_seal", "blitz_3m", "twin_tea", "lone_wolf_king"].indexOf(variantMode) === -1) {
+    variantMode = "standard";
+  }
+  if (variantMode !== "standard" && typeof isVariantUnlocked === "function" && !isVariantUnlocked(variantMode)) {
+    variantMode = "standard";
+    state.activeVariant = "standard";
+  }
   saveUserPrefs();
 
-  if ((pref === "wolf_king" || pref === "elder") && count < 10) {
-    count = 10;
-    if (el("selectModeCount")) el("selectModeCount").value = "10";
-    showToast(pref === "wolf_king" ? "🐺 流言首領已自動切換至 10人局！" : "🛡️ 清心長老已自動切換至 10人局！", "emerald");
-  }
-  if (pref === "hunter" && count < 8) {
-    count = 8;
-    el("selectModeCount").value = "8";
-    showToast("直心糾察長已自動切換至 8人局！", "emerald");
-  }
-  if (pref === "guard" && count < 8) {
-    count = 8;
+  if (variantMode === "lone_wolf_king") {
+    count = 6;
     state.guardMode = true;
-    if (el("selectModeCount")) el("selectModeCount").value = "8";
+    if (el("selectModeCount")) el("selectModeCount").value = "6";
     if (el("chkGuardMode")) el("chkGuardMode").checked = true;
-    showToast("🛡️ 已切換至 8 人「預女獵守」護心守衛模式！", "emerald");
-  } else if (pref === "guard") {
-    state.guardMode = true;
-    if (el("chkGuardMode")) el("chkGuardMode").checked = true;
+    showToast("雲起奇局【孤狼流言王局】啟動：6人無觀察員，1名強化流言首領對決5名茶友。", "emerald");
+  } else {
+    if ((pref === "wolf_king" || pref === "elder") && count < 10) {
+      count = 10;
+      if (el("selectModeCount")) el("selectModeCount").value = "10";
+      showToast(pref === "wolf_king" ? "流言首領已自動切換至 10人局。" : "清心長老已自動切換至 10人局。", "emerald");
+    }
+    if (pref === "hunter" && count < 8) {
+      count = 8;
+      el("selectModeCount").value = "8";
+      showToast("直心糾察長已自動切換至 8人局。", "emerald");
+    }
+    if (pref === "guard" && count < 8) {
+      count = 8;
+      state.guardMode = true;
+      if (el("selectModeCount")) el("selectModeCount").value = "8";
+      if (el("chkGuardMode")) el("chkGuardMode").checked = true;
+      showToast("已切換至 8 人「預女獵守」護心守衛模式。", "emerald");
+    } else if (pref === "guard") {
+      state.guardMode = true;
+      if (el("chkGuardMode")) el("chkGuardMode").checked = true;
+    }
   }
 
-  const useGuardBoard = Boolean(count >= 12 || (count >= 8 && state.guardMode));
+  const useGuardBoard = Boolean(variantMode === "lone_wolf_king" || count >= 12 || (count >= 8 && state.guardMode));
   let rolePool;
-  if (count >= 12) {
+  if (variantMode === "lone_wolf_king") {
+    count = 6;
+    rolePool = ["wolf", "witch", "guard", "hunter", "villager", "villager"];
+  } else if (count >= 12) {
     count = 12;
     rolePool = ["wolf", "wolf", "wolf", "wolf", "seer", "witch", "hunter", "guard", "villager", "villager", "villager", "villager"];
   } else if (count >= 10) {
@@ -434,7 +468,14 @@ function startNewGame() {
   }
 
   // 10/12-player advanced roles: 1 流言首領 (Wolf King) + 1 清心長老 (Elder)
-  if (count >= 10) {
+  // Also in "lone_wolf_king" variant, the sole Wolf is ALWAYS an enhanced 流言首領 (Wolf King)!
+  if (variantMode === "lone_wolf_king") {
+    const soleWolf = seats.find(function (s) { return s.role === "wolf"; });
+    if (soleWolf) {
+      soleWolf.isWolfKing = true;
+      soleWolf.microPulse = Math.max(48, (soleWolf.microPulse || 72) - 16);
+    }
+  } else if (count >= 10) {
     const wolfSeatsAll = seats.filter(function (s) { return s.role === "wolf"; });
     const villagerSeatsAll = seats.filter(function (s) { return s.role === "villager"; });
     const pSeatInit = seats.find(function (s) { return s.id === playerSeatId; });
@@ -555,7 +596,15 @@ function startNewGame() {
     detectedContradictions: [],
     microInspectCountToday: 0,
     microInspectedSeats: {},
-    wolfTactic: "fake_seer",
+    wolfTactic: "mate_fake_seer_gold",
+    variantMode: variantMode,
+    isMatchPoint: false,
+    hopeConfrontation: null,
+    wolfExplodedToday: false,
+    interjectBonusCharges: 0,
+    guardAwakenBonusWeightDay: 0,
+    guardBlockedLastNight: false,
+    spiritBet: { active: null, history: [], streak: 0, bestStreak: 0, totalBonusPts: 0 },
     sheriffRallyUsedDay: 0,
     sheriffElectionPending: Boolean(sheriffSeatId),
     sheriffElectionCtx: null,
@@ -608,9 +657,26 @@ function startNewGame() {
       fourGSynergies: 0,
       elderExempted: 0,
       wolfKingStrikes: 0,
-      sheriffDramaWins: 0
+      sheriffDramaWins: 0,
+      guardBlocks: 0,
+      wolfExplosions: 0,
+      spiritBetsWon: 0
     }
   };
+
+  const variantLabels = {
+    fog_seal: "迷霧封牌局（離席者不揭露真實陣營與職能）",
+    blitz_3m: "三分鐘閃電快棋（全員限 22 字短句＋15 秒快投）",
+    twin_tea: "雙刃毒茗局（首夜奉茶師不可自救、首夜解禁清心茶）",
+    lone_wolf_king: "孤狼流言王局（6 人無觀察員，1 名強化流言首領對決 5 名茶友）"
+  };
+  if (variantMode !== "standard" && variantLabels[variantMode]) {
+    addLog({
+      kind: "blessing",
+      title: "雲起奇局生效：" + variantLabels[variantMode],
+      text: ""
+    });
+  }
 
   const pSeatObj = getPlayerSeat();
   const effRoleKey = (pSeatObj && pSeatObj.isWolfKing) ? "wolf_king" : ((pSeatObj && pSeatObj.isElder) ? "elder" : playerRole);

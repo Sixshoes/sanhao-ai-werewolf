@@ -105,6 +105,30 @@ const MOVEMENTS = {
     ],
     drums: [1, 0, 3, 1, 0, 3, 1, 3]
   },
+  matchpoint: {
+    name: "06 茶涼聽牌（決死快鼓）",
+    chordsLabel: "F#m — Em — Dmaj7 — C#7",
+    bpm: 138,
+    pads: [
+      [42, 49, 54, 57],
+      [40, 47, 52, 55],
+      [38, 45, 50, 54],
+      [37, 44, 49, 53]
+    ],
+    arps: [
+      [54, 57, 61, 66, 61, 57, 64, 61],
+      [52, 55, 59, 64, 59, 55, 62, 59],
+      [50, 54, 57, 62, 57, 54, 61, 57],
+      [49, 53, 56, 61, 56, 53, 60, 56]
+    ],
+    bells: [
+      [78, null, 76, null, 73, null, 76, null],
+      [76, null, 74, null, 71, null, 74, null],
+      [74, null, 73, null, 69, null, 73, null],
+      [73, null, 71, null, 68, null, 73, 76]
+    ],
+    drums: [1, 3, 1, 3, 1, 2, 1, 3]
+  },
   finale: {
     name: "05 雲開見月（終局謝幕）",
     chordsLabel: "Dmaj9 — Gmaj9 — Em9 — Asus4",

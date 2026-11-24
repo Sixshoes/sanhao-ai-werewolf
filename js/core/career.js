@@ -28,6 +28,41 @@ const ACHIEVEMENT_DEFS = [
   { id: "sheriff_drama",   icon: "🎙️", title: "警上戲精",     desc: "親身上警競選並高人氣奪下警徽" }
 ];
 
+const CLOUD_VARIANT_DEFS = [
+  {
+    id: "fog_seal",
+    title: "迷霧封牌局",
+    badge: "盲推極限",
+    desc: "出局者一律暗牌封存，不公布真實陣營、職能與離席死因，AI 與玩家同處完全盲推。",
+    needWins: 1,
+    needBadges: 2
+  },
+  {
+    id: "blitz_3m",
+    title: "三分鐘閃電快棋",
+    badge: "22字＋15秒",
+    desc: "全員發言上限壓縮至 22 字短句，公投階段開啟 15 秒決死快投倒數。",
+    needWins: 2,
+    needBadges: 4
+  },
+  {
+    id: "twin_tea",
+    title: "雙刃毒茗局",
+    badge: "首夜解禁清心",
+    desc: "首夜滴水奉茶師不可自救，同時首夜立即解禁清心醒神茶，夜間博弈瞬間白熱化。",
+    needWins: 3,
+    needBadges: 6
+  },
+  {
+    id: "lone_wolf_king",
+    title: "孤狼流言王局",
+    badge: "6人無觀察員",
+    desc: "6 人無明心觀察員板子：1 名強化流言首領獨戰 5 名書院茶友（含奉茶、守衛、糾察長）。",
+    needWins: 4,
+    needBadges: 8
+  }
+];
+
 function loadCareerStats() {
   const fallback = {
     gamesPlayed: 0,
@@ -38,6 +73,8 @@ function loadCareerStats() {
     totalRewrites: 0,
     bestCombo: 0,
     zeroToxicWins: 0,
+    spiritBetScore: 0,
+    bestSpiritStreak: 0,
     unlockedBadges: []
   };
   try {
@@ -51,6 +88,32 @@ function loadCareerStats() {
   } catch (e) {
     return fallback;
   }
+}
+
+function isVariantUnlocked(variantId, careerOpt) {
+  if (!variantId || variantId === "standard") return true;
+  const def = CLOUD_VARIANT_DEFS.find(function (v) { return v.id === variantId; });
+  if (!def) return false;
+  const c = careerOpt || loadCareerStats();
+  const wins = c.wins || 0;
+  const badges = Array.isArray(c.unlockedBadges) ? c.unlockedBadges.length : 0;
+  return wins >= def.needWins || badges >= def.needBadges;
+}
+
+function getUnlockedVariants(careerOpt) {
+  const c = careerOpt || loadCareerStats();
+  return CLOUD_VARIANT_DEFS.filter(function (v) { return isVariantUnlocked(v.id, c); }).map(function (v) { return v.id; });
+}
+
+function recordSpiritBetCareerBonus(pts, streak) {
+  const addPts = Math.max(0, Math.round(Number(pts) || 0));
+  const st = Math.max(0, Math.round(Number(streak) || 0));
+  if (addPts <= 0 && st <= 0) return null;
+  const c = loadCareerStats();
+  c.spiritBetScore = (c.spiritBetScore || 0) + addPts;
+  c.bestSpiritStreak = Math.max(c.bestSpiritStreak || 0, st);
+  saveCareerStats(c);
+  return c;
 }
 
 function saveCareerStats(career) {

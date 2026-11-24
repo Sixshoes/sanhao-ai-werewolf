@@ -43,6 +43,70 @@ const indieFlow = {
       gdToggle.classList.toggle("is-selected", gd);
       gdToggle.textContent = gd ? "已開啟・守衛" : "未開啟";
     }
+    this.renderSetupVariantsGrid();
+  },
+
+  renderSetupVariantsGrid: function () {
+    const grid = el("setupVariantsGrid");
+    const statusEl = el("setupVariantStatus");
+    if (!grid) return;
+    const career = typeof loadCareerStats === "function" ? loadCareerStats() : { wins: 0, unlockedBadges: [] };
+    const wins = career.wins || 0;
+    const badges = Array.isArray(career.unlockedBadges) ? career.unlockedBadges.length : 0;
+    const curVar = state.activeVariant || "standard";
+    const defs = (typeof CLOUD_VARIANT_DEFS !== "undefined" && Array.isArray(CLOUD_VARIANT_DEFS)) ? CLOUD_VARIANT_DEFS : [];
+    const curDef = defs.find(function (d) { return d.id === curVar; });
+    if (statusEl) {
+      statusEl.textContent = curDef ? curDef.title : "標準席";
+    }
+
+    grid.innerHTML = "";
+    const stdBtn = document.createElement("button");
+    stdBtn.type = "button";
+    stdBtn.className = "variant-pick-card" + (curVar === "standard" ? " is-selected" : "");
+    stdBtn.setAttribute("data-setup-variant", "standard");
+    stdBtn.innerHTML =
+      '<div class="flex items-center justify-between gap-2">' +
+      '<span class="font-serif-craft text-xs font-bold text-amber-100">標準雲起席</span>' +
+      '<span class="variant-pill">預設常規</span>' +
+      '</div>' +
+      '<div class="text-[10px] text-slate-400 mt-0.5 text-left">依上方人數與進階板設定正常開局。</div>';
+    stdBtn.addEventListener("click", function () {
+      state.activeVariant = "standard";
+      if (typeof saveUserPrefs === "function") saveUserPrefs();
+      indieFlow.renderSetupVariantsGrid();
+    });
+    grid.appendChild(stdBtn);
+
+    defs.forEach(function (v) {
+      const unlocked = typeof isVariantUnlocked === "function" ? isVariantUnlocked(v.id, career) : true;
+      const selected = curVar === v.id && unlocked;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "variant-pick-card" + (selected ? " is-selected" : "") + (unlocked ? "" : " is-locked");
+      btn.setAttribute("data-setup-variant", v.id);
+      const lockText = unlocked
+        ? v.badge
+        : ("需 " + v.needWins + " 勝或 " + v.needBadges + " 勳章（目前 " + wins + " 勝/" + badges + " 章）");
+      btn.innerHTML =
+        '<div class="flex items-center justify-between gap-2">' +
+        '<span class="font-serif-craft text-xs font-bold ' + (unlocked ? "text-amber-200" : "text-slate-400") + '">' + escapeHtml(v.title) + '</span>' +
+        '<span class="variant-pill ' + (unlocked ? "is-open" : "is-locked") + '">' + escapeHtml(lockText) + '</span>' +
+        '</div>' +
+        '<div class="text-[10px] text-slate-400 mt-0.5 text-left">' + escapeHtml(v.desc) + '</div>';
+      btn.addEventListener("click", function () {
+        if (!unlocked) {
+          if (typeof showToast === "function") {
+            showToast("尚未解鎖【" + v.title + "】：累計 " + v.needWins + " 勝或 " + v.needBadges + " 枚勳章即可解鎖。", "warn");
+          }
+          return;
+        }
+        state.activeVariant = v.id;
+        if (typeof saveUserPrefs === "function") saveUserPrefs();
+        indieFlow.renderSetupVariantsGrid();
+      });
+      grid.appendChild(btn);
+    });
   },
 
   openSetupDrawer: function (open) {

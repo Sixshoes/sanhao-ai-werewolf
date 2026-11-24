@@ -28,6 +28,22 @@ function syncFocalCardChrome(p) {
     const spNow = (p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH" || showSheriffSpotlight) ? getSeat(state.activeSpeakerId) : null;
     focalCard.style.borderColor = spNow ? spNow.color : "";
   }
+  const explodeBar = el("wolfSelfExplodeBar");
+  if (explodeBar) {
+    const canExplode = Boolean(typeof canWolfSelfExplodeNow === "function" && canWolfSelfExplodeNow(getPlayerSeat()));
+    explodeBar.classList.toggle("hidden", !canExplode);
+  }
+  if (typeof renderHopeConfrontationModal === "function") {
+    const isDayHopePh = (p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "DAY_VOTE");
+    if (!isDayHopePh && el("hopeConfrontationModal")) {
+      el("hopeConfrontationModal").classList.add("hidden");
+    } else {
+      renderHopeConfrontationModal();
+    }
+  }
+  if (typeof renderSpiritBetBanner === "function") {
+    renderSpiritBetBanner();
+  }
 
   const dragHint = el("dragGestureHint");
   if (dragHint) {
@@ -307,24 +323,28 @@ function renderNightAndHunterPanel(p) {
     const victim = getSeat(state.match.nightState.wolfTarget);
     const healBtn = el("btnWitchHeal");
     const purifyBtn = el("btnWitchPurify");
-    const blockedSelfHeal = Boolean(state.match.witchPotions.heal && victim && victim.id === getPlayerId() && state.match.day >= 2);
+    const twinTeaUi = state.match.variantMode === "twin_tea";
+    const blockedSelfHeal = Boolean(state.match.witchPotions.heal && victim && victim.id === getPlayerId() && (state.match.day >= 2 || twinTeaUi));
     const canHealNow = Boolean(state.match.witchPotions.heal && victim && !blockedSelfHeal);
+    const canPurifyDay = Boolean(state.match.witchPotions.purify && (state.match.day >= 2 || twinTeaUi));
 
     healBtn.disabled = !canHealNow;
     healBtn.textContent = canHealNow
-      ? ("🍵 暖心茶護回 " + victim.id + "號")
-      : (blockedSelfHeal ? "第2夜不可自護" : "暖心茶(已用)");
+      ? ("暖心茶護回 " + victim.id + "號")
+      : (blockedSelfHeal ? (twinTeaUi && state.match.day === 1 ? "雙刃毒茗首夜禁自救" : "第2夜不可自護") : "暖心茶(已用)");
 
-    purifyBtn.disabled = !state.match.witchPotions.purify;
-    purifyBtn.textContent = state.match.witchPotions.purify
-      ? ("🍃 清心茶請離" + (sel && sel.alive && sel.id !== getPlayerId() ? (" " + sel.id + "號") : "可疑者"))
-      : "清心茶(已用)";
+    purifyBtn.disabled = !canPurifyDay;
+    purifyBtn.textContent = canPurifyDay
+      ? ("清心茶請離" + (sel && sel.alive && sel.id !== getPlayerId() ? (" " + sel.id + "號") : "可疑者"))
+      : (state.match.witchPotions.purify ? "清心茶(第2夜開放)" : "清心茶(已用)");
 
     el("targetPromptBox").textContent = canHealNow
-      ? ("今晚 " + victim.id + "號 " + victim.name + " 被迷霧鎖定！要端暖心回甘茶護回他嗎？（同夜限一盞）")
+      ? ("今晚 " + victim.id + "號 " + victim.name + " 被迷霧鎖定，要端暖心回甘茶護回他嗎？（同夜限一盞）")
       : (blockedSelfHeal
-        ? "今晚你被迷霧鎖定（第2夜起不可自護），可端清心醒神茶請可疑者離席或略過"
-        : "暖心茶已用完（不再得知夜間目標），可點上方座位端清心茶請可疑者冷靜或按略過");
+        ? (twinTeaUi && state.match.day === 1
+          ? "雙刃毒茗局：首夜不可自救，但首夜已解禁清心茶！可選席位請離或略過。"
+          : "今晚你被迷霧鎖定（第2夜起不可自護），可端清心醒神茶請可疑者離席或略過。")
+        : "暖心茶已用完（不再得知夜間目標），可點上方座位端清心茶請可疑者冷靜或按略過。");
     return;
   }
 
@@ -335,7 +355,9 @@ function renderNightAndHunterPanel(p) {
     const showWolfTactic = (p === "NIGHT_WOLF");
     tacticRow.classList.toggle("hidden", !showWolfTactic);
     if (showWolfTactic && typeof document !== "undefined" && typeof document.querySelectorAll === "function") {
-      const curTac = state.match.wolfTactic || "fake_seer";
+      const curTac = typeof normalizeWolfTacticKey === "function"
+        ? normalizeWolfTacticKey(state.match.wolfTactic)
+        : (state.match.wolfTactic || "mate_fake_seer_gold");
       document.querySelectorAll("[data-wolf-tactic]").forEach(function (tb) {
         tb.classList.toggle("is-active", tb.getAttribute("data-wolf-tactic") === curTac);
       });
@@ -343,9 +365,13 @@ function renderNightAndHunterPanel(p) {
   }
   const pSelfTarget = getPlayerSeat();
   const isPlayerWK = Boolean(p === "HUNTER_TRIGGER" && pSelfTarget && pSelfTarget.isWolfKing);
+  const aliveWolvesUi = getAliveSeats().filter(function (s) { return s.role === "wolf"; }).length;
+  const allowSelfKnifeUi = Boolean(p === "NIGHT_WOLF" && state.match.day === 1 && aliveWolvesUi >= 2);
   const validT = Boolean(sel && sel.alive && (p === "NIGHT_GUARD"
     ? state.match.lastGuardTargetId !== sel.id
-    : (sel.id !== getPlayerId() && !((p === "NIGHT_WOLF" || isPlayerWK) && sel.role === "wolf"))));
+    : (allowSelfKnifeUi
+      ? true
+      : (sel.id !== getPlayerId() && !((p === "NIGHT_WOLF" || isPlayerWK) && sel.role === "wolf")))));
   const verb = p === "NIGHT_GUARD" ? "守護 " : (p === "NIGHT_SEER" ? "查證 " : (p === "NIGHT_WOLF" ? "鎖定 " : (isPlayerWK ? "反撲帶走 " : "共鳴請離 ")));
   confirmBtn.disabled = !validT;
   if (validT) {
@@ -877,11 +903,11 @@ function renderSheriffElectionPanel() {
     }
   }
   if (el("btnSheriffWithdraw")) {
-    el("btnSheriffWithdraw").classList.toggle("hidden", !pAlive || !ctx.playerRunning || stage === "signup");
+    el("btnSheriffWithdraw").classList.toggle("hidden", !pAlive || !ctx.playerRunning);
   }
   if (el("btnSheriffPass")) {
     if (stage === "vote") {
-      el("btnSheriffPass").textContent = ctx.playerRunning ? "📣 維持上警・開始開票" : "🪑 棄票／自動開票";
+      el("btnSheriffPass").textContent = ctx.playerRunning ? "維持上警・開始開票" : "棄票／自動開票";
     } else if (stage === "speech") {
       el("btnSheriffPass").textContent = "略過剩餘發言・直接開票";
     } else {

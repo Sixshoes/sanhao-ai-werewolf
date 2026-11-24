@@ -637,8 +637,8 @@ for (let ci = 0; ci < configs.length; ci++) {
       const wiMatchA = JSON.parse(JSON.stringify(matchA));
       wiMatchA.phase = "NIGHT_WITCH";
       const wiMatchB = buildCounterfactualWorldB(wiMatchA, seatId, { phase: "NIGHT_WITCH" });
-      const wiA = runInWorld(ctx, wiMatchA, guardOn, `chooseAiWitchNightAction(getSeat(${seatId}))`);
-      const wiB = runInWorld(ctx, wiMatchB, guardOn, `chooseAiWitchNightAction(getSeat(${seatId}))`);
+      const wiA = runInWorld(ctx, wiMatchA, guardOn, `chooseAiWitchNightAction(getSeat(${seatId}), 0.5)`);
+      const wiB = runInWorld(ctx, wiMatchB, guardOn, `chooseAiWitchNightAction(getSeat(${seatId}), 0.5)`);
       assert.deepEqual(wiA, wiB, `Witch night action (with heal) leaked hidden info!`);
       totalChecks++;
       // With heal SPENT (must NOT know tonight's scrambled wolfTarget!)
@@ -646,8 +646,8 @@ for (let ci = 0; ci < configs.length; ci++) {
       wiNoA.phase = "NIGHT_WITCH";
       wiNoA.witchPotions.heal = false;
       const wiNoB = buildCounterfactualWorldB(wiNoA, seatId, { phase: "NIGHT_WITCH" });
-      const wnA = runInWorld(ctx, wiNoA, guardOn, `chooseAiWitchNightAction(getSeat(${seatId}))`);
-      const wnB = runInWorld(ctx, wiNoB, guardOn, `chooseAiWitchNightAction(getSeat(${seatId}))`);
+      const wnA = runInWorld(ctx, wiNoA, guardOn, `chooseAiWitchNightAction(getSeat(${seatId}), 0.5)`);
+      const wnB = runInWorld(ctx, wiNoB, guardOn, `chooseAiWitchNightAction(getSeat(${seatId}), 0.5)`);
       assert.deepEqual(wnA, wnB, `Witch night action (heal spent) leaked nightState.wolfTarget!`);
       totalChecks++;
     } else if (r === "hunter") {
@@ -659,7 +659,85 @@ for (let ci = 0; ci < configs.length; ci++) {
   }
 }
 
+// ==================== v16.0 FOG-SEAL & HOPE CONFRONTATION ZERO-LEAK ISOLATION PROOF ====================
+{
+  const rngFog = makeSeededRng(16001);
+  const fogMatchA = buildScenarioMatch(8, { day: 2, harmony: 70, dualSeer: true, seed: 99 }, rngFog);
+  fogMatchA.variantMode = "fog_seal";
+  // Eliminate seat #6 (Villager) and seat #7 (Wolf) with distinct internal outReasons & hidden roles
+  fogMatchA.seats[5].alive = false;
+  fogMatchA.seats[5].outReason = "清心茶請離";
+  fogMatchA.seats[6].alive = false;
+  fogMatchA.seats[6].outReason = "夜間迷霧暫離";
+
+  // Build World B where dead seats #6 and #7 have COMPLETELY SWAPPED hidden roles/teams/outReasons!
+  const fogMatchB = buildCounterfactualWorldB(fogMatchA, 2, { phase: "DAY_SPEECH" });
+  fogMatchB.variantMode = "fog_seal";
+  fogMatchB.seats[5].alive = false;
+  fogMatchB.seats[5].role = "wolf";
+  fogMatchB.seats[5].team = "wolf";
+  fogMatchB.seats[5].outReason = "同守同救破盾";
+  fogMatchB.seats[6].alive = false;
+  fogMatchB.seats[6].role = "guard";
+  fogMatchB.seats[6].team = "good";
+  fogMatchB.seats[6].outReason = "投票出局";
+
+  // 1. Proxy strictly blocks reading dead seats' hidden role/team & masks outReason in Fog-Seal mode!
+  vm.runInContext(`
+    state.match = ${JSON.stringify(fogMatchA)};
+    state.guardMode = true;
+    antiCheatMonitor.resetMatch();
+    antiCheatMonitor.strictThrow = true;
+  `, ctx);
+  const fogMaskRes = vm.runInContext(`(() => {
+    const snap = createBlindMatchSnapshot(getSeat(2), { module: "fog_seal_audit" });
+    const d6 = snap.getSeat(6);
+    const d7 = snap.getSeat(7);
+    let blockedRole = false;
+    let blockedTeam = false;
+    try { void d6.role; } catch (e) { blockedRole = true; }
+    try { void d7.team; } catch (e) { blockedTeam = true; }
+    const trappedCount = antiCheatMonitor.stats.violationsBlocked;
+    antiCheatMonitor.resetMatch();
+    return {
+      fogSealMode: snap.fogSealMode,
+      d6Sealed: d6.fogSealed,
+      d6Reason: d6.outReason,
+      d7Reason: d7.outReason,
+      blockedRole,
+      blockedTeam,
+      trappedCount
+    };
+  })()`, ctx);
+  assert.equal(fogMaskRes.fogSealMode, true, "Fog-Seal flag must propagate to Blind Snapshot");
+  assert.equal(fogMaskRes.d6Sealed, true, "Dead seat in Fog-Seal must be marked fogSealed");
+  assert.equal(fogMaskRes.d6Reason, "已離席（迷霧封牌）", "Dead seat outReason must be masked in Fog-Seal");
+  assert.equal(fogMaskRes.d7Reason, "已離席（迷霧封牌）", "Dead seat outReason must be masked in Fog-Seal");
+  assert.equal(fogMaskRes.blockedRole, true, "Fog-Seal dead seat .role access MUST throw");
+  assert.equal(fogMaskRes.blockedTeam, true, "Fog-Seal dead seat .team access MUST throw");
+  assert.equal(fogMaskRes.trappedCount, 2, "Proxy trap must record both illegal dead-seat role/team reads");
+  totalChecks += 7;
+
+  // 2. Counterfactual Invariance in Fog-Seal mode: Speech, Vote & Prompt MUST be bit-identical across World A & B!
+  const fogSpA = runInWorld(ctx, JSON.parse(JSON.stringify(fogMatchA)), true, `buildHeuristicAiSpeech(getSeat(2))`);
+  const fogSpB = runInWorld(ctx, JSON.parse(JSON.stringify(fogMatchB)), true, `buildHeuristicAiSpeech(getSeat(2))`);
+  assert.deepEqual(fogSpA, fogSpB, "Fog-Seal day speech leaked dead seat hidden role/outReason!");
+  const fogVtA = runInWorld(ctx, JSON.parse(JSON.stringify(fogMatchA)), true, `chooseAiVoteTarget(getSeat(2), { pkActive: false, playerTargetId: 3 })`);
+  const fogVtB = runInWorld(ctx, JSON.parse(JSON.stringify(fogMatchB)), true, `chooseAiVoteTarget(getSeat(2), { pkActive: false, playerTargetId: 3 })`);
+  assert.equal(fogVtA, fogVtB, "Fog-Seal vote leaked dead seat hidden role/outReason!");
+  totalChecks += 2;
+
+  // 3. Refactored Four-G Hope ("15s 明燈雙向對質") Counterfactual Invariance (ZERO hidden-info leak!)
+  const hopeWorldA = JSON.parse(JSON.stringify(fogMatchA));
+  hopeWorldA.phase = "DAY_SPEECH";
+  const hopeWorldB = buildCounterfactualWorldB(hopeWorldA, 2, { phase: "DAY_SPEECH" });
+  const hcA = runInWorld(ctx, hopeWorldA, true, `buildBlindConfrontationLine(getSeat(2), getSeat(4))`);
+  const hcB = runInWorld(ctx, hopeWorldB, true, `buildBlindConfrontationLine(getSeat(2), getSeat(4))`);
+  assert.deepEqual(hcA, hcB, "Four-G Hope Confrontation leaked hidden roles across World A & B!");
+  totalChecks += 1;
+}
+
 console.log(
-  `[ANTI-CHEAT PASS] Static hygiene OK | Proxy Trap 100% enforced | Prompt Leak Auditor OK | ` +
+  `[ANTI-CHEAT PASS] Static hygiene OK | Proxy Trap 100% enforced | Prompt Leak Auditor OK | Fog-Seal & Hope Duel Isolated | ` +
   `Counterfactual Invariance PROVEN across ${totalChecks} adversarial A/B checks (0 leaks, 0 violations)!`
 );

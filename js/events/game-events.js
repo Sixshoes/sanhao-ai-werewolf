@@ -66,7 +66,31 @@ function resetMatchToLobby() {
   state.match.detectedContradictions = [];
   state.match.microInspectCountToday = 0;
   state.match.microInspectedSeats = {};
-  state.match.wolfTactic = "fake_seer";
+  if (typeof state._preSpectatorFxPacing === "string") {
+    state.fxPacing = state._preSpectatorFxPacing;
+    state._preSpectatorFxPacing = null;
+    if (typeof document !== "undefined" && document.body && document.body.classList) {
+      document.body.classList.toggle("fx-pacing-fast", state.fxPacing === "fast");
+    }
+  }
+  state.match.wolfTactic = "mate_fake_seer_gold";
+  state.match.variantMode = "standard";
+  state.match.isMatchPoint = false;
+  state.match.hopeConfrontation = null;
+  state.match.wolfExplodedToday = false;
+  state.match.interjectBonusCharges = 0;
+  state.match.guardAwakenBonusWeightDay = 0;
+  state.match.guardAwakenBonusUsed = false;
+  state.match.guardBlockedLastNight = false;
+  state.match.spiritBet = { active: null, history: [], streak: 0, bestStreak: 0, totalBonusPts: 0 };
+  if (typeof clearWolfScreenTacticTimer === "function") clearWolfScreenTacticTimer();
+  if (typeof clearBlitzVoteTimer === "function") clearBlitzVoteTimer();
+  if (typeof closeHopeConfrontationModal === "function") closeHopeConfrontationModal();
+  if (typeof closeSpiritRoundBet === "function") closeSpiritRoundBet(false);
+  if (typeof document !== "undefined" && document.body && document.body.classList) {
+    document.body.classList.remove("is-match-point");
+  }
+  if (el("matchPointBadge")) el("matchPointBadge").classList.add("hidden");
   state.match.sheriffRallyUsedDay = 0;
   state.match.pendingSheriffTransfer = null;
   state.match.pendingEvidenceTargetId = null;
@@ -710,6 +734,7 @@ function bindIntelAndDetectiveEvents() {
           pinClue(sp.id, "⚡" + contraObj.label, contraObj.rebuttalText, "contradiction");
           state.match.stats.contradictionsFound = (state.match.stats.contradictionsFound || 0) + 1;
           state.match.stats.cluesCaught = (state.match.stats.cluesCaught || 0) + 1;
+          if (typeof evaluateRoleMission === "function") evaluateRoleMission();
           const isFeast = Boolean(state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "harmony_feast");
           state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + (isFeast ? 10 : 5), 0, 100);
           bumpCombo("抓包邏輯矛盾");
@@ -1024,8 +1049,11 @@ function bindNightVoteAndFourGEvents() {
     if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     const victim = getSeat(state.match.nightState.wolfTarget);
     if (!victim) return;
-    if (victim.id === getPlayerId() && state.match.day >= 2) {
-      showToast("依茶席規則，第 2 夜起滴水奉茶師不可自護！", "warn");
+    const twinTeaHeal = state.match.variantMode === "twin_tea";
+    if (victim.id === getPlayerId() && (state.match.day >= 2 || twinTeaHeal)) {
+      showToast(twinTeaHeal && state.match.day === 1
+        ? "雙刃毒茗局規則：首夜滴水奉茶師不可自救！"
+        : "依茶席規則，第 2 夜起滴水奉茶師不可自護！", "warn");
       return;
     }
     state.match.nightState.witchSaved = true;
@@ -1041,15 +1069,20 @@ function bindNightVoteAndFourGEvents() {
     spawnBeam(getPlayerId(), victim.id, "#34d399", "trust", 640);
     spawnBurst(victim.id, ["#34d399", "#a7f3d0", "#fde68a"], 20, "ring");
     setSeatEmotion(victim.id, "happy", 2800);
-    spawnFx(victim.id, "🍵 回甘茶護回!", "#34d399", { scale: 1.15, durationMs: 1600 });
+    spawnFx(victim.id, "回甘茶護回", "#34d399", { scale: 1.15, durationMs: 1600 });
     addThreeGoodPoint("deeds", "做好事奉茶護回夥伴");
-    addLog({ kind: "secret", title: "🍵 端出暖心回甘茶護回 " + victim.id + "號！", text: "" });
+    addLog({ kind: "secret", title: "端出暖心回甘茶護回 " + victim.id + "號。", text: "" });
     resolveDawn();
   });
 
   el("btnWitchPurify").addEventListener("click", function () {
     sound.unlock();
     if (state.match.phase !== "NIGHT_WITCH" || !state.match.witchPotions.purify) return;
+    const twinTeaPurify = state.match.variantMode === "twin_tea";
+    if (state.match.day === 1 && !twinTeaPurify) {
+      showToast("常規茶席第 2 夜起才開放端出清心醒神茶。", "warn");
+      return;
+    }
     if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     const target = getSeat(state.selectedSeatId);
     if (!target || !target.alive || target.id === getPlayerId()) {
@@ -1067,10 +1100,42 @@ function bindNightVoteAndFourGEvents() {
     if (typeof triggerScreenFlash === "function") triggerScreenFlash("#a78bfa", 420, 0.32);
     spawnBeam(getPlayerId(), target.id, "#a78bfa", "grill", 680);
     spawnBurst(target.id, ["#c084fc", "#f43f5e", "#ffffff"], 22, "slash");
-    spawnFx(target.id, "🍃 清心醒神請離!", "#c084fc", { scale: 1.15, durationMs: 1650 });
-    addLog({ kind: "secret", title: "🍃 已端清心醒神茶請 " + target.id + "號 天亮離席冷靜！", text: "" });
+    spawnFx(target.id, "清心醒神請離", "#c084fc", { scale: 1.15, durationMs: 1650 });
+    addLog({ kind: "secret", title: "已端清心醒神茶請 " + target.id + "號天亮離席冷靜。", text: "" });
     resolveDawn();
   });
+
+  if (el("btnWolfSelfExplode")) {
+    el("btnWolfSelfExplode").addEventListener("click", function () {
+      sound.unlock();
+      if (typeof triggerWolfSelfExplode === "function") {
+        triggerWolfSelfExplode(getPlayerId());
+      }
+    });
+  }
+
+  if (el("btnHopeConfrontClose")) {
+    el("btnHopeConfrontClose").addEventListener("click", function () {
+      if (typeof closeHopeConfrontationModal === "function") closeHopeConfrontationModal();
+    });
+  }
+
+  if (el("btnHopeConfrontStart")) {
+    el("btnHopeConfrontStart").addEventListener("click", function () {
+      sound.unlock();
+      const hc = state.match && state.match.hopeConfrontation;
+      if (!hc || !Array.isArray(hc.draftIds) || hc.draftIds.length !== 2) return;
+      if (typeof executeHopeConfrontation === "function") {
+        executeHopeConfrontation(hc.draftIds[0], hc.draftIds[1]);
+      }
+    });
+  }
+
+  if (el("btnSpiritBetSkip")) {
+    el("btnSpiritBetSkip").addEventListener("click", function () {
+      if (typeof closeSpiritRoundBet === "function") closeSpiritRoundBet(true);
+    });
+  }
 
   el("btnCastVote").addEventListener("click", function () {
     if (state.match.phase !== "DAY_VOTE" || !isPlayerEligibleToVote() || (state.voteFlight && state.voteFlight.active)) return;

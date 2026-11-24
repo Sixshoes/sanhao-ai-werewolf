@@ -577,7 +577,8 @@ function validateGeminiSpeechReality(speaker, fallbackMeta, parsed, snap) {
       return { ok: false, reason: "wolf_self_outing" };
     }
     const isWolfPkNow = Boolean(snap && snap.pkActive && Array.isArray(snap.pkCandidates) && snap.pkCandidates.indexOf(speaker.id) !== -1);
-    if (!isWolfPkNow && parsed.accuseId && snap && Array.isArray(snap.knownWolfMates)) {
+    const isDeepBusAllowed = Boolean(snap && (snap.wolfTactic === "deep_stealth_bus" || snap.wolfTactic === "deep_stealth"));
+    if (!isWolfPkNow && !isDeepBusAllowed && parsed.accuseId && snap && Array.isArray(snap.knownWolfMates)) {
       const hitMate = snap.knownWolfMates.some(function (m) { return m && m.id === parsed.accuseId; });
       if (hitMate) {
         return { ok: false, reason: "wolf_accused_teammate" };
@@ -813,8 +814,13 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
         return m.id + "號" + m.name + (m.alive ? "(在席)" : "(已離席)");
       }).join("、") + "（絕不可出賣同伴，且你並不知道好人之中誰是真神職，要偽裝好人並自然帶點挑撥語氣栽贓好人）。";
     }
-    if (snap && snap.wolfTactic === "deep_stealth") secretIntel += "【狼隊戰術指示】：採取深水潛伏策略，溫和倒鉤避免暴露。";
-    else if (snap && snap.wolfTactic === "pack_push") secretIntel += "【狼隊戰術指示】：主動集火帶節奏沖票好人焦點位。";
+    if (snap && (snap.wolfTactic === "deep_stealth_bus" || snap.wolfTactic === "deep_stealth")) {
+      secretIntel += "【狼隊屏風戰術】：全員深水倒鉤互踩做身分，絕不輕易搶跳神職，必要時可適度拉開距離甚至反踩高壓同伴博好人信任。";
+    } else if (snap && (snap.wolfTactic === "player_fake_seer_push" || snap.wolfTactic === "pack_push")) {
+      secretIntel += "【狼隊屏風戰術】：由玩家同伴親自悍跳定調，你切勿搶跳觀察員，務必全力幫玩家衝票集火同一目標。";
+    } else if (snap && (snap.wolfTactic === "mate_fake_seer_gold" || snap.wolfTactic === "fake_seer")) {
+      secretIntel += "【狼隊屏風戰術】：同伴悍跳發玩家金水，若你獲授權起跳明心觀察員，請直接發給玩家同伴金水拉高其好人面。";
+    }
     if (self.isWolfKing) secretIntel += "你同時是流言首領（白天被公投請離時可發動最後帶風向帶走 1 位在席夥伴）。";
   }
 
@@ -931,15 +937,11 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     return Boolean(s && s.alive);
   });
   if (aliveHopeIds.length === 2) {
-    fgNotes.push("給希望雙光必有1狼：" + aliveHopeIds[0] + "號 與 " + aliveHopeIds[1] + "號");
-    let hopeExtra = "";
-    if (self.team === "good" && aliveHopeIds.indexOf(self.id) !== -1) {
-      const otherHopeId = aliveHopeIds[0] === self.id ? aliveHopeIds[1] : aliveHopeIds[0];
-      hopeExtra = "（你自己就在雙光名單裡且你是好人，代表 " + otherHopeId + "號 幾乎就是酸民狼！）";
-    }
-    const overlapId = aliveJoyIds.find(function (id) { return aliveHopeIds.indexOf(id) !== -1; });
-    if (overlapId) hopeExtra += "【歡喜×希望雙光交會重疊於 " + overlapId + "號，高度可疑！】";
-    fgDetailLines.push("給希望雙光必有1狼：" + aliveHopeIds[0] + "號 與 " + aliveHopeIds[1] + "號" + hopeExtra);
+    fgNotes.push("給希望明燈對質席位：" + aliveHopeIds[0] + "號 與 " + aliveHopeIds[1] + "號");
+    const hcContras = (snap && snap.hopeConfrontation && Array.isArray(snap.hopeConfrontation.contradictions) && snap.hopeConfrontation.contradictions.length)
+      ? ("｜言票矛盾紀錄：" + snap.hopeConfrontation.contradictions.slice(0, 2).join("；"))
+      : "";
+    fgDetailLines.push("給希望明燈雙向對質：" + aliveHopeIds[0] + "號 與 " + aliveHopeIds[1] + "號剛完成公開對質（僅比對公開言票邏輯，絕不代表兩人中必有狼）" + hcContras);
   }
   if (snap && snap.convenienceRallyTargetId) {
     const convS = readSeat(snap.convenienceRallyTargetId);
@@ -1049,7 +1051,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
     "4. 【嚴禁 AI 機器味與朗讀播報腔・像真實台灣大學茶社同儕圍桌聊天】提到任何座位請一律寫「阿拉伯數字＋號」（如 1號、3號、6號、11號），嚴禁寫前導零（01、06）、嚴禁省略「號」字（站3、抓6），也嚴禁寫中文數字（三號、六號）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或生硬古文代詞（「吾、汝、諸君、妾身、夫、蓋」），亦禁止機械重複以「先這樣，過！」作結。全桌以自然台灣現代白話為基底（墨白、晴嵐、阿竹保留溫和書卷氣質與適度四字成語），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感），自然接前一位的話回嘴或點破剛剛的席間神情／追問。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
-    "6. 【三檔動態句長配額與純口語格式】本輪句長檔位為「" + ((fallbackMeta && fallbackMeta.lengthTier === "brief") ? "極短留白過水（嚴格 15～28 字，簡短自然表態即停）" : ((fallbackMeta && fallbackMeta.lengthTier === "intense") ? "焦點交鋒反詰（60～95 字，直面質疑拆解坑位）" : (totalSeatsNow >= 10 ? "標準推演（42～75 字）" : "標準推演（45～82 字）"))) + "」（切勿長篇大論、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
+    "6. 【三檔動態句長配額與純口語格式】本輪句長檔位為「" + ((snap && snap.speechCharCap > 0) ? ("茶涼聽牌／閃電快棋決死短兵相接（嚴格 " + snap.speechCharCap + " 字以內，直指關鍵一針見血！）") : ((fallbackMeta && fallbackMeta.lengthTier === "brief") ? "極短留白過水（嚴格 15～28 字，簡短自然表態即停）" : ((fallbackMeta && fallbackMeta.lengthTier === "intense") ? "焦點交鋒反詰（60～95 字，直面質疑拆解坑位）" : (totalSeatsNow >= 10 ? "標準推演（42～75 字）" : "標準推演（45～82 字）")))) + "」（切勿長篇大論、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
     '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":' + (lockedClaim ? ('"' + lockedClaim + '"') : 'null') + ',"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員且你本人非觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
 
   const audit = typeof auditLlmPromptLeak === "function"

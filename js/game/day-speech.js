@@ -3,9 +3,97 @@
  */
 "use strict";
 
+// ==================== v16.0 MATCH POINT (茶涼聽牌) & SPEECH CHAR LIMIT ====================
+function evaluateMatchPointState() {
+  const m = state.match;
+  if (!m || !m.started || m.phase === "GAME_OVER" || m.phase === "LOBBY") {
+    if (m) m.isMatchPoint = false;
+    if (typeof document !== "undefined" && document.body && document.body.classList) {
+      document.body.classList.remove("is-match-point");
+    }
+    return false;
+  }
+  const allSeats = m.seats || [];
+  const alive = getAliveSeats();
+  const aliveWolves = alive.filter(function (s) { return s.team === "wolf"; }).length;
+  const aliveGoods = alive.filter(function (s) { return s.team === "good"; }).length;
+  const hadGods = allSeats.some(function (s) { return typeof isGodRole === "function" ? isGodRole(s.role) : (s.role === "seer" || s.role === "witch" || s.role === "hunter" || s.role === "guard"); });
+  const hadVillagers = allSeats.some(function (s) { return s.role === "villager"; });
+  const aliveGods = alive.filter(function (s) { return typeof isGodRole === "function" ? isGodRole(s.role) : (s.role === "seer" || s.role === "witch" || s.role === "hunter" || s.role === "guard"); }).length;
+  const aliveVillagers = alive.filter(function (s) { return s.role === "villager"; }).length;
+
+  const oneKillAway = Boolean(
+    aliveWolves >= 1 && (
+      (hadGods && aliveGods <= 1) ||
+      (hadVillagers && aliveVillagers <= 1) ||
+      (aliveWolves >= aliveGoods - 1)
+    )
+  );
+  const active = Boolean(alive.length > 0 && (alive.length <= 5 || oneKillAway));
+  const wasActive = Boolean(m.isMatchPoint);
+  m.isMatchPoint = active;
+
+  if (typeof document !== "undefined" && document.body && document.body.classList) {
+    document.body.classList.toggle("is-match-point", active);
+  }
+  const mpBadge = el("matchPointBadge");
+  if (mpBadge) {
+    mpBadge.classList.toggle("hidden", !active);
+    if (active) {
+      mpBadge.textContent = m.variantMode === "blitz_3m"
+        ? "茶涼聽牌 · 限 22 字決死"
+        : "茶涼聽牌 · 限 28 字決死";
+    }
+  }
+  if (active && !wasActive) {
+    addLog({
+      kind: "dawn",
+      title: "茶涼聽牌（決死加速）：局勢已逼近臨界，全場發言上限壓縮至 28 字內短兵相接。",
+      text: ""
+    });
+    if (typeof triggerCutIn === "function") {
+      triggerCutIn("茶涼聽牌・決死加速", "勝敗僅在一念之間，全場陳詞強制壓縮至 28 字內短兵相接", "crimson", 1800);
+    }
+    if (typeof sound !== "undefined" && typeof sound.syncAtmosphere === "function") {
+      sound.syncAtmosphere();
+    }
+  }
+  return active;
+}
+
+function getActiveSpeechCharLimit(matchObj) {
+  const m = matchObj || (typeof state !== "undefined" ? state.match : null);
+  if (!m) return 0;
+  if (m.variantMode === "blitz_3m") return 22;
+  if (m.isMatchPoint) return 28;
+  return 0;
+}
+
+function clampSpeechToCharLimit(rawText, limit) {
+  const txt = String(rawText || "").trim();
+  const cap = Number(limit) || 0;
+  if (!txt || cap <= 0 || txt.length <= cap) return txt;
+  const slice = txt.slice(0, cap);
+  // Prefer breaking cleanly on natural punctuation if near the end
+  let cutIdx = -1;
+  for (let i = slice.length - 1; i >= Math.floor(cap * 0.62); i--) {
+    if ("。！？；，".indexOf(slice[i]) !== -1) {
+      cutIdx = i + 1;
+      break;
+    }
+  }
+  let out = cutIdx > 0 ? slice.slice(0, cutIdx) : slice.slice(0, Math.max(1, cap - 1));
+  out = out.replace(/[，、；：]+$/, "");
+  if (out.length < cap && !/[。！？…]$/.test(out)) {
+    out += "。";
+  }
+  return out.slice(0, cap);
+}
+
 // ==================== DAY SPEECH (STRICT 凹嗚狼人殺 TURN ORDER) ====================
 function startDayDiscussion(dawnVoiceLine, opts) {
   clearStepTimer();
+  evaluateMatchPointState();
   const optCfg = opts || {};
   state.match.phase = "DAY_SPEECH";
   const total = state.match.totalSeats;
@@ -178,7 +266,8 @@ function canUseTeaInterjectNow() {
   const p = getPlayerSeat();
   const sp = getSeat(state.activeSpeakerId);
   if (!p || !p.alive || !sp || !sp.alive || sp.id === p.id) return false;
-  return state.match.interjectUsedDay !== state.match.day;
+  if (state.match.interjectUsedDay !== state.match.day) return true;
+  return (state.match.interjectBonusCharges || 0) > 0;
 }
 
 function buildTeaInterjectQuickPrompts(targetSeat) {
@@ -297,7 +386,11 @@ function executeTeaInterjection(questionText) {
   const cleanQ = String(questionText || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").trim().slice(0, 18);
   if (!cleanQ) return null;
 
-  state.match.interjectUsedDay = state.match.day;
+  if (state.match.interjectUsedDay === state.match.day && (state.match.interjectBonusCharges || 0) > 0) {
+    state.match.interjectBonusCharges -= 1;
+  } else {
+    state.match.interjectUsedDay = state.match.day;
+  }
   state.interjectOpen = false;
   if (el("interjectPopover")) el("interjectPopover").classList.add("hidden");
 
@@ -501,6 +594,9 @@ const THINKING_MICROCUES = [
 
 async function executeAiTurnSpeech(speaker) {
   if (state.speakingInFlight) return;
+  if (typeof maybeTriggerAiWolfSelfExplode === "function" && maybeTriggerAiWolfSelfExplode(speaker)) {
+    return;
+  }
   const turnSeq = (state._speechTurnSeq = (state._speechTurnSeq || 0) + 1);
   state.speakingInFlight = true;
   state.currentTurnSpoken = true;

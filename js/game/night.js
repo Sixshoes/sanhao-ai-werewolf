@@ -226,9 +226,15 @@ function beginNightPhase() {
     proceedToNightWolf();
   };
 
-  // v15.0 Civilians / Non-acting players on Night 2+ enter "燭下覆茶" quote review instead of staring at empty timers!
   const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
   const ffNow = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+
+  // v16.0 Eliminated spectator gets a 5s Spirit Intuition Bet before Night resolution!
+  if (isBrowserUi && !ffNow && typeof openSpiritRoundBet === "function" && state.match.day >= 2) {
+    const openedNightBet = openSpiritRoundBet("night_kill", runNightRoles);
+    if (openedNightBet) return;
+  }
+  // v15.0 Civilians / Non-acting players on Night 2+ enter "燭下覆茶" quote review instead of staring at empty timers!
   if (isBrowserUi && !ffNow && state.match.day >= 2 && !playerHasActiveNightSkillNow()) {
     const opened = openCandlelitNightReview(runNightRoles);
     if (opened) return;
@@ -297,6 +303,55 @@ function proceedToNightGuard() {
   }
 }
 
+function normalizeWolfTacticKey(tacticKey) {
+  if (tacticKey === "mate_fake_seer_gold" || tacticKey === "fake_seer") return "mate_fake_seer_gold";
+  if (tacticKey === "player_fake_seer_push" || tacticKey === "pack_push") return "player_fake_seer_push";
+  if (tacticKey === "deep_stealth_bus" || tacticKey === "deep_stealth") return "deep_stealth_bus";
+  return "mate_fake_seer_gold";
+}
+
+function clearWolfScreenTacticTimer() {
+  if (state.wolfScreenInterval) {
+    clearInterval(state.wolfScreenInterval);
+    state.wolfScreenInterval = null;
+  }
+  state.wolfScreenSecondsLeft = 0;
+  const lbl = el("wolfTacticTimerLabel");
+  if (lbl) lbl.textContent = "";
+}
+
+function startWolfScreenTacticTimer() {
+  clearWolfScreenTacticTimer();
+  const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
+  if (!isBrowserUi || !state.match || !state.match.started || state.match.phase !== "NIGHT_WOLF") return;
+  state.wolfScreenSecondsLeft = 10;
+  const syncLbl = function () {
+    const lbl = el("wolfTacticTimerLabel");
+    if (!lbl) return;
+    lbl.textContent = state.wolfScreenSecondsLeft > 0
+      ? ("屏風密謀倒數 " + state.wolfScreenSecondsLeft + " 秒")
+      : "屏風劇本已鎖定";
+  };
+  syncLbl();
+  state.wolfScreenInterval = setInterval(function () {
+    if (!state.match || !state.match.started || state.match.phase !== "NIGHT_WOLF") {
+      clearWolfScreenTacticTimer();
+      return;
+    }
+    const dealOv = el("roleDealOverlay");
+    if (dealOv && !dealOv.classList.contains("hidden")) {
+      return;
+    }
+    state.wolfScreenSecondsLeft = Math.max(0, (state.wolfScreenSecondsLeft || 0) - 1);
+    syncLbl();
+    if (state.wolfScreenSecondsLeft <= 0) {
+      clearWolfScreenTacticTimer();
+      const lbl = el("wolfTacticTimerLabel");
+      if (lbl) lbl.textContent = "屏風劇本已拍板";
+    }
+  }, 1000);
+}
+
 function applyWolfNightTactic(tacticKey) {
   const m = state.match;
   if (!m || !m.started || m.phase !== "NIGHT_WOLF") return false;
@@ -304,25 +359,25 @@ function applyWolfNightTactic(tacticKey) {
   const pSeat = getPlayerSeat();
   if (!pSeat || !pSeat.alive || pSeat.role !== "wolf") return false;
   const mates = m.seats.filter(function (s) { return s.id !== pid && s.alive && s.role === "wolf"; });
-  const key = (tacticKey === "deep_stealth" || tacticKey === "pack_push") ? tacticKey : "fake_seer";
-  m.wolfTactic = key;
+  const key = normalizeWolfTacticKey(tacticKey);
+  const validRawKeys = ["fake_seer", "deep_stealth", "pack_push", "mate_fake_seer_gold", "player_fake_seer_push", "deep_stealth_bus"];
+  m.wolfTactic = validRawKeys.indexOf(tacticKey) !== -1 ? tacticKey : key;
+  clearWolfScreenTacticTimer();
   mates.forEach(function (mt, idx) {
-    mt.fakeSeer = (key === "fake_seer" && idx === 0);
+    mt.fakeSeer = (key === "mate_fake_seer_gold" && idx === 0);
   });
   const replyMap = {
-    fake_seer: "收到！明天白天我直接悍跳明心觀察員搶警徽帶風向，你在下面幫我衝票！",
-    deep_stealth: "明白！我們全員低調深水倒鉤、絕不露破綻，等好人自己內訌！",
-    pack_push: "好！明天白天發言跟投票我全力配合你集火同一目標，一口氣沖出去！"
+    mate_fake_seer_gold: "收到！明天白天我親自悍跳明心觀察員，直接發你一張金水保你做高身分！",
+    player_fake_seer_push: "明白！明天白天讓你悍跳定調，我們全員幫你衝票抬轎，一口氣壓垮好人！",
+    deep_stealth_bus: "了解！明天全員深水倒鉤、適度互踩拉開距離做身分，讓好人完全摸不清狼坑！"
   };
   const labelMap = {
-    fake_seer: "🎭 同伴跳觀察員",
-    deep_stealth: "🌿 同伴深水倒鉤",
-    pack_push: "🔥 聯手集火目標"
+    mate_fake_seer_gold: "同伴悍跳發我金水",
+    player_fake_seer_push: "我親自悍跳同伴衝票",
+    deep_stealth_bus: "全員深水倒鉤互踩做身分"
   };
   const primaryMate = mates[0];
-  const wolfNightLine = (primaryMate && typeof buildPersonaWolfNightLine === "function")
-    ? buildPersonaWolfNightLine(primaryMate, "", "reply_" + key)
-    : replyMap[key];
+  const wolfNightLine = replyMap[key];
   if (primaryMate) {
     if (typeof setSeatBubble === "function") setSeatBubble(primaryMate.id, wolfNightLine, "wolf", 5200);
     if (typeof setSeatEmotion === "function") setSeatEmotion(primaryMate.id, "proud", 3200);
@@ -331,14 +386,16 @@ function applyWolfNightTactic(tacticKey) {
   }
   addLog({
     kind: "secret",
-    title: "🐺 狼隊密謀拍板【" + labelMap[key] + "】",
-    text: primaryMate ? (fmtSeatNum(primaryMate.id) + "號" + primaryMate.name + "：「" + wolfNightLine + "」") : ""
+    title: "屏風密謀拍板【" + labelMap[key] + "】",
+    text: primaryMate ? (fmtSeatNum(primaryMate.id) + "號" + primaryMate.name + "：「" + wolfNightLine + "」") : "獨狼定計，明早按劇本行事。"
   });
+  if (typeof updateAllUI === "function") updateAllUI();
   return true;
 }
 
 function proceedToNightWolf() {
   clearStepTimer();
+  clearWolfScreenTacticTimer();
   state.selectedSeatId = null;
   if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
   state.match.phase = "NIGHT_WOLF";
@@ -347,7 +404,7 @@ function proceedToNightWolf() {
 
   const player = getPlayerSeat();
   if (player && player.alive && player.role === "wolf") {
-    voice.speakHost("第" + state.match.day + "晚，天黑請靜心。鍵盤酸民狼請選擇今晚散播迷霧的對象。", undefined, "host_night");
+    voice.speakHost("第" + state.match.day + "晚，天黑請靜心。鍵盤酸民狼請選擇今晚散播迷霧的對象，並可於屏風密謀指定明日戰術。", undefined, "host_night");
     const mate = state.match.seats.find(function (s) { return s.id !== getPlayerId() && s.alive && s.role === "wolf"; });
     const candidates = getAliveSeats().filter(function (s) { return s.role !== "wolf"; });
     if (mate && candidates.length > 0) {
@@ -362,9 +419,10 @@ function proceedToNightWolf() {
             : ("噓…我感覺 " + pickLbl + "很像核心好夥伴，今晚先請他暫離如何？已幫你標起來！"));
         setSeatBubble(mate.id, planLine, "wolf", 6800);
         spawnBeam(mate.id, pick.id, "#f43f5e", "grill", 900);
-        addLog({ kind: "secret", title: "🐺 酸民狼密談（" + fmtSeatNum(mate.id) + "號" + mate.name + "）：", text: planLine });
+        addLog({ kind: "secret", title: "酸民狼屏風密談（" + fmtSeatNum(mate.id) + "號" + mate.name + "）：", text: planLine });
       }
     }
+    startWolfScreenTacticTimer();
     updateAllUI();
   } else {
     if (player && player.alive && player.role === "seer") {
@@ -387,10 +445,36 @@ function chooseAiWolfTargetBlind(wolfSeat, rngVal) {
   const snap = typeof createBlindMatchSnapshot === "function"
     ? createBlindMatchSnapshot(wolfSeat, { module: "night_wolf", phase: "NIGHT_WOLF" })
     : null;
+  const self = (snap && snap.self) ? snap.self : wolfSeat;
   const goodTargets = snap
     ? snap.aliveOthers.filter(function (s) { return !s.isWolfMate; })
     : getAliveSeats().filter(function (s) { return s.role !== "wolf"; });
   if (!goodTargets.length) return null;
+
+  // v16.0 Night-1 Self-Knife Bait (自刀騙藥／博銀水) in normal (~22%) & pro (~28%) when >= 2 alive wolves exist (strictly Blind-View legal!)
+  const dayNow = snap ? snap.day : (state.match ? state.match.day : 1);
+  const diffNow = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
+  const aliveMates = snap
+    ? (snap.knownWolfMates || []).filter(function (m) { return m && m.alive; })
+    : getAliveSeats().filter(function (s) { return s.role === "wolf" && s.id !== wolfSeat.id; });
+  const wolfPackCount = (self && self.alive ? 1 : 0) + aliveMates.length;
+  const selfKnifeProb = (dayNow === 1 && wolfPackCount >= 2)
+    ? (diffNow === "pro" ? 0.28 : (diffNow === "normal" ? 0.22 : 0))
+    : 0;
+  if (selfKnifeProb > 0) {
+    const roll = typeof rngVal === "number" ? rngVal : Math.random();
+    if (roll < selfKnifeProb) {
+      // Pick self (or fake-seer wolf mate if self is not fakeSeer) — strictly using Blind-View self/knownWolfMates!
+      const baitSeat = (self && self.alive) ? self : aliveMates[0];
+      if (baitSeat) {
+        if (typeof antiCheatMonitor !== "undefined" && wolfSeat) {
+          antiCheatMonitor.recordDecision("night_wolf", wolfSeat.id, "首夜自刀騙藥 " + baitSeat.id + "號");
+        }
+        return baitSeat;
+      }
+    }
+  }
+
   const picked = chooseAiWolfTarget(goodTargets, { snap: snap, rngVal: rngVal });
   if (typeof antiCheatMonitor !== "undefined" && wolfSeat) {
     antiCheatMonitor.recordDecision("night_wolf", wolfSeat.id, picked ? ("夜襲 " + picked.id + "號") : "無目標");
@@ -514,29 +598,47 @@ function proceedToNightSeer() {
   }
 }
 
-function chooseAiWitchNightAction(witchSeat) {
+function chooseAiWitchNightAction(witchSeat, rngVal) {
   const snap = typeof createBlindMatchSnapshot === "function"
     ? createBlindMatchSnapshot(witchSeat, { module: "night_witch", phase: "NIGHT_WITCH" })
     : null;
   const self = (snap && snap.self) ? snap.self : witchSeat;
   const pots = (snap && snap.witchPotions) ? snap.witchPotions : state.match.witchPotions;
   const day = snap ? snap.day : state.match.day;
+  const diff = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
+  const twinTea = Boolean(snap ? snap.witchCanPurifyNight1 : (state.match && state.match.variantMode === "twin_tea"));
+  const canSelfHealN1 = snap ? (snap.witchCanSelfHealNight1 !== false) : !twinTea;
   // Blind-View ONLY exposes nightWolfVictimId if heal potion is still available!
   const victimId = snap ? snap.nightWolfVictimId : (pots && pots.heal ? state.match.nightState.wolfTarget : null);
   let heal = false;
   let poisonTargetId = null;
 
-  const aiCanHeal = Boolean(pots && pots.heal && victimId && (victimId !== self.id || day === 1));
+  const aiCanHeal = Boolean(pots && pots.heal && victimId && (victimId !== self.id || (day === 1 && canSelfHealN1)));
   if (aiCanHeal) {
     const susp = (self.suspicionMap && self.suspicionMap[victimId]) || 50;
-    if (day === 1 || susp < 62) {
+    if (day === 1) {
+      // v16.0 Dynamic Night-1 Heal Probability (breaks 100% auto-save iron rule! normal ~70%, pro ~55%, easy ~85%)
+      const baseProb = diff === "pro" ? 0.55 : (diff === "easy" ? 0.85 : 0.70);
+      const prof = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
+      const personaAdj = prof ? ((prof.credulity - 0.75) * 0.16) : 0;
+      const selfSaveAdj = (victimId === self.id) ? 0.12 : 0;
+      const minP = diff === "pro" ? 0.45 : (diff === "easy" ? 0.76 : 0.60);
+      const maxP = diff === "pro" ? 0.68 : (diff === "easy" ? 0.94 : 0.82);
+      const finalProb = clamp(baseProb + personaAdj + selfSaveAdj, minP, maxP);
+      const roll = typeof rngVal === "number" ? rngVal : Math.random();
+      if (roll < finalProb) {
+        heal = true;
+      }
+    } else if (susp < 62) {
       heal = true;
     }
   }
-  if (!heal && pots && pots.purify && day >= 2) {
+  const canPurifyTonight = Boolean(!heal && pots && pots.purify && (day >= 2 || twinTea));
+  if (canPurifyTonight) {
     const aliveOthers = snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== witchSeat.id; });
+    const purifyThreshold = (day === 1 && twinTea) ? 58 : 72;
     const suspects = aliveOthers.filter(function (s) {
-      return s.id !== self.savedSeatId && ((self.suspicionMap && self.suspicionMap[s.id]) || 0) >= 72;
+      return s.id !== self.savedSeatId && ((self.suspicionMap && self.suspicionMap[s.id]) || 0) >= purifyThreshold;
     });
     if (suspects.length > 0) {
       suspects.sort(function (a, b) {
@@ -566,11 +668,14 @@ function proceedToNightWitch() {
   }
   if (witch.id === getPlayerId()) {
     const vic = getSeat(state.match.nightState.wolfTarget);
-    const canSelfOrOtherHeal = Boolean(state.match.witchPotions.heal && vic && (vic.id !== witch.id || state.match.day === 1));
+    const twinTeaNow = state.match.variantMode === "twin_tea";
+    const canSelfOrOtherHeal = Boolean(state.match.witchPotions.heal && vic && (vic.id !== witch.id || (state.match.day === 1 && !twinTeaNow)));
     if (state.match.witchPotions.heal && vic) {
       voice.speakHost(canSelfOrOtherHeal
         ? ("滴水奉茶師請睜眼，今晚" + vic.id + "號" + vic.name + "被迷霧鎖定了，要端出暖心回甘茶護回他嗎？")
-        : ("滴水奉茶師請睜眼，今晚你被迷霧鎖定了，第2夜起不可自護，可選擇是否使用清心醒神茶。"), undefined, "host_night");
+        : (twinTeaNow
+          ? "滴水奉茶師請睜眼，雙刃毒茗局首夜不可自救，但已解禁清心醒神茶，請決定是否出手。"
+          : "滴水奉茶師請睜眼，今晚你被迷霧鎖定了，第2夜起不可自護，可選擇是否使用清心醒神茶。"), undefined, "host_night");
     } else {
       voice.speakHost("滴水奉茶師請睜眼，要端出清心醒神茶請可疑者離席冷靜嗎？", undefined, "host_night");
     }
@@ -604,6 +709,9 @@ function resolveDawn() {
   if (typeof orchestrator !== "undefined") orchestrator.emit("phase:changed", { phase: "DAWN_RESOLVE", day: state.match.day });
 
   const ns = state.match.nightState;
+  if (typeof resolveSpiritRoundBet === "function") {
+    resolveSpiritRoundBet("night_kill", ns.wolfTarget || null);
+  }
   const casualties = [];
   const names = [];
   const fallenIds = [];
@@ -612,6 +720,15 @@ function resolveDawn() {
   const isGuardedWolfTarget = Boolean(ns.wolfTarget && guardedId && ns.wolfTarget === guardedId);
   const isDoubleSaveClash = Boolean(isGuardedWolfTarget && ns.witchSaved);
   const wolfKillBlocked = Boolean((ns.witchSaved && !isGuardedWolfTarget) || (isGuardedWolfTarget && !ns.witchSaved));
+  const fogSealOn = state.match.variantMode === "fog_seal";
+  state.match.guardBlockedLastNight = Boolean(isGuardedWolfTarget && !ns.witchSaved);
+  if (state.match.guardBlockedLastNight) {
+    if (state.match.stats) state.match.stats.guardBlocks = (state.match.stats.guardBlocks || 0) + 1;
+    const gSeatChk = state.match.seats.find(function (s) { return s.role === "guard" && s.alive; });
+    if (gSeatChk && gSeatChk.id === getPlayerId()) {
+      state.match.guardAwakenBonusWeightDay = state.match.day;
+    }
+  }
   let wolfKillSeat = null;
 
   // 凹嗚《狼刀在先》＆《同守同救奶穿》原則：先結算夜晚未擋下的狼刀；若已達屠神／屠民終局，毒茶／獵人共鳴／警徽移交皆不再觸發！
@@ -619,13 +736,15 @@ function resolveDawn() {
     const wk = getSeat(ns.wolfTarget);
     if (wk && wk.alive) {
       wk.alive = false;
-      wk.outReason = (poisonedId && poisonedId === wk.id) ? "清心茶請離" : (isDoubleSaveClash ? "同守同救破盾" : "夜間迷霧暫離");
+      wk.outReason = fogSealOn
+        ? "已離席（迷霧封牌）"
+        : ((poisonedId && poisonedId === wk.id) ? "清心茶請離" : (isDoubleSaveClash ? "同守同救破盾" : "夜間迷霧暫離"));
       wolfKillSeat = wk;
       const wCause = (poisonedId && poisonedId === wk.id) ? "purify" : (isDoubleSaveClash ? "double_clash" : "wolf");
       casualties.push({ id: wk.id, cause: wCause });
       names.push(wk.id + "號" + wk.name);
       fallenIds.push(wk.id);
-      spawnFx(wk.id, isDoubleSaveClash ? "🛡🍵 同守破盾!" : "暫離冷靜", isDoubleSaveClash ? "#f59e0b" : "#e11d48");
+      spawnFx(wk.id, (!fogSealOn && isDoubleSaveClash) ? "同守破盾" : "暫離冷靜", (!fogSealOn && isDoubleSaveClash) ? "#f59e0b" : "#e11d48");
     }
   }
 
@@ -668,7 +787,7 @@ function resolveDawn() {
     const ps = getSeat(poisonedId);
     if (ps && ps.alive) {
       ps.alive = false;
-      ps.outReason = "清心茶請離";
+      ps.outReason = fogSealOn ? "已離席（迷霧封牌）" : "清心茶請離";
       casualties.push({ id: ps.id, cause: "purify" });
       names.push(ps.id + "號" + ps.name);
       fallenIds.push(ps.id);
@@ -714,19 +833,22 @@ function resolveDawn() {
     triggerShake(260);
     state.match.harmonyScore = clamp(state.match.harmonyScore - 6 * casualties.length, 0, 100);
     if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation(casualties);
-    const noLwTag = state.match.day >= 2 ? "（第2夜起夜間離席無遺言）" : "（首夜離席保留遺言）";
+    const noLwTag = state.match.day >= 2 ? "（第2夜起夜間離席一律覆杯閉麥、無遺言）" : "（首夜離席保留遺言）";
     playSkyCurtain("day", "", "第 " + state.match.day + "天・晨曦雲開！", "昨晚 " + names.join("、") + "離席冷靜！" + noLwTag);
     addLog({ kind: "dawn", title: "天亮了：" + names.join("、") + " 昨夜離席冷靜" + noLwTag, text: "" });
-    dawnVoiceLine = "第" + state.match.day + "天，天亮請睜眼！昨晚" + names.join("、") + "離席冷靜了。" + (state.match.day >= 2 ? "第2夜起夜間離席沒有遺言。" : "請發表首夜遺言。");
+    dawnVoiceLine = "第" + state.match.day + "天，天亮請睜眼！昨晚" + names.join("、") + "離席冷靜了。" + (state.match.day >= 2 ? "第2夜起夜間離席一律無遺言，直接覆杯閉麥。" : "請發表首夜遺言。");
   }
+  if (typeof evaluateRoleMission === "function") evaluateRoleMission();
+  if (typeof evaluateMatchPointState === "function") evaluateMatchPointState();
 
   if (fallenIds.indexOf(getPlayerId()) !== -1) {
+    if (typeof autoEnableSpectatorCompactPace === "function") autoEnableSpectatorCompactPace();
     const fallenPlayer = getPlayerSeat();
     if (fallenPlayer && typeof showToast === "function") {
       showToast(
         fallenPlayer.team === "wolf"
-          ? "🎯 你昨夜離席了！留在茶席觀戰即可挑戰「猜神職」拿額外加分！"
-          : "🔍 你昨夜離席了！留在茶席觀戰即可挑戰「猜狼」拿額外加分！",
+          ? "你昨夜已離席，已切為觀戰緊湊節奏，可參與席外茶靈押注與猜神職。"
+          : "你昨夜已離席，已切為觀戰緊湊節奏，可參與席外茶靈押注與猜狼。",
         "emerald"
       );
     }
@@ -1077,19 +1199,25 @@ function confirmTargetAction() {
   }
 
   if (phase === "NIGHT_WOLF") {
-    if (!target || !target.alive || target.role === "wolf") {
-      showToast("點選 1 位好人當目標！", "warn");
+    const aliveWolvesNow = getAliveSeats().filter(function (s) { return s.role === "wolf"; });
+    const allowSelfKnifeN1 = Boolean(state.match.day === 1 && aliveWolvesNow.length >= 2);
+    if (!target || !target.alive || (target.role === "wolf" && !allowSelfKnifeN1)) {
+      showToast(allowSelfKnifeN1 ? "請點選 1 位在席目標（首夜可點己方執行自刀騙藥）" : "點選 1 位好人當目標！", "warn");
       return;
     }
+    clearWolfScreenTacticTimer();
     state.match.nightState.wolfTarget = target.id;
     state.match.stats.nightSkillUsed += 1;
+    if (target.role === "wolf") {
+      addLog({ kind: "secret", title: "首夜自刀騙藥戰術啟動：鎖定 " + fmtSeatNum(target.id) + "號" + (target.id === getPlayerId() ? "你" : target.name), text: "伺機博取滴水奉茶師暖心回甘茶信任。" });
+    }
     spawnBeam(getPlayerId(), target.id, "#f43f5e", "grill", 680);
     spawnBurst(target.id, ["#f43f5e", "#fb7185", "#ffffff"], 18, "slash");
     if (typeof triggerScreenFlash === "function") triggerScreenFlash("#f43f5e", 340, 0.26);
     if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive()) {
       stage3d.triggerSkillFx("witch_poison", getPlayerId(), target.id, true);
     }
-    spawnFx(target.id, "鎖定!", "#f43f5e");
+    spawnFx(target.id, target.role === "wolf" ? "自刀博藥" : "鎖定!", "#f43f5e");
     proceedToNightSeer();
     return;
   }

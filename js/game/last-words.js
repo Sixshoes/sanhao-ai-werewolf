@@ -72,8 +72,36 @@ function buildAiLastWords(seat, mode) {
     };
   }
   if (self.team === "wolf") {
+    const diffLw = (snap && snap.aiDifficulty) || (typeof state !== "undefined" ? state.aiDifficulty : "normal");
+    const dayLw = snap ? snap.day : ((typeof state !== "undefined" && state.match) ? state.match.day : 1);
+    const hasGuardLw = Boolean(snap ? snap.hasGuardMode : (typeof state !== "undefined" && state.guardMode));
+    const alivePoolLw = (snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== self.id; })).slice();
+    const aliveMatesLw = alivePoolLw.filter(function (s) { return snap ? s.isWolfMate : (s.role === "wolf"); });
+    const fakeChance = !isFirstNight ? (diffLw === "pro" ? 0.78 : (diffLw === "normal" ? 0.48 : 0)) : 0;
+    const detRoll = ((self.id * 17 + dayLw * 29 + 11) % 100) / 100;
+    if (!isFirstNight && fakeChance > 0 && detRoll < fakeChance && alivePoolLw.length > 0) {
+      const fakeTarget = aliveMatesLw[0] || alivePoolLw[0];
+      const fakeLbl = labelOf(fakeTarget);
+      const fakeAsGuard = Boolean(hasGuardLw && ((self.id + dayLw) % 2 === 1));
+      if (fakeAsGuard) {
+        return {
+          text: "各位真的投錯人了，我才是這局低調巡防的護心守衛！上一晚我的護心結界剛守過 " + fakeLbl + "，他清白可信，請大家回頭檢視剛才帶頭衝我的人！",
+          claimRole: "guard",
+          targetId: fakeTarget.id,
+          isWolf: false,
+          isFakeGodBluff: true
+        };
+      }
+      return {
+        text: "太冤了，我才是這局一直沒露面的滴水奉茶師！先前是我端暖心回甘茶護回 " + fakeLbl + " 的銀水，他鐵定是好人，別再被假話帶偏了！",
+        claimRole: "witch",
+        targetId: fakeTarget.id,
+        isWolf: false,
+        isFakeGodBluff: true
+      };
+    }
     return {
-      text: flv ? flv.lastWolf.replace(/^「|」$/g, "") : "可惡竟然被看穿破綻了，大家邏輯好強，我乖乖離席休息！",
+      text: flv ? flv.lastWolf.replace(/^「|」$/g, "") : "這輪節奏被你們看穿了，我先離席靜心休息。",
       claimRole: null,
       targetId: null,
       isWolf: null
@@ -205,6 +233,14 @@ function applyLastWordsInfluence(seat, rawText, meta) {
 }
 
 function startLastWordsSequence(seatIds, mode, onDone) {
+  const normMode = mode || "first_night";
+  const curDay = (typeof state !== "undefined" && state.match) ? (state.match.day || 1) : 1;
+  // v16.0 High-Intensity Rule: ONLY Day-1 night casualties & daytime voted-out seats get Last Words!
+  // Night 2+ wolf-kills or purify-kills are strictly silent (cover cup, zero last words).
+  if ((normMode === "first_night" || normMode === "night") && curDay >= 2) {
+    if (typeof onDone === "function") onDone("");
+    return;
+  }
   const list = (seatIds || []).filter(function (id) { return Boolean(getSeat(id)); });
   if (!list.length) {
     if (typeof onDone === "function") onDone("");
@@ -212,7 +248,7 @@ function startLastWordsSequence(seatIds, mode, onDone) {
   }
   state.lastWordsCtx = {
     queue: list.slice(),
-    mode: mode || "first_night",
+    mode: normMode,
     onDone: onDone || null,
     lastRecordedText: ""
   };
