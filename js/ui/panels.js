@@ -104,13 +104,13 @@ function renderVoteResultPanel() {
 
   if (vr.lastWord) {
     const lwDiv = document.createElement("div");
-    lwDiv.className = "rounded-xl p-2 bg-amber-500/15 border border-amber-400/40 text-xs font-bold text-amber-100 leading-snug mb-1.5";
+    lwDiv.className = "rounded-xl p-2 bg-amber-500/15 border border-amber-400/40 text-sm font-bold text-amber-100 leading-snug mb-1.5";
     lwDiv.textContent = "離席遺言：" + vr.lastWord;
     barsBox.appendChild(lwDiv);
   }
   if (entries.length === 0) {
     const emptyMsg = document.createElement("div");
-    emptyMsg.className = "text-xs text-slate-400 text-center py-2";
+    emptyMsg.className = "text-sm text-slate-400 text-center py-2";
     emptyMsg.textContent = vr.isHunterOutChoice
       ? "直心糾察長正氣共鳴已結算，你可以直接結束看底牌，或繼續留下來觀戰。"
       : "全員棄票，沒有人得票";
@@ -128,14 +128,14 @@ function renderVoteResultPanel() {
     const row = document.createElement("div");
     row.className = "rounded-xl px-2.5 py-1.5 border " + (isOut ? "bg-rose-500/20 border-rose-400/50 vote-row-out" : "bg-slate-950/70 border-slate-800");
     row.innerHTML =
-      '<div class="flex items-center justify-between text-xs font-black">' +
+      '<div class="flex items-center justify-between text-sm font-black">' +
       '<span class="' + (isOut ? "text-rose-200" : "text-slate-200") + '">' + fmtSeatNum(e.id) + "號 " + escapeHtml(sObj ? sObj.name : "") + (isOut ? "（出局）" : "") + "</span>" +
       '<span class="text-amber-300 math-font">' + e.count + " 票 (" + sharePct + "%)</span>" +
       "</div>" +
       '<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden my-1">' +
       '<div class="h-full vote-bar-fill ' + (isOut ? "bg-rose-400" : "bg-amber-400") + '" style="width:' + pct + '%; animation-delay:' + (idx * 70) + 'ms;"></div>' +
       "</div>" +
-      '<div class="text-[10px] text-slate-400">投票者：' + escapeHtml(voters || "無") + "</div>";
+      '<div class="text-[13px] text-slate-400">投票者：' + escapeHtml(voters || "無") + "</div>";
     barsBox.appendChild(row);
   });
 }
@@ -442,17 +442,17 @@ function renderStepperPanel(p) {
       el("btnMarkWolf").disabled = true;
       el("btnMarkGood").textContent = "同伴發言中";
       el("btnMarkWolf").textContent = "狼隊配合";
-      el("btnMarkGood").className = "py-1 px-2 text-[11px] shrink-0 cta-ink opacity-80";
-      el("btnMarkWolf").className = "py-1 px-2 text-[11px] shrink-0 cta-ink opacity-80";
+      el("btnMarkGood").className = "py-1 px-2 text-[13px] shrink-0 cta-ink opacity-80";
+      el("btnMarkWolf").className = "py-1 px-2 text-[13px] shrink-0 cta-ink opacity-80";
     } else if (isWolfListener) {
       el("btnMarkGood").disabled = false;
       el("btnMarkWolf").disabled = false;
       el("btnMarkGood").textContent = curMark === "good" ? "已標假保" : "標記假保";
       el("btnMarkWolf").textContent = curMark === "wolf" ? "已標甩鍋" : "標記甩鍋";
-      el("btnMarkGood").className = "py-1 px-2 text-[11px] shrink-0 " + (
+      el("btnMarkGood").className = "py-1 px-2 text-[13px] shrink-0 " + (
         curMark === "good" ? "cta-celadon font-bold" : "cta-ink"
       );
-      el("btnMarkWolf").className = "py-1 px-2 text-[11px] shrink-0 " + (
+      el("btnMarkWolf").className = "py-1 px-2 text-[13px] shrink-0 " + (
         curMark === "wolf" ? "cta-cinnabar" : "cta-ink"
       );
     } else {
@@ -460,10 +460,10 @@ function renderStepperPanel(p) {
       el("btnMarkWolf").disabled = false;
       el("btnMarkGood").textContent = curMark === "good" ? "已點頭" : "點頭認同";
       el("btnMarkWolf").textContent = curMark === "wolf" ? "已皺眉" : "皺眉存疑";
-      el("btnMarkGood").className = "py-1 px-2 text-[11px] shrink-0 " + (
+      el("btnMarkGood").className = "py-1 px-2 text-[13px] shrink-0 " + (
         curMark === "good" ? "cta-celadon font-bold" : "cta-ink"
       );
-      el("btnMarkWolf").className = "py-1 px-2 text-[11px] shrink-0 " + (
+      el("btnMarkWolf").className = "py-1 px-2 text-[13px] shrink-0 " + (
         curMark === "wolf" ? "cta-cinnabar" : "cta-ink"
       );
     }
@@ -485,10 +485,10 @@ function renderStepperPanel(p) {
       const pSus = Math.round(activeSpeaker.suspicionMap[getPlayerId()] || 50);
       if (pSus >= 62) {
         mTxt.textContent = "他正存疑你";
-        mTxt.className = "text-[10.5px] text-rose-300 font-semibold truncate hidden sm:inline pl-1";
+        mTxt.className = "text-[13px] text-rose-300 font-semibold truncate hidden sm:inline pl-1";
       } else if (pSus <= 38) {
         mTxt.textContent = "他傾向信任你";
-        mTxt.className = "text-[10.5px] text-emerald-300 font-semibold truncate hidden sm:inline pl-1";
+        mTxt.className = "text-[13px] text-emerald-300 font-semibold truncate hidden sm:inline pl-1";
       } else {
         mTxt.textContent = "";
         mTxt.className = "hidden";
@@ -650,19 +650,19 @@ function renderSheriffTransferPanel() {
     btn.type = "button";
     const chk = getMyChk(s.id);
     let tagSuffix = "";
-    let cls = "cta-brass py-1.5 px-2.5 text-xs";
+    let cls = "cta-brass py-1.5 px-2.5 text-[15px]";
     if (s.id === f1) {
-      if (chk && !chk.isWolf) { tagSuffix = "〔警1★金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-xs"; }
-      else if (chk && chk.isWolf) { tagSuffix = "〔警1⚠查殺〕"; cls = "cta-ink py-1.5 px-2.5 text-xs"; }
+      if (chk && !chk.isWolf) { tagSuffix = "〔警1★金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-[15px]"; }
+      else if (chk && chk.isWolf) { tagSuffix = "〔警1⚠查殺〕"; cls = "cta-ink py-1.5 px-2.5 text-[15px]"; }
       else if (canSignalFlow) { tagSuffix = "〔警1・報金水〕"; }
       else { tagSuffix = "〔警1〕"; }
     } else if (s.id === f2) {
-      if (chk && !chk.isWolf) { tagSuffix = "〔警2★金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-xs"; }
+      if (chk && !chk.isWolf) { tagSuffix = "〔警2★金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-[15px]"; }
       else if (canSignalFlow) { tagSuffix = "〔警2・跳飛〕"; }
       else { tagSuffix = "〔警2〕"; }
     } else if (chk && !chk.isWolf) {
       tagSuffix = "〔已驗金水〕";
-      cls = "cta-celadon py-1.5 px-2.5 text-xs";
+      cls = "cta-celadon py-1.5 px-2.5 text-[15px]";
     }
     btn.className = cls;
     btn.textContent = "👑 交給 " + fmtSeatNum(s.id) + "號 " + s.name + tagSuffix;
@@ -738,7 +738,7 @@ function renderSheriffElectionPanel() {
     cBox.innerHTML = "";
     if (Array.isArray(ctx.dramaEvents) && ctx.dramaEvents.length) {
       const dramaBanner = document.createElement("div");
-      dramaBanner.className = "rounded px-2.5 py-1.5 text-[11px] font-bold bg-amber-500/15 border border-amber-400/45 text-amber-100 mb-1";
+      dramaBanner.className = "rounded px-2.5 py-1.5 text-[13px] font-bold bg-amber-500/15 border border-amber-400/45 text-amber-100 mb-1";
       dramaBanner.textContent = ctx.dramaEvents[0];
       cBox.appendChild(dramaBanner);
     }
@@ -749,7 +749,7 @@ function renderSheriffElectionPanel() {
         const cs = getSeat(cid);
         if (!cs || !cs.alive) return;
         const badge = document.createElement("span");
-        badge.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 border border-amber-400/45 text-amber-100";
+        badge.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-bold bg-amber-500/15 border border-amber-400/45 text-amber-100";
         badge.textContent = "👑 " + fmtSeatNum(cid) + "號 " + (cid === pid ? "你" : cs.name) + "（待發言）";
         rosterRow.appendChild(badge);
       });
@@ -763,7 +763,7 @@ function renderSheriffElectionPanel() {
         const isClash = sp.tone === "clash";
         const isSeer = sp.tone === "seer";
         const isActiveNow = stage === "speech" && ctx.activeReelSeatId === sp.id;
-        row.className = "rounded px-2 py-1 text-[11px] transition " + (isActiveNow
+        row.className = "rounded px-2 py-1 text-[13px] transition " + (isActiveNow
           ? "bg-amber-500/25 border border-amber-300 text-amber-50"
           : (isClash
             ? "bg-rose-950/55 border border-rose-400/45 text-rose-50"
@@ -771,10 +771,10 @@ function renderSheriffElectionPanel() {
               ? "bg-indigo-950/55 border border-violet-400/40 text-slate-100"
               : "bg-slate-900/55 border border-amber-400/25 text-slate-200")));
         const badgeHtml = sp.tag
-          ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold ' + (isClash ? "bg-rose-500/30 text-rose-200" : (isSeer ? "bg-violet-500/30 text-violet-200" : "bg-amber-500/25 text-amber-200")) + '">' + escapeHtml(sp.tag) + "</span>")
+          ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[13px] font-extrabold ' + (isClash ? "bg-rose-500/30 text-rose-200" : (isSeer ? "bg-violet-500/30 text-violet-200" : "bg-amber-500/25 text-amber-200")) + '">' + escapeHtml(sp.tag) + "</span>")
           : "";
         const bfChipHtml = (sp.badgeFlow && sp.badgeFlow.firstTargetId && typeof formatBadgeFlowSummary === "function")
-          ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 border border-amber-400/40 text-amber-200">警徽流：' + escapeHtml(formatBadgeFlowSummary(sp.badgeFlow)) + "</span>")
+          ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[13px] font-bold bg-amber-500/20 border border-amber-400/40 text-amber-200">警徽流：' + escapeHtml(formatBadgeFlowSummary(sp.badgeFlow)) + "</span>")
           : "";
         row.innerHTML = badgeHtml + bfChipHtml + '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("👑 " + playerNumTag() + " 你") : (fmtSeatNum(sp.id) + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
         cBox.appendChild(row);
@@ -830,7 +830,7 @@ function renderSheriffElectionPanel() {
         if (typeof setPlayerSheriffDraftBadgeFlow === "function") setPlayerSheriffDraftBadgeFlow(draftBf.firstTargetId, v2);
       });
       const hintBf = document.createElement("span");
-      hintBf.className = "text-[10px] opacity-80";
+      hintBf.className = "text-[13px] opacity-80";
       hintBf.textContent = "（倒牌：徽給先位＝金水｜跳飛／撕徽＝查殺）";
       bfBar.appendChild(sel1);
       bfBar.appendChild(arrow);
@@ -849,8 +849,8 @@ function renderSheriffElectionPanel() {
         card.type = "button";
         card.className = "play-card-btn is-compact-card text-left";
         card.innerHTML =
-          '<div class="text-[11px] font-bold text-amber-200">' + escapeHtml(opt.title) + '</div>' +
-          '<div class="text-[10px] text-slate-300 line-clamp-2 mt-0.5">' + escapeHtml(opt.text) + '</div>';
+          '<div class="text-[13px] font-bold text-amber-200">' + escapeHtml(opt.title) + '</div>' +
+          '<div class="text-[13px] text-slate-300 line-clamp-2 mt-0.5">' + escapeHtml(opt.text) + '</div>';
         card.addEventListener("click", function () {
           if (typeof submitPlayerSheriffSpeech === "function") {
             submitPlayerSheriffSpeech(opt.text, opt.badgeFlow || null, { claimsSeer: opt.claimsSeer });
@@ -873,7 +873,7 @@ function renderSheriffElectionPanel() {
         if (!cs || !cs.alive) return;
         const vb = document.createElement("button");
         vb.type = "button";
-        vb.className = "cta-celadon py-1.5 px-3 text-xs";
+        vb.className = "cta-celadon py-1.5 px-3 text-[15px]";
         vb.textContent = "👑 投給 " + fmtSeatNum(cid) + "號 " + cs.name;
         vb.addEventListener("click", function () {
           if (typeof resolveSheriffElectionAction === "function") resolveSheriffElectionAction(cid);
@@ -987,8 +987,8 @@ function renderGameOverMetrics() {
       misEl.classList.remove("hidden");
       misEl.textContent = (misEval.completed ? "🏅 秘密角色任務達成「" : "📜 秘密角色任務「") + misEval.title + "」：" + misEval.progressText + (misEval.completed ? " (+15分)" : "");
       misEl.className = misEval.completed
-        ? "text-[11px] font-bold text-emerald-300 text-left mt-1.5"
-        : "text-[11px] font-medium text-slate-300 text-left mt-1.5";
+        ? "text-[13px] font-bold text-emerald-300 text-left mt-1.5"
+        : "text-[13px] font-medium text-slate-300 text-left mt-1.5";
     } else {
       misEl.classList.add("hidden");
     }
@@ -1006,7 +1006,7 @@ function renderGameOverMetrics() {
   metrics.forEach(function (item) {
     const d = document.createElement("div");
     d.className = "p-1.5 rounded-xl bg-slate-950 border border-slate-800";
-    d.innerHTML = '<div class="text-[10px] text-slate-400">' + escapeHtml(item.label) + '</div><div class="text-xs font-black text-amber-200">' + escapeHtml(item.val) + "</div>";
+    d.innerHTML = '<div class="text-[13px] text-slate-400">' + escapeHtml(item.label) + '</div><div class="text-sm font-black text-amber-200">' + escapeHtml(item.val) + "</div>";
     box.appendChild(d);
   });
 
@@ -1023,7 +1023,7 @@ function renderGameOverMetrics() {
     const insights = buildAiPostMatchCoachInsights();
     insights.forEach(function (ci) {
       const card = document.createElement("div");
-      card.className = "rounded-lg px-2 py-1 bg-slate-950/75 border border-amber-400/25 text-[10.5px] text-slate-200 leading-snug";
+      card.className = "rounded-lg px-2 py-1 bg-slate-950/75 border border-amber-400/25 text-[13px] text-slate-200 leading-snug";
       card.innerHTML = '<span class="font-bold text-amber-300">' + escapeHtml(ci.icon + " " + ci.title + "：") + "</span>" + escapeHtml(ci.text);
       coachBox.appendChild(card);
     });

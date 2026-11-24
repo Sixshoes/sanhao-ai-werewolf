@@ -5,7 +5,7 @@
 
 function hasBlockingModalOpen() {
   if (typeof stage3d !== "undefined" && stage3d.showcaseMode) return true;
-  const modalIds = ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalFeedback", "modalPauseMenu", "heroSheetLightbox", "heroShowcaseOverlay", "setupDrawer", "roleDealOverlay"];
+  const modalIds = ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalFeedback", "modalPauseMenu", "heroShowcaseOverlay", "setupDrawer", "roleDealOverlay"];
   return modalIds.some(function (mid) {
     const m = el(mid);
     return Boolean(m && m.classList && !m.classList.contains("hidden"));
@@ -33,11 +33,7 @@ function bindModalEvents() {
         return;
       }
       if (typeof stage3d !== "undefined" && stage3d.showcaseMode) {
-        if (el("heroSheetLightbox") && !el("heroSheetLightbox").classList.contains("hidden")) {
-          el("heroSheetLightbox").classList.add("hidden");
-        } else {
-          stage3d.setShowcaseMode(false);
-        }
+        stage3d.setShowcaseMode(false);
         return;
       }
       if (el("setupDrawer") && !el("setupDrawer").classList.contains("hidden")) {
@@ -52,7 +48,7 @@ function bindModalEvents() {
         roleGuidePop.classList.add("hidden");
         closedAny = true;
       }
-      ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalFeedback", "modalPauseMenu", "heroSheetLightbox"].forEach(function (mid) {
+      ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalFeedback", "modalPauseMenu"].forEach(function (mid) {
         const m = el(mid);
         if (m && !m.classList.contains("hidden")) {
           m.classList.add("hidden");

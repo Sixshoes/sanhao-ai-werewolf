@@ -281,11 +281,11 @@ function renderPinnedCluesTray() {
     return;
   }
   tray.classList.remove("hidden");
-  tray.innerHTML = '<span class="text-[10px] font-black text-amber-300 shrink-0">蒐證：</span>';
+  tray.innerHTML = '<span class="text-[13px] font-black text-amber-300 shrink-0">蒐證：</span>';
   list.forEach(function (clue) {
     const chip = document.createElement("button");
     chip.type = "button";
-    chip.className = "pinned-clue-chip text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-400/50 transition flex items-center gap-1";
+    chip.className = "pinned-clue-chip text-[13px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-400/50 transition flex items-center gap-1";
     chip.innerHTML = '<span>' + escapeHtml(clue.tag) + '</span><span class="opacity-65">→填入</span>';
     chip.title = "點擊將這條線索直接填入下方發言欄";
     chip.addEventListener("click", function () {
@@ -549,7 +549,7 @@ function showToast(message, tone) {
   }
   const div = document.createElement("div");
   const toneCls = tone === "warn" ? "toast-warn" : (tone === "emerald" ? "toast-jade" : "toast-gold");
-  div.className = "craft-toast pointer-events-auto cursor-pointer px-3.5 py-2.5 text-xs font-medium msg-enter " + toneCls;
+  div.className = "craft-toast pointer-events-auto cursor-pointer px-3.5 py-2.5 text-sm font-medium msg-enter " + toneCls;
   div.textContent = message;
   div.title = "點擊可立即關閉";
   const removeSelf = function () {

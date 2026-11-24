@@ -609,8 +609,15 @@ body.craft-ui #seatButtonStrip button.seat-is-selected {
 }
 
 @keyframes curtainOrbPulse {
-  0% { transform: scale(0.96); box-shadow: 0 0 20px rgba(212, 166, 87, 0.35), inset 0 0 10px rgba(254, 240, 138, 0.18); }
-  100% { transform: scale(1.06); box-shadow: 0 0 38px rgba(245, 194, 102, 0.65), inset 0 0 18px rgba(254, 240, 138, 0.42); }
+  0% {
+    transform: scale(0.96);
+    box-shadow: 0 0 20px rgba(212, 166, 87, 0.35), inset 0 0 10px rgba(254, 240, 138, 0.18);
+  }
+
+  100% {
+    transform: scale(1.06);
+    box-shadow: 0 0 38px rgba(245, 194, 102, 0.65), inset 0 0 18px rgba(254, 240, 138, 0.42);
+  }
 }
 
 #dayNightCurtain.mode-night .curtain-orb {
@@ -900,4 +907,32 @@ body.craft-ui.theme-day #roleGuidePopover .bg-rose-500\/25 {
 
 body.craft-ui.theme-day #roleGuidePopover .border-slate-700\/60 {
   border-color: var(--border-card);
+}
+
+/* v19.0 Day-Theme Parity for 22px Headline, Seat Numbers & Tea Journal Harmony Bar */
+body.craft-ui.theme-day #inGameTopHud #bannerHeadline {
+  color: #251a0f;
+}
+
+body.craft-ui.theme-day .seat-pill-num-big {
+  color: #8c5a18;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-speaking {
+  background: linear-gradient(180deg, #f5c451 0%, #dda232 100%);
+  border-color: #7c4a12;
+  color: #1c1205;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-speaking .seat-pill-num-big,
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-speaking .seat-pill-name {
+  color: #1c1205;
+}
+
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected .seat-pill-num-big {
+  color: #fef08a;
+}
+
+body.craft-ui.theme-day .journal-harmony-bar {
+  background: rgba(242, 232, 212, 0.72);
 }

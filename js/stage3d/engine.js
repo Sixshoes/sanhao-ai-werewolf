@@ -13,6 +13,8 @@ function dampFactor3D(k60, dt60) {
   return 1 - Math.pow(1 - k, s);
 }
 
+const _camRivalAnchors = [];
+
 const stage3d = {
   ready: false,
   failed: false,
@@ -548,7 +550,7 @@ const stage3d = {
     this.closeUpSeatId = seatId;
     this.orbit.userOverrideUntil = 0;
     const s = getSeat(seatId) || (this.seats.anchors[seatId] && this.seats.anchors[seatId].seat);
-    showToast("🔍 正面特寫檢視 " + fmtSeatNum(seatId) + "號 " + (s ? s.name : "") + "（點空白處退回）", "emerald");
+    showToast("正面特寫檢視 " + fmtSeatNum(seatId) + "號 " + (s ? s.name : "") + "（點空白處退回）", "emerald");
   },
 
   clearCloseUp: function () {
@@ -759,10 +761,10 @@ const stage3d = {
     if (isHero) {
       const hp = this.hero ? this.hero.root.position : new THREE.Vector3(2.95, 0.02, -5.45);
       const hRotY = this.hero ? (this.hero.root.rotation.y || 0) : -0.44;
-      this.orbit.targetYaw = hRotY + 0.18;
-      this.orbit.targetPitch = 0.18;
-      this.orbit.targetRadius = 3.75;
-      if (this.orbit.targetLookAt) this.orbit.targetLookAt.set(hp.x, hp.y + 1.58, hp.z);
+      this.orbit.targetYaw = hRotY + 0.14;
+      this.orbit.targetPitch = 0.16;
+      this.orbit.targetRadius = 2.95;
+      if (this.orbit.targetLookAt) this.orbit.targetLookAt.set(hp.x, hp.y + 1.54, hp.z);
     } else if (this.seats && this.seats.anchors && this.seats.anchors[this.showcaseTarget]) {
       const ap = this.seats.anchors[this.showcaseTarget].worldPos;
       const frontYaw = Math.atan2(-ap.x, -ap.z);
@@ -863,7 +865,12 @@ const stage3d = {
     }
     let prep = null;
     if (typeof stage3dVrm !== "undefined" && typeof stage3dVrm.prepareLoadedAvatar === "function") {
-      prep = stage3dVrm.prepareLoadedAvatar(gltf, { mode: "standing", targetHeight: 2.14, baseY: 0.08 });
+      prep = stage3dVrm.prepareLoadedAvatar(gltf, {
+        mode: "standing",
+        targetHeight: 2.14,
+        baseY: 0.08,
+        personaName: isCustomUpload ? null : "清茗"
+      });
     }
     const mdl = prep ? prep.root : gltf.scene;
     if (!prep) {
@@ -893,6 +900,9 @@ const stage3d = {
     this.hero.customGlbBaseY = prep ? prep.baseY : (mdl.position.y || 0.18);
     this.hero.customGlbRoot = mdl;
     this.hero.root.add(mdl);
+    if (!isCustomUpload && this.hero.paletteKey && this.hero.vrmAvatar && typeof stage3dVrm !== "undefined" && typeof stage3dVrm.applyHeroVrmPalette === "function") {
+      stage3dVrm.applyHeroVrmPalette(this.hero.vrmAvatar, this.hero.paletteKey);
+    }
     if (typeof setHeroVisualMode === "function") setHeroVisualMode(this.hero, "glb");
     if (isCustomUpload) {
       this.extractEmbeddedVrmThumbnail(gltf, "主持");
@@ -1636,44 +1646,66 @@ const stage3d = {
           frontShotFov = frSp.fov;
           isFrontShot = true;
         }
-      } else if ((p === "DAY_VOTE" && isPkVoteActive()) || (p === "DAY_SPEECH" && state.match.seats.filter(function (s) { return s.alive && s.claimedRole === "seer"; }).length >= 2 && !state.activeSpeakerId)) {
-        // Dual-Rival Confrontation Framing (PK or Seer Clash!)
-        const rivals = isPkVoteActive()
-          ? (state.match.pkCandidates || []).map(function (id) { return stage3d.seats.anchors[id]; }).filter(Boolean)
-          : state.match.seats.filter(function (s) { return s.alive && s.claimedRole === "seer"; }).map(function (s) { return stage3d.seats.anchors[s.id]; }).filter(Boolean);
-        if (rivals.length >= 2) {
-          const midX = (rivals[0].worldPos.x + rivals[1].worldPos.x) * 0.5;
-          const midZ = (rivals[0].worldPos.z + rivals[1].worldPos.z) * 0.5;
-          const axisAng = Math.atan2(rivals[1].worldPos.z - rivals[0].worldPos.z, rivals[1].worldPos.x - rivals[0].worldPos.x);
-          o.targetYaw = Math.sin(axisAng) * 0.52;
-          o.targetPitch = 0.56;
-          o.targetRadius = 11.8 + largeTableR * 0.85;
-          o.targetLookAt.set(midX * 0.32, 0.65, midZ * 0.32 + 0.35);
-        } else {
-          o.targetYaw = Math.sin(f.tSec * 0.2) * 0.16;
-          o.targetPitch = 0.62;
-          o.targetRadius = 12.4 + largeTableR;
-          o.targetLookAt.set(0, 0.62, 0.35);
-        }
-      } else if (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT") {
-        const leaderAnchor = (state.voteLeaderId && this.seats.anchors[state.voteLeaderId]) ? this.seats.anchors[state.voteLeaderId] : null;
-        if (leaderAnchor) {
-          const lp = leaderAnchor.worldPos;
-          o.targetYaw = -Math.sin(Math.atan2(lp.x, lp.z)) * 0.32;
-          o.targetPitch = 0.54;
-          o.targetRadius = 11.5 + largeTableR * 0.85;
-          o.targetLookAt.set(lp.x * 0.24, 0.68, lp.z * 0.24 + 0.32);
-        } else {
-          o.targetYaw = Math.sin(f.tSec * 0.2) * 0.16;
-          o.targetPitch = 0.62;
-          o.targetRadius = 12.4 + largeTableR;
-          o.targetLookAt.set(0, 0.62, 0.35);
-        }
       } else {
-        o.targetYaw = 0;
-        o.targetPitch = 0.54;
-        o.targetRadius = 12.0 + largeTableR;
-        o.targetLookAt.set(0, 0.64, 0.35);
+        let isDualConfrontation = false;
+        _camRivalAnchors.length = 0;
+        if (p === "DAY_VOTE" && isPkVoteActive()) {
+          isDualConfrontation = true;
+          const pkList = state.match.pkCandidates || [];
+          for (let ri = 0; ri < pkList.length; ri++) {
+            const anc = stage3d.seats.anchors[pkList[ri]];
+            if (anc) _camRivalAnchors.push(anc);
+          }
+        } else if (p === "DAY_SPEECH" && !state.activeSpeakerId) {
+          const allSeatsCam = (state.match && state.match.seats) || [];
+          let seerClaimCount = 0;
+          for (let si = 0; si < allSeatsCam.length; si++) {
+            const sc = allSeatsCam[si];
+            if (sc && sc.alive && sc.claimedRole === "seer") {
+              seerClaimCount += 1;
+              const anc = stage3d.seats.anchors[sc.id];
+              if (anc) _camRivalAnchors.push(anc);
+            }
+          }
+          if (seerClaimCount >= 2) isDualConfrontation = true;
+          else _camRivalAnchors.length = 0;
+        }
+        if (isDualConfrontation) {
+          // Dual-Rival Confrontation Framing (PK or Seer Clash! Zero per-frame array allocation)
+          if (_camRivalAnchors.length >= 2) {
+            const midX = (_camRivalAnchors[0].worldPos.x + _camRivalAnchors[1].worldPos.x) * 0.5;
+            const midZ = (_camRivalAnchors[0].worldPos.z + _camRivalAnchors[1].worldPos.z) * 0.5;
+            const axisAng = Math.atan2(_camRivalAnchors[1].worldPos.z - _camRivalAnchors[0].worldPos.z, _camRivalAnchors[1].worldPos.x - _camRivalAnchors[0].worldPos.x);
+            o.targetYaw = Math.sin(axisAng) * 0.52;
+            o.targetPitch = 0.56;
+            o.targetRadius = 11.8 + largeTableR * 0.85;
+            o.targetLookAt.set(midX * 0.32, 0.65, midZ * 0.32 + 0.35);
+          } else {
+            o.targetYaw = Math.sin(f.tSec * 0.2) * 0.16;
+            o.targetPitch = 0.62;
+            o.targetRadius = 12.4 + largeTableR;
+            o.targetLookAt.set(0, 0.62, 0.35);
+          }
+        } else if (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT") {
+          const leaderAnchor = (state.voteLeaderId && this.seats.anchors[state.voteLeaderId]) ? this.seats.anchors[state.voteLeaderId] : null;
+          if (leaderAnchor) {
+            const lp = leaderAnchor.worldPos;
+            o.targetYaw = -Math.sin(Math.atan2(lp.x, lp.z)) * 0.32;
+            o.targetPitch = 0.54;
+            o.targetRadius = 11.5 + largeTableR * 0.85;
+            o.targetLookAt.set(lp.x * 0.24, 0.68, lp.z * 0.24 + 0.32);
+          } else {
+            o.targetYaw = Math.sin(f.tSec * 0.2) * 0.16;
+            o.targetPitch = 0.62;
+            o.targetRadius = 12.4 + largeTableR;
+            o.targetLookAt.set(0, 0.62, 0.35);
+          }
+        } else {
+          o.targetYaw = 0;
+          o.targetPitch = 0.54;
+          o.targetRadius = 12.0 + largeTableR;
+          o.targetLookAt.set(0, 0.64, 0.35);
+        }
       }
     }
 
@@ -1961,112 +1993,131 @@ function draw3DOverlayHud(ctx, f, coords) {
     const wolfGodKey3D = (isWolfViewer3D && !isWolfMate3D && state.match.wolfGodMarks) ? state.match.wolfGodMarks[s.id] : "";
     const wolfGodLabel3D = (wolfGodKey3D && typeof getWolfGodMarkDef === "function") ? getWolfGodMarkDef(wolfGodKey3D).label : "";
 
-    // Handcrafted lacquer & antique-gold floating tablet above 3D head (ALWAYS preserves seat number & name!)
+    // v19.0 0.3s Instant-Recognition Floating Seat Plate: 22px bold seat number + clean 2-char name (zero club-title clutter!)
     let topTag = "";
-    let topBg = "rgba(22, 17, 13, 0.9)";
-    let topBorder = "rgba(212, 166, 87, 0.55)";
-    let topFg = "#efe7d8";
+    let topBg = "rgba(20, 16, 12, 0.90)";
+    let topBorder = "rgba(212, 166, 87, 0.58)";
+    let topFg = "#f7f0e2";
+    let numFg = "#f5c451";
     let isSubtleNameplate = false;
+    let isDeadPlate = !s.alive;
     let prio = 1;
     const sRoleDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : null) || ROLE_DEFS[s.role];
-    const isNarrow3D = (f.w / Math.max(1, dpr)) < 600;
-    const sShortTag = (!isNarrow3D && s.id !== getPlayerId() && typeof getPersonaShortTag === "function") ? getPersonaShortTag(s) : "";
     const sCompactName = s.id === getPlayerId() ? "你" : s.name;
-    const sNameTag = s.id === getPlayerId() ? "你" : (s.name + (sShortTag ? ("·" + sShortTag) : ""));
+    const numLabel = fmtSeatNum(s.id);
     if (isSpeaking) {
-      const spSuffix = !s.alive ? "｜遺言中" : (activelyVoicing || p === "DAY_PLAYER_TURN" ? "｜發言中" : "｜已講畢");
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sNameTag + spSuffix;
-      topBg = activelyVoicing || p === "DAY_PLAYER_TURN" ? "rgba(166, 50, 38, 0.94)" : "rgba(58, 42, 26, 0.92)";
-      topBorder = s.color || "rgba(242, 212, 156, 0.85)";
-      topFg = "#fbf5ea";
-      prio = 4;
+      const spSuffix = !s.alive ? " · 遺言" : (activelyVoicing || p === "DAY_PLAYER_TURN" ? " · 發言" : "");
+      topTag = sheriffPrefix + sCompactName + spSuffix;
+      topBg = "rgba(245, 196, 81, 0.96)";
+      topBorder = "#fff5d6";
+      topFg = "#1c1205";
+      numFg = "#1c1205";
+      prio = 5;
     } else if (!s.alive) {
-      topTag = showTruth && sRoleDef ? (fmtSeatNum(s.id) + " " + sCompactName + "｜" + (ROLE_SHORT_3D[s.role] || sRoleDef.name)) : (fmtSeatNum(s.id) + " " + sCompactName + "｜離席");
-      topBorder = "rgba(148, 134, 114, 0.35)";
-      topFg = "#a89d8b";
+      topTag = showTruth && sRoleDef ? (sCompactName + " · " + (ROLE_SHORT_3D[s.role] || sRoleDef.name)) : (sCompactName + " · 離席");
+      topBg = "rgba(22, 24, 28, 0.72)";
+      topBorder = "rgba(120, 125, 134, 0.34)";
+      topFg = "#8e949f";
+      numFg = "#757c87";
     } else if (showTruth && sRoleDef) {
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + "｜" + sRoleDef.name;
+      topTag = sheriffPrefix + sCompactName + " · " + sRoleDef.name;
       topBg = s.role === "wolf" ? "rgba(154, 44, 34, 0.94)" : "rgba(33, 94, 73, 0.94)";
-      topBorder = "rgba(242, 212, 156, 0.6)";
+      topBorder = "rgba(242, 212, 156, 0.72)";
       topFg = "#fbf5ea";
+      numFg = "#fde68a";
       prio = 3;
     } else if (isSelected) {
-      topTag = sheriffPrefix + "✦ " + fmtSeatNum(s.id) + " " + sCompactName + "｜已鎖定";
-      topBg = "rgba(166, 50, 38, 0.94)";
-      topBorder = "rgba(250, 224, 156, 0.9)";
+      topTag = sheriffPrefix + sCompactName + " · 鎖定";
+      topBg = "rgba(180, 52, 40, 0.96)";
+      topBorder = "#fde68a";
       topFg = "#fff8eb";
+      numFg = "#fde68a";
       prio = 4;
     } else if (isWolfMate3D) {
-      topTag = sheriffPrefix + "🐺 " + fmtSeatNum(s.id) + " " + sCompactName + "｜同伴";
-      topBg = "rgba(136, 28, 38, 0.92)";
-      topBorder = "rgba(251, 113, 133, 0.78)";
+      topTag = sheriffPrefix + sCompactName + " · 同伴";
+      topBg = "rgba(136, 28, 38, 0.94)";
+      topBorder = "rgba(251, 113, 133, 0.85)";
       topFg = "#ffe4e6";
+      numFg = "#fda4af";
       prio = 3;
     } else if (state.match.started && s.id !== getPlayerId() && (state.match.microPulseRevealed || s.sweatExposed)) {
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + "｜心虛" + s.microPulse + "%";
-      topBg = s.microPulse >= 60 ? "rgba(154, 44, 34, 0.92)" : "rgba(33, 94, 73, 0.92)";
-      topBorder = "rgba(242, 212, 156, 0.5)";
+      topTag = sheriffPrefix + sCompactName + " · 心虛" + s.microPulse + "%";
+      topBg = s.microPulse >= 60 ? "rgba(154, 44, 34, 0.94)" : "rgba(33, 94, 73, 0.94)";
+      topBorder = "rgba(242, 212, 156, 0.65)";
       topFg = "#fbf5ea";
+      numFg = "#fde68a";
       prio = 2;
     } else if (s.claimedRole && ROLE_DEFS[s.claimedRole]) {
       const cShort = ROLE_SHORT_3D[s.claimedRole] || ROLE_DEFS[s.claimedRole].name;
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + "｜自稱" + cShort;
-      topBg = "rgba(120, 78, 24, 0.92)";
-      topBorder = "rgba(242, 212, 156, 0.65)";
+      topTag = sheriffPrefix + sCompactName + " · " + cShort;
+      topBg = "rgba(120, 78, 24, 0.94)";
+      topBorder = "rgba(242, 212, 156, 0.75)";
       topFg = "#fbf5ea";
+      numFg = "#fde68a";
       prio = 3;
     } else if (wolfGodLabel3D) {
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + "｜🔍" + wolfGodLabel3D;
-      topBg = "rgba(120, 72, 18, 0.92)";
-      topBorder = "rgba(251, 191, 36, 0.78)";
+      topTag = sheriffPrefix + sCompactName + " · " + wolfGodLabel3D;
+      topBg = "rgba(120, 72, 18, 0.94)";
+      topBorder = "rgba(251, 191, 36, 0.82)";
       topFg = "#fef3c7";
+      numFg = "#fde68a";
       prio = 2;
     } else if (mark === "wolf") {
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + (isWolfViewer3D ? "｜甩鍋" : "｜存疑");
-      topBg = "rgba(154, 44, 34, 0.9)";
-      topBorder = "rgba(232, 140, 128, 0.65)";
+      topTag = sheriffPrefix + sCompactName + (isWolfViewer3D ? " · 甩鍋" : " · 懷疑");
+      topBg = "rgba(154, 44, 34, 0.92)";
+      topBorder = "rgba(244, 114, 128, 0.78)";
       topFg = "#fbf5ea";
+      numFg = "#fde68a";
       prio = 2;
     } else if (mark === "good") {
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sCompactName + (isWolfViewer3D ? "｜假保" : "｜認同");
-      topBg = "rgba(33, 94, 73, 0.9)";
-      topBorder = "rgba(126, 196, 166, 0.65)";
+      topTag = sheriffPrefix + sCompactName + (isWolfViewer3D ? " · 假保" : " · 信任");
+      topBg = "rgba(33, 94, 73, 0.92)";
+      topBorder = "rgba(126, 196, 166, 0.78)";
       topFg = "#fbf5ea";
+      numFg = "#a7f3d0";
       prio = 2;
     } else if (state.hoverSeatId === s.id) {
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + "號 " + sNameTag;
-      topBg = "rgba(22, 17, 13, 0.92)";
-      topBorder = s.color || "rgba(212, 166, 87, 0.72)";
-      topFg = "#f5dfac";
+      topTag = sheriffPrefix + sCompactName;
+      topBg = "rgba(28, 22, 16, 0.95)";
+      topBorder = s.color || "rgba(212, 166, 87, 0.85)";
+      topFg = "#fff4d9";
+      numFg = "#f5c451";
       prio = 3;
     } else if (inMatch && isSheriff) {
       isSubtleNameplate = true;
-      topTag = sheriffPrefix + fmtSeatNum(s.id) + " " + sNameTag;
-      topBg = "rgba(18, 14, 11, 0.78)";
-      topBorder = "rgba(245, 196, 81, 0.78)";
+      topTag = sheriffPrefix + sCompactName;
+      topBg = "rgba(24, 18, 12, 0.88)";
+      topBorder = "rgba(245, 196, 81, 0.86)";
       topFg = "#fde68a";
+      numFg = "#fde68a";
       prio = 2;
     } else if (inMatch && s.alive) {
-      // Permanent whisper-subtle color-coded character nameplate above every seated avatar so players instantly recognize who is who!
       isSubtleNameplate = true;
-      topTag = fmtSeatNum(s.id) + " " + sNameTag;
-      topBg = "rgba(18, 14, 11, 0.72)";
-      topBorder = s.color || "rgba(212, 166, 87, 0.48)";
-      topFg = "#efe7d8";
+      topTag = sCompactName;
+      topBg = "rgba(18, 14, 11, 0.84)";
+      topBorder = s.color || "rgba(212, 166, 87, 0.56)";
+      topFg = "#f3ebdc";
+      numFg = "#f5c451";
       prio = 1;
     }
 
     if (topTag) {
       const isNarrowFont = (f.w / Math.max(1, dpr)) < 600;
-      const font = isSubtleNameplate
-        ? ("600 " + Math.round((isNarrowFont ? 8.2 : 9) * dpr) + "px 'Noto Sans TC', sans-serif")
-        : ("700 " + Math.round((isNarrowFont ? 9.2 : 10) * dpr) + "px 'Noto Serif TC', 'Songti TC', 'Noto Sans TC', serif");
-      ctx.font = font;
-      const ttw = ctx.measureText(topTag).width;
-      const tW = ttw + (isSubtleNameplate ? (isNarrowFont ? 8 : 10) : (isNarrowFont ? 12 : 16)) * dpr;
-      const tH = (isSubtleNameplate ? (isNarrowFont ? 13.5 : 14.5) : (isNarrowFont ? 16.5 : 18)) * dpr;
+      const speakScale = isSpeaking ? 1.18 : 1.0;
+      const numPx = Math.round((isNarrowFont ? 14 : (isSubtleNameplate ? 17 : 19)) * speakScale * dpr);
+      const namePx = Math.round((isNarrowFont ? 12 : 13.5) * (isSpeaking ? 1.12 : 1.0) * dpr);
+      const numFont = "900 " + numPx + "px 'Inter', 'Noto Sans TC', sans-serif";
+      const nameFont = "700 " + namePx + "px 'Noto Sans TC', sans-serif";
+      ctx.font = numFont;
+      const numW = ctx.measureText(numLabel).width;
+      ctx.font = nameFont;
+      const nameW = ctx.measureText(topTag).width;
+      const gapX = Math.round(5.5 * dpr);
+      const padH = Math.round((isSpeaking ? 12 : 9) * dpr);
+      const tW = numW + gapX + nameW + padH * 2;
+      const tH = Math.round((isNarrowFont ? 21 : (isSpeaking ? 30 : 25)) * dpr);
       const closeUpLift = drawR > 58 * dpr ? 0.68 : 0.46;
-      const rawY = sy - drawR * closeUpLift - tH - 3 * dpr;
+      const rawY = sy - drawR * closeUpLift - tH - 4 * dpr;
       // Hide low-priority subtle nameplates whose character sits buried behind the bottom #controlDeck so zero labels bleed through chips!
       if (isSubtleNameplate && prio <= 1 && rawY > bottomSafeY + 24 * dpr) return;
       const maxPlateY = Math.max(topSafeY, bottomSafeY - tH);
@@ -2075,8 +2126,9 @@ function draw3DOverlayHud(ctx, f, coords) {
       plates.push({
         seatId: s.id, anchorX: sx, anchorY: sy - drawR * 0.35,
         x: baseX, y: baseY, origY: baseY, w: tW, h: tH,
-        topTag: topTag, topBg: topBg, topBorder: topBorder, topFg: topFg,
-        font: font, isSubtle: isSubtleNameplate, prio: prio
+        numLabel: numLabel, numW: numW, gapX: gapX, padH: padH,
+        topTag: topTag, topBg: topBg, topBorder: topBorder, topFg: topFg, numFg: numFg,
+        numFont: numFont, font: nameFont, isSubtle: isSubtleNameplate, isSpeaking: isSpeaking, isDead: isDeadPlate, prio: prio
       });
     }
   });
@@ -2090,11 +2142,11 @@ function draw3DOverlayHud(ctx, f, coords) {
     if (hostHead.z > -1 && hostHead.z < 1 && Math.abs(hostHead.x) < 0.96 && hostHead.y > -0.95 && hostHead.y < 1.14) {
       const hx = (hostHead.x * 0.5 + 0.5) * f.w;
       const hy = (-hostHead.y * 0.5 + 0.5) * f.h;
-      const hFont = "600 " + Math.round(8.5 * dpr) + "px 'Noto Serif TC', 'Noto Sans TC', serif";
-      const hTag = "茶席主持・清茗";
+      const hFont = "700 " + Math.round(13 * dpr) + "px 'Noto Serif TC', 'Noto Sans TC', serif";
+      const hTag = "清茗";
       ctx.font = hFont;
-      const hW = ctx.measureText(hTag).width + 12 * dpr;
-      const hH = 14 * dpr;
+      const hW = ctx.measureText(hTag).width + 18 * dpr;
+      const hH = 22 * dpr;
       const clampedHy = clamp(hy - hH * 0.5, topSafeY, Math.max(topSafeY, bottomSafeY - hH));
       if (hy <= bottomSafeY + 12 * dpr) {
         plates.push({
@@ -2142,27 +2194,45 @@ function draw3DOverlayHud(ctx, f, coords) {
 
   plates.forEach(function (pl) {
     ctx.save();
+    if (pl.isDead) ctx.globalAlpha = 0.62;
     if (Math.abs(pl.y - pl.origY) > 8 * dpr) {
       ctx.beginPath();
       ctx.moveTo(pl.x, pl.y + pl.h);
       ctx.lineTo(pl.anchorX, pl.anchorY);
       ctx.strokeStyle = pl.topBorder;
-      ctx.lineWidth = 1.0 * dpr;
-      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.globalAlpha = pl.isDead ? 0.32 : 0.58;
       ctx.stroke();
-      ctx.globalAlpha = 1.0;
+      ctx.globalAlpha = pl.isDead ? 0.62 : 1.0;
     }
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = pl.font;
-    drawRoundedRect(ctx, pl.x - pl.w * 0.5, pl.y, pl.w, pl.h, 3.5 * dpr);
+    if (pl.isSpeaking) {
+      ctx.shadowColor = "rgba(245, 196, 81, 0.58)";
+      ctx.shadowBlur = 14 * dpr;
+    }
+    drawRoundedRect(ctx, pl.x - pl.w * 0.5, pl.y, pl.w, pl.h, 7 * dpr);
     ctx.fillStyle = pl.topBg;
     ctx.fill();
-    ctx.lineWidth = (pl.isSubtle ? 0.85 : 1.1) * dpr;
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = (pl.isSpeaking ? 2.0 : (pl.isSubtle ? 1.1 : 1.4)) * dpr;
     ctx.strokeStyle = pl.topBorder;
     ctx.stroke();
-    ctx.fillStyle = pl.topFg;
-    ctx.fillText(pl.topTag, pl.x, pl.y + pl.h * 0.53);
+
+    ctx.textBaseline = "middle";
+    if (pl.numLabel && pl.numFont) {
+      const leftX = pl.x - pl.w * 0.5 + (pl.padH || 9 * dpr);
+      ctx.textAlign = "left";
+      ctx.font = pl.numFont;
+      ctx.fillStyle = pl.numFg || pl.topFg;
+      ctx.fillText(pl.numLabel, leftX, pl.y + pl.h * 0.52);
+      ctx.font = pl.font;
+      ctx.fillStyle = pl.topFg;
+      ctx.fillText(pl.topTag, leftX + (pl.numW || 0) + (pl.gapX || 5 * dpr), pl.y + pl.h * 0.53);
+    } else {
+      ctx.textAlign = "center";
+      ctx.font = pl.font;
+      ctx.fillStyle = pl.topFg;
+      ctx.fillText(pl.topTag, pl.x, pl.y + pl.h * 0.53);
+    }
     ctx.restore();
   });
 

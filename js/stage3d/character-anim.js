@@ -631,14 +631,14 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
           : (mark === "wolf" ? "#f43f5e" : (mark === "good" ? "#10b981" : (s.color || "#94a3b8")));
     actor.ringMat.color.set(baseHex);
     actor.ringMat.emissive.set(baseHex);
-    actor.ringMat.emissiveIntensity = !s.alive ? 0.04 : (isSpeaking || isSelected || isDragSnap ? 1.25 : 0.42);
+    actor.ringMat.emissiveIntensity = !s.alive ? 0.0 : (isSpeaking ? 1.55 : (isSelected || isDragSnap ? 1.25 : 0.42));
 
     const showHalo = s.alive && (isSpeaking || isSelected || isDragSnap || Boolean(s.claimedRole));
-    actor.haloMat.opacity += ((showHalo ? (isSpeaking ? (0.85 + liveAmp * 0.15) : 0.55) : 0.0) - actor.haloMat.opacity) * d16;
-    actor.haloMat.color.set(isSpeaking ? "#fde047" : (isSelected ? "#f59e0b" : (s.claimedRole === "seer" ? "#a78bfa" : "#38bdf8")));
+    actor.haloMat.opacity += ((showHalo ? (isSpeaking ? (0.94 + liveAmp * 0.06) : 0.55) : 0.0) - actor.haloMat.opacity) * d16;
+    actor.haloMat.color.set(isSpeaking ? "#f5c451" : (isSelected ? "#f59e0b" : (s.claimedRole === "seer" ? "#a78bfa" : "#38bdf8")));
     actor.haloRing.position.y = actor.useVrm ? 0.24 : 0.68;
     actor.haloRing.rotation.z = t * (isSpeaking ? 2.2 : 1.4);
-    actor.haloRing.scale.setScalar(isSpeaking ? (1.02 + liveAmp * 0.22 + Math.sin(t * 5.0) * 0.04) : (isSelected ? 1.08 : 0.96));
+    actor.haloRing.scale.setScalar(isSpeaking ? (1.18 + liveAmp * 0.18 + Math.sin(t * 5.0) * 0.04) : (isSelected ? 1.08 : 0.96));
 
     // 3D Floating Golden Sheriff Crown
     if (actor.sheriffCrownGroup) {
@@ -692,9 +692,13 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     }
     actor._wasAlive = Boolean(s.alive);
 
-    // Smooth Teacup Cover Lid & Fog-Seal Parchment Strip on Eliminated Seats
+    // Smooth Overturned Teacup (出局倒杯) & Cover Lid + Fog-Seal Strip on Eliminated Seats
     const targetLid = s.alive ? 0.0 : 1.0;
     actor.lidProgress = (actor.lidProgress || 0) + (targetLid - (actor.lidProgress || 0)) * d14;
+    if (actor.teaGroup) {
+      actor.teaGroup.rotation.z = actor.lidProgress * 1.42;
+      actor.teaGroup.position.y = 0.01 + actor.lidProgress * 0.06;
+    }
     if (actor.teaLidGroup) {
       actor.teaLidGroup.visible = actor.lidProgress > 0.03;
       actor.teaLidGroup.position.y = 0.24 - actor.lidProgress * 0.104;
@@ -844,26 +848,50 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       });
     }
 
-    // Throttled Live 3D Anime Face Update (skipped cleanly when external .VRM avatar is active!)
+    // Throttled + Signature-Cached Live 3D Anime Face Update (skipped cleanly when external .VRM avatar is active or face state unchanged!)
     const isEco = state.quality3D === "eco";
     const isBal = state.quality3D === "balanced";
     const redrawEvery = (isSpeaking || isHovered || isSelected || isDragSnap)
       ? (isEco ? 3 : 2)
       : (isEco ? 12 : ((nSeats >= 10 || isBal) ? 8 : 5));
     if (!actor.useVrm && (!actor.faceDrawnOnce || (pool.frameCounter + s.id) % redrawEvery === 0)) {
-      actor.faceDrawnOnce = true;
+      const sleepingFace = Boolean(f.night && !isSelected && !isWolfNightMate) || !s.alive;
       const sweating = Boolean(state.match.started && s.alive && (state.match.microPulseRevealed || s.sweatExposed) && s.microPulse >= 60);
       const moodNow = isBeingAccusedNow ? "shock" : getSeatEmotion(s.id, nowMs);
-      draw3DFaceCanvas(actor.faceBundle.ctx, s, avStyle, {
-        nowMs: nowMs,
-        sleeping: f.night && !isSelected && !isWolfNightMate,
-        talking: isTalkingNow,
-        sweating: sweating,
-        emotion: moodNow,
-        gazeX: clamp(actor.headYaw * 1.15, -1, 1),
-        gazeY: clamp(actor.headPitch * 0.7, -1, 1)
-      });
-      actor.faceBundle.tex.needsUpdate = true;
+      const gazeX = clamp(actor.headYaw * 1.15, -1, 1);
+      const gazeY = clamp(actor.headPitch * 0.7, -1, 1);
+      const blinkCycle = (t + s.id * 1.19) % 3.6;
+      const isBlinking = (!sleepingFace && moodNow !== "shock" && moodNow !== "nervous" && blinkCycle > 3.46) ? 1 : 0;
+      const talkingFace = Boolean(isTalkingNow && s.alive);
+      const mouthBucket = talkingFace
+        ? Math.round((liveAmp > 0 ? liveAmp : (0.4 + Math.abs(Math.sin(t * 16 + s.id * 1.7)) * 0.6)) * 10)
+        : 0;
+      const sweatBucket = (sweating || moodNow === "nervous")
+        ? Math.floor(((t * (moodNow === "nervous" ? 84 : 52)) % 46) / 3)
+        : 0;
+      const faceSig =
+        (s.alive ? "1" : "0") + "|" +
+        (sleepingFace ? "1" : "0") + "|" +
+        moodNow + "|" +
+        isBlinking + "|" +
+        mouthBucket + "|" +
+        sweatBucket + "|" +
+        Math.round(gazeX * 12) + "|" +
+        Math.round(gazeY * 12);
+      if (!actor.faceDrawnOnce || actor._lastFaceSig !== faceSig) {
+        actor.faceDrawnOnce = true;
+        actor._lastFaceSig = faceSig;
+        draw3DFaceCanvas(actor.faceBundle.ctx, s, avStyle, {
+          nowMs: nowMs,
+          sleeping: sleepingFace,
+          talking: talkingFace,
+          sweating: sweating,
+          emotion: moodNow,
+          gazeX: gazeX,
+          gazeY: gazeY
+        });
+        actor.faceBundle.tex.needsUpdate = true;
+      }
     }
 
     actor.root.updateMatrixWorld(false);

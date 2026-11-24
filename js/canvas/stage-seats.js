@@ -171,7 +171,7 @@ function drawStageSeats(ctx, f, coords) {
 
     const sx = node.x + phys.ox * dpr;
     const sy = node.y + phys.oy * dpr;
-    const baseR = isSpeaking ? node.r * 1.26 : node.r;
+    const baseR = isSpeaking ? node.r * 1.18 : node.r;
     const drawR = baseR * phys.scale;
 
     // Live Eye Gaze Target: track cursor when inside canvas, or glance at active speaker!
@@ -195,8 +195,10 @@ function drawStageSeats(ctx, f, coords) {
       ? state.match.daySpeechEvents[state.match.daySpeechEvents.length - 1]
       : null;
     const isReactingTarget = Boolean(latestEvForAlpha && latestEvForAlpha.speakerId === state.activeSpeakerId && (latestEvForAlpha.accuseId === s.id || latestEvForAlpha.vouchId === s.id));
-    if ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN") && state.activeSpeakerId && !isSpeaking && !isSelected && !isHovered && !isDragSnap && !isReactingTarget && !state.dragAction.active) {
-      ctx.globalAlpha = 0.34;
+    if (!s.alive) {
+      ctx.globalAlpha = 0.44;
+    } else if ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN") && state.activeSpeakerId && !isSpeaking && !isSelected && !isHovered && !isDragSnap && !isReactingTarget && !state.dragAction.active) {
+      ctx.globalAlpha = 0.46;
     }
     if (isSpeaking) {
       const pulseA = (nowMs * 0.0022) % 1;
@@ -292,78 +294,97 @@ function drawStageSeats(ctx, f, coords) {
     ctx.stroke();
     ctx.restore();
 
-    // Crisp Nameplate Pill below Portrait
+    // Crisp High-Contrast 22px Seat Number + Nameplate Pill below Portrait
     const showTruth = isOver || (typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive());
     const known = state.match.started && !state.hidePlayerRole
       ? (showTruth ? s.role : state.match.playerKnownRoles[s.id])
       : null;
     const pSelfCanvas = state.match.started ? getPlayerSeat() : null;
     const isWolfViewCanvas = Boolean(pSelfCanvas && pSelfCanvas.role === "wolf" && !state.hidePlayerRole);
-    let plateText = fmtSeatNum(s.id) + " " + (s.id === getPlayerId() ? "你" : s.name);
-    if (!s.alive) plateText = (showTruth && ROLE_DEFS[s.role]) ? (fmtSeatNum(s.id) + " " + ROLE_DEFS[s.role].name) : (fmtSeatNum(s.id) + " 休息");
-    else if (known === "wolf") plateText = fmtSeatNum(s.id) + (isWolfViewCanvas && s.id !== getPlayerId() ? " 狼同伴" : " 酸民狼");
-    else if (known === "good_verified") plateText = fmtSeatNum(s.id) + " 好人";
-    else if (known && ROLE_DEFS[known] && showTruth) plateText = fmtSeatNum(s.id) + " " + ROLE_DEFS[known].name;
-    else if (pMark === "wolf") plateText = fmtSeatNum(s.id) + (isWolfViewCanvas ? " 甩鍋" : " 懷疑");
-    else if (pMark === "good") plateText = fmtSeatNum(s.id) + (isWolfViewCanvas ? " 假保" : " 信任");
+    const numStr2D = fmtSeatNum(s.id);
+    let nameStr2D = s.id === getPlayerId() ? "你" : s.name;
+    if (!s.alive) nameStr2D = (showTruth && ROLE_DEFS[s.role]) ? ROLE_DEFS[s.role].name : (nameStr2D + "·離");
+    else if (known === "wolf") nameStr2D = isWolfViewCanvas && s.id !== getPlayerId() ? "同伴" : "酸民狼";
+    else if (known === "good_verified") nameStr2D = "好人";
+    else if (known && ROLE_DEFS[known] && showTruth) nameStr2D = ROLE_DEFS[known].name;
+    else if (pMark === "wolf") nameStr2D = isWolfViewCanvas ? "甩鍋" : "懷疑";
+    else if (pMark === "good") nameStr2D = isWolfViewCanvas ? "假保" : "信任";
 
-    const plateW = Math.max(48 * dpr, (plateText.length * 8.2 + 12) * dpr);
-    const plateH = 16 * dpr;
+    const numFont2D = "900 " + Math.round((isSpeaking ? 20 : 17) * dpr) + "px 'Inter', 'Noto Sans TC', sans-serif";
+    const nameFont2D = "800 " + Math.round((isSpeaking ? 14 : 13) * dpr) + "px 'Noto Sans TC', sans-serif";
+    ctx.font = numFont2D;
+    const numW2D = ctx.measureText(numStr2D).width;
+    ctx.font = nameFont2D;
+    const nameW2D = ctx.measureText(nameStr2D).width;
+    const platePad = 10 * dpr;
+    const plateGap = 5 * dpr;
+    const plateW = Math.max(66 * dpr, numW2D + nameW2D + plateGap + platePad * 2);
+    const plateH = (isSpeaking ? 26 : 23) * dpr;
     const plateY = sy + drawR - 6 * dpr;
-    drawRoundedRect(ctx, sx - plateW * 0.5, plateY, plateW, plateH, 7 * dpr);
+    drawRoundedRect(ctx, sx - plateW * 0.5, plateY, plateW, plateH, 8 * dpr);
     ctx.fillStyle = !s.alive
-      ? (daylight ? "rgba(226, 232, 240, 0.92)" : "rgba(15, 23, 42, 0.85)")
-      : (known === "wolf" || pMark === "wolf"
-        ? "#e11d48"
-        : (known === "good_verified" || pMark === "good"
-          ? "#059669"
-          : (daylight ? "rgba(255, 253, 245, 0.95)" : "rgba(15, 23, 42, 0.92)")));
+      ? (daylight ? "rgba(203, 213, 225, 0.85)" : "rgba(18, 22, 28, 0.82)")
+      : (isSpeaking
+        ? "#f5c451"
+        : (known === "wolf" || pMark === "wolf"
+          ? "#e11d48"
+          : (known === "good_verified" || pMark === "good"
+            ? "#059669"
+            : (daylight ? "rgba(255, 253, 245, 0.96)" : "rgba(18, 15, 12, 0.94)"))));
     ctx.fill();
-    ctx.lineWidth = 1.2 * dpr;
-    ctx.strokeStyle = !s.alive ? "#94a3b8" : (isSpeaking ? "#f59e0b" : s.color);
+    ctx.lineWidth = (isSpeaking ? 2.2 : 1.4) * dpr;
+    ctx.strokeStyle = !s.alive ? "#64748b" : (isSpeaking ? "#fff3c4" : s.color);
     ctx.stroke();
 
-    ctx.textAlign = "center";
+    const startTextX = sx - (numW2D + plateGap + nameW2D) * 0.5;
+    ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.font = "900 " + Math.round(9.5 * dpr) + "px 'Inter', 'Noto Sans TC', sans-serif";
-    ctx.fillStyle = (!s.alive)
+    ctx.font = numFont2D;
+    ctx.fillStyle = !s.alive
       ? "#64748b"
-      : ((known === "wolf" || known === "good_verified" || pMark) ? "#ffffff" : (daylight ? "#0f172a" : "#f8fafc"));
-    ctx.fillText(plateText, sx, plateY + plateH * 0.53);
+      : (isSpeaking ? "#1c1205" : ((known === "wolf" || known === "good_verified" || pMark) ? "#fef08a" : (daylight ? "#9a6823" : "#fbbf24")));
+    ctx.fillText(numStr2D, startTextX, plateY + plateH * 0.52);
+
+    ctx.font = nameFont2D;
+    ctx.fillStyle = !s.alive
+      ? "#64748b"
+      : (isSpeaking ? "#1c1205" : ((known === "wolf" || known === "good_verified" || pMark) ? "#ffffff" : (daylight ? "#0f172a" : "#f8fafc")));
+    ctx.fillText(nameStr2D, startTextX + numW2D + plateGap, plateY + plateH * 0.53);
+    ctx.textAlign = "center";
 
     // High-contrast solid pill badge right on the active speaker's seat!
     if (isSpeaking) {
       const activelyTalking = (state.typewriter.active || voice.speaking);
-      const pillText = activelyTalking ? "發言中..." : "剛講完";
-      const pillW = 56 * dpr;
-      const pillH = 17 * dpr;
+      const pillText = activelyTalking ? "發言中" : "已講畢";
+      const pillW = 68 * dpr;
+      const pillH = 22 * dpr;
       const placeBelow = (sy - drawR - pillH - 8 * dpr) < (6 * dpr);
-      const pillY = placeBelow ? (sy + drawR + 6 * dpr) : (sy - drawR - pillH - 6 * dpr);
-      drawRoundedRect(ctx, sx - pillW * 0.5, pillY, pillW, pillH, 8 * dpr);
-      ctx.fillStyle = activelyTalking ? "#f59e0b" : "#10b981";
+      const pillY = placeBelow ? (sy + drawR + 24 * dpr) : (sy - drawR - pillH - 6 * dpr);
+      drawRoundedRect(ctx, sx - pillW * 0.5, pillY, pillW, pillH, 9 * dpr);
+      ctx.fillStyle = activelyTalking ? "#f5c451" : "#10b981";
       ctx.fill();
-      ctx.font = "900 " + Math.round(10 * dpr) + "px 'Noto Sans TC', sans-serif";
-      ctx.fillStyle = "#0f172a";
+      ctx.font = "900 " + Math.round(13 * dpr) + "px 'Noto Sans TC', sans-serif";
+      ctx.fillStyle = "#1a1106";
       ctx.fillText(pillText, sx, pillY + pillH * 0.53);
     } else if (isAccusedNow || isVouchedNow) {
-      const rPillText = isAccusedNow ? "被點名!" : "被力挺";
-      const rPillW = 48 * dpr;
-      const rPillH = 15 * dpr;
+      const rPillText = isAccusedNow ? "被點名" : "被力挺";
+      const rPillW = 62 * dpr;
+      const rPillH = 21 * dpr;
       const rPillY = sy - drawR - rPillH - 5 * dpr;
-      drawRoundedRect(ctx, sx - rPillW * 0.5, rPillY, rPillW, rPillH, 7 * dpr);
+      drawRoundedRect(ctx, sx - rPillW * 0.5, rPillY, rPillW, rPillH, 8 * dpr);
       ctx.fillStyle = isAccusedNow ? "#f43f5e" : "#10b981";
       ctx.fill();
-      ctx.font = "900 " + Math.round(9.5 * dpr) + "px 'Noto Sans TC', sans-serif";
+      ctx.font = "900 " + Math.round(13 * dpr) + "px 'Noto Sans TC', sans-serif";
       ctx.fillStyle = "#ffffff";
       ctx.fillText(rPillText, sx, rPillY + rPillH * 0.53);
     } else if (state.match.started && s.alive && s.id !== getPlayerId() && (state.match.microPulseRevealed || s.sweatExposed)) {
-      ctx.font = "900 " + Math.round(10 * dpr) + "px 'Noto Sans TC', sans-serif";
+      ctx.font = "900 " + Math.round(13 * dpr) + "px 'Noto Sans TC', sans-serif";
       ctx.fillStyle = s.microPulse >= 60 ? (daylight ? "#be123c" : "#fda4af") : (daylight ? "#047857" : "#6ee7b7");
-      ctx.fillText("心虛 " + s.microPulse + "%", sx, sy - drawR - 9 * dpr);
+      ctx.fillText("心虛 " + s.microPulse + "%", sx, sy - drawR - 11 * dpr);
     } else if (s.claimedRole && ROLE_DEFS[s.claimedRole] && s.alive) {
-      ctx.font = "900 " + Math.round(10 * dpr) + "px 'Noto Sans TC', sans-serif";
+      ctx.font = "900 " + Math.round(13 * dpr) + "px 'Noto Sans TC', sans-serif";
       ctx.fillStyle = daylight ? "#b45309" : "#fde68a";
-      ctx.fillText("跳" + ROLE_DEFS[s.claimedRole].name, sx, sy - drawR - 9 * dpr);
+      ctx.fillText("跳" + ROLE_DEFS[s.claimedRole].name, sx, sy - drawR - 11 * dpr);
     }
     ctx.restore();
   });

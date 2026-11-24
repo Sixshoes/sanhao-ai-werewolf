@@ -32,7 +32,7 @@ window.onload = function () {
   }
   renderTutorialSlide();
   bindEvents();
-  renderTimeline();
+  renderTimeline({ deferIfHidden: true });
   updateAllUI();
   resizeCanvas();
   startAnimationLoop();

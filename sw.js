@@ -4,11 +4,36 @@
  * - 核心網頁與腳本採 Network-First（離線自動降級快取）
  * - /api/* 即時動態端點永不快取
  */
-const CACHE_NAME = "sanhao-tea-v18.0";
+const CACHE_NAME = "sanhao-tea-v19.0";
+const MAX_CACHE_ENTRIES = 80;
+const CORE_SHELL_URLS = [
+  "./ai.html",
+  "./css/tailwind-local.css",
+  "./css/theme.css",
+  "./css/components.css"
+];
 const IMMUTABLE_RE = /\/(?:assets\/(?:models\/[^/]+\.vrm|(?:portraits|portraits_vrm|sky|textures|voice_pack)\/)|js\/vendor\/)/i;
 
-self.addEventListener("install", function () {
-  self.skipWaiting();
+function trimCacheIfNeeded(cache) {
+  return cache.keys().then(function (keys) {
+    if (!keys || keys.length <= MAX_CACHE_ENTRIES) return;
+    const excess = keys.length - MAX_CACHE_ENTRIES;
+    const deletions = [];
+    for (let i = 0; i < excess; i++) {
+      deletions.push(cache.delete(keys[i]));
+    }
+    return Promise.all(deletions);
+  }).catch(function () { });
+}
+
+self.addEventListener("install", function (event) {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(function (cache) {
+      return cache.addAll(CORE_SHELL_URLS).catch(function () { });
+    }).then(function () {
+      return self.skipWaiting();
+    })
+  );
 });
 
 self.addEventListener("activate", function (event) {
@@ -39,7 +64,9 @@ self.addEventListener("fetch", function (event) {
           if (cached) return cached;
           return fetch(req).then(function (resp) {
             if (resp && resp.ok && resp.status === 200) {
-              cache.put(req, resp.clone()).catch(function () { });
+              cache.put(req, resp.clone()).then(function () {
+                return trimCacheIfNeeded(cache);
+              }).catch(function () { });
             }
             return resp;
           });
@@ -55,8 +82,10 @@ self.addEventListener("fetch", function (event) {
         if (resp && resp.ok && resp.status === 200) {
           const clone = resp.clone();
           caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(req, clone).catch(function () { });
-          });
+            return cache.put(req, clone).then(function () {
+              return trimCacheIfNeeded(cache);
+            });
+          }).catch(function () { });
         }
         return resp;
       })

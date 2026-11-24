@@ -11,14 +11,17 @@
   <link rel="stylesheet" href="css/tailwind-local.css" />
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/components.css" />
-  <script src="js/vendor/three.min.js"></script>
-  <script src="js/vendor/GLTFLoader.js"></script>
-  <script src="js/vendor/postfx-r128.js"></script>
+  <script src="js/vendor/three.min.js" defer></script>
+  <script src="js/vendor/GLTFLoader.js" defer></script>
+  <script src="js/vendor/postfx-r128.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
+    rel="preload"
+    as="style"
     href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@600;700;900&display=swap"
-    rel="stylesheet" />
+    onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@600;700;900&display=swap" /></noscript>
 </head>
 
 <body class="craft-ui theme-twilight screen-title selection:bg-amber-400/30 selection:text-amber-100">
@@ -48,7 +51,7 @@
             <div id="dramaticCutIn" aria-hidden="true">
               <div class="cutin-band">
                 <div id="cutInTitle" class="text-base sm:text-xl font-black tracking-widest">真假明心觀察員對跳</div>
-                <div id="cutInSub" class="text-xs sm:text-[13px] font-semibold text-amber-50 mt-1 tracking-wider">茶席推理高光時刻
+                <div id="cutInSub" class="text-sm sm:text-sm font-semibold text-amber-50 mt-1 tracking-wider">茶席推理高光時刻
                 </div>
               </div>
             </div>
@@ -60,13 +63,13 @@
             <div id="radialSeatMenu" class="hidden" aria-label="靜默偵探輪盤">
               <div class="w-16 h-16 rounded-full border border-amber-400/60 bg-slate-950/40 pointer-events-none"></div>
               <button type="button" data-radial="good" style="left:50%; top:-14px;"
-                class="radial-btn cta-celadon px-2.5 py-1 text-[11px] font-bold">標好人</button>
+                class="radial-btn cta-celadon px-2.5 py-1 text-[13px] font-bold">標好人</button>
               <button type="button" data-radial="wolf" style="left:calc(100% + 26px); top:50%;"
-                class="radial-btn cta-cinnabar px-2.5 py-1 text-[11px] font-bold">標懷疑</button>
+                class="radial-btn cta-cinnabar px-2.5 py-1 text-[13px] font-bold">標懷疑</button>
               <button type="button" data-radial="pin" style="left:50%; top:calc(100% + 14px);"
-                class="radial-btn cta-brass px-2.5 py-1 text-[11px] font-bold">記筆記</button>
+                class="radial-btn cta-brass px-2.5 py-1 text-[13px] font-bold">記筆記</button>
               <button type="button" data-radial="intel" style="left:-26px; top:50%;"
-                class="radial-btn cta-ink px-2.5 py-1 text-[11px] font-bold">看情報</button>
+                class="radial-btn cta-ink px-2.5 py-1 text-[13px] font-bold">看情報</button>
             </div>
 
             <!-- Whisper-Quiet Stage Hint -->
@@ -80,11 +83,11 @@
 
             <!-- Ballot-Flight Reveal Banner -->
             <div id="voteFlightBanner"
-              class="hidden absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 text-xs font-bold shadow-xl cursor-pointer flex items-center gap-2 msg-enter"
+              class="hidden absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 text-sm font-bold shadow-xl cursor-pointer flex items-center gap-2 msg-enter"
               title="點擊立即展開最終票數">
               <span class="inline-block w-2 h-2 rounded-full bg-rose-400 animate-ping"></span>
               <span id="voteFlightText">開票飛票中…</span>
-              <span class="text-[10px] opacity-70">點此跳過</span>
+              <span class="text-[13px] opacity-70">點此跳過</span>
             </div>
 
             <!-- Dual-Portrait PK Confrontation Banner -->
@@ -92,15 +95,15 @@
               <div class="flex items-center gap-1.5 min-w-0">
                 <img id="pkLeftImg" alt="" class="pk-duel-portrait hidden" />
                 <div class="min-w-0 text-left">
-                  <div id="pkLeftName" class="text-[11px] font-black text-amber-100 truncate">01號</div>
-                  <div id="pkLeftVotes" class="text-[10px] font-bold text-amber-300">PK 拉票</div>
+                  <div id="pkLeftName" class="text-[13px] font-black text-amber-100 truncate">01號</div>
+                  <div id="pkLeftVotes" class="text-[13px] font-bold text-amber-300">PK 拉票</div>
                 </div>
               </div>
               <span id="pkDuelMidLabel" class="pk-duel-vs shrink-0">VS</span>
               <div class="flex items-center gap-1.5 min-w-0">
                 <div class="min-w-0 text-right">
-                  <div id="pkRightName" class="text-[11px] font-black text-amber-100 truncate">02號</div>
-                  <div id="pkRightVotes" class="text-[10px] font-bold text-amber-300">PK 拉票</div>
+                  <div id="pkRightName" class="text-[13px] font-black text-amber-100 truncate">02號</div>
+                  <div id="pkRightVotes" class="text-[13px] font-bold text-amber-300">PK 拉票</div>
                 </div>
                 <img id="pkRightImg" alt="" class="pk-duel-portrait hidden" />
               </div>
@@ -126,83 +129,43 @@
             </button>
           </div>
 
-          <!-- MINIMAL FLOATING IN-GAME TOP HUD (LEFT: CHAPTER + HARMONY | RIGHT: COMPACT CONTROLS + FEEDBACK) -->
+          <!-- MINIMAL FLOATING IN-GAME TOP HUD (LEFT: 22PX ACTION HEADLINE | RIGHT: ONLY 3 CLEAN BUTTONS!) -->
           <div id="inGameTopHud" class="hidden">
             <div class="hud-pill-shell flex-wrap">
               <span id="skyIcon" class="sky-dot shrink-0"></span>
-              <span id="phaseBadge" class="font-serif-craft text-xs font-bold text-amber-300 tracking-wider">初夜</span>
-              <span class="hud-sep-headline text-slate-400 text-[10px]">|</span>
+              <span id="phaseBadge" class="font-serif-craft text-[15px] font-bold text-amber-300 tracking-wider shrink-0">初夜</span>
+              <span class="hud-sep-headline text-slate-400 text-[13px]">|</span>
               <h2 id="bannerHeadline"
-                class="font-serif-craft text-xs sm:text-sm font-bold text-white truncate max-w-[190px] sm:max-w-[260px]">
+                class="font-serif-craft text-[18px] sm:text-[22px] font-black text-white truncate max-w-[260px] sm:max-w-[420px]">
                 找出 2 名說謊的酸民狼</h2>
-              <span id="roundTitle" class="text-[10.5px] text-slate-400 inline-flex items-center shrink-0"></span>
+              <span id="roundTitle" class="text-[13px] text-slate-400 inline-flex items-center shrink-0"></span>
               <div class="hidden" aria-hidden="true">
                 <span id="stepTrack1" class="phase-pill step-night">壹 入夜</span>
                 <span id="stepTrack2" class="phase-pill step-speak">貳 論道</span>
                 <span id="stepTrack3" class="phase-pill step-player">參 陳詞</span>
                 <span id="stepTrack4" class="phase-pill step-vote">肆 公投</span>
               </div>
-              <div class="flex items-center gap-1.5 pl-1.5 border-l border-slate-800" title="茶席友善度達 85 吹起三好清風">
-                <span class="text-[10.5px] text-slate-400">友善</span>
-                <div class="harmony-track">
-                  <div id="harmonyBar" class="harmony-fill" style="width: 70%;"></div>
-                </div>
-                <span id="harmonyText" class="text-[11px] font-bold text-amber-300 math-font">70</span>
-              </div>
               <span id="comboBadge"
-                class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-200 border border-amber-400/40">連擊 ×2</span>
+                class="hidden text-[13px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-200 border border-amber-400/40">連擊 ×2</span>
               <span id="matchPointBadge" class="hidden match-point-badge" title="茶涼聽牌：當輪發言限 28 字短兵相接">聽牌</span>
               <button id="directorEventPill" type="button"
-                class="hidden text-[10.5px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-200 border border-emerald-400/45 hover:bg-emerald-500/25 transition truncate max-w-[155px]"
+                class="hidden text-[13px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-200 border border-emerald-400/45 hover:bg-emerald-500/25 transition truncate max-w-[155px]"
                 title="清茗茶席導演事件（點擊查看詳細效果）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>突發事件</button>
               <span id="queueOrderHint" class="hidden"></span>
             </div>
 
-            <!-- CALM HUD RIGHT: JOURNAL + COMPACT UTILITY RAIL + MENU -->
-            <div class="flex items-center gap-1.5 shrink-0">
-              <button id="btnOpenJournal" type="button" class="hud-icon-btn" title="開啟茶席手札（對話紀錄＋票型小抄｜快捷鍵 J）">
+            <!-- v19.0 ULTRA-CLEAN 3-BUTTON TOP RIGHT HUD: 手札 · 倍速 · 選單 -->
+            <div class="flex items-center gap-2 shrink-0">
+              <button id="btnOpenJournal" type="button" class="hud-icon-btn" title="開啟茶席手札（對話紀錄、友善度與票型小抄｜快捷鍵 J）">
                 <svg class="svg-ic" viewBox="0 0 24 24">
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                   <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                 </svg>
                 <span>手札</span>
               </button>
-              <div class="hud-utility-rail">
-                <button id="btnQuickAutoHud" type="button" class="hud-rail-btn" title="一鍵開關自動推進發言 (快捷鍵 A)">
-                  <svg class="svg-ic" viewBox="0 0 24 24">
-                    <polygon points="6 4 20 12 6 20 6 4" />
-                  </svg>
-                  <span id="hudAutoLabel">自動</span>
-                </button>
-                <button id="btnCycleViewHud" type="button" class="hud-rail-btn"
-                  title="循環切換視角：運鏡 → 坐席 → 俯瞰 → 2D (快捷鍵 C / D)">
-                  <svg class="svg-ic" viewBox="0 0 24 24">
-                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                  <span id="hudViewLabel">運鏡</span>
-                </button>
-                <button id="btnToggleSceneThemeHud" type="button" class="hud-rail-btn"
-                  title="切換 3D 古亭造景：林美書院 ⇄ 絕雲仙境">
-                  <svg class="svg-ic" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M3 18l5-8 4 5 3-4 6 7H3z" />
-                    <circle cx="17.5" cy="6.5" r="2" />
-                  </svg>
-                  <span id="hudSceneLabel">書院</span>
-                </button>
-                <button id="btnQuickVoiceHud" type="button" class="hud-rail-btn" title="開關語音播報 (快捷鍵 V)">
-                  <span id="headerVoiceBars" class="eq-bars"><span></span><span></span><span></span></span>
-                </button>
-              </div>
-              <button id="btnOpenFeedback" type="button" class="hud-icon-btn hud-feedback-btn" title="提交試玩反饋、建議或回報 BUG">
-                <svg class="svg-ic" viewBox="0 0 24 24">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  <line x1="9" y1="9" x2="15" y2="9" />
-                  <line x1="9" y1="13" x2="13" y2="13" />
-                </svg>
-                <span class="feedback-btn-label">反饋</span>
-              </button>
-              <button id="btnOpenPauseMenu" type="button" class="hud-icon-btn" title="遊戲選單與設定 (快捷鍵 Esc)">
+              <button id="btnQuickVoiceSpeed" type="button" class="hud-icon-btn"
+                title="切換語音播報倍速（1.0× / 1.15× / 1.3× / 1.5×）">1.0×</button>
+              <button id="btnOpenPauseMenu" type="button" class="hud-icon-btn" title="遊戲選單與設定（運鏡、換景、教學、反饋｜快捷鍵 Esc）">
                 <svg class="svg-ic" viewBox="0 0 24 24">
                   <line x1="4" y1="7" x2="20" y2="7" />
                   <line x1="4" y1="12" x2="20" y2="12" />
@@ -223,8 +186,8 @@
                   <span id="intelSeatDot" class="intel-seat-seal">02</span>
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div id="intelSeatTitle" class="font-serif-craft text-[13.5px] font-bold text-amber-200 truncate leading-tight">02號 小澄</div>
-                  <div id="intelSeatSub" class="text-[10.5px] text-slate-400 truncate mt-0.5">資訊社數據控</div>
+                  <div id="intelSeatTitle" class="font-serif-craft text-[19px] font-bold text-amber-200 truncate leading-tight">02號 小澄</div>
+                  <div id="intelSeatSub" class="text-[13px] text-slate-400 truncate mt-0.5">資訊社數據控</div>
                   <div id="intelPersonaBadge" class="intel-persona-tag truncate mt-1">邏輯推演派｜極度審慎</div>
                 </div>
               </div>
@@ -232,7 +195,7 @@
             </div>
 
             <div id="intelAttitudeBox" class="intel-attitude-block">
-              <div class="flex items-center justify-between text-[10.5px]">
+              <div class="flex items-center justify-between text-[13px]">
                 <span class="intel-att-key">對你的態度</span>
                 <span id="intelAttitudeLabel" class="font-bold text-emerald-300">傾向信任</span>
               </div>
@@ -247,13 +210,13 @@
 
             <div id="intelActionGrid" class="intel-action-deck">
               <button id="btnIntelQuickAct" type="button"
-                class="hidden cta-cinnabar py-1.5 px-2.5 text-[11px] w-full"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9 9-9z"/><circle cx="12" cy="12" r="2.6"/></svg>鎖定行動</button>
-              <div class="intel-stance-seg">
+                class="hidden cta-cinnabar py-2.5 px-3 text-[15px] w-full"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9 9-9z"/><circle cx="12" cy="12" r="2.6"/></svg>鎖定行動</button>
+              <div id="intelStanceRow" class="intel-stance-seg">
                 <button id="btnIntelMarkGood" type="button" class="intel-seg-btn">標記好人</button>
                 <button id="btnIntelMarkWolf" type="button" class="intel-seg-btn">標記懷疑</button>
                 <button id="btnIntelPinSeat" type="button" class="intel-seg-btn">記筆記</button>
               </div>
-              <div class="intel-skill-row">
+              <div id="intelSkillRow" class="intel-skill-row">
                 <button id="btnIntelMicroInspect" type="button" class="intel-skill-btn is-gold"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>觀微 1/1</button>
                 <button id="btnIntelServeTea" type="button" class="intel-skill-btn is-jade"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>奉暖茶 1/1</button>
               </div>
@@ -310,10 +273,10 @@
                 <!-- GUIDED BEGINNER STEP-BY-STEP COACH BANNER (Only shown in 新手帶玩席, 1-click dismissable) -->
                 <div id="beginnerCoachBanner" class="hidden beginner-coach-banner msg-enter">
                   <div id="beginnerCoachText" class="flex-1 min-w-0 leading-relaxed"></div>
-                  <button id="btnDismissBeginnerCoach" type="button" class="cta-ink text-[10px] px-2 py-0.5 shrink-0">✕ 我會玩了</button>
+                  <button id="btnDismissBeginnerCoach" type="button" class="cta-ink text-[13px] px-2 py-0.5 shrink-0">✕ 我會玩了</button>
                 </div>
 
-                <!-- VISUAL NOVEL BUST-OUT DIALOGUE STRIP -->
+                <!-- VISUAL NOVEL BUST-OUT DIALOGUE STRIP (v19.0: 22px Seat Seal + Name + 18-19px Dialogue Only!) -->
                 <div id="spotlightStageBox" class="hidden cursor-pointer transition">
                   <div class="flex items-start gap-3.5">
                     <div class="vn-bust-wrap flex flex-col items-center gap-1">
@@ -321,36 +284,31 @@
                         class="hidden vn-portrait-frame vn-bust-img bg-slate-900 transition-all duration-300" />
                       <canvas id="speakerPortraitCanvas" width="144" height="144"
                         class="w-16 h-16 vn-portrait-frame bg-slate-900"></canvas>
-                      <span id="speakerMoodBadge"
-                        class="text-[9.5px] font-medium px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap">觀察中</span>
+                      <span id="speakerMoodBadge" class="hidden" aria-hidden="true">觀察中</span>
                     </div>
                     <div class="flex-1 min-w-0">
-                      <div id="speakerActiveBanner" class="py-0.5 mb-1.5 flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-2 min-w-0">
+                      <div id="speakerActiveBanner" class="py-0.5 mb-2 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
                           <span id="speakerSeatMedallion"
-                            class="w-5 h-5 text-[10.5px] font-black flex items-center justify-center shrink-0">01</span>
+                            class="w-10 h-10 text-[22px] font-black flex items-center justify-center shrink-0">01</span>
                           <span id="spotlightSpeakerBadge"
-                            class="font-serif-craft text-sm sm:text-base font-bold text-amber-300 truncate tracking-wide">主持播報</span>
-                          <span id="spotlightTraitTag" class="text-[10.5px] text-slate-400 hidden sm:inline"></span>
+                            class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-amber-300 truncate tracking-wide">主持播報</span>
+                          <span id="spotlightTraitTag" class="hidden" aria-hidden="true"></span>
                           <span id="speakerVoiceWave"
                             class="eq-bars playing text-amber-400 shrink-0"><span></span><span></span><span></span></span>
                         </div>
-                        <div class="spotlight-quiet-tools flex items-center gap-1 shrink-0">
-                          <button id="btnPauseVoice" type="button" class="cta-ink text-[10px] px-1.5 py-0.5"
+                        <div class="spotlight-quiet-tools flex items-center gap-1.5 shrink-0">
+                          <button id="btnPauseVoice" type="button" class="cta-ink text-[15px] px-2.5 py-1"
                             title="暫停或繼續目前語音與字幕 (快捷鍵 P)"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.5v13M15.5 5.5v13"/></svg>暫停</button>
-                          <button id="btnQuickVoiceSpeed" type="button" class="cta-ink text-[10px] px-1.5 py-0.5"
-                            title="切換語音播報倍速（1.0× / 1.15× / 1.3× / 1.5×）">1.0×</button>
-                          <button id="btnToggleSubtitleSize" type="button" class="cta-ink text-[10px] px-1.5 py-0.5 hidden sm:inline-flex"
-                            title="切換發言字幕字級（標準／大字護眼）">字級</button>
-                          <button id="btnReplayVoice" type="button" class="cta-ink text-[10px] px-2 py-0.5"
+                          <button id="btnReplayVoice" type="button" class="cta-ink text-[15px] px-2.5 py-1"
                             title="重播剛剛這段語音">重聽</button>
-                          <span id="speakerLiveStatePill" class="text-[10px] font-bold px-1.5 py-0.5">發言中</span>
+                          <span id="speakerLiveStatePill" class="hidden" aria-hidden="true">發言中</span>
                         </div>
                       </div>
                       <div id="speakerStanceStrip" class="hidden stance-strip-row"></div>
                       <div class="flex items-start gap-2.5">
                         <p id="spotlightText"
-                          class="flex-1 min-w-0 text-[13.5px] sm:text-[14.5px] font-medium text-slate-100 leading-relaxed min-h-[3.6rem] text-left tracking-wide">
+                          class="flex-1 min-w-0 text-[18px] sm:text-[19px] font-medium text-slate-100 leading-relaxed min-h-[3.8rem] text-left tracking-wide">
                         </p>
                         <div id="spotlightTargetReact" class="hidden target-react-card shrink-0" title="點擊查看對方情報">
                           <img id="targetReactImg" src="assets/portraits/qingming.jpg" alt="" class="target-react-avatar" />
@@ -366,8 +324,7 @@
                       </div>
                       <div class="spotlight-meta-foot flex items-center justify-between gap-2 mt-1">
                         <div id="speakerTurnStrip" class="turn-strip-row flex items-center gap-1 min-w-0"></div>
-                        <span id="typewriterStatusHint"
-                          class="text-[10px] text-slate-400 opacity-70 truncate shrink-0 hidden sm:inline">點亮字蒐證・空白鍵推進</span>
+                        <span id="typewriterStatusHint" class="hidden" aria-hidden="true"></span>
                         <span id="spotlightTurnCounter" class="hidden"></span>
                       </div>
                     </div>
@@ -380,56 +337,57 @@
                 <!-- SPECTATOR DUAL-FACTION DEDUCTION BAR (Good Hunts Wolves / Wolf Hunts God-Roles) -->
                 <div id="spectatorGuessBar" class="hidden spectator-guess-bar"></div>
 
-                <!-- 0. FULL-SCREEN INDIE TITLE SCREEN MENU -->
-                <div id="panelLobby" class="space-y-5">
-                  <div class="space-y-2">
+                <!-- 0. FULL-SCREEN INDIE TITLE SCREEN MENU (v19.0: 3 Clean Primary Buttons, Zero Subtitle Clutter) -->
+                <div id="panelLobby" class="space-y-6">
+                  <div class="space-y-2.5">
                     <div class="flex items-center gap-2.5 flex-wrap">
                       <div class="seal-chop" aria-hidden="true">善</div>
-                      <div class="text-[11px] tracking-[0.26em] text-amber-300/90 font-medium">林美山書院・反假訊息推理之夜</div>
-                      <span class="title-release-badge">公測 3.3</span>
+                      <div class="text-sm tracking-[0.22em] text-amber-300/90 font-medium">林美山書院・3D 推理桌遊</div>
+                      <span class="title-release-badge">公測 3.4</span>
                     </div>
                     <h1
                       class="font-serif-craft text-3xl sm:text-4xl font-black text-amber-50 tracking-[0.14em] leading-tight">
                       三好・雲起茶席</h1>
-                    <p id="lobbySeatSummary" class="text-xs text-slate-300 leading-relaxed max-w-[300px]">
+                    <p id="lobbySeatSummary" class="text-[15px] text-slate-200 leading-relaxed max-w-[320px]">
                       存好心明辨真偽，說好話凝聚共識。與八位書院夥伴圍坐茶席，在三好與四給間識破挑撥迷霧。
                     </p>
                   </div>
 
-                  <div class="space-y-2 max-w-[285px]">
+                  <div class="space-y-3 max-w-[290px]">
                     <button id="btnStartMatch" type="button" class="title-menu-item is-primary">
                       <span>入席開局</span>
-                      <span class="text-[10.5px] opacity-85 font-sans font-normal tracking-normal">立即對弈 →</span>
                     </button>
                     <button id="btnOpenSetupDrawer" type="button" class="title-menu-item">
                       <span>自訂茶席</span>
-                      <span class="text-[10.5px] text-slate-400 font-sans font-normal tracking-normal">人數・職能・難度</span>
                     </button>
                     <button id="btnOpenHeroShowcase" type="button" class="title-menu-item">
-                      <span>3D 角色鑑賞</span>
-                      <span class="text-[10.5px] text-amber-300/90 font-sans font-normal tracking-normal">清茗・360°</span>
+                      <span>角色鑑賞</span>
                     </button>
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                      <button id="btnStartTutorialMatch" type="button"
-                        class="cta-celadon py-2 px-2.5 text-xs">新手帶玩席</button>
-                      <button id="btnOpenTutorial" type="button" class="cta-brass py-2 px-2.5 text-xs"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v17H5.5A2.5 2.5 0 0 0 3 22V5.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v17h6.5a2.5 2.5 0 0 1 2.5 2V5.5z"/></svg>遊戲教學</button>
-                    </div>
                   </div>
 
-                  <div class="flex items-center flex-wrap gap-x-2.5 gap-y-1 pt-1 text-[11px] text-slate-400">
-                    <button id="btnStartJudgeShowcase" type="button"
-                      class="text-amber-300 hover:text-amber-200 transition underline underline-offset-4 font-semibold"
-                      title="直切第 2 天雙觀察員對跳、言票背離與四給逆轉精華局（適合評審 3 分鐘快速體驗）">評審三分鐘導覽</button>
-                    <span>·</span>
-                    <button id="btnTitleOpenGuide" type="button"
-                      class="hover:text-amber-300 transition underline underline-offset-4">書院規則與理念</button>
-                    <span>·</span>
-                    <button id="btnTitleOpenMusic" type="button"
-                      class="hover:text-amber-300 transition underline underline-offset-4">語音與雅樂</button>
-                    <span>·</span>
-                    <button id="btnTitleOpenCareer" type="button"
-                      class="hover:text-amber-300 transition underline underline-offset-4">書院印記</button>
-                  </div>
+                  <details class="lobby-more-drawer max-w-[290px]">
+                    <summary class="lobby-more-summary text-[14px] text-slate-300 hover:text-amber-200 cursor-pointer select-none">更多模式・教學與設定 ▾</summary>
+                    <div class="pt-3 space-y-2">
+                      <div class="grid grid-cols-2 gap-2">
+                        <button id="btnStartTutorialMatch" type="button" class="cta-celadon py-2 px-3 text-[15px]">新手帶玩</button>
+                        <button id="btnOpenTutorial" type="button" class="cta-brass py-2 px-3 text-[15px]">遊戲教學</button>
+                      </div>
+                      <div class="flex items-center flex-wrap gap-x-3 gap-y-1.5 pt-1 text-sm text-slate-300">
+                        <button id="btnStartJudgeShowcase" type="button"
+                          class="text-amber-300 hover:text-amber-200 transition underline underline-offset-4 font-semibold"
+                          title="直切第 2 天雙觀察員對跳、言票背離與四給逆轉精華局（適合評審 3 分鐘快速體驗）">評審導覽</button>
+                        <span>·</span>
+                        <button id="btnTitleOpenGuide" type="button"
+                          class="hover:text-amber-300 transition underline underline-offset-4">規則理念</button>
+                        <span>·</span>
+                        <button id="btnTitleOpenMusic" type="button"
+                          class="hover:text-amber-300 transition underline underline-offset-4">語音雅樂</button>
+                        <span>·</span>
+                        <button id="btnTitleOpenCareer" type="button"
+                          class="hover:text-amber-300 transition underline underline-offset-4">書院印記</button>
+                      </div>
+                    </div>
+                  </details>
                 </div>
 
                 <!-- v16.0 WOLF SELF-EXPLODE BAR (Alive Human Wolf in Sheriff/Day/Vote) -->
@@ -441,26 +399,26 @@
                 <!-- v16.0 FOUR-G HOPE 15s TWO-WAY CONFRONTATION PANEL (Zero God-View) -->
                 <div id="hopeConfrontationModal" class="hidden hope-confront-card msg-enter">
                   <div class="flex items-center justify-between gap-2 mb-1.5">
-                    <span id="hopeConfrontTitle" class="font-serif-craft text-xs font-bold text-sky-200 truncate">明燈雙向對質</span>
+                    <span id="hopeConfrontTitle" class="font-serif-craft text-sm font-bold text-sky-200 truncate">明燈雙向對質</span>
                     <div class="flex items-center gap-1.5 shrink-0">
                       <span id="hopeConfrontTimer" class="hope-timer-pill">15 秒</span>
-                      <button id="btnHopeConfrontClose" type="button" class="cta-ink text-[10px] px-2 py-0.5">收燈</button>
+                      <button id="btnHopeConfrontClose" type="button" class="cta-ink text-[13px] px-2 py-0.5">收燈</button>
                     </div>
                   </div>
                   <div id="hopeConfrontPicker" class="hidden grid grid-cols-3 sm:grid-cols-4 gap-1.5 mb-2"></div>
                   <div id="hopeConfrontResult" class="hidden space-y-1.5"></div>
                   <div class="flex justify-end mt-1.5">
-                    <button id="btnHopeConfrontStart" type="button" class="hidden cta-brass py-1 px-3 text-[11px]" disabled>開啟 15 秒明燈對質</button>
+                    <button id="btnHopeConfrontStart" type="button" class="hidden cta-brass py-1 px-3 text-[13px]" disabled>開啟 15 秒明燈對質</button>
                   </div>
                 </div>
 
                 <!-- v16.0 SPECTATOR 5s SPIRIT ROUND INTUITION BET BANNER -->
                 <div id="spiritBetBanner" class="hidden spirit-bet-banner msg-enter">
                   <div class="flex items-center justify-between gap-2 mb-1">
-                    <span id="spiritBetTitle" class="text-[11px] font-serif-craft font-bold text-amber-200 truncate">席外茶靈直覺押注</span>
+                    <span id="spiritBetTitle" class="text-[13px] font-serif-craft font-bold text-amber-200 truncate">席外茶靈直覺押注</span>
                     <div class="flex items-center gap-1.5 shrink-0">
                       <span id="spiritBetTimer" class="hope-timer-pill">5 秒</span>
-                      <button id="btnSpiritBetSkip" type="button" class="cta-ink text-[10px] px-2 py-0.5">略過</button>
+                      <button id="btnSpiritBetSkip" type="button" class="cta-ink text-[13px] px-2 py-0.5">略過</button>
                     </div>
                   </div>
                   <div id="spiritBetChips" class="flex items-center gap-1.5 flex-wrap"></div>
@@ -469,20 +427,20 @@
                 <!-- 2. AI SPEAKING / NIGHT WAIT ACTION BAR -->
                 <div id="panelStepper" class="hidden space-y-1.5">
                   <div id="stepperWaitRow"
-                    class="flex items-center justify-center gap-2 text-xs font-medium text-slate-300 py-1">
+                    class="flex items-center justify-center gap-2 text-sm font-medium text-slate-300 py-1">
                     <span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
                     <span id="stepperStatusText">行動進行中…</span>
                   </div>
 
                   <div id="turnWatchNotice"
                     class="hidden rounded px-2.5 py-1.5 bg-amber-500/15 border border-amber-400/50 flex items-center justify-between gap-2 msg-enter">
-                    <div id="turnWatchText" class="text-[11px] font-medium text-amber-200 leading-snug">
+                    <div id="turnWatchText" class="text-[13px] font-medium text-amber-200 leading-snug">
                       對方剛點名你，先記進筆記，輪到你的順位再回應。</div>
                     <div class="flex items-center gap-1 shrink-0">
                       <button id="btnWarmDeescalate" type="button"
-                        class="hidden cta-celadon py-1 px-2 text-[10.5px] shrink-0"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4c-2.2 3.8-2.6 7.5 0 12 2.6-4.5 2.2-8.2 0-12z"/><path d="M5 19.5h14"/></svg>說好話化解</button>
+                        class="hidden cta-celadon py-1 px-2 text-[13px] shrink-0"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4c-2.2 3.8-2.6 7.5 0 12 2.6-4.5 2.2-8.2 0-12z"/><path d="M5 19.5h14"/></svg>說好話化解</button>
                       <button id="btnQuickPinWatch" type="button"
-                        class="cta-brass py-1 px-2 text-[10.5px] shrink-0">記進筆記</button>
+                        class="cta-brass py-1 px-2 text-[13px] shrink-0">記進筆記</button>
                     </div>
                   </div>
 
@@ -491,9 +449,9 @@
                     <div class="flex items-center justify-between gap-2 mb-1.5">
                       <div class="flex items-center gap-1.5 min-w-0">
                         <span class="candlelit-seal">燭下覆茶</span>
-                        <span class="text-[11px] text-amber-100/90 truncate">圈選明日盯防對象（最多 2 席・朱筆留記）</span>
+                        <span class="text-[13px] text-amber-100/90 truncate">圈選明日盯防對象（最多 2 席・朱筆留記）</span>
                       </div>
-                      <button id="btnCandlelitDone" type="button" class="cta-brass py-0.5 px-2.5 text-[10.5px] shrink-0">覆茶靜候天明</button>
+                      <button id="btnCandlelitDone" type="button" class="cta-brass py-0.5 px-2.5 text-[13px] shrink-0">覆茶靜候天明</button>
                     </div>
                     <div id="candlelitSlipsList" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
                   </div>
@@ -501,44 +459,44 @@
                   <!-- TEA-CUP INTERJECTION POPOVER (Once Per Day Live Cross-Examination) -->
                   <div id="interjectPopover" class="hidden interject-popover msg-enter">
                     <div class="flex items-center justify-between gap-2 mb-1.5">
-                      <span id="interjectTargetTitle" class="text-[11px] font-serif-craft font-bold text-amber-200 truncate">舉杯當場追問（每日限 1 次）</span>
-                      <button id="btnInterjectCancel" type="button" class="cta-ink text-[10px] px-2 py-0.5 shrink-0">收盞</button>
+                      <span id="interjectTargetTitle" class="text-[13px] font-serif-craft font-bold text-amber-200 truncate">舉杯當場追問（每日限 1 次）</span>
+                      <button id="btnInterjectCancel" type="button" class="cta-ink text-[13px] px-2 py-0.5 shrink-0">收盞</button>
                     </div>
                     <div id="interjectQuickPrompts" class="grid grid-cols-1 sm:grid-cols-3 gap-1 mb-1.5"></div>
                     <div class="flex items-center gap-1.5">
                       <input id="interjectCustomInput" type="text" maxlength="18" placeholder="或自訂 18 字內短問（如：你為何保他？）…"
-                        class="flex-1 min-w-0 rounded px-2 py-1 text-[11px] border focus:outline-none focus:border-amber-400" />
-                      <button id="btnInterjectSend" type="button" class="cta-brass px-2.5 py-1 text-[11px] shrink-0">舉杯發問</button>
+                        class="flex-1 min-w-0 rounded px-2 py-1 text-[13px] border focus:outline-none focus:border-amber-400" />
+                      <button id="btnInterjectSend" type="button" class="cta-brass px-2.5 py-1 text-[13px] shrink-0">舉杯發問</button>
                     </div>
                   </div>
 
                   <div class="stepper-action-row flex items-center justify-between gap-2 pt-1 border-t border-slate-800/70">
                     <div id="detectiveMarkRow" class="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
                       <button id="btnMarkGood" type="button"
-                        class="cta-ink py-1 px-2.5 text-[11px] shrink-0"
+                        class="cta-ink py-1 px-2.5 text-[13px] shrink-0"
                         title="聆聽席點頭認同：表露欣賞神色並記為可信夥伴（後位茶友會察覺你的反應）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg>點頭認同</button>
                       <button id="btnMarkWolf" type="button"
-                        class="cta-ink py-1 px-2.5 text-[11px] shrink-0"
+                        class="cta-ink py-1 px-2.5 text-[13px] shrink-0"
                         title="聆聽席皺眉存疑：表露懷疑神色並記為可疑對象（後位茶友會察覺你的反應）"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9 9-9z"/><path d="M12 8.5v4.2"/><path d="M12 16h.01"/></svg>皺眉存疑</button>
                       <button id="btnTeaInterject" type="button"
-                        class="cta-brass py-1 px-2.5 text-[11px] shrink-0"
+                        class="cta-brass py-1 px-2.5 text-[13px] shrink-0"
                         title="每日限 1 次：趁對方發言露破綻時當場舉杯追問，逼出即時回防"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>舉杯追問</button>
                       <button id="btnPinCurrentSpeaker" type="button"
-                        class="cta-ink cta-quiet py-1 px-2 text-[11px] shrink-0"
+                        class="cta-ink cta-quiet py-1 px-2 text-[13px] shrink-0"
                         title="把他的立場存成重點便條，輪到你發言時一鍵引用"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-3.5L7 20V4z"/></svg>記重點</button>
-                      <button id="btnMicroInspect" type="button" class="cta-ink cta-quiet py-1 px-2 text-[11px] shrink-0"
+                      <button id="btnMicroInspect" type="button" class="cta-ink cta-quiet py-1 px-2 text-[13px] shrink-0"
                         title="每日限次偵測目前發言者的心虛緊張值，幫你判斷是否在說謊"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>看心虛</button>
-                      <button id="btnOpenPitSheet" type="button" class="pit-quick-btn py-1 px-2.5 text-[11px] shrink-0"
+                      <button id="btnOpenPitSheet" type="button" class="pit-quick-btn py-1 px-2.5 text-[13px] shrink-0"
                         title="開啟警長與歷輪公投票型手札，對照誰投誰來精準排坑"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg>票型排坑</button>
                       <span id="tableMomentumText"
                         class="hidden"></span>
                     </div>
-                    <div id="selfSpeakingRow" class="hidden flex-1 text-xs font-bold text-emerald-300 px-1 truncate">
+                    <div id="selfSpeakingRow" class="hidden flex-1 text-sm font-bold text-emerald-300 px-1 truncate">
                       01號 你 正在對全場發言…
                     </div>
                     <button id="btnSpectatorEndNow" type="button"
-                      class="hidden cta-ink py-1.5 px-2.5 text-xs shrink-0">直接結束</button>
-                    <button id="btnStepNext" type="button" class="cta-brass py-1.5 px-4 text-xs shrink-0">下一位 →</button>
+                      class="hidden cta-ink py-1.5 px-2.5 text-[15px] shrink-0">直接結束</button>
+                    <button id="btnStepNext" type="button" class="cta-brass py-1.5 px-4 text-[15px] shrink-0">下一位 →</button>
                   </div>
                 </div>
 
@@ -546,21 +504,21 @@
                 <div id="panelTargetAction" class="hidden space-y-2 text-center">
                   <div id="nightRoleTipStrip" class="hidden night-role-tip-strip"></div>
                   <div id="targetPromptBox"
-                    class="font-serif-craft text-xs sm:text-sm font-bold text-amber-100 leading-snug">
+                    class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-amber-100 leading-snug">
                     請點選席間座位
                   </div>
                   <div id="seerRevealCard" class="hidden rounded p-3 border text-center space-y-1.5 msg-enter">
                     <div id="seerRevealTitle" class="font-serif-craft text-sm font-bold"></div>
-                    <div id="seerRevealSub" class="text-[11px] opacity-90"></div>
+                    <div id="seerRevealSub" class="text-[13px] opacity-90"></div>
                     <button id="btnSeerRevealContinue" type="button"
-                      class="cta-brass mt-1 px-5 py-1.5 text-xs">記住了・繼續</button>
+                      class="cta-brass mt-1 px-5 py-1.5 text-[15px]">記住了・繼續</button>
                   </div>
                   <div id="witchSubPanel" class="hidden grid grid-cols-2 gap-2">
-                    <button id="btnWitchHeal" type="button" class="cta-celadon py-2 px-3 text-xs">暖心茶護回</button>
-                    <button id="btnWitchPurify" type="button" class="cta-ink py-2 px-3 text-xs">清心茶請離</button>
+                    <button id="btnWitchHeal" type="button" class="cta-celadon py-2 px-3 text-[15px]">暖心茶護回</button>
+                    <button id="btnWitchPurify" type="button" class="cta-ink py-2 px-3 text-[15px]">清心茶請離</button>
                   </div>
                   <div id="wolfTacticRow" class="hidden space-y-1">
-                    <div class="flex items-center justify-between gap-2 text-[10.5px] px-1">
+                    <div class="flex items-center justify-between gap-2 text-[13px] px-1">
                       <span class="font-serif-craft font-bold text-rose-200">屏風戰術三選一（隔日 AI 同伴照劇本演戲）</span>
                       <span id="wolfTacticTimerLabel" class="text-amber-300 font-bold tabular-nums"></span>
                     </div>
@@ -572,8 +530,8 @@
                   </div>
                   <div id="targetActionBtnsRow" class="flex items-center justify-center gap-2">
                     <button id="btnConfirmTarget" type="button"
-                      class="cta-cinnabar flex-1 max-w-xs py-1.5 px-4 text-xs">確認執行</button>
-                    <button id="btnSkipAction" type="button" class="cta-ink py-1.5 px-4 text-xs">略過</button>
+                      class="cta-cinnabar flex-1 max-w-xs py-1.5 px-4 text-[15px]">確認執行</button>
+                    <button id="btnSkipAction" type="button" class="cta-ink py-1.5 px-4 text-[15px]">略過</button>
                   </div>
                 </div>
 
@@ -582,11 +540,11 @@
                   <div class="flex items-center justify-between gap-2 flex-wrap gap-y-1">
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span id="playerTurnHeading"
-                        class="font-serif-craft text-xs sm:text-sm font-bold text-emerald-300 truncate">輪到你發言</span>
-                      <span id="playerSpeechTargetLabel" class="text-[11px] text-slate-400 truncate hidden sm:inline">對象：02號</span>
-                      <button id="btnCycleSpeechTarget" type="button" class="cta-ink text-[10px] px-2 py-0.5 shrink-0"
+                        class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-emerald-300 truncate">輪到你發言</span>
+                      <span id="playerSpeechTargetLabel" class="text-[13px] text-slate-400 truncate hidden sm:inline">對象：02號</span>
+                      <button id="btnCycleSpeechTarget" type="button" class="cta-ink text-[13px] px-2 py-0.5 shrink-0"
                         title="輪換下方 3 張快捷發言卡的點名對象 (快捷鍵 Tab)">換人 ↻</button>
-                      <span id="playerComboBonusHint" class="hidden text-[10px] text-amber-300 shrink-0"></span>
+                      <span id="playerComboBonusHint" class="hidden text-[13px] text-amber-300 shrink-0"></span>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
                       <div id="playerTurnOrderStrip" class="hidden"></div>
@@ -599,7 +557,7 @@
 
                   <div id="pinnedCluesTray" class="hidden flex items-center gap-1 flex-wrap"></div>
                   <div id="tableWindVaneSpeech"
-                    class="hidden wind-vane-strip text-[10.5px] text-amber-200/90 bg-slate-950/60 border border-amber-400/30 rounded px-2 py-1 truncate">
+                    class="hidden wind-vane-strip text-[13px] text-amber-200/90 bg-slate-950/60 border border-amber-400/30 rounded px-2 py-1 truncate">
                   </div>
 
                   <!-- Hidden legacy duplicate dashboard (info already lives cleanly in bottom-left #cornerRoleTile) -->
@@ -613,19 +571,19 @@
                     <div id="pitSheriffRefStrip" class="hidden pit-sheriff-strip"></div>
                     <div id="pitBadgeFlowBar" class="hidden badge-flow-bar"></div>
                     <div id="playerPitBuilder" class="pit-builder-box"></div>
-                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-700/50 text-[10px] text-slate-400">
+                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-700/50 text-[13px] text-slate-400">
                       <span>點上方座號可自動組句，或練習婉轉修辭：</span>
                       <button id="btnQuickSpiceDemo" type="button"
-                        class="cta-ink cta-quiet px-2 py-0.5 text-[10px] shrink-0"
+                        class="cta-ink cta-quiet px-2 py-0.5 text-[13px] shrink-0"
                         title="填入一句語氣較急的範例，體驗三選一婉轉潤飾靈感籤"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2.5 3.4 5.5 6 5.5 10a5.5 5.5 0 0 1-11 0"/></svg>語氣範例</button>
                     </div>
                   </div>
 
                   <!-- Three-Option Diegetic Rephrase Slips Tray (Player retains agency!) -->
                   <div id="rephraseChoicesTray" class="hidden rephrase-tray space-y-1 msg-enter">
-                    <div class="flex items-center justify-between gap-2 text-[10.5px]">
+                    <div class="flex items-center justify-between gap-2 text-[13px]">
                       <span id="rephraseTrayHint" class="text-amber-200/95 font-medium truncate">語氣稍急，不妨添一分婉轉（挑一張靈感籤潤飾詞句）：</span>
-                      <button id="btnCloseRephraseTray" type="button" class="text-[10px] text-slate-400 hover:text-amber-200 shrink-0">維持原句</button>
+                      <button id="btnCloseRephraseTray" type="button" class="text-[13px] text-slate-400 hover:text-amber-200 shrink-0">維持原句</button>
                     </div>
                     <div id="rephraseSlipsGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
                   </div>
@@ -633,17 +591,17 @@
                   <!-- Clean Single-Line Free Speech + Mic Voice Input + Auto-Appearing Gentle Rephrase -->
                   <div class="free-speech-bar flex items-center gap-1.5">
                     <button id="btnMicVoiceSpeech" type="button"
-                      class="cta-ink px-2 py-1.5 text-[11px] shrink-0"
+                      class="cta-ink px-2 py-1.5 text-[13px] shrink-0"
                       title="開口說話輸入發言（瀏覽器原生繁中語音辨識，再按一次停止）"><svg class="sh-ico sh-ico-jade sh-ico-solo" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9v6M12 5v14M16 9v6M4 11v2M20 11v2"/></svg></button>
                     <input id="quickFreeInput" type="text" placeholder="點上方卡牌直接講，或自行輸入發言／點左側麥克風開口說…"
-                      class="flex-1 min-w-0 rounded px-2.5 py-1.5 text-xs border focus:outline-none focus:border-emerald-400" />
+                      class="flex-1 min-w-0 rounded px-2.5 py-1.5 text-sm border focus:outline-none focus:border-emerald-400" />
                     <span id="speechCharCounter" class="hidden speech-char-counter shrink-0" aria-live="polite">0 / 28</span>
                     <span id="speechThreeGoodBadge" class="hidden speech-tg-badge shrink-0"></span>
                     <button id="btnQuickInlineRewrite" type="button"
-                      class="hidden cta-brass px-2.5 py-1.5 text-[11px] shrink-0"
+                      class="hidden cta-brass px-2.5 py-1.5 text-[13px] shrink-0"
                       title="展開三選一茶席潤飾靈感籤，保留原意並添一分婉轉說服力"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>潤飾詞句</button>
                     <button id="btnQuickFreeSend" type="button"
-                      class="cta-celadon px-3.5 py-1.5 text-xs shrink-0"
+                      class="cta-celadon px-3.5 py-1.5 text-[15px] shrink-0"
                       title="將輸入欄內的發言對全場送出">送出</button>
                   </div>
                   <div id="quickStancePills" class="hidden"></div>
@@ -665,23 +623,23 @@
                 <div id="panelVote" class="hidden space-y-1.5">
                   <div id="voteGoodwillBadge" class="hidden vote-goodwill-badge"></div>
                   <div id="tableWindVaneVote"
-                    class="hidden wind-vane-strip text-[10.5px] text-amber-200/90 bg-slate-950/60 border border-amber-400/30 rounded px-2 py-1 truncate">
+                    class="hidden wind-vane-strip text-[13px] text-amber-200/90 bg-slate-950/60 border border-amber-400/30 rounded px-2 py-1 truncate">
                   </div>
                   <div class="flex items-center justify-between gap-3 flex-wrap gap-y-2">
                     <div class="min-w-0 text-left">
-                      <div id="votePromptLabel" class="font-serif-craft text-xs sm:text-sm font-bold text-rose-300">
+                      <div id="votePromptLabel" class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-rose-300">
                         點選席間座位投出公投票</div>
-                      <div class="flex items-center gap-2 text-[11px]">
+                      <div class="flex items-center gap-2 text-[13px]">
                         <span id="selectedVoteBadge" class="text-amber-300 font-medium">尚未鎖定對象</span>
                         <span id="blitzVoteTimerBadge" class="hidden blitz-vote-badge"></span>
                         <span id="voteTargetIntelLine" class="hidden text-slate-400 truncate"></span>
                       </div>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
-                      <button id="btnSheriffRally" type="button" class="hidden cta-brass py-2 px-2.5 text-xs shrink-0"
+                      <button id="btnSheriffRally" type="button" class="hidden cta-brass py-2 px-2.5 text-[15px] shrink-0"
                         title="警長號召好人集中歸票"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>警長歸票</button>
-                      <button id="btnCastVote" type="button" class="cta-cinnabar py-2 px-4 text-xs">確認投票</button>
-                      <button id="btnAbstainVote" type="button" class="cta-ink py-2 px-3 text-xs">棄票</button>
+                      <button id="btnCastVote" type="button" class="cta-cinnabar py-2 px-4 text-[15px]">確認投票</button>
+                      <button id="btnAbstainVote" type="button" class="cta-ink py-2 px-3 text-[15px]">棄票</button>
                     </div>
                   </div>
                 </div>
@@ -689,17 +647,17 @@
                 <!-- 5B. VOTE TALLY REVEAL STRIP -->
                 <div id="panelVoteResult" class="hidden space-y-2 msg-enter">
                   <div class="flex items-center justify-between gap-2">
-                    <div id="voteResultHeadline" class="font-serif-craft text-xs sm:text-sm font-bold text-amber-300">
+                    <div id="voteResultHeadline" class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-amber-300">
                       開票結果</div>
                     <div id="voteResultBtnRow" class="flex items-center gap-1.5 shrink-0">
                       <button id="btnVoteEndNow" type="button"
-                        class="hidden cta-ink py-1.5 px-3 text-xs">直接結束看底牌</button>
+                        class="hidden cta-ink py-1.5 px-3 text-[15px]">直接結束看底牌</button>
                       <button id="btnVoteResultNext" type="button"
-                        class="cta-cinnabar py-1.5 px-4 text-xs">進入夜晚</button>
+                        class="cta-cinnabar py-1.5 px-4 text-[15px]">進入夜晚</button>
                     </div>
                   </div>
                   <div id="votePlayerOutChoiceNotice"
-                    class="hidden rounded px-3 py-1.5 bg-rose-500/15 border border-rose-400/45 text-xs text-rose-100">
+                    class="hidden rounded px-3 py-1.5 bg-rose-500/15 border border-rose-400/45 text-sm text-rose-100">
                     你已被請離茶席！要直接結束揭曉全員底牌，還是繼續留下觀戰？
                   </div>
                   <div id="voteResultBars"
@@ -711,65 +669,65 @@
                 <div id="panelLastWords" class="hidden space-y-2 msg-enter">
                   <div class="flex items-center justify-between gap-2">
                     <span id="lastWordsHeading"
-                      class="font-serif-craft text-xs sm:text-sm font-bold text-amber-300">發表離席遺言（AI 將記住你的線索）</span>
+                      class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-amber-300">發表離席遺言（AI 將記住你的線索）</span>
                     <button id="btnSkipLastWords" type="button"
-                      class="cta-ink text-[11px] px-2.5 py-0.5 shrink-0">略過</button>
+                      class="cta-ink text-[13px] px-2.5 py-0.5 shrink-0">略過</button>
                   </div>
                   <div id="lastWordsSubHint" class="hidden"></div>
                   <div id="lastWordsChips" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
                   <div class="flex items-center gap-1.5">
                     <input id="lastWordsFreeInput" type="text" placeholder="或寫下離席提醒（如：昨晚查 3號 是狼）…"
-                      class="flex-1 min-w-0 rounded px-2.5 py-1.5 text-xs border focus:outline-none focus:border-amber-400" />
+                      class="flex-1 min-w-0 rounded px-2.5 py-1.5 text-sm border focus:outline-none focus:border-amber-400" />
                     <button id="btnSendLastWords" type="button"
-                      class="cta-brass px-3.5 py-1.5 text-xs shrink-0">送出遺言</button>
+                      class="cta-brass px-3.5 py-1.5 text-[15px] shrink-0">送出遺言</button>
                   </div>
                 </div>
 
                 <!-- 5D. SHERIFF BADGE TRANSFER -->
                 <div id="panelSheriffTransfer" class="hidden space-y-2 text-center msg-enter">
                   <div id="sheriffTransferHeadline"
-                    class="font-serif-craft text-xs sm:text-sm font-bold text-amber-300"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>警長離席，請選擇接棒警徽的存活夥伴，或當場撕毀警徽
+                    class="font-serif-craft text-[18px] sm:text-[22px] font-bold text-amber-300"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>警長離席，請選擇接棒警徽的存活夥伴，或當場撕毀警徽
                   </div>
                   <div id="sheriffTransferFlowGuide" class="hidden badge-flow-guide text-left"></div>
                   <div id="sheriffTransferButtons" class="flex items-center justify-center gap-1.5 flex-wrap"></div>
-                  <button id="btnShatterSheriffBadge" type="button" class="cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>撕毀警徽（本局不再有警長）</button>
+                  <button id="btnShatterSheriffBadge" type="button" class="cta-ink py-1.5 px-3 text-[15px]"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>撕毀警徽（本局不再有警長）</button>
                 </div>
 
                 <!-- 5E. TURN-BY-TURN SHERIFF ELECTION (上警輪流發言 & 警下投票決選) -->
                 <div id="panelSheriffElection" class="hidden space-y-2 text-center msg-enter">
                   <div class="flex items-center justify-between gap-2 flex-wrap">
                     <div id="sheriffElectionHeadline"
-                      class="font-serif-craft text-xs sm:text-sm font-bold text-amber-300 text-left"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>上警競選・輪流發言拉票</div>
+                      class="font-serif-craft text-[18px] sm:text-[22px] font-bold text-amber-300 text-left"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>上警競選・輪流發言拉票</div>
                     <div id="sheriffOrderStrip" class="flex items-center gap-1 flex-wrap justify-end"></div>
                   </div>
                   <div id="sheriffElectionCandidates" class="space-y-1 text-left max-h-[128px] overflow-y-auto custom-scroll"></div>
                   <div id="sheriffPlayerTurnBox" class="hidden space-y-1.5 text-left rounded p-2 border border-amber-400/40 bg-amber-500/10">
-                    <div class="text-[11px] font-bold text-amber-200"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>輪到你警上發言（選一張競選宣言或自行輸入）：</div>
+                    <div class="text-[13px] font-bold text-amber-200"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>輪到你警上發言（選一張競選宣言或自行輸入）：</div>
                     <div id="sheriffPlayerBadgeFlowBar" class="badge-flow-bar"></div>
                     <div id="sheriffPlayerQuickChips" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
                     <div class="flex items-center gap-1.5">
                       <input id="sheriffPlayerInput" type="text" placeholder="輸入你的上警宣言與警徽流…"
-                        class="flex-1 min-w-0 rounded px-2.5 py-1.5 text-xs border focus:outline-none focus:border-amber-400" />
-                      <button id="btnSheriffPlayerSend" type="button" class="cta-brass px-3 py-1.5 text-xs shrink-0">送出警上發言</button>
+                        class="flex-1 min-w-0 rounded px-2.5 py-1.5 text-sm border focus:outline-none focus:border-amber-400" />
+                      <button id="btnSheriffPlayerSend" type="button" class="cta-brass px-3 py-1.5 text-[15px] shrink-0">送出警上發言</button>
                     </div>
                   </div>
                   <div id="sheriffElectionVoteRow" class="flex items-center justify-center gap-1.5 flex-wrap"></div>
                   <div id="sheriffElectionBtnRow" class="flex items-center justify-center gap-2 flex-wrap">
-                    <button id="btnSheriffRun" type="button" class="cta-brass py-1.5 px-3 text-xs"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M7.5 10.5L12 6l4.5 4.5M5 19h14"/></svg>我要上警競選</button>
-                    <button id="btnSheriffStartSpeech" type="button" class="cta-celadon py-1.5 px-3 text-xs">警下聽選（開始輪流發言）</button>
-                    <button id="btnSheriffNextSpeech" type="button" class="hidden cta-brass py-1.5 px-4 text-xs">下一位候選人 → <kbd class="ui-kbd ml-1">Space</kbd></button>
-                    <button id="btnSheriffWithdraw" type="button" class="hidden cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-muted" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v18M6 4h11l-2.5 4.2L17 12.5H6"/></svg>拱手退水</button>
-                    <button id="btnSheriffPass" type="button" class="cta-ink py-1.5 px-3 text-xs"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><polygon points="15.5 8.5 13.4 13.4 8.5 15.5 10.6 10.6 15.5 8.5"/></svg>略過發言・直接決選</button>
+                    <button id="btnSheriffRun" type="button" class="cta-brass py-1.5 px-3 text-[15px]"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M7.5 10.5L12 6l4.5 4.5M5 19h14"/></svg>我要上警競選</button>
+                    <button id="btnSheriffStartSpeech" type="button" class="cta-celadon py-1.5 px-3 text-[15px]">警下聽選（開始輪流發言）</button>
+                    <button id="btnSheriffNextSpeech" type="button" class="hidden cta-brass py-1.5 px-4 text-[15px]">下一位候選人 → <kbd class="ui-kbd ml-1">Space</kbd></button>
+                    <button id="btnSheriffWithdraw" type="button" class="hidden cta-ink py-1.5 px-3 text-[15px]"><svg class="sh-ico sh-ico-muted" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v18M6 4h11l-2.5 4.2L17 12.5H6"/></svg>拱手退水</button>
+                    <button id="btnSheriffPass" type="button" class="cta-ink py-1.5 px-3 text-[15px]"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><polygon points="15.5 8.5 13.4 13.4 8.5 15.5 10.6 10.6 15.5 8.5"/></svg>略過發言・直接決選</button>
                   </div>
                 </div>
 
                 <!-- 5F. SHERIFF ORDER PICKER (警左 / 警右順逆時針) -->
                 <div id="panelSheriffOrder" class="hidden space-y-2 text-center msg-enter">
                   <div id="sheriffOrderHeadline"
-                    class="font-serif-craft text-xs sm:text-sm font-bold text-amber-300"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>你是本局警長，請指定今日輪流發言順序（你將壓軸末置位歸票）</div>
+                    class="font-serif-craft text-[18px] sm:text-[22px] font-bold text-amber-300"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>你是本局警長，請指定今日輪流發言順序（你將壓軸末置位歸票）</div>
                   <div class="flex items-center justify-center gap-2">
-                    <button id="btnSheriffOrderCW" type="button" class="cta-brass py-1.5 px-4 text-xs">↻ 順時針開講</button>
-                    <button id="btnSheriffOrderCCW" type="button" class="cta-celadon py-1.5 px-4 text-xs">↺ 逆時針開講</button>
+                    <button id="btnSheriffOrderCW" type="button" class="cta-brass py-1.5 px-4 text-[15px]">↻ 順時針開講</button>
+                    <button id="btnSheriffOrderCCW" type="button" class="cta-celadon py-1.5 px-4 text-[15px]">↺ 逆時針開講</button>
                   </div>
                 </div>
 
@@ -781,21 +739,21 @@
                         class="font-serif-craft text-xl font-black text-amber-300 tracking-wider">勝負揭曉</h3>
                       <span id="playerGradeBadge" class="seal-chop text-sm">S</span>
                     </div>
-                    <p id="gameOverReason" class="text-xs text-slate-200 text-left mt-1.5"></p>
+                    <p id="gameOverReason" class="text-sm text-slate-200 text-left mt-1.5"></p>
                     <p id="gameOverTruthLine"
-                      class="text-xs font-medium text-amber-200 text-left mt-2 pt-2 border-t border-amber-400/20 leading-relaxed">
+                      class="text-sm font-medium text-amber-200 text-left mt-2 pt-2 border-t border-amber-400/20 leading-relaxed">
                     </p>
-                    <p id="gameOverMissionLine" class="hidden text-[11px] font-bold text-emerald-300 text-left mt-1.5">
+                    <p id="gameOverMissionLine" class="hidden text-[13px] font-bold text-emerald-300 text-left mt-1.5">
                     </p>
                   </div>
                   <div id="gameOverGuessBox" class="hidden gameover-guess-box"></div>
-                  <div id="gameOverMetrics" class="grid grid-cols-4 gap-2 text-center text-xs"></div>
+                  <div id="gameOverMetrics" class="grid grid-cols-4 gap-2 text-center text-sm"></div>
                   <div id="gameOverCoachBox" class="space-y-1 text-left mt-2"></div>
                   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <button id="btnReviewRolesModal" type="button" class="cta-ink py-2 px-2 text-xs">復盤手札</button>
-                    <button id="btnExportReplay" type="button" class="cta-celadon py-2 px-2 text-xs">匯出戰報</button>
-                    <button id="btnPlayAgain" type="button" class="cta-cinnabar py-2 px-2 text-xs">再戰一局</button>
-                    <button id="btnBackToTitleOver" type="button" class="cta-ink py-2 px-2 text-xs">返回主畫面</button>
+                    <button id="btnReviewRolesModal" type="button" class="cta-ink py-2 px-2 text-[15px]">復盤手札</button>
+                    <button id="btnExportReplay" type="button" class="cta-celadon py-2 px-2 text-[15px]">匯出戰報</button>
+                    <button id="btnPlayAgain" type="button" class="cta-cinnabar py-2 px-2 text-[15px]">再戰一局</button>
+                    <button id="btnBackToTitleOver" type="button" class="cta-ink py-2 px-2 text-[15px]">返回主畫面</button>
                   </div>
                 </div>
 
@@ -877,18 +835,18 @@
   <div id="roleGuidePopover" class="hidden role-guide-popover custom-scroll msg-enter" role="dialog" aria-label="職能與三好指南">
     <div class="flex items-center justify-between gap-2 pb-1.5 border-b border-amber-400/25">
       <div class="flex items-center gap-1.5 min-w-0">
-        <span id="roleGuideTitle" class="font-serif-craft text-xs font-bold text-amber-200 truncate">職能指南</span>
-        <span id="roleGuideBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-400/35 shrink-0">好人陣營</span>
+        <span id="roleGuideTitle" class="font-serif-craft text-sm font-bold text-amber-200 truncate">職能指南</span>
+        <span id="roleGuideBadge" class="text-[13px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-400/35 shrink-0">好人陣營</span>
       </div>
       <div class="flex items-center gap-1.5 shrink-0">
         <button id="btnOpenTutorialFromGuide" type="button"
-          class="text-[10px] px-1.5 py-0.5 rounded border border-emerald-400/40 text-emerald-200 hover:bg-emerald-500/20 transition"
+          class="text-[13px] px-1.5 py-0.5 rounded border border-emerald-400/40 text-emerald-200 hover:bg-emerald-500/20 transition"
           title="開啟 6 步驟完整遊戲使用教學"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v17H5.5A2.5 2.5 0 0 0 3 22V5.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v17h6.5a2.5 2.5 0 0 1 2.5 2V5.5z"/></svg>教學</button>
         <button id="btnCloseRoleGuide" type="button"
           class="intel-close-btn" aria-label="關閉職能指南">✕</button>
       </div>
     </div>
-    <div id="roleGuideBody" class="space-y-1.5 text-[11px] leading-relaxed pt-1.5"></div>
+    <div id="roleGuideBody" class="space-y-1.5 text-[13px] leading-relaxed pt-1.5"></div>
   </div>
 
   <!-- 1. NO-FORM SLIDE-OUT MATCH SETUP DRAWER -->
@@ -896,107 +854,107 @@
     <div class="setup-drawer-sheet custom-scroll">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
-          <div class="text-[10px] tracking-[0.25em] text-amber-300/80">MATCH LEDGER</div>
+          <div class="text-[13px] tracking-[0.25em] text-amber-300/80">MATCH LEDGER</div>
           <h2 class="font-serif-craft text-lg font-bold text-amber-100 tracking-wider">自訂茶席名冊</h2>
         </div>
-        <button id="btnCloseSetupDrawer" type="button" class="cta-ink px-2.5 py-1 text-xs">返回</button>
+        <button id="btnCloseSetupDrawer" type="button" class="cta-ink px-2.5 py-1 text-[15px]">返回</button>
       </div>
 
       <div class="space-y-1.5">
-        <div class="text-[11px] font-medium text-slate-400">茶席人數（6 / 8 / 10 / 12 人局）</div>
+        <div class="text-[13px] font-medium text-slate-400">茶席人數（6 / 8 / 10 / 12 人局）</div>
         <div class="grid grid-cols-2 gap-2">
-          <button type="button" data-setup-count="6" class="seg-choice">六人速戰<span class="block text-[9px] text-slate-400 font-normal">2狼 2神 2民</span></button>
-          <button type="button" data-setup-count="8" class="seg-choice is-selected">八人標準<span class="block text-[9px] text-slate-400 font-normal">2狼 3-4神</span></button>
-          <button type="button" data-setup-count="10" class="seg-choice">十人進階<span class="block text-[9px] text-slate-400 font-normal">3狼 4神 3民</span></button>
-          <button type="button" data-setup-count="12" class="seg-choice">十二人大局<span class="block text-[9px] text-slate-400 font-normal">4狼 4神 4民</span></button>
+          <button type="button" data-setup-count="6" class="seg-choice">六人速戰<span class="block text-[13px] text-slate-400 font-normal">2狼 2神 2民</span></button>
+          <button type="button" data-setup-count="8" class="seg-choice is-selected">八人標準<span class="block text-[13px] text-slate-400 font-normal">2狼 3-4神</span></button>
+          <button type="button" data-setup-count="10" class="seg-choice">十人進階<span class="block text-[13px] text-slate-400 font-normal">3狼 4神 3民</span></button>
+          <button type="button" data-setup-count="12" class="seg-choice">十二人大局<span class="block text-[13px] text-slate-400 font-normal">4狼 4神 4民</span></button>
         </div>
       </div>
 
       <div class="space-y-1.5">
-        <div class="text-[11px] font-medium text-slate-400">點選本局職能牌</div>
+        <div class="text-[13px] font-medium text-slate-400">點選本局職能牌</div>
         <div class="grid grid-cols-2 gap-2">
           <button type="button" data-setup-role="seer" class="role-pick-card is-selected">
-            <div class="font-serif-craft text-xs font-bold text-amber-300">明心觀察員</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">每晚靜心查證真偽</div>
+            <div class="font-serif-craft text-sm font-bold text-amber-300">明心觀察員</div>
+            <div class="text-[13px] text-slate-400 mt-0.5">每晚靜心查證真偽</div>
           </button>
           <button type="button" data-setup-role="witch" class="role-pick-card">
-            <div class="font-serif-craft text-xs font-bold text-emerald-300">滴水奉茶師</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">暖心護回・清心請離</div>
+            <div class="font-serif-craft text-sm font-bold text-emerald-300">滴水奉茶師</div>
+            <div class="text-[13px] text-slate-400 mt-0.5">暖心護回・清心請離</div>
           </button>
           <button type="button" data-setup-role="hunter" class="role-pick-card">
-            <div class="font-serif-craft text-xs font-bold text-sky-300">直心糾察長</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">8人席・正氣共鳴</div>
+            <div class="font-serif-craft text-sm font-bold text-sky-300">直心糾察長</div>
+            <div class="text-[13px] text-slate-400 mt-0.5">8人席・正氣共鳴</div>
           </button>
           <button type="button" data-setup-role="guard" class="role-pick-card">
-            <div class="font-serif-craft text-xs font-bold text-cyan-300">護心守衛</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">8人進階・護心擋霧</div>
+            <div class="font-serif-craft text-sm font-bold text-cyan-300">護心守衛</div>
+            <div class="text-[13px] text-slate-400 mt-0.5">8人進階・護心擋霧</div>
           </button>
           <button type="button" data-setup-role="villager" class="role-pick-card">
-            <div class="font-serif-craft text-xs font-bold text-slate-200">三好書院生</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">理性傾聽守護茶席</div>
+            <div class="font-serif-craft text-sm font-bold text-slate-200">三好書院生</div>
+            <div class="text-[13px] text-slate-400 mt-0.5">理性傾聽守護茶席</div>
           </button>
           <button type="button" data-setup-role="elder" class="role-pick-card">
-            <div class="font-serif-craft text-xs font-bold text-teal-300">清心長老</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">10/12人・首誤投亮牌豁免</div>
+            <div class="font-serif-craft text-sm font-bold text-teal-300">清心長老</div>
+            <div class="text-[13px] text-slate-400 mt-0.5">10/12人・首誤投亮牌豁免</div>
           </button>
           <button type="button" data-setup-role="wolf" class="role-pick-card">
-            <div class="font-serif-craft text-xs font-bold text-rose-300">鍵盤酸民狼</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">反派視角暗中佈局</div>
+            <div class="font-serif-craft text-sm font-bold text-rose-300">鍵盤酸民狼</div>
+            <div class="text-[13px] text-slate-400 mt-0.5">反派視角暗中佈局</div>
           </button>
           <button type="button" data-setup-role="wolf_king" class="role-pick-card">
-            <div class="font-serif-craft text-xs font-bold text-red-300">流言首領</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">10/12人・公投離席可反撲</div>
+            <div class="font-serif-craft text-sm font-bold text-red-300">流言首領</div>
+            <div class="text-[13px] text-slate-400 mt-0.5">10/12人・公投離席可反撲</div>
           </button>
           <button type="button" data-setup-role="random" class="role-pick-card">
-            <div class="font-serif-craft text-xs font-bold text-amber-200">隨機抽牌</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">驚喜隨機分配身分</div>
+            <div class="font-serif-craft text-sm font-bold text-amber-200">隨機抽牌</div>
+            <div class="text-[13px] text-slate-400 mt-0.5">驚喜隨機分配身分</div>
           </button>
         </div>
       </div>
 
       <div class="space-y-1.5">
-        <div class="text-[11px] font-medium text-slate-400">AI 推理強度</div>
+        <div class="text-[13px] font-medium text-slate-400">AI 推理強度</div>
         <div class="grid grid-cols-3 gap-1.5">
-          <button type="button" data-setup-diff="easy" class="seg-choice text-[11px]">新手友善</button>
-          <button type="button" data-setup-diff="normal" class="seg-choice is-selected text-[11px]">經典推理</button>
-          <button type="button" data-setup-diff="pro" class="seg-choice text-[11px]">凹嗚高手</button>
+          <button type="button" data-setup-diff="easy" class="seg-choice text-[13px]">新手友善</button>
+          <button type="button" data-setup-diff="normal" class="seg-choice is-selected text-[13px]">經典推理</button>
+          <button type="button" data-setup-diff="pro" class="seg-choice text-[13px]">凹嗚高手</button>
         </div>
       </div>
 
       <div class="space-y-1.5">
-        <div class="text-[11px] font-medium text-slate-400">茶席規則深度</div>
+        <div class="text-[13px] font-medium text-slate-400">茶席規則深度</div>
         <div class="grid grid-cols-2 gap-2">
-          <button type="button" data-setup-depth="classic" class="seg-choice text-[11px]">
+          <button type="button" data-setup-depth="classic" class="seg-choice text-[13px]">
             經典精簡席
-            <span class="block text-[9px] text-slate-400 font-normal mt-0.5">新手推薦・純粹推理</span>
+            <span class="block text-[13px] text-slate-400 font-normal mt-0.5">新手推薦・純粹推理</span>
           </button>
-          <button type="button" data-setup-depth="full" class="seg-choice is-selected text-[11px]">
+          <button type="button" data-setup-depth="full" class="seg-choice is-selected text-[13px]">
             完整書院席
-            <span class="block text-[9px] text-slate-400 font-normal mt-0.5">茶會事件＋微表情＋任務</span>
+            <span class="block text-[13px] text-slate-400 font-normal mt-0.5">茶會事件＋微表情＋任務</span>
           </button>
         </div>
       </div>
 
       <div class="flex items-center justify-between p-2.5 rounded bg-slate-950/60 border border-slate-800">
         <div>
-          <div class="text-xs font-bold text-amber-200">警長歸票制（含上警競選）</div>
-          <div class="text-[10px] text-slate-400">選出 1 位警長擁有 1.5 票權重與末置位歸票權</div>
+          <div class="text-sm font-bold text-amber-200">警長歸票制（含上警競選）</div>
+          <div class="text-[13px] text-slate-400">選出 1 位警長擁有 1.5 票權重與末置位歸票權</div>
         </div>
-        <button id="btnSetupSheriffToggle" type="button" class="seg-choice text-[11px] shrink-0">未開啟</button>
+        <button id="btnSetupSheriffToggle" type="button" class="seg-choice text-[13px] shrink-0">未開啟</button>
       </div>
 
       <div class="flex items-center justify-between p-2.5 rounded bg-slate-950/60 border border-slate-800">
         <div>
-          <div class="text-xs font-bold text-cyan-200">護心守衛進階板（預女獵守）</div>
-          <div class="text-[10px] text-slate-400">8人局替換1名書院生・不可連守、同守同救破盾</div>
+          <div class="text-sm font-bold text-cyan-200">護心守衛進階板（預女獵守）</div>
+          <div class="text-[13px] text-slate-400">8人局替換1名書院生・不可連守、同守同救破盾</div>
         </div>
-        <button id="btnSetupGuardToggle" type="button" class="seg-choice text-[11px] shrink-0">未開啟</button>
+        <button id="btnSetupGuardToggle" type="button" class="seg-choice text-[13px] shrink-0">未開啟</button>
       </div>
 
       <div class="space-y-1.5">
         <div class="flex items-center justify-between">
-          <div class="text-[11px] font-medium text-slate-400">雲起奇局（生涯勝場／勳章解鎖）</div>
-          <span id="setupVariantStatus" class="text-[10px] text-amber-300/90">標準席</span>
+          <div class="text-[13px] font-medium text-slate-400">雲起奇局（生涯勝場／勳章解鎖）</div>
+          <span id="setupVariantStatus" class="text-[13px] text-amber-300/90">標準席</span>
         </div>
         <div id="setupVariantsGrid" class="grid grid-cols-1 gap-1.5"></div>
       </div>
@@ -1065,26 +1023,67 @@
     </div>
   </div>
 
-  <!-- 3. 360° ANIME 3D CHARACTER SHOWCASE STUDIO ("清茗" & 全席 8 位夥伴) -->
+  <!-- 3. 360° ANIME 3D CHARACTER SHOWCASE STUDIO (v19.0: Prev/Next Arrows + 3 Tea-Robe Swatches) -->
   <div id="heroShowcaseOverlay" class="hidden">
     <div class="flex items-start justify-between gap-2.5">
-      <div class="hud-pill-shell showcase-header-pill flex-col items-start gap-0.5 py-2.5 px-3.5 min-w-0 flex-1 max-w-[78vw]">
-        <div class="flex items-center gap-2">
-          <span class="seal-chop w-6 h-6 text-xs shrink-0">茗</span>
+      <div class="hud-pill-shell showcase-header-pill flex-col items-start gap-1 py-3 px-4 min-w-0 flex-1 max-w-[78vw]">
+        <div class="flex items-center gap-2.5">
+          <span id="heroShowcaseSeal" class="seal-chop w-7 h-7 text-sm shrink-0">茗</span>
           <span id="heroShowcaseTitle"
-            class="font-serif-craft text-base font-bold text-amber-200 tracking-wider">清茗・雲茶書靈</span>
+            class="font-serif-craft text-[22px] font-bold text-amber-200 tracking-wider">清茗・雲茶書靈</span>
         </div>
-        <div id="heroShowcaseSub" class="text-[10.5px] text-slate-400">全 12 席次二次元 VRM 3D 鑑賞台（11 位 AI 專屬剪影配件、坐姿習慣與社團關係）｜拖曳 360° 旋轉、滾輪縮放</div>
-        <div id="showcasePersonaBio" class="text-[11px] text-amber-100/90 mt-1 leading-snug"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5c-7 0-12 4.5-13 13 8.5-1 13-6 13-13z"/><path d="M6 18l6-6"/></svg>雲起茶席引路人｜點選下方席次可鑑賞 3D 造型與試聽角色代表台詞</div>
+        <div id="heroShowcaseSub" class="text-[13px] text-slate-300">拖曳 360° 旋轉、滾輪縮放</div>
+        <div id="showcasePersonaBio" class="text-sm text-amber-100/95 mt-0.5 leading-snug"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5c-7 0-12 4.5-13 13 8.5-1 13-6 13-13z"/><path d="M6 18l6-6"/></svg>雲起茶席引路人｜使用下方箭頭切換茶友 3D 造型</div>
         <div id="showcaseProfileCard" class="hidden showcase-profile-card"></div>
       </div>
       <button id="btnCloseHeroShowcase" type="button" class="hud-icon-btn shrink-0 whitespace-nowrap">← 返回茶席</button>
     </div>
 
-    <div class="showcase-studio-dock space-y-2">
-      <div class="showcase-target-row flex items-center gap-1 flex-wrap pb-1.5 border-b border-slate-800/70">
-        <span class="text-[10.5px] text-slate-400 mr-1 shrink-0 whitespace-nowrap">鑑賞對象</span>
-        <button type="button" data-showcase-target="hero" class="showcase-chip is-active">清茗(主持)</button>
+    <div class="showcase-studio-dock space-y-2.5">
+      <!-- Primary Clean 5-Control Strip: Prev / Counter / Next + 3 Tea-Robe Palette Swatches -->
+      <div class="showcase-carousel-row flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <button id="btnShowcasePrev" type="button" class="cta-ink px-3.5 py-2 text-[15px]" aria-label="上一位角色">◀ 上一位</button>
+          <span id="showcaseTargetCounter" class="showcase-target-counter text-[15px] font-serif-craft font-bold text-amber-200 px-2.5">清茗 · 1/13</span>
+          <button id="btnShowcaseNext" type="button" class="cta-ink px-3.5 py-2 text-[15px]" aria-label="下一位角色">下一位 ▶</button>
+        </div>
+
+        <div id="showcasePaletteGroup" class="flex items-center gap-2 flex-wrap">
+          <button type="button" data-hero-palette="celadon" class="showcase-chip is-active">青瓷雅韻</button>
+          <button type="button" data-hero-palette="teagold" class="showcase-chip">茶金秋韻</button>
+          <button type="button" data-hero-palette="inknight" class="showcase-chip">暮墨書院</button>
+        </div>
+      </div>
+
+      <!-- Quiet Secondary Drawer: Voice Audition + Optional Pose / Custom VRM -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+        <button id="btnShowcaseAuditionVoice" type="button" class="cta-celadon px-4 py-1.5 text-[15px]"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9v6M12 5v14M16 9v6M4 11v2M20 11v2"/></svg>試聽台詞</button>
+        <details class="showcase-more-drawer">
+          <summary class="text-sm text-slate-300 hover:text-amber-200 cursor-pointer select-none px-2 py-1">動態姿勢 / 載入模型 ▾</summary>
+          <div class="mt-2 pt-2 border-t border-slate-800/70 space-y-2">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button type="button" data-hero-action="welcome_bow" class="showcase-chip is-active">迎賓揮手</button>
+              <button type="button" data-hero-action="idle_breathe" class="showcase-chip">靜息品茗</button>
+              <button type="button" data-hero-action="speak_gesture" class="showcase-chip">主持陳詞</button>
+              <button type="button" data-hero-action="purify_cast" class="showcase-chip">蓮燈淨化</button>
+              <button type="button" data-hero-action="gasp_react" class="showcase-chip">驚訝張望</button>
+              <button type="button" data-hero-action="celebrate" class="showcase-chip">勝利歡呼</button>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span id="showcaseUploadHint" class="text-[13px] text-slate-400">支援即時載入自訂 .VRM / .GLB 模型</span>
+              <div class="flex items-center gap-2">
+                <button id="btnResetHeroRig" type="button" class="hidden cta-ink px-3 py-1.5 text-[15px]">切回內建 3D</button>
+                <button id="btnUploadHeroGlb" type="button" class="cta-ink px-3 py-1.5 text-[15px]">載入 .VRM / .GLB</button>
+                <input id="inputHeroGlb" type="file" accept=".vrm,.glb,.gltf" class="hidden" />
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Hidden seat-target compatibility buttons for tests/direct jump -->
+      <div class="hidden" aria-hidden="true">
+        <button type="button" data-showcase-target="hero" class="showcase-chip is-active">清茗</button>
         <button type="button" data-showcase-target="1" class="showcase-chip">01 你</button>
         <button type="button" data-showcase-target="2" class="showcase-chip">02 小澄</button>
         <button type="button" data-showcase-target="3" class="showcase-chip">03 暖暖</button>
@@ -1098,79 +1097,45 @@
         <button type="button" data-showcase-target="11" class="showcase-chip">11 阿朗</button>
         <button type="button" data-showcase-target="12" class="showcase-chip">12 柚子</button>
       </div>
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-[10.5px] text-slate-400 mr-1">動態演技</span>
-          <button type="button" data-hero-action="welcome_bow" class="showcase-chip is-active">迎賓揮手</button>
-          <button type="button" data-hero-action="idle_breathe" class="showcase-chip">靜息品茗</button>
-          <button type="button" data-hero-action="speak_gesture" class="showcase-chip">主持陳詞</button>
-          <button type="button" data-hero-action="purify_cast" class="showcase-chip">蓮燈淨化</button>
-          <button type="button" data-hero-action="gasp_react" class="showcase-chip">驚訝張望</button>
-          <button type="button" data-hero-action="celebrate" class="showcase-chip">勝利歡呼</button>
-        </div>
-        <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-[10.5px] text-slate-400 mr-1">服飾</span>
-          <button type="button" data-hero-palette="celadon" class="showcase-chip is-active">青瓷雅韻</button>
-          <button type="button" data-hero-palette="teagold" class="showcase-chip">茶金秋韻</button>
-          <button type="button" data-hero-palette="inknight" class="showcase-chip">暮墨書院</button>
-        </div>
-      </div>
-      <div class="showcase-action-footer flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-slate-800/80 text-[11px]">
-        <span id="showcaseUploadHint" class="text-slate-400 truncate">可放入 VRoid 免費捏臉之 `qingming.vrm`、`xiaocheng.vrm` 等至
-          `assets/models/` 自動載入，或於右側即時套用</span>
-        <div class="flex flex-wrap items-center gap-1.5">
-          <button id="btnShowcaseAuditionVoice" type="button" class="cta-celadon px-3 py-1 text-[11px]"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9v6M12 5v14M16 9v6M4 11v2M20 11v2"/></svg>試聽角色台詞</button>
-          <button id="btnResetHeroRig" type="button" class="hidden cta-ink px-3 py-1 text-[11px]">切回內建 3D</button>
-          <button id="btnToggleHeroSheet" type="button" class="cta-brass px-3 py-1 text-[11px]">檢視三視圖設計稿</button>
-          <button id="btnUploadHeroGlb" type="button" class="cta-ink px-3 py-1 text-[11px]">載入 .VRM / .GLB</button>
-          <input id="inputHeroGlb" type="file" accept=".vrm,.glb,.gltf" class="hidden" />
-        </div>
-      </div>
     </div>
   </div>
 
-  <!-- Hero Concept Turnaround Sheet Lightbox -->
-  <div id="heroSheetLightbox"
-    class="hidden fixed inset-0 z-50 craft-modal-backdrop flex items-center justify-center p-4">
-    <div class="craft-modal-box max-w-4xl w-full overflow-hidden shadow-2xl">
-      <div class="px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
-        <span class="modal-title-serif text-sm font-bold text-amber-300 tracking-wider">清茗・官方三視圖角色設定稿（正／側／背）</span>
-        <button id="btnCloseHeroSheet" type="button" class="cta-ink text-xs px-2.5 py-1">關閉</button>
-      </div>
-      <div class="p-3 bg-slate-950/90">
-        <img src="assets/models/qingming_sheet.jpg" alt="清茗三視圖設計稿"
-          class="w-full h-auto rounded border border-amber-400/30" />
-      </div>
-    </div>
-  </div>
-
-  <!-- 4. UNIFIED DUAL-TAB TEA JOURNAL MODAL (DIALOGUE LOG + VOTE CHEAT SHEET) -->
+  <!-- 4. UNIFIED DUAL-TAB TEA JOURNAL MODAL (DIALOGUE LOG + VOTE CHEAT SHEET + HARMONY METER) -->
   <div id="modalJournal"
     class="hidden fixed inset-0 z-40 craft-modal-backdrop flex items-center justify-center p-3 sm:p-4">
     <div class="craft-modal-box max-w-2xl w-full max-h-[84dvh] flex flex-col overflow-hidden shadow-2xl">
       <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2">
         <div class="flex items-center gap-1.5 flex-wrap">
           <button id="tabJournalLog" type="button"
-            class="journal-tab-btn is-active px-2.5 py-1 rounded border border-slate-700 text-xs">對話紀錄</button>
+            class="journal-tab-btn is-active px-3 py-1 rounded border border-slate-700 text-[15px]">對話紀錄</button>
           <button id="tabJournalMatrix" type="button"
-            class="journal-tab-btn px-2.5 py-1 rounded border border-slate-700 text-xs">茶席言行錄</button>
+            class="journal-tab-btn px-3 py-1 rounded border border-slate-700 text-[15px]">茶席言行錄</button>
           <button id="tabJournalVote" type="button"
-            class="journal-tab-btn px-2.5 py-1 rounded border border-slate-700 text-xs">票型小抄</button>
-          <button id="btnToggleGraphOverlay" type="button" class="cta-ink text-[11px] px-2 py-1">連線:開</button>
+            class="journal-tab-btn px-3 py-1 rounded border border-slate-700 text-[15px]">票型小抄</button>
+          <button id="btnToggleGraphOverlay" type="button" class="cta-ink text-[15px] px-2.5 py-1">連線:開</button>
         </div>
-        <button id="btnCloseJournal" type="button" class="cta-ink text-xs px-2.5 py-1 shrink-0">關閉</button>
+        <button id="btnCloseJournal" type="button" class="cta-ink text-[15px] px-3 py-1 shrink-0">關閉</button>
+      </div>
+      <div class="journal-harmony-bar px-4 py-2 border-b border-slate-800/80 flex items-center justify-between gap-3" title="茶席友善度達 85 吹起三好清風">
+        <span class="text-sm font-medium text-slate-300 shrink-0">茶席友善度（達 85 吹起三好清風）</span>
+        <div class="flex items-center gap-2 shrink-0">
+          <div class="harmony-track">
+            <div id="harmonyBar" class="harmony-fill" style="width: 70%;"></div>
+          </div>
+          <span id="harmonyText" class="text-sm font-bold text-amber-300 math-font">70</span>
+        </div>
       </div>
       <div id="journalPaneLog" class="flex-1 overflow-y-auto custom-scroll p-3.5">
         <div id="chatTimeline" class="space-y-2"></div>
       </div>
       <div id="journalPaneMatrix"
-        class="hidden flex-1 overflow-y-auto custom-scroll p-3.5 space-y-2.5 text-xs text-slate-200">
-        <p class="text-[11px] text-slate-400">茶席言行錄：全桌公開立場、言行比對、昨日票型與一鍵引用</p>
+        class="hidden flex-1 overflow-y-auto custom-scroll p-3.5 space-y-2.5 text-sm text-slate-200">
+        <p class="text-[13px] text-slate-400">茶席言行錄：全桌公開立場、言行比對、昨日票型與一鍵引用</p>
         <div id="matrixSheetBody" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
       </div>
       <div id="journalPaneVote"
-        class="hidden flex-1 overflow-y-auto custom-scroll p-4 space-y-3 text-xs text-slate-200">
-        <p id="voteSheetSubtitle" class="text-[11px] text-slate-400">按被投對象歸票整理，一眼看清站邊與分票</p>
+        class="hidden flex-1 overflow-y-auto custom-scroll p-4 space-y-3 text-sm text-slate-200">
+        <p id="voteSheetSubtitle" class="text-[13px] text-slate-400">按被投對象歸票整理，一眼看清站邊與分票</p>
         <div id="voteSheetBody" class="space-y-4"></div>
       </div>
     </div>
@@ -1181,20 +1146,35 @@
     <div class="craft-modal-box max-w-md w-full max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl">
       <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2">
-          <span class="seal-chop w-6 h-6 text-xs">善</span>
-          <h3 class="modal-title-serif text-sm font-bold text-amber-300 tracking-wider">茶席選單與設定</h3>
+          <span class="seal-chop w-6 h-6 text-sm">善</span>
+          <h3 class="modal-title-serif text-lg font-bold text-amber-300 tracking-wider">茶席選單與設定</h3>
         </div>
-        <button id="btnClosePauseMenu" type="button" class="cta-ink text-xs px-2.5 py-1">繼續對弈</button>
+        <button id="btnClosePauseMenu" type="button" class="cta-ink text-[15px] px-2.5 py-1">繼續對弈</button>
       </div>
-      <div class="p-4 space-y-3 text-xs overflow-y-auto custom-scroll">
+      <div class="p-4 space-y-3 text-sm overflow-y-auto custom-scroll">
         <div class="grid grid-cols-2 gap-2">
+          <button id="btnCycleViewHud" type="button" class="pause-action-btn" title="循環切換視角：運鏡 → 坐席 → 俯瞰 → 2D (快捷鍵 C / D)">
+            <span>視角切換</span>
+            <span id="hudViewLabel" class="text-[13px] text-amber-300">運鏡</span>
+          </button>
+          <button id="btnToggleSceneThemeHud" type="button" class="pause-action-btn" title="切換 3D 古亭造景：林美書院 ⇄ 絕雲仙境">
+            <span>場景造景</span>
+            <span id="hudSceneLabel" class="text-[13px] text-emerald-300">書院</span>
+          </button>
+          <button id="btnQuickAutoHud" type="button" class="pause-action-btn" title="一鍵開關自動推進發言 (快捷鍵 A)">
+            <span id="hudAutoLabel">自動</span>
+            <span class="text-[13px] text-slate-400">A</span>
+          </button>
           <button id="btnToggleVoice" type="button" class="pause-action-btn">
             <span id="voiceToggleLabel">語音:柔聲</span>
-            <span class="text-[10px] text-emerald-300">V</span>
+            <span class="text-[13px] text-emerald-300">V</span>
           </button>
           <button id="btnToggleMute" type="button" class="pause-action-btn">
             <span id="muteToggleLabel">音效:開</span>
-            <span class="text-[10px] text-slate-400">M</span>
+            <span class="text-[13px] text-slate-400">M</span>
+          </button>
+          <button id="btnToggleSubtitleSize" type="button" class="pause-action-btn" title="切換發言字幕字級（標準／大字護眼）">
+            <span>字級</span>
           </button>
           <button id="btnOpenMusicModal" type="button" class="pause-action-btn">
             <span>語音・配樂調音</span>
@@ -1203,27 +1183,31 @@
           <button id="btnOpenAiModal" type="button" class="pause-action-btn">
             <span class="flex items-center gap-1.5"><span id="aiModeDot"
                 class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span id="aiModeLabel">內建AI</span></span>
-            <span class="text-[10px] text-slate-400">設定</span>
+            <span class="text-[13px] text-slate-400">設定</span>
           </button>
           <button id="btnToggle3D" type="button" class="pause-action-btn">3D舞台</button>
           <button id="btnToggle3DQuality" type="button" class="pause-action-btn">極致畫質</button>
-          <button id="btnToggleSceneThemePause" type="button" class="pause-action-btn">造景:林美書院</button>
           <button id="btnToggleFxPacing" type="button" class="pause-action-btn">演出:沉穩</button>
-          <button id="btnAutoPlayToggle" type="button" class="pause-action-btn">自動:關</button>
           <button id="btnReset3DCam" type="button" class="pause-action-btn">重置鏡頭</button>
         </div>
-        <div id="gpuPerfStatusLine" class="text-[10.5px] text-slate-400 text-center tabular-nums">3D 引擎就緒・即時監測中</div>
+        <!-- Hidden compatibility bridges for legacy pause-menu duplicate IDs -->
+        <div class="hidden" aria-hidden="true">
+          <button id="btnToggleSceneThemePause" type="button">造景:林美書院</button>
+          <button id="btnAutoPlayToggle" type="button">自動:關</button>
+          <button id="btnQuickVoiceHud" type="button"><span id="headerVoiceBars" class="eq-bars"><span></span><span></span><span></span></span></button>
+        </div>
+        <div id="gpuPerfStatusLine" class="text-[13px] text-slate-400 text-center tabular-nums">3D 引擎就緒・即時監測中</div>
         <div id="gpuDualCardHint" class="gpu-dual-hint hidden"></div>
 
         <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
           <button id="btnOpenTutorialPause" type="button" class="pause-action-btn text-emerald-200"><span class="inline-flex items-center"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v17H5.5A2.5 2.5 0 0 0 3 22V5.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v17h6.5a2.5 2.5 0 0 1 2.5 2V5.5z"/></svg>遊戲使用教學</span></button>
-          <button id="btnOpenHeroShowcasePause" type="button" class="pause-action-btn text-amber-200">3D
-            角色鑑賞・清茗</button>
+          <button id="btnOpenHeroShowcasePause" type="button" class="pause-action-btn text-amber-200">3D 角色鑑賞</button>
           <button id="btnOpenGuide" type="button" class="pause-action-btn">三好與 AI 架構</button>
           <button id="btnOpenCareer" type="button" class="pause-action-btn">書院生涯印記</button>
           <button id="btnOpenLogDrawer" type="button" class="pause-action-btn">對話手札</button>
           <button id="btnOpenVoteSheet" type="button" class="pause-action-btn">票型小抄</button>
-          <button id="btnRestartTop" type="button" class="cta-cinnabar py-2 text-xs text-center col-span-2">返回主畫面</button>
+          <button id="btnOpenFeedback" type="button" class="pause-action-btn col-span-2" title="提交試玩反饋、建議或回報 BUG">提交使用反饋</button>
+          <button id="btnRestartTop" type="button" class="cta-cinnabar py-2 text-[15px] text-center col-span-2">返回主畫面</button>
         </div>
 
         <div class="shortcut-legend-bar" aria-label="鍵盤快捷鍵速查">
@@ -1253,21 +1237,21 @@
     <div class="craft-modal-box max-w-2xl w-full max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl">
       <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
         <div class="flex items-center gap-2 min-w-0">
-          <span class="modal-title-serif text-sm sm:text-base font-bold text-amber-300 tracking-wider truncate"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v17H5.5A2.5 2.5 0 0 0 3 22V5.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v17h6.5a2.5 2.5 0 0 1 2.5 2V5.5z"/></svg>三好・雲起茶席｜完整遊戲使用教學</span>
-          <span id="tutorialStepCounter" class="text-[10.5px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-200 border border-amber-400/35 shrink-0 tabular-nums">1 / 6</span>
+          <span class="modal-title-serif text-lg sm:text-xl font-bold text-amber-300 tracking-wider truncate"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v17H5.5A2.5 2.5 0 0 0 3 22V5.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v17h6.5a2.5 2.5 0 0 1 2.5 2V5.5z"/></svg>三好・雲起茶席｜完整遊戲使用教學</span>
+          <span id="tutorialStepCounter" class="text-[13px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-200 border border-amber-400/35 shrink-0 tabular-nums">1 / 6</span>
         </div>
-        <button id="btnCloseTutorial" type="button" class="cta-ink text-xs px-2.5 py-1 shrink-0">關閉</button>
+        <button id="btnCloseTutorial" type="button" class="cta-ink text-[15px] px-2.5 py-1 shrink-0">關閉</button>
       </div>
       <div id="tutorialStepTabs" class="tut-tab-strip px-3.5 py-2 border-b border-slate-800/80 flex items-center gap-1.5 overflow-x-auto custom-scroll shrink-0"></div>
       <div class="p-4 flex-1 overflow-y-auto custom-scroll">
         <div id="tutorialSlideBody" class="min-h-[210px] flex flex-col justify-start text-center space-y-3"></div>
       </div>
       <div class="px-4 py-3 border-t border-slate-800 flex items-center justify-between gap-2 shrink-0">
-        <button id="btnTutPrev" type="button" class="cta-ink px-3 py-1.5 text-xs">← 上一章</button>
+        <button id="btnTutPrev" type="button" class="cta-ink px-3 py-1.5 text-[15px]">← 上一章</button>
         <div id="tutorialDots" class="flex items-center justify-center gap-1.5"></div>
         <div class="flex items-center gap-1.5">
-          <button id="btnTutNext" type="button" class="cta-brass px-4 py-1.5 text-xs">下一章 →</button>
-          <button id="btnLaunchGuidedDemo" type="button" class="hidden cta-cinnabar px-4 py-1.5 text-xs"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>開啟新手帶玩席</button>
+          <button id="btnTutNext" type="button" class="cta-brass px-4 py-1.5 text-[15px]">下一章 →</button>
+          <button id="btnLaunchGuidedDemo" type="button" class="hidden cta-cinnabar px-4 py-1.5 text-[15px]"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>開啟新手帶玩席</button>
         </div>
       </div>
     </div>
@@ -1279,16 +1263,16 @@
     <div class="craft-modal-box max-w-2xl w-full max-h-[86dvh] flex flex-col overflow-hidden shadow-2xl">
       <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
         <div class="flex items-center gap-2 flex-wrap">
-          <h3 class="modal-title-serif text-sm font-bold text-amber-300 tracking-wider mr-1">三好・四給・AI 編排</h3>
+          <h3 class="modal-title-serif text-lg font-bold text-amber-300 tracking-wider mr-1">三好・四給・AI 編排</h3>
           <button id="tabGuideOverview" type="button"
-            class="journal-tab-btn is-active px-2.5 py-1 rounded border border-slate-700 text-xs">架構總覽</button>
+            class="journal-tab-btn is-active px-2.5 py-1 rounded border border-slate-700 text-[15px]">架構總覽</button>
           <button id="tabGuideTrace" type="button"
-            class="journal-tab-btn px-2.5 py-1 rounded border border-slate-700 text-xs">即時 AI 編排監控</button>
+            class="journal-tab-btn px-2.5 py-1 rounded border border-slate-700 text-[15px]">即時 AI 編排監控</button>
         </div>
-        <button id="btnCloseGuide" type="button" class="cta-ink text-xs px-2.5 py-1 shrink-0">關閉</button>
+        <button id="btnCloseGuide" type="button" class="cta-ink text-[15px] px-2.5 py-1 shrink-0">關閉</button>
       </div>
       <div id="guidePaneOverview"
-        class="p-4 space-y-3 text-xs text-slate-200 leading-relaxed overflow-y-auto custom-scroll">
+        class="p-4 space-y-3 text-sm text-slate-200 leading-relaxed overflow-y-auto custom-scroll">
         <p class="p-2.5 rounded bg-amber-500/10 border border-amber-400/30 text-amber-100">
           以<strong>「林美山書院・雲起茶席」</strong>為舞台，將傳統推理溫雅轉化為<strong>「防制網路假訊息與酸言霸凌」</strong>互動體驗，在對弈中自然實踐三好與四給精神。
         </p>
@@ -1307,7 +1291,7 @@
             <div>給方便：點亮連線號召歸票</div>
           </div>
         </div>
-        <div class="p-2.5 rounded bg-emerald-500/10 border border-emerald-400/30 space-y-1 text-[11px] text-slate-200">
+        <div class="p-2.5 rounded bg-emerald-500/10 border border-emerald-400/30 space-y-1 text-[13px] text-slate-200">
           <div class="font-serif-craft font-bold text-emerald-300">書院對弈核心規則（標準屠邊制）</div>
           <div>
             ・<strong>勝負條件（屠邊制）</strong>：好人公投請離全部酸民狼即勝；酸民狼讓所有神職離席（<strong>屠神</strong>）或所有三好書院生離席（<strong>屠民</strong>）即獲勝。
@@ -1315,13 +1299,13 @@
           <div>・<strong>夜間職能與限制（狼刀在先）</strong>：護心守衛每晚守 1 人（不可連守同人，遇回甘茶同守同救會破盾）；明心觀察員每晚查驗 1 人；滴水奉茶師同夜限用一盞茶、第 2 夜起不可自護；直心糾察長遇清心茶請離、或身為最後一神於夜間遭酸民狼鎖定離席（達屠神終局）時，皆無法發動正氣共鳴。</div>
           <div>・<strong>上警、遺言與平票 PK</strong>：開啟警長制將於首日進行上警競選（1.5 票與末置位歸票）；首夜及白天公投離席（含糾察長）可留遺言，第 2 夜起夜間離席無遺言；同票進入 PK 拉票決選，再平票則無人離席。</div>
         </div>
-        <div class="p-2.5 rounded bg-emerald-500/15 border border-emerald-400/40 space-y-1 text-[11px] text-emerald-100">
+        <div class="p-2.5 rounded bg-emerald-500/15 border border-emerald-400/40 space-y-1 text-[13px] text-emerald-100">
           <div class="font-serif-craft font-bold text-emerald-300"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.6-3 7.8-7 9.5-4-1.7-7-4.9-7-9.5V6l7-3z"/><path d="M12 7v10"/></svg>v9.0 零洩漏反作弊資訊隔離防火牆（Epistemic Blind-View）</div>
           <div>・<strong>嚴格盲視投影（Blind-View Proxy）</strong>：每位 AI 在發言、公投、夜晚職能、警長競選／移交與遺言時，一律只能讀取屬於自己視野的凍結快照，絕不接觸底層底牌、他人私密懷疑值或上帝視角紀錄。</div>
           <div>・<strong>逐角色資訊邊界</strong>：酸民狼僅知狼同伴（無法偷看誰是真神職）；觀察員僅知自己親查結果；奉茶師僅知親救銀水與有藥當夜刀口；其餘好人 AI 零偷看、零讀心。</div>
           <div>・<strong>LLM Prompt 洩漏稽核＋反事實不變性證明</strong>：外接 Gemini／Ollama 前自動掃描提示詞防止私密外洩，並通過 50+ 隨機對局置換底牌後 AI 行為 100% 一致的數學級驗證。</div>
         </div>
-        <div class="p-2.5 rounded bg-indigo-500/15 border border-indigo-400/35 space-y-1 text-[11px] text-indigo-100">
+        <div class="p-2.5 rounded bg-indigo-500/15 border border-indigo-400/35 space-y-1 text-[13px] text-indigo-100">
           <div class="font-serif-craft font-bold text-amber-300">雙核四層 Multi-Agent Orchestrator 技術透明速覽</div>
           <div>・<strong>四大 AI 代理路由器</strong>：由
             <code>PersonaAgent</code>、<code>ThreeGoodGuardianAgent</code>、<code>QingmingDirectorAgent</code>（每日茶席突發事件）、<code>GodViewAnalystAgent</code>
@@ -1331,13 +1315,13 @@
           <div>・<strong>免費神經語音＋3D 實景</strong>：結合 Poly Haven CC0 物理材質、360° 山海天穹、旗艦 3D 角色「清茗」事件編舞與即時口型同步。</div>
         </div>
       </div>
-      <div id="guidePaneTrace" class="hidden p-4 space-y-3 text-xs text-slate-200 overflow-y-auto custom-scroll">
+      <div id="guidePaneTrace" class="hidden p-4 space-y-3 text-sm text-slate-200 overflow-y-auto custom-scroll">
         <div id="orchSummaryBar" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center"></div>
         <div id="antiCheatAuditBox" class="rounded-xl p-3 bg-slate-950/90 border border-emerald-500/35 space-y-2"></div>
         <div class="flex items-center justify-between gap-2">
-          <span class="text-[11px] text-slate-400">即時 Multi-Agent 調度、降級路線與文化合規過濾軌跡（最新 32 筆）：</span>
+          <span class="text-[13px] text-slate-400">即時 Multi-Agent 調度、降級路線與文化合規過濾軌跡（最新 32 筆）：</span>
           <button id="btnClearOrchTrace" type="button"
-            class="cta-ink px-2.5 py-0.5 text-[10.5px] shrink-0">清空軌跡</button>
+            class="cta-ink px-2.5 py-0.5 text-[13px] shrink-0">清空軌跡</button>
         </div>
         <div id="orchTraceList" class="space-y-1.5"></div>
       </div>
@@ -1348,10 +1332,10 @@
   <div id="modalAiConfig" class="hidden fixed inset-0 z-50 craft-modal-backdrop flex items-center justify-center p-4">
     <div class="craft-modal-box max-w-md w-full max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl">
       <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between shrink-0">
-        <h3 class="modal-title-serif text-sm font-bold text-amber-300 tracking-wider">AI 推理引擎設定</h3>
-        <button id="btnCloseAiModal" type="button" class="cta-ink text-xs px-2.5 py-1">關閉</button>
+        <h3 class="modal-title-serif text-lg font-bold text-amber-300 tracking-wider">AI 推理引擎設定</h3>
+        <button id="btnCloseAiModal" type="button" class="cta-ink text-[15px] px-2.5 py-1">關閉</button>
       </div>
-      <div class="p-4 space-y-3 text-xs text-slate-300 overflow-y-auto custom-scroll">
+      <div class="p-4 space-y-3 text-sm text-slate-300 overflow-y-auto custom-scroll">
         <div class="p-2.5 rounded bg-amber-500/10 border border-amber-400/30 text-amber-100 leading-relaxed space-y-1">
           <div><strong class="text-amber-300">最新旗艦 Gemini（雲端）</strong>：到 Google AI Studio 取得免費 API Key 即可用最新 <code>Gemini 3.8 Flash</code>，或選頂級旗艦 <code>Gemini 4 Argon</code>／<code>3.1 Pro</code>。</div>
           <div class="text-sky-200"><strong class="text-sky-300">本機免費 Ollama（免 Key）</strong>：下方自動偵測電腦已安裝的本機高階模型。</div>
@@ -1359,7 +1343,7 @@
         <div>
           <label for="selectGeminiModel" class="block font-medium text-slate-200 mb-1">選擇推理模型</label>
           <select id="selectGeminiModel"
-            class="w-full rounded px-3 py-2 text-xs font-bold border focus:outline-none focus:border-amber-400">
+            class="w-full rounded px-3 py-2 text-sm font-bold border focus:outline-none focus:border-amber-400">
             <optgroup label="最新雲端旗艦 Gemini（Google AI Studio）">
               <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash（2026 最新旗艦・免費額度可用・高速強推理）</option>
               <option value="gemini-4-argon">Gemini 4 Argon（最新頂級旗艦・需付費 API 方案）</option>
@@ -1376,9 +1360,9 @@
         <div>
           <label for="inputGeminiKey" class="block font-medium text-slate-200 mb-1">Gemini API Key（僅存本分頁記憶體・關分頁即清；雲端公測版與 Ollama 可免填）</label>
           <input id="inputGeminiKey" type="password" placeholder="AIza...（可留空使用公測雲端 Gemini，或填入個人 Key）"
-            class="w-full rounded px-3 py-2 text-xs border focus:outline-none focus:border-amber-400" />
+            class="w-full rounded px-3 py-2 text-sm border focus:outline-none focus:border-amber-400" />
         </div>
-        <div id="aiTestResultBox" class="hidden p-2 rounded bg-slate-950 border border-slate-800 text-[11px]"></div>
+        <div id="aiTestResultBox" class="hidden p-2 rounded bg-slate-950 border border-slate-800 text-[13px]"></div>
         <div class="flex justify-end gap-2">
           <button id="btnClearApiKey" type="button" class="cta-ink px-3 py-1.5">切回內建AI</button>
           <button id="btnSaveApiKey" type="button" class="cta-brass px-4 py-1.5">連線並套用</button>
@@ -1393,174 +1377,174 @@
     <div class="craft-modal-box max-w-lg w-full max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl">
       <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between shrink-0">
         <div>
-          <h3 class="modal-title-serif text-sm font-bold text-amber-300 tracking-wider">語音聲線與茶席配樂調音台</h3>
-          <p id="nowPlayingLabel" class="text-[11px] text-slate-400">目前樂章：自動隨遊戲階段切換</p>
+          <h3 class="modal-title-serif text-lg font-bold text-amber-300 tracking-wider">語音聲線與茶席配樂調音台</h3>
+          <p id="nowPlayingLabel" class="text-[13px] text-slate-400">目前樂章：自動隨遊戲階段切換</p>
         </div>
-        <button id="btnCloseMusicModal" type="button" class="cta-ink text-xs px-2.5 py-1">關閉</button>
+        <button id="btnCloseMusicModal" type="button" class="cta-ink text-[15px] px-2.5 py-1">關閉</button>
       </div>
-      <div class="p-4 space-y-3 text-xs text-slate-200 overflow-y-auto custom-scroll">
+      <div class="p-4 space-y-3 text-sm text-slate-200 overflow-y-auto custom-scroll">
         <div class="rounded bg-slate-950 border border-emerald-400/30 p-3 space-y-2.5">
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
-              <span class="font-serif-craft text-xs font-bold text-emerald-300">角色語音調音</span>
-              <span id="voiceEngineStatusLabel" class="text-[10px] text-slate-400 ml-1.5">分句柔聲優化中</span>
+              <span class="font-serif-craft text-sm font-bold text-emerald-300">角色語音調音</span>
+              <span id="voiceEngineStatusLabel" class="text-[13px] text-slate-400 ml-1.5">分句柔聲優化中</span>
             </div>
             <button id="btnTestVoiceSample" type="button"
-              class="cta-celadon text-[11px] px-2.5 py-1 shrink-0">試聽設定</button>
+              class="cta-celadon text-[13px] px-2.5 py-1 shrink-0">試聽設定</button>
           </div>
           <div class="grid grid-cols-3 gap-1.5 text-center">
             <button id="btnVoiceModeHybrid" type="button" data-vmode="hybrid"
-              class="voice-mode-btn voice-rate-btn is-active py-1.5 px-1.5 rounded border border-slate-700 bg-slate-900 text-[11px] text-slate-200 transition">溫潤伴音人聲
-              <div class="text-[9px] opacity-75 font-normal">分句停頓＋樂音</div>
+              class="voice-mode-btn voice-rate-btn is-active py-1.5 px-1.5 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition">溫潤伴音人聲
+              <div class="text-[13px] opacity-75 font-normal">分句停頓＋樂音</div>
             </button>
             <button id="btnVoiceModeNatural" type="button" data-vmode="tts"
-              class="voice-mode-btn voice-rate-btn py-1.5 px-1.5 rounded border border-slate-700 bg-slate-900 text-[11px] text-slate-200 transition">純淨自然人聲
-              <div class="text-[9px] opacity-75 font-normal">分句呼吸</div>
+              class="voice-mode-btn voice-rate-btn py-1.5 px-1.5 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition">純淨自然人聲
+              <div class="text-[13px] opacity-75 font-normal">分句呼吸</div>
             </button>
             <button id="btnVoiceModeCozy" type="button" data-vmode="cozy"
-              class="voice-mode-btn voice-rate-btn py-1.5 px-1.5 rounded border border-slate-700 bg-slate-900 text-[11px] text-slate-200 transition">療癒原音樂音
-              <div class="text-[9px] opacity-75 font-normal">木管音色</div>
+              class="voice-mode-btn voice-rate-btn py-1.5 px-1.5 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition">療癒原音樂音
+              <div class="text-[13px] opacity-75 font-normal">木管音色</div>
             </button>
           </div>
           <div><select id="selectDeviceVoice"
-              class="w-full rounded px-2.5 py-1.5 text-[11px] font-bold border focus:outline-none focus:border-emerald-400">
+              class="w-full rounded px-2.5 py-1.5 text-[13px] font-bold border focus:outline-none focus:border-emerald-400">
               <option value="auto">自動挑選最佳自然聲線（推薦）</option>
             </select></div>
           <div class="grid grid-cols-2 gap-1.5 text-center">
             <button id="btnAccentMulti" type="button" data-accent="anime"
-              class="voice-accent-btn voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[10.5px] text-slate-200 transition"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>12角色聲線最大化（含古風）</button>
+              class="voice-accent-btn voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>12角色聲線最大化（含古風）</button>
             <button id="btnAccentTw" type="button" data-accent="tw"
-              class="voice-accent-btn voice-rate-btn py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[10.5px] text-slate-300 transition">純台灣腔（共振峰塑形）</button>
+              class="voice-accent-btn voice-rate-btn py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-300 transition">純台灣腔（共振峰塑形）</button>
           </div>
           <div class="grid grid-cols-3 gap-1.5 text-center">
             <button id="btnEngineAuto" type="button" data-vengine="auto"
-              class="voice-rate-btn is-active py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[10px] text-slate-200 transition">雙軌自動（推薦）</button>
+              class="voice-rate-btn is-active py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition">雙軌自動（推薦）</button>
             <button id="btnEngineLocal" type="button" data-vengine="local"
-              class="voice-rate-btn py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[10px] text-slate-300 transition">免費本地神經 $0</button>
+              class="voice-rate-btn py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-300 transition">免費本地神經 $0</button>
             <button id="btnEngineGemini" type="button" data-vengine="gemini"
-              class="voice-rate-btn py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[10px] text-slate-300 transition">Gemini 3.8 氣口</button>
+              class="voice-rate-btn py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-300 transition">Gemini 3.8 氣口</button>
           </div>
           <div class="grid grid-cols-2 gap-1.5 text-center">
             <button id="btnToggleLiveBackchannel" type="button"
-              class="voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[10px] text-slate-200 transition">圓桌座位插話反應：開</button>
+              class="voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition">圓桌座位插話反應：開</button>
             <button id="btnToggleHumanBreath" type="button"
-              class="voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[10px] text-slate-200 transition">真人換氣＋木亭音場：開</button>
+              class="voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition">真人換氣＋木亭音場：開</button>
           </div>
           <div class="grid grid-cols-3 gap-1.5 text-center">
             <button id="btnVoiceRateSlow" type="button" data-vrate="0.96"
-              class="voice-rate-btn is-active py-1.5 px-2 rounded border border-slate-700 bg-slate-900 text-[11px] text-slate-300 transition">溫柔舒緩
+              class="voice-rate-btn is-active py-1.5 px-2 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-300 transition">溫柔舒緩
               0.96x</button>
             <button id="btnVoiceRateDefault" type="button" data-vrate="1.03"
-              class="voice-rate-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-900 text-[11px] text-slate-300 transition">自然對話
+              class="voice-rate-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-300 transition">自然對話
               1.03x</button>
             <button id="btnVoiceRateFast" type="button" data-vrate="1.13"
-              class="voice-rate-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-900 text-[11px] text-slate-300 transition">活潑明快
+              class="voice-rate-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-300 transition">活潑明快
               1.13x</button>
           </div>
           <div class="space-y-1">
-            <div class="text-[10px] text-slate-400">點選試聽全角色動漫專屬配音（12 位真人級聲線＋主持）：</div>
+            <div class="text-[13px] text-slate-400">點選試聽全角色動漫專屬配音（12 位真人級聲線＋主持）：</div>
             <div id="voiceAuditionStrip" class="grid grid-cols-3 sm:grid-cols-4 gap-1.5 text-center">
-              <button type="button" data-audition="你" class="cta-ink py-1 px-1.5 text-[10.5px]">你（玩家）</button>
-              <button type="button" data-audition="暖暖" class="cta-ink py-1 px-1.5 text-[10.5px]">暖暖</button>
-              <button type="button" data-audition="小澄" class="cta-ink py-1 px-1.5 text-[10.5px]">小澄</button>
-              <button type="button" data-audition="阿松" class="cta-ink py-1 px-1.5 text-[10.5px]">阿松</button>
-              <button type="button" data-audition="星兒" class="cta-ink py-1 px-1.5 text-[10.5px]">星兒</button>
-              <button type="button" data-audition="小雲" class="cta-ink py-1 px-1.5 text-[10.5px]">小雲</button>
-              <button type="button" data-audition="阿竹" class="cta-ink py-1 px-1.5 text-[10.5px]">阿竹</button>
-              <button type="button" data-audition="晨晨" class="cta-ink py-1 px-1.5 text-[10.5px]">晨晨</button>
-              <button type="button" data-audition="墨白" class="cta-ink py-1 px-1.5 text-[10.5px]">墨白</button>
-              <button type="button" data-audition="晴嵐" class="cta-ink py-1 px-1.5 text-[10.5px]">晴嵐</button>
-              <button type="button" data-audition="阿朗" class="cta-ink py-1 px-1.5 text-[10.5px]">阿朗</button>
-              <button type="button" data-audition="柚子" class="cta-ink py-1 px-1.5 text-[10.5px]">柚子</button>
-              <button type="button" data-audition="主持" class="cta-ink py-1 px-1.5 text-[10.5px]">清茗主持</button>
+              <button type="button" data-audition="你" class="cta-ink py-1 px-1.5 text-[13px]">你（玩家）</button>
+              <button type="button" data-audition="暖暖" class="cta-ink py-1 px-1.5 text-[13px]">暖暖</button>
+              <button type="button" data-audition="小澄" class="cta-ink py-1 px-1.5 text-[13px]">小澄</button>
+              <button type="button" data-audition="阿松" class="cta-ink py-1 px-1.5 text-[13px]">阿松</button>
+              <button type="button" data-audition="星兒" class="cta-ink py-1 px-1.5 text-[13px]">星兒</button>
+              <button type="button" data-audition="小雲" class="cta-ink py-1 px-1.5 text-[13px]">小雲</button>
+              <button type="button" data-audition="阿竹" class="cta-ink py-1 px-1.5 text-[13px]">阿竹</button>
+              <button type="button" data-audition="晨晨" class="cta-ink py-1 px-1.5 text-[13px]">晨晨</button>
+              <button type="button" data-audition="墨白" class="cta-ink py-1 px-1.5 text-[13px]">墨白</button>
+              <button type="button" data-audition="晴嵐" class="cta-ink py-1 px-1.5 text-[13px]">晴嵐</button>
+              <button type="button" data-audition="阿朗" class="cta-ink py-1 px-1.5 text-[13px]">阿朗</button>
+              <button type="button" data-audition="柚子" class="cta-ink py-1 px-1.5 text-[13px]">柚子</button>
+              <button type="button" data-audition="主持" class="cta-ink py-1 px-1.5 text-[13px]">清茗主持</button>
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-0.5">
             <div class="space-y-1">
-              <div class="text-[10px] text-slate-400">主角聲線與 3D 造型</div>
+              <div class="text-[13px] text-slate-400">主角聲線與 3D 造型</div>
               <div class="grid grid-cols-2 gap-1 text-center">
                 <button id="btnPlayerGenderF" type="button" data-pgender="f"
-                  class="voice-rate-btn is-active py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[10.5px] text-slate-200 transition">女主角・女聲</button>
+                  class="voice-rate-btn is-active py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition">女主角・女聲</button>
                 <button id="btnPlayerGenderM" type="button" data-pgender="m"
-                  class="voice-rate-btn py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[10.5px] text-slate-300 transition">男主角・男聲</button>
+                  class="voice-rate-btn py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-300 transition">男主角・男聲</button>
               </div>
             </div>
             <div class="space-y-1">
-              <div class="text-[10px] text-slate-400">對話框與桌牌頭像</div>
+              <div class="text-[13px] text-slate-400">對話框與桌牌頭像</div>
               <div class="grid grid-cols-2 gap-1 text-center">
                 <button id="btnPortraitStylePainted" type="button" data-pstyle="painted"
-                  class="voice-rate-btn is-active py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[10.5px] text-slate-200 transition">電影工筆立繪</button>
+                  class="voice-rate-btn is-active py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition">電影工筆立繪</button>
                 <button id="btnPortraitStyleVrm" type="button" data-pstyle="vrm3d"
-                  class="voice-rate-btn py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[10.5px] text-slate-300 transition">3D 模型頭像</button>
+                  class="voice-rate-btn py-1 px-1.5 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-300 transition">3D 模型頭像</button>
               </div>
             </div>
           </div>
           <div id="voiceQualityHintBox"
-            class="hidden rounded px-2.5 py-1.5 bg-amber-500/10 border border-amber-400/30 text-[10.5px] text-amber-200 leading-relaxed">
+            class="hidden rounded px-2.5 py-1.5 bg-amber-500/10 border border-amber-400/30 text-[13px] text-amber-200 leading-relaxed">
             <strong>免費升級高音質語音（$0）：</strong>本機執行 <code>python3 server.py</code> 即可啟用 13 位免費微軟神經台灣配音員。
           </div>
         </div>
         <div class="grid grid-cols-3 gap-2.5 pt-0.5">
           <div>
-            <div class="flex justify-between text-[11px] text-slate-400 mb-1"><label for="sliderBgmVol">配樂</label><span
+            <div class="flex justify-between text-[13px] text-slate-400 mb-1"><label for="sliderBgmVol">配樂</label><span
                 id="bgmVolLabel" class="font-bold text-amber-300">60%</span></div><input id="sliderBgmVol" type="range"
               min="0" max="100" value="60" class="w-full accent-amber-400 cursor-pointer" />
           </div>
           <div>
-            <div class="flex justify-between text-[11px] text-slate-400 mb-1"><label
+            <div class="flex justify-between text-[13px] text-slate-400 mb-1"><label
                 for="sliderVoiceVol">人聲語音</label><span id="voiceVolLabel" class="font-bold text-sky-300">86%</span>
             </div><input id="sliderVoiceVol" type="range" min="0" max="100" value="86"
               class="w-full accent-sky-400 cursor-pointer" />
           </div>
           <div>
-            <div class="flex justify-between text-[11px] text-slate-400 mb-1"><label for="sliderSfxVol">音效</label><span
+            <div class="flex justify-between text-[13px] text-slate-400 mb-1"><label for="sliderSfxVol">音效</label><span
                 id="sfxVolLabel" class="font-bold text-emerald-300">75%</span></div><input id="sliderSfxVol"
               type="range" min="0" max="100" value="75" class="w-full accent-emerald-400 cursor-pointer" />
           </div>
         </div>
         <div class="rounded bg-slate-950 border border-slate-800 p-2.5">
-          <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1.5"><span id="musicChordReadout"
+          <div class="flex items-center justify-between text-[13px] text-slate-400 mb-1.5"><span id="musicChordReadout"
               class="font-bold text-amber-300">Dadd9 — Bm11 — Gmaj9 — Asus4</span><span id="musicBpmReadout"
               class="math-font">76 BPM</span></div>
           <div class="relative h-12 w-full"><canvas id="musicSpectrumCanvas" class="block w-full h-full"></canvas></div>
         </div>
         <div>
-          <div class="text-[11px] text-slate-400 mb-1.5">器樂編曲風格</div>
+          <div class="text-[13px] text-slate-400 mb-1.5">器樂編曲風格</div>
           <div class="grid grid-cols-3 gap-1.5">
             <button id="btnTimbreZen" type="button" data-timbre="zen"
-              class="timbre-btn is-active py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-xs text-slate-300 transition">山城雅樂
-              <div class="text-[10px] opacity-70 font-normal">古箏 × 頌缽</div>
+              class="timbre-btn is-active py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-[15px] text-slate-300 transition">山城雅樂
+              <div class="text-[13px] opacity-70 font-normal">古箏 × 頌缽</div>
             </button>
             <button id="btnTimbreFolk" type="button" data-timbre="folk"
-              class="timbre-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-xs text-slate-300 transition">木質民謠
-              <div class="text-[10px] opacity-70 font-normal">木吉他 × 鐵琴</div>
+              class="timbre-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-[15px] text-slate-300 transition">木質民謠
+              <div class="text-[13px] opacity-70 font-normal">木吉他 × 鐵琴</div>
             </button>
             <button id="btnTimbreCinema" type="button" data-timbre="cinema"
-              class="timbre-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-xs text-slate-300 transition">懸疑劇場
-              <div class="text-[10px] opacity-70 font-normal">弦樂 × 鋼片琴</div>
+              class="timbre-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-[15px] text-slate-300 transition">懸疑劇場
+              <div class="text-[13px] opacity-70 font-normal">弦樂 × 鋼片琴</div>
             </button>
           </div>
         </div>
         <div>
           <div class="flex items-center justify-between mb-1.5"><span
-              class="text-[11px] text-slate-400">五段式場景樂章</span><button id="btnTrackAuto" type="button" data-track="auto"
-              class="track-btn is-active text-[11px] px-2.5 py-0.5 rounded border border-slate-700 bg-slate-950 text-slate-300 transition">隨階段自動切換</button>
+              class="text-[13px] text-slate-400">五段式場景樂章</span><button id="btnTrackAuto" type="button" data-track="auto"
+              class="track-btn is-active text-[13px] px-2.5 py-0.5 rounded border border-slate-700 bg-slate-950 text-slate-300 transition">隨階段自動切換</button>
           </div>
           <div class="grid grid-cols-5 gap-1.5 text-center">
             <button id="btnTrackTwilight" type="button" data-track="twilight"
-              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[11px] text-slate-300 transition">壹
+              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">壹
               暮色</button>
             <button id="btnTrackNight" type="button" data-track="night"
-              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[11px] text-slate-300 transition">貳
+              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">貳
               深夜</button>
             <button id="btnTrackDay" type="button" data-track="day"
-              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[11px] text-slate-300 transition">參
+              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">參
               晨光</button>
             <button id="btnTrackVote" type="button" data-track="vote"
-              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[11px] text-slate-300 transition">肆
+              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">肆
               對決</button>
             <button id="btnTrackFinale" type="button" data-track="finale"
-              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[11px] text-slate-300 transition">伍
+              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">伍
               終局</button>
           </div>
         </div>
@@ -1573,10 +1557,10 @@
     class="hidden fixed inset-0 z-50 craft-modal-backdrop flex items-center justify-center p-3 sm:p-4">
     <div class="craft-modal-box max-w-lg w-full max-h-[86dvh] flex flex-col overflow-hidden shadow-2xl">
       <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-        <h3 class="modal-title-serif text-sm font-bold text-amber-300 tracking-wider">書院生涯戰績與三好印記</h3>
-        <button id="btnCloseCareer" type="button" class="cta-ink text-xs px-2.5 py-1">關閉</button>
+        <h3 class="modal-title-serif text-lg font-bold text-amber-300 tracking-wider">書院生涯戰績與三好印記</h3>
+        <button id="btnCloseCareer" type="button" class="cta-ink text-[15px] px-2.5 py-1">關閉</button>
       </div>
-      <div id="careerModalBody" class="p-4 overflow-y-auto custom-scroll text-xs text-slate-200"></div>
+      <div id="careerModalBody" class="p-4 overflow-y-auto custom-scroll text-sm text-slate-200"></div>
     </div>
   </div>
 
@@ -1586,17 +1570,17 @@
     <div class="craft-modal-box max-w-lg w-full max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl">
       <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2">
         <div>
-          <h3 class="modal-title-serif text-sm font-bold text-amber-300 tracking-wider"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7.5a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13V5.5z"/><path d="M8.5 8.5h7M8.5 11.5h4.5"/></svg>玩家使用反饋</h3>
-          <div class="text-[10.5px] text-slate-400 mt-0.5">歡迎回報問題、畫面建議或規則心得，協助讓茶席更加完善。</div>
+          <h3 class="modal-title-serif text-lg font-bold text-amber-300 tracking-wider"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7.5a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13V5.5z"/><path d="M8.5 8.5h7M8.5 11.5h4.5"/></svg>玩家使用反饋</h3>
+          <div class="text-[13px] text-slate-400 mt-0.5">歡迎回報問題、畫面建議或規則心得，協助讓茶席更加完善。</div>
         </div>
-        <button id="btnCloseFeedback" type="button" class="cta-ink text-xs px-2.5 py-1 shrink-0">關閉</button>
+        <button id="btnCloseFeedback" type="button" class="cta-ink text-[15px] px-2.5 py-1 shrink-0">關閉</button>
       </div>
-      <div class="p-4 overflow-y-auto custom-scroll space-y-3 text-xs text-slate-200">
+      <div class="p-4 overflow-y-auto custom-scroll space-y-3 text-sm text-slate-200">
         <!-- 1. Star Rating -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <span class="font-bold text-amber-200">整體遊玩體驗評分</span>
-            <span id="feedbackRatingText" class="text-[11px] font-bold text-amber-300">5★ 很喜歡這次體驗</span>
+            <span id="feedbackRatingText" class="text-[13px] font-bold text-amber-300">5★ 很喜歡這次體驗</span>
           </div>
           <div id="feedbackStarGroup" class="flex items-center gap-1.5">
             <button type="button" data-fb-star="1" class="fb-star-btn is-lit" aria-label="1星">★</button>
@@ -1621,21 +1605,21 @@
         <!-- 3. Nickname (Optional) & Message -->
         <div class="space-y-2">
           <div>
-            <label for="inputFeedbackName" class="block text-[11px] text-slate-400 mb-1">你的暱稱或聯絡方式（選填）</label>
+            <label for="inputFeedbackName" class="block text-[13px] text-slate-400 mb-1">你的暱稱或聯絡方式（選填）</label>
             <input id="inputFeedbackName" type="text" maxlength="32" placeholder="例如：小宇（不填則以匿名茶客送出）"
-              class="w-full rounded-lg px-3 py-1.5 bg-slate-950/85 border border-slate-700 text-xs text-slate-100 focus:outline-none focus:border-amber-400" />
+              class="w-full rounded-lg px-3 py-1.5 bg-slate-950/85 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-amber-400" />
           </div>
           <div>
-            <label for="inputFeedbackBody" class="block text-[11px] text-amber-200 font-bold mb-1">詳細想法或遇到的問題（必填）</label>
+            <label for="inputFeedbackBody" class="block text-[13px] text-amber-200 font-bold mb-1">詳細想法或遇到的問題（必填）</label>
             <textarea id="inputFeedbackBody" rows="4" maxlength="1500"
               placeholder="例如：12人桌坐席視角很順、但手機版投票按鈕想要大一點；或是某個階段遇到 BUG…"
-              class="w-full rounded-lg px-3 py-2 bg-slate-950/85 border border-slate-700 text-xs text-slate-100 leading-relaxed focus:outline-none focus:border-amber-400 resize-y"></textarea>
+              class="w-full rounded-lg px-3 py-2 bg-slate-950/85 border border-slate-700 text-sm text-slate-100 leading-relaxed focus:outline-none focus:border-amber-400 resize-y"></textarea>
           </div>
         </div>
 
         <!-- 4. Auto Environment Diagnostics -->
         <div class="space-y-1.5">
-          <label class="inline-flex items-center gap-2 cursor-pointer text-[11px] text-slate-300">
+          <label class="inline-flex items-center gap-2 cursor-pointer text-[13px] text-slate-300">
             <input id="chkFeedbackIncludeEnv" type="checkbox" checked class="accent-amber-400" />
             <span>自動附帶目前對局環境（人數／視角／視窗大小，不含 API Key 或隱藏 AI 身分）</span>
           </label>
@@ -1644,23 +1628,23 @@
 
         <!-- 5. Submit CTA -->
         <div class="flex items-center justify-end gap-2">
-          <button id="btnSubmitFeedback" type="button" class="cta-cinnabar px-4 py-2 text-xs"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3 7l9 6 9-6"/></svg>送出反饋</button>
+          <button id="btnSubmitFeedback" type="button" class="cta-cinnabar px-4 py-2 text-[15px]"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3 7l9 6 9-6"/></svg>送出反饋</button>
         </div>
 
         <!-- 6. Instant Multi-Channel Confirmation Card -->
         <div id="feedbackResultCard" class="hidden fb-result-card space-y-2">
-          <div id="feedbackResultMsg" class="text-[11.5px] font-bold text-emerald-200 leading-relaxed"></div>
+          <div id="feedbackResultMsg" class="text-[13px] font-bold text-emerald-200 leading-relaxed"></div>
           <div class="flex flex-wrap gap-2">
-            <button id="btnOpenGithubFeedback" type="button" class="cta-brass px-3 py-1.5 text-[11px]"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="7.5" y="7.5" width="9" height="9" rx="1"/></svg>一鍵送至 GitHub 反饋板</button>
-            <button id="btnCopyLastFeedback" type="button" class="cta-celadon px-3 py-1.5 text-[11px]"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M7.5 8.5h9M7.5 12h9M7.5 15.5h5.5"/></svg>複製完整反饋（貼給作者 / LINE）</button>
+            <button id="btnOpenGithubFeedback" type="button" class="hidden cta-brass px-3 py-1.5 text-[15px]" aria-hidden="true">回饋備份</button>
+            <button id="btnCopyLastFeedback" type="button" class="cta-celadon px-3 py-1.5 text-[15px]"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M7.5 8.5h9M7.5 12h9M7.5 15.5h5.5"/></svg>複製完整反饋</button>
           </div>
         </div>
 
         <!-- 7. Local Stored Feedback Log & Export -->
         <div class="pt-2 border-t border-slate-800/80 space-y-2">
           <div class="flex items-center justify-between gap-2">
-            <span id="feedbackHistoryCount" class="text-[10.5px] text-slate-400">本機已留存 0 筆</span>
-            <button id="btnExportFeedbackJson" type="button" class="hidden cta-ink px-2.5 py-1 text-[10.5px]"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="1.5"/><path d="M8 10h8M10 3h4v7h-4z"/></svg>匯出全部反饋 (.json)</button>
+            <span id="feedbackHistoryCount" class="text-[13px] text-slate-400">本機已留存 0 筆</span>
+            <button id="btnExportFeedbackJson" type="button" class="hidden cta-ink px-2.5 py-1 text-[13px]"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="1.5"/><path d="M8 10h8M10 3h4v7h-4z"/></svg>匯出全部反饋 (.json)</button>
           </div>
           <div id="feedbackHistoryList" class="space-y-1.5 max-h-36 overflow-y-auto custom-scroll"></div>
         </div>
@@ -1669,69 +1653,69 @@
   </div>
 
   <!-- Data & Core State -->
-  <script src="js/data/constants.js"></script>
-  <script src="js/core/state.js"></script>
-  <script src="js/core/orchestrator.js"></script>
-  <script src="js/core/career.js"></script>
+  <script src="js/data/constants.js" defer></script>
+  <script src="js/core/state.js" defer></script>
+  <script src="js/core/orchestrator.js" defer></script>
+  <script src="js/core/career.js" defer></script>
 
   <!-- Audio & Voice Engines -->
-  <script src="js/audio/movements.js"></script>
-  <script src="js/audio/soundtrack.js"></script>
-  <script src="js/audio/voice.js"></script>
+  <script src="js/audio/movements.js" defer></script>
+  <script src="js/audio/soundtrack.js" defer></script>
+  <script src="js/audio/voice.js" defer></script>
 
   <!-- Visual FX, Craft Icons, Spotlight, Intel, Flow & UI Rendering -->
-  <script src="js/ui/icons.js"></script>
-  <script src="js/ui/fx.js"></script>
-  <script src="js/ui/spotlight.js"></script>
-  <script src="js/ui/intel.js"></script>
-  <script src="js/ui/hud.js"></script>
-  <script src="js/ui/panels.js"></script>
-  <script src="js/ui/modals.js"></script>
-  <script src="js/ui/feedback.js"></script>
-  <script src="js/ui/flow.js"></script>
+  <script src="js/ui/icons.js" defer></script>
+  <script src="js/ui/fx.js" defer></script>
+  <script src="js/ui/spotlight.js" defer></script>
+  <script src="js/ui/intel.js" defer></script>
+  <script src="js/ui/hud.js" defer></script>
+  <script src="js/ui/panels.js" defer></script>
+  <script src="js/ui/modals.js" defer></script>
+  <script src="js/ui/feedback.js" defer></script>
+  <script src="js/ui/flow.js" defer></script>
 
   <!-- Procedural Canvas Portraits & Stage Layers -->
-  <script src="js/canvas/portraits.js"></script>
-  <script src="js/canvas/stage-backdrop.js"></script>
-  <script src="js/canvas/stage-seats.js"></script>
-  <script src="js/canvas/stage.js"></script>
+  <script src="js/canvas/portraits.js" defer></script>
+  <script src="js/canvas/stage-backdrop.js" defer></script>
+  <script src="js/canvas/stage-seats.js" defer></script>
+  <script src="js/canvas/stage.js" defer></script>
 
   <!-- 3D Three.js Sanctuary Stage + Genshin NPR Toon + VRM Engine -->
-  <script src="js/stage3d/textures.js"></script>
-  <script src="js/stage3d/anime-shader.js"></script>
-  <script src="js/stage3d/vrm-loader.js"></script>
-  <script src="js/stage3d/environment.js"></script>
-  <script src="js/stage3d/character-mesh.js"></script>
-  <script src="js/stage3d/character-anim.js"></script>
-  <script src="js/stage3d/hero-character.js"></script>
-  <script src="js/stage3d/effects.js"></script>
-  <script src="js/stage3d/postfx.js"></script>
-  <script src="js/stage3d/engine.js"></script>
+  <script src="js/stage3d/textures.js" defer></script>
+  <script src="js/stage3d/anime-shader.js" defer></script>
+  <script src="js/stage3d/vrm-loader.js" defer></script>
+  <script src="js/stage3d/environment.js" defer></script>
+  <script src="js/stage3d/character-mesh.js" defer></script>
+  <script src="js/stage3d/character-anim.js" defer></script>
+  <script src="js/stage3d/hero-character.js" defer></script>
+  <script src="js/stage3d/effects.js" defer></script>
+  <script src="js/stage3d/postfx.js" defer></script>
+  <script src="js/stage3d/engine.js" defer></script>
 
   <!-- AI Engines (v9.0 Anti-Cheat Blind-View Firewall + Gemini + Built-in Heuristics) -->
-  <script src="js/ai/blind-view.js"></script>
-  <script src="js/ai/persona-engine.js"></script>
-  <script src="js/ai/gemini.js"></script>
-  <script src="js/ai/deduction.js"></script>
-  <script src="js/ai/context.js"></script>
-  <script src="js/ai/reactions.js"></script>
-  <script src="js/ai/heuristics.js"></script>
+  <script src="js/ai/blind-view.js" defer></script>
+  <script src="js/ai/persona-engine.js" defer></script>
+  <script src="js/ai/gemini.js" defer></script>
+  <script src="js/ai/deduction.js" defer></script>
+  <script src="js/ai/context.js" defer></script>
+  <script src="js/ai/reactions.js" defer></script>
+  <script src="js/ai/heuristics.js" defer></script>
 
   <!-- Game Rules & Flow -->
-  <script src="js/game/setup.js"></script>
-  <script src="js/game/night.js"></script>
-  <script src="js/game/last-words.js"></script>
-  <script src="js/game/day-speech.js"></script>
-  <script src="js/game/player-speech.js"></script>
-  <script src="js/game/voting.js"></script>
-  <script src="js/game/spectator.js"></script>
+  <script src="js/game/setup.js" defer></script>
+  <script src="js/game/night.js" defer></script>
+  <script src="js/game/last-words.js" defer></script>
+  <script src="js/game/day-speech.js" defer></script>
+  <script src="js/game/player-speech.js" defer></script>
+  <script src="js/game/voting.js" defer></script>
+  <script src="js/game/spectator.js" defer></script>
 
   <!-- Event Bindings & App Entry -->
-  <script src="js/events/canvas-events.js"></script>
-  <script src="js/events/audio-events.js"></script>
-  <script src="js/events/game-events.js"></script>
-  <script src="js/events/modal-events.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/events/canvas-events.js" defer></script>
+  <script src="js/events/audio-events.js" defer></script>
+  <script src="js/events/game-events.js" defer></script>
+  <script src="js/events/modal-events.js" defer></script>
+  <script src="js/main.js" defer></script>
 </body>
 
 </html>

@@ -2710,12 +2710,15 @@ function finalizeSheriffElectionWinner(chosenCandId, opts) {
         if (typeof showToast === "function") {
           showToast("警長競選平票！進入平票 PK 重投。", "amber");
         }
-        if (!finOpts.isQuickPass) {
+        const pSeatPk = getPlayerSeat();
+        const isFfPk = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+        const playerCanVotePk = Boolean(pSeatPk && pSeatPk.alive && !ctx.playerRunning && ctx.candidateIds.indexOf(pid) === -1 && !isFfPk);
+        if (!finOpts.isQuickPass || playerCanVotePk) {
           updateAllUI();
           return null;
         }
-        // 快速開票模式自動執行第 2 輪 PK 投票（若仍平票則正式流失警徽）
-        return finalizeSheriffElectionWinner(chosenCandId, { isQuickPass: true });
+        // 快速開票模式（玩家無法於警下重投時）自動執行第 2 輪 PK 投票，不帶入首輪無效舊票
+        return finalizeSheriffElectionWinner(null, { isQuickPass: true });
       }
       // 二次平票：本局警徽正式流失！
       winner = null;

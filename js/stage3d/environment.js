@@ -56,6 +56,51 @@ function apply3DEnvironmentIBL(scene, env) {
   if (tex) scene.environment = tex;
 }
 
+function buildInstancedOrGroup(geo, mat, specs, opts) {
+  if (!specs || specs.length === 0) return null;
+  const canInstance = typeof THREE.InstancedMesh === "function" && typeof THREE.Matrix4 === "function" && specs.length > 1;
+  if (canInstance) {
+    const im = new THREE.InstancedMesh(geo, mat, specs.length);
+    if (opts && opts.castShadow) im.castShadow = true;
+    if (opts && opts.receiveShadow) im.receiveShadow = true;
+    const dummy = new THREE.Object3D();
+    const localM = new THREE.Matrix4();
+    const finalM = new THREE.Matrix4();
+    for (let i = 0; i < specs.length; i++) {
+      const sp = specs[i];
+      dummy.position.set(sp.px || 0, sp.py || 0, sp.pz || 0);
+      dummy.rotation.set(sp.rx || 0, sp.ry || 0, sp.rz || 0);
+      dummy.scale.set(sp.sx === undefined ? 1 : sp.sx, sp.sy === undefined ? 1 : sp.sy, sp.sz === undefined ? 1 : sp.sz);
+      dummy.updateMatrix();
+      if (sp.parentMat) {
+        localM.copy(dummy.matrix);
+        finalM.multiplyMatrices(sp.parentMat, localM);
+        im.setMatrixAt(i, finalM);
+      } else {
+        im.setMatrixAt(i, dummy.matrix);
+      }
+    }
+    if (im.instanceMatrix) im.instanceMatrix.needsUpdate = true;
+    return im;
+  }
+  const grp = new THREE.Group();
+  for (let i = 0; i < specs.length; i++) {
+    const sp = specs[i];
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(sp.px || 0, sp.py || 0, sp.pz || 0);
+    m.rotation.set(sp.rx || 0, sp.ry || 0, sp.rz || 0);
+    m.scale.set(sp.sx === undefined ? 1 : sp.sx, sp.sy === undefined ? 1 : sp.sy, sp.sz === undefined ? 1 : sp.sz);
+    if (opts && opts.castShadow) m.castShadow = true;
+    if (opts && opts.receiveShadow) m.receiveShadow = true;
+    if (sp.parentGrp) {
+      sp.parentGrp.add(m);
+    } else {
+      grp.add(m);
+    }
+  }
+  return grp.children.length > 0 ? grp : null;
+}
+
 function build3DEnvironmentMap(renderer, scene, env) {
   if (!renderer || typeof THREE.PMREMGenerator !== "function") return;
   try {
@@ -65,28 +110,23 @@ function build3DEnvironmentMap(renderer, scene, env) {
 
     const envScene = new THREE.Scene();
     envScene.background = new THREE.Color(0x162038);
-    const dome = new THREE.Mesh(
-      new THREE.SphereGeometry(18, 16, 12),
-      new THREE.MeshBasicMaterial({ color: 0x263455, side: THREE.BackSide })
-    );
-    envScene.add(dome);
-    const warmRing = new THREE.Mesh(
-      new THREE.TorusGeometry(6, 0.85, 8, 24),
-      new THREE.MeshBasicMaterial({ color: 0xffd27d })
-    );
+    const domeGeo = new THREE.SphereGeometry(18, 16, 12);
+    const domeMat = new THREE.MeshBasicMaterial({ color: 0x263455, side: THREE.BackSide });
+    envScene.add(new THREE.Mesh(domeGeo, domeMat));
+    const warmRingGeo = new THREE.TorusGeometry(6, 0.85, 8, 24);
+    const warmRingMat = new THREE.MeshBasicMaterial({ color: 0xffd27d });
+    const warmRing = new THREE.Mesh(warmRingGeo, warmRingMat);
     warmRing.rotation.x = Math.PI * 0.5;
     warmRing.position.y = 5.5;
     envScene.add(warmRing);
-    const sunPatch = new THREE.Mesh(
-      new THREE.SphereGeometry(2.6, 12, 10),
-      new THREE.MeshBasicMaterial({ color: 0xfff3c4 })
-    );
+    const sunPatchGeo = new THREE.SphereGeometry(2.6, 12, 10);
+    const sunPatchMat = new THREE.MeshBasicMaterial({ color: 0xfff3c4 });
+    const sunPatch = new THREE.Mesh(sunPatchGeo, sunPatchMat);
     sunPatch.position.set(8, 8, -9);
     envScene.add(sunPatch);
-    const coolPatch = new THREE.Mesh(
-      new THREE.SphereGeometry(3.2, 12, 10),
-      new THREE.MeshBasicMaterial({ color: 0x60a5fa })
-    );
+    const coolPatchGeo = new THREE.SphereGeometry(3.2, 12, 10);
+    const coolPatchMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
+    const coolPatch = new THREE.Mesh(coolPatchGeo, coolPatchMat);
     coolPatch.position.set(-9, 6, 7);
     envScene.add(coolPatch);
 
@@ -94,9 +134,27 @@ function build3DEnvironmentMap(renderer, scene, env) {
     env.iblDefaultTex = procRT.texture;
     scene.environment = procRT.texture;
 
+    // Immediately release temporary procedural IBL baking geometries & materials
+    [domeGeo, warmRingGeo, sunPatchGeo, coolPatchGeo, domeMat, warmRingMat, sunPatchMat, coolPatchMat].forEach(function (res) {
+      try { if (res && typeof res.dispose === "function") res.dispose(); } catch (e) { }
+    });
+
+    let pmremDisposed = false;
+    const disposePmrem = function () {
+      if (pmremDisposed) return;
+      pmremDisposed = true;
+      try { if (typeof pmrem.dispose === "function") pmrem.dispose(); } catch (e) { }
+      if (env.pmrem === pmrem) env.pmrem = null;
+    };
+
     const isFileProto = typeof window !== "undefined" && window.location && window.location.protocol === "file:";
     if (!isFileProto && typeof THREE.TextureLoader === "function") {
       const loader = new THREE.TextureLoader();
+      let pendingSkyCount = 4;
+      const onSkySettled = function () {
+        pendingSkyCount -= 1;
+        if (pendingSkyCount <= 0) disposePmrem();
+      };
       loader.load("assets/sky/sanctuary_day.jpg?v=12", function (tex) {
         tex.encoding = THREE.sRGBEncoding;
         tex.mapping = THREE.EquirectangularReflectionMapping;
@@ -104,10 +162,11 @@ function build3DEnvironmentMap(renderer, scene, env) {
         env.skyPhotoDayMat.needsUpdate = true;
         env.hasPhotoDay = true;
         try {
-          env.iblDayTex = pmrem.fromEquirectangular(tex).texture;
+          if (!pmremDisposed) env.iblDayTex = pmrem.fromEquirectangular(tex).texture;
           apply3DEnvironmentIBL(scene, env);
         } catch (e) { }
-      });
+        onSkySettled();
+      }, undefined, onSkySettled);
       loader.load("assets/sky/sanctuary_celestial_day.jpg?v=12", function (tex) {
         tex.encoding = THREE.sRGBEncoding;
         tex.mapping = THREE.EquirectangularReflectionMapping;
@@ -117,10 +176,11 @@ function build3DEnvironmentMap(renderer, scene, env) {
         }
         env.hasPhotoCelestial = true;
         try {
-          env.iblCelestialTex = pmrem.fromEquirectangular(tex).texture;
+          if (!pmremDisposed) env.iblCelestialTex = pmrem.fromEquirectangular(tex).texture;
           apply3DEnvironmentIBL(scene, env);
         } catch (e) { }
-      });
+        onSkySettled();
+      }, undefined, onSkySettled);
       loader.load("assets/sky/sanctuary_night.jpg?v=12", function (tex) {
         tex.encoding = THREE.sRGBEncoding;
         tex.mapping = THREE.EquirectangularReflectionMapping;
@@ -128,10 +188,11 @@ function build3DEnvironmentMap(renderer, scene, env) {
         env.skyPhotoNightMat.needsUpdate = true;
         env.hasPhotoNight = true;
         try {
-          env.iblNightTex = pmrem.fromEquirectangular(tex).texture;
+          if (!pmremDisposed) env.iblNightTex = pmrem.fromEquirectangular(tex).texture;
           apply3DEnvironmentIBL(scene, env);
         } catch (e) { }
-      });
+        onSkySettled();
+      }, undefined, onSkySettled);
       loader.load("assets/sky/sanctuary_dusk.jpg?v=12", function (tex) {
         tex.encoding = THREE.sRGBEncoding;
         tex.mapping = THREE.EquirectangularReflectionMapping;
@@ -141,10 +202,13 @@ function build3DEnvironmentMap(renderer, scene, env) {
         }
         env.hasPhotoDusk = true;
         try {
-          env.iblDuskTex = pmrem.fromEquirectangular(tex).texture;
+          if (!pmremDisposed) env.iblDuskTex = pmrem.fromEquirectangular(tex).texture;
           apply3DEnvironmentIBL(scene, env);
         } catch (e) { }
-      });
+        onSkySettled();
+      }, undefined, onSkySettled);
+    } else {
+      disposePmrem();
     }
   } catch (e) { }
 }
@@ -460,7 +524,11 @@ function buildMountainPineTree(x, y, z, scaleMul, woodTex) {
   }
 
   const canopy = new THREE.Group();
+  const coreGeo = new THREE.ConeGeometry(0.46, 0.24, 7);
   const fanGeo = new THREE.PlaneGeometry(1.92, 1.32);
+  const coreSpecs = [];
+  const shadeFanSpecs = [];
+  const sunFanSpecs = [];
   [
     [1.26, 2.96, 0.40, 1.24],
     [-1.02, 3.76, -0.36, 1.20],
@@ -469,32 +537,43 @@ function buildMountainPineTree(x, y, z, scaleMul, woodTex) {
     [-0.22, 4.18, 0.58, 1.00]
   ].forEach(function (c, ti) {
     // Subtle dark-emerald inner shadow core tucked cleanly inside lush needle cloud sprays
-    const core = new THREE.Mesh(new THREE.ConeGeometry(c[3] * 0.46, c[3] * 0.24, 7), deepLeafMat);
-    core.scale.set(1.22, 0.72, 1.04);
-    core.position.set(c[0], c[1] + 0.02, c[2]);
-    core.rotation.y = ti * 0.95;
-    core.castShadow = true;
-    canopy.add(core);
+    coreSpecs.push({
+      px: c[0], py: c[1] + 0.02, pz: c[2],
+      ry: ti * 0.95,
+      sx: 1.22 * c[3], sy: 0.72 * c[3], sz: 1.04 * c[3]
+    });
     if (needleTex) {
-      // Richer painterly pine bough sprays: 6 lower shaded fronds + 5 upper sunlit crown fronds
+      // Richer painterly pine bough sprays: 6 lower shaded fronds + 5 upper sunlit crown fronds (batched via InstancedMesh!)
       for (let fi = 0; fi < 6; fi++) {
         const fa = (fi / 6) * Math.PI * 2 + ti * 0.65;
-        const fan = new THREE.Mesh(fanGeo, fanMatShade);
-        fan.position.set(c[0] + Math.cos(fa) * c[3] * 0.48, c[1] - 0.04 + (fi % 2) * 0.06, c[2] + Math.sin(fa) * c[3] * 0.48);
-        fan.rotation.set(-0.68, fa, 0.14 * (fi % 2 ? 1 : -1));
-        fan.scale.setScalar(c[3] * 0.90);
-        canopy.add(fan);
+        const scF = c[3] * 0.90;
+        shadeFanSpecs.push({
+          px: c[0] + Math.cos(fa) * c[3] * 0.48,
+          py: c[1] - 0.04 + (fi % 2) * 0.06,
+          pz: c[2] + Math.sin(fa) * c[3] * 0.48,
+          rx: -0.68, ry: fa, rz: 0.14 * (fi % 2 ? 1 : -1),
+          sx: scF, sy: scF, sz: scF
+        });
       }
       for (let ui = 0; ui < 5; ui++) {
         const ua = (ui / 5) * Math.PI * 2 + ti * 0.9 + 0.35;
-        const uFan = new THREE.Mesh(fanGeo, fanMatSun);
-        uFan.position.set(c[0] + Math.cos(ua) * c[3] * 0.28, c[1] + 0.12 + (ui % 2) * 0.06, c[2] + Math.sin(ua) * c[3] * 0.28);
-        uFan.rotation.set(-0.46, ua, -0.10 * (ui % 2 ? 1 : -1));
-        uFan.scale.setScalar(c[3] * 0.76);
-        canopy.add(uFan);
+        const scU = c[3] * 0.76;
+        sunFanSpecs.push({
+          px: c[0] + Math.cos(ua) * c[3] * 0.28,
+          py: c[1] + 0.12 + (ui % 2) * 0.06,
+          pz: c[2] + Math.sin(ua) * c[3] * 0.28,
+          rx: -0.46, ry: ua, rz: -0.10 * (ui % 2 ? 1 : -1),
+          sx: scU, sy: scU, sz: scU
+        });
       }
     }
   });
+  const coreBatch = buildInstancedOrGroup(coreGeo, deepLeafMat, coreSpecs, { castShadow: true });
+  if (coreBatch) canopy.add(coreBatch);
+  const shadeFanBatch = buildInstancedOrGroup(fanGeo, fanMatShade, shadeFanSpecs);
+  if (shadeFanBatch) canopy.add(shadeFanBatch);
+  const sunFanBatch = buildInstancedOrGroup(fanGeo, fanMatSun, sunFanSpecs);
+  if (sunFanBatch) canopy.add(sunFanBatch);
   g.add(canopy);
   g.userData = { canopy: canopy };
 
@@ -503,7 +582,7 @@ function buildMountainPineTree(x, y, z, scaleMul, woodTex) {
   return g;
 }
 
-function buildCourtyardStoneLantern(x, z, rotY, stoneTex) {
+function buildCourtyardStoneLanternsInstanced(positions, stoneTex) {
   const g = new THREE.Group();
   const stoneMat = new THREE.MeshStandardMaterial({
     map: stoneTex ? stoneTex.map : null,
@@ -521,31 +600,52 @@ function buildCourtyardStoneLantern(x, z, rotY, stoneTex) {
     roughness: 0.22
   });
 
-  const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.20, 0.50), stoneMat);
-  plinth.position.y = 0.10;
-  plinth.castShadow = true;
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.14, 0.88, 8), stoneMat);
-  post.position.y = 0.64;
-  post.castShadow = true;
-  const tray = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.09, 0.44), stoneMat);
-  tray.position.y = 1.12;
-  const firebox = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.29, 6), coreMat);
-  firebox.position.y = 1.31;
-  // 4 delicate bronze lattice corner mullions framing the glowing lantern chamber
-  [[-0.145, -0.145], [0.145, -0.145], [-0.145, 0.145], [0.145, 0.145]].forEach(function (mp) {
-    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.32, 5), mullionMat);
-    bar.position.set(mp[0], 1.31, mp[1]);
-    g.add(bar);
-  });
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.25, 6), stoneMat);
-  roof.position.y = 1.59;
-  roof.castShadow = true;
-  const finial = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), stoneMat);
-  finial.position.y = 1.75;
+  const plinthSpecs = [];
+  const postSpecs = [];
+  const traySpecs = [];
+  const fireboxSpecs = [];
+  const mullionSpecs = [];
+  const roofSpecs = [];
+  const finialSpecs = [];
+  const mullionOffsets = [[-0.145, -0.145], [0.145, -0.145], [-0.145, 0.145], [0.145, 0.145]];
+  const canMat = typeof THREE.Matrix4 === "function";
 
-  g.add(plinth, post, tray, firebox, roof, finial);
-  g.position.set(x, 0, z);
-  g.rotation.y = rotY || 0;
+  positions.forEach(function (sl) {
+    const pObj = new THREE.Object3D();
+    pObj.position.set(sl[0], 0, sl[1]);
+    pObj.rotation.y = sl[2] || 0;
+    let parentMat = null;
+    let parentGrp = null;
+    if (canMat && typeof pObj.updateMatrix === "function" && pObj.matrix) {
+      pObj.updateMatrix();
+      parentMat = pObj.matrix.clone();
+    } else {
+      parentGrp = new THREE.Group();
+      parentGrp.position.set(sl[0], 0, sl[1]);
+      parentGrp.rotation.y = sl[2] || 0;
+      g.add(parentGrp);
+    }
+    plinthSpecs.push({ py: 0.10, parentMat: parentMat, parentGrp: parentGrp });
+    postSpecs.push({ py: 0.64, parentMat: parentMat, parentGrp: parentGrp });
+    traySpecs.push({ py: 1.12, parentMat: parentMat, parentGrp: parentGrp });
+    fireboxSpecs.push({ py: 1.31, parentMat: parentMat, parentGrp: parentGrp });
+    for (let mi = 0; mi < mullionOffsets.length; mi++) {
+      mullionSpecs.push({ px: mullionOffsets[mi][0], py: 1.31, pz: mullionOffsets[mi][1], parentMat: parentMat, parentGrp: parentGrp });
+    }
+    roofSpecs.push({ py: 1.59, parentMat: parentMat, parentGrp: parentGrp });
+    finialSpecs.push({ py: 1.75, parentMat: parentMat, parentGrp: parentGrp });
+  });
+
+  const parts = [
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.50, 0.20, 0.50), stoneMat, plinthSpecs, { castShadow: true }),
+    buildInstancedOrGroup(new THREE.CylinderGeometry(0.105, 0.14, 0.88, 8), stoneMat, postSpecs, { castShadow: true }),
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.44, 0.09, 0.44), stoneMat, traySpecs),
+    buildInstancedOrGroup(new THREE.CylinderGeometry(0.155, 0.155, 0.29, 6), coreMat, fireboxSpecs),
+    buildInstancedOrGroup(new THREE.CylinderGeometry(0.016, 0.016, 0.32, 5), mullionMat, mullionSpecs),
+    buildInstancedOrGroup(new THREE.ConeGeometry(0.42, 0.25, 6), stoneMat, roofSpecs, { castShadow: true }),
+    buildInstancedOrGroup(new THREE.SphereGeometry(0.07, 8, 6), stoneMat, finialSpecs)
+  ];
+  parts.forEach(function (part) { if (part) g.add(part); });
   return { group: g, coreMat: coreMat };
 }
 
@@ -631,6 +731,9 @@ function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex) {
 
   const canopy = new THREE.Group();
   const leafGeo = new THREE.PlaneGeometry(1.55, 1.55);
+  const nodeRingGeo = new THREE.TorusGeometry(0.05, 0.010, 5, 10);
+  const nodeRingSpecs = [];
+  const sprigSpecs = [];
   const stalks = [
     { ox: 0.0, oz: 0.0, h: 5.8, r: 0.056, leanX: 0.05, leanZ: 0.04 },
     { ox: 0.34, oz: 0.18, h: 4.9, r: 0.046, leanX: 0.09, leanZ: -0.05 },
@@ -647,26 +750,35 @@ function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex) {
 
     for (let ni = 1; ni <= 4; ni++) {
       const ny = st.h * (ni / 5);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(st.r * (1.02 - ni * 0.05), 0.010, 5, 10), nodeMat);
-      ring.rotation.x = Math.PI * 0.5;
-      ring.position.set(st.ox + st.leanX * ny * 0.8, ny, st.oz + st.leanZ * ny * 0.8);
-      g.add(ring);
+      const rScale = (st.r * (1.02 - ni * 0.05)) / 0.05;
+      nodeRingSpecs.push({
+        px: st.ox + st.leanX * ny * 0.8, py: ny, pz: st.oz + st.leanZ * ny * 0.8,
+        rx: Math.PI * 0.5,
+        sx: rScale, sy: rScale, sz: 1
+      });
     }
 
-    // Layered crossed bamboo foliage sprays crowning upper culms
+    // Layered crossed bamboo foliage sprays crowning upper culms (batched via InstancedMesh!)
     for (let li = 0; li < 2; li++) {
       const ly = st.h * (0.72 + li * 0.22);
       const lx = st.ox + st.leanX * ly * 0.82;
       const lz = st.oz + st.leanZ * ly * 0.82;
       for (let ci = 0; ci < 2; ci++) {
-        const sprig = new THREE.Mesh(leafGeo, leafMat);
-        sprig.position.set(lx, ly, lz);
-        sprig.rotation.set(-0.22 + li * 0.12, si * 1.15 + ci * Math.PI * 0.5 + li * 0.5, (ci === 0 ? 0.18 : -0.18));
-        sprig.scale.setScalar(0.86 + (si % 3) * 0.14);
-        canopy.add(sprig);
+        const scB = 0.86 + (si % 3) * 0.14;
+        sprigSpecs.push({
+          px: lx, py: ly, pz: lz,
+          rx: -0.22 + li * 0.12,
+          ry: si * 1.15 + ci * Math.PI * 0.5 + li * 0.5,
+          rz: ci === 0 ? 0.18 : -0.18,
+          sx: scB, sy: scB, sz: scB
+        });
       }
     }
   });
+  const nodeBatch = buildInstancedOrGroup(nodeRingGeo, nodeMat, nodeRingSpecs);
+  if (nodeBatch) g.add(nodeBatch);
+  const sprigBatch = buildInstancedOrGroup(leafGeo, leafMat, sprigSpecs);
+  if (sprigBatch) canopy.add(sprigBatch);
 
   g.add(canopy);
   g.position.set(x, y, z);
@@ -742,6 +854,8 @@ function buildBlossomTree(x, y, z, scaleMul, kind, woodTex, blossomTex) {
 
   const canopy = new THREE.Group();
   const sprigGeo = new THREE.PlaneGeometry(1.85, 1.58);
+  const shadeSprigSpecs = [];
+  const sunSprigSpecs = [];
   [
     [1.18, 2.86, 0.48, 1.05],
     [-1.08, 3.22, -0.42, 1.10],
@@ -749,24 +863,34 @@ function buildBlossomTree(x, y, z, scaleMul, kind, woodTex, blossomTex) {
     [-0.08, 3.92, 0.14, 1.24],
     [-0.36, 3.30, 0.66, 0.92]
   ].forEach(function (cl, idx) {
-    // Pure layered painterly blossom sprigs (shaded inner + sunlit outer; zero solid geometric sphere blobs!)
+    // Pure layered painterly blossom sprigs batched via InstancedMesh!
     for (let si = 0; si < 3; si++) {
       const sa = (si / 3) * Math.PI * 2 + idx * 0.85;
-      const inSp = new THREE.Mesh(sprigGeo, sprigMatShade);
-      inSp.position.set(cl[0] + Math.cos(sa) * cl[3] * 0.16, cl[1] - 0.12 + (si % 2) * 0.08, cl[2] + Math.sin(sa) * cl[3] * 0.16);
-      inSp.rotation.set(-0.22 + si * 0.18, sa + 0.5, (si % 2 ? 0.22 : -0.22));
-      inSp.scale.setScalar(cl[3] * 0.78);
-      canopy.add(inSp);
+      const scI = cl[3] * 0.78;
+      shadeSprigSpecs.push({
+        px: cl[0] + Math.cos(sa) * cl[3] * 0.16,
+        py: cl[1] - 0.12 + (si % 2) * 0.08,
+        pz: cl[2] + Math.sin(sa) * cl[3] * 0.16,
+        rx: -0.22 + si * 0.18, ry: sa + 0.5, rz: si % 2 ? 0.22 : -0.22,
+        sx: scI, sy: scI, sz: scI
+      });
     }
     for (let pi = 0; pi < 5; pi++) {
       const pa = (pi / 5) * Math.PI * 2 + idx * 0.7;
-      const sp = new THREE.Mesh(sprigGeo, sprigMat);
-      sp.position.set(cl[0] + Math.cos(pa) * cl[3] * 0.34, cl[1] + (pi % 2 ? 0.16 : -0.04), cl[2] + Math.sin(pa) * cl[3] * 0.34);
-      sp.rotation.set(-0.34 + (pi % 3) * 0.18, pa, (pi % 2 ? 0.16 : -0.16));
-      sp.scale.setScalar(cl[3] * 0.88);
-      canopy.add(sp);
+      const scP = cl[3] * 0.88;
+      sunSprigSpecs.push({
+        px: cl[0] + Math.cos(pa) * cl[3] * 0.34,
+        py: cl[1] + (pi % 2 ? 0.16 : -0.04),
+        pz: cl[2] + Math.sin(pa) * cl[3] * 0.34,
+        rx: -0.34 + (pi % 3) * 0.18, ry: pa, rz: pi % 2 ? 0.16 : -0.16,
+        sx: scP, sy: scP, sz: scP
+      });
     }
   });
+  const shadeBlossomBatch = buildInstancedOrGroup(sprigGeo, sprigMatShade, shadeSprigSpecs);
+  if (shadeBlossomBatch) canopy.add(shadeBlossomBatch);
+  const sunBlossomBatch = buildInstancedOrGroup(sprigGeo, sprigMat, sunSprigSpecs);
+  if (sunBlossomBatch) canopy.add(sunBlossomBatch);
 
   g.add(canopy);
   g.position.set(x, y, z);
@@ -1267,6 +1391,18 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
 
   const pillarPts = [];
   const lr = 7.85;
+  const canMatPav = typeof THREE.Matrix4 === "function";
+  const pPlinthSpecs = [];
+  const pPlinthRingSpecs = [];
+  const pPostSpecs = [];
+  const pDouLowerSpecs = [];
+  const pDouUpperSpecs = [];
+  const pQuetiMainSpecs = [];
+  const pQuetiTrimSpecs = [];
+  const pArmSpecs = [];
+  const cordGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.52, 4);
+  const tasselGeo = new THREE.CylinderGeometry(0.018, 0.044, 0.32, 6);
+
   for (let li = 0; li < 8; li++) {
     const la = (li / 8) * Math.PI * 2 + Math.PI / 8;
     const px = Math.cos(la) * lr;
@@ -1277,39 +1413,28 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     if (li === 1 || li === 2) continue;
 
     const lg = new THREE.Group();
-    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 0.36, 8), stonePlinthMat);
-    plinth.position.y = 0.18;
-    lg.add(plinth);
-    const plinthRing = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.022, 6, 16), goldAccentMat);
-    plinthRing.rotation.x = Math.PI * 0.5;
-    plinthRing.position.y = 0.37;
-    lg.add(plinthRing);
+    lg.position.set(px, 0, pz);
+    lg.lookAt(0, 0, 0);
+    let lgMat = null;
+    if (canMatPav && typeof lg.updateMatrix === "function" && lg.matrix) {
+      lg.updateMatrix();
+      lgMat = lg.matrix.clone();
+    }
 
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 4.7, 12), pillarMat);
-    post.position.y = 2.6;
-    post.castShadow = true;
-    lg.add(post);
-
-    // Sculpted Dougong (斗拱) stepped timber bracket capital + carved Queti (雀替) wing brackets
-    const douLower = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.42), woodDarkMat);
-    douLower.position.y = 4.62;
-    const douUpper = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.11, 0.52), goldAccentMat);
-    douUpper.position.y = 4.75;
-    lg.add(douLower, douUpper);
+    pPlinthSpecs.push({ py: 0.18, parentMat: lgMat, parentGrp: lgMat ? null : lg });
+    pPlinthRingSpecs.push({ py: 0.37, rx: Math.PI * 0.5, parentMat: lgMat, parentGrp: lgMat ? null : lg });
+    pPostSpecs.push({ py: 2.6, parentMat: lgMat, parentGrp: lgMat ? null : lg });
+    pDouLowerSpecs.push({ py: 4.62, parentMat: lgMat, parentGrp: lgMat ? null : lg });
+    pDouUpperSpecs.push({ py: 4.75, parentMat: lgMat, parentGrp: lgMat ? null : lg });
     [-1, 1].forEach(function (sideDir) {
-      const quetiMain = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.09), woodDarkMat);
-      quetiMain.position.set(sideDir * 0.34, 4.44, 0);
-      const quetiTrim = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.09, 0.11), goldAccentMat);
-      quetiTrim.position.set(sideDir * 0.28, 4.33, 0);
-      lg.add(quetiMain, quetiTrim);
+      pQuetiMainSpecs.push({ px: sideDir * 0.34, py: 4.44, parentMat: lgMat, parentGrp: lgMat ? null : lg });
+      pQuetiTrimSpecs.push({ px: sideDir * 0.28, py: 4.33, parentMat: lgMat, parentGrp: lgMat ? null : lg });
     });
+    pArmSpecs.push({ py: 4.25, pz: -0.4, parentMat: lgMat, parentGrp: lgMat ? null : lg });
 
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.85), woodDarkMat);
-    arm.position.set(0, 4.25, -0.4);
-    lg.add(arm);
-
+    // Animated swaying silk lantern stays inside lg so wind sway & tassel secondary motion stay intact
     const orb = new THREE.Group();
-    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.52, 4), lanternCapMat);
+    const cord = new THREE.Mesh(cordGeo, lanternCapMat);
     cord.position.y = 0.52;
     const body = new THREE.Mesh(lanternBodyGeo, env.lanternBodyMat);
     const halo = new THREE.Mesh(lanternHaloGeo, env.lanternHaloMat);
@@ -1323,19 +1448,27 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     const botTrim = new THREE.Mesh(lanternTrimRingGeo, goldAccentMat);
     botTrim.rotation.x = Math.PI * 0.5;
     botTrim.position.y = -0.27;
-    const tassel = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.044, 0.32, 6), tasselMat);
+    const tassel = new THREE.Mesh(tasselGeo, tasselMat);
     tassel.position.y = -0.49;
     orb.add(cord, body, halo, topCap, topTrim, botCap, botTrim, tassel);
     orb.position.set(0, 3.45, -0.78);
     lg.add(orb);
 
-    lg.position.set(px, 0, pz);
-    lg.lookAt(0, 0, 0);
     proceduralPavilionGroup.add(lg);
     env.lanterns.push({ group: lg, orb: orb, tassel: tassel, phase: li * 0.85 });
   }
+  [
+    buildInstancedOrGroup(new THREE.CylinderGeometry(0.28, 0.36, 0.36, 8), stonePlinthMat, pPlinthSpecs),
+    buildInstancedOrGroup(new THREE.TorusGeometry(0.26, 0.022, 6, 16), goldAccentMat, pPlinthRingSpecs),
+    buildInstancedOrGroup(new THREE.CylinderGeometry(0.14, 0.16, 4.7, 12), pillarMat, pPostSpecs, { castShadow: true }),
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.42, 0.12, 0.42), woodDarkMat, pDouLowerSpecs),
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.62, 0.11, 0.52), goldAccentMat, pDouUpperSpecs),
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.42, 0.16, 0.09), woodDarkMat, pQuetiMainSpecs),
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.30, 0.09, 0.11), goldAccentMat, pQuetiTrimSpecs),
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.08, 0.08, 0.85), woodDarkMat, pArmSpecs)
+  ].forEach(function (part) { if (part) proceduralPavilionGroup.add(part); });
 
-  // Carved Wooden Balustrades, White-Plaster Academy Plinths & Swept Backdrop Flying Eaves (leaves +Z camera bays open!)
+  // Carved Wooden Balustrades, White-Plaster Academy Plinths & Swept Backdrop Flying Eaves (InstancedMesh batched!)
   const hasTube = typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function";
   const balLatticeTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createBalustradeLatticeTexture === "function")
     ? stage3dTextures.createBalustradeLatticeTexture()
@@ -1351,6 +1484,21 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
       side: THREE.DoubleSide
     })
     : null;
+  const octSpan = 2 * lr * Math.sin(Math.PI / 8);
+  const bLowWallSpecs = [];
+  const bTopRailSpecs = [];
+  const bBotRailSpecs = [];
+  const bFretSpecs = [];
+  const bSpindleSpecs = [];
+  const bCapCollarSpecs = [];
+  const bLotusBudSpecs = [];
+  const eLintelSpecs = [];
+  const eFriezeSpecs = [];
+  const eRoofPanelSpecs = [];
+  const eRidgeBeamSpecs = [];
+  const eTransomSpecs = [];
+  const eTransomBarSpecs = [];
+
   for (let bi = 0; bi < 8; bi++) {
     // Bay 1 (Front South between li=1 and li=2) stays completely open gateway for uncluttered camera approach
     if (bi === 1) continue;
@@ -1358,114 +1506,118 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     const pB = pillarPts[(bi + 1) % 8];
     const midX = (pA.x + pB.x) * 0.5;
     const midZ = (pA.z + pB.z) * 0.5;
-    const span = Math.hypot(pB.x - pA.x, pB.z - pA.z);
+    const span = octSpan;
     const yaw = Math.atan2(pB.x - pA.x, pB.z - pA.z);
 
     // Low white-plaster courtyard curb + carved walnut fretwork balustrade + lotus-bud newel caps (skip front entrance bays 0 and 2)
     if (bi >= 3 || bi === 7) {
-      const bayGrp = new THREE.Group();
-      bayGrp.position.set(midX, 0, midZ);
-      bayGrp.rotation.y = yaw;
-
-      const lowWall = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, span - 0.35), stonePlinthMat);
-      lowWall.position.y = 0.14;
-      lowWall.receiveShadow = true;
-      const topRail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, span - 0.25), woodDarkMat);
-      topRail.position.y = 0.96;
-      topRail.castShadow = true;
-      const botRail = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.05, span - 0.36), woodDarkMat);
-      botRail.position.y = 0.31;
-      bayGrp.add(lowWall, topRail, botRail);
-
-      if (balLatticeMat) {
-        const fretPanel = new THREE.Mesh(new THREE.PlaneGeometry(span - 0.54, 0.60), balLatticeMat);
-        fretPanel.rotation.y = Math.PI * 0.5;
-        fretPanel.position.y = 0.63;
-        bayGrp.add(fretPanel);
+      const bayRef = new THREE.Object3D();
+      bayRef.position.set(midX, 0, midZ);
+      bayRef.rotation.y = yaw;
+      let bayMat = null;
+      let bayGrp = null;
+      if (canMatPav && typeof bayRef.updateMatrix === "function" && bayRef.matrix) {
+        bayRef.updateMatrix();
+        bayMat = bayRef.matrix.clone();
+      } else {
+        bayGrp = new THREE.Group();
+        bayGrp.position.set(midX, 0, midZ);
+        bayGrp.rotation.y = yaw;
+        proceduralPavilionGroup.add(bayGrp);
       }
 
+      bLowWallSpecs.push({ py: 0.14, parentMat: bayMat, parentGrp: bayGrp });
+      bTopRailSpecs.push({ py: 0.96, parentMat: bayMat, parentGrp: bayGrp });
+      bBotRailSpecs.push({ py: 0.31, parentMat: bayMat, parentGrp: bayGrp });
+      if (balLatticeMat) {
+        bFretSpecs.push({ py: 0.63, ry: Math.PI * 0.5, parentMat: bayMat, parentGrp: bayGrp });
+      }
       [-0.36, 0, 0.36].forEach(function (frac) {
-        const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.68, 6), woodDarkMat);
-        sp.position.set(0, 0.60, frac * (span - 0.5));
-        bayGrp.add(sp);
+        const zOff = frac * (span - 0.5);
+        bSpindleSpecs.push({ py: 0.60, pz: zOff, parentMat: bayMat, parentGrp: bayGrp });
         if (frac !== 0) {
-          const capCollar = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.012, 5, 10), goldAccentMat);
-          capCollar.rotation.x = Math.PI * 0.5;
-          capCollar.position.set(0, 1.01, frac * (span - 0.5));
-          const lotusBud = new THREE.Mesh(new THREE.SphereGeometry(0.062, 8, 6), stonePlinthMat);
-          lotusBud.scale.set(1, 1.24, 1);
-          lotusBud.position.set(0, 1.08, frac * (span - 0.5));
-          bayGrp.add(capCollar, lotusBud);
+          bCapCollarSpecs.push({ py: 1.01, pz: zOff, rx: Math.PI * 0.5, parentMat: bayMat, parentGrp: bayGrp });
+          bLotusBudSpecs.push({ py: 1.08, pz: zOff, sx: 1, sy: 1.24, sz: 1, parentMat: bayMat, parentGrp: bayGrp });
         }
       });
-      proceduralPavilionGroup.add(bayGrp);
     }
 
     // Sloped Red-Tile Backdrop Veranda Roof + Swept Upturned Flying Eaves along Rear & Side Bays (3..7)!
     if (bi >= 3) {
-      const eaveGrp = new THREE.Group();
-      eaveGrp.position.set(midX, 4.92, midZ);
-      eaveGrp.lookAt(0, 4.92, 0);
-
-      const lintel = new THREE.Mesh(new THREE.BoxGeometry(span + 0.18, 0.22, 0.26), woodDarkMat);
-      const frieze = new THREE.Mesh(new THREE.BoxGeometry(span + 0.12, 0.18, 0.28), stonePlinthMat);
-      frieze.position.y = -0.18;
-
-      // Outward-sloping crimson roof skirt (extends OUTSIDE pillar ring, zero camera occlusion!)
-      const slopeLen = 2.05;
-      const roofPanel = new THREE.Mesh(new THREE.BoxGeometry(span + 0.72, 0.12, slopeLen), roofTileMat);
-      roofPanel.position.set(0, 0.34, -0.78);
-      roofPanel.rotation.x = 0.34;
-      roofPanel.castShadow = true;
-
-      const ridgeBeam = new THREE.Mesh(new THREE.BoxGeometry(span + 0.78, 0.10, 0.12), goldAccentMat);
-      ridgeBeam.position.set(0, 0.04, -1.72);
-      eaveGrp.add(lintel, frieze, roofPanel, ridgeBeam);
-      // Warm backlit carved lattice transom frieze along rear bays (zero horizon occlusion!)
-      if (bi >= 4 && bi <= 6 && latticeTex) {
-        const transom = new THREE.Mesh(new THREE.BoxGeometry(span - 0.42, 0.42, 0.06), latticeMat);
-        transom.position.set(0, -0.50, 0.02);
-        const transomBar = new THREE.Mesh(new THREE.BoxGeometry(span - 0.34, 0.06, 0.10), woodDarkMat);
-        transomBar.position.set(0, -0.73, 0.02);
-        eaveGrp.add(transom, transomBar);
+      const eaveRef = new THREE.Object3D();
+      eaveRef.position.set(midX, 4.92, midZ);
+      eaveRef.lookAt(0, 4.92, 0);
+      let eaveMat = null;
+      let eaveGrp = null;
+      if (canMatPav && typeof eaveRef.updateMatrix === "function" && eaveRef.matrix) {
+        eaveRef.updateMatrix();
+        eaveMat = eaveRef.matrix.clone();
+      } else {
+        eaveGrp = new THREE.Group();
+        eaveGrp.position.set(midX, 4.92, midZ);
+        eaveGrp.lookAt(0, 4.92, 0);
+        proceduralPavilionGroup.add(eaveGrp);
       }
-      proceduralPavilionGroup.add(eaveGrp);
+
+      eLintelSpecs.push({ parentMat: eaveMat, parentGrp: eaveGrp });
+      eFriezeSpecs.push({ py: -0.18, parentMat: eaveMat, parentGrp: eaveGrp });
+      eRoofPanelSpecs.push({ py: 0.34, pz: -0.78, rx: 0.34, parentMat: eaveMat, parentGrp: eaveGrp });
+      eRidgeBeamSpecs.push({ py: 0.04, pz: -1.72, parentMat: eaveMat, parentGrp: eaveGrp });
+      if (bi >= 4 && bi <= 6 && latticeTex) {
+        eTransomSpecs.push({ py: -0.50, pz: 0.02, parentMat: eaveMat, parentGrp: eaveGrp });
+        eTransomBarSpecs.push({ py: -0.73, pz: 0.02, parentMat: eaveMat, parentGrp: eaveGrp });
+      }
     }
   }
+  const slopeLen = 2.05;
+  [
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.24, 0.28, octSpan - 0.35), stonePlinthMat, bLowWallSpecs, { receiveShadow: true }),
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.14, 0.08, octSpan - 0.25), woodDarkMat, bTopRailSpecs, { castShadow: true }),
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.10, 0.05, octSpan - 0.36), woodDarkMat, bBotRailSpecs),
+    balLatticeMat ? buildInstancedOrGroup(new THREE.PlaneGeometry(octSpan - 0.54, 0.60), balLatticeMat, bFretSpecs) : null,
+    buildInstancedOrGroup(new THREE.CylinderGeometry(0.036, 0.036, 0.68, 6), woodDarkMat, bSpindleSpecs),
+    buildInstancedOrGroup(new THREE.TorusGeometry(0.052, 0.012, 5, 10), goldAccentMat, bCapCollarSpecs),
+    buildInstancedOrGroup(new THREE.SphereGeometry(0.062, 8, 6), stonePlinthMat, bLotusBudSpecs),
+    buildInstancedOrGroup(new THREE.BoxGeometry(octSpan + 0.18, 0.22, 0.26), woodDarkMat, eLintelSpecs),
+    buildInstancedOrGroup(new THREE.BoxGeometry(octSpan + 0.12, 0.18, 0.28), stonePlinthMat, eFriezeSpecs),
+    buildInstancedOrGroup(new THREE.BoxGeometry(octSpan + 0.72, 0.12, slopeLen), roofTileMat, eRoofPanelSpecs, { castShadow: true }),
+    buildInstancedOrGroup(new THREE.BoxGeometry(octSpan + 0.78, 0.10, 0.12), goldAccentMat, eRidgeBeamSpecs),
+    buildInstancedOrGroup(new THREE.BoxGeometry(octSpan - 0.42, 0.42, 0.06), latticeMat, eTransomSpecs),
+    buildInstancedOrGroup(new THREE.BoxGeometry(octSpan - 0.34, 0.06, 0.10), woodDarkMat, eTransomBarSpecs)
+  ].forEach(function (part) { if (part) proceduralPavilionGroup.add(part); });
 
-  // Sculpted Upturned Flying Eave Horns + Golden Finials on the 6 Rear/Side Pillars (li = 3,4,5,6,7,0)!
+  // Sculpted Upturned Flying Eave Horns + Golden Finials on the 6 Rear/Side Pillars (li = 3,4,5,6,7,0) via InstancedMesh!
+  const hornSpecs = [];
+  const finialSpecs = [];
   [0, 3, 4, 5, 6, 7].forEach(function (idx) {
     const pt = pillarPts[idx];
     const dirX = Math.cos(pt.a);
     const dirZ = Math.sin(pt.a);
-    const hornGrp = new THREE.Group();
-    if (hasTube) {
-      const curve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(dirX * 7.6, 5.26, dirZ * 7.6),
-        new THREE.Vector3(dirX * 8.95, 5.02, dirZ * 8.95),
-        new THREE.Vector3(dirX * 9.75, 5.38, dirZ * 9.75)
-      );
-      const horn = new THREE.Mesh(new THREE.TubeGeometry(curve, 10, 0.095, 7, false), roofTileMat);
-      hornGrp.add(horn);
-    }
-    const finial = new THREE.Mesh(new THREE.OctahedronGeometry(0.11, 0), goldAccentMat);
-    finial.position.set(dirX * 9.78, 5.46, dirZ * 9.78);
-    hornGrp.add(finial);
-    proceduralPavilionGroup.add(hornGrp);
+    hornSpecs.push({ ry: -pt.a });
+    finialSpecs.push({ px: dirX * 9.78, py: 5.46, pz: dirZ * 9.78 });
   });
+  if (hasTube) {
+    const baseHornCurve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(7.6, 5.26, 0),
+      new THREE.Vector3(8.95, 5.02, 0),
+      new THREE.Vector3(9.75, 5.38, 0)
+    );
+    const hornBatch = buildInstancedOrGroup(new THREE.TubeGeometry(baseHornCurve, 10, 0.095, 7, false), roofTileMat, hornSpecs);
+    if (hornBatch) proceduralPavilionGroup.add(hornBatch);
+  }
+  const finialBatch = buildInstancedOrGroup(new THREE.OctahedronGeometry(0.11, 0), goldAccentMat, finialSpecs);
+  if (finialBatch) proceduralPavilionGroup.add(finialBatch);
 
-  // 4 Courtyard Stone Lanterns + 5 Sculpted Mountain Black Pines in a scaled courtyard group (never clip 10/12-seat eaves!)
+  // 4 Courtyard Stone Lanterns (InstancedMesh batched) + 5 Sculpted Mountain Black Pines in a scaled courtyard group
   const courtyardPropsGroup = new THREE.Group();
-  [
+  const stoneLanternPack = buildCourtyardStoneLanternsInstanced([
     [8.8, -4.8, 0.4],
     [-8.8, -4.8, -0.4],
     [4.4, -8.8, 0.1],
     [-4.4, -8.8, -0.1]
-  ].forEach(function (sl) {
-    const lanternObj = buildCourtyardStoneLantern(sl[0], sl[1], sl[2], stone);
-    courtyardPropsGroup.add(lanternObj.group);
-    env.stoneLanternCores.push(lanternObj.coreMat);
-  });
+  ], stone);
+  courtyardPropsGroup.add(stoneLanternPack.group);
+  env.stoneLanternCores.push(stoneLanternPack.coreMat);
 
   [
     [-10.4, -0.55, -3.2, 1.28],

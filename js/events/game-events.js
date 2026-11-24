@@ -176,7 +176,7 @@ function resetMatchToLobby() {
   if (el("btnQuickInlineRewrite")) el("btnQuickInlineRewrite").classList.add("hidden");
   updateSpotlightBox("主持播報", "準備開局", "選擇下方人數與角色，按下「開始對局」即可進入第一晚！", "");
   renderPinnedCluesTray();
-  renderTimeline();
+  renderTimeline({ deferIfHidden: true });
   updateAllUI();
 }
 

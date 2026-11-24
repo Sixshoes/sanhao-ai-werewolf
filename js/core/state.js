@@ -520,7 +520,7 @@ function addLog(entry) {
       entry.title + (entry.text ? (" — " + entry.text) : "")
     );
   }
-  renderTimeline();
+  renderTimeline({ deferIfHidden: true });
 }
 
 function isNightPhase(phase) {

@@ -419,6 +419,24 @@ function renderSeatIntelPopover() {
       bQuick.textContent = quickLabel;
       if (typeof shPrependIcon === "function") shPrependIcon(bQuick, quickIco, "gold");
     }
+
+    // v19.0 Phase-Aware Popover Subtraction: show ONLY 1–3 relevant large buttons per phase (zero 7-button overload!)
+    const stanceRow = el("intelStanceRow");
+    const skillRow = el("intelSkillRow");
+    const isVoteFocus = Boolean(state.match.started && ph === "DAY_VOTE" && quickLabel);
+    const isNightActionFocus = Boolean(state.match.started && (ph === "NIGHT_SEER" || ph === "NIGHT_WOLF" || ph === "NIGHT_GUARD" || ph === "HUNTER_TRIGGER") && quickLabel);
+    const isLobbyIntel = !state.match.started;
+    if (stanceRow) {
+      stanceRow.classList.toggle("hidden", isLobbyIntel || isVoteFocus || isNightActionFocus || !s.alive);
+    }
+    if (skillRow) {
+      const microUsable = Boolean(bMicro && !bMicro.classList.contains("hidden") && !bMicro.disabled);
+      const teaUsable = Boolean(bTea && !bTea.classList.contains("hidden") && !bTea.disabled);
+      skillRow.classList.toggle("hidden", isLobbyIntel || isVoteFocus || isNightActionFocus || !s.alive || (!microUsable && !teaUsable));
+    }
+    if (bPoke) {
+      bPoke.classList.toggle("hidden", isVoteFocus || isNightActionFocus || (state.match.started && s.alive));
+    }
   }
 }
 

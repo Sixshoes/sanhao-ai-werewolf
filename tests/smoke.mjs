@@ -63,7 +63,6 @@ const requiredAssets = [
   "assets/portraits/qingming.jpg",
   "assets/portraits/player_female.jpg",
   "assets/models/manifest.json",
-  "assets/models/qingming_sheet.jpg",
   "assets/portraits_vrm/qingming.jpg",
   "assets/portraits_vrm/player.jpg",
   "assets/portraits_vrm/player_male.jpg",
@@ -715,10 +714,11 @@ function makeObj3D(geo, mat) {
     geometry: geo || { attributes: { position: { setXYZ() { }, needsUpdate: false } }, dispose() { } },
     material: mat || { color: makeColor(), emissive: makeColor(), emissiveIntensity: 0, opacity: 1, dispose() { } },
     position: makeVec3(), rotation: makeVec3(), scale: makeVec3(1, 1, 1), quaternion: {},
+    matrix: { elements: new Float32Array(16), clone() { return { elements: new Float32Array(this.elements), copy() { return this; }, multiplyMatrices() { return this; } }; }, copy() { return this; }, multiplyMatrices() { return this; } },
     parent: null, children: [], visible: true, castShadow: false, receiveShadow: false, frustumCulled: true, userData: {},
     add(...items) { items.forEach(x => { if (x) { x.parent = this; this.children.push(x); } }); },
     remove(item) { const k = this.children.indexOf(item); if (k >= 0) { this.children.splice(k, 1); if (item) item.parent = null; } },
-    lookAt() { }, updateMatrixWorld() { },
+    lookAt() { }, updateMatrix() { }, updateMatrixWorld() { },
     getWorldPosition(t) {
       let wx = 0, wy = 0, wz = 0, cur = this;
       while (cur) {
@@ -757,7 +757,25 @@ const THREE = {
       compileEquirectangularShader() { },
       fromScene: () => ({ texture: { dispose() { } } }),
       fromEquirectangular: () => ({ texture: { dispose() { } } }),
+      dispose() { },
     };
+  },
+  Matrix4: function () {
+    return {
+      elements: new Float32Array(16),
+      clone() { return THREE.Matrix4(); },
+      copy() { return this; },
+      multiplyMatrices() { return this; }
+    };
+  },
+  InstancedMesh: function (g, m, count) {
+    const o = makeObj3D(g, m);
+    o.isInstancedMesh = true;
+    o.count = count || 0;
+    o.instanceMatrix = { needsUpdate: false };
+    o._matrices = [];
+    o.setMatrixAt = function (idx, mat4) { o._matrices[idx] = mat4; };
+    return o;
   },
   TextureLoader: function () { return { load() { } }; },
   Raycaster: function () {
@@ -1512,7 +1530,7 @@ vm.runInContext(`
   resetMatchToLobby();
 
   // v6.1 UI Craft, Ergonomics, Always-On Seat Quick Bar & Keyboard Shortcut E2E Checks
-  ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalPauseMenu", "heroSheetLightbox", "setupDrawer", "roleDealOverlay"].forEach(function (mid) {
+  ["modalTutorial", "modalGuide", "modalAiConfig", "modalVoteSheet", "modalHistoryLog", "modalJournal", "modalMusic", "modalCareer", "modalPauseMenu", "setupDrawer", "roleDealOverlay"].forEach(function (mid) {
     el(mid).classList.add("hidden");
   });
   if (!el("seatButtonStrip").classList.contains("hidden")) {
@@ -3952,7 +3970,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const xssEscaped = histHtml.includes("&lt;img") && !histHtml.includes("<img src=x");
     const resultShown = !el("feedbackResultCard").classList.contains("hidden");
     const ghUrl = savedEntry ? buildGitHubIssueUrl(savedEntry) : "";
-    const ghUrlOk = ghUrl.startsWith("https://github.com/Sixshoes/sanhao-ai-werewolf/issues/new?") && ghUrl.includes("title=") && ghUrl.includes("body=");
+    const ghUrlOk = FEEDBACK_CONFIG.githubOwner === "" && ghUrl === "";
 
     closeFeedbackModal();
     return {
@@ -6482,7 +6500,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       el("showcaseProfileCard").innerHTML.includes("好人癖好");
     const showcaseCardOk = Boolean(cardHiddenHero && cardShownMobai);
     const diag17 = collectFeedbackDiagnostics();
-    const version17Ok = Boolean(diag17 && diag17.version === "v18.0 (公測 3.3)");
+    const version17Ok = Boolean(diag17 && diag17.version === "v19.0 (公測 3.4)");
 
     // 6. Standard Day-1 Werewolf Order: Sheriff Election FIRST, THEN Night-1 Death Reveal (+ Dead-Sheriff Transfer + Election Explode Settlement)
     el("selectModeCount").value = "8";
@@ -6765,10 +6783,13 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     state.activeSpeakerId = 2;
     const prevSpk = voice.speaking;
     voice.speaking = true;
+    el("modalJournal").classList.remove("hidden");
+    el("journalPaneLog").classList.remove("hidden");
     renderTimeline();
     const maskedHtml = (el("chatTimeline")._children || []).map(function (c) { return c.innerHTML || c.textContent || ""; }).join(" ");
     commitPendingSpeechLog(2);
     const unmaskedHtml = (el("chatTimeline")._children || []).map(function (c) { return c.innerHTML || c.textContent || ""; }).join(" ");
+    el("modalJournal").classList.add("hidden");
     voice.speaking = prevSpk;
     const antiSpoilerTimelineOk = Boolean(
       maskedHtml.includes("正在發言中") &&
@@ -6798,4 +6819,193 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v18.0 (5 Sheriff Bugfixes / Pitch-Preserved Speed / 220ms Prep Beat / 4-State Vocal Sync / 1.25kHz Vocal Carve / Narrative Hold) E2E smoke test PASSED!");
+// ==================== v19.0 UI CLARITY, QINGMING TEA-ROBE VRM RECOLOR, 3-TIER TYPOGRAPHY & BUGFIX REGRESSION ====================
+{
+  const v19Html = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const v19Css = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const v19SpotlightSrc = fs.readFileSync(path.join(ROOT, "js/ui/spotlight.js"), "utf8");
+
+  const noLegacySheetOk = Boolean(
+    !v19Html.includes("btnToggleHeroSheet") &&
+    !v19Html.includes("heroSheetLightbox") &&
+    !fs.existsSync(path.join(ROOT, "assets/models/qingming_sheet.jpg"))
+  );
+  const noSub13HtmlOk = !/\btext-(?:xs|\[(?:[0-9]|1[0-2])(?:\.[0-9]+)?px\])/.test(v19Html);
+  const noSub13CssOk = [...v19Css.matchAll(/font-size:\s*([0-9.]+)px/g)].every(m => parseFloat(m[1]) >= 13);
+  const nullishHoldOk = v19SpotlightSrc.includes("narrativeHoldMs ?? 720") && v19SpotlightSrc.includes("holdMs ?? 2400") && v19SpotlightSrc.includes("opts.holdMs ?? 2450");
+
+  // Top HUD must contain ONLY 3 visible right-side buttons (Journal, Speed, Menu) & Harmony moved to modalJournal
+  const hudMatch = v19Html.match(/id="inGameTopHud"[\s\S]*?id="seatIntelPopover"/);
+  const hudSlice = hudMatch ? hudMatch[0] : "";
+  const topHud3BtnOk = Boolean(
+    hudSlice.includes('id="btnOpenJournal"') &&
+    hudSlice.includes('id="btnQuickVoiceSpeed"') &&
+    hudSlice.includes('id="btnOpenPauseMenu"') &&
+    !hudSlice.includes('id="harmonyBar"') &&
+    !hudSlice.includes('id="btnCycleViewHud"') &&
+    !hudSlice.includes('id="btnOpenFeedback"')
+  );
+
+  const v19Res = vm.runInContext(`(function () {
+    const qmStyle = stage3dVrm.getPersonaStyling("清茗");
+    const plStyle = stage3dVrm.getPersonaStyling("你");
+    const stylingOk = Boolean(
+      qmStyle && qmStyle.topsHex && qmStyle.neckHex && qmStyle.bottomsHex && qmStyle.vrmAcc === "tea_host" &&
+      plStyle && plStyle.topsHex && plStyle.bottomsHex && !plStyle.baseSlug
+    );
+
+    // applyHeroPalette propagates live to VRM recolorSlots + accMats
+    let shawlHexSet = null;
+    let jadeHexSet = null;
+    const fakeHero = {
+      paletteKey: "celadon",
+      mats: {
+        vest: { color: { setHex: function () {} } },
+        trim: { color: { setHex: function () {} } },
+        tunic: { color: { setHex: function () {} } },
+        sleeves: { color: { setHex: function () {} } },
+        sash: { color: { setHex: function () {} } },
+        trousers: { color: { setHex: function () {} } },
+        shoes: { color: { setHex: function () {} } },
+        hair: { color: { setHex: function () {} } },
+        ribbon: { color: { setHex: function () {} } },
+        jade: { color: { setHex: function () {} } }
+      },
+      vrmAvatar: {
+        recolorSlots: [],
+        accMats: {
+          shawlMat: { color: { setHex: function (h) { shawlHexSet = h; } } },
+          jadeMat: { color: { setHex: function (h) { jadeHexSet = h; } } }
+        }
+      }
+    };
+    applyHeroPalette(fakeHero, "teagold");
+    const heroVrmPalOk = Boolean(fakeHero.paletteKey === "teagold" && shawlHexSet === HERO_VRM_PALETTES.teagold.shawlHex && jadeHexSet === HERO_VRM_PALETTES.teagold.jadeHex);
+
+    // Quick-pass Sheriff Election tie pauses when player is eligible under-voter in PK round
+    el("selectModeCount").value = "6";
+    el("selectPreferredRole").value = "villager";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pidQp = getPlayerId();
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    const aiAliveQp = getAliveSeats().filter(function (s) { return s.id !== pidQp; });
+    aiAliveQp.slice(4).forEach(function (s) { s.alive = false; });
+    const c1 = aiAliveQp[0], c2 = aiAliveQp[1], v1 = aiAliveQp[2], v2 = aiAliveQp[3];
+    v1.suspicionMap[c1.id] = 5; v1.suspicionMap[c2.id] = 95;
+    v2.suspicionMap[c1.id] = 95; v2.suspicionMap[c2.id] = 5;
+    state.match.sheriffElectionCtx.candidateIds = [c1.id, c2.id];
+    state.match.sheriffElectionCtx.playerRunning = false;
+    state.match.sheriffElectionCtx.stage = "vote";
+    const qpTieRes = finalizeSheriffElectionWinner(null, { isQuickPass: true });
+    const quickPassPkPauseOk = Boolean(
+      qpTieRes === null &&
+      state.match.phase === "SHERIFF_ELECTION" &&
+      state.match.sheriffElectionCtx &&
+      state.match.sheriffElectionCtx.isPkRound === true
+    );
+
+    // Voting-phase Seat Intel Popover focuses cleanly on single Confirm Vote CTA
+    state.match.phase = "DAY_VOTE";
+    const voteTgt = getAliveSeats().find(function (s) { return s.id !== pidQp; });
+    openSeatIntel(voteTgt.id);
+    const votePopoverSingleCtaOk = Boolean(
+      !el("btnIntelQuickAct").classList.contains("hidden") &&
+      el("btnIntelQuickAct").textContent.includes("確認投給") &&
+      el("intelStanceRow").classList.contains("hidden") &&
+      el("intelSkillRow").classList.contains("hidden") &&
+      el("btnIntelPokeSeat").classList.contains("hidden")
+    );
+    closeSeatIntel();
+
+    // Showcase carousel Prev/Next arrows cycle cleanly & hide palette group on non-hero targets
+    stage3d.showcaseTarget = "hero";
+    indieFlow.syncShowcaseTargetUi();
+    const palShownOnHero = !el("showcasePaletteGroup").classList.contains("hidden");
+    el("btnShowcaseNext").click();
+    const nextMovedToSeat1 = String(stage3d.showcaseTarget) === "1" && el("showcasePaletteGroup").classList.contains("hidden");
+    el("btnShowcasePrev").click();
+    const prevReturnedHero = String(stage3d.showcaseTarget) === "hero";
+    const showcaseCarouselOk = Boolean(palShownOnHero && nextMovedToSeat1 && prevReturnedHero);
+
+    // Feedback modal hides external GitHub handle button
+    openFeedbackModal();
+    const ghHiddenOk = el("btnOpenGithubFeedback").classList.contains("hidden");
+    closeFeedbackModal();
+
+    resetMatchToLobby();
+    return {
+      stylingOk, heroVrmPalOk, quickPassPkPauseOk, votePopoverSingleCtaOk, showcaseCarouselOk, ghHiddenOk
+    };
+  })()`, ctx);
+
+  const v19Static = { noLegacySheetOk, noSub13HtmlOk, noSub13CssOk, nullishHoldOk, topHud3BtnOk };
+  for (const [k, v] of Object.entries(Object.assign({}, v19Static, v19Res))) {
+    if (!v) {
+      throw new Error("v19.0 UI CLARITY & RECOLOR REGRESSION failed for " + k + ": " + JSON.stringify(Object.assign({}, v19Static, v19Res)));
+    }
+  }
+}
+
+// v19.1 FULL-STACK QUALITY, ANONYMITY & WEBGL/NETWORK PERFORMANCE AUDIT CHECK
+{
+  const fbSrc = fs.readFileSync(path.join(ROOT, "js/ui/feedback.js"), "utf8");
+  const noAuthorLeakOk = !fbSrc.includes("Sixshoes") && fbSrc.includes('githubOwner: ""');
+
+  const engSrc = fs.readFileSync(path.join(ROOT, "js/stage3d/engine.js"), "utf8");
+  const noEngineEmojiOk = !engSrc.includes("🔍");
+  const zeroGcCamOk = engSrc.includes("_camRivalAnchors") && !engSrc.includes('seats.filter(function (s) { return s.alive && s.claimedRole === "seer"; })');
+
+  const scriptTags = [...html.matchAll(/<script\b[^>]*src="([^"]+)"[^>]*>/g)];
+  const allScriptsDeferredOk = scriptTags.length >= 52 && scriptTags.every(m => /\bdefer\b/.test(m[0]));
+  const nonBlockingFontsOk = html.includes('rel="preload"') && html.includes('as="style"') && html.includes("display=swap");
+
+  const envSrc = fs.readFileSync(path.join(ROOT, "js/stage3d/environment.js"), "utf8");
+  const instancedEnvOk = envSrc.includes("THREE.InstancedMesh") && envSrc.includes("buildCourtyardStoneLanternsInstanced") && envSrc.includes("pmrem.dispose");
+
+  const animSrc = fs.readFileSync(path.join(ROOT, "js/stage3d/character-anim.js"), "utf8");
+  const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
+
+  const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const swPerfOk = swSrcPerf.includes("sanhao-tea-v19.0") && swSrcPerf.includes("MAX_CACHE_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+
+  const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
+  const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
+
+  const lazyModalOk = vm.runInContext(`(() => {
+    el("modalJournal").classList.add("hidden");
+    state._timelineDirty = false;
+    state._matrixDirty = false;
+    renderTimeline({ deferIfHidden: true });
+    renderTableMatrixIntoBody({ deferIfHidden: true });
+    const skippedWhileHidden = Boolean(state._timelineDirty && state._matrixDirty);
+    indieFlow.openJournal("log");
+    const flushedOnOpen = Boolean(!state._timelineDirty && !el("modalJournal").classList.contains("hidden"));
+    indieFlow.switchJournalTab("matrix");
+    const flushedMatrixOnTab = Boolean(!state._matrixDirty);
+    el("modalJournal").classList.add("hidden");
+    return skippedWhileHidden && flushedOnOpen && flushedMatrixOnTab;
+  })()`, ctx);
+
+  const perfRes = {
+    noAuthorLeakOk,
+    noEngineEmojiOk,
+    zeroGcCamOk,
+    allScriptsDeferredOk,
+    nonBlockingFontsOk,
+    instancedEnvOk,
+    faceSigCacheOk,
+    swPerfOk,
+    vercelTimeoutOk,
+    lazyModalOk
+  };
+  for (const [k, v] of Object.entries(perfRes)) {
+    if (!v) {
+      throw new Error("v19.1 PERFORMANCE & ANONYMITY check failed for " + k + ": " + JSON.stringify(perfRes));
+    }
+  }
+}
+
+console.log("[OK] Full v19.0 + Performance Audit (Anon / 52 defer / InstancedMesh / Zero-GC / FaceSig / Lazy Modal / SW Cap / Vercel maxDuration) E2E smoke test PASSED!");

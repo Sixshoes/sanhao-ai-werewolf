@@ -109,7 +109,7 @@ function commitPendingSpeechLog(speakerId) {
     }
   });
   if (changed && typeof renderTimeline === "function") {
-    renderTimeline();
+    renderTimeline({ deferIfHidden: true });
   }
   return changed;
 }
@@ -132,7 +132,7 @@ function maybeScheduleAutoAdvanceAfterSpeech() {
   if (state.stepTimer) clearTimeout(state.stepTimer);
   const pauseMs = ff
     ? 260
-    : (voice.canSpeak() ? (state.typewriter.narrativeHoldMs || 720) : (state.typewriter.holdMs || 2400));
+    : (voice.canSpeak() ? (state.typewriter.narrativeHoldMs ?? 720) : (state.typewriter.holdMs ?? 2400));
   if (!ff && state.typewriter.isBombshellHold && typeof sound !== "undefined" && typeof sound.playSeatFoley === "function") {
     sound.playSeatFoley("cup_set", state.typewriter.speakerId || 0);
   }
@@ -357,8 +357,8 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
     const lbl = isTyping ? "顯示全文" : (isLw ? "繼續 →" : (isLastOfRound ? "進入公投 →" : "下一位 →"));
     nextBtn.innerHTML = escapeHtml(lbl) + ' <kbd class="ui-kbd ml-1">Space</kbd>';
     nextBtn.className = (!isTyping && !voice.speaking)
-      ? "cta-brass py-1.5 px-3.5 text-xs shrink-0 inline-flex items-center"
-      : "cta-ink py-1.5 px-3 text-xs shrink-0 inline-flex items-center";
+      ? "cta-brass py-1.5 px-3.5 text-[15px] shrink-0 inline-flex items-center"
+      : "cta-ink py-1.5 px-3 text-[15px] shrink-0 inline-flex items-center";
   }
   const spProf = (speaker && typeof getPersonaProfile === "function") ? getPersonaProfile(speaker) : null;
   const enrichedTrait = (spProf && speaker && speaker.id !== getPlayerId() && spProf.shortTag)
@@ -643,7 +643,7 @@ function startSpotlightTypewriter(opts) {
         revealedPrior = true;
       }
     });
-    if (revealedPrior && typeof renderTimeline === "function") renderTimeline();
+    if (revealedPrior && typeof renderTimeline === "function") renderTimeline({ deferIfHidden: true });
   }
   const cleanText = String(opts.rawText || "").replace(/^「|」$/g, "").trim();
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
@@ -658,7 +658,7 @@ function startSpotlightTypewriter(opts) {
     ? (performance.now() + clamp(cleanText.length * 68, 2400, 6400))
     : 0;
   const narHold = computeNarrativeHoldMs(opts.speechEv || null, cleanText, opts.voiceMood || "normal");
-  state.typewriter.holdMs = ff ? 280 : (opts.holdMs || 2450);
+  state.typewriter.holdMs = ff ? 280 : (opts.holdMs ?? 2450);
   state.typewriter.narrativeHoldMs = narHold.ms;
   state.typewriter.isBombshellHold = narHold.isBombshell;
   state.typewriter.onDone = null;

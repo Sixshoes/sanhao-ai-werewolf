@@ -96,10 +96,10 @@ const indieFlow = {
     stdBtn.setAttribute("data-setup-variant", "standard");
     stdBtn.innerHTML =
       '<div class="flex items-center justify-between gap-2">' +
-      '<span class="font-serif-craft text-xs font-bold text-amber-100">標準雲起席</span>' +
+      '<span class="font-serif-craft text-sm font-bold text-amber-100">標準雲起席</span>' +
       '<span class="variant-pill">預設常規</span>' +
       '</div>' +
-      '<div class="text-[10px] text-slate-400 mt-0.5 text-left">依上方人數與進階板設定正常開局。</div>';
+      '<div class="text-[13px] text-slate-400 mt-0.5 text-left">依上方人數與進階板設定正常開局。</div>';
     stdBtn.addEventListener("click", function () {
       state.activeVariant = "standard";
       if (typeof saveUserPrefs === "function") saveUserPrefs();
@@ -119,10 +119,10 @@ const indieFlow = {
         : ("需 " + v.needWins + " 勝或 " + v.needBadges + " 勳章（目前 " + wins + " 勝/" + badges + " 章）");
       btn.innerHTML =
         '<div class="flex items-center justify-between gap-2">' +
-        '<span class="font-serif-craft text-xs font-bold ' + (unlocked ? "text-amber-200" : "text-slate-400") + '">' + escapeHtml(v.title) + '</span>' +
+        '<span class="font-serif-craft text-sm font-bold ' + (unlocked ? "text-amber-200" : "text-slate-400") + '">' + escapeHtml(v.title) + '</span>' +
         '<span class="variant-pill ' + (unlocked ? "is-open" : "is-locked") + '">' + escapeHtml(lockText) + '</span>' +
         '</div>' +
-        '<div class="text-[10px] text-slate-400 mt-0.5 text-left">' + escapeHtml(v.desc) + '</div>';
+        '<div class="text-[13px] text-slate-400 mt-0.5 text-left">' + escapeHtml(v.desc) + '</div>';
       btn.addEventListener("click", function () {
         if (!unlocked) {
           if (typeof showToast === "function") {
@@ -161,8 +161,8 @@ const indieFlow = {
   openJournal: function (tabKey) {
     const m = el("modalJournal");
     if (!m) return;
-    this.switchJournalTab(tabKey || "log");
     m.classList.remove("hidden");
+    this.switchJournalTab(tabKey || "log");
   },
 
   switchJournalTab: function (tabKey) {
@@ -454,14 +454,33 @@ const indieFlow = {
       }
       b.classList.toggle("is-active", val === tgt);
     });
+    const orderList = ["hero"].concat(liveSeats.map(function (x) { return String(x.id); }));
+    const curIdx = Math.max(0, orderList.indexOf(tgt));
+    const counterEl = el("showcaseTargetCounter");
+    const palGroup = el("showcasePaletteGroup");
+    if (palGroup) {
+      palGroup.classList.toggle("hidden", tgt !== "hero");
+    }
+    if (counterEl) {
+      if (tgt === "hero") {
+        counterEl.textContent = "清茗 · " + (curIdx + 1) + "/" + orderList.length;
+      } else {
+        const sidC = parseInt(tgt, 10);
+        const sObj = liveSeats.find(function (x) { return x && x.id === sidC; });
+        const dispName = sObj ? ((typeof getPlayerId === "function" && sObj.id === getPlayerId()) ? "你" : sObj.name) : "";
+        counterEl.textContent = fmtSeatNum(sidC) + " " + dispName + " · " + (curIdx + 1) + "/" + orderList.length;
+      }
+    }
     const titleEl = el("heroShowcaseTitle");
+    const sealEl = el("heroShowcaseSeal");
     const bioEl = el("showcasePersonaBio");
     const profileCardEl = el("showcaseProfileCard");
     const resetBtn = el("btnResetHeroRig");
     if (tgt === "hero") {
+      if (sealEl) sealEl.textContent = "茗";
       if (titleEl) titleEl.textContent = "清茗・雲茶書靈";
       if (bioEl) {
-        bioEl.textContent = "雲起茶席說書主持｜點選下方 02～12 號可 360° 鑑賞全 11 位 AI 角色的專屬剪影、招牌決策癖好與社團關係。";
+        bioEl.textContent = "雲起茶席說書主持｜使用下方左右箭頭可 360° 鑑賞全 12 席茶友造型與社團檔案。";
         if (typeof shPrependIcon === "function") shPrependIcon(bioEl, "leaf", "jade");
       }
       if (profileCardEl) {
@@ -472,6 +491,7 @@ const indieFlow = {
       if (resetBtn) resetBtn.classList.toggle("hidden", !glbActive);
     } else {
       const sid = parseInt(tgt, 10);
+      if (sealEl) sealEl.textContent = fmtSeatNum(sid);
       const s = typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D().find(function (x) { return x.id === sid; }) : null;
       const slug = (typeof stage3dVrm !== "undefined" && s) ? stage3dVrm.getSeatModelSlug(s) : ("seat" + sid);
       const pProfShow = (s && typeof getPersonaProfile === "function") ? getPersonaProfile(s) : null;
@@ -766,7 +786,7 @@ const indieFlow = {
       });
     }
     // Auto-close Pause Menu when jumping into a sub-modal
-    ["btnOpenMusicModal", "btnOpenAiModal", "btnOpenGuide", "btnOpenCareer", "btnOpenTutorial", "btnOpenTutorialPause", "btnRestartTop"].forEach(function (id) {
+    ["btnOpenMusicModal", "btnOpenAiModal", "btnOpenGuide", "btnOpenCareer", "btnOpenTutorial", "btnOpenTutorialPause", "btnOpenFeedback", "btnRestartTop"].forEach(function (id) {
       const b = el(id);
       if (b) b.addEventListener("click", function () { self.openPauseMenu(false); });
     });
@@ -797,10 +817,38 @@ const indieFlow = {
     });
     if (el("btnCloseHeroShowcase")) {
       el("btnCloseHeroShowcase").addEventListener("click", function () {
-        if (el("heroSheetLightbox")) el("heroSheetLightbox").classList.add("hidden");
         if (typeof stage3d !== "undefined") stage3d.setShowcaseMode(false);
       });
     }
+    const stepShowcaseTarget = function (delta) {
+      if (typeof stage3d === "undefined" || typeof stage3d.setShowcaseTarget !== "function") return;
+      const liveSeats = typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D() : [];
+      const orderList = ["hero"].concat(liveSeats.map(function (x) { return String(x.id); }));
+      const curTgt = stage3d.showcaseTarget ? String(stage3d.showcaseTarget) : "hero";
+      const curIdx = Math.max(0, orderList.indexOf(curTgt));
+      const nextIdx = (curIdx + delta + orderList.length) % orderList.length;
+      const nextTgt = orderList[nextIdx] || "hero";
+      sound.unlock();
+      stage3d.setShowcaseTarget(nextTgt);
+      const seatActor = (nextTgt !== "hero" && stage3d.seats && stage3d.seats.slots) ? stage3d.seats.slots[parseInt(nextTgt, 10)] : null;
+      const curAct = nextTgt === "hero"
+        ? ((stage3d.hero && stage3d.hero.action) || "welcome_bow")
+        : ((seatActor && seatActor.showcaseAction) || "idle_breathe");
+      document.querySelectorAll("[data-hero-action]").forEach(function (o) {
+        o.classList.toggle("is-active", o.getAttribute("data-hero-action") === curAct);
+      });
+    };
+    if (el("btnShowcasePrev")) {
+      el("btnShowcasePrev").addEventListener("click", function () { stepShowcaseTarget(-1); });
+    }
+    if (el("btnShowcaseNext")) {
+      el("btnShowcaseNext").addEventListener("click", function () { stepShowcaseTarget(1); });
+    }
+    window.addEventListener("keydown", function (ev) {
+      if (typeof stage3d === "undefined" || !stage3d.showcaseMode) return;
+      if (ev.key === "ArrowLeft") { ev.preventDefault(); stepShowcaseTarget(-1); }
+      else if (ev.key === "ArrowRight") { ev.preventDefault(); stepShowcaseTarget(1); }
+    });
     document.querySelectorAll("[data-showcase-target]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         sound.unlock();
@@ -870,21 +918,6 @@ const indieFlow = {
         if (typeof stage3d !== "undefined") stage3d.setHeroPalette(pal);
       });
     });
-    if (el("btnToggleHeroSheet")) {
-      el("btnToggleHeroSheet").addEventListener("click", function () {
-        if (el("heroSheetLightbox")) el("heroSheetLightbox").classList.toggle("hidden");
-      });
-    }
-    if (el("btnCloseHeroSheet")) {
-      el("btnCloseHeroSheet").addEventListener("click", function () {
-        if (el("heroSheetLightbox")) el("heroSheetLightbox").classList.add("hidden");
-      });
-    }
-    if (el("heroSheetLightbox")) {
-      el("heroSheetLightbox").addEventListener("click", function (ev) {
-        if (ev.target === el("heroSheetLightbox")) el("heroSheetLightbox").classList.add("hidden");
-      });
-    }
     if (el("btnUploadHeroGlb") && el("inputHeroGlb")) {
       el("btnUploadHeroGlb").addEventListener("click", function () { el("inputHeroGlb").click(); });
       el("inputHeroGlb").addEventListener("change", function () {

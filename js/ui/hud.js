@@ -49,7 +49,7 @@ function renderTutorialSlide() {
 
   const bodyEl = el("tutorialSlideBody");
   bodyEl.innerHTML =
-    '<div class="inline-block mx-auto px-3 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 text-[11px] font-bold tracking-widest text-amber-300">第 ' + slide.icon + ' 章 · ' + escapeHtml(slide.tab || "") + '</div>' +
+    '<div class="inline-block mx-auto px-3 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 text-[13px] font-bold tracking-widest text-amber-300">第 ' + slide.icon + ' 章 · ' + escapeHtml(slide.tab || "") + '</div>' +
     '<h4 class="font-serif-craft text-base sm:text-lg font-bold text-white tracking-wide">' + slide.title + '</h4>' +
     '<div>' + slide.html + '</div>';
   if (bodyEl.parentElement && typeof bodyEl.parentElement.scrollTop === "number") {
@@ -57,7 +57,7 @@ function renderTutorialSlide() {
   }
 
   el("btnTutPrev").disabled = idx === 0;
-  el("btnTutPrev").className = "cta-ink px-3 py-1.5 text-xs transition " + (
+  el("btnTutPrev").className = "cta-ink px-3 py-1.5 text-[15px] transition " + (
     idx === 0 ? "opacity-30 pointer-events-none" : ""
   );
 
@@ -290,18 +290,16 @@ function renderSeatStrip() {
       if (s.color) av.style.borderColor = s.color;
       av.onerror = function () { av.style.display = "none"; };
       btn.appendChild(av);
-    } else {
-      const numDot = document.createElement("span");
-      numDot.className = "seat-pill-num";
-      numDot.textContent = String(s.id);
-      if (s.color) numDot.style.borderColor = s.color;
-      btn.appendChild(numDot);
     }
 
-    const shortTagSeat = (s.id !== pid && typeof getPersonaShortTag === "function") ? getPersonaShortTag(s) : "";
+    const numBig = document.createElement("span");
+    numBig.className = "seat-pill-num-big";
+    numBig.textContent = fmtSeatNum(s.id);
+    btn.appendChild(numBig);
+
     const nameSpan = document.createElement("span");
     nameSpan.className = "seat-pill-name";
-    nameSpan.textContent = (isSheriff ? "👑" : "") + s.id + (s.id === pid ? "你" : s.name);
+    nameSpan.textContent = (isSheriff ? "👑" : "") + (s.id === pid ? "你" : s.name);
     btn.appendChild(nameSpan);
 
     const canConfirmThisSeat = Boolean(canDoubleClickConfirm && isSelected && s.alive && (s.id !== pid || p === "NIGHT_GUARD") && !isWolfMateDisabled && !isLastGuardedDisabled && !isPkOutDisabled);
@@ -582,12 +580,12 @@ function openRoleGuidePopover(mode) {
     }
     if (badgeEl) {
       badgeEl.textContent = tg.resonanceTriggered ? "三瓣全亮・已覺醒" : ("進度 " + ((tg.heart > 0 ? 1 : 0) + (tg.words > 0 ? 1 : 0) + (tg.deeds > 0 ? 1 : 0)) + "/3");
-      badgeEl.className = "text-[10px] px-1.5 py-0.5 rounded shrink-0 border " + (tg.resonanceTriggered ? "bg-emerald-500/25 text-emerald-200 border-emerald-400/50" : "bg-amber-500/20 text-amber-200 border-amber-400/35");
+      badgeEl.className = "text-[13px] px-1.5 py-0.5 rounded shrink-0 border " + (tg.resonanceTriggered ? "bg-emerald-500/25 text-emerald-200 border-emerald-400/50" : "bg-amber-500/20 text-amber-200 border-amber-400/35");
     }
     const rowHtml = function (ok, icon, name, count, how) {
       return '<div class="role-guide-row ' + (ok ? "is-lit" : "") + '">' +
         '<div class="font-bold ' + (ok ? "text-emerald-300" : "text-amber-200") + '">' + escapeHtml((ok ? "✓ " : "○ ") + icon + " " + name + "（已修 " + count + " 次）") + "</div>" +
-        '<div class="text-[10.5px] opacity-90">' + escapeHtml(how) + "</div>" +
+        '<div class="text-[13px] opacity-90">' + escapeHtml(how) + "</div>" +
         "</div>";
     };
     const rewardText = isRoleMasked
@@ -603,7 +601,7 @@ function openRoleGuidePopover(mode) {
       rowHtml(tg.words > 0, "語", "說好話", tg.words, "溫和陳詞、用「潤飾詞句」靈感籤、按「說好話化解」或「給歡喜」。") +
       rowHtml(tg.deeds > 0, "行", "做好事", tg.deeds, "白天「奉暖茶」、奉茶師救人、守衛守護、或「給信心／給方便」。") +
       '<div class="role-guide-reward">' + escapeHtml(rewardText) + "</div>" +
-      '<div class="text-[10.5px] text-amber-200/90 pt-0.5">' + escapeHtml(synText) + "</div>";
+      '<div class="text-[13px] text-amber-200/90 pt-0.5">' + escapeHtml(synText) + "</div>";
   } else {
     if (titleEl) {
       titleEl.textContent = rDef.name + "・指南";
@@ -611,7 +609,7 @@ function openRoleGuidePopover(mode) {
     }
     if (badgeEl) {
       badgeEl.textContent = guide.shortRole;
-      badgeEl.className = "text-[10px] px-1.5 py-0.5 rounded shrink-0 border " + (isWolf ? "bg-rose-500/25 text-rose-200 border-rose-400/45" : "bg-emerald-500/20 text-emerald-200 border-emerald-400/40");
+      badgeEl.className = "text-[13px] px-1.5 py-0.5 rounded shrink-0 border " + (isWolf ? "bg-rose-500/25 text-rose-200 border-rose-400/45" : "bg-emerald-500/20 text-emerald-200 border-emerald-400/40");
     }
     const nowHint = getLiveRoleActionHint(p, effKey, state.match.phase);
     const tk = buildLiveAvailableTools(p, state.match.phase);
@@ -622,7 +620,7 @@ function openRoleGuidePopover(mode) {
         '<span class="font-bold text-amber-100">' + escapeHtml(it.name) + "</span>" +
         '<span class="guide-tool-status ' + stCls + '">' + escapeHtml(it.statusText) + "</span>" +
         "</div>" +
-        '<div class="text-[10px] opacity-85 mt-0.5">' + escapeHtml(it.desc) + "</div>" +
+        '<div class="text-[13px] opacity-85 mt-0.5">' + escapeHtml(it.desc) + "</div>" +
         "</div>";
     }).join("");
     const classicModeGuide = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
@@ -631,9 +629,9 @@ function openRoleGuidePopover(mode) {
       ? ('<div class="role-guide-row ' + (misGuide.completed ? "is-lit" : "") + '"><span class="font-bold text-amber-200">' + (misGuide.completed ? "✓ 密令達成：" : "本局密令：") + '</span>' + escapeHtml(misGuide.title + "（" + misGuide.progressText + "）") + "</div>")
       : "";
     bodyEl.innerHTML =
-      '<div class="guide-now-box"><div class="text-[10px] font-bold text-amber-300/90">現在這一步</div><div class="font-bold text-amber-50 mt-0.5">' + escapeHtml(nowHint) + "</div></div>" +
+      '<div class="guide-now-box"><div class="text-[13px] font-bold text-amber-300/90">現在這一步</div><div class="font-bold text-amber-50 mt-0.5">' + escapeHtml(nowHint) + "</div></div>" +
       misGuideHtml +
-      '<div class="space-y-1"><div class="text-[10px] font-bold text-slate-300">目前可用道具與按鈕</div>' + toolsHtml + "</div>" +
+      '<div class="space-y-1"><div class="text-[13px] font-bold text-slate-300">目前可用道具與按鈕</div>' + toolsHtml + "</div>" +
       '<div class="pt-1 border-t border-slate-700/60 space-y-1">' +
       '<div class="role-guide-row"><span class="font-bold text-amber-200">勝利目標：</span>' + escapeHtml(guide.winCond) + "</div>" +
       '<div class="role-guide-row"><span class="font-bold text-indigo-300">夜晚職能：</span>' + escapeHtml(guide.nightAction) + "</div>" +
@@ -896,7 +894,7 @@ function renderDirectorEventChoiceBar() {
   bar.classList.remove("hidden");
 
   const label = document.createElement("span");
-  label.className = "text-[11px] font-bold text-emerald-200 truncate";
+  label.className = "text-[13px] font-bold text-emerald-200 truncate";
   label.textContent = "🍵 " + ev.shortTitle + "：" + ev.badge;
   bar.appendChild(label);
 
@@ -911,7 +909,7 @@ function renderDirectorEventChoiceBar() {
   choices.forEach(function (ch) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "cta-celadon py-1 px-2.5 text-[10px]";
+    btn.className = "cta-celadon py-1 px-2.5 text-[13px]";
     btn.textContent = ch.text;
     btn.addEventListener("click", function () {
       orchestrator.triggerDirectorEventChoice(ch.key);

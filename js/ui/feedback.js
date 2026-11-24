@@ -5,7 +5,7 @@
 "use strict";
 
 const FEEDBACK_CONFIG = {
-  githubOwner: "Sixshoes",
+  githubOwner: "",
   githubRepo: "sanhao-ai-werewolf",
   // 若未來希望靜態網頁免登入 GitHub 也能靜默收件，可於此貼上 Formspree / Google Apps Script Webhook 網址
   webhookUrl: "",
@@ -101,7 +101,7 @@ function collectFeedbackDiagnostics() {
     : "未開局或已遮蔽";
 
   return {
-    version: "v18.0 (公測 3.3)",
+    version: "v19.0 (公測 3.4)",
     timestamp: new Date().toISOString(),
     started: Boolean(m.started),
     phase: String(m.phase || "LOBBY"),
@@ -149,6 +149,7 @@ function buildFeedbackReportText(entry) {
 
 function buildGitHubIssueUrl(entry) {
   const repoInfo = resolveFeedbackGithubRepo();
+  if (!repoInfo || !repoInfo.owner || !repoInfo.repo) return "";
   const catDef = FEEDBACK_CATEGORIES[entry.category] || FEEDBACK_CATEGORIES.idea;
   const snippet = String(entry.message || "").replace(/\s+/g, " ").trim().slice(0, 36);
   const title = "[" + catDef.label.replace(/^[^\u4e00-\u9fffA-Za-z0-9]+\s*/, "") + "][" + entry.rating + "★] " + (snippet || "玩家使用反饋");
@@ -234,7 +235,7 @@ function renderFeedbackHistoryList() {
   if (!listEl) return;
   listEl.innerHTML = "";
   if (list.length === 0) {
-    listEl.innerHTML = '<div class="text-[11px] text-slate-400 text-center py-2">尚無送出紀錄，歡迎分享你的試玩感受！</div>';
+    listEl.innerHTML = '<div class="text-[13px] text-slate-400 text-center py-2">尚無送出紀錄，歡迎分享你的試玩感受！</div>';
     return;
   }
   list.slice(0, 6).forEach(function (item) {
@@ -247,11 +248,11 @@ function renderFeedbackHistoryList() {
       ? "已直傳主機"
       : (item.deliveredTo === "webhook" ? "已送達雲端" : "本機已存");
     row.innerHTML =
-      '<div class="flex items-center justify-between gap-2 text-[10px]">' +
+      '<div class="flex items-center justify-between gap-2 text-[13px]">' +
       '<span class="font-bold text-amber-300">' + escapeHtml(catDef.label) + ' · ' + escapeHtml(stars) + '</span>' +
       '<span class="text-slate-400">' + escapeHtml(statusLabel) + (timeLabel ? (" · " + escapeHtml(timeLabel)) : "") + '</span>' +
       '</div>' +
-      '<div class="text-[11px] text-slate-200 mt-1 break-words">' + escapeHtml(String(item.message || "").slice(0, 120)) + '</div>';
+      '<div class="text-[13px] text-slate-200 mt-1 break-words">' + escapeHtml(String(item.message || "").slice(0, 120)) + '</div>';
     listEl.appendChild(row);
   });
 }
@@ -266,7 +267,7 @@ function openFeedbackModal() {
   renderFeedbackHistoryList();
   if (el("feedbackResultCard")) el("feedbackResultCard").classList.add("hidden");
   if (el("btnOpenGithubFeedback")) {
-    el("btnOpenGithubFeedback").classList.toggle("hidden", isAnonymousReviewHost());
+    el("btnOpenGithubFeedback").classList.add("hidden");
   }
   modal.classList.remove("hidden");
   if (el("inputFeedbackBody") && typeof el("inputFeedbackBody").focus === "function") {
@@ -374,11 +375,11 @@ async function submitUserFeedback() {
 
   if (resultCard && resultMsg) {
     if (delivery.channel === "server") {
-      resultMsg.textContent = "已直接送達主辦者電腦（.feedback_inbox），也可順手複製或送至 GitHub 備份：";
+      resultMsg.textContent = "已直接送達本機反饋箱（.feedback_inbox），也可順手複製留存：";
     } else if (delivery.channel === "webhook") {
       resultMsg.textContent = "已送達雲端反饋箱，感謝你的試玩意見：";
     } else {
-      resultMsg.textContent = "已整理並暫存反饋報告，請點下方按鈕回傳給作者：";
+      resultMsg.textContent = "已整理並暫存反饋報告，點下方按鈕即可複製回傳：";
     }
     resultCard.classList.remove("hidden");
   }
@@ -387,13 +388,10 @@ async function submitUserFeedback() {
     sound.tone(660, 0.08, "triangle", 0.05, 0);
   }
   if (typeof showToast === "function") {
-    const anonHost = typeof isAnonymousReviewHost === "function" && isAnonymousReviewHost();
     showToast(
       delivery.delivered
         ? "感謝你的反饋，已順利送達。"
-        : (anonHost
-          ? "反饋已整理完成，點「複製貼給作者」即可回傳。"
-          : "反饋已整理完成，點「送至 GitHub」或「複製貼給作者」即可回傳。"),
+        : "反饋已整理完成，點「複製完整反饋」即可回傳。",
       "emerald"
     );
   }
@@ -478,6 +476,7 @@ function bindFeedbackEvents() {
       const target = feedbackUiState.lastEntry || loadFeedbackHistory()[0];
       if (!target) return;
       const url = buildGitHubIssueUrl(target);
+      if (!url) return;
       if (typeof window !== "undefined" && typeof window.open === "function") {
         window.open(url, "_blank", "noopener,noreferrer");
       }

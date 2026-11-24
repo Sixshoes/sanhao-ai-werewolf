@@ -47,17 +47,26 @@ const VRM_IDLE_ARCHETYPES = {
  * - 補齊阿松（高領登山摺疊圍巾＋傘繩手環）與小雲（採訪證斜背掛繩＋胸袋速寫本＋髮夾）原本為 null 的 3D 配件
  */
 const VRM_PERSONA_STYLING = Object.freeze({
-  "小澄": Object.freeze({ baseSlug: "azhu", hairHex: "#1c283d", hairStr: 0.88, topsHex: "#31587d", topsStr: 0.82, neckHex: "#e8decb", eyeHex: "#24354d", vrmAcc: "glasses" }),
-  "暖暖": Object.freeze({ baseSlug: "nuannuan", hairHex: "#623d26", hairStr: 0.45, topsHex: "#c2893b", topsStr: 0.76, neckHex: "#f3e6cc", eyeHex: "#523220", vrmAcc: "ribbon" }),
-  "阿松": Object.freeze({ baseSlug: "asong", hairHex: "#5f6872", hairStr: 0.72, topsHex: "#2a5c46", topsStr: 0.76, neckHex: "#82ab95", eyeHex: "#30261d", vrmAcc: "hiking_scarf" }),
-  "星兒": Object.freeze({ baseSlug: "xinger", hairHex: "#54366e", hairStr: 0.90, topsHex: "#876094", topsStr: 0.84, neckHex: "#e0be72", eyeHex: "#553b75", vrmAcc: "star_clip" }),
-  "小雲": Object.freeze({ baseSlug: "xiaoyun", hairHex: "#3a1e2b", hairStr: 0.68, topsHex: "#2d303a", topsStr: 0.72, neckHex: "#943548", eyeHex: "#422130", vrmAcc: "press_kit" }),
-  "阿竹": Object.freeze({ baseSlug: "azhu", hairHex: "#1f242b", hairStr: 0.88, topsHex: "#35615b", topsStr: 0.78, neckHex: "#232a30", eyeHex: "#283635", vrmAcc: "jade_pendant" }),
-  "晨晨": Object.freeze({ baseSlug: "chenchen", hairHex: "#573724", hairStr: 0.78, topsHex: "#b8552a", topsStr: 0.84, neckHex: "#e39c3e", eyeHex: "#42281a", vrmAcc: "headband" }),
-  "墨白": Object.freeze({ baseSlug: "chenchen", hairHex: "#151923", hairStr: 0.88, topsHex: "#31405c", topsStr: 0.86, neckHex: "#ece2d0", eyeHex: "#242c47", vrmAcc: "ink_scroll" }),
-  "晴嵐": Object.freeze({ baseSlug: "xiaocheng", hairHex: "#523325", hairStr: 0.74, topsHex: "#c98f96", topsStr: 0.84, neckHex: "#f2e8dc", eyeHex: "#593524", vrmAcc: "jade_hairpin" }),
-  "阿朗": Object.freeze({ baseSlug: "player_male", hairHex: "#3a251b", hairStr: 0.76, topsHex: "#a37944", topsStr: 0.84, neckHex: "#f0eee8", eyeHex: "#7a511e", vrmAcc: "gavel_brooch" }),
-  "柚子": Object.freeze({ baseSlug: "nuannuan", hairHex: "#a36c33", hairStr: 0.78, topsHex: "#829e5a", topsStr: 0.84, neckHex: "#f6efe0", eyeHex: "#4f642c", vrmAcc: "yuzu_clip" })
+  "清茗": Object.freeze({ baseSlug: "qingming", hairHex: "#31241d", hairStr: 0.56, topsHex: "#447364", topsStr: 0.90, neckHex: "#d6b066", neckStr: 0.92, bottomsHex: "#2e353b", bottomsStr: 0.90, eyeHex: "#5c432c", vrmAcc: "tea_host" }),
+  "主持": Object.freeze({ baseSlug: "qingming", hairHex: "#31241d", hairStr: 0.56, topsHex: "#447364", topsStr: 0.90, neckHex: "#d6b066", neckStr: 0.92, bottomsHex: "#2e353b", bottomsStr: 0.90, eyeHex: "#5c432c", vrmAcc: "tea_host" }),
+  "你": Object.freeze({ hairHex: "#2c221d", hairStr: 0.42, topsHex: "#466a61", topsStr: 0.84, neckHex: "#dbc292", neckStr: 0.88, bottomsHex: "#2b313a", bottomsStr: 0.88, eyeHex: "#443428", vrmAcc: null }),
+  "小澄": Object.freeze({ baseSlug: "azhu", hairHex: "#1c283d", hairStr: 0.88, topsHex: "#31587d", topsStr: 0.82, neckHex: "#e8decb", neckStr: 0.82, bottomsHex: "#232a36", bottomsStr: 0.84, eyeHex: "#24354d", vrmAcc: "glasses" }),
+  "暖暖": Object.freeze({ baseSlug: "nuannuan", hairHex: "#623d26", hairStr: 0.45, topsHex: "#c2893b", topsStr: 0.76, neckHex: "#f3e6cc", neckStr: 0.80, bottomsHex: "#382c24", bottomsStr: 0.84, eyeHex: "#523220", vrmAcc: "ribbon" }),
+  "阿松": Object.freeze({ baseSlug: "asong", hairHex: "#5f6872", hairStr: 0.72, topsHex: "#2a5c46", topsStr: 0.76, neckHex: "#82ab95", neckStr: 0.80, bottomsHex: "#262c28", bottomsStr: 0.84, eyeHex: "#30261d", vrmAcc: "hiking_scarf" }),
+  "星兒": Object.freeze({ baseSlug: "xinger", hairHex: "#54366e", hairStr: 0.90, topsHex: "#876094", topsStr: 0.84, neckHex: "#e0be72", neckStr: 0.84, bottomsHex: "#2b2533", bottomsStr: 0.86, eyeHex: "#553b75", vrmAcc: "star_clip" }),
+  "小雲": Object.freeze({ baseSlug: "xiaoyun", hairHex: "#3a1e2b", hairStr: 0.68, topsHex: "#2d303a", topsStr: 0.72, neckHex: "#943548", neckStr: 0.84, bottomsHex: "#24262e", bottomsStr: 0.88, eyeHex: "#422130", vrmAcc: "press_kit" }),
+  "阿竹": Object.freeze({ baseSlug: "azhu", hairHex: "#1f242b", hairStr: 0.88, topsHex: "#35615b", topsStr: 0.78, neckHex: "#232a30", neckStr: 0.82, bottomsHex: "#222929", bottomsStr: 0.86, eyeHex: "#283635", vrmAcc: "jade_pendant" }),
+  "晨晨": Object.freeze({ baseSlug: "chenchen", hairHex: "#573724", hairStr: 0.78, topsHex: "#b8552a", topsStr: 0.84, neckHex: "#e39c3e", neckStr: 0.84, bottomsHex: "#2b2623", bottomsStr: 0.84, eyeHex: "#42281a", vrmAcc: "headband" }),
+  "墨白": Object.freeze({ baseSlug: "chenchen", hairHex: "#151923", hairStr: 0.88, topsHex: "#31405c", topsStr: 0.86, neckHex: "#ece2d0", neckStr: 0.82, bottomsHex: "#1f2430", bottomsStr: 0.88, eyeHex: "#242c47", vrmAcc: "ink_scroll" }),
+  "晴嵐": Object.freeze({ baseSlug: "xiaocheng", hairHex: "#523325", hairStr: 0.74, topsHex: "#c98f96", topsStr: 0.84, neckHex: "#f2e8dc", neckStr: 0.82, bottomsHex: "#332a2e", bottomsStr: 0.86, eyeHex: "#593524", vrmAcc: "jade_hairpin" }),
+  "阿朗": Object.freeze({ baseSlug: "player_male", hairHex: "#3a251b", hairStr: 0.76, topsHex: "#a37944", topsStr: 0.84, neckHex: "#f0eee8", neckStr: 0.84, bottomsHex: "#292520", bottomsStr: 0.86, eyeHex: "#7a511e", vrmAcc: "gavel_brooch" }),
+  "柚子": Object.freeze({ baseSlug: "nuannuan", hairHex: "#a36c33", hairStr: 0.78, topsHex: "#829e5a", topsStr: 0.84, neckHex: "#f6efe0", neckStr: 0.82, bottomsHex: "#2e3326", bottomsStr: 0.86, eyeHex: "#4f642c", vrmAcc: "yuzu_clip" })
+});
+
+const HERO_VRM_PALETTES = Object.freeze({
+  celadon: Object.freeze({ topsHex: "#447364", topsStr: 0.90, neckHex: "#d6b066", neckStr: 0.92, bottomsHex: "#2e353b", bottomsStr: 0.90, shawlHex: 0x3b6658, jadeHex: 0x6ec7a5 }),
+  teagold: Object.freeze({ topsHex: "#8c6134", topsStr: 0.90, neckHex: "#e6c67e", neckStr: 0.92, bottomsHex: "#2d251e", bottomsStr: 0.90, shawlHex: 0x7a542d, jadeHex: 0xe2bc6b }),
+  inknight: Object.freeze({ topsHex: "#31415c", topsStr: 0.90, neckHex: "#d4b478", neckStr: 0.92, bottomsHex: "#1d222c", bottomsStr: 0.90, shawlHex: 0x293750, jadeHex: 0x89aed4 })
 });
 
 const stage3dVrm = {
@@ -223,6 +232,40 @@ const stage3dVrm = {
    * female Body_00_SKIN UV maps, completely eliminating default white underwear & skin gaps
    * across pelvis, crotch, and upper thighs while leaving feet/hands/torso untouched.
    */
+  applyHeroVrmPalette: function (vrmInst, palKey) {
+    if (!vrmInst || !HERO_VRM_PALETTES[palKey]) return false;
+    const pal = HERO_VRM_PALETTES[palKey];
+    let updated = false;
+    const slots = Array.isArray(vrmInst.recolorSlots) ? vrmInst.recolorSlots : [];
+    for (let i = 0; i < slots.length; i++) {
+      const s = slots[i];
+      if (!s || !s.mat || !s.origMap) continue;
+      let hex = null;
+      let str = 0.88;
+      if (s.slot === "tops") { hex = pal.topsHex; str = pal.topsStr; }
+      else if (s.slot === "neck") { hex = pal.neckHex; str = pal.neckStr; }
+      else if (s.slot === "bottoms") { hex = pal.bottomsHex; str = pal.bottomsStr; }
+      if (!hex) continue;
+      const newTex = this.recolorVrmTextureMap(s.origMap, hex, str);
+      if (newTex) {
+        s.mat.map = newTex;
+        s.mat.needsUpdate = true;
+        updated = true;
+      }
+    }
+    if (vrmInst.accMats) {
+      if (vrmInst.accMats.shawlMat && vrmInst.accMats.shawlMat.color) {
+        vrmInst.accMats.shawlMat.color.setHex(pal.shawlHex);
+        updated = true;
+      }
+      if (vrmInst.accMats.jadeMat && vrmInst.accMats.jadeMat.color) {
+        vrmInst.accMats.jadeMat.color.setHex(pal.jadeHex);
+        updated = true;
+      }
+    }
+    return updated;
+  },
+
   paintVrmModestyShortsMap: function (srcTex, shortHex, localCache) {
     if (!srcTex || !srcTex.image || typeof document === "undefined" || typeof THREE.CanvasTexture !== "function") {
       return srcTex;
@@ -683,6 +726,58 @@ const stage3dVrm = {
       jpGrp.add(wideCollar, disc, knot);
       chestBone.add(jpGrp);
       mounted.push(jpGrp);
+    } else if (acc === "tea_host") {
+      // 清茗：古金茶葉髮簪（頭骨）＋青瓷茶衫交領披肩與玉佩（胸骨）＋左手捧青瓷蓮花茶盞（退去日系制服感！）
+      const shawlMat = new THREE.MeshStandardMaterial({ color: 0x3b6658, roughness: 0.58, metalness: 0.06 });
+      const ivoryLapelMat = new THREE.MeshStandardMaterial({ color: 0xf0e7d5, roughness: 0.50 });
+      const celadonCupMat = new THREE.MeshStandardMaterial({ color: 0xd8f3e8, roughness: 0.16, metalness: 0.08 });
+      const teaLiquidMat = new THREE.MeshStandardMaterial({ color: 0xb67b2e, roughness: 0.14, metalness: 0.18 });
+      mounted.accMats = { shawlMat: shawlMat, jadeMat: jadeMat };
+      if (headBone) {
+        const pinGrp = new THREE.Group();
+        const leaf = new THREE.Mesh(new THREE.OctahedronGeometry(0.024, 0), goldMat);
+        leaf.scale.set(1.5, 0.52, 0.36);
+        leaf.position.set(0.072, eyeY + 0.078, eyeZ + fwdSign * 0.014);
+        leaf.rotation.set(0.18, 0.45, -0.42);
+        const bead = new THREE.Mesh(new THREE.SphereGeometry(0.009, 8, 6), jadeMat);
+        bead.position.set(0.056, eyeY + 0.074, eyeZ + fwdSign * 0.022);
+        pinGrp.add(leaf, bead);
+        headBone.add(pinGrp);
+        mounted.push(pinGrp);
+      }
+      if (chestBone) {
+        const robeGrp = new THREE.Group();
+        const shawl = new THREE.Mesh(new THREE.TorusGeometry(0.138, 0.024, 8, 24), shawlMat);
+        shawl.rotation.x = Math.PI * 0.52;
+        shawl.position.set(0, 0.098, -fwdSign * 0.008);
+        shawl.scale.set(1.18, 0.86, 0.72);
+        [-1, 1].forEach(function (sd) {
+          const lapel = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.172, 0.014), ivoryLapelMat);
+          lapel.position.set(sd * 0.036, 0.048, fwdSign * 0.092);
+          lapel.rotation.z = -sd * 0.30;
+          robeGrp.add(lapel);
+        });
+        const jadeRing = new THREE.Mesh(new THREE.TorusGeometry(0.017, 0.005, 8, 16), jadeMat);
+        jadeRing.position.set(0, 0.014, fwdSign * 0.106);
+        const goldKnot = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6), goldMat);
+        goldKnot.position.set(0, 0.032, fwdSign * 0.106);
+        robeGrp.add(shawl, jadeRing, goldKnot);
+        chestBone.add(robeGrp);
+        mounted.push(robeGrp);
+      }
+      if (bones.leftHand) {
+        const cupGrp = new THREE.Group();
+        cupGrp.position.set(0.028, -0.022, fwdSign * 0.048);
+        const saucer = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.034, 0.007, 16), celadonCupMat);
+        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.022, 0.042, 14), celadonCupMat);
+        cup.position.y = 0.024;
+        const tea = new THREE.Mesh(new THREE.CircleGeometry(0.027, 12), teaLiquidMat);
+        tea.rotation.x = -Math.PI * 0.5;
+        tea.position.y = 0.042;
+        cupGrp.add(saucer, cup, tea);
+        bones.leftHand.add(cupGrp);
+        mounted.push(cupGrp);
+      }
     }
     return mounted.length ? mounted : null;
   },
@@ -1188,9 +1283,11 @@ const stage3dVrm = {
     for (let si = 0; si < springBones.length; si++) {
       springBones[si].quatMeta = this.initBoneQuatData(springBones[si].obj);
     }
-    // v10.0 Mount precision persona 3D accessories (glasses, headband, star/yuzu clips, jade hairpin, gavel brooch) in T-pose!
+    // v10.0 Mount precision persona 3D accessories (glasses, headband, star/yuzu clips, jade hairpin, gavel brooch, tea_host) in T-pose!
+    let accMats = null;
     if (o.personaName && typeof this.attachVrmPersonaAccessories === "function") {
-      this.attachVrmPersonaAccessories(bones, o.personaName, isVrm0);
+      const accResult = this.attachVrmPersonaAccessories(bones, o.personaName, isVrm0);
+      if (accResult && accResult.accMats) accMats = accResult.accMats;
     }
 
     // CRITICAL STEP 3: Pose legs & arms using exact anatomical Model-Space quaternions (zero gimbal flip or VRM 1.0 twist!)
@@ -1255,6 +1352,7 @@ const stage3dVrm = {
     const personaStyling = o.personaName ? this.getPersonaStyling(o.personaName) : null;
     const tintMats = [];
     const celMats = [];
+    const recolorSlots = [];
     const canCelUpgrade = Boolean(
       typeof stage3dAnime !== "undefined" &&
       typeof stage3dAnime.upgradeVrmMaterialToCel === "function" &&
@@ -1286,6 +1384,7 @@ const stage3dVrm = {
           const keepUnlitEye = /eyewhite|eyehighlight|eyeextra/i.test(tagStr);
           const isFaceMat = /face|skin|brow|mouth|eyeline|eyelash|iris/i.test(tagStr);
           const isHairMat = /hair/i.test(tagStr);
+          const isBottomsMat = /bottoms/i.test(tagStr);
           const isTopsMat = /tops|cloth/i.test(tagStr) && !/bottoms|shoes|accessoryneck/i.test(tagStr);
           const isNeckMat = /accessoryneck/i.test(tagStr);
           const isIrisMat = /eyeiris|iris/i.test(tagStr);
@@ -1294,6 +1393,16 @@ const stage3dVrm = {
           if (m.transparent && !m.alphaTest) m.alphaTest = 0.35;
           if (m.map && THREE.sRGBEncoding !== undefined) m.map.encoding = THREE.sRGBEncoding;
 
+          const origMapBeforeRecolor = m.map || null;
+          let recolorSlotKey = null;
+          if (!isOutline && origMapBeforeRecolor) {
+            if (isHairMat) recolorSlotKey = "hair";
+            else if (isTopsMat) recolorSlotKey = "tops";
+            else if (isNeckMat) recolorSlotKey = "neck";
+            else if (isBottomsMat) recolorSlotKey = "bottoms";
+            else if (isIrisMat) recolorSlotKey = "iris";
+          }
+
           // Modesty Safety Shorts (安全褲): erase VRoid default white panties on ALL female/skirted Body_00_SKIN textures!
           const isFemaleBodySkin = /body.*skin/i.test(mName) && (/^f\d{2}/i.test(mName) || hasSkirt);
           if (isFemaleBodySkin && !isOutline && m.map) {
@@ -1301,7 +1410,7 @@ const stage3dVrm = {
             m.map = selfLoader.paintVrmModestyShortsMap(m.map, "#1e2330", avatarTexCache);
           }
 
-          // v10.0 Luminance-preserving texture recolor so ALL 11 AI characters match their 2D portraits!
+          // v19.0 Luminance-preserving texture recolor across ALL roles including Qingming, Player & bottoms/skirts!
           if (personaStyling && !isOutline && m.map) {
             if (isHairMat && personaStyling.hairHex) {
               m = m.clone ? m.clone() : m;
@@ -1311,7 +1420,10 @@ const stage3dVrm = {
               m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.topsHex, personaStyling.topsStr || 0.80, avatarTexCache);
             } else if (isNeckMat && personaStyling.neckHex) {
               m = m.clone ? m.clone() : m;
-              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.neckHex, 0.78, avatarTexCache);
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.neckHex, personaStyling.neckStr || 0.82, avatarTexCache);
+            } else if (isBottomsMat && personaStyling.bottomsHex) {
+              m = m.clone ? m.clone() : m;
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.bottomsHex, personaStyling.bottomsStr || 0.88, avatarTexCache);
             } else if (isIrisMat && personaStyling.eyeHex) {
               m = m.clone ? m.clone() : m;
               m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.eyeHex, 0.65, avatarTexCache);
@@ -1343,6 +1455,9 @@ const stage3dVrm = {
             allUnlitBasic = false;
           }
 
+          if (recolorSlotKey && origMapBeforeRecolor) {
+            recolorSlots.push({ slot: recolorSlotKey, origMap: origMapBeforeRecolor, mat: finalMat });
+          }
           if (!isOutline && finalMat.color && typeof finalMat.color.clone === "function") {
             tintMats.push({ mat: finalMat, baseColor: finalMat.color.clone(), isCel: Boolean(finalMat.userData && finalMat.userData.isVrmCel) });
           }
@@ -1376,6 +1491,8 @@ const stage3dVrm = {
       springBones: springBones,
       tintMats: tintMats,
       celMats: celMats,
+      recolorSlots: recolorSlots,
+      accMats: accMats,
       mixer: mixer,
       clips: mixer ? gltf.animations : [],
       activeAction: null,
@@ -1464,13 +1581,13 @@ const stage3dVrm = {
         : (o.moodKey === "vote"
           ? { r: 0.91, g: 0.85, b: 0.83 }
           : (o.moodKey === "day" ? { r: 0.90, g: 0.90, b: 0.88 } : { r: 0.87, g: 0.86, b: 0.90 }));
-      const deadDim = aliveFlag ? (talkBoostFlag ? 1.07 : 1.0) : 0.55;
+      const deadDim = aliveFlag ? (talkBoostFlag ? 1.08 : 1.0) : 0.34;
       for (let mi = 0; mi < inst.tintMats.length; mi++) {
         const entry = inst.tintMats[mi];
         if (entry.mat && entry.mat.color && entry.baseColor) {
-          const mulR = entry.isCel ? (aliveFlag ? (talkBoostFlag ? 1.06 : 1.0) : 0.56) : (moodTint.r * deadDim);
-          const mulG = entry.isCel ? (aliveFlag ? (talkBoostFlag ? 1.05 : 1.0) : 0.58) : (moodTint.g * deadDim);
-          const mulB = entry.isCel ? (aliveFlag ? (talkBoostFlag ? 1.04 : 1.0) : 0.64) : (moodTint.b * deadDim);
+          const mulR = entry.isCel ? (aliveFlag ? (talkBoostFlag ? 1.08 : 1.0) : 0.35) : (moodTint.r * deadDim);
+          const mulG = entry.isCel ? (aliveFlag ? (talkBoostFlag ? 1.06 : 1.0) : 0.36) : (moodTint.g * deadDim);
+          const mulB = entry.isCel ? (aliveFlag ? (talkBoostFlag ? 1.04 : 1.0) : 0.39) : (moodTint.b * deadDim);
           entry.mat.color.r = Math.min(1.0, entry.baseColor.r * mulR);
           entry.mat.color.g = Math.min(1.0, entry.baseColor.g * mulG);
           entry.mat.color.b = Math.min(1.0, entry.baseColor.b * mulB);

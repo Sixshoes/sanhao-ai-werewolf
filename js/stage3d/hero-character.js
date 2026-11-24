@@ -273,7 +273,7 @@ function buildHeroCharacter(scene) {
     jade: new CupMatCtor({ color: pal.jade, roughness: 0.16, metalness: 0.08, clearcoat: 0.85 }),
     celadon: new CupMatCtor({ color: 0xd8f3e8, roughness: 0.14, metalness: 0.06, clearcoat: 0.92 }),
     gold: new THREE.MeshStandardMaterial({ color: 0xd9ad5b, roughness: 0.24, metalness: 0.82 }),
-    lanternGlow: new THREE.MeshStandardMaterial({ color: 0xffe4a0, emissive: 0xd4a657, emissiveIntensity: 1.4, roughness: 0.18, transparent: true, opacity: 0.94 }),
+    lanternGlow: new THREE.MeshStandardMaterial({ color: 0xf4d58d, emissive: 0xb68a3e, emissiveIntensity: 0.38, roughness: 0.30, transparent: true, opacity: 0.80 }),
     daisWood: new THREE.MeshStandardMaterial({ map: wood.map, color: 0x452b1b, roughness: 0.42, metalness: 0.16 })
   };
 
@@ -442,20 +442,20 @@ function buildHeroCharacter(scene) {
   teacupGroup.add(saucer, cup, teaSurf);
   leftArm.elbow.add(teacupGroup);
 
-  // Right Hand Summonable Three-Goodness Golden Lotus Lantern
+  // Right Hand Summonable Three-Goodness Miniature Golden Lotus Charm (70% smaller & warm, never blinding)
   const lanternGroup = new THREE.Group();
-  lanternGroup.position.set(0, -0.40, 0.16);
-  const lanternCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.155, 1), mats.lanternGlow);
-  const lanternRing = new THREE.Mesh(new THREE.TorusGeometry(0.215, 0.018, 8, 24), mats.gold);
+  lanternGroup.position.set(0, -0.38, 0.14);
+  const lanternCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.048, 1), mats.lanternGlow);
+  const lanternRing = new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.008, 8, 24), mats.gold);
   lanternRing.rotation.x = Math.PI * 0.5;
   lanternGroup.add(lanternCore, lanternRing);
   lanternGroup.visible = false;
   rightArm.elbow.add(lanternGroup);
 
-  // Orbiting 3D Lantern used when a custom .GLB model is loaded!
+  // Subtle Miniature Floating Celadon Tea Charm when a custom .GLB/.VRM is casting purify/celebrate
   const glbLanternGroup = new THREE.Group();
-  const glbLanternCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 1), mats.lanternGlow);
-  const glbLanternRing = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.018, 8, 24), mats.gold);
+  const glbLanternCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.044, 1), mats.lanternGlow);
+  const glbLanternRing = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.008, 8, 24), mats.gold);
   glbLanternRing.rotation.x = Math.PI * 0.5;
   glbLanternGroup.add(glbLanternCore, glbLanternRing);
   glbLanternGroup.visible = false;
@@ -628,6 +628,9 @@ function applyHeroPalette(hero, key) {
   hero.mats.hair.color.setHex(pal.hair);
   hero.mats.ribbon.color.setHex(pal.ribbon);
   hero.mats.jade.color.setHex(pal.jade);
+  if (hero.vrmAvatar && typeof stage3dVrm !== "undefined" && typeof stage3dVrm.applyHeroVrmPalette === "function") {
+    stage3dVrm.applyHeroVrmPalette(hero.vrmAvatar, key);
+  }
 }
 
 function triggerHeroAction(hero, actionName, durationMs) {
@@ -759,8 +762,8 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
     hero.rightArm.elbow.rotation.x += (rElbX - hero.rightArm.elbow.rotation.x) * d14;
   }
 
-  // Summoned Lotus Lantern spin (rig hand vs orbiting lantern when .GLB is active!)
-  const showLantern = (act === "purify_cast" || act === "celebrate" || isShowcase);
+  // Summoned Lotus Charm spin (only during purify_cast/celebrate — never a glaring orb in showcase!)
+  const showLantern = (act === "purify_cast" || act === "celebrate");
   const glbActive = Boolean(hero.customGlbRoot && hero.customGlbRoot.visible);
   hero.lanternGroup.visible = showLantern && !glbActive;
   if (hero.lanternGroup.visible) {
