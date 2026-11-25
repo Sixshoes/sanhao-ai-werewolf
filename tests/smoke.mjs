@@ -7871,4 +7871,213 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 Contrast & PC Perf E2E smoke test PASSED!");
+// ==================== v24.0 CONSOLIDATED FINAL AUDIT & POLISH CHECK ====================
+{
+  const showcaseDir = path.join(ROOT, "assets/voice_pack/showcase");
+  const expectedMp3s = [
+    "showcase_asong_day2.mp3",
+    "showcase_asong_grill_flip.mp3",
+    "showcase_asong_grill_defend.mp3",
+    "showcase_asong_lw.mp3",
+    "showcase_xiaocheng_d2.mp3",
+    "showcase_nuannuan_d2.mp3",
+    "showcase_xinger_d2.mp3",
+    "showcase_host_good_win.mp3"
+  ];
+  const mp3Ok = expectedMp3s.every((fn) => {
+    const fp = path.join(showcaseDir, fn);
+    return fs.existsSync(fp) && fs.statSync(fp).size >= 10000;
+  });
+
+  const compCss240 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const envJs240 = fs.readFileSync(path.join(ROOT, "js/stage3d/environment.js"), "utf8");
+  const reactJs240 = fs.readFileSync(path.join(ROOT, "js/ai/reactions.js"), "utf8");
+
+  const v240Static = {
+    mp3PackPresentOk: mp3Ok,
+    desktopGridCenterOk: compCss240.includes("grid-template-columns: 240px minmax(0, 1fr) 240px"),
+    daylightSpectatorBarOk: compCss240.includes("body.craft-ui.theme-daylight .spectator-guess-bar"),
+    daytimeFocusDimOk: envJs240.includes("activeSpeakingNow") && envJs240.includes("targetFocusDim"),
+    zeroDoubleBangCommentOk: !reactJs240.includes("Wolf!!")
+  };
+  const failedV240Static = Object.entries(v240Static).filter(([, v]) => !v);
+  if (failedV240Static.length > 0) {
+    throw new Error("v24.0 STATIC check failed: " + JSON.stringify(v240Static));
+  }
+
+  const v240Runtime = vm.runInContext(`(() => {
+    // 1. Showcase voice pack lookup
+    const uDay2 = voice.lookupBundledVoicePackUrl("阿松", "各位別急著一面倒啊，昨天 7號怎麼投票是他的事，跟我無關！我才是一路扛壓的真明心觀察員，昨夜查了 1號，他才是穿我衣服的假觀察員，這輪聽我一次，先出 5號或 1號，過。");
+    const uGrill = voice.lookupBundledVoicePackUrl("阿松", "盤面剛變了嘛，我照新線索調整很正常啊。");
+    const uLw = voice.lookupBundledVoicePackUrl("阿松", "唉，算你們票型對得夠細，昨晚 7號被請離後我本來想再硬扛一輪的。這局輸得心服口服，茶席推論確實精彩！");
+    const uHost = voice.lookupBundledVoicePackUrl("主持", "全場酸民狼已清出茶席，好人陣營大獲全勝，恭喜各位守住雲起茶席！");
+    const showcaseLookupOk = uDay2 === "assets/voice_pack/showcase/showcase_asong_day2.mp3"
+      && uGrill === "assets/voice_pack/showcase/showcase_asong_grill_flip.mp3"
+      && uLw === "assets/voice_pack/showcase/showcase_asong_lw.mp3"
+      && uHost === "assets/voice_pack/showcase/showcase_host_good_win.mp3";
+
+    // 2. Bug #1: Static cloud host detector & 404 latch
+    const origHost = window.location.hostname;
+    window.location.hostname = "sanhao-ai-werewolf.vercel.app";
+    const vercelDetected = voice.isStaticCloudHost() === true;
+    window.location.hostname = "127.0.0.1";
+    const localhostNotStatic = voice.isStaticCloudHost() === false;
+    window.location.hostname = origHost;
+    voice._localTtsEndpointUnavailable = true;
+    voice.localNeuralAvailable = true;
+    const prevFetch = globalThis.fetch;
+    let fetchHits = 0;
+    globalThis.fetch = function () { fetchHits++; return Promise.resolve({ ok: false, status: 404 }); };
+    voice._fetchLocalNeuralAudio("阿松", "測試", "normal");
+    const latchSkippedFetch = fetchHits === 0;
+    globalThis.fetch = prevFetch;
+    voice._localTtsEndpointUnavailable = false;
+    voice.localNeuralAvailable = false;
+
+    // 3. Bug #3 & #5b: Sheriff election candidate cap preserves Seer + fakeSeer & skips when alive <= 3
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    startNewGame();
+    state.match.seats.forEach((s, i) => { s.alive = i < 3; });
+    const skipLowAliveOk = buildSheriffElectionCandidates().length === 0;
+    const pid3 = getPlayerId();
+    state.match.seats.forEach((s) => { s.alive = true; s.role = "villager"; s.team = "good"; s.fakeSeer = false; });
+    const ai3 = state.match.seats.filter((s) => s.id !== pid3);
+    ai3[0].role = "seer";
+    ai3[1].role = "wolf"; ai3[1].team = "wolf"; ai3[1].fakeSeer = true;
+    ai3[2].role = "wolf"; ai3[2].team = "wolf";
+    const origShouldRun = shouldAiRunForSheriff;
+    shouldAiRunForSheriff = () => true; // Force 7 AI candidates > hardMax(5)
+    const cands8 = buildSheriffElectionCandidates();
+    shouldAiRunForSheriff = origShouldRun;
+    const cand8Ids = cands8.map((c) => c.id);
+    const preservesSeerAndFake = cands8.length === 5 && cand8Ids.includes(ai3[0].id) && cand8Ids.includes(ai3[1].id);
+
+    // 4. Bug #4: Fast Sheriff election persistent tie results in badge loss (winnerId === null)
+    state.sheriffMode = true;
+    state.match.sheriffElectionPending = true;
+    state.match.day = 1;
+    const pSeat4 = getPlayerSeat();
+    pSeat4.alive = false; // Player dead -> fast auto branch
+    ai3.forEach((s, idx) => {
+      s.alive = idx < 6; // 6 alive AI seats (2 candidates + 4 voters)
+      s.role = idx === 0 ? "seer" : (idx === 1 ? "wolf" : "villager");
+      s.team = idx === 1 ? "wolf" : "good";
+      s.fakeSeer = idx === 1;
+      s.claimedRole = (idx === 0 || idx === 1) ? "seer" : null;
+    });
+    const candA4 = ai3[0];
+    const candB4 = ai3[1];
+    const voterOrder4 = [ai3[2].id, ai3[3].id, ai3[4].id, ai3[5].id];
+    const oldBuildCands = buildSheriffElectionCandidates;
+    const oldChooseVote = chooseAiSheriffElectionVote;
+    buildSheriffElectionCandidates = () => [candA4, candB4];
+    chooseAiSheriffElectionVote = (voter) => (voterOrder4.indexOf(voter.id) % 2 === 0 ? candA4.id : candB4.id); // Exact 2-2 tie twice!
+    startSheriffElection();
+    buildSheriffElectionCandidates = oldBuildCands;
+    chooseAiSheriffElectionVote = oldChooseVote;
+    const sheriffTieResolvedOk = Boolean(
+      state.match.sheriffVoteRecord &&
+      state.match.sheriffVoteRecord.winnerId === null &&
+      state.match.sheriffVoteRecord.badgeLost === true &&
+      state.match.sheriffVoteRecord.badgeLostReason === "警上二次平票"
+    );
+
+    // 4B. Bug #2: Hope Confrontation does not steal 15s countdown while hydrating Gemini lines
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    state.match.phase = "DAY_SPEECH";
+    state.match.fourGivingsUsed.hope = false;
+    const aiHope = state.match.seats.filter((s) => s.alive && s.id !== getPlayerId());
+    const origExtLlm = isExternalLlmActive;
+    const origGenHope = tryGenerateGeminiConfrontationLine;
+    isExternalLlmActive = () => true;
+    tryGenerateGeminiConfrontationLine = () => new Promise(() => {}); // Stays pending during check
+    executeHopeConfrontation(aiHope[0].id, aiHope[1].id);
+    const hopeHydrateOk = Boolean(
+      state.match.hopeConfrontation &&
+      state.match.hopeConfrontation.hydrating === true &&
+      state.match.hopeConfrontation.secondsLeft === 15 &&
+      !state.hopeConfrontInterval
+    );
+    closeHopeConfrontationModal();
+    isExternalLlmActive = origExtLlm;
+    tryGenerateGeminiConfrontationLine = origGenHope;
+
+    // 5. Bug #5a: Custom name HTML escaping in Spotlight
+    const evilSeat = state.match.seats[0];
+    const prevName = evilSeat.name;
+    evilSeat.name = "<img src=x onerror=alert(1)>";
+    renderInteractiveSpotlightText("我看 1號 <img src=x onerror=alert(1)> 很可疑！", state.match.seats[1], false);
+    const evilHtml = String(el("spotlightText").innerHTML || "");
+    const xssSpotSafeOk = !evilHtml.includes("<img") && evilHtml.includes("&lt;img");
+    evilSeat.name = prevName;
+
+    // 6. True Deferred Speech Log + Bombshell 950ms / Brief Pass 420ms
+    const logsBeforeDef = state.match.logs.length;
+    state.match._deferredSpeechLog = {
+      speakerId: 4,
+      day: 2,
+      entry: { kind: "speech", useTypewriter: true, pendingReveal: false, speakerId: 4, title: "04號 · 阿松", subBadge: "老練", text: "延遲寫入測試" }
+    };
+    const heldBeforeCommit = state.match.logs.length === logsBeforeDef;
+    commitPendingSpeechLog(4);
+    const flushedAfterCommit = state.match.logs.length === logsBeforeDef + 1
+      && state.match._deferredSpeechLog === null
+      && state.match.logs[state.match.logs.length - 1].text === "延遲寫入測試";
+    const bombHold = computeNarrativeHoldMs(null, "我現在直接拍身分，昨天查殺4號！", "normal");
+    const briefHold = computeNarrativeHoldMs(null, "我好人，先聽後置位，過。", "normal");
+    const narrativeBeatsOk = bombHold.ms === 950 && bombHold.isBombshell === true && briefHold.ms === 420;
+
+    // 7. Phoneme-aware Mandarin vowel aperture lip-sync
+    const vA = sound.computeMandarinCharVowels("查", 100);
+    const vO = sound.computeMandarinCharVowels("我", 100);
+    const vU = sound.computeMandarinCharVowels("出", 100);
+    const vI = sound.computeMandarinCharVowels("你", 100);
+    const vE = sound.computeMandarinCharVowels("這", 100);
+    const vSil = sound.computeMandarinCharVowels("。", 100);
+    const vowelLipSyncOk = vA.a > vA.u && vO.o > vO.i && vU.u > vU.a && vI.i > vI.o && vE.e > vE.u && vSil.amp === 0;
+
+    // 8. Dead human wolf does NOT trigger broken isPlayerPushScript
+    el("selectModeCount").value = "12";
+    el("selectPreferredRole").value = "wolf";
+    startNewGame();
+    const pWolf = getPlayerSeat();
+    pWolf.alive = false;
+    const aliveMate = state.match.seats.find((s) => s.alive && s.team === "wolf" && s.id !== pWolf.id);
+    const aliveGood = state.match.seats.find((s) => s.alive && s.team === "good");
+    state.match.day = 4;
+    state.match.phase = "DAY_SPEECH";
+    state.match.daySpeechEvents = [
+      { day: 4, speakerId: pWolf.id, accuseId: aliveGood.id, rawText: "投他" }
+    ];
+    const mateSpeech = buildHeuristicAiSpeech(aliveMate);
+    const deadWolfNoEchoOk = !String(mateSpeech && mateSpeech.text || "").includes("我也跟 " + pWolf.id + "號你 有同感");
+
+    resetMatchToLobby();
+    return {
+      showcaseLookupOk,
+      vercelDetected,
+      localhostNotStatic,
+      latchSkippedFetch,
+      skipLowAliveOk,
+      preservesSeerAndFake,
+      sheriffTieResolvedOk,
+      hopeHydrateOk,
+      xssSpotSafeOk,
+      heldBeforeCommit,
+      flushedAfterCommit,
+      narrativeBeatsOk,
+      vowelLipSyncOk,
+      deadWolfNoEchoOk
+    };
+  })()`, ctx);
+
+  const failedV240Run = Object.entries(v240Runtime).filter(([, v]) => !v);
+  if (failedV240Run.length > 0) {
+    throw new Error("v24.0 RUNTIME check failed: " + JSON.stringify(v240Runtime));
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 Consolidated Final Pass E2E smoke test PASSED!");

@@ -506,26 +506,43 @@ const sound = {
   },
 
   computeMandarinCharVowels: function (ch, nowMs) {
-    // v18.0 Punctuation-aware Chinese syllable mouth shapes (closed lips on commas/periods!)
+    // v24.0 Phoneme-aware Mandarin character vowel aperture + bilabial onset modulation (eliminates uniform jaw flapping offline!)
     if (!ch || /^[\s，。！？、；：「」『』（）()—…·・\-~,.!?;:]+$/.test(ch)) {
       return { a: 0, i: 0, u: 0, e: 0, o: 0, amp: 0 };
     }
-    const pulse = 0.78 + 0.22 * Math.sin((nowMs || 0) * 0.018);
-    if (/[好大他她吧啦嗎啊哪發話打殺查怕假家那看張場把當方長講狼像剛幫想常上讓]/.test(ch)) {
-      return { a: 0.86 * pulse, i: 0.08, u: 0.10, e: 0.16, o: 0.28 * pulse, amp: 0.84 * pulse };
+    const tNow = nowMs || 0;
+    const bilabialMul = /[不把別白票牌沒明問我怕幫表邊評盤排拍破偏]/.test(ch)
+      ? (0.58 + 0.42 * Math.max(0, Math.sin(tNow * 0.028)))
+      : 1.0;
+    const phraseArc = 0.72 + 0.28 * Math.sin(tNow * 0.017) * Math.cos(tNow * 0.007);
+    const pulse = clamp(phraseArc * bilabialMul, 0.24, 1.0);
+    // 1. Wide-open [a] aperture (啊/話/查/殺/打/吧/他/大/那/場/狼/講)
+    if (/[好大他她吧啦嗎啊哪發話打殺查怕假家那看張場把當方長講狼像剛幫想常上讓感站晚牌排藍松朗]/.test(ch)) {
+      return { a: 0.90 * pulse, i: 0.06, u: 0.08, e: 0.16, o: 0.24 * pulse, amp: 0.86 * pulse };
     }
-    if (/[我多說過錯落護獨投出局錄部度不都公票座號就又手口後走有某否若桌]/.test(ch)) {
-      return { a: 0.22 * pulse, i: 0.05, u: 0.56 * pulse, e: 0.12, o: 0.80 * pulse, amp: 0.68 * pulse };
+    // 2. Rounded [o] aperture (我/說/多/過/投/號/票/座/若/桌/莫)
+    if (/[我多說過錯落投公票座號就又手口後走有某否若桌作波魔破莫播囉喔]/.test(ch)) {
+      return { a: 0.20 * pulse, i: 0.04, u: 0.44 * pulse, e: 0.10, o: 0.84 * pulse, amp: 0.70 * pulse };
     }
-    if (/[你是一起意氣理記仔細戲疑這得給誰別點先驗明清信民席警聽心定平輕]/.test(ch)) {
-      return { a: 0.14 * pulse, i: 0.72 * pulse, u: 0.08, e: 0.52 * pulse, o: 0.10, amp: 0.48 * pulse };
+    // 3. Tight-puckered [u] aperture (出/不/五/主/守/竹/無/護/獨/錄/局/路/住)
+    if (/[出不五主守竹無護獨局錄部度都圖書族入補覆步路露住注組毒忽突初]/.test(ch)) {
+      return { a: 0.08, i: 0.04, u: 0.86 * pulse, e: 0.08, o: 0.34 * pulse, amp: 0.54 * pulse };
+    }
+    // 4. Wide-narrow [i] aperture (你/是/一/七/起/氣/疑/席/警/聽/心/清/信)
+    if (/[你是一七起意氣理記仔細戲疑席警聽心定平輕清信民明奇緊離西席星]/.test(ch)) {
+      return { a: 0.12 * pulse, i: 0.78 * pulse, u: 0.06, e: 0.42 * pulse, o: 0.08, amp: 0.46 * pulse };
+    }
+    // 5. Mid-open [e] aperture (這/得/給/誰/別/點/先/驗/徹/則/可/合/和/色/澄/晨)
+    if (/[這得給誰別點先驗徹則可合和色澄晨車測設社覺切結]/.test(ch)) {
+      return { a: 0.36 * pulse, i: 0.26 * pulse, u: 0.08, e: 0.76 * pulse, o: 0.14, amp: 0.60 * pulse };
     }
     const code = ch.charCodeAt(0) || 1;
-    const bucket = code % 4;
-    if (bucket === 0) return { a: 0.68 * pulse, i: 0.12, u: 0.12, e: 0.22, o: 0.24, amp: 0.66 * pulse };
-    if (bucket === 1) return { a: 0.24, i: 0.56 * pulse, u: 0.14, e: 0.44 * pulse, o: 0.14, amp: 0.52 * pulse };
-    if (bucket === 2) return { a: 0.20, i: 0.10, u: 0.50 * pulse, e: 0.16, o: 0.64 * pulse, amp: 0.58 * pulse };
-    return { a: 0.46 * pulse, i: 0.24, u: 0.18, e: 0.54 * pulse, o: 0.22, amp: 0.56 * pulse };
+    const bucket = code % 5;
+    if (bucket === 0) return { a: 0.72 * pulse, i: 0.10, u: 0.10, e: 0.20, o: 0.22, amp: 0.68 * pulse };
+    if (bucket === 1) return { a: 0.18, i: 0.62 * pulse, u: 0.10, e: 0.40 * pulse, o: 0.10, amp: 0.48 * pulse };
+    if (bucket === 2) return { a: 0.18, i: 0.08, u: 0.44 * pulse, e: 0.14, o: 0.68 * pulse, amp: 0.58 * pulse };
+    if (bucket === 3) return { a: 0.10, i: 0.06, u: 0.70 * pulse, e: 0.10, o: 0.28 * pulse, amp: 0.50 * pulse };
+    return { a: 0.42 * pulse, i: 0.22, u: 0.14, e: 0.62 * pulse, o: 0.18, amp: 0.56 * pulse };
   },
 
   getVoiceVowelWeights: function (seatId, nowMs) {

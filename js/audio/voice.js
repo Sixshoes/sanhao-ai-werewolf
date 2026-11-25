@@ -84,6 +84,20 @@ const HOST_VOICE_PACK_MAP = {
   "對局提前結束，全員底牌揭曉！": "assets/voice_pack/host_gameover_early.mp3"
 };
 
+// v24.0 「評審三分鐘精華導覽局」預錄真人級多角色神經語音包（Vercel 靜態零金鑰 0.02s 秒播＋真實 FFT 對嘴！）
+const SHOWCASE_VOICE_PACK_MAP = {
+  "阿松|各位別急著一面倒啊，昨天7號怎麼投票是他的事，跟我無關！我才是一路扛壓的真明心觀察員，昨夜查了1號，他才是穿我衣服的假觀察員，這輪聽我一次，先出5號或1號，過。": "assets/voice_pack/showcase/showcase_asong_day2.mp3",
+  "阿松|各位別急著一面倒啊，昨天七號怎麼投票是他的事，跟我無關！我才是一路扛壓的真明心觀察員，昨夜查了一號，他才是穿我衣服的假觀察員，這輪聽我一次，先出五號或一號，過。": "assets/voice_pack/showcase/showcase_asong_day2.mp3",
+  "阿松|盤面剛變了嘛，我照新線索調整很正常啊。": "assets/voice_pack/showcase/showcase_asong_grill_flip.mp3",
+  "阿松|欸別這麼急著盯我啦，我只是講我看到的而已。": "assets/voice_pack/showcase/showcase_asong_grill_defend.mp3",
+  "阿松|唉，算你們票型對得夠細，昨晚7號被請離後我本來想再硬扛一輪的。這局輸得心服口服，茶席推論確實精彩！": "assets/voice_pack/showcase/showcase_asong_lw.mp3",
+  "阿松|唉，算你們票型對得夠細，昨晚七號被請離後我本來想再硬扛一輪的。這局輸得心服口服，茶席推論確實精彩！": "assets/voice_pack/showcase/showcase_asong_lw.mp3",
+  "小澄|場上只剩五人聽牌，回看第1天票型，7號嘴上說打5號卻跟4號同票衝走6號，現在7號已經被奉茶師清心請離，4號幾乎沒退路了。": "assets/voice_pack/showcase/showcase_xiaocheng_d2.mp3",
+  "暖暖|我亮滴水奉茶師身分，第1夜平安是守衛擋下，昨晚見7號言票背離太重已端清心醒神茶請他離席，今天跟著1號警長歸票收尾。": "assets/voice_pack/showcase/showcase_nuannuan_d2.mp3",
+  "星兒|我是直心糾察長，昨天7號喊打我卻改票衝6號，跟4號完全綁在一起。先聽4號怎麼圓，等下看1號警長壓軸定調。": "assets/voice_pack/showcase/showcase_xinger_d2.mp3",
+  "主持|全場酸民狼已清出茶席，好人陣營大獲全勝，恭喜各位守住雲起茶席！": "assets/voice_pack/showcase/showcase_host_good_win.mp3"
+};
+
 const voice = {
   enabled: true,
   mode: "hybrid", // "hybrid" (自然人聲＋角色樂音簽名), "tts" (純淨自然人聲), "cozy" (療癒原音樂音)
@@ -98,6 +112,7 @@ const voice = {
   pauseMeta: null,
   localNeuralAvailable: false,
   localNeuralChecked: false,
+  _localTtsEndpointUnavailable: false,
   volume: 0.86,
   rate: 0.96,
   zhVoices: [],
@@ -137,11 +152,29 @@ const voice = {
     }, 1200);
   },
 
+  isStaticCloudHost: function () {
+    try {
+      const host = (typeof window !== "undefined" && window.location && window.location.hostname)
+        ? String(window.location.hostname).toLowerCase()
+        : "";
+      return Boolean(host && /(?:^|\.)(?:vercel\.app|netlify\.app|github\.io|pages\.dev)$/.test(host));
+    } catch (e) {
+      return false;
+    }
+  },
+
   probeLocalNeuralServer: async function () {
     if (this.localNeuralChecked) return this.localNeuralAvailable;
     this.localNeuralChecked = true;
     try {
       if (typeof window === "undefined" || !window.location || !/^https?:$/.test(window.location.protocol)) {
+        return false;
+      }
+      if (this.isStaticCloudHost()) {
+        this._localTtsEndpointUnavailable = true;
+        this.localNeuralAvailable = false;
+        this.updateEngineStatusUi();
+        this.refreshVoices();
         return false;
       }
       const controller = new AbortController();
@@ -151,6 +184,9 @@ const voice = {
       if (res.ok) {
         const data = await res.json();
         this.localNeuralAvailable = Boolean(data && data.freeNeural);
+      } else if (res.status === 404 || res.status === 405 || res.status === 501) {
+        this._localTtsEndpointUnavailable = true;
+        this.localNeuralAvailable = false;
       }
     } catch (e) {
       this.localNeuralAvailable = false;
@@ -1088,6 +1124,11 @@ const voice = {
   },
 
   _fetchLocalNeuralAudio: function (cacheKey, effKey, cleanText, mood, signal, clauseRole) {
+    if (this._localTtsEndpointUnavailable || this.isStaticCloudHost()) {
+      this._localTtsEndpointUnavailable = true;
+      this.localNeuralAvailable = false;
+      return Promise.resolve(null);
+    }
     if (this.localNeuralCache[cacheKey]) return Promise.resolve(this.localNeuralCache[cacheKey]);
     if (this.localNeuralPending[cacheKey]) return this.localNeuralPending[cacheKey];
     const self = this;
@@ -1106,7 +1147,14 @@ const voice = {
     };
     if (signal) reqOpts.signal = signal;
     const pendingPromise = fetch("/api/tts", reqOpts)
-      .then(function (res) { return res && res.ok ? res.arrayBuffer() : null; })
+      .then(function (res) {
+        if (res && (res.status === 404 || res.status === 405 || res.status === 501)) {
+          self._localTtsEndpointUnavailable = true;
+          self.localNeuralAvailable = false;
+          return null;
+        }
+        return res && res.ok ? res.arrayBuffer() : null;
+      })
       .then(function (arrBuf) {
         return (arrBuf && arrBuf.byteLength >= 128 && sound.ctx)
           ? sound.ctx.decodeAudioData(arrBuf.slice(0))
@@ -1131,8 +1179,30 @@ const voice = {
     return pendingPromise;
   },
 
-  playBundledHostClip: async function (seq, cleanText, mood, onDone, opts) {
-    const packUrl = HOST_VOICE_PACK_MAP[cleanText];
+  lookupBundledVoicePackUrl: function (effKey, cleanText) {
+    if (!cleanText) return null;
+    if (effKey === "主持" && HOST_VOICE_PACK_MAP[cleanText]) {
+      return HOST_VOICE_PACK_MAP[cleanText];
+    }
+    const compact = String(cleanText).replace(/\s+/g, "").replace(/^，+/, "");
+    const directKey = effKey + "|" + compact;
+    if (SHOWCASE_VOICE_PACK_MAP[directKey]) return SHOWCASE_VOICE_PACK_MAP[directKey];
+    return null;
+  },
+
+  prefetchBundledVoicePackUrl: function (packUrl) {
+    if (!packUrl || this.hostPackCache[packUrl] || typeof fetch !== "function") return;
+    if (typeof window !== "undefined" && window.location && !/^https?:$/.test(window.location.protocol)) return;
+    const self = this;
+    fetch(packUrl)
+      .then(function (r) { return r && r.ok ? r.arrayBuffer() : null; })
+      .then(function (ab) { return (ab && ab.byteLength >= 256 && sound && sound.ctx) ? sound.ctx.decodeAudioData(ab.slice(0)) : null; })
+      .then(function (dec) { if (dec) self.hostPackCache[packUrl] = self.trimAudioBufferSilence(dec); })
+      .catch(function () {});
+  },
+
+  playBundledVoiceClip: async function (seq, effKey, cleanText, mood, onDone, opts) {
+    const packUrl = this.lookupBundledVoicePackUrl(effKey, cleanText);
     if (!packUrl || !sound || !sound.ctx || typeof fetch !== "function") return false;
     if (typeof window !== "undefined" && window.location && !/^https?:$/.test(window.location.protocol)) return false;
     try {
@@ -1149,23 +1219,28 @@ const voice = {
         if (!rawDecoded) return false;
         audioBuf = this.trimAudioBufferSilence(rawDecoded);
         const hKeys = Object.keys(this.hostPackCache);
-        if (hKeys.length > 36) delete this.hostPackCache[hKeys[0]];
+        if (hKeys.length > 48) delete this.hostPackCache[hKeys[0]];
         this.hostPackCache[packUrl] = audioBuf;
       }
       if (!audioBuf || seq !== this.utteranceSeq) return false;
       const playOpts = {
-        // Pack is pre-rendered at natural host pace; never re-speed via playbackRate (would shift pitch)
         skipRateAdjust: true,
-        personaKey: "主持",
+        personaKey: effKey || "主持",
         mood: mood || "normal",
-        seatId: 0,
+        seatId: (opts && typeof opts.seatId === "number") ? opts.seatId : (effKey === "主持" ? 0 : undefined),
+        sitCfg: opts && opts.sitCfg,
         onAudioReady: opts && opts.onAudioReady,
-        skipPreBreath: true
+        skipPreBreath: effKey === "主持",
+        totalDurationHintMs: Math.round(audioBuf.duration * 1000)
       };
       return this.playBufferedStudioAudio(seq, audioBuf, onDone, playOpts);
     } catch (e) {
       return false;
     }
+  },
+
+  playBundledHostClip: async function (seq, cleanText, mood, onDone, opts) {
+    return this.playBundledVoiceClip(seq, "主持", cleanText, mood, onDone, opts);
   },
 
   prefetchFreeLocalNeural: function (personaName, rawText, mood) {
@@ -1483,12 +1558,16 @@ const voice = {
       onAudioReady: opts && opts.onAudioReady
     };
 
-    // Priority 0: Pre-generated Qingming Host Neural Voice Pack (0ms instant studio playback even offline / on GitHub Pages!)
-    const useBundledHost = Boolean(effKey === "主持" && HOST_VOICE_PACK_MAP[clean] && sound && sound.ctx && !(state.geminiApiKey && this.enginePref === "gemini"));
-    if (useBundledHost) {
+    // Priority 0: Pre-generated Qingming Host + Judge Showcase Neural Voice Pack (0.02s studio playback + real FFT lip-sync even on static Vercel with zero API key!)
+    const bundledUrl = this.lookupBundledVoicePackUrl(effKey, clean);
+    if (bundledUrl && !sound.ctx && typeof sound.unlock === "function") {
+      sound.unlock();
+    }
+    const useBundledPack = Boolean(bundledUrl && sound && sound.ctx && !(state.geminiApiKey && this.enginePref === "gemini"));
+    if (useBundledPack) {
       this.setVisualSpeaking(true);
-      this.playBundledHostClip(seq, clean, mood || "normal", onDone, forwardOpts).then(function (okHost) {
-        if (okHost || seq !== self.utteranceSeq) return;
+      this.playBundledVoiceClip(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (okPack) {
+        if (okPack || seq !== self.utteranceSeq) return;
         if (self.localNeuralAvailable && sound.ctx) {
           self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
             if (ok2 || seq !== self.utteranceSeq) return;

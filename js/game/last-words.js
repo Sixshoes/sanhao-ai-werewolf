@@ -4,6 +4,18 @@
 "use strict";
 
 function buildAiLastWords(seat, mode) {
+  if (
+    seat && seat.id === 4 && mode !== "first_night" &&
+    typeof state !== "undefined" && state.match && state.match.judgeShowcase &&
+    state.match.judgeShowcaseScript && state.match.judgeShowcaseScript.lwAsongText
+  ) {
+    return {
+      text: state.match.judgeShowcaseScript.lwAsongText,
+      claimRole: null,
+      targetId: null,
+      isWolf: true
+    };
+  }
   const snap = typeof createBlindMatchSnapshot === "function"
     ? createBlindMatchSnapshot(seat, { module: "last_words" })
     : null;

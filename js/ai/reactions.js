@@ -212,7 +212,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
     };
   }
 
-  // 0A. HIGHEST PRIORITY: Someone earlier today claimed Seer and called ME a Wolf!!
+  // 0A. HIGHEST PRIORITY: Someone earlier today claimed Seer and called ME a Wolf!
   if (seerWolfOnMe) {
     const accSeat = readSeat(seerWolfOnMe.speakerId);
     const accName = seatLabel(accSeat);
@@ -928,10 +928,10 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     // Zero-Leak: Wolf only sees observable Seer claim by a non-wolf (NEVER reads s.role === "seer"!)
     const rivalSeerExposed = spokenOthers.find(function (s) { return !s.isWolfMate && s.claimedRole === "seer"; });
 
-    if (isPlayerPushScript) {
-      const pidNow = snap ? snap.playerSeatId : (typeof getPlayerId === "function" ? getPlayerId() : 1);
-      const playerSeatView = readSeat(pidNow);
-      const playerClaimedSeer = Boolean(playerSeatView && playerSeatView.claimedRole === "seer");
+    const pidNow = snap ? snap.playerSeatId : (typeof getPlayerId === "function" ? getPlayerId() : 1);
+    const playerSeatView = readSeat(pidNow);
+    if (isPlayerPushScript && playerSeatView && playerSeatView.alive) {
+      const playerClaimedSeer = Boolean(playerSeatView.claimedRole === "seer");
       const playerAccEv = (snap ? snap.daySpeechEvents : []).find(function (ev) { return ev.speakerId === pidNow && ev.accuseId; });
       const playerTarget = playerAccEv ? readSeat(playerAccEv.accuseId) : (rivalSeerExposed || goodSpoken[0] || goodAll[0]);
       if (playerTarget && playerTarget.alive && !playerTarget.isWolfMate && playerTarget.id !== speaker.id) {
@@ -940,10 +940,10 @@ function tryRoleSpecificSpeech(speaker, ctx) {
           targetId: playerTarget.id,
           relationType: "suspect",
           accuseId: playerTarget.id,
-          vouchId: (playerSeatView && playerSeatView.alive) ? pidNow : null,
+          vouchId: pidNow,
           standWithSeerId: playerClaimedSeer ? pidNow : null,
           wolfPits: [playerTarget.id],
-          goodPits: (playerSeatView && playerSeatView.alive) ? [pidNow] : [],
+          goodPits: [pidNow],
           hasToxicSlip: false,
           text: wolfLead + (playerClaimedSeer
             ? ("我聽下來堅定站邊 " + seatLabel(playerSeatView) + " 這張觀察員，")

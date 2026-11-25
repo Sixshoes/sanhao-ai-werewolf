@@ -88,7 +88,7 @@ function computeNarrativeHoldMs(speechEv, rawText, voiceMood) {
     voiceMood === "rebut" ||
     voiceMood === "panic" ||
     (speechEv && (speechEv.claimRole || speechEv.checkedWolfId || speechEv.contradiction || speechEv.isInterject)) ||
-    /查殺|對跳|我是明心|我是觀察員|我是奉茶|我是守衛|我是糾察/.test(txt)
+    /查殺|對跳|我是明心|我是觀察員|我是奉茶|我是守衛|我是糾察|掀席|自爆|起跳|跳明心|拍身分|假觀察員/.test(txt)
   );
   if (isBombshell) return { ms: 950, isBombshell: true };
   const isBriefPass = Boolean(
@@ -102,6 +102,14 @@ function computeNarrativeHoldMs(speechEv, rawText, voiceMood) {
 function commitPendingSpeechLog(speakerId) {
   if (typeof state === "undefined" || !state.match || !Array.isArray(state.match.logs)) return false;
   let changed = false;
+  const def = state.match._deferredSpeechLog;
+  if (def && (!speakerId || def.speakerId === speakerId)) {
+    state.match._deferredSpeechLog = null;
+    if (def.entry && typeof addLog === "function") {
+      addLog(def.entry);
+      changed = true;
+    }
+  }
   state.match.logs.forEach(function (item) {
     if (item && item.pendingReveal && (!speakerId || item.speakerId === speakerId)) {
       item.pendingReveal = false;
@@ -402,7 +410,7 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
   const contraTriggers = activeContraRec
     ? ["硬打", "自稱", "假冒", "冒充", "力挺", "洗白", "投出去", "站邊", "護航", "點進狼坑", "明心觀察員", "滴水奉茶師", "直心糾察長", "狼坑"]
     : [];
-  const seatNameAlt = ((state.match && Array.isArray(state.match.seats) ? state.match.seats.map(function (s) { return s.name; }) : [])
+  const seatNameAlt = ((state.match && Array.isArray(state.match.seats) ? state.match.seats.map(function (s) { return String(s && s.name || "").replace(/[\r\n\t<>]/g, "").trim(); }) : [])
     .concat(["晨晨", "小雲", "阿竹", "柚子", "晴嵐", "阿松", "小澄", "墨白", "暖暖", "星兒", "阿朗", "玩家你", "玩家", "你"]))
     .filter(function (nm, idx, arr) { return nm && arr.indexOf(nm) === idx; })
     .sort(function (a, b) { return b.length - a.length; })
@@ -653,6 +661,9 @@ function startSpotlightTypewriter(opts) {
   }
   const speaker = opts.speaker || null;
   // Reveal any prior speaker's deferred timeline entry when advancing to a new speaker
+  if (state.match && state.match._deferredSpeechLog && (!speaker || state.match._deferredSpeechLog.speakerId !== speaker.id)) {
+    commitPendingSpeechLog(state.match._deferredSpeechLog.speakerId);
+  }
   if (state.match && Array.isArray(state.match.logs)) {
     let revealedPrior = false;
     state.match.logs.forEach(function (it) {

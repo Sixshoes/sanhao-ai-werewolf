@@ -888,6 +888,10 @@ function clearHopeConfrontationTimer() {
     clearInterval(state.hopeConfrontInterval);
     state.hopeConfrontInterval = null;
   }
+  if (state.hopeHydrateTimer) {
+    clearTimeout(state.hopeHydrateTimer);
+    state.hopeHydrateTimer = null;
+  }
 }
 
 function closeHopeConfrontationModal() {
@@ -998,7 +1002,7 @@ function renderHopeConfrontationModal() {
   }
 
   if (titleEl) titleEl.textContent = "15 秒明燈雙向對質・言票比對";
-  if (timerEl) timerEl.textContent = "剩餘 " + Math.max(0, hc.secondsLeft || 0) + " 秒";
+  if (timerEl) timerEl.textContent = hc.hydrating ? "整理陳詞中…" : ("剩餘 " + Math.max(0, hc.secondsLeft || 0) + " 秒");
   if (pickerEl) pickerEl.classList.add("hidden");
   if (actionBtn) actionBtn.classList.add("hidden");
   if (resultEl) {
@@ -1122,42 +1126,11 @@ function executeHopeConfrontation(seatAId, seatBId) {
   if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
   renderHopeConfrontationModal();
 
-  // Live Gemini hydration for Hope Confrontation (strictly Blind-View & non-blocking!)
-  const ffHc = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-  if (!ffHc && typeof isExternalLlmActive === "function" && isExternalLlmActive() && typeof tryGenerateGeminiConfrontationLine === "function") {
-    const epHc = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
-    const hcObjRef = state.match.hopeConfrontation;
-    Promise.all([
-      tryGenerateGeminiConfrontationLine(sA, sB, lineA).catch(function () { return null; }),
-      tryGenerateGeminiConfrontationLine(sB, sA, lineB).catch(function () { return null; })
-    ]).then(function (pairRes) {
-      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epHc)) return;
-      let changed = false;
-      if (pairRes[0]) {
-        lineA.text = pairRes[0];
-        setSeatBubble(sA.id, lineA.text.slice(0, 32) + (lineA.text.length > 32 ? "…" : ""), "suspect", 4600);
-        changed = true;
-      }
-      if (pairRes[1]) {
-        lineB.text = pairRes[1];
-        setSeatBubble(sB.id, lineB.text.slice(0, 32) + (lineB.text.length > 32 ? "…" : ""), "suspect", 4600);
-        changed = true;
-      }
-      if (changed) {
-        if (hcLogRef) {
-          hcLogRef.text = lineA.speakerLabel + "：「" + lineA.text + "」｜" + lineB.speakerLabel + "：「" + lineB.text + "」" +
-            (contradictions.length ? ("｜矛盾紀錄：" + contradictions.join("；")) : "");
-          if (typeof renderTimeline === "function") renderTimeline({ deferIfHidden: true });
-        }
-        if (state.match && state.match.hopeConfrontation === hcObjRef && hcObjRef.active) {
-          renderHopeConfrontationModal();
-        }
-      }
-    }).catch(function () { });
-  }
-
   const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
-  if (isBrowserUi && !state.autoPlay) {
+  const hcObjRef = state.match.hopeConfrontation;
+  const startHopeCountdown = function () {
+    if (!isBrowserUi || state.autoPlay) return;
+    if (!state.match || state.match.hopeConfrontation !== hcObjRef || !hcObjRef.active) return;
     clearHopeConfrontationTimer();
     state.hopeConfrontInterval = setInterval(function () {
       const hcNow = state.match && state.match.hopeConfrontation;
@@ -1171,6 +1144,62 @@ function executeHopeConfrontation(seatAId, seatBId) {
         closeHopeConfrontationModal();
       }
     }, 1000);
+  };
+
+  // v24.0 Bounded 2.5s Live Gemini hydration for Hope Confrontation:
+  // Lock final lines BEFORE starting the 15s reading countdown so timer never steals seconds or jumps text mid-read!
+  const ffHc = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const useLiveHopeLlm = Boolean(
+    !ffHc &&
+    typeof isExternalLlmActive === "function" &&
+    isExternalLlmActive() &&
+    typeof tryGenerateGeminiConfrontationLine === "function"
+  );
+  if (useLiveHopeLlm) {
+    const epHc = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+    hcObjRef.hydrating = true;
+    let settled = false;
+    const finalizeHopeLines = function (pairRes) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(capTimer);
+      hcObjRef.hydrating = false;
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epHc)) return;
+      let changed = false;
+      if (pairRes && pairRes[0]) {
+        lineA.text = pairRes[0];
+        setSeatBubble(sA.id, lineA.text.slice(0, 32) + (lineA.text.length > 32 ? "…" : ""), "suspect", 4600);
+        changed = true;
+      }
+      if (pairRes && pairRes[1]) {
+        lineB.text = pairRes[1];
+        setSeatBubble(sB.id, lineB.text.slice(0, 32) + (lineB.text.length > 32 ? "…" : ""), "suspect", 4600);
+        changed = true;
+      }
+      if (changed && hcLogRef) {
+        hcLogRef.text = lineA.speakerLabel + "：「" + lineA.text + "」｜" + lineB.speakerLabel + "：「" + lineB.text + "」" +
+          (contradictions.length ? ("｜矛盾紀錄：" + contradictions.join("；")) : "");
+        if (typeof renderTimeline === "function") renderTimeline({ deferIfHidden: true });
+      }
+      if (state.match && state.match.hopeConfrontation === hcObjRef && hcObjRef.active) {
+        renderHopeConfrontationModal();
+        startHopeCountdown();
+      }
+    };
+    const capTimer = setTimeout(function () {
+      finalizeHopeLines(null);
+    }, 2500);
+    state.hopeHydrateTimer = capTimer;
+    Promise.all([
+      tryGenerateGeminiConfrontationLine(sA, sB, lineA).catch(function () { return null; }),
+      tryGenerateGeminiConfrontationLine(sB, sA, lineB).catch(function () { return null; })
+    ]).then(function (pairRes) {
+      finalizeHopeLines(pairRes);
+    }).catch(function () {
+      finalizeHopeLines(null);
+    });
+  } else {
+    startHopeCountdown();
   }
   updateAllUI();
   return state.match.hopeConfrontation;
@@ -1270,6 +1299,9 @@ function triggerWolfSelfExplode(seatId, opts) {
 
   // 1B. Synchronize interrupted speech timeline & AI memory (rollback if never vocalized in 220ms prep beat, else reveal partial speech!)
   if (interruptedInPrepBeat) {
+    if (m._deferredSpeechLog && (!interruptedSpeakerId || m._deferredSpeechLog.speakerId === interruptedSpeakerId)) {
+      m._deferredSpeechLog = null;
+    }
     if (Array.isArray(m.logs)) {
       let logIdx = activeCommitRef && activeCommitRef.logEntry ? m.logs.indexOf(activeCommitRef.logEntry) : -1;
       if (logIdx === -1) {
@@ -1979,6 +2011,8 @@ function shouldAiRunForSheriff(seat, electionSeed) {
 
 function buildSheriffElectionCandidates() {
   const alive = getAliveSeats();
+  // v24.0 Extreme 3-seat endgame guard: skip election cleanly when <= 3 alive seats
+  if (alive.length <= 3) return [];
   const pid = getPlayerId();
   const m = state.match;
   if (m && typeof m.sheriffElectionSeed !== "number") {
@@ -1998,9 +2032,17 @@ function buildSheriffElectionCandidates() {
     cands = [aiAlive[soloIdx]];
   }
 
-  // If more than hardMax raised hands, prioritize Seer/fakeSeer naturally via per-seat deterministic shuffle (no hidden peeking across seats!)
+  // v24.0 Dealer-side hardMax trim: preserve Seer & designated fakeSeer first so excess outer-position runners are trimmed instead of core duelists!
   if (cands.length > hardMax) {
+    const coreRank = function (s) {
+      if (s.role === "seer") return 0;
+      if (s.role === "wolf" && s.fakeSeer) return 1;
+      return 2;
+    };
     cands = cands.slice().sort(function (a, b) {
+      const ra = coreRank(a);
+      const rb = coreRank(b);
+      if (ra !== rb) return ra - rb;
       return _hashSheriffRoll(seed, a.id, 43) - _hashSheriffRoll(seed, b.id, 43);
     }).slice(0, hardMax);
   }
@@ -2376,6 +2418,7 @@ function startSheriffElection(onDone) {
       const counts = {};
       const ballots = [];
       candIds.forEach(function (id) { counts[id] = 0; });
+      let autoBadgeLostReason = (cands.length >= 2 && autoUnderVoters.length === 0) ? "全體上警（無警下投票者）" : "";
       if (cands.length >= 2 && autoUnderVoters.length > 0) {
         autoUnderVoters.forEach(function (s) {
           const pickId = chooseAiSheriffElectionVote(s, candIds, autoSpeeches, true);
@@ -2386,7 +2429,32 @@ function startSheriffElection(onDone) {
         });
         const maxAutoV = cands.reduce(function (mx, c) { return Math.max(mx, counts[c.id] || 0); }, 0);
         const topAuto = cands.filter(function (c) { return (counts[c.id] || 0) === maxAutoV; });
-        fallbackWinner = (maxAutoV > 0 && topAuto.length === 1) ? topAuto[0] : (maxAutoV > 0 ? topAuto[0] : null);
+        if (maxAutoV > 0 && topAuto.length === 1) {
+          fallbackWinner = topAuto[0];
+        } else if (maxAutoV > 0 && topAuto.length > 1) {
+          // v24.0 Tie parity with interactive election: simulate 1 PK revote; if STILL tied, badge is lost (null)!
+          const tieIds = topAuto.map(function (c) { return c.id; });
+          const revCounts = {};
+          tieIds.forEach(function (id) { revCounts[id] = 0; });
+          const revVoters = getAliveSeats().filter(function (s) { return tieIds.indexOf(s.id) === -1; });
+          revVoters.forEach(function (s) {
+            const rPick = chooseAiSheriffElectionVote(s, tieIds, autoSpeeches, true);
+            if (rPick && revCounts[rPick] !== undefined) {
+              revCounts[rPick] += 1;
+            }
+          });
+          const maxRevV = topAuto.reduce(function (mx, c) { return Math.max(mx, revCounts[c.id] || 0); }, 0);
+          const topRev = topAuto.filter(function (c) { return (revCounts[c.id] || 0) === maxRevV; });
+          if (maxRevV > 0 && topRev.length === 1) {
+            fallbackWinner = topRev[0];
+          } else {
+            fallbackWinner = null;
+            autoBadgeLostReason = "警上二次平票";
+          }
+        } else {
+          fallbackWinner = null;
+          autoBadgeLostReason = "無人得票";
+        }
       } else if (cands.length === 1) {
         fallbackWinner = cands[0];
         counts[cands[0].id] = 1;
@@ -2400,6 +2468,7 @@ function startSheriffElection(onDone) {
         seerClaimIds: seerIdsAuto,
         winnerId: fallbackWinner ? fallbackWinner.id : null,
         badgeLost: !fallbackWinner,
+        badgeLostReason: !fallbackWinner ? (autoBadgeLostReason || "警徽流失") : "",
         ballots: ballots,
         tallies: Object.assign({}, counts)
       };

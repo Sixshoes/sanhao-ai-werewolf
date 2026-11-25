@@ -202,6 +202,11 @@ function startJudgeShowcaseMatch() {
   state.match = {
     started: true,
     judgeShowcase: true,
+    judgeShowcaseScript: {
+      day2AsongUsed: false,
+      day2AsongText: "各位別急著一面倒啊，昨天 7號怎麼投票是他的事，跟我無關！我才是一路扛壓的真明心觀察員，昨夜查了 1號，他才是穿我衣服的假觀察員，這輪聽我一次，先出 5號或 1號，過。",
+      lwAsongText: "唉，算你們票型對得夠細，昨晚 7號被請離後我本來想再硬扛一輪的。這局輸得心服口服，茶席推論確實精彩！"
+    },
     judgeGuideDismissed: false,
     phase: "DAY_SPEECH",
     day: 2,
@@ -349,6 +354,13 @@ function startJudgeShowcaseMatch() {
     orchestrator.emit("phase:changed", { phase: "DAY_SPEECH", day: 2 });
   }
   updateAllUI();
+  if (typeof voice !== "undefined" && typeof voice.prefetchBundledVoicePackUrl === "function") {
+    voice.prefetchBundledVoicePackUrl("assets/voice_pack/showcase/showcase_asong_day2.mp3");
+    voice.prefetchBundledVoicePackUrl("assets/voice_pack/showcase/showcase_asong_grill_defend.mp3");
+    voice.prefetchBundledVoicePackUrl("assets/voice_pack/showcase/showcase_asong_grill_flip.mp3");
+    voice.prefetchBundledVoicePackUrl("assets/voice_pack/showcase/showcase_asong_lw.mp3");
+    voice.prefetchBundledVoicePackUrl("assets/voice_pack/showcase/showcase_host_good_win.mp3");
+  }
   showToast("評審導覽局已就位：依上方三步提示體驗追問、潤飾籤與五人聽牌覆盤。", "emerald");
   if (typeof advanceSpeechQueue === "function") {
     state.stepTimer = setTimeout(advanceSpeechQueue, 380);
@@ -869,7 +881,10 @@ function finishMatch(winnerTeam, reason) {
       }
     }
   });
-  voice.speakHost((winnerTeam === "good" ? "對局結束，好人陣營獲勝！" : "對局結束，酸民狼陣營獲勝！") + reason);
+  const endHostLine = (state.match && state.match.judgeShowcase && winnerTeam === "good")
+    ? "全場酸民狼已清出茶席，好人陣營大獲全勝，恭喜各位守住雲起茶席！"
+    : ((winnerTeam === "good" ? "對局結束，好人陣營獲勝！" : "對局結束，酸民狼陣營獲勝！") + reason);
+  voice.speakHost(endHostLine);
 
   addLog({
     kind: "banner",

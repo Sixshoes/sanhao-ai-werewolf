@@ -2721,8 +2721,16 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   const isMatchPointNow = Boolean(typeof state !== "undefined" && state.match && state.match.started && state.match.isMatchPoint && state.match.phase !== "GAME_OVER");
   const mpFlicker = isMatchPointNow ? (0.86 + Math.sin(t * 14.3) * 0.08 + Math.sin(t * 23.7) * 0.05) : 1.0;
   const dramaticFocusNow = isDramaticFocusActive(f.nowMs);
-  env.focusDimBlend = (env.focusDimBlend || 0) + ((dramaticFocusNow ? 1 : 0) - (env.focusDimBlend || 0)) * d08;
-  // Smoothly dim ambient/distant IBL & backdrop lighting by 35% (down to 0.65) during dramatic focus beats!
+  const activeSpeakingNow = Boolean(
+    typeof state !== "undefined" &&
+    state.match &&
+    state.match.started &&
+    (state.match.phase === "DAY_SPEECH" || state.match.phase === "SHERIFF_ELECTION") &&
+    state.activeSpeakerId
+  );
+  const targetFocusDim = dramaticFocusNow ? 1.0 : (activeSpeakingNow ? 0.58 : 0.0);
+  env.focusDimBlend = (env.focusDimBlend || 0) + (targetFocusDim - (env.focusDimBlend || 0)) * d08;
+  // v24.0 Focus Dimming: ~20% gentle ambient dip during daytime speeches, 35% cinematic dip during dramatic beats!
   const focusDimMul = 1.0 - env.focusDimBlend * 0.35;
   const blackoutNow = Boolean(env.lanternBlackoutUntil && f.nowMs < env.lanternBlackoutUntil);
   const blackoutMul = blackoutNow ? 0.14 : 1.0;

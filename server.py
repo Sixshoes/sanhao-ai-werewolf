@@ -75,6 +75,13 @@ def call_ollama_generate(model_name, prompt_text, json_mode=False, timeout=45):
 try:
     import edge_tts
     HAS_EDGE_TTS = True
+    if os.name == "nt":
+        try:
+            import ssl as _ssl_mod
+            import edge_tts.communicate as _edge_comm
+            _edge_comm._SSL_CTX = _ssl_mod.create_default_context()
+        except Exception:
+            pass
 except ImportError:
     # Auto-switch into local .venv if edge-tts was installed there!
     if VENV_PY.exists() and Path(sys.executable).resolve() != VENV_PY.resolve():
@@ -415,10 +422,34 @@ def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeo
 
 
 class SanhaoHandler(SimpleHTTPRequestHandler):
+    _STREAM_CHUNK_BYTES = 16384
+
     def __init__(self, *args, **kwargs):
         self._static_etag = None
         self._static_cache_ctl = None
         super().__init__(*args, directory=str(ROOT_DIR), **kwargs)
+
+    def setup(self):
+        super().setup()
+        if hasattr(self.connection, "setsockopt"):
+            try:
+                self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            except OSError:
+                pass
+
+    def copyfile(self, source, outputfile):
+        # Stream static files in 16KB chunks to prevent Windows loopback TCP stalls on >128KB sendall buffers
+        while True:
+            chunk = source.read(self._STREAM_CHUNK_BYTES)
+            if not chunk:
+                break
+            outputfile.write(chunk)
+
+    def write_bytes_chunked(self, data):
+        mv = memoryview(data)
+        step = self._STREAM_CHUNK_BYTES
+        for off in range(0, len(mv), step):
+            self.wfile.write(mv[off:off + step])
 
     def end_headers(self):
         if getattr(self, "_static_etag", None):
@@ -441,7 +472,7 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(body)
+        self.write_bytes_chunked(body)
 
     def do_GET(self):
         route = self.path.split("?")[0]
@@ -836,7 +867,7 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(out_bytes)))
         self.send_header("Cache-Control", "public, max-age=86400")
         self.end_headers()
-        self.wfile.write(out_bytes)
+        self.write_bytes_chunked(out_bytes)
 
     def do_POST(self):
         route = self.path.split("?")[0]
@@ -937,7 +968,7 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(len(audio_bytes)))
             self.send_header("Cache-Control", "public, max-age=86400")
             self.end_headers()
-            self.wfile.write(audio_bytes)
+            self.write_bytes_chunked(audio_bytes)
         except Exception as exc:
             self.send_json(500, {"ok": False, "error": str(exc)[:180]})
 

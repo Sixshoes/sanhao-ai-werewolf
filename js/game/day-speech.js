@@ -186,6 +186,7 @@ function startDayDiscussion(dawnVoiceLine, opts) {
 
 function advanceSpeechQueue() {
   clearStepTimer();
+  if (typeof commitPendingSpeechLog === "function") commitPendingSpeechLog();
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   if (state.match.phase !== "DAY_SPEECH" && state.match.phase !== "DAY_PLAYER_TURN") return;
 
@@ -499,6 +500,14 @@ function executeTeaInterjection(questionText) {
         if (!state.match || state.match.phase !== "DAY_SPEECH") return;
         if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
       });
+  } else if (!ffInt && typeof voice !== "undefined" && voice.canSpeak() && state.activeSpeakerId === sp.id) {
+    if (typeof commitPendingSpeechLog === "function") commitPendingSpeechLog(sp.id);
+    const epIntLocal = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+    voice.speakCharacter(sp, replyObj.text, replyObj.tense ? "panic" : "rebut", function () {
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epIntLocal)) return;
+      if (!state.match || state.match.phase !== "DAY_SPEECH") return;
+      if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
+    });
   } else if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
     maybeScheduleAutoAdvanceAfterSpeech();
   }
@@ -675,8 +684,36 @@ async function executeAiTurnSpeech(speaker) {
   if (pfMatch) state.match._prefetchedSpeech = null;
 
   let cueTimer = null;
+  const useShowcaseCuratedAsong = Boolean(
+    !ffNow &&
+    state.match &&
+    state.match.judgeShowcase &&
+    state.match.day === 2 &&
+    speaker.id === 4 &&
+    state.match.judgeShowcaseScript &&
+    !state.match.judgeShowcaseScript.day2AsongUsed &&
+    !(state.geminiApiKey && typeof voice !== "undefined" && voice.enginePref === "gemini")
+  );
   try {
-    if (ffNow) {
+    if (useShowcaseCuratedAsong) {
+      state.match.judgeShowcaseScript.day2AsongUsed = true;
+      generated = {
+        text: state.match.judgeShowcaseScript.day2AsongText,
+        claimRole: "seer",
+        claimSeer: true,
+        accuseId: 1,
+        targetId: 1,
+        vouchId: null,
+        standWithSeerId: null,
+        checkedWolfId: 1,
+        checkedGoodId: null,
+        wolfPits: [1, 5],
+        goodPits: [2, 3],
+        relationType: "suspect",
+        emotion: "sharp",
+        hasToxicSlip: false
+      };
+    } else if (ffNow) {
       generated = buildHeuristicAiSpeech(speaker);
     } else if (pfMatch && pf.resolvedMeta) {
       // Zero-wait instant handoff from background prefetch!
@@ -870,19 +907,34 @@ async function executeAiTurnSpeech(speaker) {
 
   const ffLog = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   const deferLogDisplay = Boolean(!ffLog && typeof voice !== "undefined" && typeof voice.canSpeak === "function" && voice.canSpeak());
-  addLog({
+  if (state.match._deferredSpeechLog && state.match._deferredSpeechLog.speakerId !== speaker.id && typeof commitPendingSpeechLog === "function") {
+    commitPendingSpeechLog(state.match._deferredSpeechLog.speakerId);
+  }
+  const speechLogPayload = {
     kind: "speech",
     useTypewriter: true,
-    pendingReveal: deferLogDisplay,
+    pendingReveal: false,
     speakerId: speaker.id,
     title: badgeTitle,
     subBadge: subTag,
     text: generated.text
-  });
+  };
+  let committedLogRef = null;
+  if (deferLogDisplay) {
+    // v24.0 True Deferred Speech Log: hold outside state.match.logs until audio finishes or skips
+    state.match._deferredSpeechLog = {
+      speakerId: speaker.id,
+      day: state.match.day,
+      entry: speechLogPayload
+    };
+  } else {
+    addLog(speechLogPayload);
+    committedLogRef = state.match.logs[state.match.logs.length - 1] || null;
+  }
   state.match._activeSpeechCommit = {
     speakerId: speaker.id,
     day: state.match.day,
-    logEntry: state.match.logs[state.match.logs.length - 1] || null,
+    logEntry: committedLogRef,
     evObj: aiEvObj,
     hadContra: Boolean(contra),
     wasAlreadyClaimed: wasAlreadyClaimed,
