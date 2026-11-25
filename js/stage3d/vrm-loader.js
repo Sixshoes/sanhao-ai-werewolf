@@ -143,13 +143,150 @@ const stage3dVrm = {
   _recolorCache: {},
   _recolorCacheKeys: [],
 
+  disposeTextureResource: function (tex) {
+    if (!tex) return;
+    if (typeof stage3dAnime !== "undefined" && stage3dAnime.cache && tex === stage3dAnime.cache.gradientMap) return;
+    if (typeof stage3dTextures !== "undefined" && stage3dTextures.cache) {
+      const vals = Object.values(stage3dTextures.cache);
+      for (let i = 0; i < vals.length; i++) {
+        const v = vals[i];
+        if (v === tex || (v && (v.map === tex || v.bump === tex || v.roughness === tex))) return;
+      }
+    }
+    try {
+      if (typeof tex.dispose === "function") tex.dispose();
+    } catch (e) { }
+    try {
+      const img = tex.image;
+      if (img) {
+        if (typeof img.close === "function") {
+          img.close();
+        } else if (typeof HTMLCanvasElement !== "undefined" && img instanceof HTMLCanvasElement) {
+          img.width = 0;
+          img.height = 0;
+        }
+        tex.image = null;
+      }
+    } catch (e) { }
+  },
+
+  downscaleVrmTextureIfNeeded: function (srcTex, maxDim, localCache) {
+    if (!srcTex || !srcTex.image) return srcTex;
+    const img = srcTex.image;
+    const iw = img.naturalWidth || img.width || 0;
+    const ih = img.naturalHeight || img.height || 0;
+    if (iw <= 0 || ih <= 0) return srcTex;
+    // Skip mipmap pyramid allocation on tiny 8x8 / 16x16 VRM placeholder textures
+    if (Math.max(iw, ih) <= 16) {
+      srcTex.generateMipmaps = false;
+      if (typeof THREE !== "undefined" && THREE.LinearFilter !== undefined) srcTex.minFilter = THREE.LinearFilter;
+      return srcTex;
+    }
+    const lim = maxDim || 512;
+    if (Math.max(iw, ih) <= lim || typeof document === "undefined" || typeof THREE === "undefined" || typeof THREE.CanvasTexture !== "function") {
+      return srcTex;
+    }
+    const cacheKey = (srcTex.uuid || "tex") + "|downscale|" + lim;
+    if (localCache && localCache[cacheKey]) return localCache[cacheKey];
+    try {
+      const sc = lim / Math.max(iw, ih);
+      const w = Math.max(16, Math.round(iw * sc));
+      const h = Math.max(16, Math.round(ih * sc));
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      const outTex = new THREE.CanvasTexture(c);
+      outTex.flipY = srcTex.flipY;
+      outTex.wrapS = srcTex.wrapS;
+      outTex.wrapT = srcTex.wrapT;
+      if (THREE.sRGBEncoding !== undefined) outTex.encoding = srcTex.encoding || THREE.sRGBEncoding;
+      outTex.needsUpdate = true;
+      if (localCache) localCache[cacheKey] = outTex;
+      return outTex;
+    } catch (e) {
+      return srcTex;
+    }
+  },
+
+  compactUnusedMorphTargets: function (rawScene, morphs) {
+    if (!rawScene || typeof rawScene.traverse !== "function") return;
+    const usedByMesh = new Map();
+    if (morphs) {
+      Object.keys(morphs).forEach(function (bucket) {
+        const list = morphs[bucket];
+        if (!Array.isArray(list)) return;
+        for (let i = 0; i < list.length; i++) {
+          const b = list[i];
+          if (!b || !b.mesh || typeof b.idx !== "number") continue;
+          let set = usedByMesh.get(b.mesh);
+          if (!set) {
+            set = new Set();
+            usedByMesh.set(b.mesh, set);
+          }
+          set.add(b.idx);
+        }
+      });
+    }
+    const remapByMesh = new Map();
+    rawScene.traverse(function (obj) {
+      if (!obj || !obj.isMesh || !obj.geometry || !obj.geometry.morphAttributes) return;
+      const ma = obj.geometry.morphAttributes;
+      // Anime cel faces do not need per-morph vertex normals (cuts morph VRAM in half & avoids USE_MORPHNORMALS shaders)
+      if (ma.normal) delete ma.normal;
+      if (ma.tangent) delete ma.tangent;
+      const posArr = ma.position;
+      if (!Array.isArray(posArr) || posArr.length === 0) return;
+      const usedSet = usedByMesh.get(obj);
+      if (!usedSet || usedSet.size === 0) {
+        delete ma.position;
+        obj.morphTargetInfluences = undefined;
+        obj.morphTargetDictionary = undefined;
+        return;
+      }
+      if (usedSet.size >= posArr.length) return;
+      const sortedIdx = Array.from(usedSet).filter(function (idx) { return idx >= 0 && idx < posArr.length; }).sort(function (a, b) { return a - b; });
+      const newPos = [];
+      const newInf = [];
+      const oldToNew = {};
+      for (let i = 0; i < sortedIdx.length; i++) {
+        const oldIdx = sortedIdx[i];
+        oldToNew[oldIdx] = i;
+        newPos.push(posArr[oldIdx]);
+        newInf.push((obj.morphTargetInfluences && obj.morphTargetInfluences[oldIdx]) || 0);
+      }
+      ma.position = newPos;
+      obj.morphTargetInfluences = newInf;
+      if (obj.morphTargetDictionary) {
+        const nextDict = {};
+        Object.keys(obj.morphTargetDictionary).forEach(function (k) {
+          const oi = obj.morphTargetDictionary[k];
+          if (oldToNew[oi] !== undefined) nextDict[k] = oldToNew[oi];
+        });
+        obj.morphTargetDictionary = nextDict;
+      }
+      remapByMesh.set(obj, oldToNew);
+    });
+    if (remapByMesh.size > 0 && morphs) {
+      Object.keys(morphs).forEach(function (bucket) {
+        const list = morphs[bucket];
+        if (!Array.isArray(list)) return;
+        for (let i = 0; i < list.length; i++) {
+          const b = list[i];
+          if (!b || !b.mesh) continue;
+          const map = remapByMesh.get(b.mesh);
+          if (map && map[b.idx] !== undefined) b.idx = map[b.idx];
+        }
+      });
+    }
+  },
+
   clearRecolorCache: function () {
     const self = this;
     Object.keys(this._recolorCache || {}).forEach(function (k) {
       const tex = self._recolorCache[k];
-      if (tex && typeof tex.dispose === "function") {
-        try { tex.dispose(); } catch (e) { }
-      }
+      self.disposeTextureResource(tex);
     });
     this._recolorCache = {};
     this._recolorCacheKeys = [];
@@ -878,10 +1015,42 @@ const stage3dVrm = {
       scene.traverse(function (obj) {
         if (obj && obj.isMesh && obj.morphTargetInfluences) {
           meshes.push(obj);
-          if (gltf && gltf.parser && gltf.parser.associations && gltf.parser.associations.get) {
-            const meta = gltf.parser.associations.get(obj);
-            if (meta && typeof meta.meshes === "number") meshByIdx[meta.meshes] = obj;
+          const assoc = (gltf && gltf.parser && gltf.parser.associations && typeof gltf.parser.associations.get === "function")
+            ? (gltf.parser.associations.get(obj) || (obj.parent ? gltf.parser.associations.get(obj.parent) : null))
+            : null;
+          let mIdx = null;
+          if (assoc && typeof assoc.meshes === "number") mIdx = assoc.meshes;
+          else if (assoc && assoc.type === "meshes" && typeof assoc.index === "number") mIdx = assoc.index;
+          if (mIdx !== null) {
+            if (!meshByIdx[mIdx]) meshByIdx[mIdx] = [];
+            meshByIdx[mIdx].push(obj);
           }
+        }
+      });
+    }
+    // Fallback for Three.js r128 GLTFLoader multi-primitive VRM 0.x groups where associations only track nodes: map mesh index by glTF mesh name or node.mesh!
+    const jsonForMap = gltf && gltf.parser && gltf.parser.json ? gltf.parser.json : null;
+    if (jsonForMap && Array.isArray(jsonForMap.meshes) && meshes.length) {
+      const nodeMeshByName = {};
+      if (Array.isArray(jsonForMap.nodes)) {
+        jsonForMap.nodes.forEach(function (nd) {
+          if (nd && nd.name && typeof nd.mesh === "number") nodeMeshByName[nd.name] = nd.mesh;
+        });
+      }
+      jsonForMap.meshes.forEach(function (gm, gi) {
+        if (gm && gm.name && nodeMeshByName[gm.name] === undefined) nodeMeshByName[gm.name] = gi;
+      });
+      meshes.forEach(function (obj) {
+        const ownName = String(obj.name || "");
+        const parName = String((obj.parent && obj.parent.name) || "");
+        const baseOwn = ownName.replace(/_\d+$/, "");
+        let gi = null;
+        if (nodeMeshByName[parName] !== undefined) gi = nodeMeshByName[parName];
+        else if (nodeMeshByName[ownName] !== undefined) gi = nodeMeshByName[ownName];
+        else if (nodeMeshByName[baseOwn] !== undefined) gi = nodeMeshByName[baseOwn];
+        if (gi !== null) {
+          if (!meshByIdx[gi]) meshByIdx[gi] = [];
+          if (meshByIdx[gi].indexOf(obj) === -1) meshByIdx[gi].push(obj);
         }
       });
     }
@@ -919,12 +1088,18 @@ const stage3dVrm = {
       };
       ext.VRM.blendShapeMaster.blendShapeGroups.forEach(function (grp) {
         if (!grp) return;
-        const pKey = String(grp.presetName || grp.name || "").toLowerCase();
-        const bucket = map0[pKey];
+        const pKey = String(grp.presetName || "").toLowerCase();
+        const nKey = String(grp.name || "").toLowerCase();
+        const bucket = map0[pKey] || map0[nKey];
         if (!bucket || !Array.isArray(grp.binds)) return;
         grp.binds.forEach(function (b) {
-          const targetMesh = meshByIdx[b.mesh];
-          if (targetMesh) pushBinding(bucket, targetMesh, b.index, (b.weight !== undefined ? b.weight : 100) / 100);
+          const targets = meshByIdx[b.mesh];
+          const wVal = (b.weight !== undefined ? b.weight : 100) / 100;
+          if (Array.isArray(targets)) {
+            targets.forEach(function (tm) { pushBinding(bucket, tm, b.index, wVal); });
+          } else if (targets) {
+            pushBinding(bucket, targets, b.index, wVal);
+          }
         });
       });
     }
@@ -956,21 +1131,21 @@ const stage3dVrm = {
       });
     }
 
-    // 3. Direct morphTargetDictionary name fallback
+    // 3. Direct morphTargetDictionary name fallback (supports VRoid prefixed names like Face.M_F00_000_00_Fcl_MTH_A!)
     const dictRules = {
-      blink: /^(blink|eye_close|eyes_closed|fcl_eye_close)$/i,
-      blink_l: /^(blink_l|blinkleft|fcl_eye_close_l)$/i,
-      blink_r: /^(blink_r|blinkright|fcl_eye_close_r)$/i,
-      aa: /^(a|aa|mouth_a|vrc\.v_aa|fcl_mth_a)$/i,
-      ih: /^(i|ih|mouth_i|vrc\.v_ih|fcl_mth_i)$/i,
-      ou: /^(u|ou|mouth_u|vrc\.v_ou|fcl_mth_u)$/i,
-      ee: /^(e|ee|mouth_e|vrc\.v_ee|fcl_mth_e)$/i,
-      oh: /^(o|oh|mouth_o|vrc\.v_oh|fcl_mth_o)$/i,
-      happy: /^(joy|happy|smile|fcl_all_joy|fcl_eye_joy)$/i,
-      fun: /^(fun|relaxed|smirk|fcl_all_fun)$/i,
-      angry: /^(angry|mad|fcl_all_angry)$/i,
-      sorrow: /^(sorrow|sad|fcl_all_sorrow)$/i,
-      surprised: /^(surprised|oh_face|shock|fcl_all_surprised)$/i
+      blink: /(?:^|_)(blink|eye_close|eyes_closed|fcl_eye_close)$/i,
+      blink_l: /(?:^|_)(blink_l|blinkleft|fcl_eye_close_l)$/i,
+      blink_r: /(?:^|_)(blink_r|blinkright|fcl_eye_close_r)$/i,
+      aa: /(?:^|_)(a|aa|mouth_a|vrc\.v_aa|fcl_mth_a)$/i,
+      ih: /(?:^|_)(i|ih|mouth_i|vrc\.v_ih|fcl_mth_i)$/i,
+      ou: /(?:^|_)(u|ou|mouth_u|vrc\.v_ou|fcl_mth_u)$/i,
+      ee: /(?:^|_)(e|ee|mouth_e|vrc\.v_ee|fcl_mth_e)$/i,
+      oh: /(?:^|_)(o|oh|mouth_o|vrc\.v_oh|fcl_mth_o)$/i,
+      happy: /(?:^|_)(joy|happy|smile|fcl_all_joy|fcl_eye_joy)$/i,
+      fun: /(?:^|_)(fun|relaxed|smirk|fcl_all_fun)$/i,
+      angry: /(?:^|_)(angry|mad|fcl_all_angry)$/i,
+      sorrow: /(?:^|_)(sorrow|sad|fcl_all_sorrow)$/i,
+      surprised: /(?:^|_)(surprised|oh_face|shock|fcl_all_surprised)$/i
     };
     meshes.forEach(function (m) {
       if (!m.morphTargetDictionary) return;
@@ -1224,6 +1399,7 @@ const stage3dVrm = {
     const boneRes = this.resolveHumanoidBones(gltf, rawScene);
     const bones = boneRes.bones || {};
     const morphs = this.resolveMorphBindings(gltf, rawScene);
+    this.compactUnusedMorphTargets(rawScene, morphs);
     const springBones = this.resolveSpringBones(gltf, boneRes.pickByIdxOrName);
 
     // CRITICAL STEP 1: Scale model in STANDING T-Pose BEFORE bending legs so seated pose never inflates avatar into a 2.9m giant!
@@ -1322,16 +1498,22 @@ const stage3dVrm = {
 
     // Upgrade VRM KHR_materials_unlit meshes to real-time Lit Cel Shading + v10.0 Persona Palette Recolor!
     const personaStyling = o.personaName ? this.getPersonaStyling(o.personaName) : null;
+    const keepRecolorSlots = Boolean(o.keepRecolorSlots);
     const tintMats = [];
     const celMats = [];
     const recolorSlots = [];
     const canCelUpgrade = Boolean(
       typeof stage3dAnime !== "undefined" &&
       typeof stage3dAnime.upgradeVrmMaterialToCel === "function" &&
-      (typeof state === "undefined" || state.quality3D !== "eco")
+      !(typeof stage3d !== "undefined" && stage3d.isSoftwareRenderer)
     );
     const selfLoader = this;
     const avatarTexCache = {};
+    const origTexturesSeen = new Set();
+    const finalTexturesUsed = new Set();
+    const pinnedRecolorTexs = new Set();
+    const disposableMats = new Set();
+    const finalMatsUsed = new Set();
     if (typeof rawScene.traverse === "function") {
       rawScene.traverse(function (child) {
         if (!child || !child.isMesh) return;
@@ -1340,16 +1522,21 @@ const stage3dVrm = {
         const nextMats = [];
         let allUnlitBasic = origMats.length > 0;
         let hasOutlineOnly = origMats.length > 0;
+        let allTransparentOverlay = origMats.length > 0;
         const childName = String(child.name || "");
         let isFaceMesh = /face/i.test(childName);
+        const isMinorOverlayMesh = /eye|brow|lash|mouth|blush|tooth|tongue|tear/i.test(childName);
         const hasSkin = Boolean(child.isSkinnedMesh);
         const hasMorph = Boolean(child.morphTargetInfluences && child.morphTargetInfluences.length);
 
-        origMats.forEach(function (m) {
+        origMats.forEach(function (origM) {
+          let m = origM;
           if (!m) {
             nextMats.push(m);
             return;
           }
+          if (m.map) origTexturesSeen.add(m.map);
+          if (m.normalMap) origTexturesSeen.add(m.normalMap);
           const mName = String(m.name || "");
           const tagStr = mName + " " + childName;
           const isOutline = (mName && /outline/i.test(mName)) || m.side === THREE.BackSide;
@@ -1362,6 +1549,7 @@ const stage3dVrm = {
           const isIrisMat = /eyeiris|iris/i.test(tagStr);
           if (isFaceMat) isFaceMesh = true;
           if (!isOutline) hasOutlineOnly = false;
+          if (!m.transparent && !isOutline && !keepUnlitEye) allTransparentOverlay = false;
           if (m.transparent && !m.alphaTest) m.alphaTest = 0.35;
           if (m.map && THREE.sRGBEncoding !== undefined) m.map.encoding = THREE.sRGBEncoding;
 
@@ -1375,30 +1563,62 @@ const stage3dVrm = {
             else if (isIrisMat) recolorSlotKey = "iris";
           }
 
+          let wasCloned = false;
+          let mapRecolored = false;
+          const ensureClonedMat = function () {
+            if (!wasCloned && m.clone) {
+              disposableMats.add(m);
+              m = m.clone();
+              wasCloned = true;
+            }
+          };
+
           // Modesty Safety Shorts (安全褲): erase VRoid default white panties on ALL female/skirted Body_00_SKIN textures!
           const isFemaleBodySkin = /body.*skin/i.test(mName) && (/^f\d{2}/i.test(mName) || hasSkirt);
           if (isFemaleBodySkin && !isOutline && m.map) {
-            m = m.clone ? m.clone() : m;
+            ensureClonedMat();
             m.map = selfLoader.paintVrmModestyShortsMap(m.map, "#1e2330", avatarTexCache);
+            mapRecolored = true;
           }
 
           // v19.0 Luminance-preserving texture recolor across ALL roles including Qingming, Player & bottoms/skirts!
           if (personaStyling && !isOutline && m.map) {
             if (isHairMat && personaStyling.hairHex) {
-              m = m.clone ? m.clone() : m;
+              ensureClonedMat();
               m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.hairHex, personaStyling.hairStr || 0.82, avatarTexCache);
+              mapRecolored = true;
             } else if (isTopsMat && personaStyling.topsHex) {
-              m = m.clone ? m.clone() : m;
+              ensureClonedMat();
               m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.topsHex, personaStyling.topsStr || 0.80, avatarTexCache);
+              mapRecolored = true;
             } else if (isNeckMat && personaStyling.neckHex) {
-              m = m.clone ? m.clone() : m;
+              ensureClonedMat();
               m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.neckHex, personaStyling.neckStr || 0.82, avatarTexCache);
+              mapRecolored = true;
             } else if (isBottomsMat && personaStyling.bottomsHex) {
-              m = m.clone ? m.clone() : m;
+              ensureClonedMat();
               m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.bottomsHex, personaStyling.bottomsStr || 0.88, avatarTexCache);
+              mapRecolored = true;
             } else if (isIrisMat && personaStyling.eyeHex) {
-              m = m.clone ? m.clone() : m;
+              ensureClonedMat();
               m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.eyeHex, 0.65, avatarTexCache);
+              mapRecolored = true;
+            }
+          }
+
+          // Downscale oversized non-recolored VRM textures (>512px) and disable mipmaps on 8x8 placeholders
+          if (!mapRecolored && m.map) {
+            const shrunk = selfLoader.downscaleVrmTextureIfNeeded(m.map, 512, avatarTexCache);
+            if (shrunk && shrunk !== m.map) {
+              ensureClonedMat();
+              m.map = shrunk;
+            }
+          }
+          if (m.normalMap) {
+            const shrunkNor = selfLoader.downscaleVrmTextureIfNeeded(m.normalMap, 256, avatarTexCache);
+            if (shrunkNor && shrunkNor !== m.normalMap) {
+              ensureClonedMat();
+              m.normalMap = shrunkNor;
             }
           }
 
@@ -1410,9 +1630,10 @@ const stage3dVrm = {
               isHair: isHairMat,
               skinning: hasSkin,
               morphTargets: hasMorph,
-              morphNormals: Boolean(child.geometry && child.geometry.morphAttributes && child.geometry.morphAttributes.normal)
+              morphNormals: false
             });
             if (finalMat !== m) {
+              disposableMats.add(m);
               allUnlitBasic = false;
               if (finalMat.userData && finalMat.userData.vrmCelUniforms) {
                 celMats.push({
@@ -1427,21 +1648,37 @@ const stage3dVrm = {
             allUnlitBasic = false;
           }
 
-          if (recolorSlotKey && origMapBeforeRecolor) {
+          if (keepRecolorSlots && recolorSlotKey && origMapBeforeRecolor) {
             recolorSlots.push({ slot: recolorSlotKey, origMap: origMapBeforeRecolor, mat: finalMat });
+            pinnedRecolorTexs.add(origMapBeforeRecolor);
           }
           if (!isOutline && finalMat.color && typeof finalMat.color.clone === "function") {
             tintMats.push({ mat: finalMat, baseColor: finalMat.color.clone(), isCel: Boolean(finalMat.userData && finalMat.userData.isVrmCel) });
           }
+          finalMatsUsed.add(finalMat);
+          if (finalMat.map) finalTexturesUsed.add(finalMat.map);
+          if (finalMat.normalMap) finalTexturesUsed.add(finalMat.normalMap);
           nextMats.push(finalMat);
         });
 
         child.material = isArr ? nextMats : nextMats[0];
-        child.castShadow = !hasOutlineOnly;
+        // Cast shadow ONLY from primary opaque body/hair/cloth meshes (skips eyes/lashes/brows/mouth/outlines -> cuts shadow draw calls >55%!)
+        child.castShadow = !hasOutlineOnly && !isFaceMesh && !isMinorOverlayMesh && !allTransparentOverlay;
         child.receiveShadow = !isFaceMesh && !allUnlitBasic;
         child.frustumCulled = false;
       });
     }
+    // Immediately free replaced original materials & unreferenced ImageBitmap textures so zero GPU/RAM leaks accumulate!
+    disposableMats.forEach(function (dm) {
+      if (dm && !finalMatsUsed.has(dm) && typeof dm.dispose === "function") {
+        try { dm.dispose(); } catch (e) { }
+      }
+    });
+    origTexturesSeen.forEach(function (ot) {
+      if (ot && !finalTexturesUsed.has(ot) && !pinnedRecolorTexs.has(ot)) {
+        selfLoader.disposeTextureResource(ot);
+      }
+    });
 
     const mixer = (Array.isArray(gltf.animations) && gltf.animations.length > 0 && typeof THREE.AnimationMixer === "function")
       ? new THREE.AnimationMixer(rawScene)

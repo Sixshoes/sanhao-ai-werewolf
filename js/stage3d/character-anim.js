@@ -667,6 +667,12 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     actor.idCardPivot.visible = showIdCard;
     if (showIdCard) {
       playerCardHit = actor.idCardHit;
+      if (!actor.idCardBackReady && actor.idCardMesh && actor.idCardMesh.material && actor.idCardMesh.material[2]) {
+        actor.idCardBackReady = true;
+        const freshBack = createIdCardFaceCanvas(false, null, true);
+        actor.idCardMesh.material[2].map = freshBack.tex;
+        actor.idCardMesh.material[2].needsUpdate = true;
+      }
       const effCardDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : null) || ROLE_DEFS[s.role];
       const rSig = (effCardDef ? effCardDef.key : s.role) + ":" + state.hidePlayerRole;
       if (actor.idCardRoleSig !== rSig) {
@@ -864,7 +870,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     const redrawEvery = (isSpeaking || isHovered || isSelected || isDragSnap)
       ? (isEco ? 3 : 2)
       : (isEco ? 12 : ((nSeats >= 10 || isBal) ? 8 : 5));
-    if (!actor.useVrm && (!actor.faceDrawnOnce || (pool.frameCounter + s.id) % redrawEvery === 0)) {
+    if (!actor.useVrm && actor.faceBundle && (!actor.faceDrawnOnce || (pool.frameCounter + s.id) % redrawEvery === 0)) {
       const sleepingFace = Boolean(f.night && !isSelected && !isWolfNightMate) || !s.alive;
       const sweating = Boolean(state.match.started && s.alive && (state.match.microPulseRevealed || s.sweatExposed) && s.microPulse >= 60);
       const moodNow = isBeingAccusedNow ? "shock" : getSeatEmotion(s.id, nowMs);

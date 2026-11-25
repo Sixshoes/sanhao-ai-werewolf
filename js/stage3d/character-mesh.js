@@ -732,9 +732,40 @@ function buildArticulatedArm(sideSign, robeMat, accentMat, skinMat, G, withVoteC
   return { shoulder: shoulderPivot, elbow: elbowPivot, hand: hand, voteCard: voteCard };
 }
 
+const stage3dCharMats = {
+  ready: false,
+  ensure: function () {
+    if (this.ready) return this;
+    this.ready = true;
+    const wood = stage3dTextures.createWoodTextures();
+    const fabric = stage3dTextures.createFabricTextures();
+    const sealTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createFogSealStripTexture === "function")
+      ? stage3dTextures.createFogSealStripTexture()
+      : null;
+    this.chairWood = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x482616, roughness: 0.36, metalness: 0.16 });
+    this.chairGold = new THREE.MeshStandardMaterial({ color: 0xd4a657, roughness: 0.28, metalness: 0.78 });
+    this.cushion = new THREE.MeshStandardMaterial({ color: 0x52231c, bumpMap: fabric.bump, bumpScale: 0.022, roughness: 0.86, metalness: 0.04 });
+    this.shadowDisc = new THREE.MeshBasicMaterial({ map: stage3dTextures.createContactShadowTexture(), transparent: true, opacity: 0.65, depthWrite: false });
+    this.crown = new THREE.MeshStandardMaterial({ color: 0xf6d379, emissive: 0xd4942a, emissiveIntensity: 0.65, roughness: 0.22, metalness: 0.86 });
+    this.crownJade = new THREE.MeshStandardMaterial({ color: 0x6ee7b7, emissive: 0x10b981, emissiveIntensity: 0.55, roughness: 0.20, metalness: 0.22 });
+    this.brass = new THREE.MeshStandardMaterial({ color: 0xc89232, roughness: 0.24, metalness: 0.86 });
+    this.wax = new THREE.MeshStandardMaterial({ color: 0xf2e1be, emissive: 0xd99436, emissiveIntensity: 0.09, roughness: 0.38, metalness: 0.04 });
+    this.wick = new THREE.MeshStandardMaterial({ color: 0x261a12, roughness: 0.9 });
+    this.flameOuter = new THREE.MeshBasicMaterial({ color: 0xffa826, transparent: true, opacity: 0.86 });
+    this.flameCore = new THREE.MeshBasicMaterial({ color: 0xfffbe6 });
+    this.flameHalo = new THREE.MeshBasicMaterial({ color: 0xffbe4d, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.celadon = new THREE.MeshStandardMaterial({ color: 0xd1fae5, roughness: 0.12, metalness: 0.14 });
+    this.teaLiquid = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.1, metalness: 0.2 });
+    this.fogSeal = new THREE.MeshStandardMaterial({ color: sealTex ? 0xffffff : 0xe5d8bc, map: sealTex || null, roughness: 0.85, metalness: 0.02 });
+    this.cardEdge = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.6 });
+    this.hitInvisible = new THREE.MeshBasicMaterial({ visible: false });
+    return this;
+  }
+};
+
 function create3DSeatActor(seat) {
   const G = stage3dCharGeos.ensure();
-  const wood = stage3dTextures.createWoodTextures();
+  const M = stage3dCharMats.ensure();
   const fabric = stage3dTextures.createFabricTextures();
   const st = getAvatarStyleForSeat(seat);
   const root = new THREE.Group();
@@ -755,21 +786,17 @@ function create3DSeatActor(seat) {
 
   // 2. Handcrafted Ming-Style Curved Backrest Tea Chair with Gold Medallion Splat & Crimson-Espresso Brocade Cushion
   const chairGroup = new THREE.Group();
-  const chairWoodMat = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x482616, roughness: 0.36, metalness: 0.16 });
-  const chairGoldMat = new THREE.MeshStandardMaterial({ color: 0xd4a657, roughness: 0.28, metalness: 0.78 });
-  const cushionMat = new THREE.MeshStandardMaterial({ color: 0x52231c, bumpMap: fabric.bump, bumpScale: 0.022, roughness: 0.86, metalness: 0.04 });
+  const chairWoodMat = M.chairWood;
+  const chairGoldMat = M.chairGold;
+  const cushionMat = M.cushion;
 
-  const shadowDisc = new THREE.Mesh(
-    G.contactShadow,
-    new THREE.MeshBasicMaterial({ map: stage3dTextures.createContactShadowTexture(), transparent: true, opacity: 0.65, depthWrite: false })
-  );
+  const shadowDisc = new THREE.Mesh(G.contactShadow, M.shadowDisc);
   shadowDisc.rotation.x = -Math.PI * 0.5;
   shadowDisc.position.y = 0.015;
   chairGroup.add(shadowDisc);
 
   const seatCushion = new THREE.Mesh(G.seatCushion, cushionMat);
   seatCushion.position.set(0, 0.675, -0.03);
-  seatCushion.castShadow = true;
   seatCushion.receiveShadow = true;
   chairGroup.add(seatCushion);
 
@@ -779,12 +806,10 @@ function create3DSeatActor(seat) {
 
   const topRail = new THREE.Mesh(G.backrest, chairWoodMat);
   topRail.position.set(0, 1.56, -0.41);
-  topRail.castShadow = true;
   chairGroup.add(topRail);
 
   const centerSplat = new THREE.Mesh(G.chairSplat, chairWoodMat);
   centerSplat.position.set(0, 1.14, -0.42);
-  centerSplat.castShadow = true;
   chairGroup.add(centerSplat);
 
   const backMedallion = new THREE.Mesh(G.chairMedallion, chairGoldMat);
@@ -801,7 +826,6 @@ function create3DSeatActor(seat) {
   [[-0.36, -0.37], [0.36, -0.37], [-0.36, 0.31], [0.36, 0.31]].forEach(function (p) {
     const leg = new THREE.Mesh(G.chairLeg, chairWoodMat);
     leg.position.set(p[0], 0.325, p[1]);
-    leg.castShadow = true;
     chairGroup.add(leg);
   });
   root.add(chairGroup);
@@ -876,10 +900,8 @@ function create3DSeatActor(seat) {
   headOvalGroup.add(nose);
 
   const faceBundle = stage3dTextures.createFaceCanvas();
-  const facePatch = new THREE.Mesh(
-    G.faceCurved,
-    new THREE.MeshBasicMaterial({ map: faceBundle.tex, transparent: true, depthWrite: false })
-  );
+  const facePatchMat = new THREE.MeshBasicMaterial({ map: faceBundle.tex, transparent: true, depthWrite: false });
+  const facePatch = new THREE.Mesh(G.faceCurved, facePatchMat);
   headOvalGroup.add(facePatch);
   headSculptGroup.add(headOvalGroup);
 
@@ -901,8 +923,8 @@ function create3DSeatActor(seat) {
 
   // Refined Antique-Gold Lotus-Prong Sheriff Coronet (replaces oversized cone hat!)
   const sheriffCrownGroup = new THREE.Group();
-  const crownMat = new THREE.MeshStandardMaterial({ color: 0xf6d379, emissive: 0xd4942a, emissiveIntensity: 0.65, roughness: 0.22, metalness: 0.86 });
-  const crownJadeMat = new THREE.MeshStandardMaterial({ color: 0x6ee7b7, emissive: 0x10b981, emissiveIntensity: 0.55, roughness: 0.20, metalness: 0.22 });
+  const crownMat = M.crown;
+  const crownJadeMat = M.crownJade;
   const crownBase = new THREE.Mesh(G.sheriffRing, crownMat);
   crownBase.rotation.x = Math.PI * 0.5;
   sheriffCrownGroup.add(crownBase);
@@ -929,7 +951,7 @@ function create3DSeatActor(seat) {
   vrmMountGroup.visible = false;
   root.add(vrmMountGroup);
 
-  const hitMesh = new THREE.Mesh(G.hitCyl, new THREE.MeshBasicMaterial({ visible: false }));
+  const hitMesh = new THREE.Mesh(G.hitCyl, M.hitInvisible);
   hitMesh.position.y = 1.35;
   hitMesh.userData = { seatId: seat.id };
   root.add(hitMesh);
@@ -952,30 +974,16 @@ function create3DSeatActor(seat) {
   const candleGroup = new THREE.Group();
   candleGroup.position.set(0.52, 0, -0.04);
   candleGroup.scale.setScalar(0.74);
-  const brassMat = new THREE.MeshStandardMaterial({ color: 0xc89232, roughness: 0.24, metalness: 0.86 });
-  const candleHolder = new THREE.Mesh(G.candleHolder, brassMat);
-  const WaxMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-  const candleStick = new THREE.Mesh(
-    G.candleStick,
-    new WaxMatCtor({ color: 0xf2e1be, emissive: 0xd99436, emissiveIntensity: 0.09, roughness: 0.48, metalness: 0.02, clearcoat: 0.25 })
-  );
+  const candleHolder = new THREE.Mesh(G.candleHolder, M.brass);
+  const candleStick = new THREE.Mesh(G.candleStick, M.wax);
   candleStick.position.y = hasLatheHelper() ? 0.095 : 0.20;
-  const candleWick = new THREE.Mesh(G.candleWick, new THREE.MeshStandardMaterial({ color: 0x261a12, roughness: 0.9 }));
+  const candleWick = new THREE.Mesh(G.candleWick, M.wick);
   candleWick.position.y = 0.365;
   const candleFlame = new THREE.Group();
   candleFlame.position.y = 0.372;
-  const flameOuter = new THREE.Mesh(
-    G.candleFlame,
-    new THREE.MeshBasicMaterial({ color: 0xffa826, transparent: true, opacity: 0.86 })
-  );
-  const flameCore = new THREE.Mesh(
-    G.candleFlameCore,
-    new THREE.MeshBasicMaterial({ color: 0xfffbe6 })
-  );
-  const flameHalo = new THREE.Mesh(
-    G.candleHalo,
-    new THREE.MeshBasicMaterial({ color: 0xffbe4d, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false })
-  );
+  const flameOuter = new THREE.Mesh(G.candleFlame, M.flameOuter);
+  const flameCore = new THREE.Mesh(G.candleFlameCore, M.flameCore);
+  const flameHalo = new THREE.Mesh(G.candleHalo, M.flameHalo);
   flameHalo.position.y = 0.075;
   candleFlame.add(flameOuter, flameCore, flameHalo);
   const candleGlowMat = new THREE.MeshBasicMaterial({
@@ -988,7 +996,7 @@ function create3DSeatActor(seat) {
   const candleGlow = new THREE.Mesh(G.candleGlow, candleGlowMat);
   candleGlow.rotation.x = -Math.PI * 0.5;
   candleGlow.position.y = 0.022;
-  const candleHit = new THREE.Mesh(G.candleHit, new THREE.MeshBasicMaterial({ visible: false }));
+  const candleHit = new THREE.Mesh(G.candleHit, M.hitInvisible);
   candleHit.position.y = 0.28;
   candleHit.userData = { candleSeatId: seat.id };
   candleGroup.add(candleHolder, candleStick, candleWick, candleFlame, candleGlow, candleHit);
@@ -996,23 +1004,14 @@ function create3DSeatActor(seat) {
 
   const teaGroup = new THREE.Group();
   teaGroup.position.set(-0.48, 0.015, 0.12);
-  const CupMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-  const celadonMat = new CupMatCtor({
-    color: 0xd1fae5,
-    roughness: 0.14,
-    metalness: 0.06,
-    clearcoat: 0.92,
-    clearcoatRoughness: 0.1
-  });
+  const celadonMat = M.celadon;
   const saucer = new THREE.Mesh(G.teasaucer, celadonMat);
   saucer.position.y = 0.011;
   saucer.receiveShadow = true;
   const teacup = new THREE.Mesh(G.teacup, celadonMat);
   teacup.position.y = 0.022;
-  const teaLiquid = new THREE.Mesh(
-    new THREE.CircleGeometry(0.082, 12),
-    new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.1, metalness: 0.2 })
-  );
+  if (!G.teaLiquid) G.teaLiquid = new THREE.CircleGeometry(0.082, 12);
+  const teaLiquid = new THREE.Mesh(G.teaLiquid, M.teaLiquid);
   teaLiquid.rotation.x = -Math.PI * 0.5;
   teaLiquid.position.y = 0.125;
 
@@ -1025,18 +1024,7 @@ function create3DSeatActor(seat) {
   teaLidGroup.position.y = 0.24;
   teaLidGroup.visible = false;
 
-  const sealTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createFogSealStripTexture === "function")
-    ? stage3dTextures.createFogSealStripTexture()
-    : null;
-  const fogSealStrip = new THREE.Mesh(
-    G.fogSealStrip,
-    new THREE.MeshStandardMaterial({
-      color: sealTex ? 0xffffff : 0xe5d8bc,
-      map: sealTex || null,
-      roughness: 0.85,
-      metalness: 0.02
-    })
-  );
+  const fogSealStrip = new THREE.Mesh(G.fogSealStrip, M.fogSeal);
   fogSealStrip.position.set(0, 0.184, 0);
   fogSealStrip.rotation.y = 0.28;
   fogSealStrip.visible = false;
@@ -1052,18 +1040,17 @@ function create3DSeatActor(seat) {
   markCrystal.visible = false;
   tablePropGroup.add(markCrystal);
 
+  // Lazy ID Card CanvasTextures (only allocated when showIdCard activates on the player's seat -> saves 22 CanvasTextures on 12p!)
   const idCardPivot = new THREE.Group();
   idCardPivot.position.set(0, 0.035, -0.18);
-  const cardBack = createIdCardFaceCanvas(false, null, true);
-  const cardFront = createIdCardFaceCanvas(true, null, true);
-  const cardEdgeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.6 });
+  const cardEdgeMat = M.cardEdge;
   const idCardMesh = new THREE.Mesh(G.idCard, [
     cardEdgeMat, cardEdgeMat,
-    new THREE.MeshBasicMaterial({ map: cardBack.tex }),
-    new THREE.MeshBasicMaterial({ map: cardFront.tex }),
+    new THREE.MeshBasicMaterial({ color: 0xffffff }),
+    new THREE.MeshBasicMaterial({ color: 0xffffff }),
     cardEdgeMat, cardEdgeMat
   ]);
-  const idCardHit = new THREE.Mesh(G.idCardHit, new THREE.MeshBasicMaterial({ visible: false }));
+  const idCardHit = new THREE.Mesh(G.idCardHit, M.hitInvisible);
   idCardPivot.add(idCardMesh, idCardHit);
   idCardPivot.visible = false;
   tablePropGroup.add(idCardPivot);
@@ -1087,6 +1074,7 @@ function create3DSeatActor(seat) {
     vrmMountGroup: vrmMountGroup,
     vrmAvatar: null,
     boundModelSlug: "",
+    boundAvatarKey: "",
     useVrm: false,
     swayHairParts: hairMeta ? hairMeta.swayHairParts : [],
     hitMesh: hitMesh,
@@ -1100,6 +1088,7 @@ function create3DSeatActor(seat) {
     noseMesh: nose,
     glassesGroup: hairMeta ? hairMeta.glassesGroup : null,
     faceBundle: faceBundle,
+    facePatchMat: facePatchMat,
     plaqueBundle: plaqueBundle,
     plaqueMesh: plaqueMesh,
     plaqueSig: "",
@@ -1125,6 +1114,7 @@ function create3DSeatActor(seat) {
     idCardPivot: idCardPivot,
     idCardMesh: idCardMesh,
     idCardHit: idCardHit,
+    idCardBackReady: false,
     idCardRoleSig: "",
     cardFlipProgress: 0,
     worldPos: new THREE.Vector3(),
@@ -1148,4 +1138,25 @@ function setSeatVisualMode(actor, mode) {
   if (actor.sculptBodyRoot) actor.sculptBodyRoot.visible = !useVrm;
   if (actor.headSculptGroup) actor.headSculptGroup.visible = !useVrm;
   if (actor.vrmMountGroup) actor.vrmMountGroup.visible = useVrm;
+  // Release unused 512x512 procedural face CanvasTexture while VRM is mounted (saves ~12MB GPU/RAM on 12p!)
+  if (useVrm && actor.faceBundle && actor.faceBundle.tex) {
+    try { actor.faceBundle.tex.dispose(); } catch (e) { }
+    if (actor.faceBundle.canvas) {
+      actor.faceBundle.canvas.width = 1;
+      actor.faceBundle.canvas.height = 1;
+    }
+    actor.faceBundle = null;
+    if (actor.facePatchMat) {
+      actor.facePatchMat.map = null;
+      actor.facePatchMat.needsUpdate = true;
+    }
+  } else if (!useVrm && !actor.faceBundle && typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createFaceCanvas === "function") {
+    actor.faceBundle = stage3dTextures.createFaceCanvas();
+    actor.faceDrawnOnce = false;
+    actor._lastFaceSig = "";
+    if (actor.facePatchMat) {
+      actor.facePatchMat.map = actor.faceBundle.tex;
+      actor.facePatchMat.needsUpdate = true;
+    }
+  }
 }

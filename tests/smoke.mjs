@@ -162,6 +162,24 @@ for (const a of requiredAssets) {
     if (Object.keys(inst.bones || {}).length < 16 || Object.keys(inst.morphs || {}).length < 8) {
       throw new Error(`Real GLTFLoader VRM rig verification failed for ${sampleVrm}`);
     }
+    if (!inst.morphs.aa || !inst.morphs.aa.length || !inst.morphs.blink || !inst.morphs.blink.length) {
+      throw new Error(`Real VRM multi-primitive morph bindings (aa/blink) missing for ${sampleVrm}`);
+    }
+    let compactedMorphMeshes = 0;
+    inst.rawScene.traverse((obj) => {
+      if (obj && obj.isMesh && obj.geometry && obj.geometry.morphAttributes && Array.isArray(obj.geometry.morphAttributes.position)) {
+        compactedMorphMeshes += 1;
+        if (obj.geometry.morphAttributes.normal) {
+          throw new Error(`VRM morph normal attribute was not stripped for ${sampleVrm}:${obj.name}`);
+        }
+        if (obj.geometry.morphAttributes.position.length > 24) {
+          throw new Error(`VRM morph targets were not compacted (<=24) for ${sampleVrm}:${obj.name}: ${obj.geometry.morphAttributes.position.length}`);
+        }
+      }
+    });
+    if (compactedMorphMeshes === 0) {
+      throw new Error(`Real VRM lost all morph meshes during compaction for ${sampleVrm}`);
+    }
     if (!inst.bones.leftEye || !inst.bones.rightEye) {
       throw new Error(`VRM eye bones (leftEye/rightEye) missing for ${sampleVrm}`);
     }
@@ -5870,6 +5888,42 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     stage3d.postfx = prevPostfx;
     const resizeCacheOk = initApplySizedOk && r1AfterApply === false && r2 === false && r3 === true && setSizeCalls === 2 && lastSizeArgs[0] === 1920 && lastSizeArgs[1] === 1080;
 
+    // 6. High-DPI 4K/1440p Pixel-Budget Cap + VRM Morph Compaction + Cross-Game Avatar Pool Reuse
+    const prevStageWrapRect = stageWrap.getBoundingClientRect;
+    const prevWinDpr = window.devicePixelRatio;
+    window.devicePixelRatio = 1.5;
+    stageWrap.getBoundingClientRect = () => ({ width: 2560, height: 1440 });
+    stage3d.isIntegratedGpu = false;
+    stage3d.isSoftwareRenderer = false;
+    const hiDpr1440 = stage3d.getTargetDpr("high");
+    const ovDpr1440 = stage3d.getOverlayDpr();
+    const pixelBudgetCapOk = Boolean(
+      (2560 * hiDpr1440) * (1440 * hiDpr1440) <= 2900000 &&
+      (2560 * ovDpr1440) * (1440 * ovDpr1440) <= 2500000
+    );
+    stageWrap.getBoundingClientRect = prevStageWrapRect;
+    window.devicePixelRatio = prevWinDpr;
+
+    const compMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial());
+    compMesh.name = "Face.baked_0";
+    compMesh.isMesh = true;
+    compMesh.traverse = function (fn) { fn(this); };
+    compMesh.geometry.morphAttributes = {
+      position: Array.from({ length: 40 }, (_, idx) => ({ id: idx })),
+      normal: Array.from({ length: 40 }, (_, idx) => ({ id: idx }))
+    };
+    compMesh.morphTargetInfluences = new Array(40).fill(0);
+    compMesh.morphTargetDictionary = { "Face.M_F00_000_00_Fcl_MTH_A": 9, "Face.M_F00_000_00_Fcl_EYE_Close": 5, "Unused_Extra": 33 };
+    const compPrep = stage3dVrm.prepareLoadedAvatar({ scene: compMesh, parser: { json: { meshes: [{ name: "Face.baked" }], extensions: { VRM: { humanoid: { humanBones: [] }, blendShapeMaster: { blendShapeGroups: [{ presetName: "a", binds: [{ mesh: 0, index: 9, weight: 100 }] }, { presetName: "blink", binds: [{ mesh: 0, index: 5, weight: 100 }] }] } } } } } }, { mode: "seated", keepRecolorSlots: false });
+    const morphCompactionOk = Boolean(
+      compPrep &&
+      !compMesh.geometry.morphAttributes.normal &&
+      compMesh.geometry.morphAttributes.position.length === 2 &&
+      compMesh.morphTargetInfluences.length === 2 &&
+      compPrep.morphs.aa.length === 1 && compPrep.morphs.blink.length === 1 &&
+      compPrep.morphs.aa[0].idx < 2 && compPrep.morphs.blink[0].idx < 2
+    );
+
     // Restore state
     stage3d.ready = prevReady;
     stage3d.failed = prevFailed;
@@ -5885,7 +5939,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       dgpuHighUnlockOk, dgpuBalUnlockOk, dgpuEcoCapOk, igpuCapOk, softCapOk,
       dtInvarianceOk, overlayCacheSigOk,
       cleanUhdOk, warnDesktopUhdOk, noWarnMobileUhdOk, noWarnSmallLaptopOk, hintShownOnUhdOk, cleanRtx5080Ok,
-      resizeCacheOk
+      resizeCacheOk, pixelBudgetCapOk, morphCompactionOk
     };
   })()`, ctx);
   for (const [k, v] of Object.entries(v152Res)) {

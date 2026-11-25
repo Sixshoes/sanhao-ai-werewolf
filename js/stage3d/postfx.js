@@ -66,9 +66,11 @@ function build3DPostFx(renderer, scene, camera, opts) {
     // Performance Win: Bypass multi-pass UnrealBloomPass on iGPU / Eco lightweight profiles
     // while preserving the single-pass ACES Filmic + FXAA + Split-Tone color grading pass!
     let bloomPass = null;
+    const bloomCapW = isWindowsAngle ? 384 : 512;
+    const bloomCapH = isWindowsAngle ? 216 : 288;
     if (!preferLightweight) {
-      const bloomW = Math.min(576, Math.max(128, Math.floor(w * 0.40)));
-      const bloomH = Math.min(324, Math.max(128, Math.floor(h * 0.40)));
+      const bloomW = Math.min(bloomCapW, Math.max(128, Math.floor(w * 0.35)));
+      const bloomH = Math.min(bloomCapH, Math.max(128, Math.floor(h * 0.35)));
       bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(bloomW, bloomH), 0.18, 0.40, 1.18);
       composer.addPass(bloomPass);
     }
@@ -163,8 +165,8 @@ function build3DPostFx(renderer, scene, camera, opts) {
         composer.setSize(width, height);
         if (bloomPass) {
           bloomPass.setSize(
-            Math.min(576, Math.max(128, Math.floor(width * 0.40))),
-            Math.min(324, Math.max(128, Math.floor(height * 0.40)))
+            Math.min(bloomCapW, Math.max(128, Math.floor(width * 0.35))),
+            Math.min(bloomCapH, Math.max(128, Math.floor(height * 0.35)))
           );
         }
         if (gradePass.uniforms && gradePass.uniforms.uTexelSize && gradePass.uniforms.uTexelSize.value) {

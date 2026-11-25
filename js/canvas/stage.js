@@ -578,23 +578,21 @@ function startAnimationLoop() {
   if (state.animFrame) cancelAnimationFrame(state.animFrame);
   let lastDrawMs = 0;
   const CAP_60_MS = 1000 / 60;
+  const CAP_120_MS = 1000 / 120;
   function frame(now) {
     if (typeof document !== "undefined" && document.hidden) {
       state.animFrame = null;
       return;
     }
-    // Discrete GPU in 3D high/balanced unlocks native display VSync (120/144/165/240Hz);
+    // Discrete GPU in 3D high/balanced paces smoothly up to 120Hz (prevents 240Hz/360Hz WebGL IPC command-buffer flooding on Windows ANGLE!);
     // iGPU / software / eco / 2D uses remainder-accumulated smooth 60fps pacing without beat-frequency judder!
-    if (shouldCapFrameRate60()) {
-      const elapsed = lastDrawMs ? (now - lastDrawMs) : CAP_60_MS;
-      if (lastDrawMs && elapsed < (CAP_60_MS - 0.8)) {
-        state.animFrame = requestAnimationFrame(frame);
-        return;
-      }
-      lastDrawMs = lastDrawMs ? (now - Math.min(CAP_60_MS, elapsed % CAP_60_MS)) : now;
-    } else {
-      lastDrawMs = now;
+    const capMs = shouldCapFrameRate60() ? CAP_60_MS : CAP_120_MS;
+    const elapsed = lastDrawMs ? (now - lastDrawMs) : capMs;
+    if (lastDrawMs && elapsed < (capMs - 0.8)) {
+      state.animFrame = requestAnimationFrame(frame);
+      return;
     }
+    lastDrawMs = lastDrawMs ? (now - Math.min(capMs, elapsed % capMs)) : now;
     drawSanctuaryFrame(now);
     drawSpotlightPortrait(now);
     state.animFrame = requestAnimationFrame(frame);

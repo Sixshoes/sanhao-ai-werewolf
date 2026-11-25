@@ -46,6 +46,10 @@ const stage3d = {
   avatarActiveLoads: 0,
   avatarTotalQueued: 0,
   avatarDoneCount: 0,
+  avatarPool: {},
+  avatarPoolOrder: [],
+  _vrmWarmupUntil: 0,
+  _shadowBakedOnce: false,
   camPreset: "cinema", // "cinema" | "firstperson" | "overview"
   orbit: {
     dragging: false,
@@ -228,6 +232,22 @@ const stage3d = {
     }
   },
 
+  getStageViewportCssArea: function () {
+    if (typeof document !== "undefined") {
+      const container = el("canvasStageWrap") || el("canvasContainer");
+      if (container && typeof container.getBoundingClientRect === "function") {
+        const rect = container.getBoundingClientRect();
+        if (rect && rect.width >= 200 && rect.height >= 150) {
+          return rect.width * rect.height;
+        }
+      }
+    }
+    if (typeof window !== "undefined" && window.innerWidth >= 200 && window.innerHeight >= 150) {
+      return window.innerWidth * window.innerHeight;
+    }
+    return 1280 * 720;
+  },
+
   getTargetDpr: function (quality) {
     const q = quality === "eco" ? "eco" : (quality === "balanced" ? "balanced" : "high");
     const cap = this.isSoftwareRenderer
@@ -235,14 +255,23 @@ const stage3d = {
       : (this.isIntegratedGpu
         ? (q === "eco" ? 0.85 : (q === "balanced" ? 0.95 : 1.2))
         : (q === "eco" ? 1.0 : (q === "balanced" ? 1.25 : 1.5)));
+    // Pixel-budget guard: prevents 1440p@150% / 4K monitors from allocating 3840x2160+ HalfFloat FBOs (>150MB VRAM + IPC stall)
+    const maxPixels = this.isSoftwareRenderer
+      ? 920000
+      : (this.isIntegratedGpu
+        ? (q === "eco" ? 960000 : (q === "balanced" ? 1450000 : 2050000))
+        : (q === "eco" ? 1250000 : (q === "balanced" ? 1950000 : 2800000)));
+    const budgetDpr = Math.sqrt(maxPixels / Math.max(1, this.getStageViewportCssArea()));
     const ecoScale = (q === "eco" && this._ecoDprScale && this._ecoDprScale < 1) ? this._ecoDprScale : 1;
-    return Math.max(0.65, Math.min(window.devicePixelRatio || 1, cap) * ecoScale);
+    return Math.max(0.65, Math.min(window.devicePixelRatio || 1, cap, budgetDpr) * ecoScale);
   },
 
   getOverlayDpr: function () {
     const q = (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high";
     const cap = this.isSoftwareRenderer ? 1.0 : ((this.isIntegratedGpu || q === "eco") ? 1.25 : 1.5);
-    return Math.min((typeof window !== "undefined" && window.devicePixelRatio) ? window.devicePixelRatio : 1, cap);
+    const maxOverlayPixels = this.isSoftwareRenderer ? 1200000 : ((this.isIntegratedGpu || q === "eco") ? 1650000 : 2400000);
+    const budgetDpr = Math.sqrt(maxOverlayPixels / Math.max(1, this.getStageViewportCssArea()));
+    return Math.max(0.75, Math.min((typeof window !== "undefined" && window.devicePixelRatio) ? window.devicePixelRatio : 1, cap, budgetDpr));
   },
 
   init: function () {
@@ -319,19 +348,16 @@ const stage3d = {
           isSoftwareRenderer: this.isSoftwareRenderer
         })
         : null;
-      // Pre-align renderer.toneMapping BEFORE the first draw call to avoid a Frame-1 shader recompilation hitch!
-      const willUsePostFxInit = Boolean(
-        this.postfx &&
-        !this.isSoftwareRenderer &&
-        state.quality3D !== "eco" &&
-        (!this.isIntegratedGpu || state.quality3D === "high")
-      );
+      // Pre-align renderer.toneMapping BEFORE the first draw call and KEEP it locked across quality changes (prevents 6-second full-scene shader recompile stalls!)
+      const willUsePostFxInit = Boolean(this.postfx && !this.isSoftwareRenderer);
       if (willUsePostFxInit && THREE.NoToneMapping !== undefined) {
         renderer.toneMapping = THREE.NoToneMapping;
       } else if (THREE.ACESFilmicToneMapping !== undefined) {
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.02;
       }
+      this._vrmWarmupUntil = (typeof performance !== "undefined" ? performance.now() : Date.now()) + 3500;
+      this._shadowBakedOnce = false;
       this.fpHandsGroup = this.buildFirstPersonHands(scene);
       if (!this._ctxLostBound && typeof canvas3d.addEventListener === "function") {
         this._ctxLostBound = true;
@@ -378,10 +404,14 @@ const stage3d = {
     const isBal = q === "balanced";
     const dpr = this.getTargetDpr(q);
     this.renderer.setPixelRatio(dpr);
-    this.renderer.shadowMap.enabled = !isEco && !this.isSoftwareRenderer;
+    // Keep shadowMap.enabled & dirLight.castShadow stable on hardware GPUs so quality switches NEVER trigger 100+ shader recompilations!
+    // In eco mode, we simply stop re-rendering the shadow map each frame (0.00ms/frame with zero shader rebuild).
+    this.renderer.shadowMap.enabled = !this.isSoftwareRenderer;
     this.renderer.shadowMap.autoUpdate = false;
-    if (this.renderer.shadowMap.enabled) this.renderer.shadowMap.needsUpdate = true;
-    if (this.env && this.env.dirLight) this.env.dirLight.castShadow = !isEco && !this.isSoftwareRenderer;
+    if (this.renderer.shadowMap.enabled && (!isEco || !this._shadowBakedOnce)) {
+      this.renderer.shadowMap.needsUpdate = true;
+    }
+    if (this.env && this.env.dirLight) this.env.dirLight.castShadow = !this.isSoftwareRenderer;
     if (this.env && this.env.fireflyPoints) this.env.fireflyPoints.visible = q === "high";
     if (this.env && this.env.celestialWisps) this.env.celestialWisps.visible = !isEco;
     if (this.env && this.env.teaSteamPoints) this.env.teaSteamPoints.visible = !isEco;
@@ -850,21 +880,35 @@ const stage3d = {
     }
   },
 
-  disposeObject3D: function (rootObj) {
+  disposeObject3D: function (rootObj, extraAvatar) {
     if (!rootObj || typeof rootObj.traverse !== "function") return;
+    const disposedGeos = new Set();
+    const disposedMats = new Set();
+    const disposedTexs = new Set();
+    const freeTex = function (tex) {
+      if (!tex || disposedTexs.has(tex)) return;
+      disposedTexs.add(tex);
+      if (typeof stage3dVrm !== "undefined" && typeof stage3dVrm.disposeTextureResource === "function") {
+        stage3dVrm.disposeTextureResource(tex);
+      } else if (typeof tex.dispose === "function") {
+        try { tex.dispose(); } catch (e) { }
+      }
+    };
     rootObj.traverse(function (node) {
       if (!node) return;
-      if (node.geometry && typeof node.geometry.dispose === "function") {
-        try { node.geometry.dispose(); } catch (e) { }
+      if (node.geometry && !disposedGeos.has(node.geometry)) {
+        disposedGeos.add(node.geometry);
+        if (typeof node.geometry.dispose === "function") {
+          try { node.geometry.dispose(); } catch (e) { }
+        }
       }
       if (node.material) {
         const mats = Array.isArray(node.material) ? node.material : [node.material];
         mats.forEach(function (m) {
-          if (!m) return;
-          ["map", "normalMap", "emissiveMap", "roughnessMap", "metalnessMap"].forEach(function (k) {
-            if (m[k] && typeof m[k].dispose === "function") {
-              try { m[k].dispose(); } catch (e) { }
-            }
+          if (!m || disposedMats.has(m)) return;
+          disposedMats.add(m);
+          ["map", "normalMap", "bumpMap", "emissiveMap", "roughnessMap", "metalnessMap", "aoMap", "alphaMap"].forEach(function (k) {
+            if (m[k]) freeTex(m[k]);
           });
           if (typeof m.dispose === "function") {
             try { m.dispose(); } catch (e) { }
@@ -872,13 +916,18 @@ const stage3d = {
         });
       }
     });
+    if (extraAvatar && Array.isArray(extraAvatar.recolorSlots)) {
+      extraAvatar.recolorSlots.forEach(function (slot) {
+        if (slot && slot.origMap) freeTex(slot.origMap);
+      });
+    }
   },
 
   attachNormalizedHeroGlb: function (gltf, label, silent, isCustomUpload) {
     if (!this.hero || !gltf || !gltf.scene) return;
     if (this.hero.customGlbRoot) {
       this.hero.root.remove(this.hero.customGlbRoot);
-      this.disposeObject3D(this.hero.customGlbRoot);
+      this.disposeObject3D(this.hero.customGlbRoot, this.hero.vrmAvatar);
     }
     let prep = null;
     if (typeof stage3dVrm !== "undefined" && typeof stage3dVrm.prepareLoadedAvatar === "function") {
@@ -886,7 +935,8 @@ const stage3d = {
         mode: "standing",
         targetHeight: 2.14,
         baseY: 0.08,
-        personaName: isCustomUpload ? null : "清茗"
+        personaName: isCustomUpload ? null : "清茗",
+        keepRecolorSlots: !isCustomUpload
       });
     }
     const mdl = prep ? prep.root : gltf.scene;
@@ -930,6 +980,60 @@ const stage3d = {
     if (!silent) showToast("已載入並自動對齊「清茗」二次元 3D 模型：" + label, "emerald");
   },
 
+  stashSeatAvatarInPool: function (actor) {
+    if (!actor || !actor.vrmAvatar || !actor.vrmAvatar.root) return false;
+    const key = actor.boundAvatarKey || "";
+    const slug = actor.boundModelSlug || "";
+    if (!key || slug.indexOf("custom:") === 0) return false;
+    if (!this.avatarPool) this.avatarPool = {};
+    if (!Array.isArray(this.avatarPoolOrder)) this.avatarPoolOrder = [];
+    if (actor.vrmMountGroup && actor.vrmAvatar.root.parent === actor.vrmMountGroup) {
+      actor.vrmMountGroup.remove(actor.vrmAvatar.root);
+    }
+    if (this.avatarPool[key] && this.avatarPool[key].avatar && this.avatarPool[key].avatar !== actor.vrmAvatar) {
+      this.disposeObject3D(this.avatarPool[key].avatar.root, this.avatarPool[key].avatar);
+    }
+    this.avatarPool[key] = { avatar: actor.vrmAvatar, slug: slug, key: key };
+    const prevIdx = this.avatarPoolOrder.indexOf(key);
+    if (prevIdx !== -1) this.avatarPoolOrder.splice(prevIdx, 1);
+    this.avatarPoolOrder.push(key);
+    while (this.avatarPoolOrder.length > 14) {
+      const oldestKey = this.avatarPoolOrder.shift();
+      if (oldestKey && this.avatarPool[oldestKey]) {
+        const oldEntry = this.avatarPool[oldestKey];
+        if (oldEntry && oldEntry.avatar && oldEntry.avatar.root) {
+          this.disposeObject3D(oldEntry.avatar.root, oldEntry.avatar);
+        }
+        delete this.avatarPool[oldestKey];
+      }
+    }
+    actor.vrmAvatar = null;
+    actor.boundModelSlug = "";
+    actor.boundAvatarKey = "";
+    actor._vrmUpdatedOnce = false;
+    if (typeof setSeatVisualMode === "function") setSeatVisualMode(actor, "sculpt3d");
+    return true;
+  },
+
+  mountPooledSeatAvatar: function (actor, pooledEntry) {
+    if (!actor || !actor.vrmMountGroup || !pooledEntry || !pooledEntry.avatar || !pooledEntry.avatar.root) return false;
+    while (actor.vrmMountGroup.children.length > 0) {
+      const oldChild = actor.vrmMountGroup.children[0];
+      actor.vrmMountGroup.remove(oldChild);
+      this.disposeObject3D(oldChild, actor.vrmAvatar);
+    }
+    actor.vrmAvatar = pooledEntry.avatar;
+    actor.vrmAvatar.lastMoodKey = "";
+    actor.vrmAvatar.lastAlive = null;
+    actor.vrmAvatar.lastTalkBoost = false;
+    actor.boundModelSlug = pooledEntry.slug;
+    actor.boundAvatarKey = pooledEntry.key;
+    actor._vrmUpdatedOnce = false;
+    actor.vrmMountGroup.add(pooledEntry.avatar.root);
+    if (typeof setSeatVisualMode === "function") setSeatVisualMode(actor, "vrm");
+    return true;
+  },
+
   attachSeatAvatar: function (seatId, gltf, label, silent, modelSlug, seatObjHint) {
     if (!this.seats || !gltf || !gltf.scene) return;
     let actor = this.seats.slots[seatId];
@@ -942,20 +1046,24 @@ const stage3d = {
       }
     }
     if (!actor || !actor.vrmMountGroup) return;
+    const prevAvatar = actor.vrmAvatar;
     while (actor.vrmMountGroup.children.length > 0) {
       const oldChild = actor.vrmMountGroup.children[0];
       actor.vrmMountGroup.remove(oldChild);
-      this.disposeObject3D(oldChild);
+      this.disposeObject3D(oldChild, prevAvatar);
     }
     const curSeatForPrep = seatObjHint || (typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D().find(function (s) { return s.id === seatId; }) : null);
     const prepPersonaName = (curSeatForPrep && (!modelSlug || modelSlug.indexOf("custom:") !== 0)) ? curSeatForPrep.name : null;
     const prep = (typeof stage3dVrm !== "undefined" && typeof stage3dVrm.prepareLoadedAvatar === "function")
-      ? stage3dVrm.prepareLoadedAvatar(gltf, { mode: "seated", targetHeight: 2.10, baseY: 0.0, personaName: prepPersonaName })
+      ? stage3dVrm.prepareLoadedAvatar(gltf, { mode: "seated", targetHeight: 2.10, baseY: 0.0, personaName: prepPersonaName, keepRecolorSlots: false })
       : { root: gltf.scene, baseY: 0, isVrm: false };
     actor.vrmAvatar = prep;
     if (modelSlug) actor.boundModelSlug = modelSlug;
+    actor.boundAvatarKey = (modelSlug || "") + "|" + (prepPersonaName || "");
+    actor._vrmUpdatedOnce = false;
     actor.vrmMountGroup.add(prep.root);
     if (typeof setSeatVisualMode === "function") setSeatVisualMode(actor, "vrm");
+    this._vrmWarmupUntil = Math.max(this._vrmWarmupUntil || 0, (typeof performance !== "undefined" ? performance.now() : Date.now()) + 2200);
     if (modelSlug && modelSlug.indexOf("custom:") === 0) {
       const curSeat = seatObjHint || (typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D().find(function (s) { return s.id === seatId; }) : null);
       const pKey = (curSeat && typeof getPortraitKey === "function") ? getPortraitKey(curSeat) : (seatId === getPlayerId() ? "你" : null);
@@ -1058,8 +1166,12 @@ const stage3d = {
         ? getStageSeatListFor3D().find(function (x) { return x.id === job.seat.id; })
         : job.seat;
       const latestSlug = latestSeat ? stage3dVrm.getSeatModelSlug(latestSeat) : job.slug;
-      if (latestSlug === job.slug) {
+      const latestAvatarKey = latestSlug + "|" + (latestSeat && latestSeat.name ? latestSeat.name : "");
+      if (latestSlug === job.slug && (!job.avatarKey || latestAvatarKey === job.avatarKey)) {
         self.attachSeatAvatar(job.seat.id, gltf, job.url.split("/").pop(), true, job.slug, latestSeat);
+      } else if (gltf && gltf.scene) {
+        // Stale in-flight load after seat shuffle: dispose immediately so GPU textures & ImageBitmaps never leak!
+        self.disposeObject3D(gltf.scene);
       }
       self.updateVrmLoadIndicator();
       setTimeout(function () { self.pumpAvatarQueue(); }, 50);
@@ -1077,8 +1189,11 @@ const stage3d = {
     if (!this.seats || !seatList || typeof stage3dVrm === "undefined" || typeof THREE.GLTFLoader !== "function") return;
     if (!this.avatarManifest || !Object.keys(this.avatarManifest).length) return;
     const self = this;
-    const newJobs = [];
+    const desiredList = [];
+    const desiredBySeatId = {};
     const nTotal = seatList.length;
+
+    // Step 1: Compute desired avatar identity (slug + personaName) for every seat
     seatList.forEach(function (s, idx) {
       const actor = self.seats.slots[s.id];
       if (!actor) return;
@@ -1090,14 +1205,57 @@ const stage3d = {
         slug = "player";
         url = self.avatarManifest[slug];
       }
-      if (!url || actor.boundModelSlug === slug) return;
-      const key = s.id + ":" + slug;
+      if (!url) return;
+      const avatarKey = slug + "|" + (s.name || "");
+      const item = { seat: s, idx: idx, actor: actor, slug: slug, url: url, avatarKey: avatarKey };
+      desiredList.push(item);
+      desiredBySeatId[s.id] = item;
+    });
+
+    // Step 2: Drop stale queued jobs for seats whose persona changed across startNewGame() shuffles!
+    if (this.avatarQueue && this.avatarQueue.length) {
+      const kept = [];
+      for (let qi = 0; qi < this.avatarQueue.length; qi++) {
+        const qj = this.avatarQueue[qi];
+        const want = qj && qj.seat ? desiredBySeatId[qj.seat.id] : null;
+        if (want && qj.avatarKey && qj.avatarKey !== want.avatarKey) {
+          delete this.avatarQueuedKeys[qj.key];
+          this.avatarTotalQueued = Math.max(0, (this.avatarTotalQueued || 0) - 1);
+          continue;
+        }
+        kept.push(qj);
+      }
+      this.avatarQueue = kept;
+    }
+
+    // Step 3: Harvest mounted VRMs from seats whose persona shuffled into reusable avatarPool (0ms swap, zero leaks!)
+    desiredList.forEach(function (item) {
+      const actor = item.actor;
+      if (actor.vrmAvatar && actor.boundAvatarKey && actor.boundAvatarKey !== item.avatarKey) {
+        self.stashSeatAvatarInPool(actor);
+      }
+    });
+
+    // Step 4: Instant 0ms re-mount from avatarPool when persona simply moved seats; queue fetch ONLY for truly unloaded personas!
+    const newJobs = [];
+    desiredList.forEach(function (item) {
+      const actor = item.actor;
+      const s = item.seat;
+      if (actor.vrmAvatar && actor.boundAvatarKey === item.avatarKey) return;
+      if (self.avatarPool && self.avatarPool[item.avatarKey]) {
+        const pooled = self.avatarPool[item.avatarKey];
+        delete self.avatarPool[item.avatarKey];
+        const oIdx = self.avatarPoolOrder ? self.avatarPoolOrder.indexOf(item.avatarKey) : -1;
+        if (oIdx !== -1) self.avatarPoolOrder.splice(oIdx, 1);
+        if (self.mountPooledSeatAvatar(actor, pooled)) return;
+      }
+      const key = s.id + ":" + item.avatarKey;
       if (self.avatarLoadingKeys[key] || self.avatarQueuedKeys[key]) return;
       const isPlayer = (typeof getPlayerId === "function" && s.id === getPlayerId());
-      const distFromOpp = Math.abs(idx - Math.floor(nTotal * 0.5));
+      const distFromOpp = Math.abs(item.idx - Math.floor(nTotal * 0.5));
       const prio = isPlayer ? 99 : distFromOpp;
       self.avatarQueuedKeys[key] = true;
-      newJobs.push({ seat: s, slug: slug, url: url, key: key, prio: prio });
+      newJobs.push({ seat: s, slug: item.slug, avatarKey: item.avatarKey, url: item.url, key: key, prio: prio });
     });
     if (!newJobs.length) return;
     if (this.avatarActiveLoads === 0 && this.avatarQueue.length === 0) {
@@ -1816,9 +1974,16 @@ const stage3d = {
               this.updateGpuStatusUi();
             }
           }
-          if (!this._manualQualityLock && state.quality3D !== "eco" && this._perfEmaMs > 30) {
+          const isLoadingWarmup = Boolean(
+            this.avatarActiveLoads > 0 ||
+            (this.avatarQueue && this.avatarQueue.length > 0) ||
+            (this._vrmWarmupUntil && nowMs < this._vrmWarmupUntil)
+          );
+          if (isLoadingWarmup) {
+            this._perfSlowMs = 0;
+          } else if (!this._manualQualityLock && state.quality3D !== "eco" && this._perfEmaMs > 30) {
             this._perfSlowMs = (this._perfSlowMs || 0) + sampleDt;
-            if (this._perfSlowMs > 1500) {
+            if (this._perfSlowMs > 1800) {
               state.quality3D = (state.quality3D === "high") ? "balanced" : "eco";
               this.applyQualityMode();
               this._perfSlowMs = 0;
@@ -1834,7 +1999,7 @@ const stage3d = {
             }
           } else if (!this._manualQualityLock && state.quality3D === "eco" && (this._ecoDprScale || 1) > 0.82 && this._perfEmaMs > 40) {
             this._perfSlowMs = (this._perfSlowMs || 0) + sampleDt;
-            if (this._perfSlowMs > 1800) {
+            if (this._perfSlowMs > 2000) {
               this._ecoDprScale = 0.8;
               this._perfSlowMs = 0;
               this._perfEmaMs = 0;
@@ -1906,25 +2071,29 @@ const stage3d = {
     const dynExpBoost = harmonyBoost + (isPunchGlow ? 0.05 : 0) + (isFlashGlow ? 0.06 : 0);
 
     if (this.renderer && this.renderer.shadowMap && this.renderer.shadowMap.enabled) {
-      this._shadowFrameCounter = (this._shadowFrameCounter || 0) + 1;
-      const shadowStride = this.getShadowUpdateStride();
-      if (this._shadowFrameCounter % shadowStride === 0) {
-        this.renderer.shadowMap.needsUpdate = true;
+      if (state.quality3D === "eco") {
+        if (!this._shadowBakedOnce) {
+          this._shadowBakedOnce = true;
+          this.renderer.shadowMap.needsUpdate = true;
+        }
+      } else {
+        this._shadowFrameCounter = (this._shadowFrameCounter || 0) + 1;
+        const shadowStride = this.getShadowUpdateStride();
+        if (!this._shadowBakedOnce || (this._shadowFrameCounter % shadowStride === 0)) {
+          this._shadowBakedOnce = true;
+          this.renderer.shadowMap.needsUpdate = true;
+        }
       }
     }
 
-    const usePostFxNow = Boolean(
-      this.postfx &&
-      !this.isSoftwareRenderer &&
-      state.quality3D !== "eco" &&
-      (!this.isIntegratedGpu || state.quality3D === "high")
-    );
+    // Keep PostFX gradePass locked on all hardware GPUs so renderer.toneMapping NEVER flips (eliminates 6s shader recompile stalls!)
+    const usePostFxNow = Boolean(this.postfx && !this.isSoftwareRenderer);
     if (usePostFxNow) {
       // Single authoritative ACES Filmic pass inside PostFX gradePass (prevents double tone-mapping compression!)
       if (this.renderer && THREE.NoToneMapping !== undefined && this.renderer.toneMapping !== THREE.NoToneMapping) {
         this.renderer.toneMapping = THREE.NoToneMapping;
       }
-      // v23.3 Fillrate Saver: Bypass 11-pass UnrealBloomPass in balanced mode, iGPU, or 10-12 seat rooms while preserving crisp 1-pass ACES + FXAA gradePass!
+      // v23.3 Fillrate Saver: Bypass 11-pass UnrealBloomPass in eco/balanced mode, iGPU, or 10-12 seat rooms while preserving crisp 1-pass ACES + FXAA gradePass!
       if (this.postfx && this.postfx.bloomPass) {
         const nSeatsNow = (state.match && Array.isArray(state.match.seats) && state.match.seats.length)
           ? state.match.seats.length

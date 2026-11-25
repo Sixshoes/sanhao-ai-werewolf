@@ -244,7 +244,7 @@ function buildHeroCharacter(scene) {
   const pal = HERO_PALETTES.celadon;
   const fabric = stage3dTextures.createFabricTextures();
   const wood = stage3dTextures.createWoodTextures();
-  const CupMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+  const CupMatCtor = THREE.MeshStandardMaterial;
 
   const hasAnime = typeof stage3dAnime !== "undefined";
   const makeHeroToon = function (col, opts) {
@@ -270,8 +270,8 @@ function buildHeroCharacter(scene) {
     sash: makeHeroToon(pal.sash, { bumpMap: fabric.bump, bumpScale: 0.015, rimStrength: 0.20, shadowLift: 0.12 }),
     trousers: makeHeroToon(pal.trousers, { shadowLift: 0.10, rimStrength: 0.14 }),
     shoes: makeHeroToon(pal.shoes, { shadowLift: 0.10, rimStrength: 0.14 }),
-    jade: new CupMatCtor({ color: pal.jade, roughness: 0.16, metalness: 0.08, clearcoat: 0.85 }),
-    celadon: new CupMatCtor({ color: 0xd8f3e8, roughness: 0.14, metalness: 0.06, clearcoat: 0.92 }),
+    jade: new CupMatCtor({ color: pal.jade, roughness: 0.14, metalness: 0.16 }),
+    celadon: new CupMatCtor({ color: 0xd8f3e8, roughness: 0.12, metalness: 0.14 }),
     gold: new THREE.MeshStandardMaterial({ color: 0xd9ad5b, roughness: 0.24, metalness: 0.82 }),
     lanternGlow: new THREE.MeshStandardMaterial({ color: 0xf4d58d, emissive: 0xb68a3e, emissiveIntensity: 0.38, roughness: 0.30, transparent: true, opacity: 0.80 }),
     daisWood: new THREE.MeshStandardMaterial({ map: wood.map, color: 0x452b1b, roughness: 0.42, metalness: 0.16 })
@@ -610,6 +610,16 @@ function setHeroVisualMode(hero, mode) {
   hero.visualMode = useGlb ? "glb" : "sculpt3d";
   if (hero.customGlbRoot) hero.customGlbRoot.visible = useGlb;
   if (hero.rigRoot) hero.rigRoot.visible = !useGlb;
+  if (useGlb && hero.heroFaceBundle && hero.heroFaceBundle.tex) {
+    try { hero.heroFaceBundle.tex.dispose(); } catch (e) { }
+    if (hero.heroFaceBundle.canvas) {
+      hero.heroFaceBundle.canvas.width = 1;
+      hero.heroFaceBundle.canvas.height = 1;
+    }
+    hero.heroFaceBundle = null;
+  } else if (!useGlb && !hero.heroFaceBundle && typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createFaceCanvas === "function") {
+    hero.heroFaceBundle = stage3dTextures.createFaceCanvas();
+  }
   const resetBtn = (typeof document !== "undefined" && typeof document.getElementById === "function") ? document.getElementById("btnResetHeroRig") : null;
   if (resetBtn) resetBtn.classList.toggle("hidden", !useGlb);
 }

@@ -268,7 +268,8 @@ function build3DSkyAndLights(scene, env) {
   scene.add(env.hemiLight);
 
   const isIgpuEnv = Boolean(typeof stage3d !== "undefined" && stage3d.isIntegratedGpu);
-  const shadowRes = isIgpuEnv ? 768 : 2048;
+  const isWinAngleEnv = Boolean(typeof stage3d !== "undefined" && stage3d.isWindowsAngle);
+  const shadowRes = isIgpuEnv ? 768 : (isWinAngleEnv ? 1024 : 1536);
   env.dirLight = new THREE.DirectionalLight(0xfff1d0, 1.24);
   env.dirLight.position.set(11, 19, 9);
   env.dirLight.castShadow = true;
@@ -654,8 +655,7 @@ function buildTabletopTeaSet(woodMat) {
   const teaSet = new THREE.Group();
   const hasLathe = typeof THREE.LatheGeometry === "function" && typeof THREE.Vector2 === "function";
   const clayMat = new THREE.MeshStandardMaterial({ color: 0x7c3b28, roughness: 0.42, metalness: 0.08 });
-  const CupMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-  const cupPorcelain = new CupMatCtor({ color: 0xdff5eb, roughness: 0.14, metalness: 0.05, clearcoat: 0.9 });
+  const cupPorcelain = new THREE.MeshStandardMaterial({ color: 0xdff5eb, roughness: 0.12, metalness: 0.14 });
   const brassMat = new THREE.MeshStandardMaterial({ color: 0xd4a657, roughness: 0.28, metalness: 0.72 });
 
   // Walnut coaster tea tray
@@ -1117,15 +1117,13 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
       ].join("\n")
     });
   } else {
-    const OceanMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+    const OceanMatCtor = THREE.MeshStandardMaterial;
     env.oceanMat = new OceanMatCtor({
       color: 0x16384c,
       bumpMap: env.oceanBumpTex,
       bumpScale: 0.08,
-      roughness: 0.16,
-      metalness: 0.30,
-      clearcoat: 0.85,
-      clearcoatRoughness: 0.18,
+      roughness: 0.14,
+      metalness: 0.34,
       transparent: true,
       opacity: 0.36
     });
@@ -1772,16 +1770,13 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   const tableScaleGroup = new THREE.Group();
   env.tableScaleGroup = tableScaleGroup;
   tableGroup.add(tableScaleGroup);
-  const MatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-  const tableWoodMat = new MatCtor({
+  const tableWoodMat = new THREE.MeshStandardMaterial({
     map: wood.map,
     bumpMap: wood.bump,
     bumpScale: 0.025,
     roughnessMap: wood.roughness || null,
-    roughness: 0.28,
-    metalness: 0.14,
-    clearcoat: 0.85,
-    clearcoatRoughness: 0.15
+    roughness: 0.24,
+    metalness: 0.18
   });
   stage3dTextures.upgradeWoodWithPolyHavenCC0(tableWoodMat);
 
@@ -2094,7 +2089,7 @@ function build3DLotusAndAtmosphere(scene, env) {
   standRim.scale.setScalar(0.66);
   scene.add(standRim);
 
-  const CoreMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+  const CoreMatCtor = THREE.MeshStandardMaterial;
   // Smooth Iridescent Glass-Jade Sacred Heart + Golden Stamen Crown
   env.lotusCore = new THREE.Mesh(
     new THREE.SphereGeometry(0.28, 22, 18),
@@ -2102,10 +2097,8 @@ function build3DLotusAndAtmosphere(scene, env) {
       color: 0xf6d88c,
       emissive: 0xd99224,
       emissiveIntensity: 0.72,
-      roughness: 0.16,
-      metalness: 0.20,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.08
+      roughness: 0.14,
+      metalness: 0.28
     })
   );
   env.lotusCore.scale.set(1.0, 1.12, 1.0);
@@ -2166,10 +2159,8 @@ function build3DLotusAndAtmosphere(scene, env) {
     color: 0xe8efe4,
     emissive: 0xb88c3e,
     emissiveIntensity: 0.22,
-    roughness: 0.20,
-    metalness: 0.14,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.12,
+    roughness: 0.16,
+    metalness: 0.22,
     transparent: true,
     opacity: 0.88,
     side: THREE.DoubleSide
@@ -2202,10 +2193,8 @@ function build3DLotusAndAtmosphere(scene, env) {
       color: tc.col,
       emissive: tc.em,
       emissiveIntensity: 0.38,
-      roughness: 0.16,
-      metalness: 0.18,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.10,
+      roughness: 0.14,
+      metalness: 0.24,
       transparent: true,
       opacity: 0.92,
       side: THREE.DoubleSide
