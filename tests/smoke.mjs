@@ -6746,11 +6746,21 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const split48Ok = split48.length <= 2 && split48.every(function (c) { return c.length <= 52; });
     const sitStd = voice.resolveSituationalVoiceState({ id: 2, role: "villager", microPulse: 35 }, "normal");
     const sitFire = voice.resolveSituationalVoiceState({ id: 2, role: "villager", microPulse: 40 }, "panic");
+    const prevDayEvents = state.match.daySpeechEvents;
+    const prevShCtx = state.match.sheriffElectionCtx;
+    state.match.daySpeechEvents = [{ speakerId: 5, checkedWolfId: 2 }];
+    const sitCheckedWolf = voice.resolveSituationalVoiceState({ id: 2, role: "villager", microPulse: 35 }, "normal");
+    state.match.daySpeechEvents = prevDayEvents;
+    state.match.sheriffElectionCtx = { isPkRound: true, candidateIds: [2, 5] };
+    const sitSheriffPk = voice.resolveSituationalVoiceState({ id: 2, role: "villager", microPulse: 35 }, "normal");
+    state.match.sheriffElectionCtx = prevShCtx;
     const sitWolf = voice.resolveSituationalVoiceState({ id: 3, role: "wolf", microPulse: 78 }, "accuse");
     const sitLw = voice.resolveSituationalVoiceState({ id: 4, role: "seer", microPulse: 20 }, "last_words");
     const sitStatesOk = Boolean(
       sitStd.key === "standard" && sitStd.commaPauseMs === 110 &&
       sitFire.key === "under_fire" && sitFire.rateMul === 1.10 && sitFire.commaPauseMs === 45 &&
+      sitCheckedWolf.key === "under_fire" && sitCheckedWolf.rateMul === 1.10 &&
+      sitSheriffPk.key === "under_fire" && sitSheriffPk.commaPauseMs === 45 &&
       sitWolf.key === "wolf_nervous" && sitWolf.hesitateBeforeAccuseMs === 240 &&
       sitLw.key === "last_words" && sitLw.rateMul === 0.88 && sitLw.tailFadeSec >= 0.4
     );

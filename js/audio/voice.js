@@ -581,8 +581,10 @@ const voice = {
       return { key: "last_words", rateMul: 0.88, commaPauseMs: 145, periodPauseMs: 240, hesitateBeforeAccuseMs: 0, tailFadeSec: 0.45, tailVolMul: 0.94 };
     }
     const isPkNow = Boolean(typeof state !== "undefined" && state.match && Array.isArray(state.match.pkCandidates) && speaker && state.match.pkCandidates.indexOf(speaker.id) !== -1);
+    const isSheriffPkNow = Boolean(typeof state !== "undefined" && state.match && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.isPkRound && speaker && Array.isArray(state.match.sheriffElectionCtx.candidateIds) && state.match.sheriffElectionCtx.candidateIds.indexOf(speaker.id) !== -1);
+    const isCheckedWolfToday = Boolean(typeof state !== "undefined" && state.match && Array.isArray(state.match.daySpeechEvents) && speaker && state.match.daySpeechEvents.some(function (ev) { return ev && ev.checkedWolfId === speaker.id && ev.speakerId !== speaker.id; }));
     const isInterjectNow = Boolean(typeof state !== "undefined" && state.lastInterjectAt && (performance.now() - state.lastInterjectAt) < 4200);
-    if (m === "panic" || m === "rebut" || isPkNow || isInterjectNow || (opts && opts.underFire)) {
+    if (m === "panic" || m === "rebut" || isPkNow || isSheriffPkNow || isCheckedWolfToday || isInterjectNow || (opts && opts.underFire)) {
       return { key: "under_fire", rateMul: 1.10, commaPauseMs: 45, periodPauseMs: 75, hesitateBeforeAccuseMs: 0, tailFadeSec: 0, tailVolMul: 1.0 };
     }
     if (speaker && speaker.role === "wolf" && (speaker.microPulse || 0) >= 72 && m !== "host_night" && m !== "host_dawn") {
