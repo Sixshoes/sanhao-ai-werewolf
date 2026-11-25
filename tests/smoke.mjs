@@ -6989,7 +6989,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v20.0") && swSrcPerf.includes("sanhao-assets-v1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.1") && swSrcPerf.includes("sanhao-assets-v1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7380,7 +7380,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v20.0"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.1"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8078,6 +8078,33 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   if (failedV240Run.length > 0) {
     throw new Error("v24.0 RUNTIME check failed: " + JSON.stringify(v240Runtime));
   }
+
+  // ==================== v24.1 RELEASE-GATE POLISH CHECK ====================
+  const voiceSrc241 = fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8");
+  const dsSrc241 = fs.readFileSync(path.join(ROOT, "js/game/day-speech.js"), "utf8");
+  const docSpec241 = fs.readFileSync(path.join(ROOT, "docs/作品說明書_初稿.md"), "utf8");
+  const docScript241 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
+  const v241Res = vm.runInContext(`(() => {
+    const mapKeys = Object.keys(SHOWCASE_VOICE_PACK_MAP);
+    const mapVals = Object.values(SHOWCASE_VOICE_PACK_MAP);
+    const unique1to1Ok = mapKeys.length === 8 && new Set(mapVals).size === 8;
+    const zhNumLookupOk = voice.lookupBundledVoicePackUrl("阿松", "各位別急著一面倒啊，昨天七號怎麼投票是他的事，跟我無關！我才是一路扛壓的真明心觀察員，昨夜查了一號，他才是穿我衣服的假觀察員，這輪聽我一次，先出五號或一號，過。") === "assets/voice_pack/showcase/showcase_asong_day2.mp3"
+      && voice.lookupBundledVoicePackUrl("阿松", "唉，算你們票型對得夠細，昨晚七號被請離後我本來想再硬扛一輪的。這局輸得心服口服，茶席推論確實精彩！") === "assets/voice_pack/showcase/showcase_asong_lw.mp3";
+    return { unique1to1Ok, zhNumLookupOk };
+  })()`, ctx);
+  const v241Checks = {
+    unique1to1Ok: v241Res.unique1to1Ok,
+    zhNumLookupOk: v241Res.zhNumLookupOk,
+    sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
+      && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
+    docCleanNoBannerOk: !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("v24.1") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
+    scriptV241Ok: docScript241.includes("v24.1") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包"),
+    voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1
+  };
+  const failedV241 = Object.entries(v241Checks).filter(([, v]) => !v);
+  if (failedV241.length > 0) {
+    throw new Error("v24.1 RELEASE-GATE check failed: " + JSON.stringify(v241Checks));
+  }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 Consolidated Final Pass E2E smoke test PASSED!");
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 Release-Gate E2E smoke test PASSED!");

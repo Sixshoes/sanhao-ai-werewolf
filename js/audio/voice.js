@@ -84,14 +84,12 @@ const HOST_VOICE_PACK_MAP = {
   "對局提前結束，全員底牌揭曉！": "assets/voice_pack/host_gameover_early.mp3"
 };
 
-// v24.0 「評審三分鐘精華導覽局」預錄真人級多角色神經語音包（Vercel 靜態零金鑰 0.02s 秒播＋真實 FFT 對嘴！）
+// v24.1 「評審三分鐘精華導覽局」預錄真人級多角色神經語音包（8 支 1 對 1 唯一鍵，Vercel 靜態零金鑰 0.02s 秒播＋真實 FFT 對嘴）
 const SHOWCASE_VOICE_PACK_MAP = {
   "阿松|各位別急著一面倒啊，昨天7號怎麼投票是他的事，跟我無關！我才是一路扛壓的真明心觀察員，昨夜查了1號，他才是穿我衣服的假觀察員，這輪聽我一次，先出5號或1號，過。": "assets/voice_pack/showcase/showcase_asong_day2.mp3",
-  "阿松|各位別急著一面倒啊，昨天七號怎麼投票是他的事，跟我無關！我才是一路扛壓的真明心觀察員，昨夜查了一號，他才是穿我衣服的假觀察員，這輪聽我一次，先出五號或一號，過。": "assets/voice_pack/showcase/showcase_asong_day2.mp3",
   "阿松|盤面剛變了嘛，我照新線索調整很正常啊。": "assets/voice_pack/showcase/showcase_asong_grill_flip.mp3",
   "阿松|欸別這麼急著盯我啦，我只是講我看到的而已。": "assets/voice_pack/showcase/showcase_asong_grill_defend.mp3",
   "阿松|唉，算你們票型對得夠細，昨晚7號被請離後我本來想再硬扛一輪的。這局輸得心服口服，茶席推論確實精彩！": "assets/voice_pack/showcase/showcase_asong_lw.mp3",
-  "阿松|唉，算你們票型對得夠細，昨晚七號被請離後我本來想再硬扛一輪的。這局輸得心服口服，茶席推論確實精彩！": "assets/voice_pack/showcase/showcase_asong_lw.mp3",
   "小澄|場上只剩五人聽牌，回看第1天票型，7號嘴上說打5號卻跟4號同票衝走6號，現在7號已經被奉茶師清心請離，4號幾乎沒退路了。": "assets/voice_pack/showcase/showcase_xiaocheng_d2.mp3",
   "暖暖|我亮滴水奉茶師身分，第1夜平安是守衛擋下，昨晚見7號言票背離太重已端清心醒神茶請他離席，今天跟著1號警長歸票收尾。": "assets/voice_pack/showcase/showcase_nuannuan_d2.mp3",
   "星兒|我是直心糾察長，昨天7號喊打我卻改票衝6號，跟4號完全綁在一起。先聽4號怎麼圓，等下看1號警長壓軸定調。": "assets/voice_pack/showcase/showcase_xinger_d2.mp3",
@@ -1184,7 +1182,11 @@ const voice = {
     if (effKey === "主持" && HOST_VOICE_PACK_MAP[cleanText]) {
       return HOST_VOICE_PACK_MAP[cleanText];
     }
-    const compact = String(cleanText).replace(/\s+/g, "").replace(/^，+/, "");
+    const zhSeatMap = { "十二": "12", "十一": "11", "十": "10", "九": "9", "八": "8", "七": "7", "六": "6", "五": "5", "四": "4", "三": "3", "二": "2", "一": "1" };
+    const compact = String(cleanText)
+      .replace(/\s+/g, "")
+      .replace(/^，+/, "")
+      .replace(/(十二|十一|[一二三四五六七八九十])號/g, function (_m, g1) { return (zhSeatMap[g1] || g1) + "號"; });
     const directKey = effKey + "|" + compact;
     if (SHOWCASE_VOICE_PACK_MAP[directKey]) return SHOWCASE_VOICE_PACK_MAP[directKey];
     return null;

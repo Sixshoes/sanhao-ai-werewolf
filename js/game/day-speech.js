@@ -907,7 +907,7 @@ async function executeAiTurnSpeech(speaker) {
 
   const ffLog = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   const deferLogDisplay = Boolean(!ffLog && typeof voice !== "undefined" && typeof voice.canSpeak === "function" && voice.canSpeak());
-  if (state.match._deferredSpeechLog && state.match._deferredSpeechLog.speakerId !== speaker.id && typeof commitPendingSpeechLog === "function") {
+  if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function") {
     commitPendingSpeechLog(state.match._deferredSpeechLog.speakerId);
   }
   const speechLogPayload = {
