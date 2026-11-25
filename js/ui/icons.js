@@ -1,5 +1,5 @@
 /**
- * 三好・雲起茶席 — 東方墨印茶金細線 SVG 圖示系統（js/ui/icons.js）
+ * 三好・清茗茶席 — 東方墨印茶金細線 SVG 圖示系統（js/ui/icons.js）
  * - 以一致的 1.65px 茶金／青瓷／硃砂線繪美學，全面取代系統彩色 Emoji，消除 AI 生成感
  * - 內建 shIcon()、shRichHtml()（先 escapeHtml 防 XSS）、以及瀏覽器端自動圖示化觀察器
  */

@@ -983,6 +983,27 @@ function bindSpeechInputEvents() {
       sendQuickFreeSpeech();
     }
   });
+  // v24.2 Mobile virtual-keyboard viewport guard: keep input & send CTA visible when soft keyboard opens
+  ["quickFreeInput", "lastWordsFreeInput"].forEach(function (inId) {
+    const inp = el(inId);
+    if (!inp) return;
+    inp.addEventListener("focus", function () {
+      if (typeof window !== "undefined" && window.innerWidth <= 767) {
+        setTimeout(function () {
+          try { inp.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {}
+        }, 260);
+      }
+    });
+  });
+  if (typeof window !== "undefined" && window.visualViewport && typeof window.visualViewport.addEventListener === "function") {
+    window.visualViewport.addEventListener("resize", function () {
+      if (window.innerWidth > 767) return;
+      const active = document.activeElement;
+      if (active && (active.id === "quickFreeInput" || active.id === "lastWordsFreeInput")) {
+        try { active.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {}
+      }
+    });
+  }
 
   if (el("btnQuickSpiceDemo")) {
     el("btnQuickSpiceDemo").addEventListener("click", function () {

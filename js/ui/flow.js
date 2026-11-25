@@ -96,7 +96,7 @@ const indieFlow = {
     stdBtn.setAttribute("data-setup-variant", "standard");
     stdBtn.innerHTML =
       '<div class="flex items-center justify-between gap-2">' +
-      '<span class="font-serif-craft text-sm font-bold text-amber-100">標準雲起席</span>' +
+      '<span class="font-serif-craft text-sm font-bold text-amber-100">標準青嵐席</span>' +
       '<span class="variant-pill">預設常規</span>' +
       '</div>' +
       '<div class="text-[13px] text-slate-400 mt-0.5 text-left">依上方人數與進階板設定正常開局。</div>';
@@ -619,7 +619,7 @@ const indieFlow = {
       if (sealEl) sealEl.textContent = "茗";
       if (titleEl) titleEl.textContent = "清茗・雲茶書靈";
       if (bioEl) {
-        bioEl.textContent = "雲起茶席說書主持｜使用下方左右箭頭可 360° 鑑賞全 12 席茶友造型與社團檔案。";
+        bioEl.textContent = "清茗茶席說書主持｜使用下方左右箭頭可 360° 鑑賞全 12 席茶友造型與社團檔案。";
         if (typeof shPrependIcon === "function") shPrependIcon(bioEl, "leaf", "jade");
       }
       if (profileCardEl) {
@@ -1024,7 +1024,7 @@ const indieFlow = {
         sound.unlock();
         const tgt = (typeof stage3d !== "undefined" && stage3d.showcaseTarget) ? String(stage3d.showcaseTarget) : "hero";
         if (tgt === "hero") {
-          const line = "歡迎蒞臨林美山雲起茶席！我是清茗，今晚且看諸位同窗如何明辨是非、說好話抓出酸民狼。";
+          const line = "歡迎蒞臨青嵐書院茶席！我是清茗，今晚且看諸位同窗如何明辨是非、說好話抓出酸民狼。";
           if (typeof voice !== "undefined" && typeof voice.speakHost === "function") voice.speakHost(line, undefined, "normal");
           if (typeof stage3d !== "undefined" && typeof stage3d.setHeroAction === "function") stage3d.setHeroAction("speak_gesture", 3200);
           if (typeof showToast === "function") showToast("清茗：「" + line + "」", "emerald");

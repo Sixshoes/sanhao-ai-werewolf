@@ -965,6 +965,9 @@ const sound = {
       osc.connect(gain);
       gain.connect(this.sfxGain);
       if (this.reverb && duration >= 0.25) gain.connect(this.reverb);
+      osc.onended = function () {
+        try { osc.disconnect(); gain.disconnect(); } catch (e) {}
+      };
       osc.start(now);
       osc.stop(now + duration + 0.03);
     } catch (e) {}

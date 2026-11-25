@@ -79,6 +79,7 @@ function startVotingPhase() {
     if (stage3d.orbit) stage3d.orbit.userOverrideUntil = 0;
   }
   state.match.phase = "DAY_VOTE";
+  state.match._voteFinalizing = false;
   const player = getPlayerSeat();
 
   if (!isPlayerEligibleToVote()) {
@@ -275,6 +276,9 @@ function chooseAiVoteTarget(voter, opts) {
 }
 
 function finalizeVoteRound(playerTargetId) {
+  // v24.2 P0 Re-entry & phase guard (prevents double settlement when blitz countdown hits 0ms simultaneously with a manual click)
+  if (!state.match || state.match.phase !== "DAY_VOTE" || state.match._voteFinalizing) return;
+  state.match._voteFinalizing = true;
   clearStepTimer();
   clearBlitzVoteTimer();
   sound.playVote();
@@ -355,6 +359,16 @@ function finalizeVoteRound(playerTargetId) {
   });
 
   function commitVoteResolution() {
+    try {
+      _commitVoteResolutionInner();
+    } finally {
+      if (state.match && state.match.phase !== "DAY_VOTE") {
+        state.match._voteFinalizing = false;
+      }
+    }
+  }
+
+  function _commitVoteResolutionInner() {
     if (maxVotes === 0 || topIds.length !== 1) {
       // Real 凹嗚狼人殺 Tie-Breaker PK! First tie triggers PK speech & re-vote ONLY if at least 1 non-PK voter can still vote!
       const nonPkEligibleCount = alive.filter(function (v) { return topIds.indexOf(v.id) === -1 && !v.voteDisabled; }).length;
@@ -680,7 +694,7 @@ function runVoteFlightSequence(ballots, onDone) {
 // ==================== FOUR GIVINGS (4G) POWER CARDS & SYNERGIES ====================
 const FOURG_JOY_JOKES = [
   "喝茶配冬瓜青，酸言瞬間消火氣——請問誰剛剛微笑突然凝固了？",
-  "林美山頭吹過一陣笑聲清風，全場嘴角同時上揚，唯有心虛者在數心跳！",
+  "山城茶席吹過一陣笑聲清風，全場嘴角同時上揚，唯有心虛者在數心跳！",
   "茶席暖場笑話：酸民狼最怕兩種水，一是查證冷水，二是大家笑看他的茶水！",
   "笑一笑十年少！我們端起三好歡喜茶敬全場，看看誰笑得比桂花糕還僵硬！"
 ];
@@ -702,7 +716,7 @@ const PERSONA_CONFIDENCE_LINES = {
 const PERSONA_LAUGH_LINES = {
   "小澄": "哈哈，連數據控都忍不住笑出來，氣氛輕鬆多囉！",
   "暖暖": "哈哈哈這杯歡喜茶我乾了！大家開心推理別傷和氣～",
-  "阿松": "呵呵，難得茶席上這麼有朝氣，比爬林美山還舒暢！",
+  "阿松": "呵呵，難得茶席上這麼有朝氣，比爬山看雲海還舒暢！",
   "星兒": "噗哈哈太鬧了吧！誰剛剛邊笑邊偷瞄旁邊啊？",
   "小雲": "哼笑一下也是好的，心理防線鬆動才好辨別真假～",
   "阿竹": "呵呵…笑聲裡自見真性情，這一局越來越有趣了。",

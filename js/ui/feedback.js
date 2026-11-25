@@ -132,7 +132,7 @@ function buildFeedbackReportText(entry) {
   const catDef = FEEDBACK_CATEGORIES[entry.category] || FEEDBACK_CATEGORIES.idea;
   const ratingVal = clamp(Number(entry.rating) || 5, 1, 5);
   const lines = [
-    "【三好・雲起茶席｜玩家使用反饋】",
+    "【三好・清茗茶席｜玩家使用反饋】",
     "・分類：" + catDef.label,
     "・評分：" + ratingVal + " / 5 星",
     "・回報者：" + (entry.nickname || "匿名茶客"),

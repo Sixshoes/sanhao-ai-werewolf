@@ -93,7 +93,7 @@ const SHOWCASE_VOICE_PACK_MAP = {
   "小澄|場上只剩五人聽牌，回看第1天票型，7號嘴上說打5號卻跟4號同票衝走6號，現在7號已經被奉茶師清心請離，4號幾乎沒退路了。": "assets/voice_pack/showcase/showcase_xiaocheng_d2.mp3",
   "暖暖|我亮滴水奉茶師身分，第1夜平安是守衛擋下，昨晚見7號言票背離太重已端清心醒神茶請他離席，今天跟著1號警長歸票收尾。": "assets/voice_pack/showcase/showcase_nuannuan_d2.mp3",
   "星兒|我是直心糾察長，昨天7號喊打我卻改票衝6號，跟4號完全綁在一起。先聽4號怎麼圓，等下看1號警長壓軸定調。": "assets/voice_pack/showcase/showcase_xinger_d2.mp3",
-  "主持|全場酸民狼已清出茶席，好人陣營大獲全勝，恭喜各位守住雲起茶席！": "assets/voice_pack/showcase/showcase_host_good_win.mp3"
+  "主持|全場酸民狼已清出茶席，好人陣營大獲全勝，恭喜各位守住清茗茶席！": "assets/voice_pack/showcase/showcase_host_good_win.mp3"
 };
 
 const voice = {

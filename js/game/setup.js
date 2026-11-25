@@ -363,7 +363,11 @@ function startJudgeShowcaseMatch() {
   }
   showToast("評審導覽局已就位：依上方三步提示體驗追問、潤飾籤與五人聽牌覆盤。", "emerald");
   if (typeof advanceSpeechQueue === "function") {
-    state.stepTimer = setTimeout(advanceSpeechQueue, 380);
+    if (typeof orchestrator !== "undefined" && typeof orchestrator.schedule === "function") {
+      orchestrator.schedule("showcase_boot", advanceSpeechQueue, 380);
+    } else {
+      state.stepTimer = setTimeout(advanceSpeechQueue, 380);
+    }
   }
 }
 
@@ -414,7 +418,7 @@ function startNewGame() {
     state.guardMode = true;
     if (el("selectModeCount")) el("selectModeCount").value = "6";
     if (el("chkGuardMode")) el("chkGuardMode").checked = true;
-    showToast("雲起奇局【孤狼流言王局】啟動：6人無觀察員，1名強化流言首領對決5名茶友。", "emerald");
+    showToast("青嵐奇局【孤狼流言王局】啟動：6人無觀察員，1名強化流言首領對決5名茶友。", "emerald");
   } else {
     if ((pref === "wolf_king" || pref === "elder") && count < 10) {
       count = 10;
@@ -723,7 +727,7 @@ function startNewGame() {
   if (variantMode !== "standard" && variantLabels[variantMode]) {
     addLog({
       kind: "blessing",
-      title: "雲起奇局生效：" + variantLabels[variantMode],
+      title: "青嵐奇局生效：" + variantLabels[variantMode],
       text: ""
     });
   }
@@ -882,7 +886,7 @@ function finishMatch(winnerTeam, reason) {
     }
   });
   const endHostLine = (state.match && state.match.judgeShowcase && winnerTeam === "good")
-    ? "全場酸民狼已清出茶席，好人陣營大獲全勝，恭喜各位守住雲起茶席！"
+    ? "全場酸民狼已清出茶席，好人陣營大獲全勝，恭喜各位守住清茗茶席！"
     : ((winnerTeam === "good" ? "對局結束，好人陣營獲勝！" : "對局結束，酸民狼陣營獲勝！") + reason);
   voice.speakHost(endHostLine);
 

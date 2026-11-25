@@ -6,7 +6,7 @@
 const CAREER_STORAGE_KEY = "sanhao_ai_werewolf_career_v1";
 
 const ACHIEVEMENT_DEFS = [
-  { id: "first_win", icon: "勝", title: "初露鋒芒", desc: "贏得第一場雲起茶席勝利" },
+  { id: "first_win", icon: "勝", title: "初露鋒芒", desc: "贏得第一場清茗茶席勝利" },
   { id: "zero_toxic", icon: "善", title: "三好典範", desc: "全程平穩有禮並贏得整場對局" },
   { id: "kind_crit", icon: "辭", title: "化戾氣為祥和", desc: "單局透過「婉轉潤飾詞句」陳詞並奪勝" },
   { id: "resonance", icon: "蓮", title: "三好圓滿", desc: "單局點亮存好心、說好話、做好事三瓣修為" },
@@ -740,7 +740,7 @@ function downloadMatchReplayReport(reportText) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "三好雲起茶席_復盤戰報.txt";
+    a.download = "三好清茗茶席_復盤戰報.txt";
     a.click();
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     showToast("已下載本局復盤戰報。", "emerald");

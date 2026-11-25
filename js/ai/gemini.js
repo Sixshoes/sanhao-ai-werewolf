@@ -1055,7 +1055,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     (!hasVoteArchiveNow ? "- 目前全場尚未進行過任何投票，嚴禁提及「剛剛有人衝票、跟票、看票型」！\n" : "");
 
   const prompt =
-    "你正在參與林美山書院茶席推理遊戲《三好AI狼人殺》（融入存好心、說好話、做好事理念，以理性防制網路酸言與假訊息取代傳統陰暗衝突，所有「出局」改為請離席冷靜）。\n" +
+    "你正在參與青嵐書院茶席推理遊戲《三好AI狼人殺》（融入存好心、說好話、做好事理念，以理性防制網路酸言與假訊息取代傳統陰暗衝突，所有「出局」改為請離席冷靜）。\n" +
     "你扮演：" + self.id + "號「" + self.name + "」。個性鮮明設定：" + flvBio + "。\n" +
     styleSamples +
     mindDesc + "。\n" +
@@ -1259,7 +1259,7 @@ function buildBlindGeminiSheriffPrompt(cand, priorSpeeches, built, opts) {
   }
 
   const prompt =
-    "你正在參與林美山書院茶席推理遊戲《三好AI狼人殺》的「第 1 天警長競選（警上發言）」。此時尚未公布昨夜倒牌結果，也尚未進行任何公投。\n" +
+    "你正在參與青嵐書院茶席推理遊戲《三好AI狼人殺》的「第 1 天警長競選（警上發言）」。此時尚未公布昨夜倒牌結果，也尚未進行任何公投。\n" +
     _buildMiniPersonaBlock(self) +
     secretIntel + "\n" +
     "【在場座位】：" + aliveList + "\n" +
@@ -1326,7 +1326,7 @@ function buildBlindGeminiLastWordsPrompt(seat, mode, lwObj) {
   }
 
   const prompt =
-    "你正在參與林美山書院《三好AI狼人殺》，你剛在「" + (isFirstNight ? "第 1 晚首夜離席" : "白天公投最高票離席") + "」，現在是你的最後遺言時間。\n" +
+    "你正在參與青嵐書院《三好AI狼人殺》，你剛在「" + (isFirstNight ? "第 1 晚首夜離席" : "白天公投最高票離席") + "」，現在是你的最後遺言時間。\n" +
     _buildMiniPersonaBlock(self) +
     secretIntel + "\n" +
     "【目前仍在場座位】：" + aliveList + "\n" +

@@ -713,7 +713,7 @@ const ROLE_STRATEGY_PLAYBOOKS = {
 const AI_PERSONAS = [
   { id: "xiaocheng", name: "小澄", trait: "資訊社數據控",   deductionStyle: "skeptical", avatarColor: "#38bdf8", register: "data" },
   { id: "nuannuan",  name: "暖暖", trait: "滴水茶社和事佬", deductionStyle: "gullible",  avatarColor: "#fbbf24", register: "warm" },
-  { id: "asong",     name: "阿松", trait: "林美登山社學長", deductionStyle: "skeptical", avatarColor: "#34d399", register: "mountain" },
+  { id: "asong",     name: "阿松", trait: "青嵐登山社學長", deductionStyle: "skeptical", avatarColor: "#34d399", register: "mountain" },
   { id: "xinger",    name: "星兒", trait: "觀星社第六感",   deductionStyle: "gullible",  avatarColor: "#a78bfa", register: "astro" },
   { id: "xiaoyun",   name: "小雲", trait: "校園查核社長",   deductionStyle: "skeptical", avatarColor: "#fb7185", register: "press" },
   { id: "azhu",      name: "阿竹", trait: "書院詩茶文青",   deductionStyle: "balanced",  avatarColor: "#2dd4bf", register: "poetic" },
@@ -836,9 +836,9 @@ const PERSONA_FLAVORS = {
     lastWolf: "「哎呀還是被你們聽出來了喔…大家真的好厲害啦，那暖暖乖乖去旁邊泡花茶反省囉～」"
   },
   "阿松": {
-    bio: "林美登山社老學長（台灣接地氣學長口吻：自然鬆弛、帶點台味幽默，常說『老松講句實在話吼』『別急啦』『我看人很準的』）",
+    bio: "青嵐登山社老學長（台灣接地氣學長口吻：自然鬆弛、帶點台味幽默，常說『老松講句實在話吼』『別急啦』『我看人很準的』）",
     openFirst: [
-      "嘿，頭一個換老松開麥啦！今天林美山天氣這麼舒服，大家別一上來就火氣大吼。我先講明我是老實好人，後面大家有話直說就好，換 {next} 啦，過。",
+      "嘿，頭一個換老松開麥啦！今天山城天氣這麼舒服，大家別一上來就火氣大吼。我先講明我是老實好人，後面大家有話直說就好，換 {next} 啦，過。",
       "哈哈，剛爬完山精神正好第一個講！現在桌上還沒半點風聲啦，老松先站好人這邊聽一輪，後面各位直接講重點就好，過。",
       "首發輪到老松喔，別緊張啦～爬山最忌還沒看清路就亂衝，我先報個清白好人，換 {next} 接棒講兩句，過。"
     ],

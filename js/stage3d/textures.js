@@ -540,7 +540,7 @@ const stage3dTextures = {
 
     ctx.fillStyle = "#e5c589";
     ctx.font = "700 20px 'Noto Serif TC', serif";
-    ctx.fillText("雲起茶席", w / 2, 66);
+    ctx.fillText("清茗茶席", w / 2, 66);
     ctx.fillText("木籌落定", w / 2, h - 62);
 
     const tex = new THREE.CanvasTexture(c);
@@ -879,7 +879,7 @@ const stage3dTextures = {
     ctx.fillText("存好心・說好話・做好事", w * 0.5, h * 0.45);
     ctx.fillStyle = "rgba(62, 42, 28, 0.72)";
     ctx.font = "700 20px 'Noto Serif TC', serif";
-    ctx.fillText("林美山雲起茶席", w * 0.5, h * 0.72);
+    ctx.fillText("青嵐書院茶席", w * 0.5, h * 0.72);
 
     // Vermilion seal chop
     ctx.fillStyle = "#b92c22";

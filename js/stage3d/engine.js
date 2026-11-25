@@ -333,6 +333,21 @@ const stage3d = {
         renderer.toneMappingExposure = 1.02;
       }
       this.fpHandsGroup = this.buildFirstPersonHands(scene);
+      if (!this._ctxLostBound && typeof canvas3d.addEventListener === "function") {
+        this._ctxLostBound = true;
+        const self3d = this;
+        canvas3d.addEventListener("webglcontextlost", function (ev) {
+          if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+          self3d.failed = true;
+          self3d.ready = false;
+          state.viewMode = "2d";
+          self3d.applyBodyModeClass();
+          if (typeof updateAllUI === "function") updateAllUI();
+          if (typeof showToast === "function") {
+            showToast("偵測到瀏覽器回收 3D 顯存，已自動無縫切換至 2D 茶席模式繼續對局。", "warn");
+          }
+        });
+      }
       this.ready = true;
       this.checkAutoHeroGlb();
 
@@ -405,21 +420,21 @@ const stage3d = {
     if (hudBtn) {
       hudBtn.classList.toggle("is-active", isCel);
       hudBtn.title = isCel
-        ? "目前造景：空靈青綠山水仙境（點擊切換至林美山雅致書院）"
-        : "目前造景：林美山雅致書院（點擊切換至空靈青綠山水仙境）";
+        ? "目前造景：空靈青綠山水仙境（點擊切換至青嵐雅致書院）"
+        : "目前造景：青嵐雅致書院（點擊切換至空靈青綠山水仙境）";
     }
     const titleLbl = el("titleSceneThemeLabel");
-    if (titleLbl) titleLbl.textContent = isCel ? "絕雲仙境" : "林美書院";
+    if (titleLbl) titleLbl.textContent = isCel ? "絕雲仙境" : "青嵐書院";
     const titleBtn = el("btnTitleSceneTheme");
     if (titleBtn) {
       titleBtn.classList.toggle("is-celestial", isCel);
       titleBtn.title = isCel
-        ? "目前造景：空靈青綠山水仙境（點擊切換回林美書院）"
-        : "目前造景：林美山雅致書院（點擊切換為空靈青綠仙境）";
+        ? "目前造景：空靈青綠山水仙境（點擊切換回青嵐書院）"
+        : "目前造景：青嵐雅致書院（點擊切換為空靈青綠仙境）";
     }
     const pauseBtn = el("btnToggleSceneThemePause");
     if (pauseBtn) {
-      pauseBtn.textContent = isCel ? "造景:絕雲仙境" : "造景:林美書院";
+      pauseBtn.textContent = isCel ? "造景:絕雲仙境" : "造景:青嵐書院";
       pauseBtn.classList.toggle("is-accent", isCel);
     }
   },
@@ -441,7 +456,7 @@ const stage3d = {
         showToast(
           next === "celestial"
             ? "已切換 3D 造景：空靈青綠山水仙境（浮空翠峰＋靈氣雲嵐）"
-            : "已切換 3D 造景：林美山雅致書院（翠竹林＋暖黃桂花與山櫻）",
+            : "已切換 3D 造景：青嵐雅致書院（翠竹林＋暖黃桂花與山櫻）",
           "emerald"
         );
       }
@@ -698,7 +713,7 @@ const stage3d = {
   interactWithGuishan: function () {
     if (!this.isActive()) return;
     sound.playBlessing();
-    showToast("遠眺林美山外的蘭陽雲海與龜山島：在山城茶席品茗推理，心曠神怡。", "emerald");
+    showToast("遠眺書院外的層疊雲海與遠山小島：在山城茶席品茗推理，心曠神怡。", "emerald");
   },
 
   raycastHeroHost: function (clientX, clientY) {

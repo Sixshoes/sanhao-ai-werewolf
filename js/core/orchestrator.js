@@ -24,8 +24,8 @@ const TEA_DIRECTOR_EVENTS = [
   },
   {
     id: "mountain_mist",
-    shortTitle: "林美山起霧求真",
-    title: "清茗插播・林美山嵐起霧了",
+    shortTitle: "山嵐起霧求真",
+    title: "清茗插播・茶席山嵐起霧了",
     desc: "本輪若合力把全場友善度推上 80，清茗將搖響銅鈴吹散山嵐，並免費點亮 1 瓣三好蓮花！",
     badge: "友善80賞蓮"
   },
@@ -39,7 +39,7 @@ const TEA_DIRECTOR_EVENTS = [
   {
     id: "truth_lantern",
     shortTitle: "照妖古燈觀微",
-    title: "清茗插播・林美山點亮照妖古燈",
+    title: "清茗插播・茶席點亮照妖古燈",
     desc: "古燈破迷霧！今日「靜心觀微」可用次數提升為 2 次，且必顯示精準心虛讀數（0 誤差）！",
     badge: "觀微×2"
   },
@@ -53,7 +53,7 @@ const TEA_DIRECTOR_EVENTS = [
   {
     id: "kind_word_duel",
     shortTitle: "好話接龍茶會",
-    title: "清茗插播・林美山好話接龍茶會",
+    title: "清茗插播・書院好話接龍茶會",
     desc: "說好話更有力量！今天玩家發出正向好話說服力額外 +10，並免費點亮 1 瓣未亮的三好蓮花！",
     badge: "好話賞蓮"
   },
@@ -359,7 +359,7 @@ const orchestrator = {
       sound.playBlessing();
     }
     if (typeof triggerCutIn === "function") {
-      triggerCutIn("山嵐雲開・清茗賞蓮！", "友善度達 80，吹散林美山霧並免費點亮 1 瓣三好蓮花！", "emerald");
+      triggerCutIn("山嵐雲開・清茗賞蓮！", "友善度達 80，吹散山嵐迷霧並免費點亮 1 瓣三好蓮花！", "emerald");
     }
     if (typeof addLog === "function") {
       addLog({ kind: "blessing", title: "山嵐雲開：友善度達 80，清茗搖鈴免費點亮 1 瓣三好蓮花！", text: "" });
@@ -369,7 +369,7 @@ const orchestrator = {
       tier: "EventDirector",
       ms: 1,
       compliance: true,
-      summary: "達成「林美山起霧求真」友善度 ≥ 80，免費點亮蓮花花瓣！"
+      summary: "達成「山嵐起霧求真」友善度 ≥ 80，免費點亮蓮花花瓣！"
     });
     this.emit("director:challenge_cleared", { eventId: "mountain_mist", rewardKind: rewardKind });
     return true;
@@ -554,7 +554,7 @@ const orchestrator = {
         const divSummary = (vmCoach && vmCoach.summaryLines && vmCoach.summaryLines.length)
           ? vmCoach.summaryLines.slice(0, 2).join("；")
           : "全場無明顯言票背離";
-        const coachPrompt = "你是林美山書院《三好AI狼人殺》茶席總監「清茗」，剛結束一場對局，請以上帝視角給玩家精闢溫暖的覆盤點評。\n" +
+        const coachPrompt = "你是青嵐書院《三好AI狼人殺》茶席總監「清茗」，剛結束一場對局，請以上帝視角給玩家精闢溫暖的覆盤點評。\n" +
           "勝方：" + (summary.winnerTeam === "good" ? "三好書院（好人勝）" : "酸民狼陣營勝") + "（" + summary.reason + "）\n" +
           "全場底牌：" + seatsBrief + "\n" +
           "投票脈絡：" + votesBrief + "\n" +

@@ -233,7 +233,7 @@ function updateAllUI() {
   el("skyIcon").textContent = "";
   el("roundTitle").textContent = m.started
     ? ("在場 " + getAliveSeats().length + "/" + m.totalSeats)
-    : "雲起茶席";
+    : "清茗茶席";
   const shellNode = el("mainStageShell");
   if (shellNode) {
     shellNode.classList.toggle("mist-glow", nightMode);

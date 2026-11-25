@@ -288,7 +288,10 @@ def get_tts_key_lock(key):
         lk = _TTS_KEY_LOCKS.get(key)
         if lk is None:
             if len(_TTS_KEY_LOCKS) > 512:
-                _TTS_KEY_LOCKS.clear()
+                # Only prune idle (unlocked) entries so active in-flight syntheses never lose their key lock
+                idle_keys = [k for k, v in list(_TTS_KEY_LOCKS.items()) if not v.locked()][:256]
+                for old_k in idle_keys:
+                    _TTS_KEY_LOCKS.pop(old_k, None)
             lk = threading.Lock()
             _TTS_KEY_LOCKS[key] = lk
         return lk
@@ -851,8 +854,10 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
                             if not wav_path.exists():
                                 wav_path.write_bytes(audio_bytes)
                         global _TTS_WRITE_COUNTER
-                        _TTS_WRITE_COUNTER += 1
-                        if _TTS_WRITE_COUNTER % 20 == 0:
+                        with _TTS_LOCKS_GUARD:
+                            _TTS_WRITE_COUNTER += 1
+                            should_prune = (_TTS_WRITE_COUNTER % 20 == 0)
+                        if should_prune:
                             threading.Thread(target=prune_tts_cache, daemon=True).start()
                     finally:
                         try:
@@ -949,8 +954,10 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
                                     if not mp3_path.exists():
                                         mp3_path.write_bytes(tmp_path.read_bytes())
                                 global _TTS_WRITE_COUNTER
-                                _TTS_WRITE_COUNTER += 1
-                                if _TTS_WRITE_COUNTER % 20 == 0:
+                                with _TTS_LOCKS_GUARD:
+                                    _TTS_WRITE_COUNTER += 1
+                                    should_prune = (_TTS_WRITE_COUNTER % 20 == 0)
+                                if should_prune:
                                     threading.Thread(target=prune_tts_cache, daemon=True).start()
                             elif not mp3_path.exists() or mp3_path.stat().st_size < 128:
                                 self.send_json(502, {"ok": False, "error": "Empty synthesis output"})
@@ -1042,7 +1049,7 @@ if __name__ == "__main__":
     prune_tts_cache()
     status = "已啟用免費微軟神經多角色語音 (edge-tts)" if HAS_EDGE_TTS else "未安裝 edge-tts（自動退回瀏覽器本機語音）"
     scope_note = "區網開放" if bind_host in ("::", "0.0.0.0") else "僅本機 127.0.0.1"
-    print(f"[三好・雲起茶席] 伺服器啟動：http://localhost:{PORT}/ （{scope_note}） | {status}", flush=True)
+    print(f"[三好・清茗茶席] 伺服器啟動：http://localhost:{PORT}/ （{scope_note}） | {status}", flush=True)
     if HAS_EDGE_TTS:
         threading.Thread(target=prewarm_common_lines, daemon=True).start()
     httpd.serve_forever()

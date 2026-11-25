@@ -2,7 +2,7 @@
  * 3D 電影級山海實景古亭與茶席場景引擎（Three.js r128）
  * 升級包含：
  * - 連續多稜線地形山巒＋反光太平洋海面＋動態龜山島燈塔＋分層流動雲海
- * - 紅瓦白牆望海古亭（八柱花崗岩柱礎＋後側飛簷翹角屋瓦＋木格欄杆＋四座庭院石燈籠＋林美五葉松）
+ * - 紅瓦白牆望海古亭（八柱花崗岩柱礎＋後側飛簷翹角屋瓦＋木格欄杆＋四座庭院石燈籠＋山城五葉松）
  * - 胡桃木茶桌搭配手工紫砂茶壺組＋雙層三好蓮花琉璃核心＋柔和散景微粒光暈＋三點電影冷暖補光
  */
 "use strict";
@@ -1635,7 +1635,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   env.courtyardPropsGroup = courtyardPropsGroup;
 
   // 6B. Dual Switchable Garden Themes!
-  // Theme A: 林美山雅致書院風 (Linmei Academy — Swaying Jade Bamboo Groves + Osmanthus & Mountain Sakura + Mossy Cliff Boulders)
+  // Theme A: 青嵐雅致書院風 (Qinglan Academy — Swaying Jade Bamboo Groves + Osmanthus & Mountain Sakura + Mossy Cliff Boulders)
   const linmeiGardenGroup = new THREE.Group();
   const bambooLeafTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createBambooLeafTexture === "function")
     ? stage3dTextures.createBambooLeafTexture()

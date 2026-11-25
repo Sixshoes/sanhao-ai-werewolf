@@ -18,7 +18,7 @@ const state = {
   hidePlayerRole: false,
   showRelationsOnCanvas: true,
   viewMode: "3d",
-  sceneTheme: "linmei", // "linmei" (林美山雅致書院風) | "celestial" (空靈青綠山水仙境風)
+  sceneTheme: "linmei", // "linmei" (青嵐雅致書院風) | "celestial" (空靈青綠山水仙境風)
   quality3D: "high",
   qualityUserChosen: false,
   fxPacing: "cinematic", // "cinematic" (沉穩儀式感) | "fast" (快節奏)

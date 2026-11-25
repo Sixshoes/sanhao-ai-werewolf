@@ -1108,7 +1108,7 @@ vm.runInContext(`
   if (!rolledEv || !state.match.activeDirectorEvent || !directorEvtSeen) {
     throw new Error("rollDailyTeaEvent failed to activate daily campus event!");
   }
-  state.match.activeDirectorEvent = { id: "mountain_mist", shortTitle: "林美山起霧求真", title: "霧", desc: "霧", badge: "80" };
+  state.match.activeDirectorEvent = { id: "mountain_mist", shortTitle: "山嵐起霧求真", title: "霧", desc: "霧", badge: "80" };
   state.match.directorEventClearedDay = 0;
   state.match.harmonyScore = 82;
   const mistCleared = orchestrator.checkMistChallengeClear();
@@ -4946,8 +4946,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     stage3d.setSceneTheme("linmei", { silent: true });
     const linmeiUiOk = state.sceneTheme === "linmei"
       && el("hudSceneLabel").textContent === "書院"
-      && el("titleSceneThemeLabel").textContent === "林美書院"
-      && el("btnToggleSceneThemePause").textContent === "造景:林美書院";
+      && el("titleSceneThemeLabel").textContent === "青嵐書院"
+      && el("btnToggleSceneThemePause").textContent === "造景:青嵐書院";
     stage3d.toggleSceneTheme();
     const celestialUiOk = state.sceneTheme === "celestial"
       && el("hudSceneLabel").textContent === "仙境"
@@ -6989,7 +6989,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.1") && swSrcPerf.includes("sanhao-assets-v1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2") && swSrcPerf.includes("sanhao-assets-v24.2") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7327,7 +7327,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     path.join(ROOT, "css/theme.css"),
     path.join(ROOT, "css/components.css"),
     path.join(ROOT, "README.md"),
-    path.join(ROOT, "docs/作品說明書_初稿.md"),
+    path.join(ROOT, "docs/作品說明書.md"),
     path.join(ROOT, "docs/三分鐘Demo影片腳本.md"),
     ...collectJsFiles(path.join(ROOT, "js"))
   ];
@@ -7339,16 +7339,18 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
   const globalZeroEmojiOk = emojiHits.length === 0;
 
-  // Anonymity & Plain Non-AI Copy check across UI + docs + README
+  // Anonymity & Plain Non-AI Copy check across UI + docs + README + CREDITS + manifest + all JS
   const anonTargets = [
     path.join(ROOT, "ai.html"),
-    path.join(ROOT, "js/ui/feedback.js"),
-    path.join(ROOT, "js/events/game-events.js"),
+    path.join(ROOT, "index.html"),
+    path.join(ROOT, "manifest.webmanifest"),
+    path.join(ROOT, "CREDITS.md"),
     path.join(ROOT, "README.md"),
-    path.join(ROOT, "docs/作品說明書_初稿.md"),
-    path.join(ROOT, "docs/三分鐘Demo影片腳本.md")
+    path.join(ROOT, "docs/作品說明書.md"),
+    path.join(ROOT, "docs/三分鐘Demo影片腳本.md"),
+    ...collectJsFiles(path.join(ROOT, "js"))
   ];
-  const bannedCopyRe = /Sixshoes|高情商|一句話秒懂|幾秒看懂|瞬間白熱化|史詩級|佛光大學/;
+  const bannedCopyRe = /Sixshoes|高情商|一句話秒懂|幾秒看懂|瞬間白熱化|史詩級|佛光大學|林美|雲起/;
   const copyHits = [];
   for (const fp of anonTargets) {
     const raw = fs.readFileSync(fp, "utf8");
@@ -7380,13 +7382,13 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.1"') &&
-    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v1"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2"') &&
+    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
 
   // v20.0-8: Competition docs 9 sections & <= 5,000 chars + 4-scene 180s storyboard
-  const docSpec = fs.readFileSync(path.join(ROOT, "docs/作品說明書_初稿.md"), "utf8");
+  const docSpec = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
   const docScript = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
   const doc9SectionsOk =
     ["一、作品名稱", "二、AI 工具使用揭露", "三、創作動機", "四、作品內容及主要特色", "五、AI 技術整合方式", "六、開發與五層自動驗證歷程", "七、三好與四給精神", "八、實際教育應用效益", "九、操作與"].every(s => docSpec.includes(s)) &&
@@ -7910,7 +7912,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const uDay2 = voice.lookupBundledVoicePackUrl("阿松", "各位別急著一面倒啊，昨天 7號怎麼投票是他的事，跟我無關！我才是一路扛壓的真明心觀察員，昨夜查了 1號，他才是穿我衣服的假觀察員，這輪聽我一次，先出 5號或 1號，過。");
     const uGrill = voice.lookupBundledVoicePackUrl("阿松", "盤面剛變了嘛，我照新線索調整很正常啊。");
     const uLw = voice.lookupBundledVoicePackUrl("阿松", "唉，算你們票型對得夠細，昨晚 7號被請離後我本來想再硬扛一輪的。這局輸得心服口服，茶席推論確實精彩！");
-    const uHost = voice.lookupBundledVoicePackUrl("主持", "全場酸民狼已清出茶席，好人陣營大獲全勝，恭喜各位守住雲起茶席！");
+    const uHost = voice.lookupBundledVoicePackUrl("主持", "全場酸民狼已清出茶席，好人陣營大獲全勝，恭喜各位守住清茗茶席！");
     const showcaseLookupOk = uDay2 === "assets/voice_pack/showcase/showcase_asong_day2.mp3"
       && uGrill === "assets/voice_pack/showcase/showcase_asong_grill_flip.mp3"
       && uLw === "assets/voice_pack/showcase/showcase_asong_lw.mp3"
@@ -8079,32 +8081,61 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     throw new Error("v24.0 RUNTIME check failed: " + JSON.stringify(v240Runtime));
   }
 
-  // ==================== v24.1 RELEASE-GATE POLISH CHECK ====================
+  // ==================== v24.1 + v24.2 RELEASE-FREEZE CHECK ====================
   const voiceSrc241 = fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8");
   const dsSrc241 = fs.readFileSync(path.join(ROOT, "js/game/day-speech.js"), "utf8");
-  const docSpec241 = fs.readFileSync(path.join(ROOT, "docs/作品說明書_初稿.md"), "utf8");
+  const docSpec241 = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
   const docScript241 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
-  const v241Res = vm.runInContext(`(() => {
+  const apiGem242 = fs.readFileSync(path.join(ROOT, "api/gemini.js"), "utf8");
+  const eng242 = fs.readFileSync(path.join(ROOT, "js/stage3d/engine.js"), "utf8");
+  const setup242 = fs.readFileSync(path.join(ROOT, "js/game/setup.js"), "utf8");
+  const srv242 = fs.readFileSync(path.join(ROOT, "server.py"), "utf8");
+  const snd242 = fs.readFileSync(path.join(ROOT, "js/audio/soundtrack.js"), "utf8");
+  const ev242 = fs.readFileSync(path.join(ROOT, "js/events/game-events.js"), "utf8");
+
+  const v242Res = vm.runInContext(`(() => {
     const mapKeys = Object.keys(SHOWCASE_VOICE_PACK_MAP);
     const mapVals = Object.values(SHOWCASE_VOICE_PACK_MAP);
     const unique1to1Ok = mapKeys.length === 8 && new Set(mapVals).size === 8;
     const zhNumLookupOk = voice.lookupBundledVoicePackUrl("阿松", "各位別急著一面倒啊，昨天七號怎麼投票是他的事，跟我無關！我才是一路扛壓的真明心觀察員，昨夜查了一號，他才是穿我衣服的假觀察員，這輪聽我一次，先出五號或一號，過。") === "assets/voice_pack/showcase/showcase_asong_day2.mp3"
       && voice.lookupBundledVoicePackUrl("阿松", "唉，算你們票型對得夠細，昨晚七號被請離後我本來想再硬扛一輪的。這局輸得心服口服，茶席推論確實精彩！") === "assets/voice_pack/showcase/showcase_asong_lw.mp3";
-    return { unique1to1Ok, zhNumLookupOk };
+
+    // v24.2 P0: Blitz / Double-click finalizeVoteRound race test — calling twice MUST only add 1 voteHistory record!
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    state.match.variantMode = "blitz_3m";
+    startVotingPhase();
+    const validTgt = state.match.seats.find((s) => s.alive && s.id !== getPlayerId());
+    const histBefore = state.match.voteHistory.length;
+    finalizeVoteRound(validTgt.id);
+    finalizeVoteRound(validTgt.id); // Simulated simultaneous blitz-timer + manual double click
+    if (state.voteFlight && typeof state.voteFlight.finish === "function") state.voteFlight.finish();
+    const doubleVoteBlockedOk = state.match.voteHistory.length === histBefore + 1;
+    resetMatchToLobby();
+
+    return { unique1to1Ok, zhNumLookupOk, doubleVoteBlockedOk };
   })()`, ctx);
-  const v241Checks = {
-    unique1to1Ok: v241Res.unique1to1Ok,
-    zhNumLookupOk: v241Res.zhNumLookupOk,
+
+  const v242Checks = {
+    unique1to1Ok: v242Res.unique1to1Ok,
+    zhNumLookupOk: v242Res.zhNumLookupOk,
+    doubleVoteBlockedOk: v242Res.doubleVoteBlockedOk,
     sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
       && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
-    docCleanNoBannerOk: !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("v24.1") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
-    scriptV241Ok: docScript241.includes("v24.1") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包"),
-    voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1
+    docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("v24.2") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
+    scriptV242Ok: docScript241.includes("v24.2") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
+    voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
+    apiTimeout8400AndLruOk: apiGem242.includes("5200, safeTemp") && apiGem242.includes("3200, safeTemp") && apiGem242.includes("finally {\n    if (timer) clearTimeout(timer);") || (apiGem242.includes("5200, safeTemp") && apiGem242.includes("3200, safeTemp") && apiGem242.includes("if (++evicted >= 200) break;")),
+    webglContextLostOk: eng242.includes('canvas3d.addEventListener("webglcontextlost"'),
+    showcaseOrchestratorBootOk: setup242.includes('orchestrator.schedule("showcase_boot"'),
+    serverSafeLockPruneOk: srv242.includes("if not v.locked()") && srv242.includes("with _TTS_LOCKS_GUARD:"),
+    audioDisconnectAndMobileVpOk: snd242.includes("osc.disconnect(); gain.disconnect();") && ev242.includes("window.visualViewport")
   };
-  const failedV241 = Object.entries(v241Checks).filter(([, v]) => !v);
-  if (failedV241.length > 0) {
-    throw new Error("v24.1 RELEASE-GATE check failed: " + JSON.stringify(v241Checks));
+  const failedV242 = Object.entries(v242Checks).filter(([, v]) => !v);
+  if (failedV242.length > 0) {
+    throw new Error("v24.2 RELEASE-FREEZE check failed: " + JSON.stringify(v242Checks));
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 Release-Gate E2E smoke test PASSED!");
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 Release-Freeze E2E smoke test PASSED!");

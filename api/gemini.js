@@ -131,6 +131,14 @@ function checkRateLimit(ip, nowMs, sessionId) {
     for (const [k, entry] of _rateStore.entries()) {
       if (now - entry.dayStart > DAY_WINDOW_MS) _rateStore.delete(k);
     }
+    // v24.2 Same-day burst LRU cap: evict oldest 200 keys if store still exceeds 800
+    if (_rateStore.size > 800) {
+      let evicted = 0;
+      for (const oldKey of _rateStore.keys()) {
+        _rateStore.delete(oldKey);
+        if (++evicted >= 200) break;
+      }
+    }
   }
 
   if (hasSession) {
@@ -139,10 +147,11 @@ function checkRateLimit(ip, nowMs, sessionId) {
     const natIpRpm = Math.max(sessRpm, Math.min(300, parseInt(process.env.GEMINI_NAT_IP_MAX_RPM || "96", 10) || 96));
     const natIpRpd = Math.max(sessRpd, Math.min(6000, parseInt(process.env.GEMINI_NAT_IP_MAX_RPD || "1200", 10) || 1200));
 
-    const sRes = _checkSingleBucket("sess:" + sessionId, sessRpm, sessRpd, now, "session");
-    if (!sRes.allowed) return { allowed: false, reason: sRes.reason, retryAfterSec: sRes.retryAfterSec };
+    // Check IP bucket BEFORE allocating/checking session bucket to block random-sessionId floods
     const ipRes = _checkSingleBucket("natip:" + ip, natIpRpm, natIpRpd, now, "ip");
     if (!ipRes.allowed) return { allowed: false, reason: ipRes.reason, retryAfterSec: ipRes.retryAfterSec };
+    const sRes = _checkSingleBucket("sess:" + sessionId, sessRpm, sessRpd, now, "session");
+    if (!sRes.allowed) return { allowed: false, reason: sRes.reason, retryAfterSec: sRes.retryAfterSec };
 
     sRes.rec.minStamps.push(now);
     sRes.rec.dayCount += 1;
@@ -207,7 +216,7 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeout
   }
 
   const controller = typeof AbortController === "function" ? new AbortController() : null;
-  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 8500) : null;
+  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 5200) : null;
   try {
     const fetchOpts = {
       method: "POST",
@@ -222,7 +231,6 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeout
     };
     if (controller) fetchOpts.signal = controller.signal;
     const resp = await fetch(endpoint, fetchOpts);
-    if (timer) clearTimeout(timer);
     if (!resp.ok) {
       return { ok: false, status: resp.status, text: "" };
     }
@@ -235,8 +243,9 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeout
     const text = joined.trim();
     return { ok: Boolean(text), status: text ? resp.status : 502, text: text };
   } catch (err) {
-    if (timer) clearTimeout(timer);
     return { ok: false, status: 504, text: "" };
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -321,7 +330,8 @@ async function handler(req, res) {
   const tierHint = body.tier === "lite" ? "lite" : "standard";
   const primaryModel = resolveSafeModel(body.model, tierHint);
 
-  const first = await callUpstreamGemini(apiKey, primaryModel, promptText, jsonMode, 8500, safeTemp);
+  // v24.2 Vercel Hobby 10s budget guard: 5.2s primary + 3.2s fallback = 8.4s max (leaves 1.6s cold-start/JSON margin)
+  const first = await callUpstreamGemini(apiKey, primaryModel, promptText, jsonMode, 5200, safeTemp);
   if (first.ok && first.text) {
     return sendJson(res, 200, { ok: true, model: primaryModel, text: first.text });
   }
@@ -332,7 +342,7 @@ async function handler(req, res) {
   const canFallback = primaryModel !== "gemini-2.5-flash" &&
     (first.status === 400 || first.status === 404 || first.status === 429 || first.status === 500 || first.status === 502 || first.status === 503 || first.status === 504 || !first.text);
   if (canFallback) {
-    const fb = await callUpstreamGemini(apiKey, "gemini-2.5-flash", promptText, jsonMode, 7500, safeTemp);
+    const fb = await callUpstreamGemini(apiKey, "gemini-2.5-flash", promptText, jsonMode, 3200, safeTemp);
     if (fb.ok && fb.text) {
       return sendJson(res, 200, { ok: true, model: "gemini-2.5-flash", text: fb.text });
     }
