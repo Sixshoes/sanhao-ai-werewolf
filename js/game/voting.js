@@ -279,6 +279,7 @@ function finalizeVoteRound(playerTargetId) {
   // v24.2 P0 Re-entry & phase guard (prevents double settlement when blitz countdown hits 0ms simultaneously with a manual click)
   if (!state.match || state.match.phase !== "DAY_VOTE" || state.match._voteFinalizing) return;
   state.match._voteFinalizing = true;
+  try {
   clearStepTimer();
   clearBlitzVoteTimer();
   sound.playVote();
@@ -359,10 +360,15 @@ function finalizeVoteRound(playerTargetId) {
   });
 
   function commitVoteResolution() {
+    let threwErr = false;
     try {
       _commitVoteResolutionInner();
+    } catch (err) {
+      threwErr = true;
+      if (state.match) state.match._voteFinalizing = false;
+      throw err;
     } finally {
-      if (state.match && state.match.phase !== "DAY_VOTE") {
+      if (state.match && (threwErr || state.match.phase !== "DAY_VOTE")) {
         state.match._voteFinalizing = false;
       }
     }
@@ -622,6 +628,10 @@ function finalizeVoteRound(playerTargetId) {
 
   // Suspenseful Sequential Flying-Ballot Reveal (Skippable with 1 click!)
   runVoteFlightSequence(ballots, commitVoteResolution);
+  } catch (err) {
+    if (state.match) state.match._voteFinalizing = false;
+    throw err;
+  }
 }
 
 function runVoteFlightSequence(ballots, onDone) {

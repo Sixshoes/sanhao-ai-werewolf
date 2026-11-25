@@ -150,7 +150,7 @@ const stage3d = {
         }
       } catch (e) { }
     }
-    const isSoftware = /swiftshader|llvmpipe|softpipe|software|microsoft basic render|\bwarp\b/i.test(info);
+    const isSoftware = /swiftshader|subzero|llvmpipe|softpipe|software|microsoft basic render|\bwarp\b/i.test(info);
     const isIntegrated = isSoftware || /intel.*(uhd|hd graphics|iris)|\bintel\(?r?\)?\s*(?:arc\(?tm\)?\s*)?graphics\b|radeon\(tm\)\s*graphics|amd radeon(?:\(tm\))?\s*(?:\d{3}m\s*)?graphics|vega \d/i.test(info);
     const isWinUa = typeof navigator !== "undefined" && /windows/i.test(String(navigator.userAgent || ""));
     const isWindowsAngle = /angle\s*\(.*direct3d/i.test(info) || (isWinUa && !/apple/i.test(info));
@@ -226,7 +226,7 @@ const stage3d = {
       hintEl.classList.toggle("hidden", !warnDesktop);
       if (warnDesktop) {
         hintEl.textContent = this.isSoftwareRenderer
-          ? "偵測到瀏覽器目前以 CPU 軟體渲染 3D。請至瀏覽器設定開啟「使用圖形加速」並重啟瀏覽器，即可恢復獨立顯卡流暢度。"
+          ? "偵測到瀏覽器目前以 CPU 軟體渲染 3D，已自動切為 2D 流暢圓桌（切 3D 時將採輕量內建人偶）。請於網址列輸入 chrome://settings/system 開啟「使用圖形加速」並重啟瀏覽器，即可啟用獨顯與全套 3D VRM。"
           : ("偵測到桌機高解析度畫面正由內顯（" + gpuName + "）執行。若本機配有多顯卡（如 RTX 獨顯），請至 Windows「設定 → 系統 → 顯示器 → 圖形」將瀏覽器指定為「高效能」後重開分頁，即可發揮高更新率原生滿幀。");
       }
     }
@@ -297,13 +297,21 @@ const stage3d = {
       this.isSoftwareRenderer = gpuProf.isSoftwareRenderer;
       this.isWindowsAngle = gpuProf.isWindowsAngle;
       this.isIntegratedGpu = gpuProf.isIntegratedGpu;
-      if (this.isSoftwareRenderer && !this._manualQualityLock && !state.qualityUserChosen) {
-        state.quality3D = "eco";
-        setTimeout(function () {
-          if (typeof showToast === "function") {
-            showToast("偵測到瀏覽器目前以 CPU 軟體渲染 3D，已自動切為省電流暢；建議於瀏覽器設定開啟「圖形加速」以發揮顯卡效能！", "warn");
-          }
-        }, 1600);
+      if (this.isSoftwareRenderer) {
+        if (!this._manualQualityLock && !state.qualityUserChosen) {
+          state.quality3D = "eco";
+        }
+        // Auto-switch to lightweight 2D illustrated tea-table when browser Hardware Acceleration is OFF (SwiftShader CPU)
+        // without overwriting saved user prefs, so turning Hardware Acceleration back ON restores full 3D VRM automatically!
+        if (!this._softwareModeAutoSwitched) {
+          this._softwareModeAutoSwitched = true;
+          state.viewMode = "2d";
+          setTimeout(function () {
+            if (typeof showToast === "function") {
+              showToast("偵測到瀏覽器未開啟「圖形加速」（目前為 CPU 軟體渲染），已自動切為 2D 流暢圓桌避免吃爆記憶體；請至 chrome://settings/system 開啟「使用圖形加速」並重啟即可恢復 3D 顯卡流暢度。", "warn");
+            }
+          }, 1600);
+        }
       } else if (this.isIntegratedGpu && !this._manualQualityLock && !state.qualityUserChosen && state.quality3D === "high") {
         state.quality3D = "balanced";
       }
@@ -375,7 +383,9 @@ const stage3d = {
         });
       }
       this.ready = true;
-      this.checkAutoHeroGlb();
+      if (!this.isSoftwareRenderer) {
+        this.checkAutoHeroGlb();
+      }
 
       this.applyQualityMode();
       this.applyBodyModeClass();
@@ -971,6 +981,7 @@ const stage3d = {
       stage3dVrm.applyHeroVrmPalette(this.hero.vrmAvatar, this.hero.paletteKey);
     }
     if (typeof setHeroVisualMode === "function") setHeroVisualMode(this.hero, "glb");
+    this._shadowBakedOnce = false;
     if (isCustomUpload) {
       this.extractEmbeddedVrmThumbnail(gltf, "主持");
     }
@@ -1031,6 +1042,7 @@ const stage3d = {
     actor._vrmUpdatedOnce = false;
     actor.vrmMountGroup.add(pooledEntry.avatar.root);
     if (typeof setSeatVisualMode === "function") setSeatVisualMode(actor, "vrm");
+    this._shadowBakedOnce = false;
     return true;
   },
 
@@ -1053,16 +1065,18 @@ const stage3d = {
       this.disposeObject3D(oldChild, prevAvatar);
     }
     const curSeatForPrep = seatObjHint || (typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D().find(function (s) { return s.id === seatId; }) : null);
-    const prepPersonaName = (curSeatForPrep && (!modelSlug || modelSlug.indexOf("custom:") !== 0)) ? curSeatForPrep.name : null;
+    const seatPersonaName = (curSeatForPrep && curSeatForPrep.name) ? curSeatForPrep.name : "";
+    const prepPersonaName = (seatPersonaName && (!modelSlug || modelSlug.indexOf("custom:") !== 0)) ? seatPersonaName : null;
     const prep = (typeof stage3dVrm !== "undefined" && typeof stage3dVrm.prepareLoadedAvatar === "function")
       ? stage3dVrm.prepareLoadedAvatar(gltf, { mode: "seated", targetHeight: 2.10, baseY: 0.0, personaName: prepPersonaName, keepRecolorSlots: false })
       : { root: gltf.scene, baseY: 0, isVrm: false };
     actor.vrmAvatar = prep;
     if (modelSlug) actor.boundModelSlug = modelSlug;
-    actor.boundAvatarKey = (modelSlug || "") + "|" + (prepPersonaName || "");
+    actor.boundAvatarKey = (modelSlug || "") + "|" + seatPersonaName;
     actor._vrmUpdatedOnce = false;
     actor.vrmMountGroup.add(prep.root);
     if (typeof setSeatVisualMode === "function") setSeatVisualMode(actor, "vrm");
+    this._shadowBakedOnce = false;
     this._vrmWarmupUntil = Math.max(this._vrmWarmupUntil || 0, (typeof performance !== "undefined" ? performance.now() : Date.now()) + 2200);
     if (modelSlug && modelSlug.indexOf("custom:") === 0) {
       const curSeat = seatObjHint || (typeof getStageSeatListFor3D === "function" ? getStageSeatListFor3D().find(function (s) { return s.id === seatId; }) : null);
@@ -1186,6 +1200,7 @@ const stage3d = {
   },
 
   syncSeatAvatars: function (seatList) {
+    if (this.isSoftwareRenderer) return;
     if (!this.seats || !seatList || typeof stage3dVrm === "undefined" || typeof THREE.GLTFLoader !== "function") return;
     if (!this.avatarManifest || !Object.keys(this.avatarManifest).length) return;
     const self = this;
@@ -1352,6 +1367,7 @@ const stage3d = {
   },
 
   checkAutoAvatars: function () {
+    if (this.isSoftwareRenderer) return;
     if (typeof window === "undefined" || !window.location) return;
     const proto = window.location.protocol;
     if (proto !== "http:" && proto !== "https:") return;
@@ -1531,7 +1547,11 @@ const stage3d = {
 
   toggleViewMode: function () {
     this.setViewMode(this.isActive() ? "2d" : "3d");
-    showToast(this.isActive() ? "已切換為 3D 山城古亭舞台！" : "已切換為 2D 經典俯視圓桌！", "emerald");
+    if (this.isActive() && this.isSoftwareRenderer) {
+      showToast("已切為 3D 輕量內建人偶（未開圖形加速，已暫緩載入高面數 VRM；開啟瀏覽器圖形加速即可解鎖全套 VRM）", "warn");
+    } else {
+      showToast(this.isActive() ? "已切換為 3D 山城古亭舞台！" : "已切換為 2D 經典俯視圓桌！", "emerald");
+    }
   },
 
   resize: function () {

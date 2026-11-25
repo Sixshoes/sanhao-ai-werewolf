@@ -1,13 +1,13 @@
 /**
- * 三好AI狼人殺 — 離線快取 Service Worker（v24.2 雙快取池架構）
- * - SHELL_CACHE（sanhao-shell-v24.2）：核心 HTML / CSS / JS / manifest，採 Network-First 策略，確保回訪即得最新版
+ * 三好AI狼人殺 — 離線快取 Service Worker（v24.3 雙快取池架構）
+ * - SHELL_CACHE（sanhao-shell-v24.3）：核心 HTML / CSS / JS / manifest，採 Network-First 策略，確保回訪即得最新版
  * - ASSET_CACHE（sanhao-assets-v24.2）：大型 3D VRM / 靜態語音包 / 立繪 / 360 天穹 / PBR 貼圖 / Vendor 函式庫，
  *   採 Cache-First 策略（上限 200 筆），與程式外殼完全隔離、絕不互相擠出快取
  * - /api/* 即時端點一律跳過快取
  */
 "use strict";
 
-const SHELL_CACHE = "sanhao-shell-v24.2";
+const SHELL_CACHE = "sanhao-shell-v24.3";
 const ASSET_CACHE = "sanhao-assets-v24.2";
 const ACTIVE_CACHES = [SHELL_CACHE, ASSET_CACHE];
 const MAX_ASSET_ENTRIES = 200;

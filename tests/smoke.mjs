@@ -349,6 +349,19 @@ vm.runInContext(`
     applyHeroPalette(rHero, "teagold");
     setHeroVisualMode(rHero, "sculpt3d");
     setHeroVisualMode(rHero, "glb"); // safely stays sculpt3d when no .glb loaded
+    if (!rHero.facePatchMat || rHero.facePatchMat.map !== rHero.heroFaceBundle.tex) {
+      throw new Error("Hero facePatchMat initial texture binding missing!");
+    }
+    rHero.customGlbRoot = new THREE.Group();
+    setHeroVisualMode(rHero, "glb");
+    if (rHero.heroFaceBundle !== null || rHero.facePatchMat.map !== null) {
+      throw new Error("setHeroVisualMode('glb') failed to clear hero.facePatchMat.map!");
+    }
+    setHeroVisualMode(rHero, "sculpt3d");
+    if (!rHero.heroFaceBundle || !rHero.heroFaceBundle.tex || rHero.facePatchMat.map !== rHero.heroFaceBundle.tex) {
+      throw new Error("setHeroVisualMode('sculpt3d') failed to rebind rebuilt heroFaceBundle.tex to hero.facePatchMat.map!");
+    }
+    rHero.customGlbRoot = null;
     updateHeroCharacter(rHero, new THREE.PerspectiveCamera(), { tSec: 1.5, nowMs: 1500, p: "LOBBY", w: 1280, h: 720 }, null, true);
 
     // Build ALL 12 bespoke Genshin-styled AI seated actors + verify double-sided plaque materials
@@ -5924,6 +5937,46 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       compPrep.morphs.aa[0].idx < 2 && compPrep.morphs.blink[0].idx < 2
     );
 
+    // 7. v24.3 Custom VRM boundAvatarKey parity & eco shadow rebake on async/pooled mount
+    const prevSeats3d = stage3d.seats;
+    const prevShadowBaked = stage3d._shadowBakedOnce;
+    const testMountGrp = new THREE.Group();
+    const testActor = { vrmMountGroup: testMountGrp, vrmAvatar: null, boundModelSlug: "", boundAvatarKey: "", _vrmUpdatedOnce: false };
+    stage3d.seats = { slots: { 99: testActor }, root: new THREE.Group() };
+    stage3d._shadowBakedOnce = true;
+    const customGltf = { scene: new THREE.Group(), parser: { json: {} } };
+    stage3d.attachSeatAvatar(99, customGltf, "custom_test.vrm", true, "custom:test", { id: 99, name: "小澄" });
+    const expectedCustomKey = "custom:test|" + "小澄";
+    const customAvatarKeyOk = Boolean(
+      testActor.boundModelSlug === "custom:test" &&
+      testActor.boundAvatarKey === expectedCustomKey
+    );
+    const shadowResetOnAttachOk = stage3d._shadowBakedOnce === false;
+    stage3d._shadowBakedOnce = true;
+    const pooledMounted = stage3d.mountPooledSeatAvatar(testActor, {
+      slug: "xiaocheng",
+      key: "xiaocheng|小澄",
+      avatar: { root: new THREE.Group(), lastMoodKey: "day", lastAlive: true, lastTalkBoost: true }
+    });
+    const shadowResetOnPoolOk = Boolean(pooledMounted && stage3d._shadowBakedOnce === false);
+    stage3d.seats = prevSeats3d;
+    stage3d._shadowBakedOnce = prevShadowBaked;
+    const ecoShadowRebakeOk = shadowResetOnAttachOk && shadowResetOnPoolOk;
+
+    // 8. v24.3 Software Renderer (SwiftShader) failsafe: skips heavy VRM queue so CPU-only browsers never exhaust RAM
+    const subzeroProf = stage3d.detectGpuProfile(null, "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)");
+    const prevAvQueueSoft = stage3d.avatarQueue;
+    const prevAvManifestSoft = stage3d.avatarManifest;
+    stage3d.isSoftwareRenderer = true;
+    stage3d.avatarQueue = [];
+    stage3d.avatarManifest = { xiaocheng: "assets/models/xiaocheng.vrm" };
+    stage3d.seats = { slots: { 2: { vrmMountGroup: new THREE.Group(), vrmAvatar: null, boundModelSlug: "", boundAvatarKey: "" } }, root: new THREE.Group() };
+    stage3d.syncSeatAvatars([{ id: 2, name: "小澄" }]);
+    const softwareSkipsVrmOk = Boolean(subzeroProf.isSoftwareRenderer && stage3d.avatarQueue.length === 0);
+    stage3d.seats = prevSeats3d;
+    stage3d.avatarQueue = prevAvQueueSoft;
+    stage3d.avatarManifest = prevAvManifestSoft;
+
     // Restore state
     stage3d.ready = prevReady;
     stage3d.failed = prevFailed;
@@ -5939,7 +5992,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       dgpuHighUnlockOk, dgpuBalUnlockOk, dgpuEcoCapOk, igpuCapOk, softCapOk,
       dtInvarianceOk, overlayCacheSigOk,
       cleanUhdOk, warnDesktopUhdOk, noWarnMobileUhdOk, noWarnSmallLaptopOk, hintShownOnUhdOk, cleanRtx5080Ok,
-      resizeCacheOk, pixelBudgetCapOk, morphCompactionOk
+      resizeCacheOk, pixelBudgetCapOk, morphCompactionOk, customAvatarKeyOk, ecoShadowRebakeOk, softwareSkipsVrmOk
     };
   })()`, ctx);
   for (const [k, v] of Object.entries(v152Res)) {
@@ -5951,11 +6004,18 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // Verify zero leftover leaf emoji in js/game/day-speech.js & pre-aligned toneMapping + smart antialias in engine.js
   const daySpeechSrc = fs.readFileSync(path.join(ROOT, "js/game/day-speech.js"), "utf8");
   const engineSrc = fs.readFileSync(path.join(ROOT, "js/stage3d/engine.js"), "utf8");
+  const votingSrc243 = fs.readFileSync(path.join(ROOT, "js/game/voting.js"), "utf8");
   if (daySpeechSrc.includes("\u{1F343}")) {
     throw new Error("v15.2 check failed: leftover leaf emoji found in js/game/day-speech.js");
   }
   if (!engineSrc.includes("antialias: useMainAa") || !engineSrc.includes("willUsePostFxInit")) {
     throw new Error("v15.2 check failed: engine.js missing postfx-aware antialias or init toneMapping pre-alignment");
+  }
+  if ((engineSrc.match(/this\._shadowBakedOnce = false;/g) || []).length < 3) {
+    throw new Error("v24.3 check failed: engine.js must reset _shadowBakedOnce = false across hero/pooled/seat VRM mounts");
+  }
+  if (!votingSrc243.includes("if (state.match) state.match._voteFinalizing = false;")) {
+    throw new Error("v24.3 check failed: voting.js missing catch-path _voteFinalizing unlock guard");
   }
 }
 
@@ -7053,7 +7113,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2") && swSrcPerf.includes("sanhao-assets-v24.2") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.3") && swSrcPerf.includes("sanhao-assets-v24.2") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7446,7 +7506,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.3"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");

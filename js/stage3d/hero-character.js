@@ -487,9 +487,10 @@ function buildHeroCharacter(scene) {
   headOval.add(nose);
 
   const heroFaceBundle = stage3dTextures.createFaceCanvas();
+  const facePatchMat = new THREE.MeshBasicMaterial({ map: heroFaceBundle.tex, transparent: true, depthWrite: false });
   const heroFacePatch = new THREE.Mesh(
     hasAnime ? stage3dAnime.createAnimeFacePatchGeometry(0.420) : new THREE.SphereGeometry(0.420, 24, 18, Math.PI * 0.22, Math.PI * 0.56, Math.PI * 0.26, Math.PI * 0.50),
-    new THREE.MeshBasicMaterial({ map: heroFaceBundle.tex, transparent: true, depthWrite: false })
+    facePatchMat
   );
   headOval.add(heroFacePatch);
   headPivot.add(headOval);
@@ -591,6 +592,7 @@ function buildHeroCharacter(scene) {
     sideLockR: sideLockR,
     ponyPivot: ponyPivot,
     heroFaceBundle: heroFaceBundle,
+    facePatchMat: facePatchMat,
     heroFaceFrame: 0,
     hitMesh: hitMesh,
     showcaseLight: showcaseLight,
@@ -617,8 +619,20 @@ function setHeroVisualMode(hero, mode) {
       hero.heroFaceBundle.canvas.height = 1;
     }
     hero.heroFaceBundle = null;
+    if (hero.facePatchMat) {
+      hero.facePatchMat.map = null;
+      hero.facePatchMat.needsUpdate = true;
+    }
   } else if (!useGlb && !hero.heroFaceBundle && typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createFaceCanvas === "function") {
     hero.heroFaceBundle = stage3dTextures.createFaceCanvas();
+    if (hero.heroFaceBundle && hero.heroFaceBundle.ctx && typeof drawHeroStorybookFace === "function") {
+      drawHeroStorybookFace(hero.heroFaceBundle.ctx, { act: hero.action || "welcome_bow", isBlinking: false, mouthOpenNow: false, gazeX: 0, gazeY: 0 });
+      if (hero.heroFaceBundle.tex) hero.heroFaceBundle.tex.needsUpdate = true;
+    }
+    if (hero.facePatchMat && hero.heroFaceBundle && hero.heroFaceBundle.tex) {
+      hero.facePatchMat.map = hero.heroFaceBundle.tex;
+      hero.facePatchMat.needsUpdate = true;
+    }
   }
   const resetBtn = (typeof document !== "undefined" && typeof document.getElementById === "function") ? document.getElementById("btnResetHeroRig") : null;
   if (resetBtn) resetBtn.classList.toggle("hidden", !useGlb);
