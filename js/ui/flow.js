@@ -389,7 +389,12 @@ const indieFlow = {
     const isTitle = !started || p === "LOBBY";
     const isGameOver = p === "GAME_OVER";
     const isPickSeat = p === "NIGHT_GUARD" || p === "NIGHT_SEER" || p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "HUNTER_TRIGGER" || p === "DAY_VOTE" || p === "DAY_PLAYER_TURN";
-    const isListening = !isTitle && (p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH");
+    const shSpeechNow = Boolean(p === "SHERIFF_ELECTION" && state.match && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech");
+    const isListening = !isTitle && (p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH" || shSpeechNow);
+    const isSpeaking = !isTitle && (p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_PLAYER");
+    const isVoting = !isTitle && (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT");
+    const isNightMode = !isTitle && (p === "NIGHT_GUARD" || p === "NIGHT_SEER" || p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "HUNTER_TRIGGER" || p === "HUNTER_RESOLVE");
+    const isSheriffMode = !isTitle && (p === "SHERIFF_ELECTION" || p === "SHERIFF_ORDER" || p === "SHERIFF_TRANSFER");
     const fourGUsable = typeof canUseFourGNow === "function" ? canUseFourGNow() : false;
     const showSeatBar = !isTitle && !isGameOver && p !== "DAY_PLAYER_TURN" && p !== "SHERIFF_TRANSFER" && p !== "SHERIFF_ELECTION" && p !== "SHERIFF_ORDER" && p !== "DAY_VOTE_RESULT" && p !== "LAST_WORDS_PLAYER" && p !== "LAST_WORDS_SPEECH";
 
@@ -398,7 +403,20 @@ const indieFlow = {
     document.body.classList.toggle("screen-gameover", isGameOver);
     document.body.classList.toggle("phase-pick-seat", !isTitle && isPickSeat);
     document.body.classList.toggle("phase-listening", isListening);
+    document.body.classList.toggle("phase-mode-listen", isListening);
+    document.body.classList.toggle("phase-mode-speak", isSpeaking);
+    document.body.classList.toggle("phase-mode-vote", isVoting);
+    document.body.classList.toggle("phase-mode-night", isNightMode);
+    document.body.classList.toggle("phase-mode-sheriff", isSheriffMode);
     document.body.classList.toggle("fourg-active", !isTitle && !isGameOver && fourGUsable);
+
+    if (!isListening && el("listenExtraToolsWrap")) {
+      el("listenExtraToolsWrap").classList.remove("is-open");
+      if (el("btnToggleListenTools")) {
+        el("btnToggleListenTools").setAttribute("aria-expanded", "false");
+        el("btnToggleListenTools").textContent = "偵探工具 ▾";
+      }
+    }
 
     if (el("inGameTopHud")) el("inGameTopHud").classList.toggle("hidden", isTitle);
     if (el("cornerRoleTile")) el("cornerRoleTile").classList.toggle("hidden", isTitle || isGameOver);
@@ -427,6 +445,127 @@ const indieFlow = {
     if (qa) qa.classList.toggle("is-active", Boolean(state.autoPlay));
     if (qaLbl) qaLbl.textContent = state.autoPlay ? "自動:開" : "自動";
     this.syncHudViewLabel();
+    this.syncAnimatedGuideCues();
+  },
+
+  syncAnimatedGuideCues: function () {
+    const GUIDE_IDS = [
+      "btnStartMatch", "seatButtonStrip", "btnConfirmTarget", "btnSeerRevealContinue",
+      "witchSubPanel", "btnCastVote", "btnStepNext", "btnTeaInterject",
+      "quickSpeechChips", "rephraseChoicesTray", "btnQuickInlineRewrite",
+      "cornerFourGDeck", "threeGoodMeters", "sheriffPlayerQuickChips",
+      "btnSheriffNextSpeech", "panelSheriffOrder", "btnSheriffRun"
+    ];
+    GUIDE_IDS.forEach(function (id) {
+      const node = el(id);
+      if (node && node.classList) {
+        node.classList.remove("is-guide-beckon", "is-guide-ready", "is-guide-focus");
+      }
+    });
+    const setCue = function (id, cls) {
+      const node = el(id);
+      if (node && node.classList) node.classList.add(cls);
+    };
+
+    const m = state.match;
+    const started = Boolean(m && m.started);
+    const p = (m && m.phase) || "LOBBY";
+    if (!started || p === "LOBBY") {
+      setCue("btnStartMatch", "is-guide-beckon");
+      return;
+    }
+    if (p === "GAME_OVER") return;
+
+    const pSeat = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
+    const pAlive = Boolean(pSeat && pSeat.alive);
+    const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+    const sel = typeof getSeat === "function" ? getSeat(state.selectedSeatId) : null;
+
+    // 1. Night / Hunter / Vote Pick-Seat phases: pulse seat strip until selected, then shift glow to Confirm CTA!
+    if (p === "NIGHT_SEER" && pAlive && pSeat.role === "seer") {
+      if (state.seerReveal) {
+        setCue("btnSeerRevealContinue", "is-guide-ready");
+      } else {
+        const validSeer = Boolean(sel && sel.alive && sel.id !== pid);
+        setCue(validSeer ? "btnConfirmTarget" : "seatButtonStrip", validSeer ? "is-guide-ready" : "is-guide-beckon");
+      }
+    } else if (p === "NIGHT_GUARD" && pAlive && pSeat.role === "guard") {
+      const validGuard = Boolean(sel && sel.alive && m.lastGuardTargetId !== sel.id);
+      setCue(validGuard ? "btnConfirmTarget" : "seatButtonStrip", validGuard ? "is-guide-ready" : "is-guide-beckon");
+    } else if (p === "NIGHT_WOLF" && pAlive && pSeat.role === "wolf") {
+      const aliveWolvesN = typeof getAliveSeats === "function"
+        ? getAliveSeats().filter(function (s) { return s.role === "wolf"; }).length
+        : 1;
+      const allowSelf = Boolean(m.day === 1 && aliveWolvesN >= 2);
+      const validWolf = Boolean(sel && sel.alive && (allowSelf ? true : (sel.id !== pid && sel.role !== "wolf")));
+      setCue(validWolf ? "btnConfirmTarget" : "seatButtonStrip", validWolf ? "is-guide-ready" : "is-guide-beckon");
+    } else if (p === "NIGHT_WITCH" && pAlive && pSeat.role === "witch") {
+      setCue("witchSubPanel", "is-guide-focus");
+    } else if (p === "HUNTER_TRIGGER" && pSeat && !pSeat.alive && (pSeat.role === "hunter" || pSeat.isWolfKing)) {
+      const validHunt = Boolean(sel && sel.alive && sel.id !== pid && !(pSeat.isWolfKing && sel.role === "wolf"));
+      setCue(validHunt ? "btnConfirmTarget" : "seatButtonStrip", validHunt ? "is-guide-ready" : "is-guide-beckon");
+    } else if (p === "DAY_VOTE") {
+      const canVote = Boolean(typeof isPlayerEligibleToVote === "function" ? isPlayerEligibleToVote() : pAlive);
+      if (canVote && !(state.voteFlight && state.voteFlight.active)) {
+        const validVote = Boolean(sel && (typeof isValidVoteTarget === "function" ? isValidVoteTarget(sel.id) : (sel.alive && sel.id !== pid)));
+        setCue(validVote ? "btnCastVote" : "seatButtonStrip", validVote ? "is-guide-ready" : "is-guide-beckon");
+      }
+    } else if (p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH") {
+      const interjBtn = el("btnTeaInterject");
+      const jStep1 = el("judgeGuideStep1");
+      const isJudgeStep1 = Boolean(jStep1 && jStep1.classList && jStep1.classList.contains("is-active"));
+      if (isJudgeStep1 && interjBtn && !interjBtn.disabled && !interjBtn.classList.contains("hidden")) {
+        setCue("btnTeaInterject", "is-guide-beckon");
+      }
+      const nextBtn = el("btnStepNext");
+      const speakingNow = Boolean((state.typewriter && state.typewriter.active) || (typeof voice !== "undefined" && voice.speaking));
+      if (nextBtn && !nextBtn.classList.contains("hidden") && !speakingNow) {
+        setCue("btnStepNext", "is-guide-ready");
+      }
+    } else if (p === "DAY_PLAYER_TURN") {
+      const tray = el("rephraseChoicesTray");
+      const trayVisible = Boolean(tray && !tray.classList.contains("hidden"));
+      const rwBtn = el("btnQuickInlineRewrite");
+      if (trayVisible) {
+        setCue("rephraseChoicesTray", "is-guide-focus");
+      } else {
+        setCue("quickSpeechChips", "is-guide-beckon");
+        if (rwBtn && !rwBtn.classList.contains("hidden")) {
+          setCue("btnQuickInlineRewrite", "is-guide-beckon");
+        }
+      }
+    } else if (p === "SHERIFF_ELECTION") {
+      const shCtx = m.sheriffElectionCtx;
+      if (shCtx) {
+        if (shCtx.stage === "signup" && pAlive && !shCtx.playerRunning && !shCtx.playerWithdrew) {
+          setCue("btnSheriffRun", "is-guide-beckon");
+        } else if (shCtx.stage === "speech") {
+          if (shCtx.activeReelSeatId === pid && pAlive) {
+            setCue("sheriffPlayerQuickChips", "is-guide-beckon");
+          } else {
+            setCue("btnSheriffNextSpeech", "is-guide-ready");
+          }
+        }
+      }
+    } else if (p === "SHERIFF_ORDER") {
+      setCue("panelSheriffOrder", "is-guide-focus");
+    }
+
+    // 2. Four-Givings & Three-Goodness Lotus synergy beckon (Show, don't tell!)
+    const fourGUsable = typeof canUseFourGNow === "function" ? canUseFourGNow() : false;
+    if (pAlive && fourGUsable) {
+      const tgObj = m.threeGood || { heart: 0, words: 0, deeds: 0 };
+      const litCnt = (tgObj.heart > 0 ? 1 : 0) + (tgObj.words > 0 ? 1 : 0) + (tgObj.deeds > 0 ? 1 : 0);
+      const used4G = m.fourGivingsUsed || {};
+      const usedCount = ["confidence", "joy", "hope", "convenience"].filter(function (k) { return used4G[k]; }).length;
+      const isWolfPlayer = Boolean(pSeat && pSeat.role === "wolf");
+      const almostLotus = Boolean(!isWolfPlayer && litCnt === 2 && !m.goodwillVoteBonus && usedCount < 4);
+      const almostSynergy = Boolean(!m.fourGSynergyTriggered && usedCount === 1 && usedCount < 4);
+      if (almostLotus || almostSynergy) {
+        setCue("cornerFourGDeck", "is-guide-beckon");
+        if (almostLotus) setCue("threeGoodMeters", "is-guide-beckon");
+      }
+    }
   },
 
   syncShowcaseTargetUi: function () {
@@ -720,6 +859,13 @@ const indieFlow = {
         if (state.match) state.match.guidedBeginner = false;
         if (el("beginnerCoachBanner")) el("beginnerCoachBanner").classList.add("hidden");
         if (typeof showToast === "function") showToast("已收合新手步驟提示，隨時可點左下「指南」查看！", "emerald");
+      });
+    }
+    if (el("btnDismissJudgeGuide")) {
+      el("btnDismissJudgeGuide").addEventListener("click", function () {
+        if (state.match) state.match.judgeGuideDismissed = true;
+        if (el("judgeShowcaseGuideBanner")) el("judgeShowcaseGuideBanner").classList.add("hidden");
+        if (typeof showToast === "function") showToast("已收合導覽三步提示。", "emerald");
       });
     }
 

@@ -2992,7 +2992,14 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       resolveSheriffElectionAction("run");
       const playerJoinedCand = state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.candidateIds.includes(pid);
       resolveSheriffElectionAction("pass");
-      const electedSeatAlive = Boolean(state.match.sheriffSeatId && getSeat(state.match.sheriffSeatId).alive);
+      if (state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.isPkRound) {
+        const pkPick = state.match.sheriffElectionCtx.candidateIds[0];
+        resolveSheriffElectionAction(pkPick || "pass");
+      }
+      const electedSeatAlive = Boolean(
+        (state.match.sheriffSeatId && getSeat(state.match.sheriffSeatId).alive) ||
+        (state.match.sheriffVoteRecord && state.match.sheriffVoteRecord.badgeLost)
+      );
 
       state.match.sheriffSeatId = pid;
       startSheriffOrderPick(function (dir) { startDayDiscussion(null, { forcedDir: dir }); });
@@ -3577,8 +3584,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     throw new Error("Invalid manifest.webmanifest");
   }
   const swSrc = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  if (!swSrc.includes("/api/") || !swSrc.includes("CACHE_NAME") || !swSrc.includes("IMMUTABLE_RE")) {
-    throw new Error("sw.js missing API bypass or static cache strategy");
+  if (!swSrc.includes("/api/") || !(swSrc.includes("SHELL_CACHE") && swSrc.includes("ASSET_CACHE")) || !swSrc.includes("IMMUTABLE_RE")) {
+    throw new Error("sw.js missing API bypass or dual-pool static cache strategy");
   }
 
   const p12Res = vm.runInContext(`(() => {
@@ -3688,7 +3695,12 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const shReelOk = shStarted && playSheriffStageReel(0);
     const shRunOk = resolveSheriffElectionAction("run") && state.match.sheriffElectionCtx.playerRunning === true;
     const shWithdrawOk = resolveSheriffElectionAction("withdraw") && state.match.sheriffElectionCtx.playerWithdrew === true;
-    const shPassOk = resolveSheriffElectionAction("pass") && Boolean(state.match.sheriffSeatId);
+    const shPassStep1 = resolveSheriffElectionAction("pass");
+    if (state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.isPkRound) {
+      const pkPick36 = state.match.sheriffElectionCtx.candidateIds[0];
+      resolveSheriffElectionAction(pkPick36 || "pass");
+    }
+    const shPassOk = shPassStep1 && Boolean(state.match.sheriffSeatId || (state.match.sheriffVoteRecord && state.match.sheriffVoteRecord.badgeLost));
 
     // Test Cross-Day Memory Ledger & Post-Match Detective Coach
     state.match.day = 2;
@@ -4549,11 +4561,16 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       advanceSheriffSpeechTurn();
     }
     const voteRowVisibleAfterSpeeches = !el("sheriffElectionVoteRow").classList.contains("hidden");
-    const firstCandId = state.match.sheriffElectionCtx.candidateIds[0];
-    resolveSheriffElectionAction(firstCandId);
+    let votedCandId = state.match.sheriffElectionCtx.candidateIds[0];
+    resolveSheriffElectionAction(votedCandId);
+    // Handle valid Round-1 Sheriff tie -> PK Round-2 re-vote cleanly
+    if (state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.isPkRound) {
+      votedCandId = state.match.sheriffElectionCtx.candidateIds[0];
+      resolveSheriffElectionAction(votedCandId);
+    }
     const shRec = state.match.sheriffVoteRecord;
-    const recordSavedOk = Boolean(shRec && shRec.kind === "sheriff" && shRec.winnerId && Array.isArray(shRec.ballots)
-      && shRec.ballots.some(b => b.voterId === pid2 && b.targetId === firstCandId));
+    const recordSavedOk = Boolean(shRec && shRec.kind === "sheriff" && (shRec.winnerId || shRec.badgeLost) && Array.isArray(shRec.ballots)
+      && shRec.ballots.some(b => b.voterId === pid2 && b.targetId === votedCandId));
 
     // Blind-view zero-leak exposure + AI pit deduction scoring + Day 1 speech context + Gemini prompt + Vote Sheet
     const aiOther = getAliveSeats().find(s => s.id !== pid2);
@@ -4835,6 +4852,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     resolveSheriffElectionAction("run");
     const pid2 = getPlayerId();
     resolveSheriffElectionAction("pass");
+    if (state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.isPkRound) {
+      resolveSheriffElectionAction("pass");
+    }
     const shRec2 = state.match.sheriffVoteRecord;
     const ballotSum = (shRec2 && Array.isArray(shRec2.ballots))
       ? shRec2.ballots.filter(b => b && b.targetId).length
@@ -5485,7 +5505,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     let outBody = "";
     const mockRes = {
       statusCode: 200,
-      setHeader() {},
+      setHeader() { },
       end(chunk) { outStatus = this.statusCode; outBody = String(chunk || ""); }
     };
     await apiGeminiHandler({ method, headers: headers || {}, body, socket: { remoteAddress: "127.0.0.1" } }, mockRes);
@@ -5508,7 +5528,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const v142Res = vm.runInContext(`(() => {
     clearStepTimer();
     startJudgeShowcaseMatch();
-    const judgeOk = Boolean(state.match && state.match.started && state.match.judgeShowcase && state.match.day === 2 && state.match.seats.length === 8 && state.match.sheriffSeatId === 1 && state.match.speechQueue.join(",") === "4,7,1");
+    const judgeOk = Boolean(state.match && state.match.started && state.match.judgeShowcase && state.match.day === 2 && state.match.seats.length === 8 && state.match.sheriffSeatId === 1 && state.match.speechQueue.join(",") === "4,1");
     // Verify Zero-Leak Vote-Speech Correlation Matrix catches Seat 7's Day-1 speech-vs-vote divergence (accused 5, voted 6) under strict Proxy trap!
     const prevStrict = antiCheatMonitor.strictThrow;
     antiCheatMonitor.strictThrow = true;
@@ -5517,7 +5537,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const vm2 = buildVoteSpeechMatrix(seat2, snap2);
     const promptBuilt = buildBlindGeminiSpeechPrompt(seat2, { text: "對照第1天票型，7號言票背離。", accuseId: 4, vouchId: 1 });
     antiCheatMonitor.strictThrow = prevStrict;
-    const matrixDetectsDivOk = Boolean(vm2 && vm2.divergenceBySeat && vm2.divergenceBySeat[7] === 1 && vm2.summaryLines.some(l => l.includes("7號") && l.includes("言票背離")));
+    const matrixDetectsDivOk = Boolean(vm2 && vm2.divergenceBySeat && vm2.divergenceBySeat[7] === 1 && vm2.divergenceBySeat[4] === 1 && vm2.summaryLines.some(l => l.includes("4號") && l.includes("言票背離")));
     const promptIncludesMatrixOk = Boolean(promptBuilt && promptBuilt.audit && promptBuilt.audit.ok && promptBuilt.prompt.includes("跨輪言票一致性與同票關聯矩陣") && promptBuilt.prompt.includes("言票背離"));
     const postInsights = buildAiPostMatchCoachInsights();
     const radarOk = Array.isArray(postInsights) && postInsights.length >= 3;
@@ -5639,8 +5659,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 
     // E. Listening Nod/Frown Micro-Reaction + Once-Per-Day Tea-Cup Interjection + Prefetch Cache Sync
     state.match.phase = "DAY_SPEECH";
-    state.activeSpeakerId = 7;
-    delete state.playerMarks[7];
+    state.activeSpeakerId = 4;
+    delete state.playerMarks[4];
     state.match.speechQueue = [5, 1];
     state.match.interjectUsedDay = 0;
     state.match.tableReactions = [];
@@ -5653,7 +5673,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const frownSyncOk = Boolean(
       (state.match.tableStateRev || 0) > revBeforeFrown &&
       state.match._prefetchedSpeech === null &&
-      state.match.tableReactions.some(r => r.targetId === 7 && r.kind === "frown") &&
+      state.match.tableReactions.some(r => r.targetId === 4 && r.kind === "frown") &&
       frownPrompt5 && frownPrompt5.audit && frownPrompt5.audit.ok &&
       frownPrompt5.prompt.includes("皺了眉頭")
     );
@@ -6500,7 +6520,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       el("showcaseProfileCard").innerHTML.includes("好人癖好");
     const showcaseCardOk = Boolean(cardHiddenHero && cardShownMobai);
     const diag17 = collectFeedbackDiagnostics();
-    const version17Ok = Boolean(diag17 && diag17.version === "v19.0 (公測 3.4)");
+    const version17Ok = Boolean(diag17 && diag17.version === "v20.0 (公測 3.5)");
 
     // 6. Standard Day-1 Werewolf Order: Sheriff Election FIRST, THEN Night-1 Death Reveal (+ Dead-Sheriff Transfer + Election Explode Settlement)
     el("selectModeCount").value = "8";
@@ -6969,7 +6989,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-tea-v19.0") && swSrcPerf.includes("MAX_CACHE_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v20.0") && swSrcPerf.includes("sanhao-assets-v1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7188,7 +7208,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 {
   const apiGemSrc = fs.readFileSync(path.join(ROOT, "api/gemini.js"), "utf8");
   const clientGemSrc = fs.readFileSync(path.join(ROOT, "js/ai/gemini.js"), "utf8");
-  const temp078Ok = apiGemSrc.includes("temperature: 0.78") && clientGemSrc.includes("genCfg.temperature = 0.78");
+  const temp078Ok = apiGemSrc.includes("clampTemperature") && clientGemSrc.includes("GEMINI_TEMP_TIERS") && clientGemSrc.includes("resolveGeminiSpeechTemperature");
   const noFallbackDumpInPromptOk = !clientGemSrc.includes("【本輪基礎戰術參考】");
 
   const v193Res = await vm.runInContext(`(async () => {
@@ -7283,4 +7303,478 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v19.0 + Perf + v19.2 Hotfix + v19.3 Full-Stage Live Gemini (Sheriff/PK/LastWords/Interject/Confrontation) E2E smoke test PASSED!");
+// v20.0 FINAL POLISH & EXPERIENCE UPGRADE VERIFICATION (P0-1..4 + TIERED TEMP + 150s JUDGE SHOWCASE + TURNING AXIS & TRUTH TABLE + ZERO-EMOJI + DOCS)
+{
+  const emojiGuardRe = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+  const collectJsFiles = (dir) => {
+    const out = [];
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        if (ent.name === "vendor") continue;
+        out.push(...collectJsFiles(full));
+      } else if (ent.name.endsWith(".js")) {
+        out.push(full);
+      }
+    }
+    return out;
+  };
+  const scanTargets = [
+    path.join(ROOT, "ai.html"),
+    path.join(ROOT, "index.html"),
+    path.join(ROOT, "sw.js"),
+    path.join(ROOT, "api/gemini.js"),
+    path.join(ROOT, "css/theme.css"),
+    path.join(ROOT, "css/components.css"),
+    path.join(ROOT, "README.md"),
+    path.join(ROOT, "docs/作品說明書_初稿.md"),
+    path.join(ROOT, "docs/三分鐘Demo影片腳本.md"),
+    ...collectJsFiles(path.join(ROOT, "js"))
+  ];
+  const emojiHits = [];
+  for (const fp of scanTargets) {
+    const raw = fs.readFileSync(fp, "utf8");
+    const m = raw.match(emojiGuardRe);
+    if (m) emojiHits.push(path.relative(ROOT, fp) + ":" + m[0]);
+  }
+  const globalZeroEmojiOk = emojiHits.length === 0;
+
+  // Anonymity & Plain Non-AI Copy check across UI + docs + README
+  const anonTargets = [
+    path.join(ROOT, "ai.html"),
+    path.join(ROOT, "js/ui/feedback.js"),
+    path.join(ROOT, "js/events/game-events.js"),
+    path.join(ROOT, "README.md"),
+    path.join(ROOT, "docs/作品說明書_初稿.md"),
+    path.join(ROOT, "docs/三分鐘Demo影片腳本.md")
+  ];
+  const bannedCopyRe = /Sixshoes|高情商|一句話秒懂|幾秒看懂|瞬間白熱化|史詩級|佛光大學/;
+  const copyHits = [];
+  for (const fp of anonTargets) {
+    const raw = fs.readFileSync(fp, "utf8");
+    const m = raw.match(bannedCopyRe);
+    if (m) copyHits.push(path.relative(ROOT, fp) + ":" + m[0]);
+  }
+  const anonAndPlainCopyOk = copyHits.length === 0;
+
+  // P0-1: gemini.js must read snap.selfSecretSummary / snap.selfLastCheck instead of direct regulated secret fields
+  const gemSrc20 = fs.readFileSync(path.join(ROOT, "js/ai/gemini.js"), "utf8");
+  const blindSrc20 = fs.readFileSync(path.join(ROOT, "js/ai/blind-view.js"), "utf8");
+  const p01SelfSecretIsolatedOk =
+    blindSrc20.includes("selfSecretSummary") &&
+    blindSrc20.includes("selfLastCheck") &&
+    gemSrc20.includes("snap.selfSecretSummary") &&
+    !gemSrc20.includes("self.checkedHistory") &&
+    !gemSrc20.includes("self.savedSeatId") &&
+    !gemSrc20.includes("self.purifiedSeatId") &&
+    !gemSrc20.includes("snap.lastGuardTargetId");
+
+  // P0-2: day-speech.js interjection .then and .catch both guard orchestrator.isEpochValid(epInt) and DAY_SPEECH phase
+  const dsSrc20 = fs.readFileSync(path.join(ROOT, "js/game/day-speech.js"), "utf8");
+  const interjCallIdx = dsSrc20.lastIndexOf("tryGenerateGeminiInterjectionReply(");
+  const interjSlice = interjCallIdx !== -1 ? dsSrc20.slice(interjCallIdx, interjCallIdx + 2800) : "";
+  const epochGuardCount = (interjSlice.match(/isEpochValid\(epInt\)/g) || []).length;
+  const phaseGuardCount = (interjSlice.match(/phase !== "DAY_SPEECH"/g) || []).length;
+  const p02InterjectRaceGuardOk = epochGuardCount >= 3 && phaseGuardCount >= 3;
+
+  // P0-3: Dual-pool sw.js check
+  const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const p03DualPoolSwOk =
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v20.0"') &&
+    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v1"') &&
+    swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
+    swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
+
+  // v20.0-8: Competition docs 9 sections & <= 5,000 chars + 4-scene 180s storyboard
+  const docSpec = fs.readFileSync(path.join(ROOT, "docs/作品說明書_初稿.md"), "utf8");
+  const docScript = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
+  const doc9SectionsOk =
+    ["一、作品名稱", "二、AI 工具使用揭露", "三、創作動機", "四、作品內容及主要特色", "五、AI 技術整合方式", "六、開發與五層自動驗證歷程", "七、三好與四給精神", "八、實際教育應用效益", "九、操作與"].every(s => docSpec.includes(s)) &&
+    docSpec.length <= 5200 &&
+    ["0:00", "0:20", "1:15", "2:15", "舉杯追問", "潤飾籤", "盲視"].every(s => docScript.includes(s));
+
+  // API handler temperature clamping check
+  const apiModRes = vm.runInNewContext(`(() => {
+    const module = { exports: {} };
+    const exports = module.exports;
+    ${fs.readFileSync(path.join(ROOT, "api/gemini.js"), "utf8")}
+    const fn = module.exports && module.exports._clampTemperature;
+    return typeof fn === "function" && fn(0.58) === 0.58 && fn(0.78) === 0.78 && fn(0.2) === 0.45 && fn(1.5) === 0.85 && fn(undefined) === 0.65;
+  })()`, { process: { env: {} }, fetch: () => { }, AbortController, setTimeout, clearTimeout, URL });
+
+  // Runtime verification: tiered temp, feedback github button hidden, 150s judge showcase 3-step guide -> instant win -> turning axis + full truth table
+  const v20RuntimeRes = await vm.runInContext(`(async () => {
+    clearStepTimer();
+    const prevStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+
+    // 1. Tiered temperature resolution + clamping + escapeHtml(0) + Match-Point compact rephrase slips
+    const escapeZeroOk = escapeHtml(0) === "0" && escapeHtml("") === "" && escapeHtml(null) === "";
+    const tempTierOk =
+      escapeZeroOk &&
+      resolveGeminiSpeechTemperature("sheriff") === 0.58 &&
+      resolveGeminiSpeechTemperature("sheriff_tally") === 0.58 &&
+      resolveGeminiSpeechTemperature("dual_seer") === 0.58 &&
+      resolveGeminiSpeechTemperature("day_standard") === 0.65 &&
+      resolveGeminiSpeechTemperature("interject") === 0.74 &&
+      resolveGeminiSpeechTemperature("confrontation") === 0.74 &&
+      resolveGeminiSpeechTemperature("pk") === 0.78 &&
+      resolveGeminiSpeechTemperature("last_words") === 0.78 &&
+      clampGeminiTemperature(0.1) === 0.45 &&
+      clampGeminiTemperature(1.2) === 0.85 &&
+      clampGeminiTemperature(NaN) === 0.65;
+
+    // 2. Feedback anonymous GitHub button hidden on open AND after submit
+    window.localStorage.setItem(FEEDBACK_CONFIG.storageKey, "[]");
+    openFeedbackModal();
+    const ghHiddenOpen = !canShowFeedbackGithubButton() && el("btnOpenGithubFeedback").classList.contains("hidden");
+    el("inputFeedbackBody").value = "v20 測試匿名送出不會露出 GitHub 按鈕";
+    await submitUserFeedback();
+    const ghHiddenAfterSubmit = el("btnOpenGithubFeedback").classList.contains("hidden");
+    closeFeedbackModal();
+    const feedbackAnonOk = ghHiddenOpen && ghHiddenAfterSubmit;
+
+    // 3. 150s Judge Showcase Guide: 5 alive match-point, 1x interject, confidence+hope available, 3-step banner transitions & instant game-over
+    startJudgeShowcaseMatch();
+    clearStepTimer();
+    const aliveInit = getAliveSeats().length;
+    const snapSelf1 = createBlindMatchSnapshot(getSeat(1), { module: "smoke_v20_self" });
+    const selfSecretSnapOk = Boolean(snapSelf1 && typeof snapSelf1.selfSecretSummary === "string" && snapSelf1.selfSecretSummary.includes("4號") && snapSelf1.selfLastCheck && snapSelf1.selfLastCheck.targetId === 4);
+    const guideVisibleStep1 = Boolean(
+      !el("judgeShowcaseGuideBanner").classList.contains("hidden") &&
+      el("judgeGuideStep1").classList.contains("is-active") &&
+      aliveInit === 5 &&
+      state.match.isMatchPoint === true &&
+      state.match.interjectUsedDay === 0 &&
+      state.match.fourGivingsUsed.confidence === false &&
+      state.match.fourGivingsUsed.hope === false
+    );
+
+    // Step 2 transition (DAY_PLAYER_TURN): compact Match-Point rephrase slips fit <= 28 chars without truncation
+    state.match.phase = "DAY_PLAYER_TURN";
+    renderJudgeShowcaseGuideBanner();
+    const mpSlips = buildRephraseChoiceSlips("4號別硬拗了快投他！");
+    const guideStep2Ok = Boolean(
+      el("judgeGuideStep2").classList.contains("is-active") &&
+      mpSlips.length === 3 &&
+      mpSlips.every(s => s.text.length <= 28)
+    );
+
+    // Step 3 transition (DAY_VOTE) -> cast vote on Seat 4 (last wolf) -> immediate GOOD victory!
+    state.match.phase = "DAY_VOTE";
+    renderJudgeShowcaseGuideBanner();
+    const guideStep3Ok = el("judgeGuideStep3").classList.contains("is-active");
+
+    // Execute instant game-over resolution (eliminate last wolf Seat 4)
+    getSeat(4).alive = false;
+    getSeat(4).outReason = "投票出局";
+    state.match.voteHistory.push({
+      day: 2,
+      outId: 4,
+      ballots: [
+        { voterId: 1, targetId: 4, weight: 1.5 },
+        { voterId: 2, targetId: 4, weight: 1 },
+        { voterId: 3, targetId: 4, weight: 1 },
+        { voterId: 4, targetId: 1, weight: 1 },
+        { voterId: 5, targetId: 4, weight: 1 }
+      ]
+    });
+    const endedNow = checkAndHandleGameOver();
+    clearStepTimer();
+    const guideHiddenOnEnd = el("judgeShowcaseGuideBanner").classList.contains("hidden");
+
+    // 4. Upgraded Game-Over panel: Turning Points Axis (up to 3) + Full 8-seat Truth Table + Replay Report
+    const tpData = buildMatchTurningPoints();
+    const truthRows = buildFullSeatTruthRows();
+    const tpHtml = el("gameOverTurningPoints").innerHTML || "";
+    const truthHtml = el("gameOverSeatTruthBox").innerHTML || "";
+    const replayTxt = buildMatchReplayReport();
+    const gameOverReviewOk = Boolean(
+      endedNow &&
+      state.match.phase === "GAME_OVER" &&
+      state.match.winner === "good" &&
+      guideHiddenOnEnd &&
+      tpData.length >= 2 && tpData.length <= 3 &&
+      !el("gameOverTurningPoints").classList.contains("hidden") &&
+      tpHtml.includes("本局三大勝負轉折軸") &&
+      truthRows.length === 8 &&
+      !el("gameOverSeatTruthBox").classList.contains("hidden") &&
+      truthHtml.includes("全席底牌與言行對照表") &&
+      truthHtml.includes("明心觀察員") &&
+      truthHtml.includes("酸民狼") &&
+      replayTxt.includes("本局三大勝負轉折軸")
+    );
+
+    antiCheatMonitor.strictThrow = prevStrict;
+    resetMatchToLobby();
+    return { tempTierOk, feedbackAnonOk, selfSecretSnapOk, guideVisibleStep1, guideStep2Ok, guideStep3Ok, gameOverReviewOk };
+  })()`, ctx);
+
+  const v20All = Object.assign({
+    globalZeroEmojiOk,
+    anonAndPlainCopyOk,
+    p01SelfSecretIsolatedOk,
+    p02InterjectRaceGuardOk,
+    p03DualPoolSwOk,
+    doc9SectionsOk,
+    apiTempClampOk: apiModRes
+  }, v20RuntimeRes);
+  for (const [k, v] of Object.entries(v20All)) {
+    if (!v) {
+      throw new Error("v20.0 FINAL VERIFICATION failed for " + k + " | emojiHits=" + JSON.stringify(emojiHits) + " | copyHits=" + JSON.stringify(copyHits) + " | all=" + JSON.stringify(v20All));
+    }
+  }
+}
+
+// ==================== v21.3 MULTI-DEVICE ERGONOMICS & 3-DEVICE INDEPENDENT TUTORIAL CHECK ====================
+{
+  const v21MultiRes = vm.runInContext(`(() => {
+    const prevW = window.innerWidth;
+    window.innerWidth = 390;
+    const devPhone = detectTutorialDeviceMode();
+    window.innerWidth = 820;
+    const devTablet = detectTutorialDeviceMode();
+    window.innerWidth = 1280;
+    const devDesktop = detectTutorialDeviceMode();
+    window.innerWidth = prevW;
+    const deviceDetectOk = (devPhone === "phone" && devTablet === "tablet" && devDesktop === "desktop");
+
+    const decksOk = Boolean(
+      typeof DEVICE_TUTORIAL_DECKS === "object" &&
+      Array.isArray(DEVICE_TUTORIAL_DECKS.phone) && DEVICE_TUTORIAL_DECKS.phone.length === 6 &&
+      Array.isArray(DEVICE_TUTORIAL_DECKS.tablet) && DEVICE_TUTORIAL_DECKS.tablet.length === 6 &&
+      Array.isArray(DEVICE_TUTORIAL_DECKS.desktop) && DEVICE_TUTORIAL_DECKS.desktop.length === 6 &&
+      DEVICE_TUTORIAL_DECKS.phone[1].html.includes("清心長老") &&
+      DEVICE_TUTORIAL_DECKS.tablet[1].html.includes("清心長老") &&
+      DEVICE_TUTORIAL_DECKS.desktop[1].html.includes("清心長老")
+    );
+
+    const distinctContentOk = Boolean(
+      DEVICE_TUTORIAL_DECKS.phone[2].html.includes("長按") &&
+      DEVICE_TUTORIAL_DECKS.phone[2].html.includes("橫滑座位條") &&
+      DEVICE_TUTORIAL_DECKS.tablet[2].html.includes("雙手") &&
+      DEVICE_TUTORIAL_DECKS.tablet[2].html.includes("頭像拖曳連線") &&
+      DEVICE_TUTORIAL_DECKS.desktop[2].html.includes("滑鼠") &&
+      DEVICE_TUTORIAL_DECKS.desktop[4].html.includes("Space") &&
+      DEVICE_TUTORIAL_DECKS.phone[2].title !== DEVICE_TUTORIAL_DECKS.tablet[2].title &&
+      DEVICE_TUTORIAL_DECKS.tablet[2].title !== DEVICE_TUTORIAL_DECKS.desktop[2].title
+    );
+
+    // Open tutorial at chapter 3 (idx=2) and switch across all 3 device tabs preserving chapter index
+    el("btnOpenTutorial").click();
+    el("tutorialStepTabs")._children[2].click();
+    const switchChildren = el("tutorialDeviceSwitch")._children;
+    const has3SwitchBtns = switchChildren.length === 3;
+    switchChildren[0].click(); // phone
+    const phoneBodyOk = state.tutorialDevice === "phone" && state.tutorialIndex === 2 && el("tutorialSlideBody").innerHTML.includes("長按");
+    switchChildren[1].click(); // tablet
+    const tabletBodyOk = state.tutorialDevice === "tablet" && state.tutorialIndex === 2 && el("tutorialSlideBody").innerHTML.includes("頭像拖曳連線");
+    switchChildren[2].click(); // desktop
+    const desktopBodyOk = state.tutorialDevice === "desktop" && state.tutorialIndex === 2 && el("tutorialSlideBody").innerHTML.includes("滑鼠核心互動");
+    el("btnCloseTutorial").click();
+
+    return { deviceDetectOk, decksOk, distinctContentOk, has3SwitchBtns, phoneBodyOk, tabletBodyOk, desktopBodyOk };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v21MultiRes)) {
+    if (!v) {
+      throw new Error("v21.3 MULTI-DEVICE TUTORIAL check failed for " + k + ": " + JSON.stringify(v21MultiRes));
+    }
+  }
+}
+
+// ==================== v22.0 ONE-FOCUS VISUAL HIERARCHY & COLLAPSIBLE LISTEN TOOLS CHECK ====================
+{
+  const v22Res = vm.runInContext(`(() => {
+    startGuidedBeginnerMatch();
+    el("btnRoleDealConfirm").click();
+    state.match.phase = "NIGHT_SEER";
+    indieFlow.syncBodyScreenState();
+    const nightClassOk = document.body.classList.contains("phase-mode-night") && !document.body.classList.contains("phase-mode-listen");
+
+    state.match.phase = "DAY_SPEECH";
+    indieFlow.syncBodyScreenState();
+    const listenClassOk = document.body.classList.contains("phase-mode-listen") && !el("listenExtraToolsWrap").classList.contains("is-open");
+    el("btnToggleListenTools").click();
+    const listenDrawerOpenOk = el("listenExtraToolsWrap").classList.contains("is-open") && el("btnToggleListenTools").getAttribute("aria-expanded") === "true";
+
+    state.match.phase = "DAY_PLAYER_TURN";
+    indieFlow.syncBodyScreenState();
+    const speakAutoCollapseOk = document.body.classList.contains("phase-mode-speak") && !el("listenExtraToolsWrap").classList.contains("is-open");
+
+    state.match.phase = "DAY_VOTE";
+    indieFlow.syncBodyScreenState();
+    const voteClassOk = document.body.classList.contains("phase-mode-vote") && !document.body.classList.contains("phase-mode-speak");
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return { nightClassOk, listenClassOk, listenDrawerOpenOk, speakAutoCollapseOk, voteClassOk };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v22Res)) {
+    if (!v) {
+      throw new Error("v22.0 VISUAL HIERARCHY check failed for " + k + ": " + JSON.stringify(v22Res));
+    }
+  }
+}
+
+// ==================== v22.1 DYNAMIC SHERIFF CANDIDATE COUNT & PLAYFUL BLUFF / WITHDRAW CHECK ====================
+{
+  const v221Res = vm.runInContext(`(() => {
+    el("chkSheriffMode").checked = true;
+    state.sheriffMode = true;
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+
+    // Sample 30 distinct election seeds to confirm candidate count is genuinely variable (NOT fixed to 3!)
+    const seenCounts = new Set();
+    const seenTones = new Set();
+    let alwaysSafeBounds = true;
+    for (let s = 1; s <= 30; s++) {
+      state.match.sheriffElectionSeed = s * 137 + 19;
+      const cands = buildSheriffElectionCandidates();
+      seenCounts.add(cands.length);
+      if (cands.length < 1 || cands.length > 5) alwaysSafeBounds = false;
+      const sampleSpeeches = [];
+      cands.forEach(c => {
+        const line = buildSheriffCandidateLine(c, sampleSpeeches);
+        if (line && line.tone) seenTones.add(line.tone);
+        sampleSpeeches.push({ id: c.id, name: c.name, tag: line.tag, tone: line.tone, text: line.text });
+      });
+    }
+    const dynamicCountOk = seenCounts.size >= 3 && alwaysSafeBounds;
+    const playfulBluffOk = seenTones.has("bluff") && seenTones.has("playful");
+
+    // Verify player non-seer quick options include playful/bluff withdrawAfter card & clean auto-withdrawal
+    const pid = getPlayerId();
+    state.match.day = 1;
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    resolveSheriffElectionAction("run");
+    let playerWithdrawCardOk = false;
+    let safety = 0;
+    while (state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech" && safety < 10) {
+      safety += 1;
+      const ctxNow = state.match.sheriffElectionCtx;
+      if (ctxNow.activeReelSeatId === pid) {
+        const wdOpt = (ctxNow.playerQuickOptions || []).find(o => o && o.withdrawAfter);
+        if (wdOpt) {
+          submitPlayerSheriffSpeech(wdOpt.text, null, { claimsSeer: false, withdrawAfter: true });
+          playerWithdrawCardOk = Boolean(
+            state.match.sheriffElectionCtx &&
+            state.match.sheriffElectionCtx.playerWithdrew === true &&
+            !state.match.sheriffElectionCtx.playerRunning &&
+            state.match.sheriffElectionCtx.candidateIds.indexOf(pid) === -1
+          );
+        } else {
+          submitPlayerSheriffSpeech("上警隨便聊聊看大家反應！");
+        }
+      } else {
+        advanceSheriffSpeechTurn();
+      }
+    }
+    if (state.match.sheriffElectionCtx) resolveSheriffElectionAction("pass");
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      dynamicCountOk,
+      playfulBluffOk,
+      playerWithdrawCardOk,
+      countsSeen: Array.from(seenCounts).sort((a, b) => a - b)
+    };
+  })()`, ctx);
+
+  if (!v221Res.dynamicCountOk || !v221Res.playfulBluffOk || !v221Res.playerWithdrawCardOk) {
+    throw new Error("v22.1 DYNAMIC SHERIFF check failed: " + JSON.stringify(v221Res));
+  }
+}
+
+// ==================== v23.1 ANIMATED DIEGETIC GUIDANCE (以動代文・光影引導) CHECK ====================
+{
+  const v231Res = vm.runInContext(`(() => {
+    resetMatchToLobby();
+    updateAllUI();
+    const lobbyStartBeckon = el("btnStartMatch").classList.contains("is-guide-beckon");
+
+    // 1. Night Seer: unselected beckons seat strip, selecting valid seat shifts glow to confirm CTA
+    el("selectModeCount").value = "6";
+    el("selectPreferredRole").value = "seer";
+    el("chkSheriffMode").checked = false;
+    state.sheriffMode = false;
+    startNewGame({ guidedBeginner: true });
+    if (typeof indieFlow !== "undefined" && typeof indieFlow.hideRoleDealRitual === "function") {
+      indieFlow.hideRoleDealRitual();
+    }
+    clearStepTimer();
+    state.match.phase = "NIGHT_SEER";
+    state.seerReveal = null;
+    state.selectedSeatId = null;
+    updateAllUI();
+    const nightUnselectedBeckon = el("seatButtonStrip").classList.contains("is-guide-beckon")
+      && !el("btnConfirmTarget").classList.contains("is-guide-ready");
+    const targetAlive = getAliveSeats().find(s => s.id !== getPlayerId());
+    state.selectedSeatId = targetAlive ? targetAlive.id : 2;
+    updateAllUI();
+    const nightSelectedReady = !el("seatButtonStrip").classList.contains("is-guide-beckon")
+      && el("btnConfirmTarget").classList.contains("is-guide-ready");
+
+    // 2. Day Speak: quick cards beckon, toxic input shifts focus to rephrase tray; zero clunky brackets
+    state.match.phase = "DAY_PLAYER_TURN";
+    state.rephraseTrayPinned = false;
+    if (el("rephraseChoicesTray")) el("rephraseChoicesTray").classList.add("hidden");
+    preparePlayerSpeechPanel();
+    updateAllUI();
+    const speakCardBeckon = el("quickSpeechChips").classList.contains("is-guide-beckon");
+    const cleanHeadingOk = !el("playerTurnHeading").textContent.includes("請選牌表態");
+    renderRephraseChoicesTray("2號白癡亂玩快滾");
+    const rephraseFocusOk = el("rephraseChoicesTray").classList.contains("is-guide-focus")
+      && !el("quickSpeechChips").classList.contains("is-guide-beckon");
+
+    // 3. Day Vote + 2-Petal Lotus Synergy -> Four-Givings pouch beckons automatically!
+    state.match.phase = "DAY_VOTE";
+    state.match.threeGood = { heart: 1, words: 1, deeds: 0, resonanceTriggered: false };
+    state.match.goodwillVoteBonus = false;
+    state.selectedSeatId = null;
+    updateAllUI();
+    const voteUnselectedOk = el("seatButtonStrip").classList.contains("is-guide-beckon")
+      && !el("btnCastVote").classList.contains("is-guide-ready");
+    const fourGBeckonOk = el("cornerFourGDeck").classList.contains("is-guide-beckon");
+    const cleanVoteBadgeOk = !el("voteGoodwillBadge").textContent.includes("右側四給卡即可");
+    state.selectedSeatId = targetAlive ? targetAlive.id : 2;
+    updateAllUI();
+    const voteSelectedReady = !el("seatButtonStrip").classList.contains("is-guide-beckon")
+      && el("btnCastVote").classList.contains("is-guide-ready");
+
+    // 4. Tutorial animated gesture visualizers across all 3 devices
+    const phoneAnimOk = DEVICE_TUTORIAL_DECKS.phone[2].html.includes("tut-anim-stage");
+    const tabletAnimOk = DEVICE_TUTORIAL_DECKS.tablet[2].html.includes("tut-anim-stage");
+    const desktopAnimOk = DEVICE_TUTORIAL_DECKS.desktop[2].html.includes("tut-anim-stage")
+      && DEVICE_TUTORIAL_DECKS.desktop[4].html.includes("tut-anim-key");
+
+    resetMatchToLobby();
+    return {
+      lobbyStartBeckon,
+      nightUnselectedBeckon,
+      nightSelectedReady,
+      speakCardBeckon,
+      cleanHeadingOk,
+      rephraseFocusOk,
+      voteUnselectedOk,
+      fourGBeckonOk,
+      cleanVoteBadgeOk,
+      voteSelectedReady,
+      phoneAnimOk,
+      tabletAnimOk,
+      desktopAnimOk
+    };
+  })()`, ctx);
+
+  const failedV231 = Object.entries(v231Res).filter(([, v]) => !v);
+  if (failedV231.length > 0) {
+    throw new Error("v23.1 ANIMATED DIEGETIC GUIDANCE check failed: " + JSON.stringify(v231Res));
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 Animated Guidance E2E smoke test PASSED!");

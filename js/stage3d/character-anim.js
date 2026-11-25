@@ -624,14 +624,16 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       actor.collarMat.color.set(s.alive ? (avStyle.accent || "#fef3c7") : "#475569");
     }
 
-    const baseHex = !s.alive
-      ? "#475569"
-      : isSelected ? "#f59e0b"
-        : isSpeaking ? "#fde047"
-          : (mark === "wolf" ? "#f43f5e" : (mark === "good" ? "#10b981" : (s.color || "#94a3b8")));
-    actor.ringMat.color.set(baseHex);
-    actor.ringMat.emissive.set(baseHex);
-    actor.ringMat.emissiveIntensity = !s.alive ? 0.0 : (isSpeaking ? 1.55 : (isSelected || isDragSnap ? 1.25 : 0.42));
+    const showFloorRing = Boolean(s.alive && (isSpeaking || isSelected || isHovered || isDragSnap || Boolean(mark)));
+    if (actor.baseRing) actor.baseRing.visible = showFloorRing;
+    if (showFloorRing) {
+      const baseHex = isSpeaking ? "#ecc36e"
+        : (isSelected || isDragSnap) ? "#e5a846"
+          : (mark === "wolf" ? "#e0584d" : (mark === "good" ? "#34b888" : "#d4a657"));
+      actor.ringMat.color.set(baseHex);
+      actor.ringMat.emissive.set(baseHex);
+      actor.ringMat.emissiveIntensity = isSpeaking ? 1.05 : ((isSelected || isDragSnap) ? 0.85 : 0.45);
+    }
 
     const showHalo = s.alive && (isSpeaking || isSelected || isDragSnap || Boolean(s.claimedRole));
     actor.haloMat.opacity += ((showHalo ? (isSpeaking ? (0.94 + liveAmp * 0.06) : 0.55) : 0.0) - actor.haloMat.opacity) * d16;
@@ -652,10 +654,10 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
 
     if (mark && s.alive) {
       actor.markCrystal.visible = true;
-      actor.markCrystalMat.color.setHex(mark === "wolf" ? 0xf43f5e : 0x10b981);
-      actor.markCrystalMat.emissive.setHex(mark === "wolf" ? 0xe11d48 : 0x059669);
-      actor.markCrystal.rotation.y = t * 2.2;
-      actor.markCrystal.position.y = 0.24 + Math.sin(t * 3.5 + s.id) * 0.04;
+      actor.markCrystalMat.color.setHex(mark === "wolf" ? 0xc25448 : 0x4ca382);
+      actor.markCrystalMat.emissive.setHex(mark === "wolf" ? 0x8f2e24 : 0x266b52);
+      actor.markCrystal.rotation.y = t * 1.4;
+      actor.markCrystal.position.y = 0.16 + Math.sin(t * 2.4 + s.id) * 0.022;
     } else {
       actor.markCrystal.visible = false;
     }

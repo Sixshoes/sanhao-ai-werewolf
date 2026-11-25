@@ -78,11 +78,11 @@ function pinSeatSummaryNote(seatId) {
     }
   }
   pinClue(s.id, tag, summary, "note");
-  spawnFx(s.id, "📌 已記進筆記!", "#fbbf24");
+  spawnFx(s.id, "已記進筆記!", "#fbbf24");
   spawnBurst(s.id, ["#fbbf24", "#fde68a", "#ffffff"], 12, "star");
   nudgeSeat(s.id, { scale: 1.12, vy: -4 });
   sound.tone(620, 0.08, "triangle", 0.045, 0);
-  showToast("📌 已靜默記下 " + fmtSeatNum(s.id) + "號重點，輪到你發言時可一鍵帶入！", "emerald");
+  showToast("已靜默記下 " + fmtSeatNum(s.id) + "號重點，輪到你發言時可一鍵帶入！", "emerald");
 }
 
 function executeRadialAction(actionKey) {
@@ -97,24 +97,24 @@ function executeRadialAction(actionKey) {
   const isWolfEx = Boolean(pSelfEx && pSelfEx.role === "wolf");
   if (actionKey === "good") {
     if (isWolfEx && target.role === "wolf") {
-      spawnFx(target.id, "🐺 狼隊同伴", "#fb7185");
+      spawnFx(target.id, "狼隊同伴", "#fb7185");
       return;
     }
     state.playerMarks[target.id] = state.playerMarks[target.id] === "good" ? null : "good";
     spawnBurst(target.id, ["#34d399", "#a7f3d0", "#fde68a"], 14, "petal");
     nudgeSeat(target.id, { scale: 0.92, vScale: 0.22, vy: -5 });
-    spawnFx(target.id, state.playerMarks[target.id] ? (isWolfEx ? "🛡️ 標記假保" : "✓ 標記好人") : "清除標記", "#34d399");
+    spawnFx(target.id, state.playerMarks[target.id] ? (isWolfEx ? "標記假保" : "標記好人") : "清除標記", "#34d399");
     sound.tone(660, 0.08, "triangle", 0.05, 0);
     updateAllUI();
   } else if (actionKey === "wolf") {
     if (isWolfEx && target.role === "wolf") {
-      spawnFx(target.id, "🐺 勿標同伴", "#fb7185");
+      spawnFx(target.id, "勿標同伴", "#fb7185");
       return;
     }
     state.playerMarks[target.id] = state.playerMarks[target.id] === "wolf" ? null : "wolf";
     spawnBurst(target.id, ["#fb7185", "#fda4af", "#ffffff"], 14, "spark");
     nudgeSeat(target.id, { scale: 0.88, vScale: 0.2, vTilt: 0.2 });
-    spawnFx(target.id, state.playerMarks[target.id] ? (isWolfEx ? "🎯 標記甩鍋" : "⚠ 標記懷疑") : "清除標記", "#fb7185");
+    spawnFx(target.id, state.playerMarks[target.id] ? (isWolfEx ? "標記甩鍋" : "標記懷疑") : "清除標記", "#fb7185");
     sound.tone(330, 0.09, "triangle", 0.05, 0);
     updateAllUI();
   } else if (actionKey === "pin") {
@@ -321,11 +321,11 @@ function renderSeatIntelPopover() {
     } else if (isWolfView) {
       bGood.disabled = !state.match.started || !s.alive;
       bGood.className = "intel-seg-btn" + (curMark === "good" ? " is-active-good" : "");
-      bGood.textContent = curMark === "good" ? "✓ 已假保" : "標假保";
+      bGood.textContent = curMark === "good" ? "已假保" : "標假保";
     } else {
       bGood.disabled = !state.match.started || !s.alive;
       bGood.className = "intel-seg-btn" + (curMark === "good" ? " is-active-good" : "");
-      bGood.textContent = curMark === "good" ? "✓ 好人" : "好人";
+      bGood.textContent = curMark === "good" ? "已標好人" : "好人";
     }
   }
   if (bWolf) {
@@ -336,11 +336,11 @@ function renderSeatIntelPopover() {
     } else if (isWolfView) {
       bWolf.disabled = !state.match.started || !s.alive;
       bWolf.className = "intel-seg-btn" + (curMark === "wolf" ? " is-active-wolf" : "");
-      bWolf.textContent = curMark === "wolf" ? "✓ 已甩鍋" : "標甩鍋";
+      bWolf.textContent = curMark === "wolf" ? "已甩鍋" : "標甩鍋";
     } else {
       bWolf.disabled = !state.match.started || !s.alive;
       bWolf.className = "intel-seg-btn" + (curMark === "wolf" ? " is-active-wolf" : "");
-      bWolf.textContent = curMark === "wolf" ? "✓ 懷疑" : "懷疑";
+      bWolf.textContent = curMark === "wolf" ? "已懷疑" : "懷疑";
     }
   }
   if (bPin) {
@@ -504,11 +504,11 @@ function inspectSeatMicroExpression(seatId) {
   if (reading >= 64) {
     target.sweatExposed = true;
     setSeatEmotion(target.id, "nervous", 4200);
-    spawnFx(target.id, "💦 神色心虛 " + reading + "%!", "#fb7185");
+    spawnFx(target.id, "神色心虛 " + reading + "%!", "#fb7185");
     spawnBurst(target.id, ["#fb7185", "#fbbf24", "#ffffff"], 18, "spark");
     pinClue(
       target.id,
-      "🔍觀微 " + fmtSeatNum(target.id) + "號心虛",
+      "觀微 " + fmtSeatNum(target.id) + "號心虛",
       "剛才我仔細觀察 " + fmtSeatNum(target.id) + "號" + target.name + " 的神情反應，發現他眼角閃躲、神色緊繃（緊張度約 " + reading + "%），建議這輪重點查證 " + fmtSeatNum(target.id) + "號！",
       "micro"
     );
@@ -524,28 +524,28 @@ function inspectSeatMicroExpression(seatId) {
     }
     addLog({
       kind: "blessing",
-      title: "🔍 靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 神情明顯緊繃閃躲（緊張讀數 " + reading + "%），已存為「呈堂證供」素材！",
+      title: "靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 神情明顯緊繃閃躲（緊張讀數 " + reading + "%），已存為「呈堂證供」素材！",
       text: ""
     });
-    showToast("🔍 觀微察覺 " + fmtSeatNum(target.id) + "號神色緊張 (" + reading + "%)！已存入呈堂證供素材！", "emerald");
+    showToast("觀微察覺 " + fmtSeatNum(target.id) + "號神色緊張 (" + reading + "%)！已存入呈堂證供素材！", "emerald");
   } else if (reading <= 38) {
     setSeatEmotion(target.id, "happy", 2800);
-    spawnFx(target.id, "🌿 氣息沉穩 " + reading + "%", "#34d399");
+    spawnFx(target.id, "氣息沉穩 " + reading + "%", "#34d399");
     spawnBurst(target.id, ["#34d399", "#a7f3d0"], 12, "petal");
     addLog({
       kind: "blessing",
-      title: "🔍 靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 目光坦然、呼吸沉穩（緊張讀數 " + reading + "%）。",
+      title: "靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 目光坦然、呼吸沉穩（緊張讀數 " + reading + "%）。",
       text: ""
     });
-    showToast("🔍 觀微顯示 " + fmtSeatNum(target.id) + "號神情沉穩自然 (" + reading + "%)。", "emerald");
+    showToast("觀微顯示 " + fmtSeatNum(target.id) + "號神情沉穩自然 (" + reading + "%)。", "emerald");
   } else {
-    spawnFx(target.id, "🔍 尚稱克制 " + reading + "%", "#fde68a");
+    spawnFx(target.id, "尚稱克制 " + reading + "%", "#fde68a");
     addLog({
       kind: "blessing",
-      title: "🔍 靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 情緒壓抑尚無明顯波瀾（讀數 " + reading + "%），仍需聽後續言行比對。",
+      title: "靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 情緒壓抑尚無明顯波瀾（讀數 " + reading + "%），仍需聽後續言行比對。",
       text: ""
     });
-    showToast("🔍 " + fmtSeatNum(target.id) + "號情緒尚稱克制（讀數 " + reading + "%），可再聽其邏輯。", "amber");
+    showToast("" + fmtSeatNum(target.id) + "號情緒尚稱克制（讀數 " + reading + "%），可再聽其邏輯。", "amber");
   }
 
   updateAllUI();
@@ -602,7 +602,7 @@ function serveWarmTeaToSeat(seatId) {
   spawnBurst(target.id, ["#34d399", "#fbbf24", "#fde68a"], 20, "petal");
   nudgeSeat(target.id, { scale: 1.12, vy: -5 });
   setSeatEmotion(target.id, "happy", 3400);
-  spawnFx(target.id, "🍵 暖茶結緣 +6!", "#34d399");
+  spawnFx(target.id, "暖茶結緣 +6!", "#34d399");
   if (typeof stage3d !== "undefined" && stage3d.isActive()) {
     stage3d.triggerSkillFx("witch_heal", pid, target.id, false);
   }
@@ -615,10 +615,10 @@ function serveWarmTeaToSeat(seatId) {
   }
   addLog({
     kind: "blessing",
-    title: "🍵 奉茶結緣：你親自端了一盞暖茶給 " + fmtSeatNum(target.id) + "號 " + target.name + "（全場友善度 +6、好感拉近）！",
+    title: "奉茶結緣：你親自端了一盞暖茶給 " + fmtSeatNum(target.id) + "號 " + target.name + "（全場友善度 +6、好感拉近）！",
     text: ""
   });
-  showToast("🍵 已奉暖茶給 " + fmtSeatNum(target.id) + "號 " + target.name + "！夥伴暖心回禮，點亮做好事進度！", "emerald");
+  showToast("已奉暖茶給 " + fmtSeatNum(target.id) + "號 " + target.name + "！夥伴暖心回禮，點亮做好事進度！", "emerald");
   if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
   updateAllUI();
   return true;

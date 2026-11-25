@@ -91,9 +91,10 @@ function bindModalEvents() {
     if (hasBlockingModalOpen()) {
       const tutMod = el("modalTutorial");
       if (tutMod && !tutMod.classList.contains("hidden")) {
+        const tutSlides = (typeof getActiveTutorialSlides === "function") ? getActiveTutorialSlides() : TUTORIAL_SLIDES;
         if (ev.key === "ArrowRight") {
           ev.preventDefault();
-          state.tutorialIndex = Math.min(TUTORIAL_SLIDES.length - 1, state.tutorialIndex + 1);
+          state.tutorialIndex = Math.min(tutSlides.length - 1, state.tutorialIndex + 1);
           renderTutorialSlide();
         } else if (ev.key === "ArrowLeft") {
           ev.preventDefault();
@@ -233,8 +234,9 @@ function bindModalEvents() {
     });
   });
 
-  function openTutorialModal(startIdx) {
+  function openTutorialModal(startIdx, deviceOverride) {
     sound.unlock();
+    state.tutorialDevice = deviceOverride || ((typeof detectTutorialDeviceMode === "function") ? detectTutorialDeviceMode() : "desktop");
     state.tutorialIndex = typeof startIdx === "number" ? startIdx : 0;
     renderTutorialSlide();
     el("modalTutorial").classList.remove("hidden");
@@ -260,9 +262,41 @@ function bindModalEvents() {
   });
   el("btnTutNext").addEventListener("click", function () {
     sound.unlock();
-    state.tutorialIndex = Math.min(TUTORIAL_SLIDES.length - 1, state.tutorialIndex + 1);
+    const tutSlides = (typeof getActiveTutorialSlides === "function") ? getActiveTutorialSlides() : TUTORIAL_SLIDES;
+    state.tutorialIndex = Math.min(tutSlides.length - 1, state.tutorialIndex + 1);
     renderTutorialSlide();
   });
+
+  // Touch horizontal swipe inside Tutorial body to turn chapters cleanly on Phone & Tablet
+  const tutScrollEl = el("tutorialScrollArea") || el("tutorialSlideBody");
+  if (tutScrollEl) {
+    let swipeStartX = 0;
+    let swipeStartY = 0;
+    let swipeActive = false;
+    tutScrollEl.addEventListener("touchstart", function (ev) {
+      if (!ev.touches || ev.touches.length !== 1) { swipeActive = false; return; }
+      swipeStartX = ev.touches[0].clientX;
+      swipeStartY = ev.touches[0].clientY;
+      swipeActive = true;
+    }, { passive: true });
+    tutScrollEl.addEventListener("touchend", function (ev) {
+      if (!swipeActive || !ev.changedTouches || !ev.changedTouches.length) return;
+      swipeActive = false;
+      const dx = ev.changedTouches[0].clientX - swipeStartX;
+      const dy = ev.changedTouches[0].clientY - swipeStartY;
+      if (Math.abs(dx) < 52 || Math.abs(dx) <= Math.abs(dy) * 1.3) return;
+      const tutSlides = (typeof getActiveTutorialSlides === "function") ? getActiveTutorialSlides() : TUTORIAL_SLIDES;
+      if (dx < 0 && state.tutorialIndex < tutSlides.length - 1) {
+        state.tutorialIndex += 1;
+        if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(540, 0.04, "triangle", 0.03, 0);
+        renderTutorialSlide();
+      } else if (dx > 0 && state.tutorialIndex > 0) {
+        state.tutorialIndex -= 1;
+        if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(480, 0.04, "triangle", 0.03, 0);
+        renderTutorialSlide();
+      }
+    }, { passive: true });
+  }
   el("btnLaunchGuidedDemo").addEventListener("click", startGuidedBeginnerMatch);
   el("btnStartTutorialMatch").addEventListener("click", startGuidedBeginnerMatch);
   if (el("btnStartJudgeShowcase") && typeof startJudgeShowcaseMatch === "function") {
@@ -329,7 +363,7 @@ function bindModalEvents() {
     const box = el("aiTestResultBox");
     if (state.serverGeminiAvailable && !state.geminiApiKey && !state.localLlmModel && !state.serverGeminiOptOut) {
       box.classList.remove("hidden");
-      box.textContent = "☁️ 線上公測雲端 Gemini（" + (state.serverGeminiModel || "gemini-3.8-flash") + "）已自動啟用，免填 Key 即可體驗即時真 AI 對話！";
+      box.textContent = "線上公測雲端 Gemini（" + (state.serverGeminiModel || "gemini-3.8-flash") + "）已自動啟用，免填 Key 即可體驗即時真 AI 對話！";
     } else {
       box.classList.add("hidden");
     }

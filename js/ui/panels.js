@@ -17,16 +17,16 @@ function syncFocalCardChrome(p) {
   if (el("selfSpeakingRow")) el("selfSpeakingRow").textContent = playerNumTag() + " 你 正在對全場發言…";
   if (el("playerTurnHeading")) {
     el("playerTurnHeading").textContent = (isPkVoteActive() && state.match.pkCandidates.indexOf(getPlayerId()) !== -1)
-      ? ("⚔️ 平票 PK 輪到 " + playerNumTag() + " 你搶救拉票！")
-      : ("輪到 " + playerNumTag() + " 你發言（請選牌表態）");
+      ? ("平票 PK · 輪到 " + playerNumTag() + " 你拉票")
+      : ("輪到 " + playerNumTag() + " 你陳詞");
   }
   const selfRow = el("selfSpeakingRow");
   if (selfRow) selfRow.classList.toggle("hidden", !isSelfSpeaking);
 
   const focalCard = el("focalCenterCard");
   if (focalCard) {
-    const spNow = (p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH" || showSheriffSpotlight) ? getSeat(state.activeSpeakerId) : null;
-    focalCard.style.borderColor = spNow ? spNow.color : "";
+    // v21.2 Subtractive Art Direction: Keep focal dock in unified antique-gold hairline palette (zero neon per-seat borders!)
+    focalCard.style.borderColor = "";
   }
   const explodeBar = el("wolfSelfExplodeBar");
   if (explodeBar) {
@@ -47,26 +47,45 @@ function syncFocalCardChrome(p) {
 
   const dragHint = el("dragGestureHint");
   if (dragHint) {
+    const devMode = (typeof detectTutorialDeviceMode === "function") ? detectTutorialDeviceMode() : "desktop";
     if (!state.match.started || p === "LOBBY") {
-      dragHint.textContent = "拖曳空地 360° 環視山城｜點擊角色、桌心蓮花或遠方龜山島互動";
+      dragHint.textContent = devMode === "phone"
+        ? "單指環視山城 · 雙指縮放 · 輕觸茶友與桌心蓮花"
+        : (devMode === "tablet"
+          ? "單指環視山城 · 雙指縮放 · 輕觸茶友、蓮花或龜山島"
+          : "拖曳環視山城 · 滾輪縮放 · 輕點茶友、蓮花或龜山島");
     } else if (p === "SHERIFF_ELECTION") {
-      dragHint.textContent = "上警競選：依座號輪流發言拉票，選完後警下投票結果將自動納入排坑考量";
+      dragHint.textContent = "上警競選 · 依席輪流陳詞，警下票型將入排坑";
     } else if (p === "DAY_VOTE") {
-      dragHint.textContent = "點選席間座位，或直接從頭像拖線至可疑對象立即投出公投票";
+      dragHint.textContent = devMode === "phone"
+        ? "擇席落籌 · 連點兩下即定"
+        : (devMode === "tablet"
+          ? "擇席落籌 · 頭像拖線直投"
+          : "擇席或拖線落籌 · 數字鍵選席");
     } else if (p === "NIGHT_GUARD") {
-      dragHint.textContent = "護心守衛：點選或拖曳連線（含自己）展開結界，不可連守昨晚對象";
+      dragHint.textContent = "護心結界 · 擇一席守護，可守自己、勿連守同席";
     } else if (p === "NIGHT_SEER" || p === "NIGHT_WOLF" || p === "HUNTER_TRIGGER") {
-      dragHint.textContent = "點選席間座位或直接拖曳連線，放開立即執行行動";
+      dragHint.textContent = devMode === "phone"
+        ? "擇一席定案 · 連點兩下即行"
+        : "擇席或頭像拖線定案";
     } else if (p === "DAY_PLAYER_TURN") {
-      dragHint.textContent = "點擊或拖線至席間座位可即時切換發言點名對象";
+      dragHint.textContent = devMode === "phone"
+        ? "橫滑切換點名 · 輕觸茶牌陳詞"
+        : (devMode === "tablet"
+          ? "擇席切換點名 · 輕觸茶牌陳詞"
+          : "擇席切換點名 · Q / W / E 出牌 · Tab 換人");
     } else if (p === "DAY_SPEECH") {
-      dragHint.textContent = "雙擊角色推進特寫｜拖曳頭像連線開啟靜默偵探輪盤";
+      dragHint.textContent = devMode === "phone"
+        ? "長按茶友開偵探輪盤 · 輕觸席號看情資"
+        : (devMode === "tablet"
+          ? "雙擊特寫 · 長按或拖線開偵探輪盤"
+          : "雙擊特寫 · 拖線開輪盤 · Space 下一位 · J 手札");
     } else if (p === "LAST_WORDS_PLAYER" || p === "LAST_WORDS_SPEECH") {
-      dragHint.textContent = "遺言階段：首夜與公投離席可留下線索，全場 AI 將納入記憶";
+      dragHint.textContent = "遺言時刻 · 所留線索將映入席間記憶";
     } else if (typeof isSpectatorGuessActive === "function" && isSpectatorGuessActive()) {
-      dragHint.textContent = "席外觀戰推理中：可在下方猜狼／猜神職，點擊圓桌座位仍可檢視發言紀錄";
+      dragHint.textContent = "席外觀戰 · 推演底牌，輕觸茶友仍可回顧陳詞";
     } else {
-      dragHint.textContent = "點擊席間夥伴可檢視情資卡與即時態度";
+      dragHint.textContent = "輕觸席間茶友可檢視情資與態度";
     }
   }
 }
@@ -80,8 +99,8 @@ function renderVoteResultPanel() {
     el("votePlayerOutChoiceNotice").classList.toggle("hidden", !vr.playerVotedOut);
     if (vr.playerVotedOut) {
       el("votePlayerOutChoiceNotice").textContent = (p1 && p1.team === "wolf")
-        ? "你已被請離茶席！留下觀戰即可開啟「🎯 席外獵神挑戰」揪出全場真神職，或直接結束看底牌。"
-        : ("你已被請離茶席！留下觀戰即可開啟「🔍 席外猜狼挑戰」找出 " + (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2) + " 名酸民狼，或直接結束看底牌。");
+        ? "你已被請離茶席！留下觀戰即可開啟「席外獵神挑戰」揪出全場真神職，或直接結束看底牌。"
+        : ("你已被請離茶席！留下觀戰即可開啟「席外猜狼挑戰」找出 " + (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2) + " 名酸民狼，或直接結束看底牌。");
     }
   }
   if (el("btnVoteEndNow")) {
@@ -159,13 +178,13 @@ function renderVotePickPanel() {
     const tgObj = (state.match && state.match.threeGood) || { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
     const litCnt = (tgObj.heart > 0 ? 1 : 0) + (tgObj.words > 0 ? 1 : 0) + (tgObj.deeds > 0 ? 1 : 0);
     if (!isWolfVoter && state.match.goodwillVoteBonus) {
-      gwBadge.textContent = "🌟 三好蓮花覺醒・黃金善意票生效中（本票權重 +1 票！）";
+      gwBadge.textContent = "三好蓮花覺醒 · 黃金善意票 +1 生效";
       gwBadge.className = "vote-goodwill-badge is-gold";
     } else if (isWolfVoter && tgObj.resonanceTriggered) {
-      gwBadge.textContent = "🌟 深水三好偽裝生效中（好人戒心已降・請避開同伴精準投票）";
+      gwBadge.textContent = "深水三好光環生效 · 席間戒心已降";
       gwBadge.className = "vote-goodwill-badge is-wolf";
     } else if (!isWolfVoter && litCnt === 2) {
-      gwBadge.textContent = "🪷 再點亮最後 1 瓣三好蓮花（打 1 張右側四給卡即可！），立即解鎖「黃金善意票 +1」！";
+      gwBadge.textContent = "三好蓮花尚差一瓣 · 奉出一盞四給茶禮即啟「黃金善意票 +1」";
       gwBadge.className = "vote-goodwill-badge is-hint";
     } else {
       gwBadge.className = "hidden vote-goodwill-badge";
@@ -187,7 +206,7 @@ function renderVotePickPanel() {
     rallyBtn.classList.toggle("hidden", !isPlayerSheriff);
     const usedToday = state.match.sheriffRallyUsedDay === state.match.day;
     rallyBtn.disabled = !isPlayerSheriff || usedToday;
-    rallyBtn.textContent = usedToday ? "👑 本輪已歸票" : "👑 警長歸票";
+    rallyBtn.textContent = usedToday ? "本輪已歸票" : "警長歸票";
   }
   const pkActive = isPkVoteActive();
   const pkListLabel = pkActive
@@ -195,14 +214,14 @@ function renderVotePickPanel() {
     : "";
   if (el("votePromptLabel")) {
     el("votePromptLabel").textContent = pkActive
-      ? ("⚔️ 平票 PK 決選：請從【" + pkListLabel + "】擇一投票")
-      : (isWolfVoter ? "🐺 酸民狼歸票：點選好人座位帶節奏（避開同伴）" : "點擊外圍座位投票抓狼");
+      ? ("平票 PK 決選 · 請從 " + pkListLabel + " 擇一")
+      : (isWolfVoter ? "酸民狼歸票 · 擇一好人席帶節奏" : "公投落籌 · 擇席請離");
   }
   const sel = getSeat(state.selectedSeatId);
   const validVote = Boolean(sel && isValidVoteTarget(sel.id));
   el("selectedVoteBadge").textContent = validVote
-    ? ("已鎖定：" + fmtSeatNum(sel.id) + "號 " + sel.name)
-    : (pkActive ? ("僅可投給 " + pkListLabel + "（或棄票）") : "點上方頭像或圓桌角色（再點一次秒投）");
+    ? ("已鎖定 · " + fmtSeatNum(sel.id) + "號 " + sel.name)
+    : (pkActive ? ("僅限 " + pkListLabel + " 或棄票") : "請擇定茶席座位");
   const vIntel = el("voteTargetIntelLine");
   if (vIntel) {
     if (validVote) {
@@ -222,7 +241,7 @@ function renderVotePickPanel() {
   if (validVote) {
     castBtn.innerHTML = escapeHtml("確認投給 " + fmtSeatNum(sel.id) + "號") + ' <kbd class="ui-kbd ml-1">Enter</kbd>';
   } else {
-    castBtn.textContent = pkActive ? "請點選 PK 候選人" : "請先選對象";
+    castBtn.textContent = pkActive ? "擇 PK 席位" : "擇席落籌";
   }
 }
 
@@ -242,10 +261,10 @@ function renderNightRoleTipStrip(p, pSelf) {
       ? state.match.sheriffBadgeFlow
       : ((state.match.sheriffBadgeFlowsBySeat && state.match.sheriffBadgeFlowsBySeat[pidNow]) || null);
     const flowTip = (myFlow && myFlow.firstTargetId && typeof formatBadgeFlowSummary === "function")
-      ? ("👑 你的警徽流：" + formatBadgeFlowSummary(myFlow))
+      ? ("你的警徽流：" + formatBadgeFlowSummary(myFlow))
       : "";
     const histTip = hist.length > 0
-      ? ("🔮 已驗（勿重驗）：" + hist.map(function (c) {
+      ? ("已驗（勿重驗）：" + hist.map(function (c) {
         const cs = getSeat(c.targetId);
         return fmtSeatNum(c.targetId) + (cs ? cs.name : "") + "=" + (c.isWolf ? "酸民狼" : "好人");
       }).join(" ｜ "))
@@ -254,18 +273,18 @@ function renderNightRoleTipStrip(p, pSelf) {
   } else if (p === "NIGHT_WITCH") {
     const healOk = Boolean(state.match.witchPotions && state.match.witchPotions.heal);
     const purOk = Boolean(state.match.witchPotions && state.match.witchPotions.purify);
-    text = "🍵 滴水奉茶師庫存：暖心茶(" + (healOk ? "可用" : "已用") + ")・清心茶(" + (purOk ? "可用" : "已用") + ")｜同夜限一盞";
+    text = "滴水奉茶師庫存：暖心茶(" + (healOk ? "可用" : "已用") + ")・清心茶(" + (purOk ? "可用" : "已用") + ")｜同夜限一盞";
   } else if (p === "NIGHT_GUARD") {
     const lg = state.match.lastGuardTargetId ? getSeat(state.match.lastGuardTargetId) : null;
     text = lg
-      ? ("🛡️ 上晚已守 " + fmtSeatNum(lg.id) + "號" + lg.name + "（今晚禁連守）")
+      ? ("上晚已守 " + fmtSeatNum(lg.id) + "號" + lg.name + "（今晚禁連守）")
       : "";
   } else if (p === "NIGHT_WOLF") {
     tone = "is-wolf";
     const mates = state.match.seats.filter(function (s) { return s.id !== getPlayerId() && s.role === "wolf"; });
     const mateLbl = mates.length > 0
-      ? ("🐺 狼同伴：" + mates.map(function (m) { return fmtSeatNum(m.id) + m.name + (m.alive ? "" : "(離)"); }).join("、"))
-      : "🐺 獨狼作戰";
+      ? ("狼同伴：" + mates.map(function (m) { return fmtSeatNum(m.id) + m.name + (m.alive ? "" : "(離)"); }).join("、"))
+      : "獨狼作戰";
     const marks = state.match.wolfGodMarks || {};
     const markList = Object.keys(marks).map(function (k) {
       const sid = parseInt(k, 10);
@@ -273,7 +292,7 @@ function renderNightRoleTipStrip(p, pSelf) {
       const md = typeof getWolfGodMarkDef === "function" ? getWolfGodMarkDef(marks[k]) : { label: marks[k] };
       return (ms && ms.alive && md.label) ? (fmtSeatNum(sid) + ms.name + "(" + md.label + ")") : "";
     }).filter(Boolean);
-    text = mateLbl + (markList.length > 0 ? (" ｜ 🔍 獵神筆記：" + markList.join("、")) : " ｜ 可指定明日同伴戰術");
+    text = mateLbl + (markList.length > 0 ? (" ｜ 獵神筆記：" + markList.join("、")) : " ｜ 可指定明日同伴戰術");
   } else if (p === "HUNTER_TRIGGER") {
     text = "";
   }
@@ -339,12 +358,12 @@ function renderNightAndHunterPanel(p) {
       : (state.match.witchPotions.purify ? "清心茶(第2夜開放)" : "清心茶(已用)");
 
     el("targetPromptBox").textContent = canHealNow
-      ? ("今晚 " + victim.id + "號 " + victim.name + " 被迷霧鎖定，要端暖心回甘茶護回他嗎？（同夜限一盞）")
+      ? ("今晚 " + victim.id + "號 " + victim.name + " 遭迷霧鎖定，是否奉暖心回甘茶護回？")
       : (blockedSelfHeal
         ? (twinTeaUi && state.match.day === 1
-          ? "雙刃毒茗局：首夜不可自救，但首夜已解禁清心茶！可選席位請離或略過。"
-          : "今晚你被迷霧鎖定（第2夜起不可自護），可端清心醒神茶請可疑者離席或略過。")
-        : "暖心茶已用完（不再得知夜間目標），可點上方座位端清心茶請可疑者冷靜或按略過。");
+          ? "雙刃毒茗首夜禁自護，今夜已解禁清心茶，可擇席請離或略過"
+          : "今夜遭鎖定且次夜起不可自護，可擇席奉清心茶或略過")
+        : "暖心茶已用盡，可擇席奉清心茶請離或略過");
     return;
   }
 
@@ -377,16 +396,16 @@ function renderNightAndHunterPanel(p) {
   if (validT) {
     confirmBtn.innerHTML = escapeHtml("確認" + verb + sel.id + "號") + ' <kbd class="ui-kbd ml-1">Enter</kbd>';
   } else {
-    confirmBtn.textContent = (p === "NIGHT_GUARD" && sel && state.match.lastGuardTargetId === sel.id) ? "不可連續守護" : "請點上方座位";
+    confirmBtn.textContent = (p === "NIGHT_GUARD" && sel && state.match.lastGuardTargetId === sel.id) ? "不可連守" : "擇定席位";
   }
   const lastG = state.match.lastGuardTargetId;
   el("targetPromptBox").textContent = validT
-    ? ("已鎖定 " + fmtSeatNum(sel.id) + "號 " + (sel.id === getPlayerId() ? "你自己" : sel.name) + "（再點頭像或按 Enter 確認）")
+    ? ("已鎖定 " + fmtSeatNum(sel.id) + "號 " + (sel.id === getPlayerId() ? "自己" : sel.name))
     : (p === "NIGHT_GUARD"
-      ? (lastG ? ("護心守衛：點上方頭像（含自己）守護；上晚守過 " + fmtSeatNum(lastG) + "號，今晚不可連守或按略過") : "護心守衛：點上方頭像（含自己）展開今夜守護結界")
+      ? (lastG ? ("護心結界 · 擇一席守護，昨夜已守 " + fmtSeatNum(lastG) + "號不可連守") : "護心結界 · 擇一席守護，可護自己")
       : (p === "NIGHT_SEER"
-        ? "明心觀察員：點上方頭像查證身分（再點一次秒查）"
-        : (isPlayerWK ? "🐺 流言首領最後帶風向：點上方好人頭像帶走 1 位夥伴（或按略過）" : "請直接點上方頭像選擇目標座位")));
+        ? "明心靜察 · 擇一席查證立場"
+        : (isPlayerWK ? "流言反撲 · 擇一好人席同行" : "請擇定席位")));
 }
 
 function renderStepperPanel(p) {
@@ -573,7 +592,7 @@ function renderStepperPanel(p) {
       ? ("直心糾察長 " + fmtSeatNum(hunterShot.hunterId) + "號 " + hunterShot.hunterName + " 帶走 " + fmtSeatNum(hunterShot.targetId) + "號 " + hunterShot.targetName + " 一同離席。")
       : "直心糾察長壓下正氣共鳴，未帶走任何人。")
     : (showCandle
-      ? "燭下覆茶：圈選明日盯防對象，或點「覆茶靜候天明」(Space)"
+      ? "燭下覆茶 · 圈選明日盯防席位"
       : (activeSpeaker
         ? (activeSpeaker.id + "號 " + activeSpeaker.name + "發言中…")
         : "天黑行動中…"));
@@ -612,20 +631,20 @@ function renderSheriffTransferPanel() {
       const f1Lbl = typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(f1) : (fmtSeatNum(f1) + "號");
       const f2Lbl = f2 ? (typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(f2) : (fmtSeatNum(f2) + "號")) : "";
       let guideText = canSignalFlow
-        ? ("👑 警徽流傳訊指南【" + formatBadgeFlowSummary(myFlow) + "】：飛給警1（" + f1Lbl + "）⇒ 全場解讀為金水；" +
+        ? ("警徽流傳訊指南【" + formatBadgeFlowSummary(myFlow) + "】：飛給警1（" + f1Lbl + "）⇒ 全場解讀為金水；" +
           (f2Lbl ? ("跳飛警2（" + f2Lbl + "）⇒ 報 " + f1Lbl + " 疑查殺、" + f2Lbl + " 金水；") : "") +
           "直接撕徽 ⇒ 報 " + f1Lbl + " 高度疑為查殺！")
         : (!isSeerClaimOrRoleP
-          ? ("👑 你尚未公開亮明觀察員身分，本次交棒將作為一般信任傳承（請移交給你信任的存活夥伴或撕毀警徽）。")
-          : ("👑 你今日才剛宣告警徽流【" + formatBadgeFlowSummary(myFlow) + "】、尚未經過夜晚查驗，請直接將警徽移交給你信任的存活夥伴或當場撕毀。"));
+          ? ("你尚未公開亮明觀察員身分，本次交棒將作為一般信任傳承（請移交給你信任的存活夥伴或撕毀警徽）。")
+          : ("你今日才剛宣告警徽流【" + formatBadgeFlowSummary(myFlow) + "】、尚未經過夜晚查驗，請直接將警徽移交給你信任的存活夥伴或當場撕毀。"));
       let guideTone = "";
       if (isSeerP && f1Chk) {
         if (f1Chk.isWolf) {
           guideTone = " is-wolf-alert";
-          guideText = "⚠️ 你昨夜查驗第一警徽流 " + f1Lbl + " 為【鍵盤酸民狼】！建議按下方「撕毀警徽」或改飛 " + (f2Lbl && f2Chk && !f2Chk.isWolf ? f2Lbl : "已驗好人") + "，將查殺暗號傳給全場！";
+          guideText = "你昨夜查驗第一警徽流 " + f1Lbl + " 為【鍵盤酸民狼】！建議按下方「撕毀警徽」或改飛 " + (f2Lbl && f2Chk && !f2Chk.isWolf ? f2Lbl : "已驗好人") + "，將查殺暗號傳給全場！";
         } else {
           guideTone = " is-good-alert";
-          guideText = "✨ 你昨夜查驗第一警徽流 " + f1Lbl + " 為【書院好夥伴（金水）】！直接將警徽飛給 " + f1Lbl + "，即可向全場亮出警徽流金水認證！";
+          guideText = "你昨夜查驗第一警徽流 " + f1Lbl + " 為【書院好夥伴（金水）】！直接將警徽飛給 " + f1Lbl + "，即可向全場亮出警徽流金水認證！";
         }
       }
       guideEl.textContent = guideText;
@@ -639,9 +658,9 @@ function renderSheriffTransferPanel() {
   if (shatterBtn) {
     if (canSignalFlow) {
       const f1LblS = typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(f1) : (fmtSeatNum(f1) + "號");
-      shatterBtn.textContent = "✕ 撕毀警徽（警徽流暗號：報 " + f1LblS + " 疑為查殺）";
+      shatterBtn.textContent = "撕毀警徽 · 報 " + f1LblS + " 疑查殺";
     } else {
-      shatterBtn.textContent = "✕ 撕毀警徽（本局不再有警長）";
+      shatterBtn.textContent = "撕毀警徽 · 本局無警";
     }
   }
 
@@ -652,12 +671,12 @@ function renderSheriffTransferPanel() {
     let tagSuffix = "";
     let cls = "cta-brass py-1.5 px-2.5 text-[15px]";
     if (s.id === f1) {
-      if (chk && !chk.isWolf) { tagSuffix = "〔警1★金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-[15px]"; }
-      else if (chk && chk.isWolf) { tagSuffix = "〔警1⚠查殺〕"; cls = "cta-ink py-1.5 px-2.5 text-[15px]"; }
+      if (chk && !chk.isWolf) { tagSuffix = "〔警1・金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-[15px]"; }
+      else if (chk && chk.isWolf) { tagSuffix = "〔警1・查殺〕"; cls = "cta-ink py-1.5 px-2.5 text-[15px]"; }
       else if (canSignalFlow) { tagSuffix = "〔警1・報金水〕"; }
       else { tagSuffix = "〔警1〕"; }
     } else if (s.id === f2) {
-      if (chk && !chk.isWolf) { tagSuffix = "〔警2★金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-[15px]"; }
+      if (chk && !chk.isWolf) { tagSuffix = "〔警2・金水〕"; cls = "cta-celadon py-1.5 px-2.5 text-[15px]"; }
       else if (canSignalFlow) { tagSuffix = "〔警2・跳飛〕"; }
       else { tagSuffix = "〔警2〕"; }
     } else if (chk && !chk.isWolf) {
@@ -665,7 +684,7 @@ function renderSheriffTransferPanel() {
       cls = "cta-celadon py-1.5 px-2.5 text-[15px]";
     }
     btn.className = cls;
-    btn.textContent = "👑 交給 " + fmtSeatNum(s.id) + "號 " + s.name + tagSuffix;
+    btn.textContent = "交給 " + fmtSeatNum(s.id) + "號 " + s.name + tagSuffix;
     btn.addEventListener("click", function () {
       if (typeof resolvePlayerSheriffTransfer === "function") resolvePlayerSheriffTransfer(s.id);
     });
@@ -692,13 +711,18 @@ function renderSheriffElectionPanel() {
 
   const headEl = el("sheriffElectionHeadline");
   if (headEl) {
+    const aliveCandN = (ctx.candidateIds || []).length;
     if (stage === "signup") {
-      headEl.textContent = "第一天上警競選（選完再公布首夜倒牌）・決定上警或警下聽選";
+      headEl.textContent = aliveCandN === 1
+        ? "第一天上警競選（目前 1 人單邊舉手）・可上警搶麥或警下聽選"
+        : ("第一天上警競選（目前 " + aliveCandN + " 人舉手）・可上警或警下聽選");
     } else if (stage === "speech") {
       const idxHuman = Math.min(orderIds.length, Math.max(1, (ctx.speechIndex || 0) + 1));
       headEl.textContent = "警上輪流發言（第 " + idxHuman + " / " + Math.max(1, orderIds.length) + " 位）";
     } else {
-      headEl.textContent = "警上發言完畢・請警下投票（結果納入排坑）";
+      headEl.textContent = aliveCandN <= 1
+        ? "警上僅餘 1 位留場・確認頒發警徽"
+        : ("警上發言完畢（共 " + aliveCandN + " 人角逐）・請警下投票");
     }
   }
 
@@ -706,6 +730,7 @@ function renderSheriffElectionPanel() {
   if (stripEl) {
     stripEl.innerHTML = "";
     orderIds.forEach(function (cid) {
+      if (withdrawnIds.indexOf(cid) !== -1) return;
       const cs = getSeat(cid);
       if (!cs) return;
       const isSp = stage === "speech" && ctx.activeReelSeatId === cid;
@@ -713,7 +738,7 @@ function renderSheriffElectionPanel() {
       const pill = document.createElement("span");
       pill.className = "sheriff-order-pill" + (isSp ? " is-speaking" : (isDone ? " is-done" : ""));
       const nm = cid === pid ? (fmtSeatNum(cid) + "你") : (fmtSeatNum(cid) + cs.name);
-      pill.textContent = (isSp ? "🎙 " : (isDone ? "✓ " : "")) + nm;
+      pill.textContent = (isSp ? "[發言] " : (isDone ? "[已講] " : "")) + nm;
       stripEl.appendChild(pill);
     });
     withdrawnIds.forEach(function (wid) {
@@ -750,7 +775,7 @@ function renderSheriffElectionPanel() {
         if (!cs || !cs.alive) return;
         const badge = document.createElement("span");
         badge.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-bold bg-amber-500/15 border border-amber-400/45 text-amber-100";
-        badge.textContent = "👑 " + fmtSeatNum(cid) + "號 " + (cid === pid ? "你" : cs.name) + "（待發言）";
+        badge.textContent = "" + fmtSeatNum(cid) + "號 " + (cid === pid ? "你" : cs.name) + "（待發言）";
         rosterRow.appendChild(badge);
       });
       cBox.appendChild(rosterRow);
@@ -762,21 +787,25 @@ function renderSheriffElectionPanel() {
         const row = document.createElement("div");
         const isClash = sp.tone === "clash";
         const isSeer = sp.tone === "seer";
+        const isPlayful = sp.tone === "playful" || sp.tone === "bluff";
+        const isWithdrew = Boolean(sp.withdrewAfterSpeech);
         const isActiveNow = stage === "speech" && ctx.activeReelSeatId === sp.id;
-        row.className = "rounded px-2 py-1 text-[13px] transition " + (isActiveNow
-          ? "bg-amber-500/25 border border-amber-300 text-amber-50"
+        row.className = "rounded px-2.5 py-1.5 text-[13px] transition " + (isActiveNow
+          ? "bg-amber-500/20 border border-amber-300/70 text-amber-50"
           : (isClash
-            ? "bg-rose-950/55 border border-rose-400/45 text-rose-50"
+            ? "bg-rose-950/50 border border-rose-400/40 text-rose-50"
             : (isSeer
-              ? "bg-indigo-950/55 border border-violet-400/40 text-slate-100"
-              : "bg-slate-900/55 border border-amber-400/25 text-slate-200")));
+              ? "bg-amber-950/45 border border-amber-400/45 text-amber-50"
+              : (isWithdrew
+                ? "bg-stone-900/50 border border-stone-600/35 text-stone-300 opacity-85"
+                : "bg-stone-950/65 border border-amber-400/20 text-stone-200"))));
         const badgeHtml = sp.tag
-          ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[13px] font-extrabold ' + (isClash ? "bg-rose-500/30 text-rose-200" : (isSeer ? "bg-violet-500/30 text-violet-200" : "bg-amber-500/25 text-amber-200")) + '">' + escapeHtml(sp.tag) + "</span>")
+          ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[13px] font-semibold ' + (isClash ? "bg-rose-500/25 text-rose-200" : (isSeer ? "bg-amber-500/25 text-amber-200" : (isPlayful ? "bg-emerald-500/20 text-emerald-200" : "bg-stone-700/60 text-amber-100"))) + '">' + escapeHtml(sp.tag) + "</span>")
           : "";
         const bfChipHtml = (sp.badgeFlow && sp.badgeFlow.firstTargetId && typeof formatBadgeFlowSummary === "function")
           ? ('<span class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[13px] font-bold bg-amber-500/20 border border-amber-400/40 text-amber-200">警徽流：' + escapeHtml(formatBadgeFlowSummary(sp.badgeFlow)) + "</span>")
           : "";
-        row.innerHTML = badgeHtml + bfChipHtml + '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("👑 " + playerNumTag() + " 你") : (fmtSeatNum(sp.id) + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
+        row.innerHTML = badgeHtml + bfChipHtml + '<span class="font-bold text-amber-300">' + (sp.id === pid ? ("[警] " + playerNumTag() + " 你") : (fmtSeatNum(sp.id) + "號 " + escapeHtml(sp.name))) + "：</span>" + escapeHtml(sp.text);
         cBox.appendChild(row);
       });
     }
@@ -793,7 +822,7 @@ function renderSheriffElectionPanel() {
       const aliveOtherSeats = getAliveSeats().filter(function (s) { return s.id !== pid; });
       const lblBf = document.createElement("span");
       lblBf.className = "font-bold shrink-0";
-      lblBf.textContent = "👑 雙警徽流設定：";
+      lblBf.textContent = "雙警徽流設定：";
       bfBar.appendChild(lblBf);
 
       const mkSel = function (selName, placeholder, curVal, excludeId, onChangeFn) {
@@ -853,7 +882,10 @@ function renderSheriffElectionPanel() {
           '<div class="text-[13px] text-slate-300 line-clamp-2 mt-0.5">' + escapeHtml(opt.text) + '</div>';
         card.addEventListener("click", function () {
           if (typeof submitPlayerSheriffSpeech === "function") {
-            submitPlayerSheriffSpeech(opt.text, opt.badgeFlow || null, { claimsSeer: opt.claimsSeer });
+            submitPlayerSheriffSpeech(opt.text, opt.badgeFlow || null, {
+              claimsSeer: opt.claimsSeer,
+              withdrawAfter: Boolean(opt.withdrawAfter)
+            });
           }
         });
         chipsBox.appendChild(card);
@@ -874,7 +906,7 @@ function renderSheriffElectionPanel() {
         const vb = document.createElement("button");
         vb.type = "button";
         vb.className = "cta-celadon py-1.5 px-3 text-[15px]";
-        vb.textContent = "👑 投給 " + fmtSeatNum(cid) + "號 " + cs.name;
+        vb.textContent = "投給 " + fmtSeatNum(cid) + "號 " + cs.name;
         vb.addEventListener("click", function () {
           if (typeof resolveSheriffElectionAction === "function") resolveSheriffElectionAction(cid);
         });
@@ -985,7 +1017,7 @@ function renderGameOverMetrics() {
   if (misEl) {
     if (misEval) {
       misEl.classList.remove("hidden");
-      misEl.textContent = (misEval.completed ? "🏅 秘密角色任務達成「" : "📜 秘密角色任務「") + misEval.title + "」：" + misEval.progressText + (misEval.completed ? " (+15分)" : "");
+      misEl.textContent = (misEval.completed ? "秘密角色任務達成「" : "秘密角色任務「") + misEval.title + "」：" + misEval.progressText + (misEval.completed ? " (+15分)" : "");
       misEl.className = misEval.completed
         ? "text-[13px] font-bold text-emerald-300 text-left mt-1.5"
         : "text-[13px] font-medium text-slate-300 text-left mt-1.5";
@@ -994,6 +1026,33 @@ function renderGameOverMetrics() {
     }
   }
   if (typeof renderGameOverGuessSummary === "function") renderGameOverGuessSummary();
+
+  // v20.0 1) Three Key Turning Points Axis
+  const tpWrap = el("gameOverTurningPoints");
+  if (tpWrap) {
+    const turningPoints = typeof buildMatchTurningPoints === "function" ? buildMatchTurningPoints() : [];
+    if (turningPoints.length > 0) {
+      let tpHtml = '<div class="gameover-section-head">本局三大勝負轉折軸</div><div class="turning-axis-grid">';
+      turningPoints.forEach(function (tp, idx) {
+        const toneCls = tp.tone === "jade" ? "is-jade" : (tp.tone === "cinnabar" ? "is-cinnabar" : "is-gold");
+        tpHtml +=
+          '<div class="turning-axis-card ' + toneCls + '">' +
+            '<div class="turning-axis-meta">' +
+              '<span class="turning-axis-step">0' + (idx + 1) + '</span>' +
+              '<span class="turning-axis-stage">' + escapeHtml(tp.stage) + '</span>' +
+            '</div>' +
+            '<div class="turning-axis-title">' + escapeHtml(tp.title) + '</div>' +
+            '<div class="turning-axis-detail">' + escapeHtml(tp.detail) + '</div>' +
+          '</div>';
+      });
+      tpHtml += '</div>';
+      tpWrap.innerHTML = tpHtml;
+      tpWrap.classList.remove("hidden");
+    } else {
+      tpWrap.innerHTML = "";
+      tpWrap.classList.add("hidden");
+    }
+  }
 
   const metrics = [
     { label: "好話", val: m.stats.goodWordsCount },
@@ -1009,6 +1068,41 @@ function renderGameOverMetrics() {
     d.innerHTML = '<div class="text-[13px] text-slate-400">' + escapeHtml(item.label) + '</div><div class="text-sm font-black text-amber-200">' + escapeHtml(item.val) + "</div>";
     box.appendChild(d);
   });
+
+  // v20.0 2) Full Seat Truth & Speech-Action Comparison Table
+  const truthWrap = el("gameOverSeatTruthBox");
+  if (truthWrap) {
+    const rows = typeof buildFullSeatTruthRows === "function" ? buildFullSeatTruthRows() : [];
+    if (rows.length > 0) {
+      let tblHtml =
+        '<div class="gameover-section-head">全席底牌與言行對照表</div>' +
+        '<div class="gameover-truth-scroll">' +
+        '<table class="gameover-truth-table">' +
+          '<thead><tr>' +
+            '<th>席位</th><th>真實底牌</th><th>公開立場</th><th>關鍵行動／投票紀錄</th><th>狀態</th>' +
+          '</tr></thead><tbody>';
+      rows.forEach(function (r) {
+        const rowCls = (r.team === "wolf" ? "is-wolf-row" : "is-good-row") + (r.isPlayer ? " is-player-row" : "");
+        const shTag = r.isSheriff ? '<span class="truth-badge-sheriff">警長</span>' : "";
+        const roleCls = r.team === "wolf" ? "truth-role-wolf" : "truth-role-good";
+        const stCls = r.alive ? "truth-status-alive" : "truth-status-out";
+        tblHtml +=
+          '<tr class="' + rowCls + '">' +
+            '<td class="truth-cell-seat">' + escapeHtml(r.seatLabel) + shTag + '</td>' +
+            '<td><span class="' + roleCls + '">' + escapeHtml(r.roleName) + '</span></td>' +
+            '<td class="truth-cell-stance">' + escapeHtml(r.publicStance) + '</td>' +
+            '<td class="truth-cell-act">' + escapeHtml(r.actionRecord) + '</td>' +
+            '<td><span class="' + stCls + '">' + escapeHtml(r.statusText) + '</span></td>' +
+          '</tr>';
+      });
+      tblHtml += '</tbody></table></div>';
+      truthWrap.innerHTML = tblHtml;
+      truthWrap.classList.remove("hidden");
+    } else {
+      truthWrap.innerHTML = "";
+      truthWrap.classList.add("hidden");
+    }
+  }
 
   // AI Post-Match Detective Coach Insights (3 crisp turning-point cards)
   if (typeof buildAiPostMatchCoachInsights === "function" && box && box.parentNode) {
@@ -1081,7 +1175,7 @@ function selectSeat(seatId) {
     if (state.intelSeatId === seatId && target.alive && p === "DAY_SPEECH" && !isSpecMode) {
       const isWolfSelf = Boolean(player && player.role === "wolf");
       if (isWolfSelf && target.role === "wolf") {
-        spawnFx(seatId, "🐺 狼隊同伴", "#fb7185");
+        spawnFx(seatId, "狼隊同伴", "#fb7185");
       } else {
         const cur = state.playerMarks[seatId] || null;
         const next = cur === null ? "wolf" : (cur === "wolf" ? "good" : null);

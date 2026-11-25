@@ -426,23 +426,16 @@ const stage3dVrm = {
       mounted.push(gGrp);
       if (chestBone) {
         const hoodGrp = new THREE.Group();
-        const hoodieMat = new THREE.MeshStandardMaterial({ color: 0x264566, roughness: 0.62, metalness: 0.06 });
         const trimMat = new THREE.MeshStandardMaterial({ color: 0xe6dec8, roughness: 0.52 });
-        const standCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.096, 0.068, 16, 1, true), hoodieMat);
-        standCollar.position.set(0, 0.132, -fwdSign * 0.010);
-        const hoodCowl = new THREE.Mesh(new THREE.TorusGeometry(0.098, 0.026, 8, 22), hoodieMat);
-        hoodCowl.rotation.x = Math.PI * 0.46;
-        hoodCowl.position.set(0, 0.118, -fwdSign * 0.042);
-        hoodCowl.scale.set(1.12, 1.0, 0.78);
         const zipLine = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.145, 0.006), darkMetal);
         zipLine.position.set(0, 0.048, fwdSign * 0.096);
         [-1, 1].forEach(function (sd) {
-          const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.078, 6), trimMat);
-          cord.position.set(sd * 0.026, 0.088, fwdSign * 0.098);
+          const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.0032, 0.0032, 0.074, 6), trimMat);
+          cord.position.set(sd * 0.025, 0.086, fwdSign * 0.098);
           cord.rotation.z = sd * 0.10;
           hoodGrp.add(cord);
         });
-        hoodGrp.add(standCollar, hoodCowl, zipLine);
+        hoodGrp.add(zipLine);
         chestBone.add(hoodGrp);
         mounted.push(hoodGrp);
       }
@@ -492,26 +485,20 @@ const stage3dVrm = {
       headBone.add(rGrp);
       mounted.push(rGrp);
     } else if (acc === "hiking_scarf" && chestBone) {
-      // 阿松（補齊原本 null）：登山社高領防風摺疊圍巾＋手腕編織傘繩
+      // 阿松：貼身登山徽章掛繩＋手腕編織傘繩（零浮空穿模圈環）
       const scGrp = new THREE.Group();
       const scarfMat = new THREE.MeshStandardMaterial({ color: 0x3b6a52, roughness: 0.72, metalness: 0.04 });
       const stripeMat = new THREE.MeshStandardMaterial({ color: 0xd9c7a0, roughness: 0.65 });
-      const wrap1 = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.032, 10, 24), scarfMat);
-      wrap1.rotation.x = Math.PI * 0.52;
-      wrap1.position.set(0, 0.128, fwdSign * 0.008);
-      wrap1.scale.set(1.12, 1.04, 1.0);
-      const wrap2 = new THREE.Mesh(new THREE.TorusGeometry(0.086, 0.026, 10, 22), stripeMat);
-      wrap2.rotation.x = Math.PI * 0.48;
-      wrap2.position.set(0, 0.156, fwdSign * 0.004);
-      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.135, 0.020), scarfMat);
-      tail.position.set(0.052 * fwdSign, 0.055, fwdSign * 0.094);
-      tail.rotation.z = -0.14 * fwdSign;
-      scGrp.add(wrap1, wrap2, tail);
+      const badge = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.042, 0.008), scarfMat);
+      badge.position.set(0.056 * fwdSign, 0.072, fwdSign * 0.096);
+      const clasp = new THREE.Mesh(new THREE.BoxGeometry(0.020, 0.008, 0.010), goldMat);
+      clasp.position.set(0.056 * fwdSign, 0.094, fwdSign * 0.098);
+      scGrp.add(badge, clasp);
       chestBone.add(scGrp);
       mounted.push(scGrp);
       const wristBone = bones.rightHand || bones.rightLowerArm;
       if (wristBone) {
-        const paracord = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.008, 8, 16), stripeMat);
+        const paracord = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.007, 6, 14), stripeMat);
         paracord.rotation.x = Math.PI * 0.5;
         paracord.position.set(0, -0.01, 0);
         wristBone.add(paracord);
@@ -578,13 +565,12 @@ const stage3dVrm = {
       headBone.add(braidGrp);
       mounted.push(braidGrp);
       if (chestBone) {
-        const shawlMat = new THREE.MeshStandardMaterial({ color: 0xf4e8de, roughness: 0.52 });
-        const shawl = new THREE.Mesh(new THREE.TorusGeometry(0.146, 0.022, 8, 26), shawlMat);
-        shawl.rotation.x = Math.PI * 0.52;
-        shawl.position.set(0, 0.068, -fwdSign * 0.010);
-        shawl.scale.set(1.22, 0.88, 0.55);
-        chestBone.add(shawl);
-        mounted.push(shawl);
+        const claspMat = new THREE.MeshStandardMaterial({ color: 0xf4e8de, roughness: 0.48 });
+        const chestBrooch = new THREE.Mesh(new THREE.OctahedronGeometry(0.015, 0), claspMat);
+        chestBrooch.scale.set(1.2, 0.85, 0.45);
+        chestBrooch.position.set(0, 0.068, fwdSign * 0.098);
+        chestBone.add(chestBrooch);
+        mounted.push(chestBrooch);
       }
     } else if (acc === "yuzu_clip" && headBone) {
       // 柚子：點心社抹茶軟呢貝雷帽＋雙側蓬鬆耳髮＋金柚果實胸／帽徽（徹底拉開與暖暖剪影差距！）
@@ -684,50 +670,40 @@ const stage3dVrm = {
         mounted.push(bunGrp);
       }
       const isGrp = new THREE.Group();
-      const mantleMat = new THREE.MeshStandardMaterial({ color: 0x222d44, roughness: 0.62 });
       const ivoryTrim = new THREE.MeshStandardMaterial({ color: 0xede3cf, roughness: 0.52 });
-      const shoulderMantle = new THREE.Mesh(new THREE.TorusGeometry(0.152, 0.032, 10, 26), mantleMat);
-      shoulderMantle.rotation.x = Math.PI * 0.52;
-      shoulderMantle.position.set(0, 0.072, -fwdSign * 0.008);
-      shoulderMantle.scale.set(1.24, 0.88, 0.52);
       [-1, 1].forEach(function (sd) {
-        const crossCollar = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.185, 0.016), ivoryTrim);
-        crossCollar.position.set(sd * 0.036, 0.056, fwdSign * 0.095);
-        crossCollar.rotation.z = -sd * 0.34;
+        const crossCollar = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.155, 0.012), ivoryTrim);
+        crossCollar.position.set(sd * 0.032, 0.056, fwdSign * 0.094);
+        crossCollar.rotation.z = -sd * 0.32;
         isGrp.add(crossCollar);
       });
       const cinnabar = new THREE.MeshStandardMaterial({ color: 0xa63529, roughness: 0.42 });
-      const seal = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.030, 0.009), cinnabar);
-      seal.position.set(0, 0.026, fwdSign * 0.106);
-      const cord = new THREE.Mesh(new THREE.TorusGeometry(0.015, 0.0028, 6, 14), goldMat);
-      cord.position.set(0, 0.044, fwdSign * 0.106);
-      isGrp.add(shoulderMantle, seal, cord);
+      const seal = new THREE.Mesh(new THREE.BoxGeometry(0.020, 0.028, 0.008), cinnabar);
+      seal.position.set(0, 0.026, fwdSign * 0.104);
+      const cord = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.0026, 6, 12), goldMat);
+      cord.position.set(0, 0.044, fwdSign * 0.104);
+      isGrp.add(seal, cord);
       chestBone.add(isGrp);
       mounted.push(isGrp);
     } else if (acc === "jade_pendant" && chestBone) {
-      // 阿竹：寬領青衫書院茶服襟飾＋青玉佩（對比小澄連帽立領！）
+      // 阿竹：貼合交領細飾＋青玉佩（移除浮空圓環穿模）
       const jpGrp = new THREE.Group();
-      const robeMat = new THREE.MeshStandardMaterial({ color: 0x2b554e, roughness: 0.60 });
       const lapelTrim = new THREE.MeshStandardMaterial({ color: 0xd9e8df, roughness: 0.52 });
       [-1, 1].forEach(function (sd) {
-        const collar = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.165, 0.014), lapelTrim);
-        collar.position.set(sd * 0.034, 0.058, fwdSign * 0.092);
-        collar.rotation.z = -sd * 0.30;
+        const collar = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.145, 0.012), lapelTrim);
+        collar.position.set(sd * 0.032, 0.058, fwdSign * 0.092);
+        collar.rotation.z = -sd * 0.28;
         jpGrp.add(collar);
       });
-      const wideCollar = new THREE.Mesh(new THREE.TorusGeometry(0.132, 0.022, 8, 22), robeMat);
-      wideCollar.rotation.x = Math.PI * 0.50;
-      wideCollar.position.set(0, 0.112, -fwdSign * 0.012);
-      wideCollar.scale.set(1.16, 0.84, 1.0);
-      const disc = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.0055, 8, 16), jadeMat);
-      disc.position.set(0, 0.018, fwdSign * 0.108);
-      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.0065, 8, 6), goldMat);
-      knot.position.set(0, 0.038, fwdSign * 0.108);
-      jpGrp.add(wideCollar, disc, knot);
+      const disc = new THREE.Mesh(new THREE.TorusGeometry(0.017, 0.005, 6, 14), jadeMat);
+      disc.position.set(0, 0.018, fwdSign * 0.106);
+      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.006, 6, 6), goldMat);
+      knot.position.set(0, 0.037, fwdSign * 0.106);
+      jpGrp.add(disc, knot);
       chestBone.add(jpGrp);
       mounted.push(jpGrp);
     } else if (acc === "tea_host") {
-      // 清茗：古金茶葉髮簪（頭骨）＋青瓷茶衫交領披肩與玉佩（胸骨）＋左手捧青瓷蓮花茶盞（退去日系制服感！）
+      // 清茗：古金茶葉髮簪（頭骨）＋貼身青瓷交領襟飾與玉佩（胸骨，零浮空圈環）＋左手捧青瓷茶盞
       const shawlMat = new THREE.MeshStandardMaterial({ color: 0x3b6658, roughness: 0.58, metalness: 0.06 });
       const ivoryLapelMat = new THREE.MeshStandardMaterial({ color: 0xf0e7d5, roughness: 0.50 });
       const celadonCupMat = new THREE.MeshStandardMaterial({ color: 0xd8f3e8, roughness: 0.16, metalness: 0.08 });
@@ -747,21 +723,17 @@ const stage3dVrm = {
       }
       if (chestBone) {
         const robeGrp = new THREE.Group();
-        const shawl = new THREE.Mesh(new THREE.TorusGeometry(0.138, 0.024, 8, 24), shawlMat);
-        shawl.rotation.x = Math.PI * 0.52;
-        shawl.position.set(0, 0.098, -fwdSign * 0.008);
-        shawl.scale.set(1.18, 0.86, 0.72);
         [-1, 1].forEach(function (sd) {
-          const lapel = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.172, 0.014), ivoryLapelMat);
-          lapel.position.set(sd * 0.036, 0.048, fwdSign * 0.092);
-          lapel.rotation.z = -sd * 0.30;
+          const lapel = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.156, 0.011), sd === 1 ? shawlMat : ivoryLapelMat);
+          lapel.position.set(sd * 0.032, 0.048, fwdSign * 0.092);
+          lapel.rotation.z = -sd * 0.28;
           robeGrp.add(lapel);
         });
-        const jadeRing = new THREE.Mesh(new THREE.TorusGeometry(0.017, 0.005, 8, 16), jadeMat);
-        jadeRing.position.set(0, 0.014, fwdSign * 0.106);
-        const goldKnot = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6), goldMat);
-        goldKnot.position.set(0, 0.032, fwdSign * 0.106);
-        robeGrp.add(shawl, jadeRing, goldKnot);
+        const jadeRing = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.0048, 6, 14), jadeMat);
+        jadeRing.position.set(0, 0.016, fwdSign * 0.104);
+        const goldKnot = new THREE.Mesh(new THREE.SphereGeometry(0.0058, 6, 6), goldMat);
+        goldKnot.position.set(0, 0.033, fwdSign * 0.104);
+        robeGrp.add(jadeRing, goldKnot);
         chestBone.add(robeGrp);
         mounted.push(robeGrp);
       }

@@ -509,6 +509,43 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
       })
     : [];
 
+  // Viewer-authorized self-secret summary (pre-assembled strictly inside Blind-View firewall so gemini.js never touches private seat props)
+  let selfSecretSummary = "【你的真實底牌】：好人陣營。";
+  let selfLastCheck = null;
+  if (selfView) {
+    const rDef = (typeof getSeatRoleDef === "function")
+      ? getSeatRoleDef(selfView)
+      : ((typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[selfView.role]) ? ROLE_DEFS[selfView.role] : null);
+    const rTitle = rDef ? rDef.name : selfView.role;
+    if (selfView.role === "wolf") {
+      const matesTxt = knownWolfMates.map(function (mt) {
+        return mt.id + "號" + (mt.id === pid ? "你" : mt.name) + (mt.alive ? "(在場)" : "(離席)");
+      }).join("、");
+      selfSecretSummary = "【你的真實底牌】：你是「" + rTitle + "」（酸民狼陣營，發言中絕對不可承認自己是狼或暴露同伴！）。" +
+        (matesTxt ? ("你的同伴：" + matesTxt + "。") : "你是目前場上最後一名同伴。");
+    } else if (selfView.role === "seer") {
+      const chkList = Array.isArray(selfView.checkedHistory) ? selfView.checkedHistory : [];
+      if (chkList.length > 0) {
+        const lastC = chkList[chkList.length - 1];
+        selfLastCheck = Object.freeze({ day: lastC.day, targetId: lastC.targetId, isWolf: Boolean(lastC.isWolf) });
+      }
+      const chksTxt = chkList.length
+        ? chkList.map(function (c) { return c.targetId + "號=" + (c.isWolf ? "酸民狼(查殺)" : "好人(金水)"); }).join("；")
+        : "尚無查驗紀錄";
+      selfSecretSummary = "【你的真實底牌】：你是「" + rTitle + "」（好人陣營）。你的親查紀錄：" + chksTxt + "。";
+    } else if (selfView.role === "witch") {
+      const wParts = [];
+      if (selfView.savedSeatId) wParts.push("曾以暖心回甘茶護回 " + selfView.savedSeatId + "號（銀水好人）");
+      if (selfView.purifiedSeatId) wParts.push("曾以醒腦清茶送離 " + selfView.purifiedSeatId + "號");
+      selfSecretSummary = "【你的真實底牌】：你是「" + rTitle + "」（好人陣營）。" + (wParts.length ? (wParts.join("；") + "。") : "尚未交出解藥或醒腦茶。");
+    } else if (selfView.role === "guard") {
+      const gTxt = legalLastGuardTargetId ? ("昨晚守護了 " + legalLastGuardTargetId + "號。") : "尚未公開守護對象。";
+      selfSecretSummary = "【你的真實底牌】：你是「" + rTitle + "」（好人陣營）。" + gTxt;
+    } else {
+      selfSecretSummary = "【你的真實底牌】：你是「" + rTitle + "」（好人陣營）。";
+    }
+  }
+
   return Object.freeze({
     started: true,
     module: moduleTag,
@@ -546,6 +583,8 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     lastGuardTargetId: legalLastGuardTargetId,
     witchPotions: legalWitchPotions,
     nightWolfVictimId: legalNightWolfVictimId,
+    selfSecretSummary: selfSecretSummary,
+    selfLastCheck: selfLastCheck,
     // Blind-projected seat collections
     self: selfView,
     seats: seats,

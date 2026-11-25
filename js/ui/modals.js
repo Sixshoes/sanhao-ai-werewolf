@@ -642,8 +642,8 @@ function renderOrchestratorTracePanel() {
       : { enabled: false, blindViewsIssued: 0, decisionsAudited: 0, promptAuditsPassed: 0, promptAuditsBlocked: 0, violationsBlocked: 0, byModule: {} };
     const isClean = ac.violationsBlocked === 0;
     const statusBadge = isClean
-      ? '<span class="px-2 py-0.5 rounded-full text-[13px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-400/45">✓ 隔離運行中・0 偷看違規</span>'
-      : '<span class="px-2 py-0.5 rounded-full text-[13px] font-black bg-rose-500/20 text-rose-200 border border-rose-400/50">⚠ 已攔截 ' + ac.violationsBlocked + ' 次越權</span>';
+      ? '<span class="px-2 py-0.5 rounded-full text-[13px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-400/45">隔離運行中・0 偷看違規</span>'
+      : '<span class="px-2 py-0.5 rounded-full text-[13px] font-black bg-rose-500/20 text-rose-200 border border-rose-400/50">已攔截 ' + ac.violationsBlocked + ' 次越權</span>';
     const modEntries = Object.keys(ac.byModule || {}).map(function (k) {
       const lblMap = { day_speech: "發言", day_vote: "公投", night_guard: "守衛", night_wolf: "狼襲", night_seer: "查驗", night_witch: "奉茶", hunter_shot: "共鳴", sheriff_speech: "上警", sheriff_vote: "投警", sheriff_transfer: "移徽", last_words: "遺言", llm_prompt: "LLM掃描" };
       return escapeHtml((lblMap[k] || k) + "×" + ac.byModule[k]);

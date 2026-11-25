@@ -34,10 +34,10 @@ function analyzeThreeGoodSpeech(rawText) {
   const seatNums = typeof extractSeatIdsFromText === "function"
     ? extractSeatIdsFromText(text, maxSeats, { includeNames: true })
     : (text.match(/(?:1[0-2]|0?[1-9])\s*號/g) || []).reduce(function (acc, m) {
-        const n = parseInt(m, 10);
-        if (n >= 1 && n <= maxSeats && acc.indexOf(n) === -1) acc.push(n);
-        return acc;
-      }, []);
+      const n = parseInt(m, 10);
+      if (n >= 1 && n <= maxSeats && acc.indexOf(n) === -1) acc.push(n);
+      return acc;
+    }, []);
 
   // Strip parenthetical explanations & Badge Flow declarations before stance extraction so
   // unchecked Badge Flow notes like "（徽給03號即金水、飛05號或撕徽即查殺）" NEVER fabricate Seer checks or wolfPits!
@@ -94,8 +94,8 @@ function analyzeThreeGoodSpeech(rawText) {
 
   const isToxic = toxicHits.length > 0;
   let badge = "溫和有理";
-  if (isToxic) badge = "語氣稍急，不妨添一分婉轉（可點選下方潤飾靈感籤）";
-  else if (state.match.rewriteCritReady) badge = "溫潤修辭・以理服人";
+  if (isToxic) badge = "語氣稍急，不妨添一分婉轉";
+  else if (state.match.rewriteCritReady) badge = "溫潤修辭 · 以理服人";
   else if (kindScore >= 86) badge = "言辭溫潤有理";
 
   return {
@@ -123,7 +123,32 @@ function buildRephraseChoiceSlips(rawText) {
     || (pid === 1 ? 2 : 1);
   const targetSeat = typeof getSeat === "function" ? getSeat(targetNum) : null;
   const targetLabel = targetSeat ? (fmtSeatNum(targetSeat.id) + "號" + targetSeat.name) : (fmtSeatNum(targetNum) + "號");
+  const shortTag = targetNum + "號" + (targetSeat ? targetSeat.name : "");
+  const activeCap = typeof getActiveSpeechCharLimit === "function" ? getActiveSpeechCharLimit() : 0;
   const isVouchIntent = Boolean(analysis.primaryVouchId && !analysis.primaryAccuseId && !analysis.isToxic);
+
+  if (activeCap > 0 && activeCap <= 28) {
+    if (isVouchIntent) {
+      return activeCap <= 22 ? [
+        { angle: "肯定條理", desc: "點出邏輯順暢處", text: shortTag + "條理清楚，這輪先信他。" },
+        { angle: "溫言互保", desc: "呼籲好人莫內耗", text: "先別錯怪" + shortTag + "，查矛盾位。" },
+        { angle: "留白觀察", desc: "暫信但保留複驗", text: "暫信" + shortTag + "，聽完後位再對。" }
+      ] : [
+        { angle: "肯定條理", desc: "點出邏輯順暢處", text: shortTag + "邏輯清楚又誠懇，這輪我先站他。" },
+        { angle: "溫言互保", desc: "呼籲好人莫內耗", text: "先別內耗誤會" + shortTag + "，一起查矛盾位。" },
+        { angle: "留白觀察", desc: "暫信但保留複驗", text: "暫把" + shortTag + "放偏可信，聽完後位再對票。" }
+      ];
+    }
+    return activeCap <= 22 ? [
+      { angle: "直指矛盾", desc: "點破票型或邏輯落差", text: shortTag + "言票有落差，建議先查他。" },
+      { angle: "溫言請教", desc: "請對方補充理由", text: "請教" + shortTag + "站邊理由，再決定票。" },
+      { angle: "留白觀望", desc: "先保留態度聽後位", text: "對" + shortTag + "先存疑，聽後位對照。" }
+    ] : [
+      { angle: "直指矛盾", desc: "點破票型或邏輯落差", text: "理性對線索，" + shortTag + "言票有落差，建議查他。" },
+      { angle: "溫言請教", desc: "請對方補充理由", text: "想溫和請教" + shortTag + "為何站邊？講不清先查他。" },
+      { angle: "留白觀望", desc: "先保留態度聽後位", text: "聽完" + shortTag + "這段仍存疑，先留記等後位對照。" }
+    ];
+  }
 
   if (isVouchIntent) {
     return [
@@ -184,6 +209,9 @@ function applyRephraseSlip(choice) {
   if (typeof sound !== "undefined" && typeof sound.playBlessing === "function") sound.playBlessing();
   if (typeof spawnFx === "function") spawnFx(getPlayerId(), "辭溫理正", "#34d399");
   if (typeof refreshLiveNlpUI === "function") refreshLiveNlpUI();
+  if (typeof indieFlow !== "undefined" && typeof indieFlow.syncAnimatedGuideCues === "function") {
+    indieFlow.syncAnimatedGuideCues();
+  }
   if (typeof showToast === "function") {
     showToast("已換成「" + choice.angle + "」說法，可直接按「送出」或再微調字句。", "emerald");
   }
@@ -212,6 +240,9 @@ function renderRephraseChoicesTray(rawText) {
     grid.appendChild(btn);
   });
   tray.classList.remove("hidden");
+  if (typeof indieFlow !== "undefined" && typeof indieFlow.syncAnimatedGuideCues === "function") {
+    indieFlow.syncAnimatedGuideCues();
+  }
   return slips;
 }
 
@@ -329,7 +360,7 @@ function syncSpeechAdvancedToggleLabel(player) {
   if (typeof shIcon === "function") {
     btn.innerHTML = shIcon(isWolf ? "mask" : "puzzle", "gold") + escapeHtml(textLabel);
   } else {
-    btn.textContent = (isWolf ? "🎭 " : "🧩 ") + textLabel;
+    btn.textContent = textLabel;
   }
   btn.classList.toggle("is-active", isOpen);
 }
@@ -520,7 +551,7 @@ function togglePlayerDraftSeatPit(seatId) {
   const seat = getSeat(seatId);
   if (!seat || !seat.alive || seatId === pid) return;
   if (player && player.role === "wolf" && seat.role === "wolf") {
-    showToast("🐺 這是你的狼隊同伴，不需要點進甩鍋目標！", "warn");
+    showToast("這是你的狼隊同伴，不需要點進甩鍋目標！", "warn");
     return;
   }
   const d = ensurePlayerDraftPits(false);
@@ -709,23 +740,23 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
         const shParts = (shRec.candidateIds || []).map(function (cid) {
           const cs = getSeat(cid);
           const voters = shGroups[cid] || [];
-          const cTag = (cid === shRec.winnerId ? "👑" : "") + fmtSeatNum(cid) + (cs ? (cid === pid ? "你" : cs.name) : "號");
+          const cTag = (cid === shRec.winnerId ? "[警] " : "") + fmtSeatNum(cid) + (cs ? (cid === pid ? "你" : cs.name) : "號");
           return cTag + (voters.length ? ("←" + voters.join(",")) : "(無警下票)");
         });
         const withPart = (shRec.withdrawnIds || []).length
           ? ("｜退水：" + shRec.withdrawnIds.map(function (wid) { return fmtSeatNum(wid) + "號"; }).join("、"))
           : "";
-        pieces.push("👑 警長票型參考：" + (shParts.join(" ｜ ") || "直接推舉") + withPart);
+        pieces.push("警長票型參考：" + (shParts.join(" ｜ ") || "直接推舉") + withPart);
       }
       const txtSpan = document.createElement("span");
       txtSpan.className = "pit-sheriff-text";
-      txtSpan.textContent = pieces.join(" ∥ ") || "👑 警徽流資訊";
+      txtSpan.textContent = pieces.join(" ∥ ") || "警徽流資訊";
       shRefStrip.appendChild(txtSpan);
       if (activeBf && activeBf.firstTargetId && typeof formatBadgeFlowSummary === "function") {
         const owLbl = typeof getSeatFlowLabel === "function" ? getSeatFlowLabel(activeBf.ownerId) : (fmtSeatNum(activeBf.ownerId) + "號");
         const bfPill = document.createElement("span");
         bfPill.className = "pit-bf-pill shrink-0";
-        bfPill.textContent = "🧭 警徽流(" + owLbl + ")：" + formatBadgeFlowSummary(activeBf);
+        bfPill.textContent = "警徽流(" + owLbl + ")：" + formatBadgeFlowSummary(activeBf);
         shRefStrip.appendChild(bfPill);
       }
       if (latestSig && latestSig.headline) {
@@ -761,7 +792,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
       bfBar.classList.remove("hidden");
       const bfLbl = document.createElement("span");
       bfLbl.className = "font-bold shrink-0";
-      bfLbl.textContent = isPlayerSheriffNow ? "👑 留／改今晚警徽流：" : "🔮 預告警徽流：";
+      bfLbl.textContent = isPlayerSheriffNow ? "留／改今晚警徽流：" : "預告警徽流：";
       bfBar.appendChild(bfLbl);
 
       const mkDayBfSel = function (selName, ph, curVal, exclId, onChg) {
@@ -815,7 +846,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   const lbl = document.createElement("span");
   lbl.className = "text-[10.5px] font-bold shrink-0 " + (isWolfPlayer ? "text-rose-300" : "text-amber-300/90");
   if (isWolfPlayer) {
-    lbl.textContent = "🎭 甩鍋／假保：";
+    lbl.textContent = "甩鍋／假保：";
   } else {
     const wolfTotal = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
     lbl.textContent = "好人排坑 (" + d.goodIds.length + "好·" + d.wolfIds.length + "/" + wolfTotal + "狼)：";
@@ -835,7 +866,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
     chip.textContent = fmtSeatNum(s.id) + s.name;
     if (shRec) {
       let shMicro = "";
-      if (shRec.winnerId === s.id) shMicro = "👑警長";
+      if (shRec.winnerId === s.id) shMicro = "警長";
       else if (shVotedMap[s.id]) shMicro = "投" + fmtSeatNum(shVotedMap[s.id]) + "警";
       else if ((shRec.withdrawnIds || []).indexOf(s.id) !== -1) shMicro = "退水";
       else if ((shRec.candidateIds || []).indexOf(s.id) !== -1) shMicro = "警上";
@@ -884,20 +915,20 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
 
   const extras = [];
   if (player.role === "seer") {
-    extras.push({ label: "🔮 亮觀察員報驗", active: d.claimRole === "seer", onClick: function () { togglePlayerDraftRoleClaim("seer"); } });
+    extras.push({ label: "亮觀察員報驗", active: d.claimRole === "seer", onClick: function () { togglePlayerDraftRoleClaim("seer"); } });
   } else if (player.role === "witch") {
-    extras.push({ label: "🍵 亮奉茶師報銀水", active: d.claimRole === "witch", onClick: function () { togglePlayerDraftRoleClaim("witch"); } });
+    extras.push({ label: "亮奉茶師報銀水", active: d.claimRole === "witch", onClick: function () { togglePlayerDraftRoleClaim("witch"); } });
   } else if (player.role === "guard") {
-    extras.push({ label: "🛡️ 亮守衛報路線", active: d.claimRole === "guard", onClick: function () { togglePlayerDraftRoleClaim("guard"); } });
+    extras.push({ label: "亮守衛報路線", active: d.claimRole === "guard", onClick: function () { togglePlayerDraftRoleClaim("guard"); } });
   } else if (player.role === "hunter") {
-    extras.push({ label: "⚖️ 亮糾察長威懾", active: d.claimRole === "hunter", onClick: function () { togglePlayerDraftRoleClaim("hunter"); } });
+    extras.push({ label: "亮糾察長威懾", active: d.claimRole === "hunter", onClick: function () { togglePlayerDraftRoleClaim("hunter"); } });
   } else if (player.isElder) {
-    extras.push({ label: "🌿 亮清心長老穩局", active: d.claimRole === "elder", onClick: function () { togglePlayerDraftRoleClaim("elder"); } });
+    extras.push({ label: "亮清心長老穩局", active: d.claimRole === "elder", onClick: function () { togglePlayerDraftRoleClaim("elder"); } });
   } else if (player.role === "villager") {
-    extras.push({ label: "📖 書院生理性歸票", active: d.claimRole === "villager", onClick: function () { togglePlayerDraftRoleClaim("villager"); } });
+    extras.push({ label: "書院生理性歸票", active: d.claimRole === "villager", onClick: function () { togglePlayerDraftRoleClaim("villager"); } });
   } else if (player.role === "wolf") {
-    extras.push({ label: "🎭 悍跳觀察員", active: d.claimRole === "seer", onClick: function () { togglePlayerDraftRoleClaim("seer"); } });
-    extras.push({ label: "🌿 低調裝好人", active: d.claimRole === "wolf_stealth", onClick: function () { togglePlayerDraftRoleClaim("wolf_stealth"); } });
+    extras.push({ label: "悍跳觀察員", active: d.claimRole === "seer", onClick: function () { togglePlayerDraftRoleClaim("seer"); } });
+    extras.push({ label: "低調裝好人", active: d.claimRole === "wolf_stealth", onClick: function () { togglePlayerDraftRoleClaim("wolf_stealth"); } });
   }
 
   // Good team convenience button: 1-click mark remaining unmarked seats as Good-Pit!
@@ -907,7 +938,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
     }).length;
     if (unmarkedCount > 0) {
       extras.push({
-        label: "✨ 其餘 " + unmarkedCount + " 位全保好人",
+        label: "其餘 " + unmarkedCount + " 位全保好人",
         active: false,
         onClick: markRemainingSeatsGoodPit
       });
@@ -932,7 +963,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   });
   if (contraClue) {
     extras.push({
-      label: "⚡ 呈堂證供 " + fmtSeatNum(contraClue.seatId) + "號",
+      label: "呈堂證供 " + fmtSeatNum(contraClue.seatId) + "號",
       active: d.evidenceClueId === contraClue.id,
       onClick: function () { togglePlayerDraftEvidence(contraClue); }
     });
@@ -962,7 +993,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
     huntRow.className = "pit-extra-row wolf-god-hunt-row";
     const hLbl = document.createElement("span");
     hLbl.className = "text-[10px] font-bold text-amber-300/90 shrink-0";
-    hLbl.textContent = "🔍 獵神筆記：";
+    hLbl.textContent = "獵神筆記：";
     huntRow.appendChild(hLbl);
     const marks = state.match.wolfGodMarks || {};
     targetSeats.forEach(function (s) {
@@ -1001,16 +1032,16 @@ function preparePlayerSpeechPanel() {
     ? pickedSeat
     : (inPk && pkRivalSeat && pkRivalSeat.alive ? pkRivalSeat : (aliveOthers[0] || { id: pid === 1 ? 2 : 1, name: "夥伴" }));
   if (el("playerTurnHeading")) {
-    el("playerTurnHeading").textContent = inPk ? "⚔️ 平票 PK 發言" : "輪到你發言";
+    el("playerTurnHeading").textContent = inPk ? "平票 PK 陳詞" : "輪到你陳詞";
   }
   const tHintEl = el("playerSpeechTargetLabel");
   if (tHintEl) {
-    tHintEl.textContent = "🎯 對象：" + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name;
+    tHintEl.textContent = "對象：" + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name;
   }
   const cHintEl = el("playerComboBonusHint");
   if (cHintEl) {
     if (state.match.comboBoostReady) {
-      cHintEl.textContent = "🔥 連擊 +15%";
+      cHintEl.textContent = "連擊 +15%";
       cHintEl.classList.remove("hidden");
     } else {
       cHintEl.textContent = "";
@@ -1037,7 +1068,15 @@ function preparePlayerSpeechPanel() {
     if (el("quickFreeInput")) el("quickFreeInput").value = "";
     if (el("playerSpeechInput")) el("playerSpeechInput").value = "";
   }
-  if (isFreshTurn && (draftNow.wolfIds.length > 0 || draftNow.goodIds.length > 0)) {
+  if (isFreshTurn && state.match && state.match.judgeShowcase && !state.match.rewriteCritReady) {
+    const qInJudge = el("quickFreeInput");
+    const sampleHarsh = sampleTarget.id + "號別硬拗了，言票早露餡快投他！";
+    if (qInJudge) qInJudge.value = sampleHarsh;
+    if (el("playerSpeechInput")) el("playerSpeechInput").value = sampleHarsh;
+    state.rephraseTrayPinned = true;
+    renderRephraseChoicesTray(sampleHarsh);
+    refreshLiveNlpUI();
+  } else if (isFreshTurn && (draftNow.wolfIds.length > 0 || draftNow.goodIds.length > 0)) {
     const qInNow = el("quickFreeInput");
     if (qInNow && !qInNow.value.trim()) syncDraftSpeechToInput();
   }
@@ -1672,7 +1711,7 @@ function submitPlayerSpeech() {
     }
   }
 
-  // Trigger "⚡ 邏輯破防" when an Evidence Card was played cleanly without toxic slips!
+  // Trigger logic-break when an Evidence Card was played cleanly without toxic slips!
   const evTgtId = state.match.pendingEvidenceTargetId;
   const evClueId = state.match.pendingEvidenceClueId;
   state.match.pendingEvidenceTargetId = null;

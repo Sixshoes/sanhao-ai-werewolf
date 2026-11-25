@@ -303,7 +303,7 @@ function bindAudioVoiceEvents() {
         syncSpeakerBannerVisuals(sp, bEl ? bEl.textContent : "", tEl ? tEl.textContent : "", Boolean(state.typewriter && state.typewriter.active));
       }
       if (typeof showToast === "function") {
-        showToast(st === "vrm3d" ? "✨ 已切換為「3D 模型頭像」" : "🎨 已切換為「電影工筆立繪」", "emerald");
+        showToast(st === "vrm3d" ? "已切換為「3D 模型頭像」" : "已切換為「電影工筆立繪」", "emerald");
       }
     });
   });
@@ -372,7 +372,7 @@ function bindAudioVoiceEvents() {
       if (typeof voice.togglePause === "function") {
         const pausedNow = voice.togglePause();
         if (typeof showToast === "function") {
-          showToast(pausedNow ? "⏸ 已暫停語音與字幕（再按一次繼續）" : "▶ 已繼續播放", "emerald");
+          showToast(pausedNow ? "已暫停語音與字幕（再按一次繼續）" : "▶ 已繼續播放", "emerald");
         }
       }
     });
@@ -385,7 +385,7 @@ function bindAudioVoiceEvents() {
       if (typeof voice.cycleQuickRate === "function") {
         const nextR = voice.cycleQuickRate();
         const tag = nextR >= 1.34 ? "1.5× 極速快節奏" : (nextR >= 1.18 ? "1.3× 疾風快節奏" : (nextR >= 1.05 ? "1.15× 輕快推理" : "1.0× 自然節奏"));
-        if (typeof showToast === "function") showToast("🎙️ 語音語速切換為：" + tag, "emerald");
+        if (typeof showToast === "function") showToast("語音語速切換為：" + tag, "emerald");
       }
     });
   }
@@ -401,7 +401,7 @@ function bindAudioVoiceEvents() {
       el("btnToggleSubtitleSize").classList.toggle("is-active", state.subtitleLarge);
       if (typeof saveUserPrefs === "function") saveUserPrefs();
       if (typeof showToast === "function") {
-        showToast(state.subtitleLarge ? "🔍 已切換為「大字護眼字幕」" : "已切回標準字幕大小", "emerald");
+        showToast(state.subtitleLarge ? "已切換為「大字護眼字幕」" : "已切回標準字幕大小", "emerald");
       }
     });
   }

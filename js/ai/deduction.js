@@ -425,7 +425,7 @@ function computeTableWindVane() {
     return ev && ev.speakerId !== pid && (ev.accuseId === pid || (Array.isArray(ev.wolfPits) && ev.wolfPits.indexOf(pid) !== -1));
   });
   if (pitCaller) {
-    parts.push("⚠ " + fmtSeatNum(pitCaller.speakerId) + "號點你進狼坑");
+    parts.push("" + fmtSeatNum(pitCaller.speakerId) + "號點你進狼坑");
   }
   if (todayContra.length > 0) {
     parts.push("偵測矛盾 " + todayContra.length + " 處");
@@ -446,7 +446,7 @@ function computeTableWindVane() {
     topHeatCount: topHeatCount,
     claimGroups: claimGroups,
     contradictionCount: todayContra.length,
-    summaryText: parts.length ? ("📊 茶席風向｜" + parts.join(" · ")) : "📊 茶席風向｜目前尚無公開集火目標"
+    summaryText: parts.length ? ("茶席風向｜" + parts.join(" · ")) : "茶席風向｜目前尚無公開集火目標"
   };
 }
 

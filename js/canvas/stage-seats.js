@@ -39,11 +39,11 @@ function computeStageSeatCoords(f) {
 function drawStageSeats(ctx, f, coords) {
   const { nowMs, w, h, dpr, p, night, daylight, cx, cy, tSec } = f;
 
-  // Subtle polar radial vectors from O(0,0) to each P_k
+  // Whisper-subtle gilded radial inlays from center toward each seat
   ctx.save();
-  ctx.strokeStyle = daylight ? "rgba(180, 83, 9, 0.14)" : (night ? "rgba(167, 139, 250, 0.14)" : "rgba(56, 189, 248, 0.13)");
+  ctx.strokeStyle = daylight ? "rgba(224, 184, 110, 0.09)" : (night ? "rgba(176, 190, 232, 0.10)" : "rgba(224, 184, 110, 0.08)");
   ctx.lineWidth = 1 * dpr;
-  ctx.setLineDash([3 * dpr, 4 * dpr]);
+  ctx.setLineDash([2.5 * dpr, 5 * dpr]);
   coords.forEach(function (c) {
     ctx.beginPath();
     ctx.moveTo(cx, cy);

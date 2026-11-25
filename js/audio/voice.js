@@ -233,11 +233,11 @@ const voice = {
         if (this.mode === "cozy") {
           lbl.textContent = "目前：12角色療癒原音樂音（零機械感・3D定位）";
         } else if (useGemFirst) {
-          lbl.textContent = "✨ Gemini 3.8 真人氣口演技（12 位真人級聲線" + (this.localNeuralAvailable ? "・含硬碟快取）" : "）");
+          lbl.textContent = "Gemini 3.8 真人氣口演技（12 位真人級聲線" + (this.localNeuralAvailable ? "・含硬碟快取）" : "）");
         } else if (this.localNeuralAvailable) {
-          lbl.textContent = "✨ v13 擬真多角色神經配音已連線（12 位真人級聲線・逐句韻律・$0）";
+          lbl.textContent = "v13 擬真多角色神經配音已連線（12 位真人級聲線・逐句韻律・$0）";
         } else if (bestScore >= 150) {
-          lbl.textContent = "✨ 免費神經聲線：" + zh[0].name.split(" ")[0];
+          lbl.textContent = "免費神經聲線：" + zh[0].name.split(" ")[0];
         } else if (bestScore >= 130) {
           lbl.textContent = "高清晰聲線：" + zh[0].name.split(" ")[0] + "（已啟用分句柔化）";
         } else if (zh.length > 0) {
@@ -781,7 +781,7 @@ const voice = {
   syncPauseButtonUi: function () {
     const btn = typeof document !== "undefined" ? document.getElementById("btnPauseVoice") : null;
     if (btn) {
-      btn.textContent = this.paused ? "▶ 繼續" : "⏸ 暫停";
+      btn.textContent = this.paused ? "▶ 繼續" : "暫停";
       btn.classList.toggle("is-paused", Boolean(this.paused));
     }
   },

@@ -31,11 +31,25 @@ function bindCanvasEvents() {
   let orbitMoved = false;
   const activeTouches = new Map();
   let lastPinchDist = 0;
+  let longPressTimer = null;
+  let longPressTriggered = false;
+  let longPressStart = null;
+  function clearLongPress() {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+    longPressStart = null;
+  }
 
   canvas.addEventListener("pointermove", function (ev) {
+    if (longPressTimer && longPressStart && Math.hypot(ev.clientX - longPressStart.x, ev.clientY - longPressStart.y) > 12) {
+      clearLongPress();
+    }
     if (activeTouches.has(ev.pointerId)) {
       activeTouches.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
       if (activeTouches.size === 2 && typeof stage3d !== "undefined" && stage3d.isActive()) {
+        clearLongPress();
         const pts = Array.from(activeTouches.values());
         const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         if (lastPinchDist > 0) {
@@ -111,6 +125,7 @@ function bindCanvasEvents() {
     if (ev.pointerType === "touch") {
       activeTouches.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
       if (activeTouches.size === 2) {
+        clearLongPress();
         const pts = Array.from(activeTouches.values());
         lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         if (typeof stage3d !== "undefined") stage3d.endOrbit();
@@ -118,7 +133,8 @@ function bindCanvasEvents() {
       }
     }
     const pt = getCanvasPoint(ev);
-    spawnRipple(pt.x, pt.y, document.body.classList.contains("theme-day") ? "#d97706" : "#fbbf24", 44);
+    const isDayUi = document.body.classList.contains("theme-daylight") || document.body.classList.contains("theme-day");
+    spawnRipple(pt.x, pt.y, isDayUi ? "#e6be6c" : "#fbbf24", 44);
     closeRadialMenu();
     // Seated POV (firstperson) Edge-Glance & Recenter Button Hit Test: 1-click smooth head turn!
     if (typeof stage3d !== "undefined" && stage3d.isActive() && stage3d.camPreset === "firstperson" && Array.isArray(state.fpGlanceButtons) && state.fpGlanceButtons.length > 0) {
@@ -150,11 +166,34 @@ function bindCanvasEvents() {
         curY: pt.y,
         snapId: null
       };
+      clearLongPress();
+      longPressTriggered = false;
+      if (ev.pointerType === "touch" && state.match && state.match.started && hitNode.id !== getPlayerId()) {
+        const lpSeatId = hitNode.id;
+        longPressStart = { x: ev.clientX, y: ev.clientY };
+        longPressTimer = setTimeout(function () {
+          longPressTimer = null;
+          if (!state.dragAction.active || state.dragAction.moved) return;
+          const pNow = state.match && state.match.phase;
+          if (isNightPhase(pNow) || pNow === "SHERIFF_ELECTION" || pNow === "SHERIFF_ORDER" || pNow === "SHERIFF_TRANSFER") return;
+          longPressTriggered = true;
+          state.dragAction.active = false;
+          state.dragAction.moved = false;
+          state.suppressNextClick = true;
+          setTimeout(function () { state.suppressNextClick = false; }, 220);
+          if (typeof sound !== "undefined" && typeof sound.tone === "function") {
+            sound.tone(620, 0.06, "triangle", 0.045, 0);
+          }
+          nudgeSeat(lpSeatId, { scale: 1.18, vScale: 0.1 });
+          openRadialMenu(lpSeatId);
+        }, 500);
+      }
       if (typeof stage3d !== "undefined" && stage3d.isActive()) {
         stage3d.updateDragWorldPoint(ev.clientX, ev.clientY);
       }
       try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
     } else if (typeof stage3d !== "undefined" && stage3d.isActive()) {
+      clearLongPress();
       orbitMoved = false;
       stage3d.beginOrbit(ev.clientX, ev.clientY);
       canvas.style.cursor = "grabbing";
@@ -163,9 +202,14 @@ function bindCanvasEvents() {
   });
 
   function finishCanvasDrag(ev) {
+    clearLongPress();
     if (ev && activeTouches.has(ev.pointerId)) {
       activeTouches.delete(ev.pointerId);
       if (activeTouches.size < 2) lastPinchDist = 0;
+    }
+    if (longPressTriggered) {
+      longPressTriggered = false;
+      return;
     }
     if (typeof stage3d !== "undefined" && stage3d.orbit.dragging) {
       stage3d.endOrbit();
@@ -223,7 +267,7 @@ function bindCanvasEvents() {
           nudgeSeat(targetId, { scale: 1.16 });
           preparePlayerSpeechPanel();
           updateAllUI();
-          showToast("🎯 已拖曳鎖定 " + fmtSeatNum(targetId) + "號 為發言點名對象！", "emerald");
+          showToast("已拖曳鎖定 " + fmtSeatNum(targetId) + "號 為發言點名對象！", "emerald");
         } else if (targetId !== pid && !isNightPhase(p) && p !== "SHERIFF_ELECTION" && p !== "SHERIFF_ORDER" && p !== "SHERIFF_TRANSFER") {
           openRadialMenu(targetId);
         }
@@ -379,6 +423,10 @@ function bindCanvasEvents() {
   };
   if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
     document.addEventListener("pointermove", function (ev) {
+      if (ev && ev.pointerType === "touch") {
+        if (activeTiltCard) resetTiltCard();
+        return;
+      }
       const tgt = ev && ev.target && typeof ev.target.closest === "function"
         ? ev.target.closest(".play-card-btn, .fourg-card, #roleDealCardBox")
         : null;

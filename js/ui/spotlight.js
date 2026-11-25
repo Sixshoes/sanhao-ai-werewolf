@@ -284,21 +284,21 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
     const reg = (speaker && typeof getPersonaRegister === "function") ? getPersonaRegister(speaker) : "";
     const isClassical = (reg === "classical" || reg === "guzheng" || reg === "poetic");
     stageBox.classList.toggle("is-classical-speech", isClassical);
-    stageBox.style.borderLeftColor = (speaker && speaker.color) ? speaker.color : "";
+    stageBox.style.borderLeftColor = "";
   }
   if (speaker) {
     if (med) {
       med.textContent = fmtSeatNum(speaker.id);
-      med.style.borderColor = speaker.color || "#d4a657";
-      med.style.color = speaker.color || "#d4a657";
+      med.style.borderColor = "";
+      med.style.color = "";
     }
     if (banner) {
-      banner.style.borderLeftColor = speaker.color || "#d4a657";
+      banner.style.borderLeftColor = "";
     }
   } else if (med) {
     med.textContent = "序";
-    med.style.borderColor = "#d4a657";
-    med.style.color = "#d4a657";
+    med.style.borderColor = "";
+    med.style.color = "";
   }
   const pImg = el("speakerPortraitImg");
   const pCan = el("speakerPortraitCanvas");
@@ -314,7 +314,7 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
         pImg.setAttribute("data-art", artUrl);
         pImg.src = artUrl;
       }
-      pImg.style.borderColor = (speaker && speaker.color) ? speaker.color : "#d4a657";
+      pImg.style.borderColor = "";
       pImg.classList.remove("hidden", "portrait-mood-angry", "portrait-mood-happy", "portrait-mood-shock");
       pImg.classList.toggle("portrait-speaking-glow", stillTalking);
       pImg.classList.toggle("portrait-speaking-breathe", Boolean(speaker && stillTalking));
@@ -373,6 +373,9 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
     shPrependIcon(tTagEl, spProf.iconKey, spProf.iconTone || "gold");
   }
   renderSpeakerTurnStrip();
+  if (typeof indieFlow !== "undefined" && typeof indieFlow.syncAnimatedGuideCues === "function") {
+    indieFlow.syncAnimatedGuideCues();
+  }
 }
 
 function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
@@ -438,14 +441,14 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
 
     if (isContraHit) {
       contraEmitted = true;
-      html += '<span class="clue-token clue-contradiction' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="發現邏輯破綻：「' + escapeHtml(activeContraRec.label) + '」，點擊收入呈堂證供">' + escapeHtml(tok) + (contraCaught ? ' ✓' : ' ·破綻') + '</span>';
+      html += '<span class="clue-token clue-contradiction' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="發現邏輯破綻：「' + escapeHtml(activeContraRec.label) + '」，點擊收入呈堂證供">' + escapeHtml(tok) + (contraCaught ? ' ·已證' : ' ·破綻') + '</span>';
     } else if (seatMatch) {
       const sid = parseInt(seatMatch[1], 10);
       html += '<span class="clue-token clue-seat" data-clue-type="seat" data-seat-id="' + sid + '" title="點擊查看 ' + fmtSeatNum(sid) + '號情報並鎖定">' + escapeHtml(tok) + '</span>';
     } else if (isToxic && speaker && speaker.id !== getPlayerId()) {
-      html += '<span class="clue-token clue-toxic' + (isCaught ? ' clue-caught' : '') + '" data-clue-type="toxic" data-clue-key="' + escapeHtml(clueKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="點擊抓包這句酸言破綻！">' + escapeHtml(tok) + (isCaught ? ' ✓' : '') + '</span>';
+      html += '<span class="clue-token clue-toxic' + (isCaught ? ' clue-caught' : '') + '" data-clue-type="toxic" data-clue-key="' + escapeHtml(clueKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="點擊抓包這句酸言破綻！">' + escapeHtml(tok) + (isCaught ? ' ·已記' : '') + '</span>';
     } else if (isRole) {
-      html += '<span class="clue-token clue-role' + (isCaught ? ' clue-caught' : '') + '" data-clue-type="role" data-clue-key="' + escapeHtml(clueKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="點擊記錄這項身分線索">' + escapeHtml(tok) + (isCaught ? ' ✓' : '') + '</span>';
+      html += '<span class="clue-token clue-role' + (isCaught ? ' clue-caught' : '') + '" data-clue-type="role" data-clue-key="' + escapeHtml(clueKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="點擊記錄這項身分線索">' + escapeHtml(tok) + (isCaught ? ' ·已記' : '') + '</span>';
     } else {
       html += escapeHtml(tok);
     }
@@ -457,7 +460,7 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
   }
   html += isPartial ? "" : "」";
   if (activeContraRec && !contraEmitted && !isPartial && speaker && speaker.id !== getPlayerId()) {
-    html += ' <span class="clue-token clue-contradiction ml-1' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="破綻" data-speaker-id="' + spId + '" title="點擊收入「' + escapeHtml(activeContraRec.label) + '」呈堂證供">收證：' + escapeHtml(activeContraRec.label) + (contraCaught ? ' ✓' : '') + '</span>';
+    html += ' <span class="clue-token clue-contradiction ml-1' + (contraCaught ? ' clue-caught' : '') + '" data-clue-type="contradiction" data-clue-key="' + escapeHtml(contraKey) + '" data-clue-word="破綻" data-speaker-id="' + spId + '" title="點擊收入「' + escapeHtml(activeContraRec.label) + '」呈堂證供">收證：' + escapeHtml(activeContraRec.label) + (contraCaught ? ' ·已證' : '') + '</span>';
   }
   pEl.innerHTML = html;
 }
@@ -491,7 +494,9 @@ function handleSpotlightClueClick(targetEl) {
   }
   state.match.caughtSpeechClues[key] = true;
   targetEl.classList.add("clue-caught");
-  if (targetEl.textContent.indexOf("✓") === -1) targetEl.textContent = targetEl.textContent.replace(/\s*·破綻$/, "") + " ✓";
+  if (targetEl.textContent.indexOf("·已記") === -1 && targetEl.textContent.indexOf("·已證") === -1) {
+    targetEl.textContent = targetEl.textContent.replace(/\s*·破綻$/, "") + (type === "contradiction" ? " ·已證" : " ·已記");
+  }
 
   if (type === "contradiction") {
     const contraRec = (state.match.activeSpeechContra && state.match.activeSpeechContra.speakerId === sp.id)
@@ -739,6 +744,9 @@ function refreshQuickFreeInputHint() {
     renderRephraseChoicesTray(val);
   } else if (tray && !state.rephraseTrayPinned) {
     tray.classList.add("hidden");
+  }
+  if (typeof indieFlow !== "undefined" && typeof indieFlow.syncAnimatedGuideCues === "function") {
+    indieFlow.syncAnimatedGuideCues();
   }
 }
 

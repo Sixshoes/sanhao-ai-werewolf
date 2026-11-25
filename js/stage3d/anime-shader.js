@@ -188,17 +188,17 @@ const stage3dAnime = {
     const celMat = new THREE.MeshToonMaterial(matOpts);
     celMat.name = srcMat.name || "";
 
-    const rimCol = new THREE.Color(isHair ? 0xffe8b6 : 0xfff2d6);
-    const shadowTint = new THREE.Color(isFace ? 0xf2e4ee : 0xd6cce8);
+    const rimCol = new THREE.Color(isHair ? 0xffe4b0 : 0xffeec8);
+    const shadowTint = new THREE.Color(isFace ? 0xf0cfc0 : 0xd2c8dc);
     if (typeof rimCol.convertSRGBToLinear === "function") rimCol.convertSRGBToLinear();
     if (typeof shadowTint.convertSRGBToLinear === "function") shadowTint.convertSRGBToLinear();
 
     const uniforms = {
       uVrmRimColor: { value: rimCol },
-      uVrmRimStrength: { value: isFace ? 0.14 : (isHair ? 0.28 : 0.22) },
+      uVrmRimStrength: { value: isFace ? 0.12 : (isHair ? 0.25 : 0.20) },
       uVrmShadowTint: { value: shadowTint },
-      uVrmShadowLift: { value: isFace ? 0.64 : 0.44 },
-      uVrmWarmBounce: { value: isFace ? 0.11 : 0.14 },
+      uVrmShadowLift: { value: isFace ? 0.48 : 0.40 },
+      uVrmWarmBounce: { value: isFace ? 0.12 : 0.13 },
       uVrmClothHarm: { value: (isFace || isHair) ? 0.0 : 1.0 }
     };
 
@@ -237,7 +237,7 @@ const stage3dAnime = {
           "float vrmUnder = clamp( -vrmN.y * 0.55 + 0.45, 0.0, 1.0 );",
           "vec3 vrmCandleBounce = diffuseColor.rgb * vec3( 1.0, 0.78, 0.48 ) * uVrmWarmBounce * vrmUnder;",
           "vec3 vrmMinFloor = diffuseColor.rgb * uVrmShadowTint * uVrmShadowLift;",
-          "vec3 vrmOut = min( max( outgoingLight * 0.80, vrmMinFloor ) + vrmRim + vrmCandleBounce, vec3( 1.12 ) );",
+          "vec3 vrmOut = min( max( outgoingLight * 0.78, vrmMinFloor ) + vrmRim + vrmCandleBounce, vec3( 1.04 ) );",
           "if ( uVrmClothHarm > 0.5 ) {",
           "  float vrmLum = dot( vrmOut, vec3( 0.299, 0.587, 0.114 ) );",
           "  vrmOut = mix( vrmOut, vec3( vrmLum ), 0.11 );",

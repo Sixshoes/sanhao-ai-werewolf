@@ -3,21 +3,68 @@
  */
 "use strict";
 
-// ==================== TUTORIAL ====================
+// ==================== TUTORIAL (3-DEVICE INDEPENDENT MANUALS) ====================
+function getActiveTutorialDevice() {
+  const valid = ["phone", "tablet", "desktop"];
+  if (state.tutorialDevice && valid.indexOf(state.tutorialDevice) !== -1) {
+    return state.tutorialDevice;
+  }
+  const detected = (typeof detectTutorialDeviceMode === "function") ? detectTutorialDeviceMode() : "desktop";
+  state.tutorialDevice = valid.indexOf(detected) !== -1 ? detected : "desktop";
+  return state.tutorialDevice;
+}
+
+function getActiveTutorialSlides() {
+  const dev = getActiveTutorialDevice();
+  if (typeof DEVICE_TUTORIAL_DECKS !== "undefined" && Array.isArray(DEVICE_TUTORIAL_DECKS[dev]) && DEVICE_TUTORIAL_DECKS[dev].length > 0) {
+    return DEVICE_TUTORIAL_DECKS[dev];
+  }
+  return TUTORIAL_SLIDES;
+}
+
 function renderTutorialSlide() {
-  const idx = clamp(state.tutorialIndex, 0, TUTORIAL_SLIDES.length - 1);
+  const devKey = getActiveTutorialDevice();
+  const detectedDev = (typeof detectTutorialDeviceMode === "function") ? detectTutorialDeviceMode() : "desktop";
+  const slides = getActiveTutorialSlides();
+  const idx = clamp(state.tutorialIndex, 0, slides.length - 1);
   state.tutorialIndex = idx;
-  const slide = TUTORIAL_SLIDES[idx];
+  const slide = slides[idx];
+
+  const devSwitchEl = el("tutorialDeviceSwitch");
+  if (devSwitchEl && typeof DEVICE_TUTORIAL_META !== "undefined") {
+    devSwitchEl.innerHTML = "";
+    ["phone", "tablet", "desktop"].forEach(function (k) {
+      const meta = DEVICE_TUTORIAL_META[k];
+      if (!meta) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.id = "btnTutDev" + k.charAt(0).toUpperCase() + k.slice(1);
+      btn.setAttribute("role", "tab");
+      btn.setAttribute("data-tut-device", k);
+      btn.setAttribute("aria-selected", k === devKey ? "true" : "false");
+      btn.className = "tut-device-btn" + (k === devKey ? " is-active" : "");
+      const isDetected = (k === detectedDev);
+      btn.innerHTML =
+        '<span>' + escapeHtml(meta.label) + '</span>' +
+        (isDetected ? '<span class="tut-device-current-tag">目前裝置</span>' : '');
+      btn.addEventListener("click", function () {
+        if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(560, 0.05, "triangle", 0.035, 0);
+        state.tutorialDevice = k;
+        renderTutorialSlide();
+      });
+      devSwitchEl.appendChild(btn);
+    });
+  }
 
   const counterEl = el("tutorialStepCounter");
   if (counterEl) {
-    counterEl.textContent = (idx + 1) + " / " + TUTORIAL_SLIDES.length;
+    counterEl.textContent = (idx + 1) + " / " + slides.length;
   }
 
   const tabsEl = el("tutorialStepTabs");
   if (tabsEl) {
     tabsEl.innerHTML = "";
-    TUTORIAL_SLIDES.forEach(function (sl, tIdx) {
+    slides.forEach(function (sl, tIdx) {
       const tb = document.createElement("button");
       tb.type = "button";
       tb.className = "tut-step-tab" + (tIdx === idx ? " is-active" : "");
@@ -33,7 +80,7 @@ function renderTutorialSlide() {
 
   const dots = el("tutorialDots");
   dots.innerHTML = "";
-  for (let i = 0; i < TUTORIAL_SLIDES.length; i++) {
+  for (let i = 0; i < slides.length; i++) {
     const d = document.createElement("button");
     d.type = "button";
     d.className = "h-2 rounded-full transition-all " + (i === idx ? "w-6 bg-amber-400" : "w-2 bg-slate-700");
@@ -47,11 +94,14 @@ function renderTutorialSlide() {
     dots.appendChild(d);
   }
 
+  const devMeta = (typeof DEVICE_TUTORIAL_META !== "undefined" && DEVICE_TUTORIAL_META[devKey]) ? DEVICE_TUTORIAL_META[devKey] : null;
   const bodyEl = el("tutorialSlideBody");
   bodyEl.innerHTML =
-    '<div class="inline-block mx-auto px-3 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 text-[13px] font-bold tracking-widest text-amber-300">第 ' + slide.icon + ' 章 · ' + escapeHtml(slide.tab || "") + '</div>' +
+    (devMeta ? '<div class="tut-device-banner"><span><strong>' + escapeHtml(devMeta.shortTitle) + '</strong> — ' + escapeHtml(devMeta.banner) + '</span></div>' : '') +
+    '<div class="inline-block mx-auto px-3 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 text-[13px] font-bold tracking-widest text-amber-300">' + (devMeta ? (escapeHtml(devMeta.label) + ' · ') : '') + '第 ' + slide.icon + ' 章 · ' + escapeHtml(slide.tab || "") + '</div>' +
     '<h4 class="font-serif-craft text-base sm:text-lg font-bold text-white tracking-wide">' + slide.title + '</h4>' +
-    '<div>' + slide.html + '</div>';
+    '<div>' + slide.html + '</div>' +
+    '<div class="tut-swipe-hint">左右滑動可快速切換上一章／下一章</div>';
   if (bodyEl.parentElement && typeof bodyEl.parentElement.scrollTop === "number") {
     bodyEl.parentElement.scrollTop = 0;
   }
@@ -61,7 +111,7 @@ function renderTutorialSlide() {
     idx === 0 ? "opacity-30 pointer-events-none" : ""
   );
 
-  const isLast = idx === TUTORIAL_SLIDES.length - 1;
+  const isLast = idx === slides.length - 1;
   el("btnTutNext").classList.toggle("hidden", isLast);
   el("btnLaunchGuidedDemo").classList.toggle("hidden", !isLast);
 }
@@ -99,12 +149,12 @@ function updatePhaseTrackUI() {
     if (cEl) cEl.textContent = rest ? ("下一順位：" + rest) : "本輪最後一位發言";
     renderSpeakerTurnStrip();
     if (p === "DAY_PLAYER_TURN") {
-      updateSpotlightBox(playerNumTag() + " 你（你的回合）", "請選擇下方卡牌送出", "輪到你發言了！點選下方卡牌即可對全場表態。", summary);
+      updateSpotlightBox(playerNumTag() + " · 你", "你的回合", "擇一張茶牌陳詞，或自在起筆發聲。", summary);
     }
   } else if (p === "DAY_VOTE") {
     if (qHint) qHint.textContent = "全員同時投票";
-    if (cEl) cEl.textContent = "請點上方圓桌座位鎖定選票";
-    updateSpotlightBox("公投抓狼階段", "第 " + state.match.day + " 天", "請點擊上方圓桌選一個最可疑的人，再按下方「確認投票」！", "全員同時投票");
+    if (cEl) cEl.textContent = "請擇席落籌";
+    updateSpotlightBox("公投落籌", "第 " + state.match.day + " 天", "擇一最可疑席位落籌定案。", "全員同時投票");
   } else {
     if (qHint) qHint.textContent = "";
     if (cEl) cEl.textContent = "";
@@ -121,9 +171,9 @@ function updateAllUI() {
   const auraTag = m.started ? (m.harmonyScore >= 85 ? "・清風" : (m.harmonyScore <= 48 ? "・陰霾" : "")) : "";
   el("harmonyText").textContent = String(m.harmonyScore) + auraTag;
   const tg = m.threeGood || { heart: 0, words: 0, deeds: 0 };
-  if (el("tgHeartPill")) el("tgHeartPill").textContent = (tg.heart > 0 ? "✦" : "") + "存好心 " + tg.heart;
-  if (el("tgWordsPill")) el("tgWordsPill").textContent = (tg.words > 0 ? "✦" : "") + "說好話 " + tg.words;
-  if (el("tgDeedsPill")) el("tgDeedsPill").textContent = (tg.deeds > 0 ? "✦" : "") + "做好事 " + tg.deeds + (m.goodwillVoteBonus ? "・🌟+1票" : "");
+  if (el("tgHeartPill")) el("tgHeartPill").textContent = (tg.heart > 0 ? "[已修] " : "") + "存好心 " + tg.heart;
+  if (el("tgWordsPill")) el("tgWordsPill").textContent = (tg.words > 0 ? "[已修] " : "") + "說好話 " + tg.words;
+  if (el("tgDeedsPill")) el("tgDeedsPill").textContent = (tg.deeds > 0 ? "[已修] " : "") + "做好事 " + tg.deeds + (m.goodwillVoteBonus ? "・+1善意票" : "");
 
   const extLlmOn = Boolean(typeof isExternalLlmActive === "function" ? isExternalLlmActive() : (state.geminiApiKey || state.localLlmModel));
   const cloudProxyOn = Boolean(typeof isServerGeminiProxyActive === "function" && isServerGeminiProxyActive());
@@ -152,27 +202,27 @@ function updateAllUI() {
   const isWolfHead = Boolean(pForHead && pForHead.role === "wolf");
   const phaseMap = {
     LOBBY: { pill: "準備開局", head: "找出 " + lobbyWolfN + " 名說謊的酸民狼" },
-    NIGHT_GUARD: { pill: "護心結界", head: "選 1 位夥伴展開守護結界（可守自己、不可連守）" },
-    NIGHT_WOLF: { pill: "第" + m.day + "晚", head: isWolfHead ? "酸民狼密議：鎖定好人目標並下達明日戰術" : "天黑請閉眼…" },
-    NIGHT_SEER: { pill: "明心查證", head: "選 1 位夥伴靜心查證立場！" },
-    NIGHT_WITCH: { pill: "滴水奉茶", head: "要端出暖心回甘茶護回夥伴嗎？" },
-    HUNTER_TRIGGER: { pill: (pForHead && pForHead.isWolfKing) ? "流言反撲" : "正氣共鳴", head: (pForHead && pForHead.isWolfKing) ? "選 1 位好人一同離席！" : "選 1 人一同離席冷靜！" },
+    NIGHT_GUARD: { pill: "護心結界", head: "擇一席展開護心結界" },
+    NIGHT_WOLF: { pill: "第" + m.day + "晚", head: isWolfHead ? "酸民狼密議 · 擇定目標並定明日戰術" : "天黑請閉眼…" },
+    NIGHT_SEER: { pill: "明心查證", head: "擇一席靜心查證立場" },
+    NIGHT_WITCH: { pill: "滴水奉茶", head: "是否端出暖心回甘茶護回夥伴？" },
+    HUNTER_TRIGGER: { pill: (pForHead && pForHead.isWolfKing) ? "流言反撲" : "正氣共鳴", head: (pForHead && pForHead.isWolfKing) ? "擇一好人席同行" : "擇一席一同離席冷靜" },
     HUNTER_RESOLVE: {
-      pill: "⚖️ 正氣共鳴",
+      pill: "正氣共鳴",
       head: m.lastHunterShot
         ? (fmtSeatNum(m.lastHunterShot.hunterId) + "號 帶走 " + fmtSeatNum(m.lastHunterShot.targetId) + "號 " + m.lastHunterShot.targetName + "！")
         : "直心糾察長正氣共鳴結算"
     },
-    SHERIFF_ELECTION: { pill: "上警競選", head: "第一天先上警競選・選完再公布首夜倒牌" },
-    SHERIFF_ORDER: { pill: "警長指序", head: "請警長決定今日順時針或逆時針輪流發言" },
-    DAY_SPEECH: { pill: "第" + m.day + "天輪流發言", head: "依序輪流發言" + (m.speechOrderLabel ? ("（" + m.speechOrderLabel + "）") : "") },
-    LAST_WORDS_PLAYER: { pill: "發表遺言", head: "請發表你的離席遺言！" },
-    LAST_WORDS_SPEECH: { pill: "遺言播報", head: "倒牌玩家發表遺言中…" },
-    DAY_PLAYER_TURN: { pill: "換你出牌", head: (isPkVoteActive() ? "⚔️ 平票 PK 輪到 " : "輪到 ") + playerNumTag() + " 你發言表態！" },
-    DAY_VOTE: { pill: isPkVoteActive() ? "平票 PK 決選" : (isWolfHead ? "投票帶節奏" : "投票抓狼"), head: isPkVoteActive() ? "平票 PK 決選投票！" : (isWolfHead ? "投票推抗推位（避開狼隊同伴）！" : "投票請酸民狼出場！") },
+    SHERIFF_ELECTION: { pill: "上警競選", head: "第一天上警競選 · 選畢揭曉首夜倒牌" },
+    SHERIFF_ORDER: { pill: "警長指序", head: "請警長指定今日順逆時針輪流發言" },
+    DAY_SPEECH: { pill: "第" + m.day + "天輪流發言", head: "依序輪流發言" + (m.speechOrderLabel ? (" · " + m.speechOrderLabel) : "") },
+    LAST_WORDS_PLAYER: { pill: "發表遺言", head: "請發表你的離席遺言" },
+    LAST_WORDS_SPEECH: { pill: "遺言播報", head: "倒牌茶友發表遺言中…" },
+    DAY_PLAYER_TURN: { pill: "換你出牌", head: (isPkVoteActive() ? "平票 PK · 輪到 " : "輪到 ") + playerNumTag() + " 你陳詞" },
+    DAY_VOTE: { pill: isPkVoteActive() ? "平票 PK 決選" : (isWolfHead ? "投票帶節奏" : "投票抓狼"), head: isPkVoteActive() ? "平票 PK 決選落籌" : (isWolfHead ? "帶節奏歸票 · 避開同伴" : "公投落籌請離酸民狼") },
     DAY_VOTE_RESULT: { pill: "開票揭曉", head: "公投開票結果揭曉" },
-    SHERIFF_TRANSFER: { pill: "警徽交接", head: "請選擇接棒警長或撕毀警徽" },
-    GAME_OVER: { pill: "結束", head: m.winner === "early_end" ? "提前結束・揭曉底牌" : (m.winner === "good" ? "好人勝利！" : "酸民狼勝利！") }
+    SHERIFF_TRANSFER: { pill: "警徽交接", head: "擇一存活茶友接棒警徽，或撕毀警徽" },
+    GAME_OVER: { pill: "結束", head: m.winner === "early_end" ? "提前結束 · 揭曉底牌" : (m.winner === "good" ? "好人勝利！" : "酸民狼勝利！") }
   };
 
   const info = phaseMap[m.phase] || phaseMap.LOBBY;
@@ -183,7 +233,7 @@ function updateAllUI() {
   el("skyIcon").textContent = "";
   el("roundTitle").textContent = m.started
     ? ("在場 " + getAliveSeats().length + "/" + m.totalSeats)
-    : "圓桌舞台（1號是你）";
+    : "雲起茶席";
   const shellNode = el("mainStageShell");
   if (shellNode) {
     shellNode.classList.toggle("mist-glow", nightMode);
@@ -198,7 +248,7 @@ function updateAllUI() {
     const dev = (!classicMode && m.started && m.phase !== "GAME_OVER") ? m.activeDirectorEvent : null;
     dirPill.classList.toggle("hidden", !dev);
     if (dev) {
-      dirPill.textContent = "🍵 " + dev.shortTitle;
+      dirPill.textContent = "" + dev.shortTitle;
       dirPill.title = dev.title + "：" + dev.desc;
     }
   }
@@ -206,6 +256,7 @@ function updateAllUI() {
   renderPlayerRoleCard();
   renderFourGBlessings();
   if (typeof renderBeginnerCoachBanner === "function") renderBeginnerCoachBanner();
+  if (typeof renderJudgeShowcaseGuideBanner === "function") renderJudgeShowcaseGuideBanner();
   if (typeof renderPkDuelBanner === "function") renderPkDuelBanner(null);
   if (typeof renderDirectorEventChoiceBar === "function") renderDirectorEventChoiceBar();
   renderControlPanels();
@@ -299,7 +350,7 @@ function renderSeatStrip() {
 
     const nameSpan = document.createElement("span");
     nameSpan.className = "seat-pill-name";
-    nameSpan.textContent = (isSheriff ? "👑" : "") + (s.id === pid ? "你" : s.name);
+    nameSpan.textContent = (isSheriff ? "[警] " : "") + (s.id === pid ? "你" : s.name);
     btn.appendChild(nameSpan);
 
     const canConfirmThisSeat = Boolean(canDoubleClickConfirm && isSelected && s.alive && (s.id !== pid || p === "NIGHT_GUARD") && !isWolfMateDisabled && !isLastGuardedDisabled && !isPkOutDisabled);
@@ -360,7 +411,7 @@ function renderSeatStrip() {
 
     const seatShortcutLbl = s.id === 10 ? "0" : (s.id === 11 ? "-" : (s.id === 12 ? "=" : String(s.id)));
     btn.title = s.id + "號 " + (s.id === pid ? "你" : s.name) +
-      (isWolfMateSeat ? "（🐺 狼隊同伴）" : (wolfGodMarkTag ? ("（🔍 獵神：" + wolfGodMarkTag + "）") : "")) +
+      (isWolfMateSeat ? "（狼隊同伴）" : (wolfGodMarkTag ? ("（獵神：" + wolfGodMarkTag + "）") : "")) +
       (canConfirmThisSeat
         ? "（再點一下立即確認）"
         : (s.alive
@@ -382,29 +433,29 @@ function getLiveRoleActionHint(p, effKey, phase) {
     if (phase === "LAST_WORDS_PLAYER") return "發表離席遺言，留下關鍵線索";
     return p.role === "wolf" ? "席外觀戰・下方可猜全場神職" : "席外觀戰・下方可猜酸民狼";
   }
-  if (phase === "NIGHT_SEER" && effKey === "seer") return "今夜點 1 席靜心查證真偽";
-  if (phase === "NIGHT_WITCH" && effKey === "witch") return "決定端暖心茶護回，或清心茶請離";
-  if (phase === "NIGHT_GUARD" && effKey === "guard") return "選 1 席展開結界（勿連守同人）";
-  if (phase === "NIGHT_WOLF" && p.role === "wolf") return "鎖定目標並下達明日狼隊戰術";
+  if (phase === "NIGHT_SEER" && effKey === "seer") return "今夜擇一席靜心查證真偽";
+  if (phase === "NIGHT_WITCH" && effKey === "witch") return "斟酌奉暖心茶護回，或清心茶請離";
+  if (phase === "NIGHT_GUARD" && effKey === "guard") return "擇一席展開結界，勿連守同席";
+  if (phase === "NIGHT_WOLF" && p.role === "wolf") return "鎖定目標並定明日狼隊戰術";
   if (phase === "SHERIFF_ELECTION") {
     return effKey === "seer"
-      ? "建議上警競選，搶 1.5 票與歸票權"
-      : (p.role === "wolf" ? "可上警悍跳搶警徽，或警下觀察" : "聆聽候選人發言，決定上警或投票");
+      ? "建議上警競選，爭取 1.5 票與歸票權"
+      : (p.role === "wolf" ? "可上警悍跳搶警徽，或警下觀察" : "聆聽候選人陳詞，決定上警或警下投票");
   }
   if (phase === "DAY_PLAYER_TURN") {
-    if (effKey === "seer") return "可點「亮觀察員報驗」公開查證紀錄";
+    if (effKey === "seer") return "可擇「亮觀察員報驗」公開查證所得";
     if (effKey === "witch") return "低調聽盤，或適時亮奉茶師作證";
     if (effKey === "guard") return "建議低調防刀，危急時再報守衛線";
     if (effKey === "hunter") return "穩健歸票；遭針對可亮糾察長威懾";
     if (effKey === "elder") return p.elderShieldUsed ? "雖無投票權但公信最高，帶領歸票" : "善用豁免盾替神職扛壓、多保好人";
-    if (effKey === "wolf_king") return "用佈局板甩鍋／獵神，被投可反撲";
-    if (effKey === "wolf") return "用佈局板甩鍋並記獵神（勿點同伴）";
+    if (effKey === "wolf_king") return "運用佈局板甩鍋或獵神，被投可反撲";
+    if (effKey === "wolf") return "運用佈局板甩鍋並記獵神，切勿誤點同伴";
     return "好人坑不限人數，多保好夥伴並鎖狼";
   }
   if (phase === "DAY_VOTE") {
-    if (effKey === "elder" && p.voteDisabled) return "長老豁免已觸發（本局靜候開票）";
+    if (effKey === "elder" && p.voteDisabled) return "長老豁免已觸發，本局靜候開票";
     if (p.role === "wolf") return p.isWolfKing ? "帶節奏避開同伴；被投出可反撲" : "配合狼隊投好人，切勿投同伴";
-    return state.match.goodwillVoteBonus ? "黃金善意票 +1 生效，投出關鍵票" : "點選最可疑座位公投（可用四給卡）";
+    return state.match.goodwillVoteBonus ? "黃金善意票 +1 生效，投出關鍵一籌" : "擇一最可疑席位公投落籌";
   }
   if (phase === "DAY_SPEECH") {
     if (p.role === "wolf") return "聽發言找真神職，點頭像記假保／甩鍋";
@@ -451,21 +502,21 @@ function buildLiveAvailableTools(p, phase) {
   if (!classicMode) {
     items.push({
       key: "micro",
-      shortPill: "🔍 心虛" + mRem,
-      name: "🔍 看心虛（觀微察色）",
+      shortPill: "心虛" + mRem,
+      name: "看心虛（觀微察色）",
       remain: mRem,
       canUseNow: Boolean(isAlive && isDayToolPhase && mRem > 0),
       statusText: !isAlive ? "觀戰停用" : (mRem <= 0 ? "今日已用完" : (isDayToolPhase ? ("可用 " + mRem + " 次") : "白天可用")),
-      desc: "點發言列「🔍 看心虛」或點任意座位，揭露對方此刻緊張值判斷真假。"
+      desc: "點發言列「看心虛」或點任意座位，揭露對方此刻緊張值判斷真假。"
     });
     items.push({
       key: "tea",
-      shortPill: "🍵 暖茶" + teaRem,
-      name: "🍵 奉暖茶拉好感（做好事）",
+      shortPill: "暖茶" + teaRem,
+      name: "奉暖茶拉好感（做好事）",
       remain: teaRem,
       canUseNow: Boolean(isAlive && isDayToolPhase && teaRem > 0),
       statusText: !isAlive ? "觀戰停用" : (teaRem <= 0 ? "今日已奉茶" : (isDayToolPhase ? "可用 1 次" : "白天可用")),
-      desc: "點任意角色頭像→按「🍵 奉暖茶」，降低對方對你的懷疑並點亮「做好事」瓣。"
+      desc: "點任意角色頭像→按「奉暖茶」，降低對方對你的懷疑並點亮「做好事」瓣。"
     });
   }
   const unused4GNames = [];
@@ -475,14 +526,14 @@ function buildLiveAvailableTools(p, phase) {
   if (!used4G.convenience) unused4GNames.push("給方便(連線歸票)");
   items.push({
     key: "fourg",
-    shortPill: "✨ 四給" + fgRem,
-    name: "✨ 四給錦囊（右下角 4 張主動卡）",
+    shortPill: "四給" + fgRem,
+    name: "四給錦囊 · 奉茶茶禮",
     remain: fgRem,
     canUseNow: Boolean(isAlive && fgReadyNow && fgRem > 0),
-    statusText: !isAlive ? "觀戰可看票型" : (fgRem <= 0 ? "本局已全用" : (fgReadyNow ? ("此刻可用 " + fgRem + " 張") : "白天發言/投票可用")),
+    statusText: !isAlive ? "觀戰可看票型" : (fgRem <= 0 ? "本局已全用" : (fgReadyNow ? ("此刻可用 " + fgRem + " 盞") : "白天發言/投票可用")),
     desc: unused4GNames.length > 0
-      ? ("尚未出牌：" + unused4GNames.join("、") + "。" + (isWolf ? "（狼人也可打牌偽裝累積信任！）" : ""))
-      : "四張錦囊已全部圓滿施展！"
+      ? ("尚餘茶禮：" + unused4GNames.join("、") + (isWolf ? " · 狼席亦可施放養信" : ""))
+      : "四盞茶禮已圓滿施展"
   });
   return { classicMode: classicMode, isAlive: isAlive, isDayToolPhase: isDayToolPhase, mRem: mRem, teaRem: teaRem, fgRem: fgRem, fgReadyNow: fgReadyNow, items: items };
 }
@@ -500,24 +551,61 @@ function renderBeginnerCoachBanner() {
   let guideText = "";
   if (p === "NIGHT_SEER") {
     guideText = state.seerReveal
-      ? "🧭 新手小老師 (1/4 記住結果)：太棒了！記住你剛查到的身分（左下角也會幫你記），按「記住了・繼續」等天亮！"
-      : "🧭 新手小老師 (1/4 晚上查驗)：天黑囉！點上方任意 1 位同學頭像，再按「確認查證」，就能偷偷知道他是不是酸民狼！";
+      ? "導引 1/4 · 暗記今夜查證所得，續候天明"
+      : "導引 1/4 · 入夜明心，擇一微光席位靜察真偽";
   } else if (p === "DAY_SPEECH") {
-    guideText = "🧭 新手小老師 (2/4 白天聽話)：大家會輪流發言！覺得像好人按「👍 認同」、覺得怪怪的按「🤨 存疑」，按「下一位 →」或空白鍵繼續聽！";
+    guideText = "導引 2/4 · 細聽茶友陳詞，隨心認同或存疑後推進";
   } else if (p === "DAY_PLAYER_TURN") {
-    guideText = "🧭 新手小老師 (3/4 輪到你講)：不用自己打字！直接點下方「🔮 亮觀察員報驗」或任一張「預設發言卡」，就會自動幫你講出來！";
+    guideText = "導引 3/4 · 輪到你陳詞，擇一張微光茶牌即刻發聲";
   } else if (p === "DAY_VOTE") {
-    guideText = "🧭 新手小老師 (4/4 公投抓狼)：大家講完要投票囉！點上方最可疑的頭像，再按「確認投票」，票數最多的人會離席！";
+    guideText = "導引 4/4 · 眾論既畢，擇一可疑席位落籌定案";
   } else if (p === "DAY_VOTE_RESULT") {
-    guideText = "🧭 新手小老師（完成第一輪！）：看懂怎麼玩了吧！按「進入夜晚」開始第 2 輪，隨時點左下「指南」都能看提示！";
+    guideText = "首輪圓滿 · 輕啟次夜，隨時可查職能指南";
   } else if (p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "NIGHT_GUARD") {
-    guideText = "🧭 新手小老師：天黑了，其他角色正在悄悄行動，馬上就輪到你！";
+    guideText = "入夜靜候 · 諸席暗中行動，稍待天明";
   }
   if (!guideText) {
     box.classList.add("hidden");
     return;
   }
   txt.textContent = guideText;
+  box.classList.remove("hidden");
+}
+
+function renderJudgeShowcaseGuideBanner() {
+  const box = el("judgeShowcaseGuideBanner");
+  if (!box) return;
+  const m = state.match;
+  if (!m || !m.started || !m.judgeShowcase || m.judgeGuideDismissed || m.phase === "GAME_OVER" || m.phase === "LOBBY") {
+    box.classList.add("hidden");
+    return;
+  }
+  const p = m.phase;
+  const step1Done = Boolean(
+    (m.interjectUsedDay && m.interjectUsedDay === m.day) ||
+    p === "DAY_PLAYER_TURN" || p === "DAY_VOTE" || p === "DAY_VOTE_RESULT"
+  );
+  const step2Done = Boolean(
+    (m.stats && (m.stats.rewritesUsed || 0) > 0) ||
+    p === "DAY_VOTE" || p === "DAY_VOTE_RESULT"
+  );
+  let activeStep = 1;
+  if (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT") {
+    activeStep = 3;
+  } else if (p === "DAY_PLAYER_TURN" || step1Done) {
+    activeStep = 2;
+  }
+  const defs = [
+    { id: "judgeGuideStep1", num: 1, done: step1Done },
+    { id: "judgeGuideStep2", num: 2, done: step2Done },
+    { id: "judgeGuideStep3", num: 3, done: false }
+  ];
+  defs.forEach(function (d) {
+    const node = el(d.id);
+    if (!node) return;
+    node.classList.toggle("is-active", activeStep === d.num);
+    node.classList.toggle("is-done", d.done && activeStep !== d.num);
+  });
   box.classList.remove("hidden");
 }
 
@@ -584,7 +672,7 @@ function openRoleGuidePopover(mode) {
     }
     const rowHtml = function (ok, icon, name, count, how) {
       return '<div class="role-guide-row ' + (ok ? "is-lit" : "") + '">' +
-        '<div class="font-bold ' + (ok ? "text-emerald-300" : "text-amber-200") + '">' + escapeHtml((ok ? "✓ " : "○ ") + icon + " " + name + "（已修 " + count + " 次）") + "</div>" +
+        '<div class="font-bold ' + (ok ? "text-emerald-300" : "text-amber-200") + '">' + escapeHtml((ok ? "[已修] " : "[待修] ") + icon + " " + name + "（已修 " + count + " 次）") + "</div>" +
         '<div class="text-[13px] opacity-90">' + escapeHtml(how) + "</div>" +
         "</div>";
     };
@@ -626,7 +714,7 @@ function openRoleGuidePopover(mode) {
     const classicModeGuide = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
     const misGuide = !classicModeGuide ? (typeof evaluateRoleMission === "function" ? evaluateRoleMission() : state.match.roleMission) : null;
     const misGuideHtml = misGuide
-      ? ('<div class="role-guide-row ' + (misGuide.completed ? "is-lit" : "") + '"><span class="font-bold text-amber-200">' + (misGuide.completed ? "✓ 密令達成：" : "本局密令：") + '</span>' + escapeHtml(misGuide.title + "（" + misGuide.progressText + "）") + "</div>")
+      ? ('<div class="role-guide-row ' + (misGuide.completed ? "is-lit" : "") + '"><span class="font-bold text-amber-200">' + (misGuide.completed ? "密令達成：" : "本局密令：") + '</span>' + escapeHtml(misGuide.title + "（" + misGuide.progressText + "）") + "</div>")
       : "";
     bodyEl.innerHTML =
       '<div class="guide-now-box"><div class="text-[13px] font-bold text-amber-300/90">現在這一步</div><div class="font-bold text-amber-50 mt-0.5">' + escapeHtml(nowHint) + "</div></div>" +
@@ -874,8 +962,8 @@ function renderPkDuelBanner(liveCounts) {
   if (el("pkRightName")) el("pkRightName").textContent = fmtSeatNum(right.id) + "號 " + (right.id === pid ? "你" : right.name);
   const lv = liveCounts ? (liveCounts[left.id] || 0) : null;
   const rv = liveCounts ? (liveCounts[right.id] || 0) : null;
-  if (el("pkLeftVotes")) el("pkLeftVotes").textContent = lv !== null ? ("即時 " + lv + " 票") : (state.activeSpeakerId === left.id ? "🎙 正在拉票" : "PK 對決台");
-  if (el("pkRightVotes")) el("pkRightVotes").textContent = rv !== null ? ("即時 " + rv + " 票") : (state.activeSpeakerId === right.id ? "🎙 正在拉票" : "PK 對決台");
+  if (el("pkLeftVotes")) el("pkLeftVotes").textContent = lv !== null ? ("即時 " + lv + " 票") : (state.activeSpeakerId === left.id ? "正在拉票" : "PK 對決台");
+  if (el("pkRightVotes")) el("pkRightVotes").textContent = rv !== null ? ("即時 " + rv + " 票") : (state.activeSpeakerId === right.id ? "正在拉票" : "PK 對決台");
   if (el("pkDuelMidLabel")) el("pkDuelMidLabel").textContent = cands.length > 2 ? ("VS (" + cands.length + "席)") : "VS";
   banner.classList.remove("hidden");
   banner.setAttribute("aria-hidden", "false");
@@ -895,16 +983,16 @@ function renderDirectorEventChoiceBar() {
 
   const label = document.createElement("span");
   label.className = "text-[13px] font-bold text-emerald-200 truncate";
-  label.textContent = "🍵 " + ev.shortTitle + "：" + ev.badge;
+  label.textContent = "" + ev.shortTitle + "：" + ev.badge;
   bar.appendChild(label);
 
   const btnGroup = document.createElement("div");
   btnGroup.className = "flex items-center gap-1.5 shrink-0";
   const choices = ev.id === "truth_lantern"
-    ? [{ key: "front", text: "🏮 照前半席" }, { key: "back", text: "🏮 照後半席" }]
+    ? [{ key: "front", text: "照前半席" }, { key: "back", text: "照後半席" }]
     : (ev.id === "boba_truce"
-      ? [{ key: "boba", text: "🍵 請選中者喝冬瓜青 (+8)" }]
-      : [{ key: "cheer", text: "🔔 響應茶會 (+10)" }]);
+      ? [{ key: "boba", text: "請選中者喝冬瓜青 (+8)" }]
+      : [{ key: "cheer", text: "響應茶會 (+10)" }]);
 
   choices.forEach(function (ch) {
     const btn = document.createElement("button");

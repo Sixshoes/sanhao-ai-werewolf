@@ -1,8 +1,9 @@
 /* 三好AI狼人殺 — 「雲起茶席・精裝獨立桌遊」語意色彩、宣紙漆木質感、字體與日夜轉場（零 !important） */
 
 :root {
-  --font-display: 'Noto Serif TC', 'Songti TC', 'STSong', 'BiauKai', Georgia, serif;
-  --font-body: 'Noto Sans TC', 'PingFang TC', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Noto Serif TC', 'Source Han Serif TC', 'Songti TC', 'STSong', Georgia, serif;
+  --font-literary: 'LXGW WenKai TC', 'Noto Serif TC', 'Songti TC', Georgia, serif;
+  --font-body: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei UI', system-ui, -apple-system, sans-serif;
 
   /* 暮色／開局：烏木黑漆 × 溫潤茶金 × 朱砂印泥 */
   --bg-deep: #120f0c;
@@ -60,39 +61,42 @@
   --tilt-y: 0deg;
 }
 
-/* 深夜：靛墨星夜 × 銀金微光 */
+/* 深夜：燭下茶寮・焙茶沉木 × 蜂蠟微光（溫潤書卷夜色，告別冰冷藍灰） */
 body.theme-night {
-  --bg-deep: #0e1018;
-  --surface-header: rgba(14, 16, 24, 0.94);
-  --border-header: rgba(169, 158, 198, 0.24);
-  --surface-card: rgba(21, 22, 32, 0.95);
-  --surface-elevated: rgba(19, 20, 30, 0.96);
-  --surface-sub: rgba(14, 15, 23, 0.86);
-  --surface-control: rgba(18, 19, 29, 0.97);
-  --surface-popover: rgba(19, 20, 31, 0.97);
-  --surface-btn: rgba(30, 32, 46, 0.88);
-  --surface-btn-hover: rgba(42, 44, 62, 0.96);
-  --surface-input: rgba(13, 14, 22, 0.94);
-  --border-card: rgba(169, 158, 198, 0.24);
-  --border-subtle: rgba(169, 158, 198, 0.14);
-  --border-accent: rgba(196, 179, 226, 0.44);
-  --shadow-focal: 0 24px 52px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(210, 199, 238, 0.1);
-  --surface-panel-grad: linear-gradient(168deg, rgba(28, 29, 44, 0.96) 0%, rgba(18, 19, 30, 0.97) 60%, rgba(12, 13, 21, 0.98) 100%);
-  --gold-foil-grad: linear-gradient(135deg, #f3e8ff 0%, #cdb8ec 50%, #8f77b8 100%);
-  --frame-ornament: rgba(196, 179, 226, 0.5);
-  --card-sheen: rgba(224, 214, 248, 0.14);
-  --card-heart-bg: linear-gradient(155deg, rgba(46, 36, 30, 0.92) 0%, rgba(22, 22, 34, 0.96) 100%);
-  --card-words-bg: linear-gradient(155deg, rgba(20, 42, 42, 0.92) 0%, rgba(18, 20, 32, 0.96) 100%);
-  --card-deeds-bg: linear-gradient(155deg, rgba(28, 34, 60, 0.92) 0%, rgba(17, 19, 30, 0.96) 100%);
-  --card-evidence-bg: linear-gradient(140deg, rgba(118, 60, 26, 0.56) 0%, rgba(44, 30, 40, 0.94) 55%, rgba(20, 20, 32, 0.97) 100%);
-  --portrait-glow: rgba(184, 167, 224, 0.42);
-  --border-inner-highlight: rgba(210, 199, 238, 0.12);
-  --surface-recessed: rgba(10, 12, 20, 0.78);
-  --kbd-bg: rgba(26, 28, 42, 0.92);
-  --kbd-border: rgba(184, 167, 224, 0.36);
-  --kbd-text: #d7d2ea;
-  --sky-dot-bg: #b8a7e0;
-  --sky-dot-glow: rgba(184, 167, 224, 0.72);
+  --bg-deep: #18130f;
+  --text-main: #f3eadb;
+  --text-sub: #cabda8;
+  --text-muted: #988a78;
+  --surface-header: rgba(28, 22, 17, 0.94);
+  --border-header: rgba(212, 174, 114, 0.24);
+  --surface-card: rgba(33, 26, 20, 0.95);
+  --surface-elevated: rgba(31, 25, 19, 0.96);
+  --surface-sub: rgba(24, 19, 15, 0.88);
+  --surface-control: rgba(28, 22, 17, 0.96);
+  --surface-popover: rgba(31, 25, 19, 0.97);
+  --surface-btn: rgba(44, 35, 27, 0.88);
+  --surface-btn-hover: rgba(58, 46, 35, 0.96);
+  --surface-input: rgba(22, 18, 14, 0.94);
+  --border-card: rgba(212, 174, 114, 0.24);
+  --border-subtle: rgba(212, 174, 114, 0.14);
+  --border-accent: rgba(218, 178, 110, 0.46);
+  --shadow-focal: 0 22px 48px rgba(10, 7, 4, 0.68), inset 0 1px 0 rgba(245, 226, 188, 0.10);
+  --surface-panel-grad: linear-gradient(168deg, rgba(40, 32, 24, 0.96) 0%, rgba(28, 22, 17, 0.97) 60%, rgba(21, 17, 13, 0.98) 100%);
+  --gold-foil-grad: linear-gradient(135deg, #f3dfb6 0%, #d4a65a 50%, #a2742f 100%);
+  --frame-ornament: rgba(216, 178, 114, 0.48);
+  --card-sheen: rgba(245, 228, 192, 0.12);
+  --card-heart-bg: linear-gradient(155deg, rgba(56, 42, 26, 0.92) 0%, rgba(32, 25, 19, 0.96) 100%);
+  --card-words-bg: linear-gradient(155deg, rgba(24, 46, 39, 0.92) 0%, rgba(22, 28, 24, 0.96) 100%);
+  --card-deeds-bg: linear-gradient(155deg, rgba(29, 39, 52, 0.92) 0%, rgba(23, 26, 30, 0.96) 100%);
+  --card-evidence-bg: linear-gradient(140deg, rgba(116, 56, 32, 0.56) 0%, rgba(54, 34, 24, 0.94) 55%, rgba(29, 22, 17, 0.97) 100%);
+  --portrait-glow: rgba(214, 172, 102, 0.40);
+  --border-inner-highlight: rgba(245, 226, 188, 0.12);
+  --surface-recessed: rgba(20, 16, 12, 0.80);
+  --kbd-bg: rgba(40, 32, 24, 0.92);
+  --kbd-border: rgba(214, 174, 112, 0.36);
+  --kbd-text: #e6d8c0;
+  --sky-dot-bg: #d4a65a;
+  --sky-dot-glow: rgba(214, 168, 92, 0.65);
 }
 
 /* 白晝：手抄宣紙 × 松煙古墨 × 紅瓦朱砂 */
@@ -135,7 +139,7 @@ body.theme-day {
 
   --shadow-card: 0 10px 28px rgba(72, 48, 20, 0.12);
   --shadow-focal: 0 16px 36px rgba(72, 48, 20, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.88);
-  --surface-panel-grad: linear-gradient(168deg, #fefbf4 0%, #f8f1e3 65%, #f0e6d2 100%);
+  --surface-panel-grad: linear-gradient(168deg, rgba(254, 251, 244, 0.98) 0%, rgba(248, 241, 227, 0.97) 65%, rgba(240, 230, 210, 0.98) 100%);
   --gold-foil-grad: linear-gradient(135deg, #d8a956 0%, #a56e23 55%, #7c4d11 100%);
   --frame-ornament: rgba(158, 106, 38, 0.52);
   --card-sheen: rgba(255, 255, 255, 0.58);
@@ -171,6 +175,8 @@ body {
   color: var(--text-main);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1;
   transition: background-color 0.8s cubic-bezier(0.22, 1, 0.36, 1), color 0.55s ease;
 }
 
@@ -285,6 +291,7 @@ body.craft-ui main .bg-slate-950\/80,
 body.craft-ui main .bg-slate-950\/75,
 body.craft-ui main .bg-slate-950\/70,
 body.craft-ui .craft-modal-box .bg-slate-950,
+body.craft-ui .craft-modal-box .bg-slate-950\/90,
 body.craft-ui .craft-modal-box .bg-slate-950\/85,
 body.craft-ui .craft-modal-box .bg-slate-950\/80,
 body.craft-ui .craft-modal-box .bg-slate-950\/75,
@@ -909,30 +916,87 @@ body.craft-ui.theme-day #roleGuidePopover .border-slate-700\/60 {
   border-color: var(--border-card);
 }
 
-/* v19.0 Day-Theme Parity for 22px Headline, Seat Numbers & Tea Journal Harmony Bar */
-body.craft-ui.theme-day #inGameTopHud #bannerHeadline {
-  color: #251a0f;
+/* ==================== v23.0 「茶席文青・三好四給美學」宣紙茶帖核心語意色票 ==================== */
+body.theme-twilight,
+body.theme-daylight {
+  --bg-deep: #ece4d5;
+  --text-main: #29211a;
+  --text-sub: #544638;
+  --text-muted: #766654;
+
+  --surface-header: rgba(248, 243, 232, 0.92);
+  --border-header: rgba(124, 98, 66, 0.22);
+  --surface-card: rgba(250, 246, 237, 0.96);
+  --surface-elevated: rgba(252, 249, 242, 0.98);
+  --surface-sub: rgba(240, 233, 219, 0.88);
+  --surface-control: rgba(247, 241, 229, 0.96);
+  --surface-popover: rgba(252, 248, 240, 0.98);
+  --surface-timeline: rgba(242, 235, 221, 0.76);
+  --surface-btn: rgba(242, 235, 222, 0.92);
+  --surface-btn-hover: rgba(233, 223, 206, 0.98);
+  --surface-input: rgba(255, 253, 248, 0.96);
+
+  --border-card: rgba(126, 98, 64, 0.24);
+  --border-subtle: rgba(126, 98, 64, 0.14);
+  --border-accent: rgba(154, 108, 44, 0.48);
+  --border-popover: rgba(126, 98, 64, 0.36);
+  --border-inner-highlight: rgba(255, 253, 248, 0.84);
+  --surface-recessed: rgba(235, 226, 209, 0.84);
+  --kbd-bg: rgba(247, 241, 229, 0.96);
+  --kbd-border: rgba(140, 102, 52, 0.34);
+  --kbd-text: #594631;
+
+  --accent-gold: #9a6b27;
+  --accent-gold-soft: rgba(154, 107, 39, 0.11);
+  --accent-cinnabar: #a4392c;
+  --accent-cinnabar-hover: #b74335;
+  --accent-celadon: #2c6753;
+  --accent-celadon-soft: rgba(44, 103, 83, 0.11);
+  --accent-indigo: #375776;
+  --accent-plum: #6c4f7a;
+
+  --shadow-card: 0 10px 28px rgba(58, 42, 22, 0.11);
+  --shadow-focal: 0 16px 38px rgba(52, 36, 18, 0.16), inset 0 1px 0 rgba(255, 253, 248, 0.90);
+  --surface-panel-grad: linear-gradient(176deg, rgba(252, 249, 242, 0.97) 0%, rgba(246, 240, 228, 0.96) 62%, rgba(239, 231, 216, 0.97) 100%);
+  --gold-foil-grad: linear-gradient(135deg, #c99742 0%, #9a6b27 55%, #754e18 100%);
+  --frame-ornament: rgba(154, 107, 39, 0.44);
+  --card-sheen: rgba(255, 253, 248, 0.64);
+  --card-heart-bg: linear-gradient(155deg, rgba(252, 246, 232, 0.98) 0%, rgba(245, 235, 214, 0.98) 100%);
+  --card-words-bg: linear-gradient(155deg, rgba(237, 246, 241, 0.98) 0%, rgba(226, 239, 232, 0.98) 100%);
+  --card-deeds-bg: linear-gradient(155deg, rgba(238, 243, 248, 0.98) 0%, rgba(228, 235, 244, 0.98) 100%);
+  --card-evidence-bg: linear-gradient(140deg, rgba(252, 241, 224, 0.98) 0%, rgba(244, 228, 202, 0.98) 100%);
+  --portrait-glow: rgba(154, 107, 39, 0.28);
+  --cinnabar-grad: linear-gradient(180deg, #b34234 0%, #922e22 100%);
+  --brass-grad: linear-gradient(180deg, #bd8a3d 0%, #996a24 100%);
+  --sky-dot-bg: #2c6753;
+  --sky-dot-glow: rgba(44, 103, 83, 0.46);
 }
 
-body.craft-ui.theme-day .seat-pill-num-big {
-  color: #8c5a18;
+body.theme-twilight #worldSkyBackdrop,
+body.theme-daylight #worldSkyBackdrop {
+  background:
+    radial-gradient(ellipse at 82% 8%, rgba(218, 184, 126, 0.28) 0%, transparent 46%),
+    radial-gradient(circle at 18% 84%, rgba(74, 128, 108, 0.14) 0%, transparent 44%),
+    linear-gradient(180deg, #f3ecde 0%, #ebe1ce 54%, #e2d5be 100%);
+  box-shadow: inset 0 0 88px rgba(114, 86, 52, 0.12);
 }
 
-body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-speaking {
-  background: linear-gradient(180deg, #f5c451 0%, #dda232 100%);
-  border-color: #7c4a12;
-  color: #1c1205;
+body.theme-night #worldSkyBackdrop {
+  background:
+    radial-gradient(circle at 78% 12%, rgba(212, 168, 98, 0.14) 0%, transparent 36%),
+    radial-gradient(ellipse at 50% 0%, #261e18 0%, #191410 58%, #120e0b 100%);
+  box-shadow: inset 0 0 120px rgba(8, 6, 4, 0.86);
 }
 
-body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-speaking .seat-pill-num-big,
-body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-speaking .seat-pill-name {
-  color: #1c1205;
+#dayNightCurtain.mode-day {
+  background: radial-gradient(circle at 50% 45%, rgba(248, 242, 230, 0.94), rgba(235, 225, 206, 0.96));
+  color: #29211a;
 }
 
-body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected .seat-pill-num-big {
-  color: #fef08a;
+#dayNightCurtain.mode-day #curtainTitle {
+  color: #29211a;
 }
 
-body.craft-ui.theme-day .journal-harmony-bar {
-  background: rgba(242, 232, 212, 0.72);
+#dayNightCurtain.mode-day #curtainSub {
+  color: #635240;
 }

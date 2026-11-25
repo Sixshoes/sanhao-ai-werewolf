@@ -369,6 +369,19 @@ class ServerTestCase(unittest.TestCase):
             self.assertEqual(res.get("text"), "連線成功")
             self.assertEqual(res.get("model"), "gemini-3.8-flash")
 
+        # v20.0 tiered temperature clamping [0.45, 0.85] (default 0.65)
+        self.assertEqual(server.clamp_gemini_temperature(0.58), 0.58)
+        self.assertEqual(server.clamp_gemini_temperature(0.78), 0.78)
+        self.assertEqual(server.clamp_gemini_temperature(0.1), 0.45)
+        self.assertEqual(server.clamp_gemini_temperature(1.9), 0.85)
+        self.assertEqual(server.clamp_gemini_temperature(None), 0.65)
+        with patch.object(server, "get_server_gemini_key", return_value="fake-test-key"), \
+             patch.object(server, "call_gemini_text_rest", return_value=("分階段溫度回應", "gemini-3.8-flash")) as mock_call:
+            st_t, _, _ = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"test","temperature":0.95}')
+            self.assertEqual(st_t, 200)
+            _, kwargs = mock_call.call_args
+            self.assertEqual(kwargs.get("temperature"), 0.85)
+
 
 if __name__ == "__main__":
     unittest.main()

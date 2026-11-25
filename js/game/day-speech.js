@@ -444,7 +444,7 @@ function executeTeaInterjection(questionText) {
       seat: sp,
       kind: "accuse",
       badge: sp.name + (wantLiveInt ? " · 臨場回應中" : " · 臨場回防"),
-      quote: wantLiveInt ? ("問「" + cleanQ + "」→ 微微一頓，正準備回應你的追問…") : ("問「" + cleanQ + "」→「" + replyObj.text + "」")
+      quote: wantLiveInt ? "微微一頓，正準備回應你的追問…" : ("「" + replyObj.text + "」")
     });
   }
   if (typeof addThreeGoodPoint === "function") addThreeGoodPoint("heart", "舉杯追問求真");
@@ -466,6 +466,7 @@ function executeTeaInterjection(questionText) {
     tryGenerateGeminiInterjectionReply(sp, cleanQ, replyObj)
       .then(function (liveReply) {
         if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epInt)) return;
+        if (!state.match || state.match.phase !== "DAY_SPEECH") return;
         const finalIntText = liveReply || replyObj.text;
         entry.reply = finalIntText;
         if (intLogRef) {
@@ -478,13 +479,15 @@ function executeTeaInterjection(questionText) {
             seat: sp,
             kind: "accuse",
             badge: sp.name + " · 臨場回防",
-            quote: "問「" + cleanQ + "」→「" + finalIntText + "」"
+            quote: "「" + finalIntText + "」"
           });
         }
         showToast(fmtSeatNum(sp.id) + "號 " + sp.name + " 即時回防：「" + finalIntText + "」", "gold");
         if (liveReply && typeof bumpTableStateRev === "function") bumpTableStateRev(true);
         if (typeof voice !== "undefined" && voice.canSpeak() && !voice.speaking && state.activeSpeakerId === sp.id) {
           voice.speakCharacter(sp, finalIntText, replyObj.tense ? "panic" : "rebut", function () {
+            if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epInt)) return;
+            if (!state.match || state.match.phase !== "DAY_SPEECH") return;
             if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
           });
         } else if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
@@ -492,6 +495,8 @@ function executeTeaInterjection(questionText) {
         }
       })
       .catch(function () {
+        if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epInt)) return;
+        if (!state.match || state.match.phase !== "DAY_SPEECH") return;
         if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
       });
   } else if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
@@ -900,8 +905,8 @@ async function executeAiTurnSpeech(speaker) {
       state.match.todayEvents.fakeSeerId = speaker.id;
       state.activeClash = { speakerId: speaker.id, kind: "fake_seer", resolved: false };
       triggerShake(260);
-      spawnFx(speaker.id, "⚠ 冒充觀察員!", "#fbbf24");
-      triggerCutIn("🔮 有人冒充明心觀察員！", fmtSeatNum(speaker.id) + "號 " + speaker.name + " 搶跳觀察員・輪到你的順位再拆穿！", "gold");
+      spawnFx(speaker.id, "冒充觀察員!", "#fbbf24");
+      triggerCutIn("有人冒充明心觀察員！", fmtSeatNum(speaker.id) + "號 " + speaker.name + " 搶跳觀察員・輪到你的順位再拆穿！", "gold");
       if (typeof orchestrator !== "undefined") orchestrator.emit("clash:detected", { kind: "fake_seer", speakerId: speaker.id });
     } else if (putPlayerInWolfPit) {
       state.match.todayEvents.accusedYouId = speaker.id;
@@ -914,7 +919,7 @@ async function executeAiTurnSpeech(speaker) {
       state.match.todayEvents.toxicSlipId = speaker.id;
       state.activeClash = { speakerId: speaker.id, kind: "toxic_slip", contradiction: contra || null, resolved: false };
       state.match.harmonyScore = clamp((state.match.harmonyScore || 70) - 7, 0, 100);
-      spawnFx(speaker.id, "🌫 酸言霧霾 -7!", "#fb7185");
+      spawnFx(speaker.id, "酸言霧霾 -7!", "#fb7185");
       if (typeof orchestrator !== "undefined") {
         orchestrator.emit("clash:detected", { kind: "toxic_slip", speakerId: speaker.id });
         orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
@@ -922,7 +927,7 @@ async function executeAiTurnSpeech(speaker) {
     } else if (contra) {
       state.activeClash = { speakerId: speaker.id, kind: "contradiction", contradiction: contra, resolved: false };
       if (contra.severity >= 2) {
-        spawnFx(speaker.id, "⚡ " + contra.label, "#fbbf24");
+        spawnFx(speaker.id, "" + contra.label, "#fbbf24");
       }
       if (typeof orchestrator !== "undefined") {
         orchestrator.emit("clash:detected", { kind: "contradiction", speakerId: speaker.id, code: contra.code });

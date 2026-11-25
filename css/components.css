@@ -1497,20 +1497,20 @@ body.screen-gameover #controlDeck {
   inset: 0;
   bottom: 0;
   background: rgba(10, 8, 6, 0.80);
-  justify-content: center;
-  padding: 20px;
+  justify-content: flex-start;
+  padding: 66px 20px 20px;
 }
 
 body.screen-gameover #bottomUnifiedRow {
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
 }
 
 body.screen-gameover #focalCenterCard {
   position: relative;
   pointer-events: auto;
-  max-width: 580px;
-  max-height: calc(100dvh - 40px);
+  max-width: 680px;
+  max-height: calc(100dvh - 86px);
   overflow-y: auto;
   padding: 22px 24px;
   border-radius: 8px;
@@ -5635,6 +5635,10 @@ body.hero-showcase-active .title-feedback-btn {
   text-shadow: 0 0 10px rgba(251, 191, 36, 0.45);
 }
 
+.fb-star-btn.is-lit .sh-ico {
+  fill: currentColor;
+}
+
 .fb-cat-btn {
   padding: 7px 8px;
   border-radius: 8px;
@@ -6952,10 +6956,13 @@ body.craft-ui.theme-day .gpu-dual-hint {
 }
 
 @keyframes matchPointPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 6px rgba(185, 28, 28, 0.26);
     border-color: rgba(248, 113, 113, 0.55);
   }
+
   50% {
     box-shadow: 0 0 14px rgba(220, 38, 38, 0.58);
     border-color: rgba(254, 202, 202, 0.9);
@@ -7688,12 +7695,12 @@ body.subtitle-large #spotlightText {
   text-align: center;
 }
 
-.showcase-more-drawer > summary {
+.showcase-more-drawer>summary {
   list-style: none;
   font-weight: 600;
 }
 
-.showcase-more-drawer > summary::-webkit-details-marker {
+.showcase-more-drawer>summary::-webkit-details-marker {
   display: none;
 }
 
@@ -7827,5 +7834,4704 @@ body.subtitle-large #spotlightText {
 
   .seat-pill-btn.is-speaking {
     transform: scale(1.06);
+  }
+}
+
+/* ==================== v20.0 JUDGE SHOWCASE 3-STEP GUIDE & GAME-OVER TRUTH REVIEW ==================== */
+.judge-showcase-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(31, 24, 17, 0.94) 0%, rgba(20, 15, 11, 0.96) 100%);
+  border: 1px solid rgba(212, 166, 87, 0.45);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.judge-showcase-banner.hidden {
+  display: none;
+}
+
+.judge-guide-steps {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.judge-guide-step {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.judge-guide-step.is-active {
+  color: #fef3c7;
+  background: rgba(212, 166, 87, 0.24);
+  border-color: rgba(245, 196, 81, 0.78);
+  font-weight: 700;
+}
+
+.judge-guide-step.is-done {
+  color: #86efac;
+  background: rgba(45, 122, 92, 0.2);
+  border-color: rgba(74, 222, 128, 0.45);
+  text-decoration: line-through;
+}
+
+body.craft-ui.theme-day .judge-showcase-banner {
+  background: linear-gradient(180deg, rgba(252, 247, 237, 0.96) 0%, rgba(244, 236, 221, 0.98) 100%);
+  border-color: rgba(154, 108, 42, 0.48);
+  box-shadow: 0 4px 14px rgba(80, 56, 24, 0.12);
+}
+
+body.craft-ui.theme-day .judge-guide-step {
+  color: #6b5a45;
+  background: rgba(120, 90, 50, 0.06);
+  border-color: rgba(120, 90, 50, 0.18);
+}
+
+body.craft-ui.theme-day .judge-guide-step.is-active {
+  color: #5c3709;
+  background: rgba(212, 166, 87, 0.28);
+  border-color: rgba(154, 104, 35, 0.72);
+}
+
+body.craft-ui.theme-day .judge-guide-step.is-done {
+  color: #1f6148;
+  background: rgba(36, 106, 80, 0.14);
+  border-color: rgba(36, 106, 80, 0.42);
+}
+
+.gameover-section-head {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #f3d79e;
+  text-align: left;
+  margin-bottom: 6px;
+}
+
+body.craft-ui.theme-day .gameover-section-head {
+  color: #6b4310;
+}
+
+.gameover-turning-axis {
+  text-align: left;
+}
+
+.gameover-turning-axis.hidden,
+.gameover-truth-table-wrap.hidden {
+  display: none;
+}
+
+.turning-axis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.turning-axis-card {
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: rgba(15, 19, 26, 0.84);
+  border: 1px solid rgba(212, 166, 87, 0.28);
+  border-top: 2px solid #d4a657;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.turning-axis-card.is-jade {
+  border-top-color: #34d399;
+  border-color: rgba(52, 211, 153, 0.32);
+}
+
+.turning-axis-card.is-cinnabar {
+  border-top-color: #fb7185;
+  border-color: rgba(251, 113, 133, 0.34);
+}
+
+.turning-axis-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.turning-axis-step {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(212, 166, 87, 0.2);
+  color: #f5d696;
+}
+
+.turning-axis-card.is-jade .turning-axis-step {
+  background: rgba(52, 211, 153, 0.18);
+  color: #86efac;
+}
+
+.turning-axis-card.is-cinnabar .turning-axis-step {
+  background: rgba(251, 113, 133, 0.2);
+  color: #fda4af;
+}
+
+.turning-axis-stage {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.turning-axis-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fef3c7;
+  line-height: 1.3;
+}
+
+.turning-axis-detail {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.48;
+}
+
+body.craft-ui.theme-day .turning-axis-card {
+  background: rgba(252, 248, 240, 0.96);
+  border-color: rgba(140, 104, 60, 0.28);
+}
+
+body.craft-ui.theme-day .turning-axis-stage {
+  color: #6b5842;
+}
+
+body.craft-ui.theme-day .turning-axis-title {
+  color: #2b2014;
+}
+
+body.craft-ui.theme-day .turning-axis-detail {
+  color: #4a3c2c;
+}
+
+body.craft-ui.theme-day .turning-axis-step {
+  background: rgba(180, 128, 46, 0.16);
+  color: #6b4310;
+}
+
+body.craft-ui.theme-day .turning-axis-card.is-jade .turning-axis-step {
+  background: rgba(36, 106, 80, 0.14);
+  color: #1c5941;
+}
+
+body.craft-ui.theme-day .turning-axis-card.is-cinnabar .turning-axis-step {
+  background: rgba(166, 50, 38, 0.14);
+  color: #96261d;
+}
+
+.gameover-truth-table-wrap {
+  text-align: left;
+  margin-top: 2px;
+}
+
+.gameover-truth-scroll {
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 166, 87, 0.26);
+  background: rgba(12, 16, 23, 0.86);
+}
+
+.gameover-truth-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.gameover-truth-table th {
+  padding: 6px 8px;
+  font-weight: 700;
+  color: #e4ba67;
+  background: rgba(212, 166, 87, 0.1);
+  border-bottom: 1px solid rgba(212, 166, 87, 0.24);
+  white-space: nowrap;
+}
+
+.gameover-truth-table td {
+  padding: 6px 8px;
+  color: #e2e8f0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  vertical-align: top;
+  line-height: 1.42;
+}
+
+.gameover-truth-table tr:last-child td {
+  border-bottom: none;
+}
+
+.gameover-truth-table tr.is-player-row td {
+  background: rgba(212, 166, 87, 0.1);
+}
+
+.gameover-truth-table tr.is-wolf-row td {
+  background: rgba(159, 18, 57, 0.11);
+}
+
+.truth-cell-seat {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.truth-cell-stance {
+  min-width: 128px;
+}
+
+.truth-badge-sheriff {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 800;
+  background: rgba(212, 166, 87, 0.26);
+  color: #fde68a;
+  border: 1px solid rgba(212, 166, 87, 0.5);
+}
+
+.truth-role-wolf {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(225, 29, 72, 0.2);
+  color: #fda4af;
+}
+
+.truth-role-good {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(16, 185, 129, 0.16);
+  color: #86efac;
+}
+
+.truth-status-alive {
+  color: #86efac;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.truth-status-out {
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+body.craft-ui.theme-day .gameover-truth-scroll {
+  background: rgba(252, 248, 240, 0.96);
+  border-color: rgba(140, 104, 60, 0.3);
+}
+
+body.craft-ui.theme-day .gameover-truth-table th {
+  color: #6b4310;
+  background: rgba(180, 128, 46, 0.12);
+  border-bottom-color: rgba(140, 104, 60, 0.26);
+}
+
+body.craft-ui.theme-day .gameover-truth-table td {
+  color: #2f2418;
+  border-bottom-color: rgba(140, 104, 60, 0.16);
+}
+
+body.craft-ui.theme-day .gameover-truth-table tr.is-player-row td {
+  background: rgba(212, 166, 87, 0.14);
+}
+
+body.craft-ui.theme-day .gameover-truth-table tr.is-wolf-row td {
+  background: rgba(180, 58, 46, 0.08);
+}
+
+body.craft-ui.theme-day .truth-badge-sheriff {
+  background: rgba(180, 128, 46, 0.2);
+  color: #6b4310;
+}
+
+body.craft-ui.theme-day .truth-role-wolf {
+  background: rgba(166, 50, 38, 0.14);
+  color: #96261d;
+}
+
+body.craft-ui.theme-day .truth-role-good {
+  background: rgba(36, 106, 80, 0.14);
+  color: #1c5941;
+}
+
+body.craft-ui.theme-day .truth-status-alive {
+  color: #1c5941;
+}
+
+body.craft-ui.theme-day .truth-status-out {
+  color: #7c6d5a;
+}
+
+@media (max-width: 767px) {
+  .turning-axis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .judge-showcase-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ==================== v21.2 「減法書院・無框劇院美學」(EXQUISITE TYPOGRAPHY · MINIMAL COLOR DISCIPLINE · ZERO !important / blur) ==================== */
+
+/* 0. Refined Global Typography Discipline (Eliminate Heavy 800/900 Bloat; Embrace Serif 500 + WenKai 400 + Sans 400/500) */
+.font-serif-craft,
+#bannerHeadline,
+#spotlightSpeakerBadge,
+#curtainTitle,
+#gameOverHeadline,
+.modal-title-serif {
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.seal-chop {
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  font-size: 16px;
+  font-weight: 600;
+  border: 1px solid rgba(250, 240, 220, 0.50);
+  box-shadow: inset 0 0 0 1.5px rgba(110, 20, 14, 0.65), 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* 1. Boutique Editorial Title Screen (Borderless Poetic Ink-Line Menu · Breathing 74% 3D Stage) */
+body.screen-title #focalCenterCard {
+  pointer-events: auto;
+  max-width: 440px;
+  padding: 44px 36px 44px 48px;
+  background: linear-gradient(90deg, rgba(10, 9, 8, 0.88) 0%, rgba(12, 11, 10, 0.66) 58%, rgba(12, 11, 10, 0.14) 86%, rgba(12, 11, 10, 0) 100%);
+}
+
+body.screen-title #focalCenterCard::before {
+  left: 22px;
+  top: 18%;
+  bottom: 18%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent 0%, rgba(216, 185, 124, 0.44) 26%, rgba(216, 185, 124, 0.44) 74%, transparent 100%);
+}
+
+body.screen-title #panelLobby {
+  max-width: 360px;
+}
+
+body.screen-title #panelLobby h1 {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #fffdf9 0%, #f1ddb2 58%, #cda256 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: none;
+  text-shadow: none;
+}
+
+body.screen-title #lobbySeatSummary {
+  font-family: var(--font-literary);
+  font-size: 14.5px;
+  font-weight: 400;
+  line-height: 1.82;
+  letter-spacing: 0.04em;
+  color: rgba(232, 222, 206, 0.78);
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(216, 185, 124, 0.18);
+}
+
+.title-release-badge {
+  padding: 1px 7px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.10em;
+  background: transparent;
+  border: 1px solid rgba(216, 185, 124, 0.30);
+  color: rgba(226, 198, 138, 0.86);
+}
+
+/* Primary CTA: One Sculpted Vermilion Seal Plaque | Secondary Items: Borderless Poetic Ink-Line Menu */
+.title-menu-item {
+  max-width: 214px;
+  padding: 11px 4px;
+  border-radius: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  justify-content: flex-start;
+  background: transparent;
+  color: rgba(236, 226, 210, 0.84);
+  border: none;
+  border-bottom: 1px solid rgba(216, 185, 124, 0.16);
+  box-shadow: none;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), color 0.18s ease, border-color 0.22s ease;
+}
+
+.title-menu-item:hover {
+  transform: translateX(8px);
+  background: transparent;
+  border-bottom-color: rgba(230, 196, 126, 0.72);
+  color: #fffaf0;
+  box-shadow: none;
+}
+
+.title-menu-item.is-primary {
+  max-width: 214px;
+  padding: 12px 22px;
+  margin-bottom: 6px;
+  border-radius: 3px;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  background: linear-gradient(180deg, #b83d30 0%, #92291e 100%);
+  border: 1px solid rgba(242, 214, 158, 0.52);
+  border-left: 1px solid rgba(242, 214, 158, 0.52);
+  color: #fffaf2;
+  box-shadow: inset 0 1px 0 rgba(255, 246, 224, 0.24), 0 8px 24px rgba(0, 0, 0, 0.38);
+}
+
+.title-menu-item.is-primary:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #c64537 0%, #9f2d21 100%);
+  border-color: rgba(248, 224, 172, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, 0.34), 0 10px 28px rgba(150, 38, 28, 0.42);
+}
+
+.lobby-more-drawer {
+  max-width: 214px;
+  border-top: none;
+  padding-top: 6px;
+}
+
+.lobby-more-summary {
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: rgba(214, 202, 184, 0.64);
+}
+
+.title-top-actions .title-scene-btn,
+.title-top-actions .title-feedback-btn {
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  background: rgba(12, 11, 10, 0.52);
+  color: rgba(236, 226, 210, 0.88);
+  border: 1px solid rgba(216, 185, 124, 0.22);
+  box-shadow: none;
+}
+
+.title-top-actions .title-scene-btn:hover,
+.title-top-actions .title-feedback-btn:hover {
+  background: rgba(24, 20, 16, 0.82);
+  border-color: rgba(226, 194, 126, 0.56);
+  color: #fffaf0;
+}
+
+.title-top-actions .title-scene-btn.is-celestial {
+  border-color: rgba(108, 196, 174, 0.42);
+  color: #c8efe4;
+}
+
+/* 2. Frameless Floating Editorial Top HUD (Zero Chunky Left Box · Unified Quiet Right Capsule) */
+#inGameTopHud {
+  top: 0;
+  left: 0;
+  right: 0;
+  max-width: 100%;
+  padding: 12px 18px 18px;
+  background: linear-gradient(180deg, rgba(10, 9, 8, 0.72) 0%, rgba(10, 9, 8, 0.28) 62%, rgba(10, 9, 8, 0) 100%);
+}
+
+#inGameTopHud .hud-pill-shell {
+  padding: 2px 4px;
+  gap: 10px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  opacity: 1;
+}
+
+#inGameTopHud #phaseBadge {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  color: #e4c27c;
+  letter-spacing: 0.14em;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.72);
+}
+
+#inGameTopHud .hud-sep-headline {
+  color: rgba(216, 185, 124, 0.34);
+}
+
+#inGameTopHud #bannerHeadline {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  color: #f8f2e6;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.78);
+}
+
+#inGameTopHud #roundTitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(230, 220, 204, 0.68);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.72);
+}
+
+#comboBadge,
+#matchPointBadge {
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  background: rgba(14, 12, 10, 0.56);
+  border: 1px solid rgba(216, 185, 124, 0.30);
+  color: #e6c684;
+  box-shadow: none;
+}
+
+#matchPointBadge {
+  border-color: rgba(206, 92, 78, 0.48);
+  color: #f0b2a8;
+}
+
+#inGameTopHud > div:last-child {
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: rgba(12, 11, 10, 0.58);
+  border: 1px solid rgba(216, 185, 124, 0.22);
+}
+
+#inGameTopHud .hud-icon-btn {
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  background: transparent;
+  color: rgba(238, 230, 216, 0.84);
+  border: none;
+  box-shadow: none;
+}
+
+#inGameTopHud .hud-icon-btn:hover {
+  background: rgba(216, 185, 124, 0.14);
+  color: #fffaf0;
+  transform: none;
+}
+
+/* 3. Whisper-Thin Continuous Typographic Seat Rail (ZERO Rainbow Boxes · ZERO Floating Sticker Badges) */
+body.screen-ingame #controlDeck {
+  bottom: 10px;
+  gap: 4px;
+  contain: layout style;
+}
+
+#seatButtonStrip {
+  max-width: 760px;
+  padding: 2px 10px;
+  gap: 2px;
+  border-radius: 3px;
+  background: rgba(12, 11, 10, 0.68);
+  border: none;
+  border-top: 1px solid rgba(216, 185, 124, 0.16);
+  border-bottom: 1px solid rgba(216, 185, 124, 0.12);
+  box-shadow: none;
+}
+
+#seatButtonStrip .seat-pill-btn {
+  padding: 5px 9px;
+  gap: 5px;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 400;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(232, 222, 206, 0.68);
+  box-shadow: none;
+  transform: none;
+  transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+}
+
+#seatButtonStrip .seat-pill-btn:hover:not(:disabled):not(.seat-is-selected) {
+  background: rgba(216, 185, 124, 0.08);
+  border-bottom-color: rgba(216, 185, 124, 0.36);
+  color: #faf3e5;
+}
+
+.seat-pill-num-big {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(224, 194, 132, 0.72);
+}
+
+.seat-pill-name {
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+#seatButtonStrip .seat-pill-btn.is-speaking {
+  background: rgba(224, 190, 120, 0.10);
+  border-bottom-color: #e4c074;
+  color: #fff9ec;
+  transform: none;
+  box-shadow: none;
+}
+
+#seatButtonStrip .seat-pill-btn.is-speaking .seat-pill-num-big {
+  color: #f2cf82;
+  font-weight: 600;
+}
+
+#seatButtonStrip .seat-pill-btn.is-speaking .seat-pill-name {
+  color: #fff9ec;
+  font-weight: 500;
+}
+
+#seatButtonStrip .seat-pill-btn.is-mark-good {
+  background: transparent;
+  border-bottom-color: rgba(94, 174, 144, 0.58);
+  color: rgba(214, 236, 226, 0.88);
+}
+
+#seatButtonStrip .seat-pill-btn.is-mark-wolf {
+  background: transparent;
+  border-bottom-color: rgba(206, 92, 80, 0.62);
+  color: rgba(244, 212, 208, 0.88);
+}
+
+#seatButtonStrip .seat-pill-btn.seat-is-selected,
+#seatButtonStrip .seat-pill-btn.seat-is-selected:hover {
+  background: rgba(190, 68, 56, 0.16);
+  border-bottom-color: #d66254;
+  color: #fff6f2;
+  box-shadow: none;
+}
+
+#seatButtonStrip .seat-pill-btn.seat-is-selected .seat-pill-num-big {
+  color: #f3c882;
+}
+
+#seatButtonStrip .seat-pill-btn.is-dead {
+  background: transparent;
+  border-bottom-color: transparent;
+  color: rgba(154, 146, 134, 0.42);
+  filter: none;
+  opacity: 0.48;
+}
+
+#seatButtonStrip .seat-pill-btn.is-dead .seat-pill-num-big {
+  color: rgba(154, 146, 134, 0.42);
+}
+
+/* Demote floating colored sticker badges into serene quiet inline text */
+#seatButtonStrip .seat-pill-badge {
+  position: static;
+  top: auto;
+  right: auto;
+  padding: 0;
+  margin-left: 1px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 0.78;
+}
+
+#seatButtonStrip .seat-pill-badge.badge-good {
+  color: #82c8ad;
+}
+
+#seatButtonStrip .seat-pill-badge.badge-wolf {
+  color: #e4948a;
+}
+
+#seatButtonStrip .seat-pill-badge.badge-speak {
+  color: #ebd08c;
+}
+
+#seatButtonStrip .seat-pill-badge.badge-dead {
+  color: rgba(164, 156, 144, 0.56);
+}
+
+/* 4. Frameless Ink-Wash Cinema Dialogue Stage (Zero Box-In-Box · Literary WenKai Prose · Quiet Ghost Toolbar) */
+body.screen-ingame #focalCenterCard {
+  max-width: 760px;
+  padding: 12px 20px 10px;
+  border-radius: 4px;
+  background:
+    linear-gradient(90deg, transparent 0%, rgba(216, 185, 124, 0.46) 16%, rgba(216, 185, 124, 0.46) 84%, transparent 100%) top / 100% 1px no-repeat,
+    linear-gradient(180deg, rgba(13, 12, 11, 0.80) 0%, rgba(10, 9, 8, 0.92) 32%, rgba(8, 7, 7, 0.96) 100%);
+  border: none;
+  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.52);
+}
+
+/* Flatten Judge Showcase 3-Step Guide into Pure Single-Line Hairline Breadcrumb (Zero Nested Boxes!) */
+.judge-showcase-banner {
+  padding: 0 0 7px;
+  margin-bottom: 9px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(216, 185, 124, 0.14);
+  box-shadow: none;
+}
+
+.judge-guide-steps {
+  gap: 14px;
+}
+
+.judge-guide-step {
+  padding: 0;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: rgba(216, 206, 190, 0.44);
+  background: transparent;
+  border: none;
+}
+
+.judge-guide-step.is-active {
+  color: #ecd08e;
+  background: transparent;
+  border: none;
+  font-weight: 500;
+}
+
+.judge-guide-step.is-done {
+  color: rgba(132, 198, 170, 0.72);
+  background: transparent;
+  border: none;
+}
+
+#btnDismissJudgeGuide {
+  background: transparent;
+  border: none;
+  color: rgba(216, 206, 190, 0.48);
+  font-weight: 400;
+  box-shadow: none;
+  padding: 0 4px;
+}
+
+#btnDismissJudgeGuide:hover {
+  color: #f4ead6;
+  background: transparent;
+}
+
+#spotlightStageBox {
+  border-left: none;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.vn-bust-wrap {
+  width: 86px;
+}
+
+#speakerPortraitImg.vn-bust-img {
+  width: 84px;
+  height: 92px;
+  border-radius: 4px;
+  border: 1px solid rgba(216, 185, 124, 0.36);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.46);
+  filter: contrast(1.02) saturate(0.95);
+  animation: none;
+}
+
+#speakerPortraitImg.portrait-mood-angry,
+#speakerPortraitImg.portrait-mood-happy,
+#speakerPortraitImg.portrait-speaking-glow,
+#speakerPortraitImg.portrait-speaking-breathe {
+  border-color: rgba(216, 185, 124, 0.46);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.46);
+  animation: none;
+}
+
+#speakerActiveBanner {
+  border-left: none;
+  padding: 0 0 2px;
+  margin-bottom: 4px;
+}
+
+/* Understated Editorial Serif Seat Numeral (Replaces Loud Green Square!) */
+#speakerSeatMedallion {
+  width: auto;
+  height: auto;
+  padding: 0 10px 0 0;
+  border-radius: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  background: transparent;
+  border: none;
+  border-right: 1px solid rgba(216, 185, 124, 0.28);
+  color: #e4c27c;
+  box-shadow: none;
+}
+
+#spotlightSpeakerBadge {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 500;
+  color: #f8f2e6;
+  letter-spacing: 0.10em;
+}
+
+.spotlight-quiet-tools .cta-ink {
+  padding: 2px 7px;
+  font-size: 13px;
+  font-weight: 400;
+  border-radius: 3px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(218, 208, 192, 0.56);
+  box-shadow: none;
+}
+
+.spotlight-quiet-tools .cta-ink:hover {
+  background: rgba(216, 185, 124, 0.10);
+  border-color: rgba(216, 185, 124, 0.24);
+  color: #faf3e5;
+}
+
+/* Flatten Stance Chips into Clean Inline Literary Tags (Zero Red/Green Pill Boxes!) */
+#speakerStanceStrip {
+  gap: 12px;
+  margin-bottom: 5px;
+}
+
+#speakerStanceStrip .stance-chip {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: rgba(226, 216, 200, 0.66);
+  box-shadow: none;
+}
+
+#speakerStanceStrip .stance-chip.is-wolf {
+  background: transparent;
+  border: none;
+  color: #dea096;
+}
+
+#speakerStanceStrip .stance-chip.is-good {
+  background: transparent;
+  border: none;
+  color: #8ccbb2;
+}
+
+#speakerStanceStrip .stance-chip.is-role,
+#speakerStanceStrip .stance-chip.is-contra {
+  background: transparent;
+  border: none;
+  color: #e4c27c;
+}
+
+/* Serene Literary WenKai Dialogue Prose + Custom Thin Gilded Scrollbar */
+#spotlightText {
+  font-family: var(--font-literary);
+  font-size: 17.5px;
+  font-weight: 400;
+  line-height: 1.84;
+  letter-spacing: 0.045em;
+  color: #f0e9dc;
+  text-shadow: none;
+  max-height: 128px;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(216, 185, 124, 0.32) transparent;
+}
+
+#spotlightText::-webkit-scrollbar {
+  width: 3.5px;
+}
+
+#spotlightText::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#spotlightText::-webkit-scrollbar-thumb {
+  background: rgba(216, 185, 124, 0.34);
+  border-radius: 3px;
+}
+
+/* Inline Seat Mentions: Literary Dotted Gold Underline (Zero Blue/Boxy Tag Disruption!) */
+.clue-seat {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dotted rgba(224, 192, 128, 0.68);
+  color: #efd8a6;
+  border-radius: 0;
+  padding: 0 2px;
+  font-weight: 400;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+
+.clue-seat:hover {
+  background: rgba(224, 192, 128, 0.10);
+  border-bottom-color: #f7e4b8;
+  color: #fff8e6;
+}
+
+.spotlight-progress-track {
+  height: 1px;
+  background: rgba(216, 185, 124, 0.12);
+}
+
+#spotlightProgressBar {
+  background: linear-gradient(90deg, rgba(196, 156, 86, 0.72) 0%, #ebd08c 100%);
+}
+
+/* Quiet Dark-Ink Margin Quote for Mentioned Seat Reaction (Zero Bright Red Popup Card!) */
+.target-react-card {
+  max-width: 156px;
+  padding: 4px 8px;
+  border-radius: 2px;
+  background: rgba(18, 16, 14, 0.62);
+  border: none;
+  border-left: 1.5px solid rgba(216, 185, 124, 0.42);
+  box-shadow: none;
+}
+
+.target-react-card.is-accuse {
+  border-left-color: rgba(210, 102, 90, 0.68);
+  background: rgba(26, 15, 14, 0.66);
+}
+
+.target-react-card.is-trust {
+  border-left-color: rgba(94, 174, 144, 0.64);
+  background: rgba(14, 24, 20, 0.66);
+}
+
+.target-react-avatar {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(216, 185, 124, 0.42);
+}
+
+.target-react-badge {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e4c27c;
+}
+
+.target-react-card.is-accuse .target-react-badge {
+  color: #e4a096;
+}
+
+.target-react-card.is-trust .target-react-badge {
+  color: #96d2ba;
+}
+
+.target-react-quote {
+  font-family: var(--font-literary);
+  font-size: 13px;
+  color: rgba(232, 222, 206, 0.80);
+}
+
+/* Flatten Director Event Strip into Subtle Inline Hairline Note (Zero Green Box!) */
+.director-choice-bar {
+  border-radius: 0;
+  padding: 5px 2px 3px;
+  margin-bottom: 4px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid rgba(216, 185, 124, 0.14);
+  color: rgba(162, 208, 188, 0.86);
+  font-weight: 400;
+  box-shadow: none;
+}
+
+.director-choice-bar button {
+  padding: 3px 10px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  background: rgba(74, 158, 126, 0.14);
+  border: 1px solid rgba(98, 184, 150, 0.36);
+  color: #b6e6d2;
+  box-shadow: none;
+}
+
+.director-choice-bar button:hover {
+  background: rgba(74, 158, 126, 0.26);
+  color: #eefcf6;
+}
+
+/* Minimalist Borderless Detective Toolbar vs ONE Singular Sculptural Gold Next CTA */
+.stepper-action-row {
+  border-top: 1px solid rgba(216, 185, 124, 0.14);
+  padding-top: 7px;
+}
+
+#detectiveMarkRow {
+  gap: 4px;
+}
+
+#detectiveMarkRow .cta-ink,
+#detectiveMarkRow .pit-quick-btn {
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(224, 214, 198, 0.68);
+  box-shadow: none;
+}
+
+#detectiveMarkRow .cta-ink:hover,
+#detectiveMarkRow .pit-quick-btn:hover {
+  background: rgba(216, 185, 124, 0.09);
+  border-color: rgba(216, 185, 124, 0.22);
+  color: #faf3e5;
+  transform: none;
+}
+
+#detectiveMarkRow .cta-cinnabar {
+  padding: 4px 9px;
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  background: rgba(190, 74, 62, 0.18);
+  border: 1px solid rgba(214, 102, 90, 0.44);
+  color: #f0b2a8;
+  box-shadow: none;
+}
+
+#detectiveMarkRow .cta-celadon {
+  padding: 4px 9px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(74, 168, 134, 0.16);
+  border: 1px solid rgba(98, 188, 152, 0.42);
+  color: #a8e2c8;
+  box-shadow: none;
+}
+
+#detectiveMarkRow #btnTeaInterject {
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid rgba(216, 185, 124, 0.34);
+  color: #ebd08c;
+  box-shadow: none;
+}
+
+#detectiveMarkRow #btnTeaInterject:hover:not(:disabled) {
+  background: rgba(216, 185, 124, 0.14);
+  border-color: rgba(232, 198, 130, 0.62);
+  color: #fff9ec;
+}
+
+#btnStepNext {
+  padding: 6px 18px;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  background: linear-gradient(180deg, #e5be70 0%, #c08f3d 100%);
+  color: #161008;
+  border: none;
+  box-shadow: inset 0 1px 0 rgba(255, 250, 236, 0.48), 0 4px 14px rgba(0, 0, 0, 0.36);
+}
+
+#btnStepNext:hover {
+  filter: brightness(1.06);
+}
+
+/* 4.5 Subtractive Player Turn Deck (Unified Ink Cards · Zero Neon Orange Glow Pill · Zero Rainbow Boxes) */
+#panelPlayerSpeech #playerTurnHeading {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: #f6eedf;
+}
+
+#panelPlayerSpeech .speech-pit-cta {
+  padding: 4px 12px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  background: rgba(216, 185, 124, 0.12);
+  border: 1px solid rgba(216, 185, 124, 0.44);
+  color: #edd49a;
+  box-shadow: none;
+  animation: none;
+}
+
+#panelPlayerSpeech .speech-pit-cta:hover {
+  background: rgba(216, 185, 124, 0.22);
+  border-color: rgba(236, 202, 134, 0.72);
+  color: #fff9ec;
+}
+
+#panelPlayerSpeech .wind-vane-strip {
+  padding: 2px 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(216, 206, 190, 0.64);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+#quickSpeechChips .play-card-btn {
+  background: rgba(20, 17, 14, 0.80);
+  border: 1px solid rgba(216, 185, 124, 0.18);
+  border-top: 2px solid rgba(216, 185, 124, 0.56);
+  border-radius: 4px;
+  box-shadow: none;
+  color: #eae0cf;
+  font-weight: 400;
+  transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
+}
+
+#quickSpeechChips .play-card-btn:hover {
+  background: rgba(32, 26, 20, 0.92);
+  border-color: rgba(226, 194, 126, 0.52);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.34);
+}
+
+#quickSpeechChips .play-card-btn.card-words {
+  background: rgba(20, 17, 14, 0.80);
+  border-top-color: rgba(94, 174, 144, 0.64);
+}
+
+#quickSpeechChips .play-card-btn.card-deeds {
+  background: rgba(20, 17, 14, 0.80);
+  border-top-color: rgba(126, 158, 196, 0.64);
+}
+
+#quickSpeechChips .play-card-btn.card-evidence {
+  background: rgba(28, 22, 15, 0.86);
+  border-top-color: #e4c074;
+}
+
+#quickSpeechChips .play-card-stamp {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+#rephraseChoicesTray {
+  background: transparent;
+  border: none;
+  border-top: 1px solid rgba(216, 185, 124, 0.14);
+  border-radius: 0;
+  padding: 8px 0 2px;
+  box-shadow: none;
+}
+
+#rephraseSlipsGrid .rephrase-slip-btn {
+  background: rgba(18, 15, 12, 0.78);
+  border: 1px solid rgba(216, 185, 124, 0.18);
+  border-radius: 4px;
+  box-shadow: none;
+  font-family: var(--font-literary);
+  font-weight: 400;
+}
+
+#rephraseSlipsGrid .rephrase-slip-btn:hover {
+  background: rgba(32, 26, 20, 0.92);
+  border-color: rgba(226, 194, 126, 0.52);
+}
+
+#panelPlayerSpeech #quickFreeInput {
+  background: rgba(14, 12, 10, 0.86);
+  border-color: rgba(216, 185, 124, 0.22);
+  border-radius: 3px;
+  font-family: var(--font-literary);
+  font-weight: 400;
+}
+
+#panelPlayerSpeech #btnQuickFreeSend {
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  background: rgba(74, 158, 126, 0.20);
+  border: 1px solid rgba(98, 184, 150, 0.46);
+  color: #c8f0df;
+  box-shadow: none;
+}
+
+#panelPlayerSpeech #btnQuickFreeSend:hover {
+  background: rgba(74, 158, 126, 0.34);
+  color: #f0fdf8;
+}
+
+/* 5. Quiet Corner Plaques & Non-Blocking Top-Right Toasts */
+.corner-role-tile {
+  flex: 0 0 238px;
+  width: 238px;
+  padding: 8px 12px;
+  border-radius: 3px;
+  background: rgba(12, 11, 10, 0.72);
+  border: none;
+  border-left: 2px solid var(--role-accent, rgba(216, 185, 124, 0.56));
+  box-shadow: none;
+}
+
+.role-nameplate {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  color: #f2e4c8;
+}
+
+.role-guide-trigger {
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-weight: 400;
+  background: transparent;
+  border: 1px solid rgba(216, 185, 124, 0.28);
+  color: rgba(232, 206, 152, 0.86);
+}
+
+.role-tile-status {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(216, 206, 190, 0.72);
+}
+
+#cornerFourGDeck .fourg-toggle-btn {
+  background: rgba(12, 11, 10, 0.72);
+  border: none;
+  border-right: 2px solid rgba(216, 185, 124, 0.44);
+  border-radius: 3px;
+  box-shadow: none;
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: rgba(236, 224, 204, 0.86);
+}
+
+body.screen-ingame #toastContainer {
+  top: 56px;
+  right: 16px;
+  bottom: auto;
+}
+
+.craft-toast {
+  background: rgba(14, 12, 10, 0.88);
+  border: 1px solid rgba(216, 185, 124, 0.28);
+  border-radius: 3px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.44);
+}
+
+/* 6. Unify All Modals (Warm Obsidian Ink · Clean Airy Spacing · Zero Cold Blue-Slate) */
+.craft-modal-box {
+  background: linear-gradient(176deg, rgba(22, 19, 16, 0.97) 0%, rgba(14, 12, 10, 0.98) 60%, rgba(10, 9, 8, 0.99) 100%);
+  border: 1px solid rgba(216, 185, 124, 0.28);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.72);
+  border-radius: 6px;
+}
+
+.fb-star-btn,
+.fb-cat-btn,
+.fb-history-item {
+  background: rgba(20, 17, 14, 0.82);
+  border: 1px solid rgba(216, 185, 124, 0.18);
+  color: rgba(226, 216, 200, 0.80);
+  border-radius: 4px;
+  font-weight: 400;
+}
+
+.fb-cat-btn:hover {
+  background: rgba(34, 28, 22, 0.92);
+  border-color: rgba(226, 194, 126, 0.48);
+  color: #fffaf0;
+}
+
+.fb-cat-btn.is-active {
+  background: rgba(186, 66, 52, 0.20);
+  border-color: rgba(226, 194, 126, 0.62);
+  color: #fff6e6;
+}
+
+.fb-env-preview {
+  background: rgba(12, 10, 8, 0.88);
+  border: 1px solid rgba(216, 185, 124, 0.16);
+  color: #a89c8a;
+  border-radius: 4px;
+}
+
+.tut-card,
+.tut-step-pill,
+.tut-role-item {
+  background: rgba(20, 17, 14, 0.84);
+  border: 1px solid rgba(216, 185, 124, 0.18);
+  color: #e8dfd0;
+  border-radius: 5px;
+}
+
+.tut-card.tut-tone-good {
+  background: rgba(18, 40, 34, 0.68);
+  border-color: rgba(94, 174, 144, 0.34);
+}
+
+.tut-card.tut-tone-wolf,
+.tut-role-item.tut-role-wolf {
+  background: rgba(48, 18, 20, 0.68);
+  border-color: rgba(206, 92, 80, 0.36);
+}
+
+.tut-card.tut-tone-gold {
+  background: rgba(44, 34, 18, 0.68);
+  border-color: rgba(216, 185, 124, 0.38);
+}
+
+.tut-card-body,
+.tut-kbd-grid {
+  color: rgba(226, 216, 200, 0.84);
+  font-weight: 400;
+}
+
+.turning-axis-card {
+  background: rgba(18, 15, 12, 0.88);
+  border-color: rgba(216, 185, 124, 0.22);
+}
+
+.turning-axis-stage,
+.turning-axis-detail {
+  color: rgba(222, 212, 196, 0.82);
+}
+
+.gameover-truth-scroll {
+  background: rgba(14, 12, 10, 0.90);
+  border-color: rgba(216, 185, 124, 0.22);
+}
+
+.gameover-truth-table td {
+  color: #ebe2d2;
+  border-bottom-color: rgba(216, 185, 124, 0.12);
+}
+
+/* 7. Hero Showcase Studio & Role Guide: Maximum Breathing Space for 3D Stage */
+#heroShowcaseOverlay {
+  padding: 14px 18px;
+}
+
+#heroShowcaseOverlay .hud-pill-shell {
+  max-width: 540px;
+  padding: 10px 16px;
+  background: rgba(14, 12, 10, 0.82);
+  border: 1px solid rgba(216, 185, 124, 0.24);
+  border-radius: 4px;
+}
+
+#heroShowcaseOverlay .showcase-studio-dock {
+  max-width: 700px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  background: rgba(14, 12, 10, 0.86);
+  border: 1px solid rgba(216, 185, 124, 0.24);
+}
+
+#roleGuidePopover {
+  max-height: calc(100dvh - 156px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(216, 185, 124, 0.36) transparent;
+}
+
+/* ==========================================================================
+   v21.3 MULTI-DEVICE ERGONOMICS (PHONE / TABLET / DESKTOP) & 3-DEVICE TUTORIAL
+   Guaranteed cascade order after v21.2 · Zero !important · Zero blur · All >= 13px
+   ========================================================================== */
+
+/* 1. Harmonize Four-Givings Deck Head with v21.2 Smoked-Obsidian Aesthetic */
+#cornerFourGDeck .fourg-deck-head {
+  background: rgba(12, 11, 10, 0.78);
+  border: none;
+  border-right: 2px solid rgba(216, 185, 124, 0.52);
+  border-radius: 3px;
+  box-shadow: none;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: rgba(242, 228, 200, 0.90);
+}
+
+#cornerFourGDeck .fourg-deck-head:hover,
+#cornerFourGDeck.is-fan-open .fourg-deck-head {
+  background: rgba(26, 22, 18, 0.92);
+  border-right-color: #e4c074;
+  color: #fff9ec;
+  transform: none;
+}
+
+#cornerFourGDeck .fourg-fan-tray {
+  background: rgba(14, 12, 10, 0.94);
+  border: 1px solid rgba(216, 185, 124, 0.28);
+  border-radius: 5px;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.62);
+}
+
+/* 2. Independent 3-Device Tutorial Switcher (Phone / Tablet / Desktop) */
+.tut-device-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(12, 10, 8, 0.62);
+  border-bottom: 1px solid rgba(216, 185, 124, 0.16);
+}
+
+.tut-device-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgba(22, 19, 16, 0.78);
+  border: 1px solid rgba(216, 185, 124, 0.18);
+  border-bottom: 2px solid transparent;
+  color: rgba(224, 214, 198, 0.78);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.tut-device-btn:hover {
+  background: rgba(36, 30, 24, 0.92);
+  border-color: rgba(226, 194, 126, 0.44);
+  color: #fffaf0;
+}
+
+.tut-device-btn.is-active {
+  background: rgba(216, 185, 124, 0.16);
+  border-color: rgba(226, 194, 126, 0.56);
+  border-bottom-color: #e6c278;
+  color: #fff6e2;
+  font-weight: 600;
+}
+
+.tut-device-current-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: rgba(94, 174, 144, 0.22);
+  border: 1px solid rgba(94, 174, 144, 0.48);
+  color: #b8eed8;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.tut-device-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 4px;
+  background: rgba(216, 185, 124, 0.08);
+  border-left: 2px solid rgba(226, 194, 126, 0.62);
+  color: rgba(238, 228, 210, 0.88);
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.tut-swipe-hint {
+  display: none;
+  font-size: 13px;
+  color: rgba(216, 185, 124, 0.72);
+  letter-spacing: 0.04em;
+  text-align: center;
+  padding-top: 2px;
+}
+
+.tut-tab-strip {
+  background: rgba(14, 12, 10, 0.52);
+  border-bottom-color: rgba(216, 185, 124, 0.14);
+}
+
+.tut-step-tab {
+  min-height: 36px;
+  padding: 5px 11px;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  background: rgba(20, 17, 14, 0.78);
+  border: 1px solid rgba(216, 185, 124, 0.18);
+  color: rgba(222, 212, 196, 0.78);
+}
+
+.tut-step-tab.is-active {
+  background: rgba(216, 185, 124, 0.18);
+  border-color: rgba(226, 194, 126, 0.64);
+  color: #fff6e2;
+  box-shadow: none;
+}
+
+.tut-tip-bar {
+  background: rgba(216, 185, 124, 0.10);
+  border: 1px solid rgba(216, 185, 124, 0.28);
+  color: #efe4cf;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.tut-card-title {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.tut-card-body,
+.tut-role-item,
+.tut-step-pill,
+.tut-kbd-grid {
+  font-size: 13.5px;
+  line-height: 1.62;
+}
+
+/* 3. Touch Pointer Guard (Coarse Pointer Devices: Hide <kbd>, Stop Hover Jitter) */
+@media (pointer: coarse) {
+  .ui-kbd {
+    display: none;
+  }
+
+  .tut-swipe-hint {
+    display: block;
+  }
+
+  .play-card-btn:hover:not(:disabled):not(.is-card-dimmed),
+  .fourg-card:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* 4. Tablet Ergonomics — Portrait & Landscape (768px ~ 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  #inGameTopHud {
+    top: max(10px, env(safe-area-inset-top));
+    left: 12px;
+    right: 12px;
+    gap: 8px;
+  }
+
+  #inGameTopHud .hud-icon-btn {
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 14px;
+  }
+
+  body.screen-ingame #controlDeck {
+    bottom: max(10px, env(safe-area-inset-bottom));
+    padding: 0 14px;
+    gap: 6px;
+  }
+
+  #seatButtonStrip {
+    max-width: min(780px, 100%);
+    padding: 3px 10px;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #seatButtonStrip .seat-pill-btn {
+    min-height: 40px;
+    padding: 6px 11px;
+    font-size: 13.5px;
+  }
+
+  #detectiveMarkRow button {
+    min-height: 38px;
+    padding: 4px 10px;
+    font-size: 13.5px;
+  }
+
+  #btnStepNext {
+    min-height: 40px;
+    padding: 6px 16px;
+    font-size: 14.5px;
+  }
+
+  #panelPlayerSpeech #quickFreeInput,
+  #panelPlayerSpeech #btnQuickFreeSend {
+    min-height: 42px;
+    font-size: 15px;
+  }
+
+  body.screen-title #focalCenterCard {
+    max-width: min(460px, 66vw);
+    padding: 44px 36px;
+  }
+
+  .title-menu-item {
+    min-height: 46px;
+  }
+
+  .tut-step-tab,
+  .tut-device-btn {
+    min-height: 40px;
+  }
+
+  .tut-swipe-hint {
+    display: block;
+  }
+}
+
+/* Tablet Portrait & Compact Tablet (768px ~ 1023px): Full-width Dialogue + Symmetrical 2-Column Footer */
+@media (min-width: 768px) and (max-width: 1023px) {
+  body.screen-ingame #bottomUnifiedRow {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  body.screen-ingame #focalCenterCard,
+  body.screen-ingame.phase-pick-seat #focalCenterCard {
+    order: 1;
+    flex: 1 1 100%;
+    max-width: min(720px, 100%);
+    margin: 0 auto;
+    padding: 12px 18px 10px;
+  }
+
+  .corner-role-tile {
+    order: 2;
+    flex: 1 1 280px;
+    width: auto;
+    max-width: 356px;
+    min-height: 48px;
+  }
+
+  #cornerFourGDeck {
+    order: 3;
+    flex: 1 1 220px;
+    width: auto;
+    max-width: 356px;
+    align-items: flex-end;
+  }
+
+  #cornerFourGDeck .fourg-deck-head {
+    min-height: 44px;
+    padding: 8px 14px;
+  }
+
+  #quickSpeechChips {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #quickSpeechChips .play-card-btn {
+    min-height: 76px;
+  }
+}
+
+/* Tablet Landscape (1024px ~ 1199px): Balanced 3-Column Cinema Dock with Touch Clearance */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  body.screen-ingame #bottomUnifiedRow {
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .corner-role-tile {
+    order: 1;
+    flex: 0 0 240px;
+    width: 240px;
+    padding: 8px 11px;
+  }
+
+  body.screen-ingame #focalCenterCard {
+    order: 2;
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: 720px;
+    padding: 9px 14px 7px;
+  }
+
+  #cornerFourGDeck {
+    order: 3;
+    flex: 0 0 150px;
+    width: 150px;
+    align-items: flex-end;
+  }
+
+  #cornerFourGDeck .fourg-deck-head {
+    min-width: 138px;
+    max-width: 150px;
+    min-height: 40px;
+    padding: 7px 10px;
+  }
+}
+
+/* Tablet Landscape Short Height (<= 820px, e.g. 1024x768): Preserve generous 3D character headroom */
+@media (min-width: 1024px) and (max-width: 1199px) and (max-height: 820px) {
+  body.screen-ingame #focalCenterCard {
+    padding: 8px 13px 6px;
+  }
+
+  #spotlightText {
+    font-size: 16px;
+    line-height: 1.5;
+    max-height: 90px;
+    min-height: 2.6rem;
+  }
+
+  #judgeShowcaseGuideBanner {
+    padding: 4px 10px;
+    margin-bottom: 4px;
+  }
+
+  #speakerActiveBanner {
+    margin-bottom: 4px;
+  }
+
+  .stepper-action-row {
+    padding-top: 4px;
+  }
+}
+
+/* 5. Phone Ergonomics (<= 767px): 100dvh Zero-Clip App Shell · One-Handed Thumb Zone · Swipe Seat Rail */
+@media (max-width: 767px) {
+  /* Lock In-Game Viewport to exact 100dvh so Role Plaque & Four-Givings NEVER clip below fold */
+  body.screen-ingame #gameViewport {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body.screen-ingame #mainStageShell,
+  body.screen-ingame #canvasContainer {
+    flex: 1 1 0%;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  body.screen-ingame #canvasStageWrap {
+    height: 31dvh;
+    min-height: 196px;
+    max-height: 270px;
+    flex: 0 0 auto;
+  }
+
+  /* Title Screen: Bottom-anchored full-width thumb menu preserving open 3D mountain view above */
+  body.screen-title #controlDeck {
+    align-items: flex-end;
+    background: linear-gradient(
+      0deg,
+      rgba(8, 7, 6, 0.94) 0%,
+      rgba(8, 7, 6, 0.78) 54%,
+      rgba(8, 7, 6, 0.22) 78%,
+      transparent 100%
+    );
+  }
+
+  body.screen-title #focalCenterCard {
+    max-width: 100%;
+    width: 100%;
+    padding: 20px 18px max(22px, env(safe-area-inset-bottom));
+  }
+
+  body.screen-title #panelLobby {
+    gap: 14px;
+  }
+
+  body.screen-title #panelLobby h1 {
+    font-size: clamp(24px, 7.2vw, 31px);
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+  }
+
+  body.screen-title #panelLobby .space-y-3,
+  body.screen-title .lobby-more-drawer,
+  body.screen-title .title-menu-item,
+  body.screen-title .title-menu-item.is-primary {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  body.screen-title .title-menu-item {
+    min-height: 46px;
+    padding: 10px 16px;
+    font-size: 16px;
+  }
+
+  /* Compact Single-Row Top HUD with Safe Area & Zero Truncation */
+  #inGameTopHud {
+    top: max(6px, env(safe-area-inset-top));
+    left: 8px;
+    right: 8px;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  #inGameTopHud .hud-pill-shell {
+    padding: 4px 9px;
+    min-height: 38px;
+    gap: 5px;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  #inGameTopHud .hud-sep-headline {
+    display: none;
+  }
+
+  #roundTitle,
+  #inGameTopHud #comboBadge,
+  #inGameTopHud #matchPointBadge {
+    display: none;
+  }
+
+  #inGameTopHud > div:last-child {
+    gap: 2px;
+    padding: 2px 4px;
+  }
+
+  #inGameTopHud .hud-icon-btn {
+    min-height: 38px;
+    padding: 0 7px;
+    font-size: 13px;
+    gap: 3px;
+  }
+
+  #inGameTopHud .hud-icon-btn .svg-ic {
+    display: none;
+  }
+
+  /* Bottom Control Deck: Flex-locked within remaining 69dvh + Horizontal Swipeable Seat Rail */
+  body.screen-ingame #controlDeck {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    flex: 1 1 0%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 4px 8px max(8px, env(safe-area-inset-bottom));
+    gap: 5px;
+    background: linear-gradient(180deg, rgba(14, 12, 10, 0.96) 0%, rgba(10, 9, 8, 0.99) 100%);
+  }
+
+  #seatButtonStrip {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px 4px;
+    gap: 4px;
+  }
+
+  #seatButtonStrip::-webkit-scrollbar {
+    display: none;
+  }
+
+  #seatButtonStrip .seat-pill-btn {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 6px 10px;
+    font-size: 13.5px;
+    scroll-snap-align: start;
+  }
+
+  body.screen-ingame #bottomUnifiedRow {
+    flex: 1 1 0%;
+    min-height: 0;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-content: space-between;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  body.screen-ingame #focalCenterCard,
+  body.screen-ingame.phase-pick-seat #focalCenterCard {
+    order: 1;
+    flex: 1 1 100%;
+    max-width: 100%;
+    max-height: calc(100% - 62px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 10px 6px;
+  }
+
+  /* Single-row horizontal scrollable Judge Showcase Guide Pill on Phones (saves ~65px vertical space!) */
+  #judgeShowcaseGuideBanner {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 6px;
+    margin-bottom: 6px;
+    gap: 6px;
+  }
+
+  #judgeShowcaseGuideBanner .judge-guide-steps {
+    flex: 1 1 0%;
+    min-width: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 10px;
+    white-space: nowrap;
+  }
+
+  #judgeShowcaseGuideBanner .judge-guide-steps::-webkit-scrollbar {
+    display: none;
+  }
+
+  #judgeShowcaseGuideBanner .judge-guide-step {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+
+  #btnDismissJudgeGuide {
+    min-height: 28px;
+    padding: 2px 8px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .corner-role-tile {
+    order: 2;
+    flex: 1 1 0%;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    padding: 6px 8px;
+  }
+
+  .corner-role-tile .role-nameplate {
+    font-size: 13.5px;
+    letter-spacing: 0.03em;
+  }
+
+  .corner-role-tile .role-nameplate .sh-ico,
+  .corner-role-tile .role-guide-trigger .sh-ico {
+    display: none;
+  }
+
+  .corner-role-tile .role-tile-tools {
+    gap: 4px;
+  }
+
+  .corner-role-tile .role-guide-trigger,
+  .corner-role-tile .role-mask-trigger {
+    min-height: 28px;
+    padding: 2px 6px;
+    font-size: 13px;
+  }
+
+  #cornerFourGDeck {
+    order: 3;
+    flex: 0 0 auto;
+    width: auto;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+
+  #cornerFourGDeck .fourg-deck-head {
+    position: relative;
+    min-width: 0;
+    max-width: 136px;
+    min-height: 40px;
+    padding: 6px 9px;
+    margin-bottom: 0;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  /* Dialogue & Inline Single-Row Detective Toolbar beside Pinned Right-Thumb Next Button */
+  #speakerActiveBanner {
+    flex-wrap: nowrap;
+    margin-bottom: 4px;
+  }
+
+  #speakerActiveBanner > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .spotlight-quiet-tools {
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .vn-bust-wrap {
+    width: 58px;
+  }
+
+  #speakerPortraitImg.vn-bust-img {
+    width: 56px;
+    height: 64px;
+  }
+
+  #spotlightText {
+    font-size: 15.5px;
+    line-height: 1.54;
+    min-height: 2.6rem;
+    max-height: 98px;
+  }
+
+  .stepper-action-row {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-top: 8px;
+  }
+
+  .stepper-action-row #detectiveMarkRow {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    gap: 5px;
+  }
+
+  .stepper-action-row #detectiveMarkRow button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 36px;
+    padding: 5px 8px;
+    font-size: 13px;
+  }
+
+  .stepper-action-row #btnStepNext {
+    flex: 1 1 100%;
+    width: 100%;
+    white-space: nowrap;
+    min-height: 44px;
+    padding: 8px 16px;
+    font-size: 15px;
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  /* Player Turn Speech Cards & iOS Anti-Zoom Input */
+  #quickSpeechChips {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 8px;
+    padding: 2px 2px 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  #quickSpeechChips .play-card-btn {
+    flex: 0 0 84%;
+    min-height: 76px;
+    padding: 10px 12px;
+    scroll-snap-align: center;
+  }
+
+  #rephraseSlipsGrid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  #rephraseSlipsGrid .rephrase-slip-btn {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  #panelPlayerSpeech #quickFreeInput {
+    font-size: 16px;
+    min-height: 42px;
+    padding: 8px 10px;
+  }
+
+  #panelPlayerSpeech #btnQuickFreeSend {
+    min-height: 42px;
+    padding: 0 14px;
+    font-size: 14.5px;
+  }
+
+  /* Non-Blocking Mobile Toasts (Never cover bottom Title menu or Role Plaque) */
+  body.screen-ingame #toastContainer,
+  body.screen-title #toastContainer {
+    top: max(50px, calc(env(safe-area-inset-top) + 44px));
+    bottom: auto;
+    right: 8px;
+    left: 8px;
+    max-width: none;
+  }
+
+  /* Tutorial Modal Mobile Touch Ergonomics */
+  .tut-device-switch {
+    padding: 6px 10px;
+    gap: 4px;
+  }
+
+  .tut-device-btn {
+    flex-direction: column;
+    gap: 2px;
+    min-height: 44px;
+    padding: 5px 4px;
+    font-size: 13.5px;
+  }
+
+  .tut-device-current-tag {
+    font-size: 13px;
+    padding: 0 5px;
+  }
+
+  .tut-step-tab {
+    min-height: 38px;
+    padding: 5px 10px;
+    font-size: 13.5px;
+  }
+
+  .tut-swipe-hint {
+    display: block;
+  }
+
+  #modalTutorial .craft-modal-box {
+    max-height: 92dvh;
+    overflow: hidden;
+  }
+}
+
+/* ==========================================================================
+   v22.0 「一幕一焦點・三層視覺主次系統」(ONE FOCUS PER SCREEN — L1 / L2 / L3)
+   Every screen enforces 1 Primary Focus (L1), Quiet Secondary Tools (L2),
+   and Calmly Receded Peripheral Chrome (L3) — Zero !important · Zero blur · >= 13px
+   ========================================================================== */
+
+/* 1. Title Screen Hierarchy (L1: Title + Vermilion CTA | L2: Links | L3: Corner Utility Pills) */
+body.screen-title .title-top-actions {
+  opacity: 0.56;
+  transition: opacity 0.22s ease;
+}
+
+body.screen-title .title-top-actions:hover,
+body.screen-title .title-top-actions:focus-within {
+  opacity: 1;
+}
+
+body.screen-title .lobby-more-drawer {
+  opacity: 0.74;
+  transition: opacity 0.2s ease;
+}
+
+body.screen-title .lobby-more-drawer:hover,
+body.screen-title .lobby-more-drawer[open] {
+  opacity: 1;
+}
+
+/* 2. In-Game Ambient Chrome (L3: Top HUD + Corner Plaques Recede Quietly Until Needed) */
+body.screen-ingame #inGameTopHud {
+  opacity: 0.68;
+  transition: opacity 0.22s ease;
+}
+
+body.screen-ingame #inGameTopHud:hover,
+body.screen-ingame #inGameTopHud:focus-within {
+  opacity: 1;
+}
+
+body.screen-ingame #bannerHeadline {
+  font-size: 14.5px;
+  font-weight: 400;
+  color: rgba(232, 222, 204, 0.72);
+  letter-spacing: 0.04em;
+}
+
+body.screen-ingame #inGameTopHud #comboBadge,
+body.screen-ingame #inGameTopHud #matchPointBadge,
+body.screen-ingame #inGameTopHud #directorEventPill {
+  background: transparent;
+  border-color: rgba(216, 185, 124, 0.26);
+  color: rgba(232, 212, 174, 0.78);
+  font-weight: 400;
+}
+
+body.screen-ingame #cornerRoleTile,
+body.screen-ingame #cornerFourGDeck {
+  opacity: 0.66;
+  transition: opacity 0.22s ease;
+}
+
+body.screen-ingame #cornerRoleTile:hover,
+body.screen-ingame #cornerRoleTile:focus-within,
+body.screen-ingame #cornerFourGDeck:hover,
+body.screen-ingame #cornerFourGDeck:focus-within,
+body.screen-ingame #cornerFourGDeck.is-fan-open {
+  opacity: 1;
+}
+
+/* Central Focal Stage is always L1 Sovereign Focus */
+body.screen-ingame #focalCenterCard {
+  border-top: 1px solid rgba(226, 194, 126, 0.34);
+  transition: border-color 0.22s ease;
+}
+
+/* 3. Listen Mode (DAY_SPEECH / LAST_WORDS_SPEECH): L1 = Dialogue Text + Next CTA ONLY */
+body.phase-mode-listen #seatButtonStrip {
+  opacity: 0.74;
+  transition: opacity 0.2s ease;
+}
+
+body.phase-mode-listen #seatButtonStrip:hover,
+body.phase-mode-listen #seatButtonStrip:focus-within {
+  opacity: 1;
+}
+
+body.phase-mode-listen #seatButtonStrip .seat-pill-btn:not(.is-speaking):not(.seat-is-selected) {
+  opacity: 0.56;
+}
+
+body.phase-mode-listen #seatButtonStrip .seat-pill-btn:hover,
+body.phase-mode-listen #seatButtonStrip .seat-pill-btn.is-speaking {
+  opacity: 1;
+}
+
+body.phase-mode-listen #spotlightText {
+  color: #fffdf8;
+}
+
+body.phase-mode-listen #speakerActiveBanner .spotlight-quiet-tools {
+  opacity: 0.46;
+  transition: opacity 0.2s ease;
+}
+
+body.phase-mode-listen #speakerActiveBanner:hover .spotlight-quiet-tools,
+body.phase-mode-listen #speakerActiveBanner .spotlight-quiet-tools:focus-within {
+  opacity: 1;
+}
+
+body.phase-mode-listen #speakerStanceStrip {
+  opacity: 0.74;
+  transition: opacity 0.2s ease;
+}
+
+body.phase-mode-listen #speakerStanceStrip:hover {
+  opacity: 1;
+}
+
+body.phase-mode-listen #spotlightTargetReact {
+  opacity: 0.78;
+  background: rgba(18, 15, 12, 0.68);
+  border-color: rgba(216, 185, 124, 0.22);
+  box-shadow: none;
+  transition: opacity 0.2s ease;
+}
+
+body.phase-mode-listen #spotlightTargetReact:hover {
+  opacity: 1;
+}
+
+body.phase-mode-listen #speakerTurnStrip {
+  opacity: 0.46;
+  transition: opacity 0.2s ease;
+}
+
+body.phase-mode-listen #speakerTurnStrip:hover {
+  opacity: 0.94;
+}
+
+/* Collapsible Extra Detective Tools Drawer (Default Hidden -> Cuts Listen Bar from 8 items to 4!) */
+.listen-extra-tools {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.listen-extra-tools.is-open {
+  display: inline-flex;
+}
+
+.listen-more-toggle {
+  color: rgba(214, 202, 182, 0.68);
+  border: 1px solid rgba(216, 185, 124, 0.16);
+  background: transparent;
+  font-weight: 400;
+}
+
+.listen-more-toggle:hover,
+.listen-more-toggle[aria-expanded="true"] {
+  color: #f3d79e;
+  border-color: rgba(226, 194, 126, 0.42);
+  background: rgba(216, 185, 124, 0.10);
+}
+
+/* Subdued L2 Reaction Tools so #btnStepNext is the SOLE Solid Focal Button in Listen Mode */
+body.phase-mode-listen #detectiveMarkRow #btnMarkGood,
+body.phase-mode-listen #detectiveMarkRow #btnMarkWolf,
+body.phase-mode-listen #detectiveMarkRow #btnPinCurrentSpeaker,
+body.phase-mode-listen #detectiveMarkRow #btnMicroInspect,
+body.phase-mode-listen #detectiveMarkRow #btnOpenPitSheet {
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(222, 212, 196, 0.72);
+  font-weight: 400;
+}
+
+body.phase-mode-listen #detectiveMarkRow #btnMarkGood:hover,
+body.phase-mode-listen #detectiveMarkRow #btnMarkWolf:hover,
+body.phase-mode-listen #detectiveMarkRow #btnPinCurrentSpeaker:hover,
+body.phase-mode-listen #detectiveMarkRow #btnMicroInspect:hover,
+body.phase-mode-listen #detectiveMarkRow #btnOpenPitSheet:hover {
+  background: rgba(216, 185, 124, 0.08);
+  border-color: rgba(216, 185, 124, 0.24);
+  color: #fffaf0;
+}
+
+body.phase-mode-listen #detectiveMarkRow #btnMarkGood.cta-celadon {
+  background: rgba(74, 158, 126, 0.16);
+  border-color: rgba(94, 174, 144, 0.52);
+  color: #c2f0dc;
+  font-weight: 500;
+}
+
+body.phase-mode-listen #detectiveMarkRow #btnMarkWolf.cta-cinnabar {
+  background: rgba(186, 66, 52, 0.16);
+  border-color: rgba(206, 92, 80, 0.52);
+  color: #f8cbc6;
+  font-weight: 500;
+}
+
+body.phase-mode-listen #detectiveMarkRow #btnTeaInterject {
+  background: rgba(216, 185, 124, 0.08);
+  border: 1px solid rgba(216, 185, 124, 0.32);
+  color: rgba(242, 218, 168, 0.90);
+  box-shadow: none;
+  font-weight: 500;
+}
+
+body.phase-mode-listen #detectiveMarkRow #btnTeaInterject:hover:not(:disabled) {
+  background: rgba(216, 185, 124, 0.18);
+  border-color: rgba(232, 200, 134, 0.62);
+  color: #fffaf0;
+}
+
+body.phase-mode-listen #detectiveMarkRow #btnTeaInterject:disabled {
+  opacity: 0.42;
+  background: transparent;
+  border-color: transparent;
+}
+
+/* Whisper-Quiet Single-Line Director Event Ribbon (Never competes with Dialogue or Primary CTA!) */
+#directorEventChoiceBar {
+  background: rgba(16, 32, 27, 0.42);
+  border: none;
+  border-left: 2px solid rgba(94, 174, 144, 0.50);
+  border-radius: 2px;
+  padding: 4px 10px;
+  box-shadow: none;
+  opacity: 0.84;
+  transition: opacity 0.2s ease;
+}
+
+#directorEventChoiceBar:hover {
+  opacity: 1;
+}
+
+#directorEventChoiceBar span {
+  font-weight: 400;
+  color: rgba(186, 228, 212, 0.84);
+}
+
+#directorEventChoiceBar button {
+  background: transparent;
+  border: 1px solid rgba(94, 174, 144, 0.42);
+  color: #b8eed8;
+  box-shadow: none;
+  font-weight: 500;
+}
+
+#directorEventChoiceBar button:hover {
+  background: rgba(74, 158, 126, 0.22);
+  color: #f2fdf8;
+}
+
+/* 4. Speak Mode (DAY_PLAYER_TURN / LAST_WORDS_PLAYER): L1 = 3 Speech Cards + Send ONLY */
+body.phase-mode-speak #directorEventChoiceBar {
+  display: none;
+}
+
+body.phase-mode-speak #inGameTopHud {
+  opacity: 0.54;
+}
+
+body.phase-mode-speak #cornerRoleTile,
+body.phase-mode-speak #cornerFourGDeck {
+  opacity: 0.54;
+}
+
+body.phase-mode-speak #focalCenterCard {
+  border-top-color: rgba(94, 174, 144, 0.52);
+}
+
+#panelPlayerSpeech #playerTurnHeading {
+  color: #f6ebd4;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+#panelPlayerSpeech #playerSpeechTargetLabel,
+#panelPlayerSpeech #playerComboBonusHint {
+  color: rgba(214, 202, 182, 0.72);
+  font-weight: 400;
+}
+
+#panelPlayerSpeech #btnCycleSpeechTarget {
+  background: transparent;
+  border: 1px solid rgba(216, 185, 124, 0.22);
+  color: rgba(226, 214, 194, 0.76);
+  font-weight: 400;
+}
+
+#panelPlayerSpeech #btnToggleCustomSpeech {
+  background: transparent;
+  border: 1px solid rgba(216, 185, 124, 0.24);
+  color: rgba(228, 216, 196, 0.80);
+  box-shadow: none;
+  font-weight: 400;
+}
+
+#panelPlayerSpeech #btnToggleCustomSpeech:hover {
+  background: rgba(216, 185, 124, 0.10);
+  border-color: rgba(226, 194, 126, 0.48);
+  color: #fffaf0;
+}
+
+#panelPlayerSpeech #tableWindVaneSpeech {
+  background: transparent;
+  border: none;
+  border-left: 2px solid rgba(216, 185, 124, 0.28);
+  border-radius: 0;
+  padding: 1px 0 1px 8px;
+  color: rgba(214, 202, 182, 0.68);
+  font-weight: 400;
+}
+
+#panelPlayerSpeech #pinnedCluesTray {
+  opacity: 0.82;
+}
+
+#panelPlayerSpeech #pinnedCluesTray button {
+  background: transparent;
+  border-color: rgba(216, 185, 124, 0.28);
+  color: rgba(232, 210, 168, 0.86);
+  box-shadow: none;
+  font-weight: 400;
+}
+
+#panelPlayerSpeech #quickSpeechChips .play-card-btn {
+  border-color: rgba(216, 185, 124, 0.24);
+  border-top-width: 2px;
+}
+
+#panelPlayerSpeech #quickSpeechChips .play-card-btn:hover {
+  border-color: rgba(232, 200, 134, 0.62);
+}
+
+/* 5. Vote & Night Pick Modes: L1 = Seat Rail + Prompt + Single Solid Action CTA */
+body.phase-mode-vote #directorEventChoiceBar,
+body.phase-mode-night #directorEventChoiceBar {
+  display: none;
+}
+
+body.phase-mode-vote #inGameTopHud,
+body.phase-mode-vote #cornerRoleTile,
+body.phase-mode-vote #cornerFourGDeck {
+  opacity: 0.56;
+}
+
+body.phase-mode-night #inGameTopHud {
+  opacity: 0.50;
+}
+
+body.phase-mode-night #cornerRoleTile {
+  opacity: 0.62;
+}
+
+body.phase-mode-vote #seatButtonStrip,
+body.phase-mode-night #seatButtonStrip {
+  opacity: 1;
+  border-top-color: rgba(226, 194, 126, 0.46);
+  border-bottom-color: rgba(226, 194, 126, 0.26);
+}
+
+body.phase-mode-vote #focalCenterCard {
+  border-top-color: rgba(206, 92, 80, 0.56);
+}
+
+body.phase-mode-night #focalCenterCard {
+  border-top-color: rgba(216, 185, 124, 0.44);
+}
+
+#panelVote #tableWindVaneVote {
+  background: transparent;
+  border: none;
+  border-left: 2px solid rgba(216, 185, 124, 0.28);
+  border-radius: 0;
+  padding: 1px 0 1px 8px;
+  color: rgba(214, 202, 182, 0.68);
+}
+
+#panelVote #voteGoodwillBadge {
+  background: rgba(24, 20, 14, 0.72);
+  border: 1px solid rgba(216, 185, 124, 0.28);
+  border-radius: 3px;
+  color: rgba(236, 214, 166, 0.88);
+  font-weight: 400;
+  box-shadow: none;
+}
+
+#panelVote #btnSheriffRally {
+  background: rgba(216, 185, 124, 0.12);
+  border: 1px solid rgba(216, 185, 124, 0.42);
+  color: #f3d79e;
+  box-shadow: none;
+  font-weight: 500;
+}
+
+#panelVote #btnSheriffRally:hover {
+  background: rgba(216, 185, 124, 0.22);
+  border-color: rgba(232, 200, 134, 0.68);
+  color: #fffaf0;
+}
+
+#panelVote #btnAbstainVote,
+#panelTargetAction #btnSkipAction,
+#panelLastWords #btnSkipLastWords,
+#panelSheriffTransfer #btnShatterSheriffBadge {
+  background: transparent;
+  border: 1px solid rgba(216, 185, 124, 0.20);
+  color: rgba(214, 204, 188, 0.72);
+  box-shadow: none;
+  font-weight: 400;
+}
+
+#panelVote #btnAbstainVote:hover,
+#panelTargetAction #btnSkipAction:hover,
+#panelLastWords #btnSkipLastWords:hover,
+#panelSheriffTransfer #btnShatterSheriffBadge:hover {
+  background: rgba(216, 185, 124, 0.10);
+  border-color: rgba(226, 194, 126, 0.44);
+  color: #fffaf0;
+}
+
+#panelTargetAction #nightRoleTipStrip {
+  background: transparent;
+  border: none;
+  color: rgba(216, 204, 186, 0.72);
+  font-weight: 400;
+}
+
+/* 6. Game Over & Modal Focus Discipline: 1 Solid Primary CTA + Ghost Close/Secondary Actions */
+#panelGameOver #btnReviewRolesModal,
+#panelGameOver #btnExportReplay,
+#panelGameOver #btnBackToTitleOver {
+  background: rgba(20, 17, 14, 0.76);
+  border: 1px solid rgba(216, 185, 124, 0.24);
+  color: rgba(228, 218, 200, 0.84);
+  box-shadow: none;
+  font-weight: 400;
+}
+
+#panelGameOver #btnReviewRolesModal:hover,
+#panelGameOver #btnExportReplay:hover,
+#panelGameOver #btnBackToTitleOver:hover {
+  background: rgba(34, 28, 22, 0.92);
+  border-color: rgba(226, 194, 126, 0.50);
+  color: #fffaf0;
+}
+
+#btnCloseTutorial,
+#btnCloseGuide,
+#btnCloseSetupDrawer,
+#btnCloseJournal,
+#btnClosePauseMenu,
+#btnCloseMusic,
+#btnCloseCareer,
+#btnCloseFeedback {
+  background: transparent;
+  border: 1px solid rgba(216, 185, 124, 0.22);
+  color: rgba(222, 212, 196, 0.76);
+  box-shadow: none;
+  font-weight: 400;
+}
+
+#btnCloseTutorial:hover,
+#btnCloseGuide:hover,
+#btnCloseSetupDrawer:hover,
+#btnCloseJournal:hover,
+#btnClosePauseMenu:hover,
+#btnCloseMusic:hover,
+#btnCloseCareer:hover,
+#btnCloseFeedback:hover {
+  background: rgba(216, 185, 124, 0.12);
+  border-color: rgba(226, 194, 126, 0.48);
+  color: #fffaf0;
+}
+
+/* 7. Touch Devices: Keep Receded Chrome Clearly Legible While Preserving Primary Hierarchy */
+@media (pointer: coarse) {
+  body.screen-ingame #inGameTopHud {
+    opacity: 0.86;
+  }
+
+  body.screen-ingame #cornerRoleTile,
+  body.screen-ingame #cornerFourGDeck {
+    opacity: 0.86;
+  }
+
+  body.phase-mode-speak #cornerRoleTile,
+  body.phase-mode-speak #cornerFourGDeck,
+  body.phase-mode-vote #cornerRoleTile,
+  body.phase-mode-vote #cornerFourGDeck {
+    opacity: 0.78;
+  }
+
+  body.phase-mode-listen #speakerActiveBanner .spotlight-quiet-tools {
+    opacity: 0.72;
+  }
+}
+
+@media (max-width: 767px) {
+  body.screen-ingame #inGameTopHud #bannerHeadline {
+    display: none;
+  }
+
+  .stepper-action-row #detectiveMarkRow button .sh-ico {
+    display: none;
+  }
+
+  .listen-extra-tools.is-open {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+}
+
+/* ==========================================================================
+   v23.0 「茶席文青・三好四給美學」
+   TAIWANESE LITERARY TEA-SALON: XUAN-PAPER · CELADON · ROASTED CEDAR · CINNABAR SEAL
+   Daytime & Lobby = Handmade Xuan-Paper Tea-Salon | Night = Candlelit Roasted-Cedar Study
+   Zero !important · Zero blur filters · All font-size >= 13px
+   ========================================================================== */
+
+/* 1. Poetic Three-Goodness & Four-Givings Creed Strip on Title Screen */
+.tea-creed-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-literary);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.10em;
+  line-height: 1.5;
+  padding: 2px 0;
+}
+
+.tea-creed-good {
+  color: #29614e;
+}
+
+.tea-creed-fourg {
+  color: #8c5f21;
+}
+
+.tea-creed-sep {
+  color: rgba(116, 92, 62, 0.45);
+  margin: 0 2px;
+}
+
+/* 2. Xuan-Paper Title Screen (Lobby: Crisp Narrow Hand-Laid Tea Scroll Left Panel) */
+body.theme-twilight.screen-title #controlDeck {
+  background: linear-gradient(
+    90deg,
+    rgba(248, 243, 232, 0.97) 0%,
+    rgba(247, 241, 229, 0.94) 26%,
+    rgba(246, 240, 228, 0.72) 37%,
+    transparent 48%
+  );
+}
+
+body.theme-twilight.screen-title #focalCenterCard {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+body.theme-twilight.screen-title #panelLobby h1 {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: #241c16;
+  color: #241c16;
+  font-weight: 600;
+  filter: none;
+  text-shadow: 0 1px 0 rgba(255, 253, 248, 0.88);
+}
+
+body.theme-twilight.screen-title #lobbySeatSummary {
+  color: #4f4235;
+  border-bottom: 1px solid rgba(116, 92, 62, 0.22);
+}
+
+body.theme-twilight.screen-title .title-release-badge {
+  background: rgba(154, 107, 39, 0.08);
+  border-color: rgba(154, 107, 39, 0.34);
+  color: #885b1e;
+}
+
+body.theme-twilight.screen-title .seal-chop {
+  background: linear-gradient(180deg, #b34234 0%, #922e22 100%);
+  border-color: rgba(146, 46, 34, 0.85);
+  color: #fdf8ee;
+  box-shadow: 0 3px 10px rgba(146, 46, 34, 0.24);
+}
+
+body.theme-twilight.screen-title .title-menu-item {
+  color: #342920;
+  border-bottom: 1px solid rgba(116, 92, 62, 0.22);
+}
+
+body.theme-twilight.screen-title .title-menu-item:hover {
+  color: #9e3427;
+  border-bottom-color: rgba(164, 57, 44, 0.62);
+}
+
+body.theme-twilight.screen-title .title-menu-item.is-primary {
+  background: linear-gradient(180deg, #b24133 0%, #922e22 100%);
+  border: 1px solid rgba(138, 42, 30, 0.88);
+  color: #fdf9f0;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 224, 0.28), 0 8px 22px rgba(138, 42, 30, 0.24);
+}
+
+body.theme-twilight.screen-title .title-menu-item.is-primary:hover {
+  background: linear-gradient(180deg, #bf493a 0%, #9f3326 100%);
+  border-color: rgba(138, 42, 30, 0.96);
+  color: #ffffff;
+}
+
+body.theme-twilight.screen-title .lobby-more-summary {
+  color: #655544;
+}
+
+body.theme-twilight.screen-title .lobby-more-summary:hover {
+  color: #8e5f1e;
+}
+
+body.theme-twilight.screen-title .lobby-more-drawer button {
+  color: #544537;
+}
+
+body.theme-twilight.screen-title .lobby-more-drawer .cta-celadon {
+  background: linear-gradient(180deg, #357660 0%, #265a48 100%);
+  border-color: rgba(38, 90, 72, 0.82);
+  color: #f6fcf9;
+}
+
+body.theme-twilight.screen-title .lobby-more-drawer .cta-brass {
+  background: linear-gradient(180deg, #bd8a3d 0%, #996a24 100%);
+  border-color: rgba(153, 106, 36, 0.82);
+  color: #fffcf5;
+}
+
+body.theme-twilight.screen-title #btnStartJudgeShowcase {
+  color: #9c3528;
+}
+
+body.theme-twilight .title-top-actions .title-scene-btn,
+body.theme-twilight .title-top-actions .title-feedback-btn {
+  background: rgba(249, 244, 234, 0.90);
+  color: #3a2f24;
+  border: 1px solid rgba(116, 92, 62, 0.28);
+  box-shadow: 0 4px 14px rgba(56, 40, 20, 0.12);
+}
+
+body.theme-twilight .title-top-actions .title-scene-btn:hover,
+body.theme-twilight .title-top-actions .title-feedback-btn:hover {
+  background: #fbf7ee;
+  color: #241c16;
+  border-color: rgba(154, 107, 39, 0.56);
+}
+
+/* 3. Daytime Xuan-Paper Top HUD & Bamboo-Paper Seat Bookmark Rail */
+body.theme-daylight.screen-ingame #inGameTopHud,
+body.theme-daylight.screen-ingame #cornerRoleTile,
+body.theme-daylight.screen-ingame #cornerFourGDeck {
+  opacity: 0.86;
+}
+
+body.theme-daylight #inGameTopHud .hud-pill-shell,
+body.theme-daylight #inGameTopHud > div:last-child {
+  background: rgba(250, 246, 237, 0.95);
+  border: 1px solid rgba(116, 92, 62, 0.26);
+  box-shadow: 0 6px 20px rgba(56, 40, 20, 0.12);
+}
+
+body.theme-daylight #inGameTopHud #phaseBadge {
+  color: #265c4a;
+}
+
+body.theme-daylight #inGameTopHud #bannerHeadline {
+  color: #544638;
+}
+
+body.theme-daylight #inGameTopHud #roundTitle {
+  color: #6f5f4e;
+}
+
+body.theme-daylight #inGameTopHud #comboBadge,
+body.theme-daylight #inGameTopHud #matchPointBadge,
+body.theme-daylight #inGameTopHud #directorEventPill {
+  background: rgba(154, 107, 39, 0.08);
+  border-color: rgba(154, 107, 39, 0.30);
+  color: #7c541c;
+}
+
+body.theme-daylight #inGameTopHud .hud-icon-btn {
+  color: #3a2f24;
+}
+
+body.theme-daylight #inGameTopHud .hud-icon-btn:hover {
+  background: rgba(154, 107, 39, 0.12);
+  color: #201812;
+}
+
+body.theme-daylight #seatButtonStrip {
+  background: rgba(249, 244, 234, 0.94);
+  border-top: 1px solid rgba(116, 92, 62, 0.22);
+  border-bottom: 1px solid rgba(116, 92, 62, 0.18);
+  box-shadow: 0 6px 18px rgba(56, 40, 20, 0.10);
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-btn {
+  color: #584a3c;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-btn:hover:not(:disabled):not(.seat-is-selected) {
+  background: rgba(154, 107, 39, 0.10);
+  border-bottom-color: rgba(154, 107, 39, 0.44);
+  color: #241c16;
+}
+
+body.theme-daylight .seat-pill-num-big {
+  color: #8c5f21;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-btn.is-speaking {
+  background: rgba(164, 57, 44, 0.12);
+  border-bottom-color: #a4392c;
+  color: #7c2218;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-btn.is-speaking .seat-pill-num-big,
+body.theme-daylight #seatButtonStrip .seat-pill-btn.is-speaking .seat-pill-name {
+  color: #7c2218;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-btn.is-mark-good {
+  border-bottom-color: #2c6753;
+  color: #235544;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-btn.is-mark-wolf {
+  border-bottom-color: #a4392c;
+  color: #8c2a1f;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-btn.seat-is-selected,
+body.theme-daylight #seatButtonStrip .seat-pill-btn.seat-is-selected:hover {
+  background: #a4392c;
+  border-bottom-color: #7d251b;
+  color: #fdf9f0;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-btn.seat-is-selected .seat-pill-num-big,
+body.theme-daylight #seatButtonStrip .seat-pill-btn.seat-is-selected .seat-pill-name {
+  color: #fdf9f0;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-btn.is-dead {
+  color: rgba(88, 74, 58, 0.66);
+}
+
+/* 4. Central Tea-Notebook Focal Card (#focalCenterCard — Handmade Xuan-Paper Sheet) */
+body.theme-daylight.screen-ingame #focalCenterCard {
+  background: linear-gradient(178deg, rgba(252, 248, 240, 0.97) 0%, rgba(245, 239, 226, 0.97) 100%);
+  border: 1px solid rgba(116, 92, 62, 0.24);
+  border-top: 2px solid #b58336;
+  box-shadow: 0 16px 40px rgba(52, 36, 18, 0.16), inset 0 1px 0 rgba(255, 253, 248, 0.92);
+  color: #29211a;
+}
+
+body.theme-daylight.phase-mode-speak #focalCenterCard {
+  border-top-color: #2c6753;
+}
+
+body.theme-daylight.phase-mode-vote #focalCenterCard {
+  border-top-color: #a4392c;
+}
+
+body.theme-daylight #judgeShowcaseGuideBanner {
+  border-bottom-color: rgba(116, 92, 62, 0.18);
+}
+
+body.theme-daylight #judgeShowcaseGuideBanner .judge-guide-step {
+  color: #7c6b58;
+}
+
+body.theme-daylight #judgeShowcaseGuideBanner .judge-guide-step.is-active {
+  color: #8a5b1b;
+  font-weight: 600;
+}
+
+body.theme-daylight #judgeShowcaseGuideBanner .judge-guide-step.is-done {
+  color: #2b6652;
+}
+
+body.theme-daylight #btnDismissJudgeGuide {
+  color: #6b5b49;
+  border-color: rgba(116, 92, 62, 0.24);
+  background: transparent;
+}
+
+/* Dialogue Tea-Scroll Typography & Portrait */
+body.theme-daylight #speakerPortraitImg.vn-bust-img,
+body.theme-daylight #speakerPortraitCanvas {
+  border: 1.5px solid rgba(146, 110, 62, 0.38);
+  background: #ede4d4;
+  box-shadow: 0 4px 14px rgba(56, 40, 20, 0.12);
+}
+
+body.theme-daylight #speakerSeatMedallion {
+  color: #8c5f21;
+  background: transparent;
+  border-right: 1px solid rgba(116, 92, 62, 0.24);
+}
+
+body.theme-daylight #spotlightSpeakerBadge {
+  color: #261e17;
+}
+
+body.theme-daylight #spotlightText {
+  color: #241d17;
+}
+
+body.theme-daylight #spotlightText .clue-seat {
+  color: #855616;
+  border-bottom: 1px dotted rgba(154, 107, 39, 0.72);
+}
+
+body.theme-daylight #spotlightStageBox .spotlight-progress-track {
+  background: rgba(116, 92, 62, 0.16);
+}
+
+body.theme-daylight #spotlightProgressBar {
+  background: #b07d32;
+}
+
+body.theme-daylight.phase-mode-listen #speakerActiveBanner .spotlight-quiet-tools {
+  opacity: 0.82;
+}
+
+body.theme-daylight #speakerActiveBanner .spotlight-quiet-tools .cta-ink {
+  color: #564738;
+  background: transparent;
+  border-color: transparent;
+}
+
+body.theme-daylight #speakerActiveBanner .spotlight-quiet-tools .cta-ink:hover {
+  color: #241c16;
+  background: rgba(116, 92, 62, 0.08);
+}
+
+body.theme-daylight #speakerStanceStrip .stance-chip {
+  background: rgba(238, 230, 215, 0.82);
+  border: 1px solid rgba(116, 92, 62, 0.20);
+  color: #4f4134;
+}
+
+body.theme-daylight #speakerStanceStrip .stance-chip.is-good {
+  background: rgba(44, 103, 83, 0.10);
+  border-color: rgba(44, 103, 83, 0.30);
+  color: #225443;
+}
+
+body.theme-daylight #speakerStanceStrip .stance-chip.is-wolf {
+  background: rgba(164, 57, 44, 0.10);
+  border-color: rgba(164, 57, 44, 0.28);
+  color: #8c2c21;
+}
+
+body.theme-daylight #spotlightTargetReact {
+  background: rgba(242, 235, 221, 0.94);
+  border: 1px solid rgba(116, 92, 62, 0.24);
+  color: #3a2f24;
+}
+
+body.theme-daylight #targetReactBadge {
+  color: #8c2c21;
+}
+
+body.theme-daylight #targetReactQuote {
+  color: #4e4033;
+}
+
+body.theme-daylight #speakerTurnStrip .turn-chip {
+  color: #6e5e4d;
+  background: transparent;
+}
+
+body.theme-daylight #speakerTurnStrip .turn-chip.is-speaking {
+  color: #8c2c21;
+  font-weight: 600;
+}
+
+/* Director Tea-Ribbon on Xuan-Paper */
+body.theme-daylight #directorEventChoiceBar {
+  background: rgba(44, 103, 83, 0.08);
+  border-left: 2px solid #2c6753;
+}
+
+body.theme-daylight #directorEventChoiceBar span {
+  color: #235544;
+}
+
+body.theme-daylight #directorEventChoiceBar button {
+  background: rgba(252, 248, 240, 0.90);
+  border-color: rgba(44, 103, 83, 0.44);
+  color: #235544;
+}
+
+body.theme-daylight #directorEventChoiceBar button:hover {
+  background: #2c6753;
+  color: #f6fcf9;
+}
+
+/* Listen Action Row: Quiet Pine-Soot Reactions + Warm Tea-Gold Primary Next Seal */
+body.theme-daylight .stepper-action-row {
+  border-top-color: rgba(116, 92, 62, 0.18);
+}
+
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnMarkGood,
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnMarkWolf,
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnPinCurrentSpeaker,
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnMicroInspect,
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnOpenPitSheet {
+  color: #4f4134;
+  background: transparent;
+  border-color: transparent;
+}
+
+body.theme-daylight #detectiveMarkRow #btnToggleListenTools {
+  color: #4a3d30;
+  background: rgba(242, 235, 222, 0.78);
+  border: 1px solid rgba(116, 92, 62, 0.34);
+  opacity: 1;
+}
+
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnMarkGood:hover,
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnMarkWolf:hover,
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnPinCurrentSpeaker:hover,
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnMicroInspect:hover,
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnOpenPitSheet:hover,
+body.theme-daylight #detectiveMarkRow #btnToggleListenTools:hover,
+body.theme-daylight #detectiveMarkRow #btnToggleListenTools[aria-expanded="true"] {
+  background: rgba(154, 107, 39, 0.14);
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #241c16;
+}
+
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnMarkGood.cta-celadon {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.48);
+  color: #1f5240;
+}
+
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnMarkWolf.cta-cinnabar {
+  background: rgba(164, 57, 44, 0.13);
+  border-color: rgba(164, 57, 44, 0.48);
+  color: #8f2a1f;
+}
+
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnTeaInterject {
+  background: rgba(154, 107, 39, 0.10);
+  border-color: rgba(154, 107, 39, 0.40);
+  color: #7c5218;
+}
+
+body.theme-daylight.phase-mode-listen #detectiveMarkRow #btnTeaInterject:hover:not(:disabled) {
+  background: rgba(154, 107, 39, 0.18);
+  border-color: rgba(154, 107, 39, 0.66);
+  color: #5b3a0c;
+}
+
+body.theme-daylight #btnStepNext {
+  background: linear-gradient(180deg, #b88437 0%, #966722 100%);
+  border: 1px solid rgba(132, 88, 26, 0.85);
+  color: #fffcf5;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, 0.34), 0 6px 16px rgba(132, 88, 26, 0.24);
+}
+
+body.theme-daylight #btnStepNext:hover {
+  background: linear-gradient(180deg, #c6903f 0%, #a37126 100%);
+  color: #ffffff;
+}
+
+body.theme-daylight #btnStepNext .ui-kbd {
+  background: rgba(255, 252, 244, 0.22);
+  border-color: rgba(255, 252, 244, 0.42);
+  color: #fffcf5;
+}
+
+/* 5. Three-Goodness Speech Tea-Cards (存好心 · 說好話 · 做好事 手作宣紙茶箋) */
+body.theme-daylight #panelPlayerSpeech #playerTurnHeading {
+  color: #245746;
+}
+
+body.theme-daylight #panelPlayerSpeech #playerSpeechTargetLabel,
+body.theme-daylight #panelPlayerSpeech #playerComboBonusHint {
+  color: #6c5b49;
+}
+
+body.theme-daylight #panelPlayerSpeech #btnCycleSpeechTarget,
+body.theme-daylight #panelPlayerSpeech #btnToggleCustomSpeech {
+  background: rgba(242, 235, 222, 0.72);
+  border: 1px solid rgba(116, 92, 62, 0.28);
+  color: #4a3d30;
+}
+
+body.theme-daylight #panelPlayerSpeech #btnCycleSpeechTarget:hover,
+body.theme-daylight #panelPlayerSpeech #btnToggleCustomSpeech:hover {
+  background: rgba(154, 107, 39, 0.12);
+  border-color: rgba(154, 107, 39, 0.50);
+  color: #241c16;
+}
+
+body.theme-daylight #panelPlayerSpeech #tableWindVaneSpeech {
+  border-left-color: rgba(154, 107, 39, 0.44);
+  color: #635342;
+}
+
+body.theme-daylight #panelPlayerSpeech #pinnedCluesTray button {
+  background: rgba(250, 243, 226, 0.90);
+  border-color: rgba(154, 107, 39, 0.38);
+  color: #7d5318;
+}
+
+body.theme-daylight #quickSpeechChips .play-card-btn {
+  background: #faf5ea;
+  border: 1px solid rgba(116, 92, 62, 0.22);
+  border-top: 2.5px solid #b58336;
+  color: #29211a;
+  box-shadow: 0 3px 10px rgba(56, 40, 20, 0.06);
+}
+
+body.theme-daylight #quickSpeechChips .play-card-btn.card-heart {
+  background: linear-gradient(165deg, #fcf6e8 0%, #f5ebd5 100%);
+  border-top-color: #b58336;
+}
+
+body.theme-daylight #quickSpeechChips .play-card-btn.card-words {
+  background: linear-gradient(165deg, #eef6f1 0%, #e2efe8 100%);
+  border-top-color: #2c6753;
+}
+
+body.theme-daylight #quickSpeechChips .play-card-btn.card-deeds {
+  background: linear-gradient(165deg, #eef3f8 0%, #e3ebf3 100%);
+  border-top-color: #466a8d;
+}
+
+body.theme-daylight #quickSpeechChips .play-card-btn.card-evidence {
+  background: linear-gradient(165deg, #fbf0df 0%, #f3e2c8 100%);
+  border-top-color: #a4392c;
+}
+
+body.theme-daylight #quickSpeechChips .play-card-btn:hover {
+  border-color: rgba(154, 107, 39, 0.56);
+  box-shadow: 0 8px 20px rgba(56, 40, 20, 0.12);
+}
+
+body.theme-daylight #quickSpeechChips .play-card-btn.card-heart .play-card-stamp {
+  color: #8a5b1b;
+}
+
+body.theme-daylight #quickSpeechChips .play-card-btn.card-words .play-card-stamp {
+  color: #235846;
+}
+
+body.theme-daylight #quickSpeechChips .play-card-btn.card-deeds .play-card-stamp {
+  color: #2f5172;
+}
+
+body.theme-daylight #quickSpeechChips .play-card-btn.card-evidence .play-card-stamp {
+  color: #912c20;
+}
+
+body.theme-daylight #rephraseChoicesTray {
+  border-top-color: rgba(116, 92, 62, 0.18);
+}
+
+body.theme-daylight #rephraseTrayHint {
+  color: #82571b;
+}
+
+body.theme-daylight #btnCloseRephraseTray {
+  color: #6b5b49;
+}
+
+body.theme-daylight #rephraseSlipsGrid .rephrase-slip-btn {
+  background: #fbf7ee;
+  border: 1px solid rgba(116, 92, 62, 0.24);
+  color: #2b221a;
+}
+
+body.theme-daylight #rephraseSlipsGrid .rephrase-slip-btn:hover {
+  background: #f5ebd8;
+  border-color: rgba(154, 107, 39, 0.54);
+}
+
+body.theme-daylight #panelPlayerSpeech #quickFreeInput,
+body.theme-daylight #panelLastWords #lastWordsFreeInput,
+body.theme-daylight #panelSheriffElection #sheriffPlayerInput,
+body.theme-daylight #interjectCustomInput {
+  background: #fffdf8;
+  border: 1px solid rgba(116, 92, 62, 0.30);
+  color: #261e17;
+}
+
+body.theme-daylight #panelPlayerSpeech #btnMicVoiceSpeech {
+  background: rgba(242, 235, 222, 0.90);
+  border: 1px solid rgba(116, 92, 62, 0.28);
+  color: #2c6753;
+}
+
+body.theme-daylight #panelPlayerSpeech #btnQuickFreeSend {
+  background: linear-gradient(180deg, #357660 0%, #265947 100%);
+  border: 1px solid rgba(38, 89, 71, 0.85);
+  color: #f6fcf9;
+}
+
+body.theme-daylight #panelPlayerSpeech #btnQuickFreeSend:hover {
+  background: linear-gradient(180deg, #3e856d 0%, #2d6854 100%);
+  color: #ffffff;
+}
+
+/* 6. Role Tea-Coaster (#cornerRoleTile) & Four-Givings Tea-Slips (#cornerFourGDeck) */
+body.theme-daylight .corner-role-tile {
+  background: rgba(250, 246, 237, 0.94);
+  border: 1px solid rgba(116, 92, 62, 0.22);
+  border-left: 3px solid var(--role-accent, #9a6b27);
+  box-shadow: 0 6px 20px rgba(56, 40, 20, 0.10);
+}
+
+body.theme-daylight .corner-role-tile .role-nameplate {
+  color: #29211a;
+}
+
+body.theme-daylight .corner-role-tile .role-tile-status {
+  color: #5d4e3e;
+}
+
+body.theme-daylight .corner-role-tile .role-guide-trigger,
+body.theme-daylight .corner-role-tile .role-mask-trigger {
+  background: rgba(240, 233, 219, 0.80);
+  border: 1px solid rgba(116, 92, 62, 0.26);
+  color: #5a4a3a;
+}
+
+body.theme-daylight .corner-role-tile .role-guide-trigger:hover,
+body.theme-daylight .corner-role-tile .role-mask-trigger:hover {
+  background: rgba(154, 107, 39, 0.12);
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #241c16;
+}
+
+body.theme-daylight #cornerFourGDeck .fourg-deck-head {
+  background: rgba(250, 246, 237, 0.94);
+  border: 1px solid rgba(116, 92, 62, 0.22);
+  border-right: 3px solid #2c6753;
+  color: #265947;
+  box-shadow: 0 6px 20px rgba(56, 40, 20, 0.10);
+}
+
+body.theme-daylight #cornerFourGDeck .fourg-deck-head:hover,
+body.theme-daylight #cornerFourGDeck.is-fan-open .fourg-deck-head {
+  background: #fbf7ee;
+  border-right-color: #1f4c3c;
+  color: #1b4335;
+}
+
+body.theme-daylight #cornerFourGDeck .fourg-fan-tray {
+  background: rgba(252, 248, 240, 0.98);
+  border: 1px solid rgba(116, 92, 62, 0.30);
+  box-shadow: 0 14px 36px rgba(52, 36, 18, 0.18);
+}
+
+body.theme-daylight #cornerFourGDeck .fourg-card.card-confidence {
+  background: linear-gradient(160deg, #fcf5e4 0%, #f3e4c2 100%);
+  border-color: rgba(154, 107, 39, 0.42);
+  color: #744c14;
+}
+
+body.theme-daylight #cornerFourGDeck .fourg-card.card-joy {
+  background: linear-gradient(160deg, #ebf5f0 0%, #d8ece2 100%);
+  border-color: rgba(44, 103, 83, 0.42);
+  color: #1e503f;
+}
+
+body.theme-daylight #cornerFourGDeck .fourg-card.card-hope {
+  background: linear-gradient(160deg, #edf2f8 0%, #dce6f1 100%);
+  border-color: rgba(65, 100, 134, 0.42);
+  color: #284866;
+}
+
+body.theme-daylight #cornerFourGDeck .fourg-card.card-convenience {
+  background: linear-gradient(160deg, #eff4ea 0%, #e1ebd8 100%);
+  border-color: rgba(84, 114, 72, 0.42);
+  color: #36502c;
+}
+
+body.theme-daylight #cornerFourGDeck .fourg-card-sub {
+  color: rgba(58, 46, 34, 0.78);
+}
+
+/* 7. Vote, Sheriff & Game Over Panels on Xuan-Paper */
+body.theme-daylight #panelVote #votePromptLabel {
+  color: #932e22;
+}
+
+body.theme-daylight #panelVote #selectedVoteBadge {
+  color: #82561a;
+}
+
+body.theme-daylight #panelVote #tableWindVaneVote {
+  border-left-color: rgba(154, 107, 39, 0.44);
+  color: #635342;
+}
+
+body.theme-daylight #panelVote #voteGoodwillBadge {
+  background: rgba(154, 107, 39, 0.10);
+  border-color: rgba(154, 107, 39, 0.34);
+  color: #774e16;
+}
+
+body.theme-daylight #panelVote #btnSheriffRally {
+  background: rgba(154, 107, 39, 0.12);
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #774e16;
+}
+
+body.theme-daylight #panelVote #btnCastVote,
+body.theme-daylight #panelVoteResult #btnVoteResultNext,
+body.theme-daylight #panelGameOver #btnPlayAgain {
+  background: linear-gradient(180deg, #b24133 0%, #922e22 100%);
+  border-color: rgba(138, 42, 30, 0.88);
+  color: #fdf9f0;
+}
+
+body.theme-daylight #panelVote #btnAbstainVote,
+body.theme-daylight #panelLastWords #btnSkipLastWords,
+body.theme-daylight #panelSheriffTransfer #btnShatterSheriffBadge,
+body.theme-daylight #panelSheriffElection .cta-ink,
+body.theme-daylight #panelGameOver #btnReviewRolesModal,
+body.theme-daylight #panelGameOver #btnExportReplay,
+body.theme-daylight #panelGameOver #btnBackToTitleOver {
+  background: rgba(242, 235, 222, 0.84);
+  border: 1px solid rgba(116, 92, 62, 0.28);
+  color: #4b3e31;
+}
+
+body.theme-daylight #panelSheriffElection #sheriffElectionHeadline,
+body.theme-daylight #panelVoteResult #voteResultHeadline,
+body.theme-daylight #panelGameOver #gameOverHeadline {
+  color: #29211a;
+}
+
+body.theme-daylight #panelSheriffElection #sheriffPlayerTurnBox {
+  background: rgba(246, 239, 225, 0.90);
+  border-color: rgba(154, 107, 39, 0.36);
+}
+
+body.theme-daylight #panelSheriffElection #sheriffElectionCandidates > div,
+body.theme-daylight #panelSheriffElection .play-card-btn {
+  background: #fbf7ee;
+  border-color: rgba(116, 92, 62, 0.24);
+  color: #29211a;
+}
+
+body.theme-daylight #panelSheriffElection #sheriffElectionVoteRow .cta-celadon {
+  background: linear-gradient(180deg, #357660 0%, #265947 100%);
+  border-color: rgba(38, 89, 71, 0.85);
+  color: #f6fcf9;
+}
+
+body.theme-daylight #panelGameOver #gameOverBannerCard,
+body.theme-daylight #panelGameOver .turning-axis-card,
+body.theme-daylight #panelGameOver .gameover-truth-scroll {
+  background: #faf5ea;
+  border-color: rgba(116, 92, 62, 0.24);
+  color: #29211a;
+}
+
+body.theme-daylight #panelGameOver .turning-axis-stage,
+body.theme-daylight #panelGameOver .turning-axis-detail,
+body.theme-daylight #panelGameOver .gameover-truth-table td {
+  color: #463a2e;
+  border-bottom-color: rgba(116, 92, 62, 0.14);
+}
+
+/* 8. Bound Xuan-Paper Modals, Drawers, Popovers & Toasts (Lobby + Daytime) */
+body.theme-twilight .craft-modal-box,
+body.theme-daylight .craft-modal-box,
+body.theme-twilight .setup-drawer-sheet,
+body.theme-daylight .setup-drawer-sheet,
+body.theme-twilight #seatIntelPopover,
+body.theme-daylight #seatIntelPopover,
+body.theme-twilight #roleGuidePopover,
+body.theme-daylight #roleGuidePopover {
+  background: linear-gradient(176deg, #fcf9f2 0%, #f5eee0 60%, #eee5d4 100%);
+  border: 1px solid rgba(116, 92, 62, 0.30);
+  box-shadow: 0 22px 54px rgba(48, 34, 16, 0.22), inset 0 1px 0 rgba(255, 253, 248, 0.90);
+  color: #29211a;
+}
+
+body.theme-twilight .craft-modal-backdrop,
+body.theme-daylight .craft-modal-backdrop {
+  background: rgba(36, 28, 20, 0.48);
+}
+
+body.theme-twilight .craft-toast,
+body.theme-daylight .craft-toast {
+  background: rgba(251, 247, 238, 0.96);
+  border: 1px solid rgba(116, 92, 62, 0.32);
+  border-left: 3px solid #2c6753;
+  color: #29211a;
+  box-shadow: 0 10px 26px rgba(52, 36, 18, 0.16);
+}
+
+body.theme-twilight .craft-toast.toast-warn,
+body.theme-daylight .craft-toast.toast-warn {
+  border-left-color: #a4392c;
+}
+
+body.theme-twilight .craft-toast.toast-gold,
+body.theme-daylight .craft-toast.toast-gold {
+  border-left-color: #b07d32;
+}
+
+/* Tutorial, Setup Drawer, Journal & Feedback Elements on Xuan-Paper */
+body.theme-twilight .tut-device-switch,
+body.theme-daylight .tut-device-switch,
+body.theme-twilight .tut-tab-strip,
+body.theme-daylight .tut-tab-strip {
+  background: rgba(238, 230, 214, 0.72);
+  border-bottom-color: rgba(116, 92, 62, 0.18);
+}
+
+body.theme-twilight .tut-device-btn,
+body.theme-daylight .tut-device-btn,
+body.theme-twilight .tut-step-tab,
+body.theme-daylight .tut-step-tab,
+body.theme-twilight .seg-choice,
+body.theme-daylight .seg-choice,
+body.theme-twilight .role-pick-card,
+body.theme-daylight .role-pick-card,
+body.theme-twilight .journal-tab-btn,
+body.theme-daylight .journal-tab-btn,
+body.theme-twilight .fb-star-btn,
+body.theme-daylight .fb-star-btn,
+body.theme-twilight .fb-cat-btn,
+body.theme-daylight .fb-cat-btn {
+  background: rgba(252, 249, 242, 0.88);
+  border: 1px solid rgba(116, 92, 62, 0.24);
+  color: #4f4134;
+}
+
+body.theme-twilight .tut-device-btn.is-active,
+body.theme-daylight .tut-device-btn.is-active,
+body.theme-twilight .tut-step-tab.is-active,
+body.theme-daylight .tut-step-tab.is-active,
+body.theme-twilight .seg-choice.is-selected,
+body.theme-daylight .seg-choice.is-selected,
+body.theme-twilight .role-pick-card.is-selected,
+body.theme-daylight .role-pick-card.is-selected,
+body.theme-twilight .journal-tab-btn.is-active,
+body.theme-daylight .journal-tab-btn.is-active,
+body.theme-twilight .fb-cat-btn.is-active,
+body.theme-daylight .fb-cat-btn.is-active {
+  background: rgba(154, 107, 39, 0.14);
+  border-color: rgba(154, 107, 39, 0.56);
+  border-bottom-color: #9a6b27;
+  color: #261e17;
+  font-weight: 600;
+}
+
+body.theme-twilight .tut-device-current-tag,
+body.theme-daylight .tut-device-current-tag {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.40);
+  color: #215342;
+}
+
+body.theme-twilight .tut-device-banner,
+body.theme-daylight .tut-device-banner,
+body.theme-twilight .tut-tip-bar,
+body.theme-daylight .tut-tip-bar {
+  background: rgba(154, 107, 39, 0.09);
+  border-color: rgba(154, 107, 39, 0.32);
+  color: #473a2d;
+}
+
+body.theme-twilight .tut-card,
+body.theme-daylight .tut-card,
+body.theme-twilight .tut-step-pill,
+body.theme-daylight .tut-step-pill,
+body.theme-twilight .tut-role-item,
+body.theme-daylight .tut-role-item,
+body.theme-twilight .fb-env-preview,
+body.theme-daylight .fb-env-preview {
+  background: #fbf7ee;
+  border-color: rgba(116, 92, 62, 0.22);
+  color: #2b221a;
+}
+
+body.theme-twilight .tut-card.tut-tone-good,
+body.theme-daylight .tut-card.tut-tone-good {
+  background: #eef6f1;
+  border-color: rgba(44, 103, 83, 0.34);
+}
+
+body.theme-twilight .tut-card.tut-tone-wolf,
+body.theme-daylight .tut-card.tut-tone-wolf,
+body.theme-twilight .tut-role-item.tut-role-wolf,
+body.theme-daylight .tut-role-item.tut-role-wolf {
+  background: #faf0ee;
+  border-color: rgba(164, 57, 44, 0.34);
+}
+
+body.theme-twilight .tut-card.tut-tone-gold,
+body.theme-daylight .tut-card.tut-tone-gold {
+  background: #fbf4e4;
+  border-color: rgba(154, 107, 39, 0.36);
+}
+
+body.theme-twilight .tut-card-body,
+body.theme-daylight .tut-card-body,
+body.theme-twilight .tut-kbd-grid,
+body.theme-daylight .tut-kbd-grid {
+  color: #463a2e;
+}
+
+body.theme-twilight #btnCloseTutorial,
+body.theme-daylight #btnCloseTutorial,
+body.theme-twilight #btnCloseGuide,
+body.theme-daylight #btnCloseGuide,
+body.theme-twilight #btnCloseSetupDrawer,
+body.theme-daylight #btnCloseSetupDrawer,
+body.theme-twilight #btnCloseJournal,
+body.theme-daylight #btnCloseJournal,
+body.theme-twilight #btnClosePauseMenu,
+body.theme-daylight #btnClosePauseMenu,
+body.theme-twilight #btnCloseMusic,
+body.theme-daylight #btnCloseMusic,
+body.theme-twilight #btnCloseCareer,
+body.theme-daylight #btnCloseCareer,
+body.theme-twilight #btnCloseFeedback,
+body.theme-daylight #btnCloseFeedback,
+body.theme-twilight #btnTutPrev,
+body.theme-daylight #btnTutPrev {
+  background: rgba(242, 235, 222, 0.72);
+  border-color: rgba(116, 92, 62, 0.28);
+  color: #4f4134;
+}
+
+body.theme-twilight #btnTutNext,
+body.theme-daylight #btnTutNext {
+  background: linear-gradient(180deg, #b88437 0%, #966722 100%);
+  border-color: rgba(132, 88, 26, 0.85);
+  color: #fffcf5;
+}
+
+body.theme-twilight #btnLaunchGuidedDemo,
+body.theme-daylight #btnLaunchGuidedDemo {
+  background: linear-gradient(180deg, #b24133 0%, #922e22 100%);
+  border-color: rgba(138, 42, 30, 0.88);
+  color: #fdf9f0;
+}
+
+/* 9. Comprehensive Mineral-Ink Text Remap for Tailwind Light Utilities on Xuan-Paper */
+body.theme-twilight .craft-modal-box .text-white,
+body.theme-daylight .craft-modal-box .text-white,
+body.theme-twilight .setup-drawer-sheet .text-white,
+body.theme-daylight .setup-drawer-sheet .text-white,
+body.theme-daylight #controlDeck .text-white,
+body.theme-twilight #controlDeck .text-white {
+  color: #241c16;
+}
+
+body.theme-twilight .craft-modal-box .text-slate-100,
+body.theme-daylight .craft-modal-box .text-slate-100,
+body.theme-twilight .craft-modal-box .text-slate-200,
+body.theme-daylight .craft-modal-box .text-slate-200,
+body.theme-twilight .setup-drawer-sheet .text-slate-200,
+body.theme-daylight .setup-drawer-sheet .text-slate-200,
+body.theme-daylight #controlDeck .text-slate-100,
+body.theme-daylight #controlDeck .text-slate-200 {
+  color: #2e251d;
+}
+
+body.theme-twilight .craft-modal-box .text-slate-300,
+body.theme-daylight .craft-modal-box .text-slate-300,
+body.theme-twilight .craft-modal-box .text-slate-400,
+body.theme-daylight .craft-modal-box .text-slate-400,
+body.theme-twilight .setup-drawer-sheet .text-slate-300,
+body.theme-daylight .setup-drawer-sheet .text-slate-300,
+body.theme-twilight .setup-drawer-sheet .text-slate-400,
+body.theme-daylight .setup-drawer-sheet .text-slate-400,
+body.theme-daylight #controlDeck .text-slate-300,
+body.theme-daylight #controlDeck .text-slate-400 {
+  color: #5c4e3f;
+}
+
+body.theme-twilight .craft-modal-box .text-amber-50,
+body.theme-daylight .craft-modal-box .text-amber-50,
+body.theme-twilight .craft-modal-box .text-amber-100,
+body.theme-daylight .craft-modal-box .text-amber-100,
+body.theme-twilight .craft-modal-box .text-amber-200,
+body.theme-daylight .craft-modal-box .text-amber-200,
+body.theme-twilight .craft-modal-box .text-amber-300,
+body.theme-daylight .craft-modal-box .text-amber-300,
+body.theme-twilight .setup-drawer-sheet .text-amber-100,
+body.theme-daylight .setup-drawer-sheet .text-amber-100,
+body.theme-twilight .setup-drawer-sheet .text-amber-200,
+body.theme-daylight .setup-drawer-sheet .text-amber-200,
+body.theme-twilight .setup-drawer-sheet .text-amber-300,
+body.theme-daylight .setup-drawer-sheet .text-amber-300,
+body.theme-twilight #panelLobby .text-amber-300\/90,
+body.theme-daylight #controlDeck .text-amber-100,
+body.theme-daylight #controlDeck .text-amber-200,
+body.theme-daylight #controlDeck .text-amber-300 {
+  color: #825519;
+}
+
+body.theme-twilight .craft-modal-box .text-emerald-200,
+body.theme-daylight .craft-modal-box .text-emerald-200,
+body.theme-twilight .craft-modal-box .text-emerald-300,
+body.theme-daylight .craft-modal-box .text-emerald-300,
+body.theme-twilight .setup-drawer-sheet .text-emerald-300,
+body.theme-daylight .setup-drawer-sheet .text-emerald-300,
+body.theme-daylight #controlDeck .text-emerald-200,
+body.theme-daylight #controlDeck .text-emerald-300 {
+  color: #215745;
+}
+
+body.theme-twilight .craft-modal-box .text-rose-200,
+body.theme-daylight .craft-modal-box .text-rose-200,
+body.theme-twilight .craft-modal-box .text-rose-300,
+body.theme-daylight .craft-modal-box .text-rose-300,
+body.theme-twilight .setup-drawer-sheet .text-rose-300,
+body.theme-daylight .setup-drawer-sheet .text-rose-300,
+body.theme-twilight .setup-drawer-sheet .text-red-300,
+body.theme-daylight .setup-drawer-sheet .text-red-300,
+body.theme-daylight #controlDeck .text-rose-200,
+body.theme-daylight #controlDeck .text-rose-300 {
+  color: #962f23;
+}
+
+body.theme-twilight .craft-modal-box .text-sky-200,
+body.theme-daylight .craft-modal-box .text-sky-200,
+body.theme-twilight .craft-modal-box .text-sky-300,
+body.theme-daylight .craft-modal-box .text-sky-300,
+body.theme-twilight .craft-modal-box .text-cyan-300,
+body.theme-daylight .craft-modal-box .text-cyan-300,
+body.theme-twilight .craft-modal-box .text-teal-300,
+body.theme-daylight .craft-modal-box .text-teal-300,
+body.theme-twilight .craft-modal-box .text-indigo-300,
+body.theme-daylight .craft-modal-box .text-indigo-300,
+body.theme-twilight .setup-drawer-sheet .text-sky-300,
+body.theme-daylight .setup-drawer-sheet .text-sky-300,
+body.theme-twilight .setup-drawer-sheet .text-cyan-200,
+body.theme-daylight .setup-drawer-sheet .text-cyan-200,
+body.theme-twilight .setup-drawer-sheet .text-cyan-300,
+body.theme-daylight .setup-drawer-sheet .text-cyan-300,
+body.theme-twilight .setup-drawer-sheet .text-teal-300,
+body.theme-daylight .setup-drawer-sheet .text-teal-300 {
+  color: #2c5576;
+}
+
+body.theme-twilight .craft-modal-box .border-slate-800,
+body.theme-daylight .craft-modal-box .border-slate-800,
+body.theme-twilight .setup-drawer-sheet .border-slate-800,
+body.theme-daylight .setup-drawer-sheet .border-slate-800,
+body.theme-twilight .setup-drawer-sheet .bg-slate-950\/60,
+body.theme-daylight .setup-drawer-sheet .bg-slate-950\/60 {
+  border-color: rgba(116, 92, 62, 0.20);
+}
+
+body.theme-twilight .setup-drawer-sheet .bg-slate-950\/60,
+body.theme-daylight .setup-drawer-sheet .bg-slate-950\/60 {
+  background: rgba(240, 232, 217, 0.80);
+}
+
+/* Modal & Drawer Secondary Buttons, Inputs, and Hero Showcase Xuan-Paper Parity */
+body.theme-twilight .craft-modal-box .cta-ink,
+body.theme-daylight .craft-modal-box .cta-ink,
+body.theme-twilight .setup-drawer-sheet .cta-ink,
+body.theme-daylight .setup-drawer-sheet .cta-ink,
+body.theme-twilight #seatIntelPopover .intel-seg-btn,
+body.theme-daylight #seatIntelPopover .intel-seg-btn,
+body.theme-twilight #seatIntelPopover .intel-quote-card,
+body.theme-daylight #seatIntelPopover .intel-quote-card {
+  background: rgba(242, 235, 222, 0.86);
+  border-color: rgba(116, 92, 62, 0.26);
+  color: #3e3226;
+}
+
+body.theme-twilight .craft-modal-box .cta-cinnabar,
+body.theme-daylight .craft-modal-box .cta-cinnabar,
+body.theme-twilight .setup-drawer-sheet .cta-cinnabar,
+body.theme-daylight .setup-drawer-sheet .cta-cinnabar,
+body.theme-twilight #seatIntelPopover .cta-cinnabar,
+body.theme-daylight #seatIntelPopover .cta-cinnabar {
+  background: linear-gradient(180deg, #b24133 0%, #922e22 100%);
+  border-color: rgba(138, 42, 30, 0.88);
+  color: #fdf9f0;
+}
+
+body.theme-twilight .craft-modal-box .cta-brass,
+body.theme-daylight .craft-modal-box .cta-brass,
+body.theme-twilight .setup-drawer-sheet .cta-brass,
+body.theme-daylight .setup-drawer-sheet .cta-brass {
+  background: linear-gradient(180deg, #b88437 0%, #966722 100%);
+  border-color: rgba(132, 88, 26, 0.85);
+  color: #fffcf5;
+}
+
+body.theme-twilight .craft-modal-box .cta-celadon,
+body.theme-daylight .craft-modal-box .cta-celadon,
+body.theme-twilight .setup-drawer-sheet .cta-celadon,
+body.theme-daylight .setup-drawer-sheet .cta-celadon {
+  background: linear-gradient(180deg, #357660 0%, #265947 100%);
+  border-color: rgba(38, 89, 71, 0.85);
+  color: #f6fcf9;
+}
+
+body.theme-twilight .craft-modal-box input,
+body.theme-daylight .craft-modal-box input,
+body.theme-twilight .craft-modal-box textarea,
+body.theme-daylight .craft-modal-box textarea,
+body.theme-twilight .craft-modal-box select,
+body.theme-daylight .craft-modal-box select {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.30);
+  color: #261e17;
+}
+
+body.theme-twilight #heroShowcaseOverlay .hud-pill-shell,
+body.theme-daylight #heroShowcaseOverlay .hud-pill-shell,
+body.theme-twilight #heroShowcaseOverlay .showcase-studio-dock,
+body.theme-daylight #heroShowcaseOverlay .showcase-studio-dock {
+  background: rgba(250, 246, 237, 0.94);
+  border-color: rgba(116, 92, 62, 0.28);
+  color: #29211a;
+  box-shadow: 0 12px 32px rgba(52, 36, 18, 0.16);
+}
+
+body.theme-twilight #heroShowcaseOverlay .showcase-chip,
+body.theme-daylight #heroShowcaseOverlay .showcase-chip {
+  background: rgba(242, 235, 222, 0.90);
+  border-color: rgba(116, 92, 62, 0.26);
+  color: #46392c;
+}
+
+body.theme-twilight #heroShowcaseOverlay .showcase-chip.is-active,
+body.theme-daylight #heroShowcaseOverlay .showcase-chip.is-active {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.56);
+  color: #1f5341;
+}
+
+/* 10. Phone Xuan-Paper Scroll Sheet (Title + Daytime In-Game) */
+@media (max-width: 767px) {
+  body.theme-twilight.screen-title #controlDeck {
+    background: transparent;
+  }
+
+  body.theme-twilight.screen-title #focalCenterCard {
+    background: linear-gradient(180deg, rgba(250, 246, 237, 0.98) 0%, rgba(244, 237, 224, 0.99) 100%);
+    border-top: 2px solid rgba(154, 107, 39, 0.42);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 32px rgba(48, 34, 16, 0.22);
+  }
+
+  body.theme-daylight.screen-ingame #controlDeck {
+    background: linear-gradient(180deg, rgba(248, 243, 232, 0.98) 0%, rgba(241, 234, 220, 0.99) 100%);
+    border-top: 1px solid rgba(116, 92, 62, 0.24);
+  }
+
+  body.theme-night.screen-ingame #controlDeck {
+    background: linear-gradient(180deg, rgba(32, 25, 20, 0.97) 0%, rgba(22, 17, 13, 0.99) 100%);
+  }
+}
+
+/* ==================== v23.1 ANIMATED DIEGETIC GUIDANCE (以動代文・光影引導) ==================== */
+/* Pure GPU-composited motion cues replacing clunky bracketed instructions. Zero blur filters. */
+
+@keyframes teaSilkSheen {
+  0%, 58% {
+    transform: translateX(-140%) skewX(-18deg);
+    opacity: 0;
+  }
+  68% {
+    opacity: 0.72;
+  }
+  92% {
+    transform: translateX(250%) skewX(-18deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(250%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes teaGuideBeacon {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.58;
+  }
+  50% {
+    transform: scale(1.26);
+    opacity: 1;
+  }
+}
+
+@keyframes teaSeatWaveDay {
+  0%, 100% {
+    transform: translateY(0);
+    border-color: rgba(116, 92, 62, 0.24);
+    box-shadow: 0 0 0 0 rgba(154, 107, 39, 0);
+  }
+  38% {
+    transform: translateY(-2px);
+    border-color: rgba(154, 107, 39, 0.72);
+    box-shadow: 0 3px 10px rgba(154, 107, 39, 0.22);
+  }
+}
+
+@keyframes teaSeatWaveNight {
+  0%, 100% {
+    transform: translateY(0);
+    border-color: rgba(214, 176, 114, 0.22);
+    box-shadow: 0 0 0 0 rgba(226, 184, 112, 0);
+  }
+  38% {
+    transform: translateY(-2px);
+    border-color: rgba(235, 198, 128, 0.78);
+    box-shadow: 0 3px 12px rgba(212, 166, 87, 0.28);
+  }
+}
+
+@keyframes teaReadyPulseCinnabar {
+  0% {
+    box-shadow: 0 0 0 0 rgba(164, 57, 44, 0.42), 0 4px 12px rgba(132, 42, 32, 0.22);
+  }
+  65% {
+    box-shadow: 0 0 0 8px rgba(164, 57, 44, 0), 0 5px 16px rgba(132, 42, 32, 0.28);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(164, 57, 44, 0), 0 4px 12px rgba(132, 42, 32, 0.22);
+  }
+}
+
+@keyframes teaReadyPulseGold {
+  0% {
+    box-shadow: 0 0 0 0 rgba(178, 128, 48, 0.44), 0 4px 12px rgba(132, 92, 32, 0.20);
+  }
+  65% {
+    box-shadow: 0 0 0 8px rgba(178, 128, 48, 0), 0 5px 16px rgba(132, 92, 32, 0.26);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(178, 128, 48, 0), 0 4px 12px rgba(132, 92, 32, 0.20);
+  }
+}
+
+@keyframes teaPouchRipple {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.78;
+  }
+  75% {
+    transform: scale(1.10, 1.24);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.10, 1.24);
+    opacity: 0;
+  }
+}
+
+@keyframes teaPouchFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2.5px);
+  }
+}
+
+@keyframes teaFocusGlow {
+  0%, 100% {
+    border-color: rgba(154, 107, 39, 0.36);
+    box-shadow: 0 0 0 0 rgba(154, 107, 39, 0.14);
+  }
+  50% {
+    border-color: rgba(154, 107, 39, 0.80);
+    box-shadow: 0 0 0 4px rgba(154, 107, 39, 0.14);
+  }
+}
+
+@keyframes teaJudgeInkFlow {
+  0% {
+    transform: scaleX(0.18);
+    transform-origin: left center;
+    opacity: 0.55;
+  }
+  55% {
+    transform: scaleX(1);
+    transform-origin: left center;
+    opacity: 0.95;
+  }
+  100% {
+    transform: scaleX(0.18);
+    transform-origin: right center;
+    opacity: 0.55;
+  }
+}
+
+/* 1. Title Primary CTA Calm Sheen */
+#btnStartMatch.is-guide-beckon {
+  position: relative;
+  overflow: hidden;
+}
+
+#btnStartMatch.is-guide-beckon::after {
+  content: "";
+  position: absolute;
+  inset: -4px auto -4px 0;
+  width: 44%;
+  background: linear-gradient(90deg, rgba(255, 250, 236, 0) 0%, rgba(255, 250, 236, 0.30) 50%, rgba(255, 250, 236, 0) 100%);
+  pointer-events: none;
+  animation: teaSilkSheen 4.8s ease-in-out infinite;
+}
+
+/* 2. Seat Rail Pick-Target Wave (Unselected Pick-Seat Phases) */
+#seatButtonStrip.is-guide-beckon {
+  position: relative;
+}
+
+body.theme-daylight #seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected),
+body.theme-twilight #seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected) {
+  animation: teaSeatWaveDay 2.6s ease-in-out infinite;
+}
+
+body.theme-night #seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected) {
+  animation: teaSeatWaveNight 2.6s ease-in-out infinite;
+}
+
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(2) { animation-delay: 0.14s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(3) { animation-delay: 0.28s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(4) { animation-delay: 0.42s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(5) { animation-delay: 0.56s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(6) { animation-delay: 0.70s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(7) { animation-delay: 0.84s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(8) { animation-delay: 0.98s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(n+9) { animation-delay: 1.12s; }
+
+/* 3. Confirm / Advance Ready Pulse (Selected Target -> Confirm CTA, or Finished Speech -> Next) */
+#btnCastVote.is-guide-ready:not(:disabled),
+#btnConfirmTarget.is-guide-ready:not(:disabled) {
+  animation: teaReadyPulseCinnabar 2.1s ease-out infinite;
+}
+
+#btnStepNext.is-guide-ready:not(:disabled),
+#btnSeerRevealContinue.is-guide-ready:not(:disabled),
+#btnSheriffNextSpeech.is-guide-ready:not(:disabled),
+#btnTeaInterject.is-guide-beckon:not(:disabled),
+#btnQuickInlineRewrite.is-guide-beckon:not(:disabled),
+#btnSheriffRun.is-guide-beckon:not(:disabled) {
+  animation: teaReadyPulseGold 2.3s ease-out infinite;
+}
+
+/* 4. Three-Goodness Speech Cards & Sheriff Cards Silk Sheen Wave */
+#quickSpeechChips.is-guide-beckon .play-card-btn,
+#sheriffPlayerQuickChips.is-guide-beckon .play-card-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+#quickSpeechChips.is-guide-beckon .play-card-btn::after,
+#sheriffPlayerQuickChips.is-guide-beckon .play-card-btn::after {
+  content: "";
+  position: absolute;
+  inset: -4px auto -4px 0;
+  width: 38%;
+  background: linear-gradient(90deg, rgba(196, 152, 74, 0) 0%, rgba(196, 152, 74, 0.22) 50%, rgba(196, 152, 74, 0) 100%);
+  pointer-events: none;
+  animation: teaSilkSheen 4.2s ease-in-out infinite;
+}
+
+#quickSpeechChips.is-guide-beckon .play-card-btn:nth-child(2)::after,
+#sheriffPlayerQuickChips.is-guide-beckon .play-card-btn:nth-child(2)::after {
+  animation-delay: 0.35s;
+}
+
+#quickSpeechChips.is-guide-beckon .play-card-btn:nth-child(3)::after,
+#sheriffPlayerQuickChips.is-guide-beckon .play-card-btn:nth-child(3)::after {
+  animation-delay: 0.70s;
+}
+
+/* 5. Focus Trays (Rephrase Slips / Witch Cups / Sheriff Order) */
+#rephraseChoicesTray.is-guide-focus,
+#witchSubPanel.is-guide-focus,
+#panelSheriffOrder.is-guide-focus {
+  border-radius: 10px;
+  animation: teaFocusGlow 2.4s ease-in-out infinite;
+}
+
+#rephraseChoicesTray.is-guide-focus .rephrase-slip-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+#rephraseChoicesTray.is-guide-focus .rephrase-slip-btn::after {
+  content: "";
+  position: absolute;
+  inset: -2px auto -2px 0;
+  width: 36%;
+  background: linear-gradient(90deg, rgba(178, 128, 48, 0) 0%, rgba(178, 128, 48, 0.22) 50%, rgba(178, 128, 48, 0) 100%);
+  pointer-events: none;
+  animation: teaSilkSheen 3.6s ease-in-out infinite;
+}
+
+#rephraseChoicesTray.is-guide-focus .rephrase-slip-btn:nth-child(2)::after { animation-delay: 0.28s; }
+#rephraseChoicesTray.is-guide-focus .rephrase-slip-btn:nth-child(3)::after { animation-delay: 0.56s; }
+
+/* 6. Four-Givings Pouch & Lotus Meter Synergy Beckon */
+#cornerFourGDeck.is-guide-beckon .fourg-deck-head {
+  position: relative;
+  animation: teaPouchFloat 2.4s ease-in-out infinite;
+}
+
+#cornerFourGDeck.is-guide-beckon .fourg-deck-head::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 1.5px solid rgba(44, 103, 83, 0.72);
+  pointer-events: none;
+  animation: teaPouchRipple 2.2s ease-out infinite;
+}
+
+body.theme-night #cornerFourGDeck.is-guide-beckon .fourg-deck-head::before {
+  border-color: rgba(212, 166, 87, 0.78);
+}
+
+#threeGoodMeters.is-guide-beckon .lotus-petal-svg:not(.is-lit) {
+  animation: teaGuideBeacon 2.0s ease-in-out infinite;
+}
+
+/* 7. Living Motion Accent on Beginner Coach & Judge Showcase Guide */
+#beginnerCoachText {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#beginnerCoachText::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: #2c6753;
+  box-shadow: 0 0 0 3px rgba(44, 103, 83, 0.20);
+  animation: teaGuideBeacon 2.0s ease-in-out infinite;
+}
+
+body.theme-night #beginnerCoachText::before {
+  background: #e2b870;
+  box-shadow: 0 0 0 3px rgba(226, 184, 112, 0.22);
+}
+
+#judgeShowcaseGuideBanner .judge-guide-step.is-active {
+  position: relative;
+  overflow: hidden;
+}
+
+#judgeShowcaseGuideBanner .judge-guide-step.is-active::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(154, 107, 39, 0.25), rgba(154, 107, 39, 0.95), rgba(154, 107, 39, 0.25));
+  animation: teaJudgeInkFlow 2.6s ease-in-out infinite;
+}
+
+/* ==================== PURE-CSS ANIMATED TUTORIAL GESTURE VISUALIZERS ==================== */
+@keyframes tutSwipeThumb {
+  0%, 14% { transform: translate(0, 0) scale(1); opacity: 0.9; }
+  38% { transform: translate(62px, 0) scale(0.92); opacity: 1; }
+  52% { transform: translate(62px, 0) scale(1.08); opacity: 0.95; }
+  78%, 100% { transform: translate(0, 0) scale(1); opacity: 0.75; }
+}
+
+@keyframes tutSwipeActiveSeat {
+  0%, 30%, 72%, 100% {
+    background: rgba(154, 107, 39, 0.12);
+    border-color: rgba(154, 107, 39, 0.30);
+    transform: translateY(0);
+  }
+  42%, 60% {
+    background: rgba(44, 103, 83, 0.24);
+    border-color: rgba(44, 103, 83, 0.78);
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes tutHoldRing {
+  0%, 12% { transform: scale(0.75); opacity: 0; }
+  22% { transform: scale(1); opacity: 0.92; }
+  58% { transform: scale(1.55); opacity: 0; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
+@keyframes tutRadialBloom {
+  0%, 28% { transform: scale(0.4); opacity: 0; }
+  45%, 78% { transform: scale(1); opacity: 1; }
+  94%, 100% { transform: scale(0.5); opacity: 0; }
+}
+
+@keyframes tutDragBeam {
+  0%, 14% { transform: scaleX(0); opacity: 0; }
+  24% { opacity: 0.95; }
+  56%, 74% { transform: scaleX(1); opacity: 1; }
+  90%, 100% { transform: scaleX(1); opacity: 0; }
+}
+
+@keyframes tutDragTargetPulse {
+  0%, 48%, 88%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(164, 57, 44, 0); }
+  62% { transform: scale(1.10); box-shadow: 0 0 0 6px rgba(164, 57, 44, 0.28); }
+  76% { transform: scale(1.03); box-shadow: 0 0 0 10px rgba(164, 57, 44, 0); }
+}
+
+@keyframes tutHandZoneA {
+  0%, 45%, 100% { opacity: 0.55; transform: scale(0.98); }
+  20%, 34% { opacity: 1; transform: scale(1.03); }
+}
+
+@keyframes tutHandZoneB {
+  0%, 45%, 100% { opacity: 0.55; transform: scale(0.98); }
+  65%, 82% { opacity: 1; transform: scale(1.03); }
+}
+
+@keyframes tutFanSlip1 {
+  0%, 18%, 88%, 100% { transform: translateY(10px) rotate(0deg); opacity: 0.55; }
+  36%, 72% { transform: translate(-22px, -4px) rotate(-14deg); opacity: 1; }
+}
+
+@keyframes tutFanSlip2 {
+  0%, 18%, 88%, 100% { transform: translateY(10px) rotate(0deg); opacity: 0.65; }
+  36%, 72% { transform: translate(-7px, -9px) rotate(-5deg); opacity: 1; }
+}
+
+@keyframes tutFanSlip3 {
+  0%, 18%, 88%, 100% { transform: translateY(10px) rotate(0deg); opacity: 0.65; }
+  36%, 72% { transform: translate(8px, -9px) rotate(5deg); opacity: 1; }
+}
+
+@keyframes tutFanSlip4 {
+  0%, 18%, 88%, 100% { transform: translateY(10px) rotate(0deg); opacity: 0.55; }
+  36%, 72% { transform: translate(23px, -4px) rotate(14deg); opacity: 1; }
+}
+
+@keyframes tutKeyPress {
+  0%, 16%, 100% {
+    transform: translateY(0);
+    box-shadow: 0 2px 0 rgba(116, 92, 62, 0.36);
+  }
+  8% {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 rgba(116, 92, 62, 0.20), 0 0 0 4px rgba(154, 107, 39, 0.26);
+  }
+}
+
+@keyframes tutPinchL {
+  0%, 100% { transform: translate(-4px, 4px); }
+  50% { transform: translate(-18px, 12px); }
+}
+
+@keyframes tutPinchR {
+  0%, 100% { transform: translate(4px, -4px); }
+  50% { transform: translate(18px, -12px); }
+}
+
+.tut-anim-stage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 520px) {
+  .tut-anim-stage {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tut-anim-card {
+  position: relative;
+  border-radius: 10px;
+  padding: 10px 10px 8px;
+  border: 1px solid rgba(154, 107, 39, 0.28);
+  background: rgba(244, 237, 224, 0.72);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+body.theme-night .tut-anim-card {
+  background: rgba(30, 23, 18, 0.80);
+  border-color: rgba(214, 176, 114, 0.26);
+}
+
+.tut-anim-canvas {
+  position: relative;
+  width: 100%;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tut-anim-caption {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3d3023;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+body.theme-night .tut-anim-caption {
+  color: #ebd7b3;
+}
+
+/* Mini Swipe Rail */
+.tut-demo-rail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tut-mini-seat {
+  width: 30px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(154, 107, 39, 0.34);
+  background: rgba(255, 252, 245, 0.85);
+  color: #3d3023;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.theme-night .tut-mini-seat {
+  background: rgba(44, 34, 26, 0.90);
+  color: #f2e5ce;
+}
+
+.tut-mini-seat.is-target-seat {
+  animation: tutSwipeActiveSeat 2.8s ease-in-out infinite;
+}
+
+.tut-swipe-thumb {
+  position: absolute;
+  left: 8px;
+  bottom: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(154, 107, 39, 0.88);
+  border: 2px solid #fffdf8;
+  box-shadow: 0 2px 6px rgba(52, 36, 18, 0.25);
+  animation: tutSwipeThumb 2.8s ease-in-out infinite;
+}
+
+/* Mini Long-Press Radial */
+.tut-hold-center {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(154, 107, 39, 0.72);
+  background: rgba(255, 252, 245, 0.92);
+  color: #3d3023;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.theme-night .tut-hold-center {
+  background: rgba(46, 36, 28, 0.95);
+  color: #f4e6cc;
+}
+
+.tut-hold-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 2px solid rgba(154, 107, 39, 0.82);
+  animation: tutHoldRing 2.6s ease-out infinite;
+}
+
+.tut-hold-orb {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #2c6753;
+  animation: tutRadialBloom 2.6s ease-out infinite;
+}
+
+.tut-hold-orb.is-o1 { top: -11px; left: 9px; background: #2c6753; }
+.tut-hold-orb.is-o2 { bottom: -11px; left: 9px; background: #a4392c; }
+.tut-hold-orb.is-o3 { left: -12px; top: 9px; background: #9a6b27; }
+.tut-hold-orb.is-o4 { right: -12px; top: 9px; background: #5a7268; }
+
+/* Mini Drag-to-Vote Beam */
+.tut-beam-row {
+  position: relative;
+  width: 152px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tut-beam-node {
+  position: relative;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(154, 107, 39, 0.64);
+  background: rgba(255, 252, 245, 0.94);
+  color: #3d3023;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.theme-night .tut-beam-node {
+  background: rgba(46, 36, 28, 0.95);
+  color: #f4e6cc;
+}
+
+.tut-beam-node.is-dst {
+  border-color: rgba(164, 57, 44, 0.72);
+  color: #8f2d21;
+  animation: tutDragTargetPulse 2.8s ease-out infinite;
+}
+
+body.theme-night .tut-beam-node.is-dst {
+  color: #f8b4ac;
+}
+
+.tut-beam-line {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 999px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #b88437 0%, #a4392c 100%);
+  animation: tutDragBeam 2.8s ease-in-out infinite;
+}
+
+/* Mini Two-Hand Tablet Split */
+.tut-twohand-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.tut-hand-zone {
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid rgba(44, 103, 83, 0.44);
+  background: rgba(44, 103, 83, 0.14);
+  color: #1f5341;
+  animation: tutHandZoneA 3.0s ease-in-out infinite;
+}
+
+.tut-hand-zone.is-right {
+  border-color: rgba(154, 107, 39, 0.48);
+  background: rgba(154, 107, 39, 0.16);
+  color: #7d5318;
+  animation: tutHandZoneB 3.0s ease-in-out infinite;
+}
+
+body.theme-night .tut-hand-zone {
+  color: #9de2c8;
+}
+
+body.theme-night .tut-hand-zone.is-right {
+  color: #f0cf8c;
+}
+
+/* Mini Four-Givings Hover Fan */
+.tut-fan-wrap {
+  position: relative;
+  width: 96px;
+  height: 44px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.tut-fan-slip {
+  position: absolute;
+  bottom: 4px;
+  width: 24px;
+  height: 32px;
+  border-radius: 5px;
+  border: 1px solid rgba(154, 107, 39, 0.56);
+  background: linear-gradient(180deg, #fffdf8 0%, #efe6d4 100%);
+  color: #3d3023;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: bottom center;
+}
+
+body.theme-night .tut-fan-slip {
+  background: linear-gradient(180deg, #3c3024 0%, #271e17 100%);
+  color: #f0d7a8;
+}
+
+.tut-fan-slip.is-s1 { animation: tutFanSlip1 3.2s ease-in-out infinite; }
+.tut-fan-slip.is-s2 { animation: tutFanSlip2 3.2s ease-in-out infinite; }
+.tut-fan-slip.is-s3 { animation: tutFanSlip3 3.2s ease-in-out infinite; }
+.tut-fan-slip.is-s4 { animation: tutFanSlip4 3.2s ease-in-out infinite; }
+
+/* Mini Pinch Zoom */
+.tut-pinch-wrap {
+  position: relative;
+  width: 72px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tut-pinch-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(44, 103, 83, 0.86);
+  border: 2px solid #fffdf8;
+}
+
+.tut-pinch-dot.is-l { animation: tutPinchL 2.4s ease-in-out infinite; }
+.tut-pinch-dot.is-r { animation: tutPinchR 2.4s ease-in-out infinite; }
+
+/* Mini Hotkey Sequence Strip */
+.tut-key-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tut-anim-key {
+  min-width: 28px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(116, 92, 62, 0.36);
+  background: #fffdf8;
+  color: #2f251b;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  animation: tutKeyPress 3.6s ease-in-out infinite;
+}
+
+body.theme-night .tut-anim-key {
+  background: #2f251c;
+  border-color: rgba(214, 176, 114, 0.36);
+  color: #f3e4c6;
+}
+
+.tut-anim-key:nth-child(2) { animation-delay: 0.55s; }
+.tut-anim-key:nth-child(3) { animation-delay: 1.10s; }
+.tut-anim-key:nth-child(4) { animation-delay: 1.65s; }
+.tut-anim-key:nth-child(5) { animation-delay: 2.20s; }
+
+/* Respect Reduced Motion Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  #btnStartMatch.is-guide-beckon::after,
+  #seatButtonStrip.is-guide-beckon .seat-pill-btn,
+  #btnCastVote.is-guide-ready,
+  #btnConfirmTarget.is-guide-ready,
+  #btnStepNext.is-guide-ready,
+  #btnSeerRevealContinue.is-guide-ready,
+  #btnSheriffNextSpeech.is-guide-ready,
+  #btnTeaInterject.is-guide-beckon,
+  #btnQuickInlineRewrite.is-guide-beckon,
+  #btnSheriffRun.is-guide-beckon,
+  #quickSpeechChips.is-guide-beckon .play-card-btn::after,
+  #sheriffPlayerQuickChips.is-guide-beckon .play-card-btn::after,
+  #rephraseChoicesTray.is-guide-focus,
+  #rephraseChoicesTray.is-guide-focus .rephrase-slip-btn::after,
+  #witchSubPanel.is-guide-focus,
+  #panelSheriffOrder.is-guide-focus,
+  #cornerFourGDeck.is-guide-beckon .fourg-deck-head,
+  #cornerFourGDeck.is-guide-beckon .fourg-deck-head::before,
+  #threeGoodMeters.is-guide-beckon .lotus-petal-svg,
+  #beginnerCoachText::before,
+  #judgeShowcaseGuideBanner .judge-guide-step.is-active::after,
+  .tut-swipe-thumb,
+  .tut-mini-seat.is-target-seat,
+  .tut-hold-ring,
+  .tut-hold-orb,
+  .tut-beam-line,
+  .tut-beam-node.is-dst,
+  .tut-hand-zone,
+  .tut-fan-slip,
+  .tut-pinch-dot,
+  .tut-anim-key {
+    animation: none;
   }
 }

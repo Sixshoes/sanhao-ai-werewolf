@@ -1118,7 +1118,7 @@ function triggerHunterResonance(hunterSeat, nextStage) {
   if (hunterSeat.id === getPlayerId()) {
     addLog({
       kind: "secret",
-      title: isWK ? "🐺 流言首領最後帶風向！選 1 位好夥伴一同離席冷靜" : "直心糾察長正氣共鳴！選 1 人一同離席冷靜",
+      title: isWK ? "流言首領最後帶風向！選 1 位好夥伴一同離席冷靜" : "直心糾察長正氣共鳴！選 1 人一同離席冷靜",
       text: ""
     });
     updateAllUI();
@@ -1137,10 +1137,10 @@ function triggerHunterResonance(hunterSeat, nextStage) {
         setCanvasBubble(hunterSeat.id, "局勢還不明朗，我先壓下共鳴不亂帶人！", "normal");
         addLog({ kind: "dawn", title: "直心糾察長 " + hunterSeat.id + "號選擇壓下共鳴，未帶走任何人。", text: "" });
         if (typeof triggerCutIn === "function") {
-          triggerCutIn("⚖️ 直心糾察長壓下共鳴", fmtSeatNum(hunterSeat.id) + "號 " + hName + " 局勢未明，未帶走任何人", "gold", 1500);
+          triggerCutIn("直心糾察長壓下共鳴", fmtSeatNum(hunterSeat.id) + "號 " + hName + " 局勢未明，未帶走任何人", "gold", 1500);
         }
         if (typeof showToast === "function") {
-          showToast("⚖️ 直心糾察長 " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 選擇壓下共鳴，未帶走任何人。", "gold");
+          showToast("直心糾察長 " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 選擇壓下共鳴，未帶走任何人。", "gold");
         }
         updateAllUI();
         let holdCommitted = false;
@@ -1266,7 +1266,7 @@ function resumeAfterHunter() {
     const shot = state.match.lastHunterShot;
     const isSelfWK = Boolean((shot && shot.isWolfKing) || p1.isWolfKing);
     const actText = isSelfWK ? "最後帶風向" : "正氣共鳴";
-    const ico = isSelfWK ? "🐺" : "⚖️";
+    const ico = isSelfWK ? "[首領]" : "[共鳴]";
     const shotHeadline = (shot && shot.hunterId === getPlayerId())
       ? (ico + " 你已發動" + actText + "，帶走 " + fmtSeatNum(shot.targetId) + "號 " + shot.targetName + "！")
       : ((shot && shot.hunterId)
@@ -1350,15 +1350,15 @@ function confirmTargetAction() {
     if (typeof stage3d !== "undefined" && stage3d.isActive && stage3d.isActive()) {
       stage3d.triggerSkillFx("guard_shield", getPlayerId(), target.id, false);
     }
-    spawnFx(target.id, "🛡️ 守護結界", "#38bdf8", { scale: 1.12, durationMs: 1450 });
+    spawnFx(target.id, "守護結界", "#38bdf8", { scale: 1.12, durationMs: 1450 });
     const guardLabel = target.id === getPlayerId() ? "你自己" : (fmtSeatNum(target.id) + "號 " + target.name);
     addLog({
       kind: "secret",
-      title: "🛡️ 雲水結界：今晚守護了 " + guardLabel + "！",
+      title: "雲水結界：今晚守護了 " + guardLabel + "！",
       text: ""
     });
     addThreeGoodPoint("deeds", "做好事・護心結界");
-    triggerCutIn("🛡️ 護心結界！", guardLabel + " 獲得今夜守護盾！", "celadon", 1300);
+    triggerCutIn("護心結界！", guardLabel + " 獲得今夜守護盾！", "celadon", 1300);
     state.selectedSeatId = null;
     proceedToNightWolf();
     return;
@@ -1416,7 +1416,7 @@ function confirmTargetAction() {
     setSeatEmotion(target.id, isWolf ? "shock" : "happy", 3200);
     spawnFx(target.id, isWolf ? "抓到了是狼!" : "是好人!", isWolf ? "#f43f5e" : "#34d399", { scale: 1.15, durationMs: 1650 });
     triggerCutIn(
-      isWolf ? "🔮 明心查獲酸民狼！" : "🔮 明心查證好夥伴！",
+      isWolf ? "明心查獲酸民狼！" : "明心查證好夥伴！",
       fmtSeatNum(target.id) + "號 " + target.name + (isWolf ? " 露出心虛破綻！" : " 心懷正氣・確定清白！"),
       isWolf ? "crimson" : "violet",
       1500

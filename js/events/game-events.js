@@ -26,6 +26,8 @@ function resetMatchToLobby() {
     indieFlow.hideRoleDealRitual({ silent: true });
   }
   state.match.started = false;
+  state.match.judgeShowcase = false;
+  state.match.judgeGuideDismissed = false;
   state.match.phase = "LOBBY";
   state.match.day = 0;
   state.match.playerSeatId = 1;
@@ -255,7 +257,7 @@ function bindMatchFlowEvents() {
       state.fxPacing = state.fxPacing === "fast" ? "cinematic" : "fast";
       if (typeof syncPrefsToControls === "function") syncPrefsToControls();
       if (typeof saveUserPrefs === "function") saveUserPrefs();
-      showToast(state.fxPacing === "fast" ? "⚡ 已切換為「快節奏」演出模式" : "✨ 已切換為「沉穩儀式感」演出模式（卡片與特效停留更從容）", "emerald");
+      showToast(state.fxPacing === "fast" ? "已切換為「快節奏」演出模式" : "已切換為「沉穩儀式感」演出模式（卡片與特效停留更從容）", "emerald");
     });
   }
 
@@ -529,6 +531,18 @@ function bindIntelAndDetectiveEvents() {
     triggerQuickReactionToSpeaker(sp, "wolf");
   });
 
+  if (el("btnToggleListenTools")) {
+    el("btnToggleListenTools").addEventListener("click", function () {
+      sound.unlock();
+      const wrap = el("listenExtraToolsWrap");
+      if (!wrap) return;
+      const openNow = wrap.classList.toggle("is-open");
+      el("btnToggleListenTools").setAttribute("aria-expanded", openNow ? "true" : "false");
+      el("btnToggleListenTools").textContent = openNow ? "收合工具 ▴" : "偵探工具 ▾";
+      if (typeof sound.tone === "function") sound.tone(openNow ? 540 : 440, 0.04, "triangle", 0.03, 0);
+    });
+  }
+
   if (el("btnPinCurrentSpeaker")) {
     el("btnPinCurrentSpeaker").addEventListener("click", function () {
       sound.unlock();
@@ -548,7 +562,7 @@ function bindIntelAndDetectiveEvents() {
       const b = el("btnMicVoiceSpeech");
       if (b) {
         b.classList.remove("is-listening");
-        b.textContent = "🎙️";
+        b.innerHTML = typeof shIcon === "function" ? shIcon("mic", "jade") : "語音";
       }
     };
     el("btnMicVoiceSpeech").addEventListener("click", function () {
@@ -574,9 +588,9 @@ function bindIntelAndDetectiveEvents() {
         isListening = true;
         const btn = el("btnMicVoiceSpeech");
         btn.classList.add("is-listening");
-        btn.textContent = "⏹";
+        btn.textContent = "";
         if (typeof sound.playTableReactionSfx === "function") sound.playTableReactionSfx("mic_on");
-        showToast("🎙️ 正在聆聽長段推理發言（支援多句停頓，說完按 ⏹ 結束）…", "emerald");
+        showToast("正在聆聽長段推理發言（支援多句停頓，說完再按一次結束）…", "emerald");
         const basePrefix = (el("quickFreeInput") && el("quickFreeInput").value.trim()) ? (el("quickFreeInput").value.trim() + " ") : "";
         let committedText = "";
         rec.onresult = function (ev) {
@@ -611,7 +625,7 @@ function bindIntelAndDetectiveEvents() {
           }
           stopMicUi();
           if (el("quickFreeInput") && el("quickFreeInput").value.trim()) {
-            showToast("✓ 語音已轉入陳詞欄，確認後按「送出」即可，也可點「潤飾詞句」調整語氣。", "emerald");
+            showToast("語音已轉入陳詞欄，確認後按「送出」即可，也可點「潤飾詞句」調整語氣。", "emerald");
           }
         };
         rec.start();
@@ -693,25 +707,25 @@ function bindIntelAndDetectiveEvents() {
       setSeatEmotion(sp.id, "shock", 2600);
       spawnBeam(pid, sp.id, "#34d399", "trust", 760);
       spawnBurst(sp.id, ["#34d399", "#fbbf24", "#fde68a"], 18, "petal");
-      spawnFx(sp.id, "✨ 戾氣化解 +9!", "#34d399");
+      spawnFx(sp.id, "戾氣化解 +9!", "#34d399");
       const noteTxt = clashKind === "toxic_slip"
         ? ("剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + " 語氣帶著挑撥，我先以說好話降溫，請大家仍保持理性留意 " + fmtSeatNum(sp.id) + "號 的真實立場！")
         : ("剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + " 把懷疑指向我，我心平氣和澄清並存進筆記，大家可對比我們雙方的邏輯！");
-      pinClue(sp.id, "✨化解 " + fmtSeatNum(sp.id) + "號", noteTxt, "clash");
+      pinClue(sp.id, "化解 " + fmtSeatNum(sp.id) + "號", noteTxt, "clash");
     }
 
     bumpCombo("說好話化解");
     addThreeGoodPoint("words", "說好話・化戾氣");
-    triggerCutIn("✨ 說好話・化戾氣為祥和！", sp ? ("你用幽默與善意接住 " + fmtSeatNum(sp.id) + "號的尖銳發言，全場友善度 +9！") : "溫柔堅定的風度贏得全場肯定！", "emerald");
+    triggerCutIn("說好話・化戾氣為祥和！", sp ? ("你用幽默與善意接住 " + fmtSeatNum(sp.id) + "號的尖銳發言，全場友善度 +9！") : "溫柔堅定的風度贏得全場肯定！", "emerald");
     if (typeof orchestrator !== "undefined") {
       orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
     }
     addLog({
       kind: "blessing",
-      title: "✨ 說好話化解：「" + myQuip + "」（全場友善度 +9，已同步記錄重點筆記）",
+      title: "說好話化解：「" + myQuip + "」（全場友善度 +9，已同步記錄重點筆記）",
       text: ""
     });
-    showToast("✨ 高情商接招成功！全場友善度 +9 並點亮「說好話」蓮花進度！", "emerald");
+    showToast("沉穩回應成功！全場友善度 +9，已點亮「說好話」蓮花進度。", "emerald");
     updateAllUI();
     return true;
   }
@@ -732,7 +746,7 @@ function bindIntelAndDetectiveEvents() {
       state.activeClash.resolved = true;
       if (sp) {
         if (clashKind === "contradiction" && contraObj) {
-          pinClue(sp.id, "⚡" + contraObj.label, contraObj.rebuttalText, "contradiction");
+          pinClue(sp.id, "" + contraObj.label, contraObj.rebuttalText, "contradiction");
           state.match.stats.contradictionsFound = (state.match.stats.contradictionsFound || 0) + 1;
           state.match.stats.cluesCaught = (state.match.stats.cluesCaught || 0) + 1;
           if (typeof evaluateRoleMission === "function") evaluateRoleMission();
@@ -741,8 +755,8 @@ function bindIntelAndDetectiveEvents() {
           bumpCombo("抓包邏輯矛盾");
           if (isFeast) bumpCombo("茶點連擊");
           addThreeGoodPoint("heart", "存好心抓包矛盾");
-          spawnFx(getPlayerId(), "⚡ 解鎖呈堂證供!", "#fbbf24");
-          showToast("⚡ 已抓下 " + fmtSeatNum(sp.id) + "號矛盾！輪到你時將出現「呈堂證供」金色卡牌！", "emerald");
+          spawnFx(getPlayerId(), "解鎖呈堂證供!", "#fbbf24");
+          showToast("已抓下 " + fmtSeatNum(sp.id) + "號矛盾！輪到你時將出現「呈堂證供」金色卡牌！", "emerald");
         } else {
           const noteTxt = clashKind === "fake_seer"
             ? ("剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + " 假冒明心觀察員，我才是真觀察員，今天建議大家集中投 " + fmtSeatNum(sp.id) + "號！")
@@ -751,8 +765,8 @@ function bindIntelAndDetectiveEvents() {
             : (fmtSeatNum(sp.id) + "號" + sp.name + " 剛才突然把矛頭指向我，我是清白好人，請大家比對我們兩邊的邏輯！");
           pinClue(sp.id, "反駁 " + fmtSeatNum(sp.id) + "號", noteTxt, "clash");
           bumpCombo("靜默記下反駁點");
-          spawnFx(getPlayerId(), "📌 已存進筆記!", "#38bdf8");
-          showToast("📌 已靜默存進筆記，輪到你的順位即可打出一鍵反駁！", "emerald");
+          spawnFx(getPlayerId(), "已存進筆記!", "#38bdf8");
+          showToast("已靜默存進筆記，輪到你的順位即可打出一鍵反駁！", "emerald");
         }
       }
       updateAllUI();
@@ -766,7 +780,7 @@ function bindSpeechInputEvents() {
       const inp = el("lastWordsFreeInput");
       const txt = inp ? inp.value.trim() : "";
       if (!txt) {
-        showToast("請點上方遺言卡牌，或輸入你想留下的遺言！", "warn");
+        showToast("請擇一張遺言茶牌，或寫下你想留下的線索。", "warn");
         return;
       }
       submitPlayerLastWords(txt);
@@ -893,6 +907,9 @@ function bindSpeechInputEvents() {
     el("btnCloseRephraseTray").addEventListener("click", function () {
       state.rephraseTrayPinned = false;
       if (el("rephraseChoicesTray")) el("rephraseChoicesTray").classList.add("hidden");
+      if (typeof indieFlow !== "undefined" && typeof indieFlow.syncAnimatedGuideCues === "function") {
+        indieFlow.syncAnimatedGuideCues();
+      }
     });
   }
 
@@ -945,7 +962,7 @@ function bindSpeechInputEvents() {
       val = composePlayerPitSpeechText().trim();
     }
     if (!val) {
-      showToast("請點上方座號點坑或選擇卡牌，也可直接輸入發言！", "warn");
+      showToast("請擇一張茶牌發聲，或先寫下你的陳詞。", "warn");
       return;
     }
     el("playerSpeechInput").value = val;
@@ -1312,9 +1329,9 @@ function bindNightVoteAndFourGEvents() {
           o.classList.toggle("is-active", o === btn);
         });
         const tacLabels = {
-          fake_seer: "🎭 夜間指令：狼同伴明日將跳明心觀察員帶風向！",
-          deep_stealth: "🌿 夜間指令：狼同伴明日將低調倒鉤絕不露綻！",
-          pack_push: "🔥 夜間指令：狼同伴明日發言與投票將全力配合你的目標！"
+          fake_seer: "夜間指令：狼同伴明日將跳明心觀察員帶風向！",
+          deep_stealth: "夜間指令：狼同伴明日將低調倒鉤絕不露綻！",
+          pack_push: "夜間指令：狼同伴明日發言與投票將全力配合你的目標！"
         };
         sound.tone(560, 0.08, "triangle", 0.05, 0);
         showToast(tacLabels[tac] || "已更新狼隊戰術指令", "emerald");

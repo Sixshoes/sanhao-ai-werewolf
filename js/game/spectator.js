@@ -30,10 +30,10 @@ function enableSpectatorGodView() {
   g.godRoles = { seer: null, witch: null, hunter: null, guard: null };
   if (typeof sound !== "undefined" && typeof sound.playBlessing === "function") sound.playBlessing();
   if (typeof addLog === "function") {
-    addLog({ kind: "secret", title: "👁 已開啟「上帝視角觀戰」（放棄席外押注加分，可透視全員底牌與即時懷疑熱度）", text: "" });
+    addLog({ kind: "secret", title: "已開啟「上帝視角觀戰」（放棄席外押注加分，可透視全員底牌與即時懷疑熱度）", text: "" });
   }
   if (typeof showToast === "function") {
-    showToast("👁 已啟用上帝視角實況！座位與茶席手札將即時揭曉全員底牌與 AI 懷疑度。", "sky");
+    showToast("已啟用上帝視角實況！座位與茶席手札將即時揭曉全員底牌與 AI 懷疑度。", "sky");
   }
   if (typeof updateAllUI === "function") updateAllUI();
   return true;
@@ -104,7 +104,7 @@ function toggleSpectatorWolfGuess(seatId) {
   sound.tone(selectedNow ? 640 : 420, 0.08, "triangle", 0.05, 0);
   if (typeof nudgeSeat === "function") nudgeSeat(seatId, { scale: selectedNow ? 1.12 : 0.94, vy: -3 });
   if (typeof spawnFx === "function") {
-    spawnFx(seatId, selectedNow ? "🔍 猜酸民狼" : "取消猜狼", selectedNow ? "#fb7185" : "#94a3b8");
+    spawnFx(seatId, selectedNow ? "猜酸民狼" : "取消猜狼", selectedNow ? "#fb7185" : "#94a3b8");
   }
   renderSpectatorGuessPanel();
   return true;
@@ -149,10 +149,10 @@ function assignSpectatorGodGuess(seatId) {
       if (k !== slot && g.godRoles[k] === seatId) g.godRoles[k] = null;
     });
     g.godRoles[slot] = seatId;
-    const roleTagMap = { seer: "🔮 猜明心觀察員", witch: "🍵 猜滴水奉茶師", hunter: "⚖️ 猜直心糾察長", guard: "🛡️ 猜護心守衛" };
+    const roleTagMap = { seer: "猜明心觀察員", witch: "猜滴水奉茶師", hunter: "猜直心糾察長", guard: "猜護心守衛" };
     sound.tone(680, 0.08, "triangle", 0.055, 0);
     if (typeof nudgeSeat === "function") nudgeSeat(seatId, { scale: 1.12, vy: -3 });
-    if (typeof spawnFx === "function") spawnFx(seatId, roleTagMap[slot] || "🔍 猜神職", "#fbbf24");
+    if (typeof spawnFx === "function") spawnFx(seatId, roleTagMap[slot] || "猜神職", "#fbbf24");
 
     const nextEmpty = keys.find(function (k) { return !g.godRoles[k]; });
     if (nextEmpty) g.activeRoleSlot = nextEmpty;
@@ -189,15 +189,15 @@ function lockSpectatorGuess() {
   g.lockedAtDay = (state.match && state.match.day) || 1;
   if (typeof sound !== "undefined" && typeof sound.playBlessing === "function") sound.playBlessing();
   if (typeof spawnBurst === "function") spawnBurst(getPlayerId(), ["#fbbf24", "#34d399", "#ffffff"], 20, "star");
-  if (typeof spawnFx === "function") spawnFx(getPlayerId(), "🔒 押注已鎖定!", "#fbbf24");
+  if (typeof spawnFx === "function") spawnFx(getPlayerId(), "押注已鎖定!", "#fbbf24");
   if (typeof addLog === "function") {
     addLog({
       kind: "blessing",
-      title: mode === "wolf_hunt" ? "🔒 席外猜狼押注已鎖定（終局全中另享 +8 勇氣加分）" : "🔒 席外獵神押注已鎖定（終局揭曉享 +8 勇氣加分）",
+      title: mode === "wolf_hunt" ? "席外猜狼押注已鎖定（終局全中另享 +8 勇氣加分）" : "席外獵神押注已鎖定（終局揭曉享 +8 勇氣加分）",
       text: ""
     });
   }
-  showToast("🔒 席外推理已鎖定！終局揭曉命中即享 +8 勇氣加分！", "emerald");
+  showToast("席外推理已鎖定！終局揭曉命中即享 +8 勇氣加分！", "emerald");
   renderSpectatorGuessPanel();
   return true;
 }
@@ -209,7 +209,7 @@ function evaluateSpectatorGuess() {
   const mode = getSpectatorGuessMode();
   const player = getPlayerSeat();
   if (g.godViewUnlocked) {
-    g.evaluated = { mode: mode, hasGuess: false, godViewUnlocked: true, hits: 0, total: 0, perfect: false, lockedEarly: false, bonusPts: 0, title: "👁 已切換上帝視角觀戰（無押注加分）", details: [], summaryLine: "" };
+    g.evaluated = { mode: mode, hasGuess: false, godViewUnlocked: true, hits: 0, total: 0, perfect: false, lockedEarly: false, bonusPts: 0, title: "已切換上帝視角觀戰（無押注加分）", details: [], summaryLine: "" };
     return g.evaluated;
   }
   if (player && player.alive && !g.wolfIds.length && !g.godRoles.seer && !g.godRoles.witch && !g.godRoles.hunter && !g.godRoles.guard) {
@@ -235,15 +235,15 @@ function evaluateSpectatorGuess() {
         seatId: pid,
         seatLabel: formatSpectatorSeatLabel(s),
         hit: hit,
-        statusText: hit ? "✓ 命中酸民狼" : ("✗ 實為" + actualRoleName)
+        statusText: hit ? "命中酸民狼" : ("未中・實為" + actualRoleName)
       };
     });
     const perfect = hasGuess && total > 0 && hits === total;
     const lockedEarly = Boolean(g.locked && hasGuess);
     const bonusPts = hasGuess ? ((perfect ? 30 : hits * 12) + (lockedEarly && hits > 0 ? 8 : 0)) : 0;
     const title = perfect
-      ? (total === 2 ? "🏆 席外神探・全中雙狼" : ("🏆 席外神探・全中 " + total + " 狼"))
-      : (hits > 0 ? ("🔎 席外觀察家・命中 " + hits + "/" + total + " 狼") : "🍵 席外品茗客・差一點就猜中");
+      ? (total === 2 ? "席外神探・全中雙狼" : ("席外神探・全中 " + total + " 狼"))
+      : (hits > 0 ? ("席外觀察家・命中 " + hits + "/" + total + " 狼") : "席外品茗客・差一點就猜中");
     const wolfSummary = actualWolves.map(formatSpectatorSeatLabel).join("、");
     const res = {
       mode: "wolf_hunt",
@@ -283,7 +283,7 @@ function evaluateSpectatorGuess() {
       hit: hit,
       statusText: !pickedId
         ? ("未猜（實為 " + formatSpectatorSeatLabel(actualSeat) + "）")
-        : (hit ? "✓ 神職命中" : ("✗ 實為 " + formatSpectatorSeatLabel(actualSeat)))
+        : (hit ? "神職命中" : ("未中・實為 " + formatSpectatorSeatLabel(actualSeat)))
     });
   });
 
@@ -292,8 +292,8 @@ function evaluateSpectatorGuess() {
   const lockedEarly = Boolean(g.locked && hasGuess);
   const bonusPts = hasGuess ? ((perfect ? 32 : hits * 12) + (lockedEarly && hits > 0 ? 8 : 0)) : 0;
   const title = perfect
-    ? "🎯 暗影洞悉者・神職全中"
-    : (hits > 0 ? ("🕵️ 席外獵神手・命中 " + hits + "/" + total + " 神職") : "🌙 迷霧旁觀者・好人藏太深");
+    ? "暗影洞悉者・神職全中"
+    : (hits > 0 ? ("席外獵神手・命中 " + hits + "/" + total + " 神職") : "迷霧旁觀者・好人藏太深");
   const res = {
     mode: "god_hunt",
     hasGuess: hasGuess,
@@ -504,7 +504,7 @@ function toggleSpectatorFastForward() {
     }
     state.autoPlay = true;
     if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
-    showToast("⚡ 已開啟 2× 觀戰快進，自動加速推進至結局！", "emerald");
+    showToast("已開啟 2× 觀戰快進，自動加速推進至結局！", "emerald");
     if (state.match && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH")) {
       if (state.typewriter && state.typewriter.active && typeof completeCurrentTypewriter === "function") {
         completeCurrentTypewriter(true);
@@ -559,7 +559,7 @@ function renderSpectatorGuessPanel() {
   const wNeed = (state.match && state.match.seats)
     ? Math.max(2, state.match.seats.filter(function (s) { return s.role === "wolf"; }).length)
     : (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2);
-  badge.textContent = mode === "god_hunt" ? "🎯 席外獵神挑戰・揪出真神職" : ("🔍 席外猜狼挑戰・鎖定 " + wNeed + " 名酸民狼");
+  badge.textContent = mode === "god_hunt" ? "席外獵神挑戰・揪出真神職" : ("席外猜狼挑戰・鎖定 " + wNeed + " 名酸民狼");
   const progress = document.createElement("span");
   progress.className = "text-[10px] text-slate-400 shrink-0";
   if (mode === "wolf_hunt") {
@@ -581,7 +581,7 @@ function renderSpectatorGuessPanel() {
   ffBtn.type = "button";
   ffBtn.setAttribute("data-spec-ff", "1");
   ffBtn.className = (ffActive ? "cta-celadon" : "cta-ink") + " text-[10px] px-2 py-0.5 shrink-0";
-  ffBtn.textContent = ffActive ? "⚡ 2×快進:開" : "⚡ 2×快進";
+  ffBtn.textContent = ffActive ? "2×快進:開" : "2×快進";
   ffBtn.title = "觀戰時加速推進 AI 發言與開票節奏";
   ffBtn.addEventListener("click", function () { toggleSpectatorFastForward(); });
   actionsWrap.appendChild(ffBtn);
@@ -590,7 +590,7 @@ function renderSpectatorGuessPanel() {
   gvBtn.id = "btnEnableSpectatorGodView";
   gvBtn.type = "button";
   gvBtn.className = (g.godViewUnlocked ? "cta-celadon" : "cta-ink") + " text-[10px] px-2 py-0.5 shrink-0";
-  gvBtn.textContent = g.godViewUnlocked ? "👁 上帝視角:開" : "👁 開上帝視角";
+  gvBtn.textContent = g.godViewUnlocked ? "上帝視角:開" : "開上帝視角";
   gvBtn.title = "放棄押注加分，直接觀看全員底牌與即時 AI 懷疑熱度";
   gvBtn.addEventListener("click", function () { enableSpectatorGodView(); });
   actionsWrap.appendChild(gvBtn);
@@ -603,14 +603,14 @@ function renderSpectatorGuessPanel() {
   } else if (g.locked) {
     const lockedPill = document.createElement("span");
     lockedPill.className = "text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 shrink-0";
-    lockedPill.textContent = "✓ 第" + (g.lockedAtDay || 1) + "輪已鎖定 (+8分)";
+    lockedPill.textContent = "第" + (g.lockedAtDay || 1) + "輪已鎖定 (+8分)";
     actionsWrap.appendChild(lockedPill);
   } else {
     const lockBtn = document.createElement("button");
     lockBtn.id = "btnLockSpectatorGuess";
     lockBtn.type = "button";
     lockBtn.className = "cta-brass text-[10px] px-2.5 py-0.5 shrink-0";
-    lockBtn.textContent = "🔒 鎖定押注 (+8分)";
+    lockBtn.textContent = "鎖定押注 (+8分)";
     lockBtn.addEventListener("click", function () { lockSpectatorGuess(); });
     actionsWrap.appendChild(lockBtn);
   }
@@ -639,7 +639,7 @@ function renderSpectatorGuessPanel() {
   }
 
   // 2. Role Slots (Only in god_hunt mode)
-  const roleShortLabels = { seer: "🔮 觀察員", witch: "🍵 奉茶師", hunter: "⚖️ 糾察長", guard: "🛡️ 守衛" };
+  const roleShortLabels = { seer: "觀察員", witch: "奉茶師", hunter: "糾察長", guard: "守衛" };
   if (mode === "god_hunt") {
     const keys = getActiveGodRoleKeys();
     if (keys.indexOf(g.activeRoleSlot) === -1) g.activeRoleSlot = keys[0];
@@ -730,7 +730,7 @@ function renderGameOverGuessSummary() {
     headerGv.className = "flex items-center justify-between gap-2";
     const tGv = document.createElement("span");
     tGv.className = "font-serif-craft text-xs font-bold text-sky-300";
-    tGv.textContent = "👁 本局已切換上帝視角觀戰（放棄席外押注加分）";
+    tGv.textContent = "本局已切換上帝視角觀戰（放棄席外押注加分）";
     const sGv = document.createElement("span");
     sGv.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300";
     sGv.textContent = "評級 +0 分";

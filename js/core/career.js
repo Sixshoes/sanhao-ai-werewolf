@@ -355,6 +355,299 @@ function buildAiPostMatchCoachInsights() {
   return insights;
 }
 
+function buildMatchTurningPoints() {
+  const m = state.match;
+  if (!m || !m.started) return [];
+  const pid = getPlayerId();
+  const nameOf = function (id) {
+    const s = getSeat(id);
+    if (!s) return id + "號";
+    return fmtSeatNum(s.id) + "號" + (s.id === pid ? "你" : s.name);
+  };
+  const points = [];
+  const usedKeys = {};
+  const pushPoint = function (key, stage, title, detail, tone) {
+    if (!key || usedKeys[key] || points.length >= 3) return;
+    usedKeys[key] = true;
+    points.push({ stage: stage, title: title, detail: detail, tone: tone || "gold" });
+  };
+
+  // 1. Pivotal Night Events (Purify Wolf / Self-Knife / Guard Block / Witch Save / First Casualty)
+  const nightArc = Array.isArray(m.nightArchive) ? m.nightArchive : [];
+  nightArc.forEach(function (na) {
+    if (!na || points.length >= 2) return;
+    const dayNum = na.day || 1;
+    const poisonSeat = na.witchPoisonTarget ? getSeat(na.witchPoisonTarget) : null;
+    const wolfTargetSeat = na.wolfTarget ? getSeat(na.wolfTarget) : null;
+    if (poisonSeat && poisonSeat.team === "wolf") {
+      pushPoint(
+        "night_purify_" + dayNum,
+        "第 " + dayNum + " 夜",
+        "清心茶命中酸民狼",
+        "滴水奉茶師以清心醒神茶請離酸民狼 " + nameOf(poisonSeat.id) + "，直接改寫陣營人數。",
+        "jade"
+      );
+    } else if (wolfTargetSeat && wolfTargetSeat.team === "wolf") {
+      pushPoint(
+        "night_selfknife_" + dayNum,
+        "第 " + dayNum + " 夜",
+        "酸民狼夜裡自刀",
+        nameOf(wolfTargetSeat.id) + " 採自刀策略博取奉茶師信任，干擾好人判斷。",
+        "cinnabar"
+      );
+    } else if (na.guardTarget && na.wolfTarget && na.guardTarget === na.wolfTarget && !na.witchSaved) {
+      pushPoint(
+        "night_guard_" + dayNum,
+        "第 " + dayNum + " 夜",
+        "護心結界擋下夜襲",
+        "護心守衛提前護住 " + nameOf(na.wolfTarget) + "，成功攔下夜襲造就平安夜。",
+        "jade"
+      );
+    } else if (na.witchSaved && na.wolfTarget) {
+      pushPoint(
+        "night_save_" + dayNum,
+        "第 " + dayNum + " 夜",
+        "暖心茶護回夥伴",
+        "滴水奉茶師於夜裡端出暖心回甘茶，護回遭襲的 " + nameOf(na.wolfTarget) + "。",
+        "jade"
+      );
+    }
+  });
+  if (points.length === 0 && nightArc.length > 0) {
+    const firstCas = nightArc.find(function (na) { return na && Array.isArray(na.casualties) && na.casualties.length > 0; });
+    if (firstCas) {
+      pushPoint(
+        "night_cas_" + (firstCas.day || 1),
+        "第 " + (firstCas.day || 1) + " 夜",
+        "暗夜首起離席",
+        firstCas.casualties.map(function (c) { return nameOf(c && typeof c === "object" ? c.id : c); }).join("、") + " 於夜裡離席，全場資訊開始收束。",
+        "gold"
+      );
+    }
+  }
+
+  // 2. Day Reasoning / Interjection / Contradiction / Sheriff Dual-Seer / Self-Explode
+  const interjs = Array.isArray(m.publicInterjections) ? m.publicInterjections : [];
+  const contras = Array.isArray(m.detectedContradictions) ? m.detectedContradictions : [];
+  const pinContra = (m.pinnedClues || []).find(function (c) { return c && c.kind === "contradiction"; });
+  if (interjs.length > 0) {
+    const it = interjs[interjs.length - 1];
+    pushPoint(
+      "day_interject",
+      "第 " + (it.day || m.day || 1) + " 日",
+      "舉杯追問咬死立場",
+      "當場舉杯追問 " + nameOf(it.targetId) + "，逼出即時回防並留存公開對照紀錄。",
+      "gold"
+    );
+  } else if (contras.length > 0) {
+    const c0 = contras[0];
+    pushPoint(
+      "day_contra",
+      "第 " + (c0.day || m.day || 1) + " 日",
+      "抓出前後發言矛盾",
+      nameOf(c0.speakerId) + " 出現邏輯前後不一，成為全席集火查核的突破口。",
+      "gold"
+    );
+  } else if (pinContra) {
+    pushPoint(
+      "day_pin_contra",
+      "第 1 日",
+      "言票背離留痕",
+      pinContra.summary || (nameOf(pinContra.seatId) + " 出現口頭點名與實際投票不一致。"),
+      "gold"
+    );
+  } else if (m.sheriffVoteRecord && Array.isArray(m.sheriffVoteRecord.seerClaimIds) && m.sheriffVoteRecord.seerClaimIds.length >= 2) {
+    pushPoint(
+      "day_dual_seer",
+      "第 1 日上警",
+      "雙明心觀察員對跳",
+      m.sheriffVoteRecord.seerClaimIds.map(nameOf).join(" 與 ") + " 同台競選警徽，由 " + nameOf(m.sheriffVoteRecord.winnerId) + " 掌歸票權。",
+      "gold"
+    );
+  } else if (m.wolfExplodedToday) {
+    pushPoint(
+      "day_explode",
+      "第 " + (m.day || 1) + " 日",
+      "酸民狼自爆搶節奏",
+      "酸民狼亮牌離席沒收當日剩餘流程，強行切入黑夜打斷好人歸票。",
+      "cinnabar"
+    );
+  }
+
+  // 3. Decisive Vote / Four-G Protection / Hunter Shot
+  const vHist = Array.isArray(m.voteHistory) ? m.voteHistory : [];
+  const wolfOutRounds = vHist.filter(function (vh) {
+    const s = vh && vh.outId ? getSeat(vh.outId) : null;
+    return Boolean(s && s.team === "wolf");
+  });
+  const goodOutRounds = vHist.filter(function (vh) {
+    const s = vh && vh.outId ? getSeat(vh.outId) : null;
+    return Boolean(s && s.team === "good");
+  });
+  if (wolfOutRounds.length > 0) {
+    const lastW = wolfOutRounds[wolfOutRounds.length - 1];
+    const withShield = Boolean(m.fourGivingsUsed && m.fourGivingsUsed.confidence);
+    pushPoint(
+      "vote_wolf_" + (lastW.day || 1),
+      "第 " + (lastW.day || 1) + " 日公投",
+      "公投請離酸民狼",
+      "全席票型鎖定酸民狼 " + nameOf(lastW.outId) + (withShield ? "，搭配「奉茶護席」穩住票數" : "") + "，決定勝負走向。",
+      "jade"
+    );
+  } else if (m.lastHunterShot && m.lastHunterShot.hunterId && m.lastHunterShot.targetId) {
+    pushPoint(
+      "hunter_shot",
+      "第 " + (m.day || 1) + " 日共鳴",
+      "離席反擊改寫比例",
+      nameOf(m.lastHunterShot.hunterId) + " 帶走 " + nameOf(m.lastHunterShot.targetId) + "，直接牽動終局人數。",
+      "cinnabar"
+    );
+  } else if (m.fourGivingsUsed && m.fourGivingsUsed.confidence) {
+    pushPoint(
+      "fourg_conf",
+      "第 " + (m.day || 1) + " 日四給",
+      "奉茶護席擋下關鍵票",
+      "施展「給信心・奉茶護席」替被質疑夥伴擋下 1 票，避免好人陣營錯投。",
+      "jade"
+    );
+  } else if (goodOutRounds.length > 0) {
+    const lastG = goodOutRounds[goodOutRounds.length - 1];
+    pushPoint(
+      "vote_good_" + (lastG.day || 1),
+      "第 " + (lastG.day || 1) + " 日公投",
+      "錯投好夥伴逼近聽牌",
+      "公投誤將好人 " + nameOf(lastG.outId) + " 請離，使酸民狼趁勢縮短勝場距離。",
+      "cinnabar"
+    );
+  } else if (m.stats && (m.stats.elderExempted || 0) > 0) {
+    pushPoint(
+      "elder_exempt",
+      "第 " + (m.day || 1) + " 日公投",
+      "清心長老亮牌豁免",
+      "清心長老觸發豁免擋下公投出局，替好人多爭取一輪查證空間。",
+      "jade"
+    );
+  }
+
+  // Ensure at least 1–3 meaningful cards even on early finish
+  if (points.length < 3 && m.winReason) {
+    pushPoint(
+      "finale_summary",
+      "終局結算",
+      m.winner === "good" ? "好人收束勝局" : (m.winner === "wolf" ? "酸民狼鎖定勝局" : "提前揭曉底牌"),
+      m.winReason,
+      m.winner === "good" ? "jade" : (m.winner === "wolf" ? "cinnabar" : "gold")
+    );
+  }
+
+  return points.slice(0, 3);
+}
+
+function buildFullSeatTruthRows() {
+  const m = state.match;
+  if (!m || !Array.isArray(m.seats)) return [];
+  const pid = getPlayerId();
+  const allSpeeches = Array.isArray(m.allSpeechEvents) ? m.allSpeechEvents : [];
+  const nightArc = Array.isArray(m.nightArchive) ? m.nightArchive : [];
+  const vHist = Array.isArray(m.voteHistory) ? m.voteHistory : [];
+
+  const roleNameOfKey = function (rKey) {
+    if (rKey && typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[rKey]) return ROLE_DEFS[rKey].name;
+    return rKey || "茶客";
+  };
+
+  return m.seats.map(function (s) {
+    const trueRoleKey = s.isWolfKing ? "wolf_king" : (s.isElder ? "elder" : s.role);
+    const trueRoleName = roleNameOfKey(trueRoleKey);
+
+    // Public claim / stance
+    const seatSpeeches = allSpeeches.filter(function (ev) { return ev && ev.speakerId === s.id; });
+    const latestSp = seatSpeeches.length > 0 ? seatSpeeches[seatSpeeches.length - 1] : null;
+    const stanceParts = [];
+    if (s.claimedRole) {
+      const claimNm = roleNameOfKey(s.claimedRole);
+      const isBluff = s.team === "wolf" && s.claimedRole !== "wolf" && s.claimedRole !== "wolf_king";
+      stanceParts.push("亮「" + claimNm + "」" + (isBluff ? "（假跳）" : ""));
+    }
+    if (latestSp) {
+      if (latestSp.standWithSeerId && latestSp.standWithSeerId !== s.id) {
+        stanceParts.push("站邊 " + latestSp.standWithSeerId + "號");
+      }
+      if (latestSp.accuseId && latestSp.accuseId !== s.id) {
+        stanceParts.push("點疑 " + latestSp.accuseId + "號");
+      } else if (latestSp.vouchId && latestSp.vouchId !== s.id && !s.claimedRole) {
+        stanceParts.push("保 " + latestSp.vouchId + "號");
+      }
+    }
+    const publicStance = stanceParts.length > 0 ? stanceParts.join("・") : "低調聽盤";
+
+    // Key night action + vote accuracy
+    const actParts = [];
+    if (s.role === "seer" && Array.isArray(s.checkedHistory) && s.checkedHistory.length > 0) {
+      const chkTxt = s.checkedHistory.slice(-2).map(function (c) {
+        return c.targetId + "號(" + (c.isWolf ? "狼" : "好") + ")";
+      }).join("、");
+      actParts.push("查驗 " + chkTxt);
+    }
+    if (s.role === "witch") {
+      if (s.savedSeatId) actParts.push("暖茶救 " + s.savedSeatId + "號");
+      if (s.purifiedSeatId) actParts.push("清心請離 " + s.purifiedSeatId + "號");
+    }
+    if (s.role === "guard") {
+      const blocks = nightArc.filter(function (na) { return na && na.guardTarget && na.guardTarget === na.wolfTarget && !na.witchSaved; });
+      if (blocks.length > 0) {
+        actParts.push("守 " + blocks[0].guardTarget + "號擋襲");
+      } else {
+        const guarded = nightArc.map(function (na) { return na && na.guardTarget; }).filter(Boolean);
+        if (guarded.length > 0) actParts.push("結界守 " + guarded[guarded.length - 1] + "號");
+      }
+    }
+    if (m.lastHunterShot && m.lastHunterShot.hunterId === s.id && m.lastHunterShot.targetId) {
+      actParts.push("帶走 " + m.lastHunterShot.targetId + "號");
+    }
+
+    let totalVotes = 0;
+    let wolfHits = 0;
+    let abstains = 0;
+    const votedTargets = [];
+    vHist.forEach(function (vh) {
+      if (!vh || !Array.isArray(vh.ballots)) return;
+      const myB = vh.ballots.find(function (b) { return b && b.voterId === s.id; });
+      if (!myB) return;
+      if (!myB.targetId) {
+        abstains += 1;
+        return;
+      }
+      totalVotes += 1;
+      votedTargets.push(myB.targetId + "號");
+      const tSeat = getSeat(myB.targetId);
+      if (tSeat && tSeat.team === "wolf") wolfHits += 1;
+    });
+    if (totalVotes > 0) {
+      if (s.team === "good") {
+        actParts.push("公投中狼 " + wolfHits + "/" + totalVotes + "（投 " + votedTargets.join("→") + "）");
+      } else {
+        actParts.push("公投推 " + votedTargets.join("→"));
+      }
+    } else if (abstains > 0) {
+      actParts.push("公投棄票 " + abstains + " 次");
+    }
+
+    return {
+      id: s.id,
+      seatLabel: fmtSeatNum(s.id) + "號 " + (s.id === pid ? "你" : s.name),
+      isPlayer: s.id === pid,
+      isSheriff: m.sheriffSeatId === s.id,
+      team: s.team,
+      roleName: trueRoleName,
+      publicStance: publicStance,
+      actionRecord: actParts.length > 0 ? actParts.join("｜") : "無特殊行動紀錄",
+      alive: Boolean(s.alive),
+      statusText: s.alive ? "存活" : (s.outReason || "已離席")
+    };
+  });
+}
+
 function buildMatchReplayReport() {
   const m = state.match;
   const diffLabel = state.aiDifficulty === "pro" ? "凹嗚高手局" : (state.aiDifficulty === "easy" ? "新手友善" : "標準推理");
@@ -410,6 +703,13 @@ function buildMatchReplayReport() {
     "  角色密令：" + (misReport ? (misReport.title + "（" + (misReport.completed ? "已完成 +15分" : misReport.progressText) + "）") : "無"),
     "  邏輯破防：" + (st.logicBreaksLanded || 0) + " 次｜靜心觀微：" + (st.microInspectsUsed || 0) + " 次｜矛盾抓包：" + (st.contradictionsFound || 0) + " 次"
   );
+  const turningPts = typeof buildMatchTurningPoints === "function" ? buildMatchTurningPoints() : [];
+  if (turningPts.length > 0) {
+    lines.push("", "■ 本局三大勝負轉折軸：");
+    turningPts.forEach(function (tp, idx) {
+      lines.push("  " + (idx + 1) + ". [" + tp.stage + "] " + tp.title + "：" + tp.detail);
+    });
+  }
   const coachList = buildAiPostMatchCoachInsights();
   if (coachList.length > 0) {
     lines.push("", "■ 本局茶席覆盤重點：");

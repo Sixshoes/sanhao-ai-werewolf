@@ -382,7 +382,7 @@ const stage3dTextures = {
     b.height = size;
     const bCtx = b.getContext("2d");
 
-    ctx.fillStyle = "#263143";
+    ctx.fillStyle = "#262320";
     ctx.fillRect(0, 0, size, size);
     bCtx.fillStyle = "#505050";
     bCtx.fillRect(0, 0, size, size);
@@ -393,8 +393,8 @@ const stage3dTextures = {
         const offset = (row % 2) * (tile * 0.5);
         const x = (col * tile + offset) % size;
         const y = row * tile;
-        const shade = ((row * 7 + col * 13) % 18) - 9;
-        ctx.fillStyle = "rgb(" + (44 + shade) + "," + (54 + shade) + "," + (70 + shade) + ")";
+        const shade = ((row * 7 + col * 13) % 16) - 8;
+        ctx.fillStyle = "rgb(" + (64 + shade) + "," + (61 + shade) + "," + (56 + shade) + ")";
         ctx.fillRect(x + 2, y + 2, tile - 4, tile - 4);
         bCtx.fillStyle = "rgb(" + (165 + shade * 2) + "," + (165 + shade * 2) + "," + (165 + shade * 2) + ")";
         bCtx.fillRect(x + 2, y + 2, tile - 4, tile - 4);
@@ -404,7 +404,7 @@ const stage3dTextures = {
     for (let i = 0; i < 900; i++) {
       const px = (i * 193) % size;
       const py = (i * 137) % size;
-      ctx.fillStyle = i % 2 === 0 ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.08)";
+      ctx.fillStyle = i % 2 === 0 ? "rgba(255,246,230,0.035)" : "rgba(0,0,0,0.075)";
       ctx.fillRect(px, py, 2, 2);
     }
 
@@ -434,50 +434,53 @@ const stage3dTextures = {
     ctx.save();
     if (typeof ctx.scale === "function") ctx.scale(2, 2);
 
-    const grad = ctx.createRadialGradient(baseSize / 2, baseSize / 2, 20, baseSize / 2, baseSize / 2, baseSize / 2);
-    grad.addColorStop(0, "#1c2d4a");
-    grad.addColorStop(0.62, "#132038");
-    grad.addColorStop(1, "#0d1629");
+    // Deep Celadon-Obsidian Silk Brocade (Museum-Grade Carved Tea Tabletop, Baked Once at Startup)
+    const grad = ctx.createRadialGradient(baseSize / 2, baseSize / 2, 18, baseSize / 2, baseSize / 2, baseSize / 2);
+    grad.addColorStop(0, "#1c2e30");
+    grad.addColorStop(0.54, "#132024");
+    grad.addColorStop(0.84, "#0d1619");
+    grad.addColorStop(1, "#090f12");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, baseSize, baseSize);
 
-    // Fine silk-felt weave speckles
+    // Subtle woven silk cross-hatch sheen
     for (let i = 0; i < 2400; i++) {
       const sx = (i * 173) % baseSize;
       const sy = (i * 251) % baseSize;
-      ctx.fillStyle = i % 2 === 0 ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.045)";
-      ctx.fillRect(sx, sy, 1.5, 1);
+      ctx.fillStyle = i % 2 === 0 ? "rgba(232, 200, 134, 0.024)" : "rgba(0, 0, 0, 0.055)";
+      ctx.fillRect(sx, sy, 2, 1);
     }
 
-    // High-Res Sacred Geometric Golden Inlaid Compass Mandala
+    // Refined Antique-Gold Lotus Inlaid Mandala
     ctx.save();
     ctx.translate(baseSize / 2, baseSize / 2);
-    ctx.strokeStyle = "rgba(245, 185, 66, 0.56)";
-    ctx.lineWidth = 2.6;
+    ctx.strokeStyle = "rgba(222, 182, 108, 0.44)";
+    ctx.lineWidth = 2.0;
     ctx.beginPath();
-    ctx.arc(0, 0, 214, 0, Math.PI * 2);
+    ctx.arc(0, 0, 218, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.strokeStyle = "rgba(245, 185, 66, 0.34)";
-    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = "rgba(222, 182, 108, 0.24)";
+    ctx.lineWidth = 1.1;
     ctx.beginPath();
-    ctx.arc(0, 0, 204, 0, Math.PI * 2);
-    ctx.arc(0, 0, 165, 0, Math.PI * 2);
+    ctx.arc(0, 0, 208, 0, Math.PI * 2);
+    ctx.arc(0, 0, 168, 0, Math.PI * 2);
+    ctx.arc(0, 0, 62, 0, Math.PI * 2);
     ctx.stroke();
 
     for (let i = 0; i < 8; i++) {
       ctx.save();
       ctx.rotate((i * Math.PI) / 4);
       ctx.beginPath();
-      ctx.moveTo(0, -56);
-      ctx.quadraticCurveTo(32, -110, 0, -162);
-      ctx.quadraticCurveTo(-32, -110, 0, -56);
-      ctx.strokeStyle = "rgba(251, 191, 36, 0.42)";
-      ctx.lineWidth = 1.6;
+      ctx.moveTo(0, -64);
+      ctx.quadraticCurveTo(28, -114, 0, -166);
+      ctx.quadraticCurveTo(-28, -114, 0, -64);
+      ctx.strokeStyle = "rgba(226, 188, 112, 0.30)";
+      ctx.lineWidth = 1.3;
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(0, -184, 3.2, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(253, 230, 138, 0.55)";
+      ctx.arc(0, -188, 2.4, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(238, 204, 134, 0.46)";
       ctx.fill();
       ctx.restore();
     }

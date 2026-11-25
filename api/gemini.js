@@ -186,11 +186,17 @@ function resolveSafeModel(requestedModel, tierHint, nowMs) {
   return chosen;
 }
 
-async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeoutMs) {
+function clampTemperature(reqTemp) {
+  const num = Number(reqTemp);
+  const base = (Number.isFinite(num) && num > 0) ? num : 0.65;
+  return Math.round(Math.max(0.45, Math.min(0.85, base)) * 100) / 100;
+}
+
+async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeoutMs, temperature) {
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
   const isGen3 = modelId.indexOf("gemini-3") === 0;
   const genCfg = {
-    temperature: 0.78,
+    temperature: clampTemperature(temperature),
     maxOutputTokens: isGen3 ? (jsonMode ? 3072 : 1536) : (jsonMode ? 1280 : 768)
   };
   if (isGen3) {
@@ -311,10 +317,11 @@ async function handler(req, res) {
   }
   const promptText = rawPrompt.slice(0, MAX_PROMPT_CHARS);
   const jsonMode = Boolean(body.jsonMode);
+  const safeTemp = clampTemperature(body.temperature);
   const tierHint = body.tier === "lite" ? "lite" : "standard";
   const primaryModel = resolveSafeModel(body.model, tierHint);
 
-  const first = await callUpstreamGemini(apiKey, primaryModel, promptText, jsonMode, 8500);
+  const first = await callUpstreamGemini(apiKey, primaryModel, promptText, jsonMode, 8500, safeTemp);
   if (first.ok && first.text) {
     return sendJson(res, 200, { ok: true, model: primaryModel, text: first.text });
   }
@@ -325,7 +332,7 @@ async function handler(req, res) {
   const canFallback = primaryModel !== "gemini-2.5-flash" &&
     (first.status === 400 || first.status === 404 || first.status === 429 || first.status === 500 || first.status === 502 || first.status === 503 || first.status === 504 || !first.text);
   if (canFallback) {
-    const fb = await callUpstreamGemini(apiKey, "gemini-2.5-flash", promptText, jsonMode, 7500);
+    const fb = await callUpstreamGemini(apiKey, "gemini-2.5-flash", promptText, jsonMode, 7500, safeTemp);
     if (fb.ok && fb.text) {
       return sendJson(res, 200, { ok: true, model: "gemini-2.5-flash", text: fb.text });
     }
@@ -340,6 +347,7 @@ handler._isAllowedOrigin = isAllowedOrigin;
 handler._checkRateLimit = checkRateLimit;
 handler._resolveSafeModel = resolveSafeModel;
 handler._extractSessionId = extractSessionId;
+handler._clampTemperature = clampTemperature;
 handler._markBadModel = function (modelId, nowMs) {
   _badModelCooldown.set(modelId, (typeof nowMs === "number" ? nowMs : Date.now()) + BAD_MODEL_COOLDOWN_MS);
 };

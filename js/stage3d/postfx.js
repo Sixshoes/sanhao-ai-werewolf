@@ -63,22 +63,27 @@ function build3DPostFx(renderer, scene, camera, opts) {
     const renderPass = new THREE.RenderPass(scene, camera);
     composer.addPass(renderPass);
 
-    const bloomW = Math.min(640, Math.max(128, Math.floor(w * 0.45)));
-    const bloomH = Math.min(360, Math.max(128, Math.floor(h * 0.45)));
-    const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(bloomW, bloomH), 0.22, 0.42, 1.10);
-    composer.addPass(bloomPass);
+    // Performance Win: Bypass multi-pass UnrealBloomPass on iGPU / Eco lightweight profiles
+    // while preserving the single-pass ACES Filmic + FXAA + Split-Tone color grading pass!
+    let bloomPass = null;
+    if (!preferLightweight) {
+      const bloomW = Math.min(576, Math.max(128, Math.floor(w * 0.40)));
+      const bloomH = Math.min(324, Math.max(128, Math.floor(h * 0.40)));
+      bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(bloomW, bloomH), 0.18, 0.40, 1.18);
+      composer.addPass(bloomPass);
+    }
 
     const gradeShader = {
       uniforms: {
         tDiffuse: { value: null },
         uExposure: { value: 1.00 },
         uExposureBoost: { value: 0.0 },
-        uContrast: { value: 1.05 },
-        uVignette: { value: 0.14 },
-        uSaturation: { value: 1.14 },
-        uWarmTint: { value: new THREE.Vector3(1.02, 1.01, 0.98) },
-        uShadowTint: { value: new THREE.Vector3(0.96, 0.98, 1.04) },
-        uShadowLift: { value: new THREE.Vector3(0.006, 0.006, 0.011) },
+        uContrast: { value: 1.06 },
+        uVignette: { value: 0.16 },
+        uSaturation: { value: 1.07 },
+        uWarmTint: { value: new THREE.Vector3(1.03, 1.00, 0.96) },
+        uShadowTint: { value: new THREE.Vector3(0.95, 0.98, 1.04) },
+        uShadowLift: { value: new THREE.Vector3(0.005, 0.005, 0.009) },
         uTexelSize: { value: new THREE.Vector2(1 / w, 1 / h) },
         uUseFxaa: { value: isMsaa ? 0.0 : 1.0 },
         uTime: { value: 0.0 }
@@ -156,10 +161,12 @@ function build3DPostFx(renderer, scene, camera, opts) {
         const effDpr = dpr || 1;
         if (typeof composer.setPixelRatio === "function") composer.setPixelRatio(effDpr);
         composer.setSize(width, height);
-        bloomPass.setSize(
-          Math.min(640, Math.max(128, Math.floor(width * 0.45))),
-          Math.min(360, Math.max(128, Math.floor(height * 0.45)))
-        );
+        if (bloomPass) {
+          bloomPass.setSize(
+            Math.min(576, Math.max(128, Math.floor(width * 0.40))),
+            Math.min(324, Math.max(128, Math.floor(height * 0.40)))
+          );
+        }
         if (gradePass.uniforms && gradePass.uniforms.uTexelSize && gradePass.uniforms.uTexelSize.value) {
           gradePass.uniforms.uTexelSize.value.set(1 / Math.max(1, width * effDpr), 1 / Math.max(1, height * effDpr));
         }
@@ -214,8 +221,10 @@ function build3DPostFx(renderer, scene, camera, opts) {
         }
 
         const dMood = typeof dampFactor3D === "function" ? dampFactor3D(0.08, (f && f.dt60) || 1) : 0.08;
-        bloomPass.strength += ((tStrength + harmBoost) - bloomPass.strength) * dMood;
-        bloomPass.threshold += (tThresh - bloomPass.threshold) * dMood;
+        if (bloomPass) {
+          bloomPass.strength += ((tStrength + harmBoost) - bloomPass.strength) * dMood;
+          bloomPass.threshold += (tThresh - bloomPass.threshold) * dMood;
+        }
         const u = gradePass.uniforms;
         u.uExposure.value += (tExp - u.uExposure.value) * dMood;
         u.uContrast.value += (tContrast - u.uContrast.value) * dMood;

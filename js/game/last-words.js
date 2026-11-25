@@ -302,7 +302,7 @@ function advanceLastWordsQueue() {
     state.match.phase = "LAST_WORDS_SPEECH";
     setSeatBubble(seat.id, lwObj.text, lwObj.isWolf ? "suspect" : "trust", 4800);
     if (lwObj.claimRole === "seer") {
-      triggerCutIn("🕯️ 明心觀察員" + lwLabel + "！", fmtSeatNum(seat.id) + "號 " + seat.name + " 臨走前公開查驗真相！", "gold");
+      triggerCutIn("明心觀察員" + lwLabel + "！", fmtSeatNum(seat.id) + "號 " + seat.name + " 臨走前公開查驗真相！", "gold");
     }
     addLog({
       kind: "speech",
@@ -376,8 +376,8 @@ function preparePlayerLastWordsPanel(mode) {
   const isFirst = (mode === "first_night");
   if (el("lastWordsHeading")) {
     el("lastWordsHeading").textContent = isFirst
-      ? ("🕯️ 首夜遺言・" + playerNumTag() + " 你（離席前交接線索）")
-      : ("🕯️ 公投遺言・" + playerNumTag() + " 你（發表最後推理）");
+      ? ("首夜遺言・" + playerNumTag() + " 你（離席前交接線索）")
+      : ("公投遺言・" + playerNumTag() + " 你（發表最後推理）");
   }
   if (el("lastWordsSubHint")) {
     el("lastWordsSubHint").textContent = "依《凹嗚狼人殺》規則，你的遺言會被全場 AI 記住並影響後續站邊！";

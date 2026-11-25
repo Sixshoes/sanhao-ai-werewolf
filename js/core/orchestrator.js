@@ -11,56 +11,56 @@ const TEA_DIRECTOR_EVENTS = [
   {
     id: "boba_truce",
     shortTitle: "學長請喝冬瓜青",
-    title: "🍵 清茗插播・學長請喝冬瓜青",
+    title: "清茗插播・學長請喝冬瓜青",
     desc: "暖飲撫慰人心！本輪溫和陳詞或潤飾好話說服力額外提升，友善度雙倍回升。",
     badge: "說服+25%"
   },
   {
     id: "anonymous_wall",
     shortTitle: "匿名牆截圖流傳",
-    title: "📱 清茗插播・書院匿名牆截圖流傳",
+    title: "清茗插播・書院匿名牆截圖流傳",
     desc: "匿名謠言讓心虛者心跳加速（酸民狼心虛值 +10）；抓包酸言或記筆記額外連擊 +1！",
     badge: "破綻加倍"
   },
   {
     id: "mountain_mist",
     shortTitle: "林美山起霧求真",
-    title: "🌫️ 清茗插播・林美山嵐起霧了",
+    title: "清茗插播・林美山嵐起霧了",
     desc: "本輪若合力把全場友善度推上 80，清茗將搖響銅鈴吹散山嵐，並免費點亮 1 瓣三好蓮花！",
     badge: "友善80賞蓮"
   },
   {
     id: "tea_master_blessing",
     shortTitle: "清茗奉茶公道席",
-    title: "🏮 清茗插播・奉茶見證公道席",
+    title: "清茗插播・奉茶見證公道席",
     desc: "清茗親臨監票！本輪公投若投中真正的酸民狼，全場友善度額外 +12 並全席喝采！",
     badge: "投狼+12友善"
   },
   {
     id: "truth_lantern",
     shortTitle: "照妖古燈觀微",
-    title: "🏮 清茗插播・林美山點亮照妖古燈",
+    title: "清茗插播・林美山點亮照妖古燈",
     desc: "古燈破迷霧！今日「靜心觀微」可用次數提升為 2 次，且必顯示精準心虛讀數（0 誤差）！",
     badge: "觀微×2"
   },
   {
     id: "harmony_feast",
     shortTitle: "書院茶點連擊",
-    title: "🍡 清茗插播・書院同樂茶點時間",
+    title: "清茗插播・書院同樂茶點時間",
     desc: "氣氛熱絡！今日每次成功抓包酸言或邏輯矛盾，連擊額外 +2、全場友善度額外 +5！",
     badge: "連擊×2"
   },
   {
     id: "kind_word_duel",
     shortTitle: "好話接龍茶會",
-    title: "🌸 清茗插播・林美山好話接龍茶會",
+    title: "清茗插播・林美山好話接龍茶會",
     desc: "說好話更有力量！今天玩家發出正向好話說服力額外 +10，並免費點亮 1 瓣未亮的三好蓮花！",
     badge: "好話賞蓮"
   },
   {
     id: "fourg_echo",
     shortTitle: "四給雙倍共鳴",
-    title: "🎴 清茗插播・四給雙倍共鳴祭",
+    title: "清茗插播・四給雙倍共鳴祭",
     desc: "吉時相映！今日每施放任意一張「四給」錦囊卡牌，額外恢復全場 +10 友善度並讓清茗喝采！",
     badge: "四給+10友善"
   }
@@ -310,9 +310,9 @@ const orchestrator = {
       if (typeof spawnBeam === "function") spawnBeam(pid, pick.id, "#34d399", "trust", 720);
       if (typeof setSeatEmotion === "function") setSeatEmotion(pick.id, "happy", 2800);
       if (typeof setSeatBubble === "function") setSeatBubble(pick.id, "謝啦這杯冬瓜青超順口！感覺你態度很穩耶！", "trust", 3400);
-      if (typeof spawnFx === "function") spawnFx(pick.id, "🍵 冬瓜青暖場 +8!", "#34d399");
-      if (typeof addLog === "function") addLog({ kind: "blessing", title: "🍵 請喝冬瓜青：贈予 " + fmtSeatNum(pick.id) + "號 " + pick.name + "，全場友善度 +8！", text: "" });
-      if (typeof showToast === "function") showToast("🍵 已請 " + fmtSeatNum(pick.id) + "號喝冬瓜青！友善度 +8 並拉近信任！", "emerald");
+      if (typeof spawnFx === "function") spawnFx(pick.id, "冬瓜青暖場 +8!", "#34d399");
+      if (typeof addLog === "function") addLog({ kind: "blessing", title: "請喝冬瓜青：贈予 " + fmtSeatNum(pick.id) + "號 " + pick.name + "，全場友善度 +8！", text: "" });
+      if (typeof showToast === "function") showToast("已請 " + fmtSeatNum(pick.id) + "號喝冬瓜青！友善度 +8 並拉近信任！", "emerald");
     } else if (ev.id === "truth_lantern") {
       const half = optionKey === "back" ? "back" : "front";
       const mid = Math.ceil((state.match.totalSeats || 8) / 2);
@@ -323,17 +323,17 @@ const orchestrator = {
       peak.sweatExposed = true;
       if (typeof spawnBeam === "function") spawnBeam(pid, peak.id, "#fbbf24", "emote", 780);
       if (typeof setSeatEmotion === "function") setSeatEmotion(peak.id, peak.microPulse >= 60 ? "nervous" : "shock", 3000);
-      if (typeof spawnFx === "function") spawnFx(peak.id, "🏮 古燈照出 " + peak.microPulse + "%", "#fbbf24");
-      if (typeof addLog === "function") addLog({ kind: "blessing", title: "🏮 照妖古燈掃描（" + (half === "front" ? "前排" : "後排") + "）：" + fmtSeatNum(peak.id) + "號 " + peak.name + " 脈搏最高（" + peak.microPulse + "%）", text: "" });
-      if (typeof showToast === "function") showToast("🏮 古燈照出 " + (half === "front" ? "前半席" : "後半席") + "最緊張對象：" + fmtSeatNum(peak.id) + "號（心虛 " + peak.microPulse + "%）！", "emerald");
+      if (typeof spawnFx === "function") spawnFx(peak.id, "古燈照出 " + peak.microPulse + "%", "#fbbf24");
+      if (typeof addLog === "function") addLog({ kind: "blessing", title: "照妖古燈掃描（" + (half === "front" ? "前排" : "後排") + "）：" + fmtSeatNum(peak.id) + "號 " + peak.name + " 脈搏最高（" + peak.microPulse + "%）", text: "" });
+      if (typeof showToast === "function") showToast("古燈照出 " + (half === "front" ? "前半席" : "後半席") + "最緊張對象：" + fmtSeatNum(peak.id) + "號（心虛 " + peak.microPulse + "%）！", "emerald");
     } else {
       state.match.harmonyScore = clamp((state.match.harmonyScore || 70) + 10, 0, 100);
       this.emit("harmony:changed", { score: state.match.harmonyScore });
       if (typeof stage3d !== "undefined" && typeof stage3d.triggerHeroBeat === "function") stage3d.triggerHeroBeat("purify_cast", 2200);
       if (typeof addThreeGoodPoint === "function") addThreeGoodPoint("words", "共襄茶會");
-      if (typeof spawnFx === "function") spawnFx(pid, "🔔 茶席響應 +10!", "#fde68a");
-      if (typeof addLog === "function") addLog({ kind: "blessing", title: "🔔 茶席響應「" + ev.shortTitle + "」：全場友善度 +10！", text: "" });
-      if (typeof showToast === "function") showToast("🔔 已響應今日茶席事件「" + ev.shortTitle + "」，全場友善度 +10！", "emerald");
+      if (typeof spawnFx === "function") spawnFx(pid, "茶席響應 +10!", "#fde68a");
+      if (typeof addLog === "function") addLog({ kind: "blessing", title: "茶席響應「" + ev.shortTitle + "」：全場友善度 +10！", text: "" });
+      if (typeof showToast === "function") showToast("已響應今日茶席事件「" + ev.shortTitle + "」，全場友善度 +10！", "emerald");
     }
 
     if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
@@ -359,10 +359,10 @@ const orchestrator = {
       sound.playBlessing();
     }
     if (typeof triggerCutIn === "function") {
-      triggerCutIn("☀️ 山嵐雲開・清茗賞蓮！", "友善度達 80，吹散林美山霧並免費點亮 1 瓣三好蓮花！", "emerald");
+      triggerCutIn("山嵐雲開・清茗賞蓮！", "友善度達 80，吹散林美山霧並免費點亮 1 瓣三好蓮花！", "emerald");
     }
     if (typeof addLog === "function") {
-      addLog({ kind: "blessing", title: "☀️ 山嵐雲開：友善度達 80，清茗搖鈴免費點亮 1 瓣三好蓮花！", text: "" });
+      addLog({ kind: "blessing", title: "山嵐雲開：友善度達 80，清茗搖鈴免費點亮 1 瓣三好蓮花！", text: "" });
     }
     this.recordTrace({
       agent: "QingmingDirectorAgent",
@@ -578,11 +578,11 @@ const orchestrator = {
           if (!box) return;
           const llmLbl = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : "Gemini";
           const cards = [
-            { tag: "✦ 清茗上帝視角・勝負轉折", body: cleanStr(obj.turnPoint), cls: "border-amber-400/40 bg-amber-950/20 text-amber-100" },
-            { tag: "🌸 三好四給・實戰評語", body: cleanStr(obj.threeGoodReview), cls: "border-emerald-400/40 bg-emerald-950/20 text-emerald-100" },
-            { tag: "🧭 下一局進階策略", body: cleanStr(obj.nextTip), cls: "border-sky-400/40 bg-sky-950/20 text-sky-100" }
+            { tag: "清茗上帝視角・勝負轉折", body: cleanStr(obj.turnPoint), cls: "border-amber-400/40 bg-amber-950/20 text-amber-100" },
+            { tag: "三好四給・實戰評語", body: cleanStr(obj.threeGoodReview), cls: "border-emerald-400/40 bg-emerald-950/20 text-emerald-100" },
+            { tag: "下一局進階策略", body: cleanStr(obj.nextTip), cls: "border-sky-400/40 bg-sky-950/20 text-sky-100" }
           ];
-          box.innerHTML = '<div class="text-[11px] font-bold text-amber-300/90 mb-1.5 flex items-center justify-between"><span>✨ ' + escapeHtml(llmLbl) + ' 即時上帝視角覆盤</span></div>' +
+          box.innerHTML = '<div class="text-[11px] font-bold text-amber-300/90 mb-1.5 flex items-center justify-between"><span>' + escapeHtml(llmLbl) + ' 即時上帝視角覆盤</span></div>' +
             cards.map(function (c) {
               return '<div class="rounded-lg border px-2.5 py-2 mb-1.5 ' + c.cls + '">' +
                 '<div class="text-[11px] font-black mb-0.5">' + escapeHtml(c.tag) + '</div>' +

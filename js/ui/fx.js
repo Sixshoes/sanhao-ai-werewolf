@@ -517,7 +517,7 @@ function syncWorldTheme() {
   sound.syncWithPhase();
   const p = state.match.phase;
   const b = document.body;
-  b.classList.remove("theme-twilight", "theme-night", "theme-day");
+  b.classList.remove("theme-twilight", "theme-night", "theme-day", "theme-daylight");
   if (!state.match.started || p === "LOBBY") {
     b.classList.add("theme-twilight");
   } else if (isNightPhase(p)) {
@@ -525,7 +525,7 @@ function syncWorldTheme() {
   } else if (p === "GAME_OVER" && state.match.winner === "wolf") {
     b.classList.add("theme-night");
   } else {
-    b.classList.add("theme-day");
+    b.classList.add("theme-daylight");
   }
 }
 

@@ -16,7 +16,7 @@ const stage3dCharGeos = {
     const hasAnime = typeof stage3dAnime !== "undefined";
     const hasLathe = typeof THREE.LatheGeometry === "function" && typeof THREE.Vector2 === "function";
 
-    this.baseRing = new THREE.TorusGeometry(0.76, 0.042, 10, 28);
+    this.baseRing = new THREE.TorusGeometry(0.72, 0.016, 6, 24);
     this.seatCushion = new THREE.BoxGeometry(0.86, 0.11, 0.80);
     this.cushionPiping = new THREE.BoxGeometry(0.88, 0.022, 0.82);
     if (typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function") {
@@ -152,12 +152,12 @@ const stage3dCharGeos = {
     this.hitCyl = new THREE.CylinderGeometry(0.76, 0.76, 2.55, 10);
     this.plaqueBox = new THREE.BoxGeometry(0.78, 0.28, 0.048);
     this.candleWick = new THREE.CylinderGeometry(0.005, 0.006, 0.032, 5);
-    this.candleHalo = new THREE.SphereGeometry(0.092, 10, 8);
+    this.candleHalo = new THREE.SphereGeometry(0.072, 8, 6);
     this.candleHit = new THREE.CylinderGeometry(0.16, 0.16, 0.52, 8);
     this.sheriffCrown = new THREE.ConeGeometry(0.036, 0.11, 5);
     this.sheriffRing = new THREE.TorusGeometry(0.125, 0.018, 8, 22);
     this.sheriffPearl = new THREE.SphereGeometry(0.032, 10, 8);
-    this.markCrystal = new THREE.OctahedronGeometry(0.14, 0);
+    this.markCrystal = new THREE.OctahedronGeometry(0.052, 0);
     this.idCard = new THREE.BoxGeometry(0.58, 0.032, 0.80);
     this.idCardHit = new THREE.BoxGeometry(0.76, 0.28, 0.96);
     return this;
@@ -278,7 +278,7 @@ function createPlaqueBackTexture() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = "900 26px 'Noto Sans TC', sans-serif";
-  ctx.fillText("✦ 三好狼人殺 ✦", 128, 49);
+  ctx.fillText("· 三好狼人殺 ·", 128, 49);
   const tex = new THREE.CanvasTexture(c);
   tex.encoding = THREE.sRGBEncoding;
   stage3dTextures.cache.plaqueBack = tex;
@@ -739,17 +739,18 @@ function create3DSeatActor(seat) {
   const st = getAvatarStyleForSeat(seat);
   const root = new THREE.Group();
 
-  // 1. Glowing Pedestal Ring
+  // 1. Subtle Brushed-Gold Floor Indicator Ring (Hidden when idle to eliminate neon floor clutter & overdraw)
   const ringMat = new THREE.MeshStandardMaterial({
-    color: seat.color || "#fbbf24",
-    emissive: seat.color || "#f59e0b",
+    color: "#e4b963",
+    emissive: "#d4a657",
     emissiveIntensity: 0.45,
-    roughness: 0.3,
-    metalness: 0.65
+    roughness: 0.32,
+    metalness: 0.72
   });
   const baseRing = new THREE.Mesh(G.baseRing, ringMat);
   baseRing.rotation.x = Math.PI * 0.5;
-  baseRing.position.y = 0.04;
+  baseRing.position.y = 0.025;
+  baseRing.visible = false;
   root.add(baseRing);
 
   // 2. Handcrafted Ming-Style Curved Backrest Tea Chair with Gold Medallion Splat & Crimson-Espresso Brocade Cushion
@@ -950,12 +951,13 @@ function create3DSeatActor(seat) {
 
   const candleGroup = new THREE.Group();
   candleGroup.position.set(0.52, 0, -0.04);
+  candleGroup.scale.setScalar(0.74);
   const brassMat = new THREE.MeshStandardMaterial({ color: 0xc89232, roughness: 0.24, metalness: 0.86 });
   const candleHolder = new THREE.Mesh(G.candleHolder, brassMat);
   const WaxMatCtor = typeof THREE.MeshPhysicalMaterial === "function" ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
   const candleStick = new THREE.Mesh(
     G.candleStick,
-    new WaxMatCtor({ color: 0xfef3d4, emissive: 0xffb347, emissiveIntensity: 0.14, roughness: 0.42, metalness: 0.02, clearcoat: 0.35 })
+    new WaxMatCtor({ color: 0xf2e1be, emissive: 0xd99436, emissiveIntensity: 0.09, roughness: 0.48, metalness: 0.02, clearcoat: 0.25 })
   );
   candleStick.position.y = hasLatheHelper() ? 0.095 : 0.20;
   const candleWick = new THREE.Mesh(G.candleWick, new THREE.MeshStandardMaterial({ color: 0x261a12, roughness: 0.9 }));

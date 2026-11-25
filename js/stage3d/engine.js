@@ -2,7 +2,7 @@
  * 3D 真實互動主引擎與多機位運鏡控制器（Three.js r128）
  * 支援：
  * - 真實 3D Raycaster 精準拾取角色與中央互動蓮花水晶
- * - 三種可切換機位：🎬 電影運鏡 / 🪑 坐桌第一人稱 / 🦅 俯視全景
+ * - 三種可切換機位：電影運鏡 / 坐桌第一人稱 / 俯視全景
  * - 空地 360° 自由旋轉＋滾輪縮放、真實 3D 空間拖曳光弧、ACES 電影級色調映射
  */
 "use strict";
@@ -530,7 +530,7 @@ const stage3d = {
     this.orbit.userOverrideUntil = 0;
     if (opts && opts.toast) {
       const s = getSeat(seatId) || (this.seats.anchors[seatId] && this.seats.anchors[seatId].seat);
-      showToast("📷 鏡頭切換至 " + fmtSeatNum(seatId) + "號 " + (s ? s.name : "") + " 面前（點空白處或換人復位）", "emerald");
+      showToast("鏡頭切換至 " + fmtSeatNum(seatId) + "號 " + (s ? s.name : "") + " 面前（點空白處或換人復位）", "emerald");
     }
     return true;
   },
@@ -595,7 +595,7 @@ const stage3d = {
     if (this.seats.anchors[seatId]) {
       spawn3DShockwave(this.fx, this.seats.anchors[seatId].worldPos, "#fde047", performance.now(), 1.32, 1.8);
     }
-    showToast("🕯️ 撥亮了 " + fmtSeatNum(seatId) + "號 桌前的燭火！", "emerald");
+    showToast("撥亮了 " + fmtSeatNum(seatId) + "號 桌前的燭火！", "emerald");
   },
 
   extinguishSeatCandleFx: function (seatId) {
@@ -1004,7 +1004,7 @@ const stage3d = {
     const queued = (this.avatarQueue && this.avatarQueue.length) || 0;
     if (total > 0 && (active > 0 || queued > 0)) {
       pill.classList.remove("hidden");
-      txt.textContent = "✨ 正在喚醒茶席夥伴 " + done + "/" + total;
+      txt.textContent = "正在喚醒茶席夥伴 " + done + "/" + total;
     } else {
       pill.classList.add("hidden");
     }
@@ -1270,7 +1270,7 @@ const stage3d = {
     const nowMs = performance.now();
     spawn3DShockwave(this.fx, new THREE.Vector3(0, 0, 0), "#fbbf24", nowMs, 1.28, 7.5);
     sound.playBlessing();
-    showToast("✨ 輕觸三好蓮花核心：願本局存好心、說好話、做好事！", "emerald");
+    showToast("輕觸三好蓮花核心：願本局存好心、說好話、做好事！", "emerald");
   },
 
   setCameraPreset: function (preset) {
@@ -1301,9 +1301,9 @@ const stage3d = {
         : "拖曳空地可 360° 環視山城｜點擊角色、桌心蓮花或遠方龜山島互動";
     }
     const labelMap = {
-      cinema: "🎬 電影自動運鏡",
-      firstperson: "🪑 沉浸坐席視角（可拖曳轉頭・點邊緣箭頭快速回望）",
-      overview: "🦅 俯視全景戰術視角"
+      cinema: "電影自動運鏡",
+      firstperson: "沉浸坐席視角（可拖曳轉頭・點邊緣箭頭快速回望）",
+      overview: "俯視全景戰術視角"
     };
     showToast("已切換視角：" + labelMap[this.camPreset], "emerald");
   },
@@ -1984,7 +1984,7 @@ function draw3DOverlayHud(ctx, f, coords) {
     const isSpeaking = (((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "SHERIFF_ELECTION") && s.alive) || p === "LAST_WORDS_SPEECH") && state.activeSpeakerId === s.id;
     const isSelected = Boolean(inMatch && isPickPhase && state.selectedSeatId === s.id);
     const isSheriff = Boolean(inMatch && !state.match.sheriffElectionPending && s.alive && state.match.sheriffSeatId === s.id);
-    const sheriffPrefix = isSheriff ? "👑 " : "";
+    const sheriffPrefix = isSheriff ? "[警長] " : "";
     const mark = state.playerMarks[s.id];
     const showTruth = isOver || (typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive());
     const pSelf3D = state.match.started && typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
@@ -2008,106 +2008,106 @@ function draw3DOverlayHud(ctx, f, coords) {
     if (isSpeaking) {
       const spSuffix = !s.alive ? " · 遺言" : (activelyVoicing || p === "DAY_PLAYER_TURN" ? " · 發言" : "");
       topTag = sheriffPrefix + sCompactName + spSuffix;
-      topBg = "rgba(245, 196, 81, 0.96)";
-      topBorder = "#fff5d6";
-      topFg = "#1c1205";
-      numFg = "#1c1205";
+      topBg = "rgba(13, 11, 10, 0.86)";
+      topBorder = "rgba(226, 192, 122, 0.82)";
+      topFg = "#faf3e4";
+      numFg = "#ecc472";
       prio = 5;
     } else if (!s.alive) {
       topTag = showTruth && sRoleDef ? (sCompactName + " · " + (ROLE_SHORT_3D[s.role] || sRoleDef.name)) : (sCompactName + " · 離席");
-      topBg = "rgba(22, 24, 28, 0.72)";
-      topBorder = "rgba(120, 125, 134, 0.34)";
-      topFg = "#8e949f";
-      numFg = "#757c87";
+      topBg = "rgba(16, 15, 14, 0.62)";
+      topBorder = "rgba(148, 138, 124, 0.24)";
+      topFg = "#8e867c";
+      numFg = "#756e66";
     } else if (showTruth && sRoleDef) {
       topTag = sheriffPrefix + sCompactName + " · " + sRoleDef.name;
-      topBg = s.role === "wolf" ? "rgba(154, 44, 34, 0.94)" : "rgba(33, 94, 73, 0.94)";
-      topBorder = "rgba(242, 212, 156, 0.72)";
-      topFg = "#fbf5ea";
-      numFg = "#fde68a";
+      topBg = "rgba(14, 12, 11, 0.84)";
+      topBorder = s.role === "wolf" ? "rgba(208, 92, 80, 0.72)" : "rgba(92, 169, 141, 0.68)";
+      topFg = "#f5ede0";
+      numFg = s.role === "wolf" ? "#ea9e96" : "#9ad3bd";
       prio = 3;
     } else if (isSelected) {
       topTag = sheriffPrefix + sCompactName + " · 鎖定";
-      topBg = "rgba(180, 52, 40, 0.96)";
-      topBorder = "#fde68a";
-      topFg = "#fff8eb";
-      numFg = "#fde68a";
+      topBg = "rgba(24, 14, 12, 0.88)";
+      topBorder = "rgba(214, 96, 82, 0.78)";
+      topFg = "#fbf4ea";
+      numFg = "#f0b4a8";
       prio = 4;
     } else if (isWolfMate3D) {
       topTag = sheriffPrefix + sCompactName + " · 同伴";
-      topBg = "rgba(136, 28, 38, 0.94)";
-      topBorder = "rgba(251, 113, 133, 0.85)";
-      topFg = "#ffe4e6";
-      numFg = "#fda4af";
+      topBg = "rgba(26, 13, 14, 0.86)";
+      topBorder = "rgba(214, 96, 86, 0.72)";
+      topFg = "#f9e3e1";
+      numFg = "#eba49c";
       prio = 3;
     } else if (state.match.started && s.id !== getPlayerId() && (state.match.microPulseRevealed || s.sweatExposed)) {
       topTag = sheriffPrefix + sCompactName + " · 心虛" + s.microPulse + "%";
-      topBg = s.microPulse >= 60 ? "rgba(154, 44, 34, 0.94)" : "rgba(33, 94, 73, 0.94)";
-      topBorder = "rgba(242, 212, 156, 0.65)";
-      topFg = "#fbf5ea";
-      numFg = "#fde68a";
+      topBg = "rgba(14, 12, 11, 0.84)";
+      topBorder = s.microPulse >= 60 ? "rgba(208, 92, 80, 0.68)" : "rgba(92, 169, 141, 0.62)";
+      topFg = "#f5ede0";
+      numFg = "#e2c27e";
       prio = 2;
     } else if (s.claimedRole && ROLE_DEFS[s.claimedRole]) {
       const cShort = ROLE_SHORT_3D[s.claimedRole] || ROLE_DEFS[s.claimedRole].name;
       topTag = sheriffPrefix + sCompactName + " · " + cShort;
-      topBg = "rgba(120, 78, 24, 0.94)";
-      topBorder = "rgba(242, 212, 156, 0.75)";
-      topFg = "#fbf5ea";
-      numFg = "#fde68a";
+      topBg = "rgba(15, 13, 11, 0.82)";
+      topBorder = "rgba(216, 184, 118, 0.62)";
+      topFg = "#f5ede0";
+      numFg = "#e2c27e";
       prio = 3;
     } else if (wolfGodLabel3D) {
       topTag = sheriffPrefix + sCompactName + " · " + wolfGodLabel3D;
-      topBg = "rgba(120, 72, 18, 0.94)";
-      topBorder = "rgba(251, 191, 36, 0.82)";
-      topFg = "#fef3c7";
-      numFg = "#fde68a";
+      topBg = "rgba(16, 13, 11, 0.84)";
+      topBorder = "rgba(216, 184, 118, 0.64)";
+      topFg = "#f5ede0";
+      numFg = "#e2c27e";
       prio = 2;
     } else if (mark === "wolf") {
       topTag = sheriffPrefix + sCompactName + (isWolfViewer3D ? " · 甩鍋" : " · 懷疑");
-      topBg = "rgba(154, 44, 34, 0.92)";
-      topBorder = "rgba(244, 114, 128, 0.78)";
-      topFg = "#fbf5ea";
-      numFg = "#fde68a";
+      topBg = "rgba(18, 12, 12, 0.82)";
+      topBorder = "rgba(204, 88, 76, 0.64)";
+      topFg = "#f5ede0";
+      numFg = "#e8a29a";
       prio = 2;
     } else if (mark === "good") {
       topTag = sheriffPrefix + sCompactName + (isWolfViewer3D ? " · 假保" : " · 信任");
-      topBg = "rgba(33, 94, 73, 0.92)";
-      topBorder = "rgba(126, 196, 166, 0.78)";
-      topFg = "#fbf5ea";
-      numFg = "#a7f3d0";
+      topBg = "rgba(12, 18, 16, 0.82)";
+      topBorder = "rgba(92, 169, 141, 0.60)";
+      topFg = "#f5ede0";
+      numFg = "#9ad3bd";
       prio = 2;
     } else if (state.hoverSeatId === s.id) {
       topTag = sheriffPrefix + sCompactName;
-      topBg = "rgba(28, 22, 16, 0.95)";
-      topBorder = s.color || "rgba(212, 166, 87, 0.85)";
-      topFg = "#fff4d9";
-      numFg = "#f5c451";
+      topBg = "rgba(16, 14, 12, 0.88)";
+      topBorder = "rgba(222, 188, 120, 0.72)";
+      topFg = "#fff8ea";
+      numFg = "#e8c474";
       prio = 3;
     } else if (inMatch && isSheriff) {
       isSubtleNameplate = true;
       topTag = sheriffPrefix + sCompactName;
-      topBg = "rgba(24, 18, 12, 0.88)";
-      topBorder = "rgba(245, 196, 81, 0.86)";
-      topFg = "#fde68a";
-      numFg = "#fde68a";
+      topBg = "rgba(14, 12, 10, 0.78)";
+      topBorder = "rgba(222, 188, 120, 0.62)";
+      topFg = "#f3e2be";
+      numFg = "#e8c474";
       prio = 2;
     } else if (inMatch && s.alive) {
       isSubtleNameplate = true;
       topTag = sCompactName;
-      topBg = "rgba(18, 14, 11, 0.84)";
-      topBorder = s.color || "rgba(212, 166, 87, 0.56)";
-      topFg = "#f3ebdc";
-      numFg = "#f5c451";
+      topBg = "rgba(13, 12, 11, 0.72)";
+      topBorder = "rgba(216, 185, 124, 0.28)";
+      topFg = "#ebe2d2";
+      numFg = "#d8b878";
       prio = 1;
     }
 
     if (topTag) {
       const isNarrowFont = (f.w / Math.max(1, dpr)) < 600;
-      const speakScale = isSpeaking ? 1.18 : 1.0;
-      const numPx = Math.round((isNarrowFont ? 14 : (isSubtleNameplate ? 17 : 19)) * speakScale * dpr);
-      const namePx = Math.round((isNarrowFont ? 12 : 13.5) * (isSpeaking ? 1.12 : 1.0) * dpr);
-      const numFont = "900 " + numPx + "px 'Inter', 'Noto Sans TC', sans-serif";
-      const nameFont = "700 " + namePx + "px 'Noto Sans TC', sans-serif";
+      const speakScale = isSpeaking ? 1.08 : 1.0;
+      const numPx = Math.round((isNarrowFont ? 13 : (isSubtleNameplate ? 14 : 15)) * speakScale * dpr);
+      const namePx = Math.round((isNarrowFont ? 12 : 13) * (isSpeaking ? 1.06 : 1.0) * dpr);
+      const numFont = "600 " + numPx + "px 'Noto Serif TC', Georgia, serif";
+      const nameFont = "500 " + namePx + "px 'Noto Sans TC', 'Microsoft JhengHei UI', sans-serif";
       ctx.font = numFont;
       const numW = ctx.measureText(numLabel).width;
       ctx.font = nameFont;

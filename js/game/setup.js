@@ -47,8 +47,8 @@ function startGuidedBeginnerMatch() {
 }
 
 /**
- * v14.2 評審三分鐘精華導覽局（固定高潮局面：第 2 天雙觀察員對跳＋言票背離矩陣＋四給逆轉＋三好蓮花差 1 瓣覺醒）
- * 嚴格遵守零洩漏盲視結構：所有欄位與一般正規對局完全一致，僅將開局推進至第 2 天末段焦點回合。
+ * v20.0 評審 150 秒全亮點導覽局（第 2 日五人聽牌高潮盤：雙觀察員對跳＋第 1 日言票背離＋舉杯追問＋四給奉茶護席／明燈對質＋一輪直達終局真相覆盤）
+ * 嚴格遵守零洩漏盲視結構：所有欄位與一般正規對局完全一致，僅將開局推進至第 2 日末段五人聽牌焦點回合。
  */
 function startJudgeShowcaseMatch() {
   sound.unlock();
@@ -81,25 +81,26 @@ function startJudgeShowcaseMatch() {
     { id: 1, name: "你", trait: "玩家", deductionStyle: "balanced", color: "#f5b942", role: "seer", alive: true, claimedRole: "seer", microPulse: 18 },
     { id: 2, pIdx: 0, role: "villager", alive: true, claimedRole: null, microPulse: 21 },
     { id: 3, pIdx: 1, role: "witch", alive: true, claimedRole: "witch", microPulse: 24 },
-    { id: 4, pIdx: 2, role: "wolf", alive: true, claimedRole: "seer", fakeSeer: true, microPulse: 86 },
+    { id: 4, pIdx: 2, role: "wolf", alive: true, claimedRole: "seer", fakeSeer: true, microPulse: 88 },
     { id: 5, pIdx: 3, role: "hunter", alive: true, claimedRole: null, microPulse: 26 },
     { id: 6, pIdx: 4, role: "villager", alive: false, outReason: "投票出局", claimedRole: null, microPulse: 28 },
-    { id: 7, pIdx: 5, role: "wolf", alive: true, claimedRole: null, microPulse: 79 },
-    { id: 8, pIdx: 6, role: "guard", alive: true, claimedRole: null, microPulse: 22 }
+    { id: 7, pIdx: 5, role: "wolf", alive: false, outReason: "清心醒神茶請離", claimedRole: null, microPulse: 79 },
+    { id: 8, pIdx: 6, role: "guard", alive: false, outReason: "夜襲離席", claimedRole: null, microPulse: 22 }
   ];
 
   const seats = fixedSpecs.map(function (sp) {
     const pInfo = typeof sp.pIdx === "number" ? (AI_PERSONAS[sp.pIdx] || AI_PERSONAS[0]) : sp;
     const sus = {};
-    for (let k = 1; k <= 8; k++) sus[k] = k === sp.id ? 0 : 48;
+    for (let k = 1; k <= 8; k++) sus[k] = k === sp.id ? 0 : 46;
     if (sp.role !== "wolf") {
-      sus[4] = 64;
-      sus[7] = 58;
-      sus[1] = 36;
-      sus[2] = 32;
+      sus[4] = 74;
+      sus[7] = 68;
+      sus[1] = 28;
+      sus[2] = 24;
+      sus[3] = 26;
     } else {
-      sus[1] = 72;
-      sus[2] = 68;
+      sus[1] = 78;
+      sus[2] = 72;
       sus[4] = 10;
       sus[7] = 10;
     }
@@ -128,9 +129,9 @@ function startJudgeShowcaseMatch() {
       checkedHistory: sp.id === 1
         ? [{ day: 1, targetId: 2, isWolf: false }, { day: 2, targetId: 4, isWolf: true }]
         : [],
-      savedSeatId: sp.id === 3 ? 2 : null,
-      witchAnnouncedSave: sp.id === 3,
-      purifiedSeatId: null
+      savedSeatId: null,
+      witchAnnouncedSave: false,
+      purifiedSeatId: sp.id === 3 ? 7 : null
     };
   });
 
@@ -152,21 +153,21 @@ function startJudgeShowcaseMatch() {
   ];
 
   const day2PriorSpeeches = [
-    { day: 2, speakerId: 2, claimRole: null, vouchId: 1, accuseId: 4, standWithSeerId: 1, wolfPits: [4, 7], goodPits: [1, 3], rawText: "昨夜平安夜太關鍵了！回頭翻第 1 天票型，7號阿竹口頭喊打 5號卻改投 6號小雲，跟 4號同票綁定，這兩張牌高度像雙狼！" },
-    { day: 2, speakerId: 3, claimRole: "witch", vouchId: 2, accuseId: 4, standWithSeerId: 1, wolfPits: [4, 7], goodPits: [1, 2], rawText: "我亮滴水奉茶師身分作證，昨晚端暖心茶護回了 2號小澄所以才平安夜，2號雙重驗明好人，今天跟著 1號警長歸票！" },
-    { day: 2, speakerId: 5, claimRole: null, vouchId: 1, accuseId: 7, standWithSeerId: 1, wolfPits: [4, 7], goodPits: [1, 2, 3], rawText: "7號昨天嘴上說要投我，開票卻跑去衝 6號小雲，這言票背離也太明顯了吧！等下聽完 4號跟 7號解釋我就跟警長歸票。" },
-    { day: 2, speakerId: 8, claimRole: null, vouchId: 1, accuseId: 4, standWithSeerId: 1, wolfPits: [4], goodPits: [1, 2, 3], rawText: "目前 1號與 3號邏輯互補，等下重點盯住 4號阿松與 7號阿竹的回應，請 1號警長壓軸定調歸票。" }
+    { day: 2, speakerId: 2, claimRole: null, vouchId: 1, accuseId: 4, standWithSeerId: 1, wolfPits: [4], goodPits: [1, 3], rawText: "場上只剩五人聽牌，回看第 1 天票型，7號嘴上說打 5號卻跟 4號同票衝走 6號，現在 7號已經被奉茶師清心請離，4號幾乎沒退路了。" },
+    { day: 2, speakerId: 3, claimRole: "witch", vouchId: 1, accuseId: 4, standWithSeerId: 1, wolfPits: [4], goodPits: [1, 2], rawText: "我亮滴水奉茶師身分，第 1 夜平安是守衛擋下，昨晚見 7號言票背離太重已端清心醒神茶請他離席，今天跟著 1號警長歸票收尾。" },
+    { day: 2, speakerId: 5, claimRole: null, vouchId: 1, accuseId: 4, standWithSeerId: 1, wolfPits: [4], goodPits: [1, 2, 3], rawText: "我是直心糾察長，昨天 7號喊打我卻改票衝 6號，跟 4號完全綁在一起。先聽 4號怎麼圓，等下看 1號警長壓軸定調。" }
   ];
 
   const day1Votes = {
     day: 1,
     outId: 6,
+    tallies: { 6: 5, 4: 3.5 },
     ballots: [
       { voterId: 1, targetId: 4, weight: 1.5 },
       { voterId: 2, targetId: 4, weight: 1 },
       { voterId: 3, targetId: 6, weight: 1 },
       { voterId: 4, targetId: 6, weight: 1 },
-      { voterId: 5, targetId: 4, weight: 1 },
+      { voterId: 5, targetId: 6, weight: 1 },
       { voterId: 6, targetId: 4, weight: 1 },
       { voterId: 7, targetId: 6, weight: 1 },
       { voterId: 8, targetId: 6, weight: 1 }
@@ -201,6 +202,7 @@ function startJudgeShowcaseMatch() {
   state.match = {
     started: true,
     judgeShowcase: true,
+    judgeGuideDismissed: false,
     phase: "DAY_SPEECH",
     day: 2,
     totalSeats: 8,
@@ -226,7 +228,7 @@ function startJudgeShowcaseMatch() {
     maxCombo: 2,
     comboBoostReady: true,
     pinnedClues: [
-      { id: "judge_clue_1", seatId: 7, tag: "7號言票背離", summary: "第1天 7號阿竹口頭點名 5號星兒，實際公投卻改投 6號小雲並與 4號阿松同票！", kind: "contradiction" }
+      { id: "judge_clue_1", seatId: 7, tag: "7號言票背離", summary: "第 1 天 7號阿竹口頭點名 5號星兒，實際公投卻改投 6號小雲並與 4號阿松同票。", kind: "contradiction" }
     ],
     tableReactions: [],
     publicInterjections: [],
@@ -237,21 +239,21 @@ function startJudgeShowcaseMatch() {
     rewriteCritReady: false,
     seats: seats,
     playerKnownRoles: { 1: "seer", 2: "good_verified", 4: "wolf" },
-    witchPotions: { heal: false, purify: true },
-    nightState: { guardTarget: 1, wolfTarget: 2, seerTarget: 4, witchSaved: true, witchPoisonTarget: null },
+    witchPotions: { heal: true, purify: false },
+    nightState: { guardTarget: 1, wolfTarget: 8, seerTarget: 4, witchSaved: false, witchPoisonTarget: 7 },
     lastGuardTargetId: 1,
     nightArchive: [
-      { day: 1, wolfTarget: 3, guardTarget: 3, witchSaved: false, casualties: [] },
-      { day: 2, wolfTarget: 2, guardTarget: 1, witchSaved: true, casualties: [] }
+      { day: 1, guardId: 8, guardTarget: 3, wolfTarget: 3, seerId: 1, seerTarget: 2, seerIsWolf: false, witchId: 3, witchSaved: false, witchPoisonTarget: null, casualties: [] },
+      { day: 2, guardId: 8, guardTarget: 1, wolfTarget: 8, seerId: 1, seerTarget: 4, seerIsWolf: true, witchId: 3, witchSaved: false, witchPoisonTarget: 7, casualties: [{ id: 8, cause: "wolf" }, { id: 7, cause: "purify" }] }
     ],
     firstNightIntel: { seerTarget: 2, isWolf: false },
-    peaceNights: [1, 2],
+    peaceNights: [1],
     detectedContradictions: [],
     microInspectCountToday: 0,
     microInspectedSeats: {},
     wolfTactic: "mate_fake_seer_gold",
     variantMode: "standard",
-    isMatchPoint: false,
+    isMatchPoint: true,
     hopeConfrontation: null,
     wolfExplodedToday: false,
     interjectBonusCharges: 0,
@@ -286,25 +288,25 @@ function startJudgeShowcaseMatch() {
     pendingSheriffTransfer: null,
     pendingEvidenceTargetId: null,
     pendingEvidenceTag: "",
-    playerDraftPits: { wolfIds: [4, 7], goodIds: [2, 3], claimRole: "seer", standSeerId: null, evidenceClueId: null, turnKey: "" },
+    playerDraftPits: { wolfIds: [4], goodIds: [2, 3, 5], claimRole: "seer", standSeerId: null, evidenceClueId: null, turnKey: "" },
     roleMission: typeof createRoleMission === "function" ? createRoleMission("seer") : null,
     speechDirection: 1,
-    speechOrderLabel: "評審精華導覽・警長末置位歸票",
-    dayOrder: [2, 3, 5, 8, 4, 7, 1],
-    speechQueue: [4, 7, 1],
+    speechOrderLabel: "五人聽牌",
+    dayOrder: [2, 3, 5, 4, 1],
+    speechQueue: [4, 1],
     daySpeechEvents: day2PriorSpeeches.slice(),
     todayEvents: { accusedYouId: 4, fakeSeerId: 4, toxicSlipId: 4 },
     relations: [
       { from: 1, to: 2, type: "trust" },
-      { from: 3, to: 2, type: "trust" },
+      { from: 3, to: 1, type: "trust" },
       { from: 4, to: 1, type: "accuse" },
       { from: 7, to: 4, type: "trust" }
     ],
     voteHistory: [day1Votes],
     allSpeechEvents: day1Speeches.concat(day2PriorSpeeches),
-    lastNightCasualties: [],
+    lastNightCasualties: [8, 7],
     microPulseRevealed: false,
-    fourGivingsUsed: { confidence: false, joy: false, hope: false, convenience: false },
+    fourGivingsUsed: { confidence: false, joy: true, hope: false, convenience: true },
     fourGJoySuspects: [],
     fourGHopePair: null,
     directorEventInteractedDay: 0,
@@ -316,13 +318,13 @@ function startJudgeShowcaseMatch() {
     winner: null,
     winReason: "",
     logs: [
-      { kind: "banner", title: "🏆 評審三分鐘精華導覽局｜第 2 天高潮回合", text: "你是 1號 明心觀察員（警長），首夜已驗 2號小澄＝金水、昨夜親驗 4號阿松＝酸民狼查殺！第 1 天 7號阿竹口頭打 5號卻改投 6號（言票背離），目前三好蓮花 2/3，施放任一「四給錦囊」或「奉暖茶」即可當場覺醒黃金善意票 +1！" },
-      { kind: "dawn", title: "第 2 天平安夜（3號滴水奉茶師暖茶護回 2號）", text: "前置位好人已表態完畢，緊接著由對跳假觀察員 4號阿松與 7號阿竹發言，下一棒即輪到 1號你壓軸歸票！" }
+      { kind: "banner", title: "評審 150 秒導覽局｜第 2 日五人聽牌決選", text: "你是 1號明心觀察員（警長）。首夜驗 2號金水、昨夜驗 4號查殺；第 1 夜 8號守衛擋下狼刀，昨夜 8號離席、3號奉茶師以清心茶請離言票背離的 7號，場上剩最後 1 名酸民狼。" },
+      { kind: "dawn", title: "五人聽牌（1・2・3・4・5號在席）", text: "緊接著由對跳假觀察員 4號阿松發言，可先試「舉杯追問」，下一棒輪到你體驗「三選一婉轉潤飾籤」，投票後直達終局真相覆盤。" }
     ],
     stats: {
       goodWordsCount: 1,
       rewritesUsed: 0,
-      fourGCount: 0,
+      fourGCount: 2,
       nightSkillUsed: 2,
       toxicSentCount: 0,
       cluesCaught: 1,
@@ -336,17 +338,18 @@ function startJudgeShowcaseMatch() {
       fourGSynergies: 0,
       elderExempted: 0,
       wolfKingStrikes: 0,
-      sheriffDramaWins: 0,
+      sheriffDramaWins: 1,
       hypocrisyFlags: 0
     }
   };
 
+  if (typeof evaluateMatchPointState === "function") evaluateMatchPointState();
   if (typeof orchestrator !== "undefined") {
     orchestrator.emit("match:started", { totalSeats: 8, playerRole: "seer", judgeShowcase: true });
     orchestrator.emit("phase:changed", { phase: "DAY_SPEECH", day: 2 });
   }
   updateAllUI();
-  showToast("✨ 評審三分鐘導覽局啟動：直切第 2 天雙觀察員對跳、言票背離矩陣與四給覺醒焦點！", "emerald");
+  showToast("評審導覽局已就位：依上方三步提示體驗追問、潤飾籤與五人聽牌覆盤。", "emerald");
   if (typeof advanceSpeechQueue === "function") {
     state.stepTimer = setTimeout(advanceSpeechQueue, 380);
   }
@@ -724,7 +727,7 @@ function startNewGame() {
 
   if (playerRole === "wolf") {
     const mates = seats.filter(function (s) { return s.id !== playerSeatId && s.role === "wolf"; });
-    if (mates.length >0) {
+    if (mates.length > 0) {
       addLog({
         kind: "secret",
         title: "狼同伴：" + mates.map(function (m) { return m.id + "號" + m.name; }).join("、"),
@@ -849,7 +852,7 @@ function finishMatch(winnerTeam, reason) {
     stage3d.triggerHeroBeat(winnerTeam === "good" ? "celebrate" : "gasp_react", 3000);
   }
   triggerCutIn(
-    winnerTeam === "good" ? "🎉 好人陣營勝利！" : "🐺 酸民狼陣營勝利！",
+    winnerTeam === "good" ? "好人陣營勝利！" : "酸民狼陣營勝利！",
     reason || "",
     winnerTeam === "good" ? "emerald" : "crimson"
   );

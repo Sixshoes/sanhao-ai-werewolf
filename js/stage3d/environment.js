@@ -2444,7 +2444,7 @@ function apply3DMoodPalette(scene, env, moodKey) {
     grad.addColorStop(0.42, isCel ? "#67e8f9" : "#7dd3fc");
     grad.addColorStop(0.75, isCel ? "#d8fcf6" : "#e0f7fa");
     grad.addColorStop(1, "#fef3c7");
-    env.targetColors.fog.setHex(isCel ? 0xc2f0ea : 0xcbeefd);
+    env.targetColors.fog.setHex(isCel ? 0xbce8e2 : 0xc6e2de);
     env.targetColors.hemiSky.setHex(isCel ? 0xa7f3d0 : 0xbae6fd);
     env.targetColors.hemiGnd.setHex(isCel ? 0xd9c698 : 0xe5c185);
     env.targetColors.dir.setHex(0xfffbeb);
@@ -2550,7 +2550,7 @@ function apply3DMoodPalette(scene, env, moodKey) {
     grad.addColorStop(0.44, isCel ? "#38849e" : "#4b5f9e");
     grad.addColorStop(0.78, isCel ? "#98d4cc" : "#d9895b");
     grad.addColorStop(1, "#fde68a");
-    env.targetColors.fog.setHex(isCel ? 0x2c566e : 0x2a3b68);
+    env.targetColors.fog.setHex(isCel ? 0x264b61 : 0x23334c);
     env.targetColors.hemiSky.setHex(isCel ? 0x9fe6e0 : 0x9cb4ff);
     env.targetColors.hemiGnd.setHex(isCel ? 0x3b4a4c : 0x523b38);
     env.targetColors.dir.setHex(0xffe8a3);
@@ -2689,7 +2689,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   else env.dawnSweep = 0;
 
   const lerpAmt = d05;
-  const targetFogDens = (f.daylight ? 0.0040 : (f.night ? 0.0072 : 0.0056)) + (isToxicHaze ? 0.0035 : (isClearBreeze ? -0.0012 : 0));
+  const targetFogDens = (f.daylight ? 0.0052 : (f.night ? 0.0080 : 0.0068)) + (isToxicHaze ? 0.0035 : (isClearBreeze ? -0.0012 : 0));
   scene.fog.color.lerp(env.targetColors.fog, lerpAmt);
   scene.fog.density += (targetFogDens - scene.fog.density) * lerpAmt;
 

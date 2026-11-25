@@ -14,6 +14,7 @@ const state = {
   autoPlay: false,
   coachEnabled: true,
   tutorialIndex: 0,
+  tutorialDevice: null, // "phone" | "tablet" | "desktop" (auto-detected on open, switchable anytime)
   hidePlayerRole: false,
   showRelationsOnCanvas: true,
   viewMode: "3d",
@@ -22,7 +23,7 @@ const state = {
   qualityUserChosen: false,
   fxPacing: "cinematic", // "cinematic" (沉穩儀式感) | "fast" (快節奏)
   playerGender: "f", // "f" | "m" (1-click player voice & VRM avatar toggle)
-  portraitStyle: "painted", // "painted" (Studio ink cinema art) | "vrm3d" (3D VRM portrait)
+  portraitStyle: "vrm3d", // "vrm3d" (Unified 3D VRM anime portrait) | "painted" (Studio ink cinema art)
   cardPeek3D: false,
   aiDifficulty: "normal", // "easy" | "normal" | "pro"
   ruleDepth: "full", // "full" | "classic"
@@ -192,8 +193,8 @@ function saveUserPrefs() {
       qualityUserChosen: Boolean(state.qualityUserChosen),
       fxPacing: state.fxPacing === "fast" ? "fast" : "cinematic",
       playerGender: state.playerGender === "m" ? "m" : "f",
-      portraitStyle: state.portraitStyle === "vrm3d" ? "vrm3d" : "painted",
-      portraitPrefVersion: 2,
+      portraitStyle: state.portraitStyle === "painted" ? "painted" : "vrm3d",
+      portraitPrefVersion: 3,
       aiDifficulty: state.aiDifficulty || "normal",
       ruleDepth: state.ruleDepth === "classic" ? "classic" : "full",
       activeVariant: state.activeVariant || "standard",
@@ -259,7 +260,7 @@ function loadUserPrefs() {
     if (typeof p.qualityUserChosen === "boolean") state.qualityUserChosen = p.qualityUserChosen;
     if (p.fxPacing === "fast" || p.fxPacing === "cinematic") state.fxPacing = p.fxPacing;
     if (p.playerGender === "m" || p.playerGender === "f") state.playerGender = p.playerGender;
-    if ((p.portraitPrefVersion >= 2) && (p.portraitStyle === "vrm3d" || p.portraitStyle === "painted")) state.portraitStyle = p.portraitStyle;
+    if ((p.portraitPrefVersion >= 3) && (p.portraitStyle === "vrm3d" || p.portraitStyle === "painted")) state.portraitStyle = p.portraitStyle;
     if (p.aiDifficulty === "easy" || p.aiDifficulty === "normal" || p.aiDifficulty === "pro") state.aiDifficulty = p.aiDifficulty;
     if (p.ruleDepth === "classic" || p.ruleDepth === "full") state.ruleDepth = p.ruleDepth;
     if (["standard", "fog_seal", "blitz_3m", "twin_tea", "lone_wolf_king"].indexOf(p.activeVariant) !== -1) state.activeVariant = p.activeVariant;
@@ -370,7 +371,7 @@ function el(id) { return document.getElementById(id); }
 function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
 
 function escapeHtml(str) {
-  return String(str || "")
+  return (str === null || str === undefined ? "" : String(str))
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -407,10 +408,10 @@ function addThreeGoodPoint(kind, reasonText) {
     }
     addLog({
       kind: "blessing",
-      title: "🪷 點亮三好蓮花瓣（" + litTotal + "/3）・" + virtueName + "！",
+      title: "點亮三好蓮花瓣（" + litTotal + "/3）・" + virtueName + "！",
       text: quote
     });
-    showToast("🪷 點亮「" + virtueName + "」(" + litTotal + "/3)｜" + quote, "emerald");
+    showToast("點亮「" + virtueName + "」(" + litTotal + "/3)｜" + quote, "emerald");
   }
   // Trigger Golden Three-Goodness Lotus Full Awakening when all 3 virtues are practiced!
   if (willAwakenNow) {
@@ -429,13 +430,13 @@ function addThreeGoodPoint(kind, reasonText) {
           ai.suspicionMap[getPlayerId()] = clamp((ai.suspicionMap[getPlayerId()] || 50) - 24, 5, 95);
         }
       });
-      triggerCutIn("🌟 蓮花覺醒・深水三好光環！", "你的禮貌言行讓全場放下戒心，懷疑度大幅下降！", "gold");
+      triggerCutIn("蓮花覺醒・深水三好光環！", "你的禮貌言行讓全場放下戒心，懷疑度大幅下降！", "gold");
       addLog({
         kind: "blessing",
-        title: "🌟 三好蓮花覺醒（反派演技）：全場好人對你的懷疑度大幅下降，心虛值平息！",
+        title: "三好蓮花覺醒（反派演技）：全場好人對你的懷疑度大幅下降，心虛值平息！",
         text: ""
       });
-      showToast("🌟 蓮花三瓣全亮！你以極高風度獲得深水信任光環！", "emerald");
+      showToast("蓮花三瓣全亮！你以極高風度獲得深水信任光環！", "emerald");
     } else {
       // Good Team Awakening: +1 Golden Goodwill Vote weight + enlighten 1 wavering Good AI on observable focus (ZERO hidden-wolf leak!)
       state.match.goodwillVoteBonus = true;
@@ -479,13 +480,13 @@ function addThreeGoodPoint(kind, reasonText) {
           enlightenNote = "，並感化 " + fmtSeatNum(waveringGood.id) + "號" + waveringGood.name + "共商聚焦 " + fmtSeatNum(targetFocus.id) + "號";
         }
       }
-      triggerCutIn("🌟 三好蓮花三瓣覺醒！", "獲得「黃金善意票（公投 +1 票）」" + enlightenNote + "！", "emerald");
+      triggerCutIn("三好蓮花三瓣覺醒！", "獲得「黃金善意票（公投 +1 票）」" + enlightenNote + "！", "emerald");
       addLog({
         kind: "blessing",
-        title: "🌟 三好蓮花覺醒！你獲得「黃金善意票（公投權重 +1）」" + enlightenNote + "！",
+        title: "三好蓮花覺醒！你獲得「黃金善意票（公投權重 +1）」" + enlightenNote + "！",
         text: ""
       });
-      showToast("🌟 蓮花三瓣全亮！獲得公投「黃金善意票 +1」" + enlightenNote + "！", "emerald");
+      showToast("蓮花三瓣全亮！獲得公投「黃金善意票 +1」" + enlightenNote + "！", "emerald");
     }
     if (typeof stage3d !== "undefined" && stage3d.isActive() && typeof stage3d.triggerSkillFx === "function") {
       stage3d.triggerSkillFx("three_good_resonance", getPlayerId(), getPlayerId(), false);
@@ -685,4 +686,22 @@ function shuffle(arr) {
     const tmp = copy[i]; copy[i] = copy[j]; copy[j] = tmp;
   }
   return copy;
+}
+
+/**
+ * 偵測目前使用的裝置形態（手機 / 平板 / 電腦），供操作提示與三裝置獨立教學自動切換。
+ */
+function detectTutorialDeviceMode() {
+  if (typeof window === "undefined") return "desktop";
+  const w = Math.max(0, Number(window.innerWidth) || 0);
+  const hasCoarse = Boolean(
+    typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches
+  );
+  const hasTouch = Boolean(
+    (typeof navigator !== "undefined" && (navigator.maxTouchPoints || 0) > 0) || hasCoarse
+  );
+  if (w > 0 && w <= 767) return "phone";
+  if (w >= 768 && w <= 1199) return "tablet";
+  if (hasCoarse && hasTouch && w <= 1366) return "tablet";
+  return "desktop";
 }

@@ -21,11 +21,11 @@ const FEEDBACK_CATEGORIES = {
 };
 
 const FEEDBACK_RATING_LABELS = {
-  1: "1★ 遇到嚴重卡關",
-  2: "2★ 有些地方不太順手",
-  3: "3★ 還不錯，有改進空間",
-  4: "4★ 很好玩！值得推薦",
-  5: "5★ 超愛這個體驗！"
+  1: "1 星 · 遇到嚴重卡關",
+  2: "2 星 · 有些地方不太順手",
+  3: "3 星 · 還不錯，有改進空間",
+  4: "4 星 · 很好玩，值得推薦",
+  5: "5 星 · 很喜歡這個體驗"
 };
 
 const feedbackUiState = {
@@ -101,7 +101,7 @@ function collectFeedbackDiagnostics() {
     : "未開局或已遮蔽";
 
   return {
-    version: "v19.0 (公測 3.4)",
+    version: "v20.0 (公測 3.5)",
     timestamp: new Date().toISOString(),
     started: Boolean(m.started),
     phase: String(m.phase || "LOBBY"),
@@ -130,11 +130,11 @@ function formatDiagnosticsSummary(diag) {
 
 function buildFeedbackReportText(entry) {
   const catDef = FEEDBACK_CATEGORIES[entry.category] || FEEDBACK_CATEGORIES.idea;
-  const stars = "★".repeat(entry.rating) + "☆".repeat(Math.max(0, 5 - entry.rating));
+  const ratingVal = clamp(Number(entry.rating) || 5, 1, 5);
   const lines = [
     "【三好・雲起茶席｜玩家使用反饋】",
     "・分類：" + catDef.label,
-    "・評分：" + stars + " (" + entry.rating + "/5)",
+    "・評分：" + ratingVal + " / 5 星",
     "・回報者：" + (entry.nickname || "匿名茶客"),
     "・時間：" + (entry.createdAt || new Date().toISOString()),
     "",
@@ -152,10 +152,24 @@ function buildGitHubIssueUrl(entry) {
   if (!repoInfo || !repoInfo.owner || !repoInfo.repo) return "";
   const catDef = FEEDBACK_CATEGORIES[entry.category] || FEEDBACK_CATEGORIES.idea;
   const snippet = String(entry.message || "").replace(/\s+/g, " ").trim().slice(0, 36);
-  const title = "[" + catDef.label.replace(/^[^\u4e00-\u9fffA-Za-z0-9]+\s*/, "") + "][" + entry.rating + "★] " + (snippet || "玩家使用反饋");
+  const title = "[" + catDef.label.replace(/^[^\u4e00-\u9fffA-Za-z0-9]+\s*/, "") + "][" + entry.rating + "星] " + (snippet || "玩家使用反饋");
   const body = buildFeedbackReportText(entry);
   const base = "https://github.com/" + encodeURIComponent(repoInfo.owner) + "/" + encodeURIComponent(repoInfo.repo) + "/issues/new";
   return base + "?title=" + encodeURIComponent(title) + "&body=" + encodeURIComponent(body);
+}
+
+function canShowFeedbackGithubButton() {
+  if (isAnonymousReviewHost()) return false;
+  const repoInfo = resolveFeedbackGithubRepo();
+  return Boolean(repoInfo && String(repoInfo.owner || "").trim() && String(repoInfo.repo || "").trim());
+}
+
+function syncFeedbackGithubButtonVisibility() {
+  const ghBtn = el("btnOpenGithubFeedback");
+  if (!ghBtn) return;
+  const visible = canShowFeedbackGithubButton();
+  ghBtn.classList.toggle("hidden", !visible);
+  ghBtn.setAttribute("aria-hidden", visible ? "false" : "true");
 }
 
 function copyFeedbackText(text) {
@@ -197,7 +211,7 @@ function syncFeedbackStarUi() {
     });
   }
   if (el("feedbackRatingText")) {
-    el("feedbackRatingText").textContent = FEEDBACK_RATING_LABELS[rating] || (rating + "★");
+    el("feedbackRatingText").textContent = FEEDBACK_RATING_LABELS[rating] || (rating + " 星");
   }
 }
 
@@ -240,7 +254,7 @@ function renderFeedbackHistoryList() {
   }
   list.slice(0, 6).forEach(function (item) {
     const catDef = FEEDBACK_CATEGORIES[item.category] || FEEDBACK_CATEGORIES.idea;
-    const stars = "★".repeat(clamp(Number(item.rating) || 5, 1, 5));
+    const ratingVal = clamp(Number(item.rating) || 5, 1, 5);
     const row = document.createElement("div");
     row.className = "fb-history-item";
     const timeLabel = item.createdAt ? String(item.createdAt).replace("T", " ").slice(5, 16) : "";
@@ -249,7 +263,7 @@ function renderFeedbackHistoryList() {
       : (item.deliveredTo === "webhook" ? "已送達雲端" : "本機已存");
     row.innerHTML =
       '<div class="flex items-center justify-between gap-2 text-[13px]">' +
-      '<span class="font-bold text-amber-300">' + escapeHtml(catDef.label) + ' · ' + escapeHtml(stars) + '</span>' +
+      '<span class="font-bold text-amber-300">' + escapeHtml(catDef.label) + ' · ' + escapeHtml(ratingVal + " / 5 星") + '</span>' +
       '<span class="text-slate-400">' + escapeHtml(statusLabel) + (timeLabel ? (" · " + escapeHtml(timeLabel)) : "") + '</span>' +
       '</div>' +
       '<div class="text-[13px] text-slate-200 mt-1 break-words">' + escapeHtml(String(item.message || "").slice(0, 120)) + '</div>';
@@ -266,9 +280,7 @@ function openFeedbackModal() {
   refreshFeedbackEnvPreview();
   renderFeedbackHistoryList();
   if (el("feedbackResultCard")) el("feedbackResultCard").classList.add("hidden");
-  if (el("btnOpenGithubFeedback")) {
-    el("btnOpenGithubFeedback").classList.add("hidden");
-  }
+  syncFeedbackGithubButtonVisibility();
   modal.classList.remove("hidden");
   if (el("inputFeedbackBody") && typeof el("inputFeedbackBody").focus === "function") {
     el("inputFeedbackBody").focus();
@@ -382,6 +394,7 @@ async function submitUserFeedback() {
       resultMsg.textContent = "已整理並暫存反饋報告，點下方按鈕即可複製回傳：";
     }
     resultCard.classList.remove("hidden");
+    syncFeedbackGithubButtonVisibility();
   }
 
   if (typeof sound !== "undefined" && typeof sound.tone === "function") {

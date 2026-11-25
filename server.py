@@ -372,11 +372,21 @@ def get_server_gemini_key():
     return ""
 
 
-def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeout=9):
+def clamp_gemini_temperature(raw_temp, default_val=0.65):
+    try:
+        val = float(raw_temp)
+    except (TypeError, ValueError):
+        val = float(default_val)
+    if not (val == val) or val <= 0:
+        val = float(default_val)
+    return round(max(0.45, min(0.85, val)), 2)
+
+
+def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeout=9, temperature=0.65):
     safe_model = model_id if model_id in ALLOWED_PROXY_GEMINI_MODELS else "gemini-3.8-flash"
     is_gen3 = safe_model.startswith("gemini-3")
     gen_cfg = {
-        "temperature": 0.52,
+        "temperature": clamp_gemini_temperature(temperature),
         "maxOutputTokens": (3072 if json_mode else 1536) if is_gen3 else (1280 if json_mode else 768),
     }
     if is_gen3:
@@ -632,20 +642,21 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         req_model = str(req.get("model") or os.environ.get("GEMINI_DEFAULT_MODEL", "gemini-3.8-flash")).strip()
         primary_model = req_model if req_model in ALLOWED_PROXY_GEMINI_MODELS else "gemini-3.8-flash"
         json_mode = bool(req.get("jsonMode"))
+        safe_temp = clamp_gemini_temperature(req.get("temperature"))
         try:
-            out_text, used_model = call_gemini_text_rest(api_key, primary_model, prompt_text, json_mode=json_mode, timeout=9)
+            out_text, used_model = call_gemini_text_rest(api_key, primary_model, prompt_text, json_mode=json_mode, timeout=9, temperature=safe_temp)
             if out_text:
                 self.send_json(200, {"ok": True, "model": used_model, "text": out_text})
                 return
             if primary_model != "gemini-2.5-flash":
-                fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode, timeout=8)
+                fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode, timeout=8, temperature=safe_temp)
                 if fb_text:
                     self.send_json(200, {"ok": True, "model": fb_model, "text": fb_text})
                     return
         except urllib.error.HTTPError as hexc:
             if primary_model != "gemini-2.5-flash" and hexc.code in (400, 404, 429, 500, 503, 504):
                 try:
-                    fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode, timeout=8)
+                    fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode, timeout=8, temperature=safe_temp)
                     if fb_text:
                         self.send_json(200, {"ok": True, "model": fb_model, "text": fb_text})
                         return

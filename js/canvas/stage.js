@@ -259,20 +259,16 @@ function drawStageOverlays(ctx, f, coords, skipBeams) {
 
     const isWolfMood = b.mood === "wolf" || b.mood === "suspect";
     const isTrustMood = b.mood === "trust";
-    drawRoundedRect(ctx, bx, by, bw, bh, 9 * dpr);
-    ctx.fillStyle = daylight
-      ? (isWolfMood ? "rgba(255, 241, 242, 0.96)" : (isTrustMood ? "rgba(236, 253, 245, 0.96)" : "rgba(255, 253, 246, 0.96)"))
-      : (isWolfMood ? "rgba(76, 5, 25, 0.94)" : (isTrustMood ? "rgba(6, 78, 59, 0.94)" : "rgba(15, 23, 42, 0.94)"));
+    drawRoundedRect(ctx, bx, by, bw, bh, 5 * dpr);
+    ctx.fillStyle = isWolfMood ? "rgba(24, 13, 13, 0.88)" : (isTrustMood ? "rgba(13, 24, 20, 0.88)" : "rgba(14, 12, 10, 0.88)");
     ctx.fill();
-    ctx.lineWidth = 1.6 * dpr;
-    ctx.strokeStyle = isWolfMood ? "#fb7185" : (isTrustMood ? "#34d399" : "#f59e0b");
+    ctx.lineWidth = 1.0 * dpr;
+    ctx.strokeStyle = isWolfMood ? "rgba(208, 92, 80, 0.55)" : (isTrustMood ? "rgba(92, 169, 141, 0.55)" : "rgba(216, 185, 124, 0.48)");
     ctx.stroke();
 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = daylight
-      ? (isWolfMood ? "#9f1239" : (isTrustMood ? "#065f46" : "#78350f"))
-      : "#f8fafc";
+    ctx.fillStyle = "#f2eadb";
     ctx.fillText(txt, bx + bw * 0.5, by + bh * 0.52, bw - 10 * dpr);
     ctx.restore();
   });
@@ -463,13 +459,13 @@ function drawStageOverlays(ctx, f, coords, skipBeams) {
       : (progress < 0.22 ? (1.17 - ((progress - 0.10) / 0.12) * 0.17) : 1.0);
     ctx.save();
     ctx.globalAlpha = progress < 0.72 ? 1 : clamp((1 - progress) / 0.28, 0, 1);
-    ctx.font = "900 " + Math.round(13.5 * sc * popEase * dpr) + "px 'Noto Sans TC', sans-serif";
+    ctx.font = "600 " + Math.round(13 * sc * popEase * dpr) + "px 'Noto Serif TC', 'Noto Sans TC', serif";
     ctx.textAlign = "center";
-    ctx.lineWidth = (3.2 * sc) * dpr;
-    ctx.strokeStyle = daylight ? "rgba(255, 255, 255, 0.95)" : "rgba(9, 13, 26, 0.9)";
-    const py = fx.y - Math.pow(progress, 0.78) * 38 * dpr;
+    ctx.lineWidth = (2.6 * sc) * dpr;
+    ctx.strokeStyle = "rgba(10, 9, 8, 0.84)";
+    const py = fx.y - Math.pow(progress, 0.78) * 34 * dpr;
     ctx.strokeText(fx.text, fx.x, py);
-    ctx.fillStyle = daylight && fx.color === "#fde68a" ? "#b45309" : fx.color;
+    ctx.fillStyle = (fx.color === "#fde68a" || fx.color === "#fbbf24") ? "#eed49b" : fx.color;
     ctx.fillText(fx.text, fx.x, py);
     ctx.restore();
   });

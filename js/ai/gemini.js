@@ -84,11 +84,40 @@ function getOrCreateProxySessionId() {
   return sid;
 }
 
+const GEMINI_TEMP_TIERS = Object.freeze({
+  sheriff_logic: 0.58,
+  day_standard: 0.65,
+  interject_confront: 0.74,
+  pk_last_words: 0.78
+});
+
+function clampGeminiTemperature(val, fallback) {
+  const num = Number(val);
+  const fb = typeof fallback === "number" ? fallback : GEMINI_TEMP_TIERS.day_standard;
+  const base = (Number.isFinite(num) && num > 0) ? num : fb;
+  return Math.round(Math.max(0.45, Math.min(0.85, base)) * 100) / 100;
+}
+
+function resolveGeminiSpeechTemperature(sceneKind, ctxOpts) {
+  const o = ctxOpts || {};
+  if (sceneKind === "pk" || sceneKind === "last_words" || o.isPkRound || o.pkActive) {
+    return GEMINI_TEMP_TIERS.pk_last_words;
+  }
+  if (sceneKind === "interject" || sceneKind === "confrontation") {
+    return GEMINI_TEMP_TIERS.interject_confront;
+  }
+  if (sceneKind === "sheriff" || sceneKind === "sheriff_tally" || sceneKind === "dual_seer" || o.isSheriff || o.isDualSeerOrGod) {
+    return GEMINI_TEMP_TIERS.sheriff_logic;
+  }
+  return GEMINI_TEMP_TIERS.day_standard;
+}
+
 async function callServerGeminiProxyOnce(promptText, timeoutMs, opts) {
   if (typeof fetch !== "function") return { ok: false, status: 0, text: null };
   const controller = typeof AbortController === "function" ? new AbortController() : null;
   const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 14000) : null;
   const sid = getOrCreateProxySessionId();
+  const safeTemp = clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard);
   try {
     const fetchOpts = {
       method: "POST",
@@ -101,7 +130,8 @@ async function callServerGeminiProxyOnce(promptText, timeoutMs, opts) {
         model: state.serverGeminiModel || "gemini-2.5-flash",
         tier: (opts && opts.lite) ? "lite" : "standard",
         sessionId: sid,
-        jsonMode: Boolean(opts && opts.jsonMode)
+        jsonMode: Boolean(opts && opts.jsonMode),
+        temperature: safeTemp
       })
     };
     if (controller) fetchOpts.signal = controller.signal;
@@ -217,7 +247,7 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
     maxOutputTokens: isGen34 ? ((opts && opts.jsonMode) ? 3072 : 2048) : ((opts && opts.jsonMode) ? 1280 : 768)
   };
   if (!modelId || modelId.indexOf("gemini-4") !== 0) {
-    genCfg.temperature = 0.78;
+    genCfg.temperature = clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard);
   }
   if (isGen34) {
     genCfg.thinkingConfig = { thinkingLevel: "LOW" };
@@ -276,19 +306,19 @@ async function callGeminiText(promptText, opts) {
     }
     if (prox.status === 429) {
       state.serverGeminiCooldownUntil = Date.now() + 180000;
-      notifyGeminiIssueOnce("proxy:429", "ℹ️ 公測雲端 Gemini 目前額度忙碌，先由內建 AI 接手；您也可填入自己的免費 Key", "sky");
+      notifyGeminiIssueOnce("proxy:429", "公測雲端 Gemini 目前額度忙碌，先由內建 AI 接手；您也可填入自己的免費 Key", "sky");
       if (typeof updateAllUI === "function") updateAllUI();
     } else if (prox.status === 404 || prox.status === 503 || prox.status === 403) {
       state.serverGeminiAvailable = false;
       if (prox.status === 403) {
-        notifyGeminiIssueOnce("proxy:403", "ℹ️ 雲端代理來源驗證未通過（HTTP 403），已自動切回內建三好 AI", "sky");
+        notifyGeminiIssueOnce("proxy:403", "雲端代理來源驗證未通過（HTTP 403），已自動切回內建三好 AI", "sky");
       }
       if (typeof updateAllUI === "function") updateAllUI();
     } else if (prox.status === 502 || prox.status === 504) {
       state._proxyFailStreak = (state._proxyFailStreak || 0) + 1;
       if (state._proxyFailStreak >= 2) {
         state.serverGeminiCooldownUntil = Date.now() + 60000;
-        notifyGeminiIssueOnce("proxy:502", "ℹ️ 雲端 Gemini 暫時回應緩慢，先由內建 AI 接手 60 秒", "sky");
+        notifyGeminiIssueOnce("proxy:502", "雲端 Gemini 暫時回應緩慢，先由內建 AI 接手 60 秒", "sky");
         if (typeof updateAllUI === "function") updateAllUI();
       }
     }
@@ -307,20 +337,20 @@ async function callGeminiText(promptText, opts) {
   // Abort redundant retries immediately on invalid key (401/403) unless it's a tier-restricted flagship model
   if ((first.status === 401 || first.status === 403) && primary.indexOf("gemini-4") !== 0) {
     state._personalKeyCooldownUntil = Date.now() + 120000;
-    notifyGeminiIssueOnce("auth:" + primary + ":" + first.status, "⚠️ Gemini API Key 無效或無權限（HTTP " + first.status + "），暫改由內建 AI 推理", "warn");
+    notifyGeminiIssueOnce("auth:" + primary + ":" + first.status, "Gemini API Key 無效或無權限（HTTP " + first.status + "），暫改由內建 AI 推理", "warn");
     return null;
   }
   if (primary !== "gemini-3.8-flash") {
     const fb38 = await callGeminiModelOnce("gemini-3.8-flash", promptText, 12000, opts);
     if (fb38.ok && fb38.text) {
       if (primary.indexOf("gemini-4") === 0 && (first.status === 403 || first.status === 429 || first.status === 404)) {
-        notifyGeminiIssueOnce("downgrade:" + primary, "ℹ️ Gemini 4 Argon 需付費額度，已自動降級至 Gemini 3.8 Flash", "emerald");
+        notifyGeminiIssueOnce("downgrade:" + primary, "Gemini 4 Argon 需付費額度，已自動降級至 Gemini 3.8 Flash", "emerald");
       }
       return fb38.text;
     }
     if (fb38.status === 401 || fb38.status === 403) {
       state._personalKeyCooldownUntil = Date.now() + 120000;
-      notifyGeminiIssueOnce("auth:38:" + fb38.status, "⚠️ Gemini API Key 無效或無權限（HTTP " + fb38.status + "），暫改由內建 AI 推理", "warn");
+      notifyGeminiIssueOnce("auth:38:" + fb38.status, "Gemini API Key 無效或無權限（HTTP " + fb38.status + "），暫改由內建 AI 推理", "warn");
       return null;
     }
   }
@@ -329,7 +359,7 @@ async function callGeminiText(promptText, opts) {
     if (fb25.ok && fb25.text) return fb25.text;
   }
   if (first.status === 429) {
-    notifyGeminiIssueOnce("quota:" + primary, "⚠️ Gemini API 額度暫滿（HTTP 429），本回合自動由內建 AI 接手", "warn");
+    notifyGeminiIssueOnce("quota:" + primary, "Gemini API 額度暫滿（HTTP 429），本回合自動由內建 AI 接手", "warn");
   }
   return null;
 }
@@ -794,16 +824,10 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   const spEffKey = self.effectiveRoleKey || (typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(speaker) : self.role);
   const spRoleDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(speaker) : null) || ROLE_DEFS[self.role];
   let secretIntel = "你的真實底牌：" + (spRoleDef ? spRoleDef.name : "書院夥伴") + "（陣營：" + (self.team === "wolf" ? "酸民狼" : "好人") + "）。";
-  if (self.role === "seer" && (self.checkedHistory || []).length > 0) {
-    secretIntel += "你已查驗的絕對真相：" + self.checkedHistory.map(function (c) {
-      return (c.day ? ("第" + c.day + "晚 ") : "") + c.targetId + "號=" + (c.isWolf ? "酸民狼" : "好人");
-    }).join("、") + "。";
-  } else if (self.role === "witch") {
-    if (self.savedSeatId) secretIntel += "你之前用暖心回甘茶護回過 " + self.savedSeatId + "號（他確定是好人）。";
-    if (self.purifiedSeatId) secretIntel += "你之前曾用清心醒神茶請 " + self.purifiedSeatId + "號離席。";
-  } else if (self.role === "guard" && snap && snap.lastGuardTargetId) {
-    secretIntel += "你昨晚展開護心結界守護過 " + snap.lastGuardTargetId + "號（今晚不可連守同一人，且須防與回甘茶同守破盾）。";
-  } else if (self.isElder) {
+  if (snap && snap.selfSecretSummary) {
+    secretIntel += snap.selfSecretSummary;
+  }
+  if (self.isElder) {
     secretIntel += self.elderShieldUsed
       ? "你已發動過清心長老豁免盾（目前無公投投票權，但發言具高公信力，應帶領好人歸票）。"
       : "你擁有清心長老首次公投豁免盾（被誤投一次不會離席，可大膽替神職分擔火力）。";
@@ -1079,9 +1103,19 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
   const totalSNow = (built.snap && built.snap.totalSeats) || 8;
   const lockedRoleNow = getAllowedGeminiClaimRole(speaker, fallbackMeta);
   const isSheriffNow = Boolean(built.snap && built.snap.sheriffSeatId === speaker.id);
+  const isPkNow = Boolean(built.snap && built.snap.pkActive);
+  const aliveSeerClaimCount = (built.snap && Array.isArray(built.snap.seats))
+    ? built.snap.seats.filter(function (s) { return s.alive && s.claimedRole === "seer"; }).length
+    : 0;
+  const isDualSeerOrGod = Boolean(lockedRoleNow || aliveSeerClaimCount >= 2);
+  const tempVal = resolveGeminiSpeechTemperature("day", {
+    pkActive: isPkNow,
+    isSheriff: isSheriffNow,
+    isDualSeerOrGod: isDualSeerOrGod
+  });
   const isBriefPass = Boolean(fallbackMeta && fallbackMeta.lengthTier === "brief");
   const useLiteTier = Boolean(totalSNow >= 10 && isBriefPass && !lockedRoleNow && !isSheriffNow && !(fallbackMeta && (fallbackMeta.checkedWolfId || fallbackMeta.accuseId)));
-  const rawOut = await callGeminiText(built.prompt, { jsonMode: true, lite: useLiteTier });
+  const rawOut = await callGeminiText(built.prompt, { jsonMode: true, lite: useLiteTier, temperature: tempVal });
   const parsed = rawOut ? parseGeminiStructuredSpeech(rawOut) : null;
   if (!parsed) return null;
   const check = validateGeminiSpeechReality(speaker, fallbackMeta, parsed, built.snap);
@@ -1094,33 +1128,10 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
 
 // ==================== FULL-STAGE LIVE GEMINI GENERATORS (SHERIFF / LAST WORDS / INTERJECT / CONFRONTATION) ====================
 function _buildMiniSecretIntelForPrompt(snap) {
-  if (!snap || !snap.self) return "【你的真實底牌】：好人陣營。";
-  const self = snap.self;
-  const roleDef = (typeof getSeatRoleDef === "function") ? getSeatRoleDef(self) : ROLE_DEFS[self.role];
-  const roleTitle = roleDef ? roleDef.name : self.role;
-  if (self.role === "wolf") {
-    const mates = (snap.knownWolfMates || []).map(function (m) {
-      return m.id + "號" + (m.id === snap.playerSeatId ? "你" : m.name) + (m.alive ? "(在場)" : "(離席)");
-    }).join("、");
-    return "【你的真實底牌】：你是「" + roleTitle + "」（酸民狼陣營，發言中絕對不可承認自己是狼或暴露同伴！）。" + (mates ? ("你的同伴：" + mates + "。") : "你是目前場上最後一名同伴。");
+  if (snap && typeof snap.selfSecretSummary === "string" && snap.selfSecretSummary) {
+    return snap.selfSecretSummary;
   }
-  if (self.role === "seer") {
-    const chks = Array.isArray(self.checkedHistory) && self.checkedHistory.length
-      ? self.checkedHistory.map(function (c) { return c.targetId + "號=" + (c.isWolf ? "酸民狼(查殺)" : "好人(金水)"); }).join("；")
-      : "尚無查驗紀錄";
-    return "【你的真實底牌】：你是「" + roleTitle + "」（好人陣營）。你的親查紀錄：" + chks + "。";
-  }
-  if (self.role === "witch") {
-    const parts = [];
-    if (self.savedSeatId) parts.push("曾以暖心回甘茶護回 " + self.savedSeatId + "號（銀水好人）");
-    if (self.purifiedSeatId) parts.push("曾以醒腦清茶送離 " + self.purifiedSeatId + "號");
-    return "【你的真實底牌】：你是「" + roleTitle + "」（好人陣營）。" + (parts.length ? (parts.join("；") + "。") : "尚未交出解藥或醒腦茶。");
-  }
-  if (self.role === "guard") {
-    const gTxt = snap.lastGuardTargetId ? ("昨晚守護了 " + snap.lastGuardTargetId + "號。") : "尚未公開守護對象。";
-    return "【你的真實底牌】：你是「" + roleTitle + "」（好人陣營）。" + gTxt;
-  }
-  return "【你的真實底牌】：你是「" + roleTitle + "」（好人陣營）。";
+  return "【你的真實底牌】：好人陣營。";
 }
 
 function _buildMiniPersonaBlock(self) {
@@ -1214,18 +1225,20 @@ function buildBlindGeminiSheriffPrompt(cand, priorSpeeches, built, opts) {
 
   const isSeerStand = Boolean(built && (built.tone === "seer" || built.tone === "clash"));
   const isClash = Boolean(built && built.tone === "clash");
+  const isBluffStand = Boolean(built && built.tone === "bluff");
+  const isPlayfulStand = Boolean(built && built.tone === "playful");
   const isWithdraw = Boolean(o.aiBluffWithdraw);
   const isPk = Boolean(o.isPkRound);
 
   const standRules = [];
   if (isPk) {
     standRules.push("現在進入「警上平票 PK 決選」最後拉票，語氣果斷誠懇，直面競爭對手並爭取警下票數（30～55字）。");
+  } else if (isWithdraw && isPlayfulStand) {
+    standRules.push("你本輪是「上警隨性亂聊搶麥後主動退水」：用輕鬆幽默的語氣隨意聊兩句、盲猜一位場上氣氛，最後大方宣布自己只是上來過過麥克風癮、現在拱手退水回警下投票（嚴禁冒充真神職，40～70字）。");
   } else if (isWithdraw) {
-    standRules.push("你本輪是「詐身分上警試探後主動拱手退水」：先自然表態自己只是上來聽前面反應或試探後置位，並在結尾明確說出「退水」回警下投票（絕不可冒充神職，40～68字）。");
+    standRules.push("你本輪是「詐身分上警試探後主動拱手退水」：故意點名一位夥伴試探反應或假裝帶節奏，並在結尾笑著攤牌說明只是詐身分、現在明確說出「退水」回警下投票（絕不可真的冒充神職，40～72字）。");
   } else if (isSeerStand) {
-    const lastChk = (self.role === "seer" && Array.isArray(self.checkedHistory) && self.checkedHistory.length > 0)
-      ? self.checkedHistory[self.checkedHistory.length - 1]
-      : null;
+    const lastChk = (snap && snap.selfLastCheck) ? snap.selfLastCheck : null;
     const chkTargetId = lastChk ? lastChk.targetId : (built && built.checkTargetId ? built.checkTargetId : null);
     const chkVerdict = lastChk ? (lastChk.isWolf ? "酸民狼(查殺)" : "好人(金水)") : "好人(金水)";
     standRules.push("你本輪必須正式起跳「明心觀察員」競選警長" + (isClash && built.rivalId ? ("，並且直接反擊剛才搶跳對跳的 " + labelOf(built.rivalId) + " 是假觀察員／悍跳狼") : "") + "！");
@@ -1237,8 +1250,12 @@ function buildBlindGeminiSheriffPrompt(cand, priorSpeeches, built, opts) {
       standRules.push("必須自然交代你的警徽流：今晚先驗 " + bf.firstTargetId + "號" + (bf.secondTargetId ? ("、再驗 " + bf.secondTargetId + "號") : "") + "（簡述倒牌飛徽即金水、撕徽即查殺）。");
     }
     standRules.push("字數 55～95 字，像真實台灣狼人殺玩家在警上侃侃而談、有氣勢又不制式。");
+  } else if (isBluffStand) {
+    standRules.push("你本輪以非觀察員身分上警「詐身分試水溫」：俏皮地胡亂點名一位夥伴試探對方會不會緊張，笑稱自己是來炸後置位看反應的，語氣生動有面殺博弈感（嚴禁真的自稱是明心觀察員／奉茶師／守衛／糾察長，40～72字）。");
+  } else if (isPlayfulStand) {
+    standRules.push("你本輪以非觀察員身分上警「隨性亂聊搶麥」：語氣輕鬆搞笑，表示自己只是想搶先拿麥克風暖場或憑直覺亂點一位夥伴玩一下，不一定要搶贏警徽（嚴禁冒充任何神職，38～68字）。");
   } else {
-    standRules.push("你本輪以「非觀察員」身分上警競選（嚴禁冒充明心觀察員／奉茶師／守衛／糾察長！），自然回應前面剛發言的候選人（若有觀察員起跳或對跳可點評站邊方向，若自己是第一位則輕鬆開場爭取末置位歸票權），40～72 字。");
+    standRules.push("你本輪以「非觀察員」身分上警競選（嚴禁冒充明心觀察員／奉茶師／守衛／糾察長！），自然回應前面剛發言的候選人（若有觀察員起跳或有人上來亂聊可順口點評，若自己是第一位則輕鬆開場爭取末置位歸票權），40～72 字。");
   }
 
   const prompt =
@@ -1263,7 +1280,8 @@ async function tryGenerateGeminiSheriffSpeech(cand, priorSpeeches, built, opts) 
   const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
   const pack = buildBlindGeminiSheriffPrompt(cand, priorSpeeches, built, o);
   if (!pack || !pack.audit || !pack.audit.ok) return null;
-  const raw = await callGeminiText(pack.prompt, { jsonMode: false });
+  const tempVal = resolveGeminiSpeechTemperature(o.isPkRound ? "pk" : "sheriff", { isPkRound: Boolean(o.isPkRound) });
+  const raw = await callGeminiText(pack.prompt, { jsonMode: false, temperature: tempVal });
   if (!raw) return null;
   const isSeerStand = Boolean(built && (built.tone === "seer" || built.tone === "clash"));
   const clean = _validateMiniLiveText(raw, pack.snap ? pack.snap.self : cand, {
@@ -1328,7 +1346,8 @@ async function tryGenerateGeminiLastWords(seat, mode, lwObj) {
   const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
   const pack = buildBlindGeminiLastWordsPrompt(seat, mode, lwObj);
   if (!pack || !pack.audit || !pack.audit.ok) return null;
-  const raw = await callGeminiText(pack.prompt, { jsonMode: false });
+  const tempVal = resolveGeminiSpeechTemperature("last_words");
+  const raw = await callGeminiText(pack.prompt, { jsonMode: false, temperature: tempVal });
   if (!raw) return null;
   const mustSeat = (lwObj && lwObj.targetId && (lwObj.claimRole === "seer" || lwObj.claimRole === "witch" || lwObj.claimRole === "guard"))
     ? lwObj.targetId
@@ -1377,7 +1396,8 @@ async function tryGenerateGeminiInterjectionReply(targetSeat, questionText, fall
   const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
   const pack = buildBlindGeminiInterjectionPrompt(targetSeat, questionText, fallbackReply);
   if (!pack || !pack.audit || !pack.audit.ok) return null;
-  const raw = await callGeminiText(pack.prompt, { jsonMode: false });
+  const tempVal = resolveGeminiSpeechTemperature("interject");
+  const raw = await callGeminiText(pack.prompt, { jsonMode: false, temperature: tempVal });
   if (!raw) return null;
   const clean = _validateMiniLiveText(raw, pack.snap ? pack.snap.self : targetSeat, {
     minLen: 10,
@@ -1426,7 +1446,8 @@ async function tryGenerateGeminiConfrontationLine(speaker, rival, baseLine) {
   const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
   const pack = buildBlindGeminiConfrontationPrompt(speaker, rival, baseLine);
   if (!pack || !pack.audit || !pack.audit.ok) return null;
-  const raw = await callGeminiText(pack.prompt, { jsonMode: false });
+  const tempVal = resolveGeminiSpeechTemperature("confrontation");
+  const raw = await callGeminiText(pack.prompt, { jsonMode: false, temperature: tempVal });
   if (!raw) return null;
   const clean = _validateMiniLiveText(raw, pack.snap ? pack.snap.self : speaker, {
     minLen: 16,
