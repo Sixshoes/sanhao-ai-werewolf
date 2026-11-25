@@ -268,7 +268,7 @@ function build3DSkyAndLights(scene, env) {
   scene.add(env.hemiLight);
 
   const isIgpuEnv = Boolean(typeof stage3d !== "undefined" && stage3d.isIntegratedGpu);
-  const shadowRes = isIgpuEnv ? 1024 : 2048;
+  const shadowRes = isIgpuEnv ? 768 : 2048;
   env.dirLight = new THREE.DirectionalLight(0xfff1d0, 1.24);
   env.dirLight.position.set(11, 19, 9);
   env.dirLight.castShadow = true;
@@ -2623,24 +2623,35 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     ? get3DTableLayout(activeSeatsN)
     : { tableScale: 1.08, ringRadius: 4.44, pavilionScale: 1.0 };
   if (!env.tableScaleCurrent) env.tableScaleCurrent = tLayout.tableScale;
-  else env.tableScaleCurrent += (tLayout.tableScale - env.tableScaleCurrent) * 0.16;
   if (!env.pavilionScaleCurrent) env.pavilionScaleCurrent = tLayout.pavilionScale;
-  else env.pavilionScaleCurrent += (tLayout.pavilionScale - env.pavilionScaleCurrent) * 0.16;
-  const tsNow = env.tableScaleCurrent;
-  const psNow = env.pavilionScaleCurrent;
-  if (env.tableScaleGroup) env.tableScaleGroup.scale.set(tsNow, 1, tsNow);
-  if (env.tableAO) env.tableAO.scale.set(tsNow, tsNow, 1);
-  if (env.floorMandala) {
-    const mSc = (tLayout.ringRadius / 4.65);
-    env.floorMandala.scale.set(mSc, mSc, 1);
+  const tScaleDiff = Math.abs(tLayout.tableScale - env.tableScaleCurrent);
+  const pScaleDiff = Math.abs(tLayout.pavilionScale - env.pavilionScaleCurrent);
+  const layoutNeedsScale = !env._layoutScaleApplied || env._lastLayoutSeats !== activeSeatsN || tScaleDiff > 0.0005 || pScaleDiff > 0.0005;
+  if (layoutNeedsScale) {
+    env._layoutScaleApplied = true;
+    env._lastLayoutSeats = activeSeatsN;
+    env.tableScaleCurrent = tScaleDiff > 0.0005
+      ? (env.tableScaleCurrent + (tLayout.tableScale - env.tableScaleCurrent) * 0.16)
+      : tLayout.tableScale;
+    env.pavilionScaleCurrent = pScaleDiff > 0.0005
+      ? (env.pavilionScaleCurrent + (tLayout.pavilionScale - env.pavilionScaleCurrent) * 0.16)
+      : tLayout.pavilionScale;
+    const tsNow = env.tableScaleCurrent;
+    const psNow = env.pavilionScaleCurrent;
+    if (env.tableScaleGroup) env.tableScaleGroup.scale.set(tsNow, 1, tsNow);
+    if (env.tableAO) env.tableAO.scale.set(tsNow, tsNow, 1);
+    if (env.floorMandala) {
+      const mSc = (tLayout.ringRadius / 4.65);
+      env.floorMandala.scale.set(mSc, mSc, 1);
+    }
+    if (env.terraceMesh) env.terraceMesh.scale.set(psNow, 1, psNow);
+    if (env.terraceTrim) env.terraceTrim.scale.set(psNow, psNow, 1);
+    if (env.groundDisk) env.groundDisk.scale.set(psNow, 1, psNow);
+    if (env.proceduralPavilionGroup) env.proceduralPavilionGroup.scale.set(psNow, 1, psNow);
+    if (env.courtyardPropsGroup) env.courtyardPropsGroup.scale.set(psNow, 1, psNow);
+    if (env.linmeiGardenGroup) env.linmeiGardenGroup.scale.set(psNow, 1, psNow);
+    if (env.celestialGardenGroup) env.celestialGardenGroup.scale.set(psNow, 1, psNow);
   }
-  if (env.terraceMesh) env.terraceMesh.scale.set(psNow, 1, psNow);
-  if (env.terraceTrim) env.terraceTrim.scale.set(psNow, psNow, 1);
-  if (env.groundDisk) env.groundDisk.scale.set(psNow, 1, psNow);
-  if (env.proceduralPavilionGroup) env.proceduralPavilionGroup.scale.set(psNow, 1, psNow);
-  if (env.courtyardPropsGroup) env.courtyardPropsGroup.scale.set(psNow, 1, psNow);
-  if (env.linmeiGardenGroup) env.linmeiGardenGroup.scale.set(psNow, 1, psNow);
-  if (env.celestialGardenGroup) env.celestialGardenGroup.scale.set(psNow, 1, psNow);
 
   const desiredTheme = (typeof state !== "undefined" && state.sceneTheme === "celestial") ? "celestial" : "linmei";
   if (env.sceneThemeKey !== desiredTheme) {
@@ -2677,12 +2688,26 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     if (env.skyPhotoCelestialMat) env.skyPhotoCelestialMat.opacity += (targetCelOp - env.skyPhotoCelestialMat.opacity) * d08;
     if (env.skyPhotoDuskMat) env.skyPhotoDuskMat.opacity += (targetDuskOp - env.skyPhotoDuskMat.opacity) * d08;
     env.skyPhotoNightMat.opacity += (targetNightOp - env.skyPhotoNightMat.opacity) * d08;
-    // Gently anchor sky domes so directional sunlight stays aligned with the painted sky sun!
+
+    // v23.3 Overdraw Cull: Hide zero-opacity sky domes & hide base procedural skyMesh when a painted dome is opaque!
+    const dayOp = env.skyPhotoDayMat.opacity;
+    const celOp = env.skyPhotoCelestialMat ? env.skyPhotoCelestialMat.opacity : 0;
+    const duskOp = env.skyPhotoDuskMat ? env.skyPhotoDuskMat.opacity : 0;
+    const nightOp = env.skyPhotoNightMat.opacity;
+    env.skyPhotoDayMesh.visible = dayOp > 0.005;
+    if (env.skyPhotoCelestialMesh) env.skyPhotoCelestialMesh.visible = celOp > 0.005;
+    if (env.skyPhotoDuskMesh) env.skyPhotoDuskMesh.visible = duskOp > 0.005;
+    env.skyPhotoNightMesh.visible = nightOp > 0.005;
+    if (env.skyMesh) {
+      env.skyMesh.visible = Math.max(dayOp, celOp, duskOp, nightOp) < 0.94;
+    }
+
+    // Gently anchor visible sky domes so directional sunlight stays aligned with the painted sky sun!
     const skyDrift = Math.sin(t * 0.03) * 0.015;
-    env.skyPhotoDayMesh.rotation.y = skyDrift;
-    if (env.skyPhotoCelestialMesh) env.skyPhotoCelestialMesh.rotation.y = skyDrift;
-    if (env.skyPhotoDuskMesh) env.skyPhotoDuskMesh.rotation.y = skyDrift;
-    env.skyPhotoNightMesh.rotation.y = skyDrift * 0.8;
+    if (env.skyPhotoDayMesh.visible) env.skyPhotoDayMesh.rotation.y = skyDrift;
+    if (env.skyPhotoCelestialMesh && env.skyPhotoCelestialMesh.visible) env.skyPhotoCelestialMesh.rotation.y = skyDrift;
+    if (env.skyPhotoDuskMesh && env.skyPhotoDuskMesh.visible) env.skyPhotoDuskMesh.rotation.y = skyDrift;
+    if (env.skyPhotoNightMesh.visible) env.skyPhotoNightMesh.rotation.y = skyDrift * 0.8;
   }
 
   if (env.dawnSweep > 0.005) env.dawnSweep *= Math.pow(0.965, dt60);
@@ -2757,10 +2782,12 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   env.sunHalo.scale.setScalar(1 + env.dawnSweep * 0.45);
   env.moonGroup.position.y += ((f.daylight ? -12 : 16.5) - env.moonGroup.position.y) * d04;
   env.starPoints.material.opacity += (((f.daylight ? 0.0 : (f.night ? 0.88 : 0.52))) - env.starPoints.material.opacity) * d05;
-  env.starPoints.rotation.y = t * 0.008;
+  env.starPoints.visible = env.starPoints.material.opacity > 0.008;
+  if (env.starPoints.visible) env.starPoints.rotation.y = t * 0.008;
   if (env.lanyangLights) {
     const targetCity = f.daylight ? 0.05 : (f.night ? 0.90 : 0.58);
     env.lanyangLights.material.opacity += (targetCity - env.lanyangLights.material.opacity) * d05;
+    env.lanyangLights.visible = env.lanyangLights.material.opacity > 0.01;
   }
   if (env.guishanMat) {
     env.guishanMat.color.setHex(f.daylight ? 0x2f5a67 : (f.night ? 0x151e38 : 0x233852));
@@ -2924,14 +2951,16 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   }
 
   if (env.mistRing) {
-    env.mistRing.rotation.y = t * (isToxicHaze ? 0.048 : 0.025);
     const mistTargetOp = (f.night ? 0.09 : 0.05) + (isToxicHaze ? 0.10 : (isClearBreeze ? -0.02 : 0));
     env.mistRing.material.opacity += (mistTargetOp - env.mistRing.material.opacity) * d05;
+    env.mistRing.visible = env.mistRing.material.opacity > 0.005;
+    if (env.mistRing.visible) env.mistRing.rotation.y = t * (isToxicHaze ? 0.048 : 0.025);
   }
   if (env.resonancePillar) {
     const targetOp = tg.resonanceTriggered ? (0.16 + Math.sin(t * 3.5) * 0.05) : 0.0;
     env.resonancePillar.material.opacity += (targetOp - env.resonancePillar.material.opacity) * d08;
-    env.resonancePillar.rotation.y = -t * 0.5;
+    env.resonancePillar.visible = env.resonancePillar.material.opacity > 0.005;
+    if (env.resonancePillar.visible) env.resonancePillar.rotation.y = -t * 0.5;
   }
 
   // Volumetric God Rays + Drifting Liyue Bamboo Leaves & Osmanthus Petals (Three-Goodness Weather Reactive!)
@@ -3003,8 +3032,10 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     env.spotCone.material.color.setHex(dramaticFocusNow ? 0xffdf9e : spotColorHex);
     const coneTargetOp = (dramaticFocusNow ? (f.daylight ? 0.07 : 0.22) : (f.daylight ? 0.025 : 0.16)) * blackoutMul;
     env.spotCone.material.opacity += (coneTargetOp - env.spotCone.material.opacity) * d12;
+    env.spotCone.visible = env.spotCone.material.opacity > 0.004;
   } else {
     env.speakerSpot.intensity += (0 - env.speakerSpot.intensity) * d10;
     env.spotCone.material.opacity += (0 - env.spotCone.material.opacity) * d10;
+    env.spotCone.visible = env.spotCone.material.opacity > 0.004;
   }
 }

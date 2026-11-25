@@ -11807,53 +11807,36 @@ body.theme-daylight #heroShowcaseOverlay .showcase-chip.is-active {
   }
 }
 
-@keyframes teaSeatWaveDay {
+@keyframes teaSeatWaveFloat {
   0%, 100% {
     transform: translateY(0);
-    border-color: rgba(116, 92, 62, 0.24);
-    box-shadow: 0 0 0 0 rgba(154, 107, 39, 0);
   }
   38% {
     transform: translateY(-2px);
-    border-color: rgba(154, 107, 39, 0.72);
-    box-shadow: 0 3px 10px rgba(154, 107, 39, 0.22);
   }
 }
 
-@keyframes teaSeatWaveNight {
+@keyframes teaSeatRingPulse {
   0%, 100% {
-    transform: translateY(0);
-    border-color: rgba(214, 176, 114, 0.22);
-    box-shadow: 0 0 0 0 rgba(226, 184, 112, 0);
+    opacity: 0;
   }
   38% {
-    transform: translateY(-2px);
-    border-color: rgba(235, 198, 128, 0.78);
-    box-shadow: 0 3px 12px rgba(212, 166, 87, 0.28);
+    opacity: 0.92;
   }
 }
 
-@keyframes teaReadyPulseCinnabar {
+@keyframes teaReadyRingRipple {
   0% {
-    box-shadow: 0 0 0 0 rgba(164, 57, 44, 0.42), 0 4px 12px rgba(132, 42, 32, 0.22);
+    transform: scale(1);
+    opacity: 0.72;
   }
-  65% {
-    box-shadow: 0 0 0 8px rgba(164, 57, 44, 0), 0 5px 16px rgba(132, 42, 32, 0.28);
+  70% {
+    transform: scale(1.06, 1.24);
+    opacity: 0;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(164, 57, 44, 0), 0 4px 12px rgba(132, 42, 32, 0.22);
-  }
-}
-
-@keyframes teaReadyPulseGold {
-  0% {
-    box-shadow: 0 0 0 0 rgba(178, 128, 48, 0.44), 0 4px 12px rgba(132, 92, 32, 0.20);
-  }
-  65% {
-    box-shadow: 0 0 0 8px rgba(178, 128, 48, 0), 0 5px 16px rgba(132, 92, 32, 0.26);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(178, 128, 48, 0), 0 4px 12px rgba(132, 92, 32, 0.20);
+    transform: scale(1.06, 1.24);
+    opacity: 0;
   }
 }
 
@@ -11881,14 +11864,12 @@ body.theme-daylight #heroShowcaseOverlay .showcase-chip.is-active {
   }
 }
 
-@keyframes teaFocusGlow {
+@keyframes teaFocusOpacity {
   0%, 100% {
-    border-color: rgba(154, 107, 39, 0.36);
-    box-shadow: 0 0 0 0 rgba(154, 107, 39, 0.14);
+    opacity: 0.34;
   }
   50% {
-    border-color: rgba(154, 107, 39, 0.80);
-    box-shadow: 0 0 0 4px rgba(154, 107, 39, 0.14);
+    opacity: 0.96;
   }
 }
 
@@ -11926,42 +11907,84 @@ body.theme-daylight #heroShowcaseOverlay .showcase-chip.is-active {
   animation: teaSilkSheen 4.8s ease-in-out infinite;
 }
 
-/* 2. Seat Rail Pick-Target Wave (Unselected Pick-Seat Phases) */
+/* 2. Seat Rail Pick-Target Wave (Pure GPU transform + opacity — zero main-thread paint!) */
 #seatButtonStrip.is-guide-beckon {
   position: relative;
 }
 
-body.theme-daylight #seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected),
-body.theme-twilight #seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected) {
-  animation: teaSeatWaveDay 2.6s ease-in-out infinite;
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected) {
+  position: relative;
+  animation: teaSeatWaveFloat 2.6s ease-in-out infinite;
 }
 
-body.theme-night #seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected) {
-  animation: teaSeatWaveNight 2.6s ease-in-out infinite;
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected)::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1.5px solid rgba(154, 107, 39, 0.72);
+  pointer-events: none;
+  opacity: 0;
+  animation: teaSeatRingPulse 2.6s ease-in-out infinite;
 }
 
-#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(2) { animation-delay: 0.14s; }
-#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(3) { animation-delay: 0.28s; }
-#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(4) { animation-delay: 0.42s; }
-#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(5) { animation-delay: 0.56s; }
-#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(6) { animation-delay: 0.70s; }
-#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(7) { animation-delay: 0.84s; }
-#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(8) { animation-delay: 0.98s; }
-#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(n+9) { animation-delay: 1.12s; }
+body.theme-night #seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected)::after {
+  border-color: rgba(235, 198, 128, 0.78);
+}
 
-/* 3. Confirm / Advance Ready Pulse (Selected Target -> Confirm CTA, or Finished Speech -> Next) */
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(2),
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(2)::after { animation-delay: 0.14s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(3),
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(3)::after { animation-delay: 0.28s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(4),
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(4)::after { animation-delay: 0.42s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(5),
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(5)::after { animation-delay: 0.56s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(6),
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(6)::after { animation-delay: 0.70s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(7),
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(7)::after { animation-delay: 0.84s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(8),
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(8)::after { animation-delay: 0.98s; }
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(n+9),
+#seatButtonStrip.is-guide-beckon .seat-pill-btn:nth-child(n+9)::after { animation-delay: 1.12s; }
+
+/* 3. Confirm / Advance Ready Pulse (GPU transform + opacity ring — zero box-shadow repaint!) */
 #btnCastVote.is-guide-ready:not(:disabled),
-#btnConfirmTarget.is-guide-ready:not(:disabled) {
-  animation: teaReadyPulseCinnabar 2.1s ease-out infinite;
-}
-
+#btnConfirmTarget.is-guide-ready:not(:disabled),
 #btnStepNext.is-guide-ready:not(:disabled),
 #btnSeerRevealContinue.is-guide-ready:not(:disabled),
 #btnSheriffNextSpeech.is-guide-ready:not(:disabled),
 #btnTeaInterject.is-guide-beckon:not(:disabled),
 #btnQuickInlineRewrite.is-guide-beckon:not(:disabled),
 #btnSheriffRun.is-guide-beckon:not(:disabled) {
-  animation: teaReadyPulseGold 2.3s ease-out infinite;
+  position: relative;
+}
+
+#btnCastVote.is-guide-ready:not(:disabled)::after,
+#btnConfirmTarget.is-guide-ready:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid rgba(164, 57, 44, 0.78);
+  pointer-events: none;
+  animation: teaReadyRingRipple 2.1s ease-out infinite;
+}
+
+#btnStepNext.is-guide-ready:not(:disabled)::after,
+#btnSeerRevealContinue.is-guide-ready:not(:disabled)::after,
+#btnSheriffNextSpeech.is-guide-ready:not(:disabled)::after,
+#btnTeaInterject.is-guide-beckon:not(:disabled)::after,
+#btnQuickInlineRewrite.is-guide-beckon:not(:disabled)::after,
+#btnSheriffRun.is-guide-beckon:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid rgba(178, 128, 48, 0.78);
+  pointer-events: none;
+  animation: teaReadyRingRipple 2.3s ease-out infinite;
 }
 
 /* 4. Three-Goodness Speech Cards & Sheriff Cards Silk Sheen Wave */
@@ -11992,12 +12015,24 @@ body.theme-night #seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):n
   animation-delay: 0.70s;
 }
 
-/* 5. Focus Trays (Rephrase Slips / Witch Cups / Sheriff Order) */
+/* 5. Focus Trays (Rephrase Slips / Witch Cups / Sheriff Order — GPU opacity ring!) */
 #rephraseChoicesTray.is-guide-focus,
 #witchSubPanel.is-guide-focus,
 #panelSheriffOrder.is-guide-focus {
+  position: relative;
   border-radius: 10px;
-  animation: teaFocusGlow 2.4s ease-in-out infinite;
+}
+
+#rephraseChoicesTray.is-guide-focus::before,
+#witchSubPanel.is-guide-focus::before,
+#panelSheriffOrder.is-guide-focus::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 1.5px solid rgba(154, 107, 39, 0.80);
+  pointer-events: none;
+  animation: teaFocusOpacity 2.4s ease-in-out infinite;
 }
 
 #rephraseChoicesTray.is-guide-focus .rephrase-slip-btn {
@@ -12503,20 +12538,21 @@ body.theme-night .tut-anim-key {
 @media (prefers-reduced-motion: reduce) {
   #btnStartMatch.is-guide-beckon::after,
   #seatButtonStrip.is-guide-beckon .seat-pill-btn,
-  #btnCastVote.is-guide-ready,
-  #btnConfirmTarget.is-guide-ready,
-  #btnStepNext.is-guide-ready,
-  #btnSeerRevealContinue.is-guide-ready,
-  #btnSheriffNextSpeech.is-guide-ready,
-  #btnTeaInterject.is-guide-beckon,
-  #btnQuickInlineRewrite.is-guide-beckon,
-  #btnSheriffRun.is-guide-beckon,
+  #seatButtonStrip.is-guide-beckon .seat-pill-btn::after,
+  #btnCastVote.is-guide-ready::after,
+  #btnConfirmTarget.is-guide-ready::after,
+  #btnStepNext.is-guide-ready::after,
+  #btnSeerRevealContinue.is-guide-ready::after,
+  #btnSheriffNextSpeech.is-guide-ready::after,
+  #btnTeaInterject.is-guide-beckon::after,
+  #btnQuickInlineRewrite.is-guide-beckon::after,
+  #btnSheriffRun.is-guide-beckon::after,
   #quickSpeechChips.is-guide-beckon .play-card-btn::after,
   #sheriffPlayerQuickChips.is-guide-beckon .play-card-btn::after,
-  #rephraseChoicesTray.is-guide-focus,
+  #rephraseChoicesTray.is-guide-focus::before,
   #rephraseChoicesTray.is-guide-focus .rephrase-slip-btn::after,
-  #witchSubPanel.is-guide-focus,
-  #panelSheriffOrder.is-guide-focus,
+  #witchSubPanel.is-guide-focus::before,
+  #panelSheriffOrder.is-guide-focus::before,
   #cornerFourGDeck.is-guide-beckon .fourg-deck-head,
   #cornerFourGDeck.is-guide-beckon .fourg-deck-head::before,
   #threeGoodMeters.is-guide-beckon .lotus-petal-svg,
@@ -12534,4 +12570,1285 @@ body.theme-night .tut-anim-key {
   .tut-anim-key {
     animation: none;
   }
+}
+
+/* ==================== v23.2 WEREWOLF JARGON DOTTED UNDERLINE & POPOVER (茶席術語箋) ==================== */
+@keyframes jargonCardPop {
+  from {
+    opacity: 0.96;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.jargon-term {
+  display: inline;
+  border-bottom: 1.5px dotted rgba(154, 107, 39, 0.78);
+  padding-bottom: 1px;
+  cursor: help;
+  border-radius: 3px;
+  transition: background-color 140ms ease, border-bottom-color 140ms ease;
+}
+
+.jargon-term:hover,
+.jargon-term:focus-visible,
+.jargon-term.is-jargon-open {
+  background: rgba(154, 107, 39, 0.14);
+  border-bottom-color: rgba(154, 107, 39, 0.98);
+  outline: none;
+}
+
+body.theme-night .jargon-term {
+  border-bottom-color: rgba(232, 194, 122, 0.72);
+}
+
+body.theme-night .jargon-term:hover,
+body.theme-night .jargon-term:focus-visible,
+body.theme-night .jargon-term.is-jargon-open {
+  background: rgba(232, 194, 122, 0.16);
+  border-bottom-color: rgba(244, 214, 152, 0.96);
+}
+
+/* Buttons with solid dark fills need light dotted underlines for high legibility */
+.cta-cinnabar .jargon-term,
+.cta-brass .jargon-term,
+.cta-celadon .jargon-term,
+.wolf-explode-btn .jargon-term {
+  border-bottom-color: rgba(255, 248, 232, 0.72);
+}
+
+.cta-cinnabar .jargon-term:hover,
+.cta-brass .jargon-term:hover,
+.cta-celadon .jargon-term:hover,
+.wolf-explode-btn .jargon-term:hover {
+  background: rgba(255, 248, 232, 0.16);
+  border-bottom-color: #fffdf8;
+}
+
+.clue-token[data-jargon] {
+  border-bottom-style: dotted;
+  border-bottom-width: 1.5px;
+}
+
+/* Shared Floating Xuan-Paper / Candlelit Cedar Jargon Popover */
+.jargon-tooltip-popover {
+  position: fixed;
+  z-index: 950;
+  width: max-content;
+  max-width: min(306px, calc(100vw - 24px));
+  padding: 10px 12px 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(154, 107, 39, 0.42);
+  border-top: 2.5px solid #9a6b27;
+  background: linear-gradient(180deg, #fdfaf3 0%, #f5ede0 100%);
+  color: #292018;
+  box-shadow: 0 12px 28px rgba(48, 34, 16, 0.24), 0 2px 6px rgba(48, 34, 16, 0.10);
+  text-align: left;
+  animation: jargonCardPop 140ms ease-out;
+}
+
+body.theme-night .jargon-tooltip-popover {
+  background: linear-gradient(180deg, #2b211a 0%, #1e1712 100%);
+  border-color: rgba(214, 176, 114, 0.40);
+  border-top-color: #d4a657;
+  color: #f4ead6;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.56);
+}
+
+.jargon-tip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(116, 92, 62, 0.18);
+}
+
+body.theme-night .jargon-tip-head {
+  border-bottom-color: rgba(214, 176, 114, 0.18);
+}
+
+.jargon-tip-cat {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(44, 103, 83, 0.12);
+  border: 1px solid rgba(44, 103, 83, 0.30);
+  color: #1f5341;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+body.theme-night .jargon-tip-cat {
+  background: rgba(52, 211, 153, 0.14);
+  border-color: rgba(52, 211, 153, 0.32);
+  color: #8ee6c5;
+}
+
+.jargon-tip-term {
+  font-size: 15px;
+  font-weight: 800;
+  color: #7d5318;
+  letter-spacing: 0.04em;
+}
+
+body.theme-night .jargon-tip-term {
+  color: #f3d28e;
+}
+
+.jargon-tip-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(116, 92, 62, 0.24);
+  background: rgba(242, 235, 222, 0.72);
+  color: #4a3b2c;
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+body.theme-night .jargon-tip-close {
+  border-color: rgba(214, 176, 114, 0.26);
+  background: rgba(46, 36, 28, 0.85);
+  color: #e6d5b8;
+}
+
+.jargon-tip-plain {
+  font-size: 13.5px;
+  line-height: 1.56;
+  color: #2b2119;
+  margin: 0;
+}
+
+body.theme-night .jargon-tip-plain {
+  color: #f4ead6;
+}
+
+.jargon-tip-note {
+  font-size: 13px;
+  line-height: 1.48;
+  color: #5e4c3a;
+  margin: 6px 0 0;
+  padding-top: 5px;
+  border-top: 1px dashed rgba(116, 92, 62, 0.22);
+}
+
+body.theme-night .jargon-tip-note {
+  color: #cbb899;
+  border-top-color: rgba(214, 176, 114, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jargon-tooltip-popover {
+    animation: none;
+  }
+}
+
+/* ==================== v23.3 FULL XUAN-PAPER CONTRAST & COHESION SWEEP ==================== */
+/* Restores crisp dark mineral ink & warm paper surfaces for every panel/popover/pill in theme-daylight & theme-twilight */
+
+/* 1. Dialogue Spotlight & Classical / Poetic Personas (阿竹 / 晴嵐 / 墨白) */
+body.craft-ui.theme-daylight #spotlightText {
+  color: #241d17;
+  text-shadow: none;
+}
+
+body.craft-ui.theme-daylight #spotlightStageBox.is-classical-speech #spotlightText {
+  color: #241d17;
+  border-left-color: rgba(154, 107, 39, 0.62);
+  text-shadow: none;
+}
+
+body.craft-ui.theme-daylight #spotlightTraitTag {
+  background: rgba(154, 107, 39, 0.14);
+  border-color: rgba(154, 107, 39, 0.40);
+  color: #6f4710;
+}
+
+body.craft-ui.theme-daylight #btnPauseVoice.is-paused,
+body.craft-ui.theme-daylight #voiceAuditionStrip [data-audition].is-auditioning,
+body.craft-ui.theme-twilight #voiceAuditionStrip [data-audition].is-auditioning {
+  background: rgba(178, 128, 48, 0.20);
+  border-color: #9a6b27;
+  color: #5e380a;
+}
+
+/* 2. Clue Tokens inside Spotlight, Journal & Recap */
+body.craft-ui.theme-daylight .clue-seat,
+body.craft-ui.theme-twilight .clue-seat {
+  background: rgba(52, 88, 128, 0.11);
+  border-color: rgba(52, 88, 128, 0.36);
+  color: #22466d;
+}
+
+body.craft-ui.theme-daylight .clue-role,
+body.craft-ui.theme-twilight .clue-role {
+  background: rgba(164, 114, 38, 0.14);
+  border-color: rgba(154, 107, 39, 0.44);
+  color: #74470e;
+}
+
+body.craft-ui.theme-daylight .clue-toxic,
+body.craft-ui.theme-twilight .clue-toxic {
+  background: rgba(164, 57, 44, 0.12);
+  border-color: rgba(164, 57, 44, 0.44);
+  color: #8f261c;
+}
+
+body.craft-ui.theme-daylight .clue-token.clue-caught,
+body.craft-ui.theme-twilight .clue-token.clue-caught {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.46);
+  color: #19523d;
+}
+
+body.craft-ui.theme-daylight .clue-token.clue-contradiction,
+body.craft-ui.theme-twilight .clue-token.clue-contradiction {
+  background: rgba(176, 114, 32, 0.16);
+  border-bottom: 1.5px dashed #965f16;
+  color: #6b3f08;
+}
+
+/* 3. Mineral Icon Tints on Xuan-Paper */
+body.craft-ui.theme-daylight .sh-ico-gold,
+body.craft-ui.theme-twilight .sh-ico-gold {
+  color: #8f5c16;
+}
+
+body.craft-ui.theme-daylight .sh-ico-jade,
+body.craft-ui.theme-twilight .sh-ico-jade {
+  color: #1f5c47;
+}
+
+body.craft-ui.theme-daylight .sh-ico-cinnabar,
+body.craft-ui.theme-twilight .sh-ico-cinnabar {
+  color: #9e2d22;
+}
+
+body.craft-ui.theme-daylight .sh-ico-indigo,
+body.craft-ui.theme-twilight .sh-ico-indigo {
+  color: #2b4e74;
+}
+
+body.craft-ui.theme-daylight .sh-ico-muted,
+body.craft-ui.theme-twilight .sh-ico-muted {
+  color: #665747;
+}
+
+/* 4. Sheriff Order Pills, Badge Flow & Election Surfaces */
+body.craft-ui.theme-daylight .sheriff-order-pill {
+  background: #f5eee0;
+  border-color: rgba(116, 92, 62, 0.34);
+  color: #4a3a2a;
+}
+
+body.craft-ui.theme-daylight .sheriff-order-pill.is-speaking {
+  background: linear-gradient(180deg, #fae5ae 0%, #f1cf7c 100%);
+  border-color: #9a6b27;
+  color: #3a2005;
+  box-shadow: 0 2px 8px rgba(154, 107, 39, 0.24);
+}
+
+body.craft-ui.theme-daylight .sheriff-order-pill.is-done {
+  background: rgba(44, 103, 83, 0.13);
+  border-color: rgba(44, 103, 83, 0.44);
+  color: #19523d;
+}
+
+body.craft-ui.theme-daylight .sheriff-order-pill.is-withdrawn {
+  background: rgba(226, 217, 200, 0.68);
+  border-color: rgba(116, 92, 62, 0.26);
+  color: #776755;
+}
+
+body.craft-ui.theme-daylight .badge-flow-bar {
+  background: rgba(249, 240, 218, 0.90);
+  border-color: rgba(154, 107, 39, 0.42);
+  color: #55340c;
+}
+
+body.craft-ui.theme-daylight .badge-flow-select {
+  background: #fffdf8;
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #3a2107;
+}
+
+body.craft-ui.theme-daylight .badge-flow-guide {
+  background: rgba(250, 241, 219, 0.94);
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #462909;
+}
+
+body.craft-ui.theme-daylight .badge-flow-guide.is-wolf-alert {
+  background: rgba(252, 232, 229, 0.96);
+  border-color: rgba(164, 57, 44, 0.48);
+  color: #821d16;
+}
+
+body.craft-ui.theme-daylight .badge-flow-guide.is-good-alert {
+  background: rgba(224, 244, 235, 0.94);
+  border-color: rgba(44, 103, 83, 0.48);
+  color: #164d3a;
+}
+
+body.craft-ui.theme-daylight .seat-pill-badge.badge-flow {
+  background: rgba(250, 238, 204, 0.96);
+  border-color: rgba(154, 107, 39, 0.56);
+  color: #6b3d08;
+}
+
+body.craft-ui.theme-daylight .bf-modal-card,
+body.craft-ui.theme-twilight .bf-modal-card {
+  background: #faf5ea;
+  border-color: rgba(154, 107, 39, 0.44);
+  color: #3a230b;
+}
+
+body.craft-ui.theme-daylight .bf-modal-head,
+body.craft-ui.theme-twilight .bf-modal-head {
+  border-bottom-color: rgba(116, 92, 62, 0.24);
+}
+
+body.craft-ui.theme-daylight .bf-modal-active,
+body.craft-ui.theme-twilight .bf-modal-active {
+  background: rgba(250, 241, 216, 0.94);
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #3f2409;
+}
+
+body.craft-ui.theme-daylight .bf-modal-sig-wolf,
+body.craft-ui.theme-twilight .bf-modal-sig-wolf {
+  background: rgba(252, 232, 229, 0.96);
+  border-color: rgba(164, 57, 44, 0.48);
+  color: #841e17;
+}
+
+body.craft-ui.theme-daylight .bf-modal-sig-good,
+body.craft-ui.theme-twilight .bf-modal-sig-good {
+  background: rgba(224, 244, 235, 0.96);
+  border-color: rgba(44, 103, 83, 0.46);
+  color: #154e3b;
+}
+
+/* 5. Wolf Self-Explode Bar (Warm Cinnabar Wash Harmonized with Xuan-Paper) */
+body.craft-ui.theme-daylight .wolf-explode-bar {
+  background: linear-gradient(90deg, rgba(250, 233, 229, 0.95) 0%, rgba(246, 224, 218, 0.95) 100%);
+  border-color: rgba(164, 57, 44, 0.46);
+}
+
+body.craft-ui.theme-daylight .wolf-explode-hint {
+  color: #7d2219;
+  font-weight: 600;
+}
+
+/* 6. Speech Pit Builder, Advanced Drawer, Badges & Secondary Panels */
+body.craft-ui.theme-daylight .speech-adv-toggle {
+  color: #fffaf0;
+  background: linear-gradient(180deg, #b87b30 0%, #925c1c 100%);
+  border-color: rgba(128, 78, 22, 0.85);
+  box-shadow: 0 2px 8px rgba(132, 82, 22, 0.22);
+}
+
+body.craft-ui.theme-daylight .speech-adv-toggle:not(.is-active) .sh-ico {
+  color: #fff6dc;
+}
+
+body.craft-ui.theme-daylight .speech-adv-toggle.is-active {
+  background: linear-gradient(180deg, #ead098 0%, #dcb76e 100%);
+  border-color: #8f5c18;
+  color: #362007;
+}
+
+body.craft-ui.theme-daylight .speech-adv-drawer {
+  background: #f5eee0;
+  border-color: rgba(116, 92, 62, 0.30);
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .pit-builder-box {
+  background: rgba(251, 247, 238, 0.94);
+  border-color: rgba(154, 107, 39, 0.34);
+  color: #2d231a;
+}
+
+body.craft-ui.theme-daylight .pit-builder-box.is-wolf-board {
+  background: rgba(252, 238, 234, 0.94);
+  border-color: rgba(164, 57, 44, 0.40);
+}
+
+body.craft-ui.theme-daylight .pit-quick-btn {
+  color: #5c340a;
+  background: linear-gradient(180deg, #fbf0d2 0%, #f2dca8 100%);
+  border-color: rgba(154, 107, 39, 0.54);
+}
+
+body.craft-ui.theme-daylight .pit-sheriff-strip {
+  background: rgba(250, 242, 222, 0.94);
+  border-color: rgba(154, 107, 39, 0.42);
+  color: #5a360c;
+}
+
+body.craft-ui.theme-daylight .pit-seat-chip {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.34);
+  color: #2e241b;
+}
+
+body.craft-ui.theme-daylight .pit-seat-chip.is-wolf {
+  background: rgba(164, 57, 44, 0.13);
+  border-color: rgba(164, 57, 44, 0.62);
+  color: #8c2018;
+}
+
+body.craft-ui.theme-daylight .pit-seat-chip.is-good {
+  background: rgba(44, 103, 83, 0.13);
+  border-color: rgba(44, 103, 83, 0.60);
+  color: #17523e;
+}
+
+body.craft-ui.theme-daylight .pit-chip-badge {
+  background: rgba(116, 92, 62, 0.12);
+  color: #3d2e20;
+}
+
+body.craft-ui.theme-daylight .pit-extra-chip,
+body.craft-ui.theme-daylight .pit-bf-pill,
+body.craft-ui.theme-daylight .pit-chip-sh-tag {
+  background: rgba(250, 240, 214, 0.92);
+  border-color: rgba(154, 107, 39, 0.46);
+  color: #6e420c;
+}
+
+body.craft-ui.theme-daylight .wolf-god-chip {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.32);
+  color: #3b2d20;
+}
+
+body.craft-ui.theme-daylight .wolf-god-chip.is-marked {
+  background: rgba(164, 57, 44, 0.14);
+  border-color: rgba(164, 57, 44, 0.56);
+  color: #8a2018;
+}
+
+body.craft-ui.theme-daylight .speech-tg-badge.is-kind {
+  background: rgba(44, 103, 83, 0.13);
+  border-color: rgba(44, 103, 83, 0.42);
+  color: #18513d;
+}
+
+body.craft-ui.theme-daylight .speech-tg-badge.is-crit {
+  background: rgba(154, 107, 39, 0.15);
+  border-color: rgba(154, 107, 39, 0.44);
+  color: #70450d;
+}
+
+body.craft-ui.theme-daylight .speech-tg-badge.is-warn {
+  background: rgba(164, 57, 44, 0.13);
+  border-color: rgba(164, 57, 44, 0.44);
+  color: #8f2219;
+}
+
+body.craft-ui.theme-daylight .speech-char-counter {
+  color: #6b5b49;
+}
+
+body.craft-ui.theme-daylight .speech-char-counter.is-over {
+  color: #96261d;
+}
+
+body.craft-ui.theme-daylight .vote-goodwill-badge.is-gold {
+  background: rgba(178, 128, 48, 0.16);
+  border-color: rgba(154, 107, 39, 0.46);
+  color: #6c410b;
+}
+
+body.craft-ui.theme-daylight .vote-goodwill-badge.is-hint {
+  background: rgba(44, 103, 83, 0.12);
+  border-color: rgba(44, 103, 83, 0.38);
+  color: #1b523e;
+}
+
+body.craft-ui.theme-daylight .vote-goodwill-badge.is-wolf {
+  background: rgba(252, 232, 229, 0.94);
+  border-color: rgba(164, 57, 44, 0.46);
+  color: #861e17;
+}
+
+body.craft-ui.theme-daylight .blitz-vote-badge {
+  background: rgba(164, 57, 44, 0.14);
+  border-color: rgba(164, 57, 44, 0.50);
+  color: #8f2219;
+}
+
+/* 7. Interject, PK Duel, Hope Confrontation, Spirit Bet, Candlelit Review, Coach & Banners */
+body.craft-ui.theme-daylight .interject-popover {
+  background: linear-gradient(178deg, #fcf9f2 0%, #f4ecdd 100%);
+  border-color: rgba(154, 107, 39, 0.44);
+  color: #292018;
+  box-shadow: 0 14px 32px rgba(48, 34, 16, 0.22);
+}
+
+body.craft-ui.theme-daylight .interject-chip-btn {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.30);
+  color: #362a1f;
+}
+
+body.craft-ui.theme-daylight .interject-chip-btn:hover {
+  background: #f6ecd7;
+  border-color: rgba(154, 107, 39, 0.58);
+  color: #241a10;
+}
+
+body.craft-ui.theme-daylight .pk-duel-banner {
+  background: linear-gradient(90deg, rgba(252, 248, 240, 0.96), rgba(250, 232, 226, 0.96), rgba(252, 248, 240, 0.96));
+  border-color: rgba(154, 107, 39, 0.62);
+  color: #2a1f16;
+}
+
+body.craft-ui.theme-daylight .pk-duel-banner #pkLeftName,
+body.craft-ui.theme-daylight .pk-duel-banner #pkRightName {
+  color: #2c1e12;
+}
+
+body.craft-ui.theme-daylight .pk-duel-banner #pkLeftVotes,
+body.craft-ui.theme-daylight .pk-duel-banner #pkRightVotes {
+  color: #8c5312;
+}
+
+body.craft-ui.theme-daylight .hope-confront-card {
+  background: #f5f8fb;
+  border-color: rgba(46, 94, 134, 0.44);
+  color: #1e3b55;
+}
+
+body.craft-ui.theme-daylight .hope-timer-pill {
+  background: rgba(250, 238, 206, 0.95);
+  border-color: rgba(154, 107, 39, 0.52);
+  color: #6b3f08;
+}
+
+body.craft-ui.theme-daylight .hope-seat-pick-btn {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.34);
+  color: #2b2219;
+}
+
+body.craft-ui.theme-daylight .hope-seat-pick-btn.is-picked {
+  background: rgba(46, 94, 134, 0.14);
+  border-color: #2e5e86;
+  color: #193e5e;
+}
+
+body.craft-ui.theme-daylight .hope-duel-card {
+  background: #fffdf8;
+  border-color: rgba(46, 94, 134, 0.28);
+}
+
+body.craft-ui.theme-daylight .hope-duel-head {
+  color: #1d4c73;
+}
+
+body.craft-ui.theme-daylight .hope-duel-pit {
+  color: #96261d;
+}
+
+body.craft-ui.theme-daylight .hope-duel-quote {
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .hope-contra-box {
+  background: rgba(250, 241, 216, 0.86);
+  border-color: rgba(154, 107, 39, 0.40);
+}
+
+body.craft-ui.theme-daylight .hope-contra-title,
+body.craft-ui.theme-daylight .hope-contra-item {
+  color: #5c360b;
+}
+
+body.craft-ui.theme-daylight .spirit-bet-banner {
+  background: rgba(251, 246, 235, 0.96);
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #362512;
+}
+
+body.craft-ui.theme-daylight .spirit-bet-chip {
+  background: #fffdf8;
+  border-color: rgba(154, 107, 39, 0.40);
+  color: #422608;
+}
+
+body.craft-ui.theme-daylight .spirit-bet-chip.is-picked {
+  background: rgba(44, 103, 83, 0.16);
+  border-color: #2c6753;
+  color: #154e3b;
+}
+
+body.craft-ui.theme-daylight .candlelit-review-card {
+  background: #faf5ea;
+  border-color: rgba(154, 107, 39, 0.36);
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .candlelit-seal {
+  color: #7d4e14;
+}
+
+body.craft-ui.theme-daylight .candlelit-slip-btn {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.28);
+  color: #34291e;
+}
+
+body.craft-ui.theme-daylight .candlelit-slip-btn.is-circled {
+  background: rgba(154, 107, 39, 0.14);
+  border-color: rgba(154, 107, 39, 0.56);
+  color: #5a3408;
+}
+
+body.craft-ui.theme-daylight .candlelit-slip-btn.is-circled .candlelit-slip-mark {
+  color: #8f261c;
+}
+
+body.craft-ui.theme-daylight .beginner-coach-banner,
+body.craft-ui.theme-twilight .beginner-coach-banner {
+  background: rgba(235, 245, 239, 0.94);
+  border-color: rgba(44, 103, 83, 0.40);
+  color: #194d3b;
+}
+
+body.craft-ui.theme-daylight .judge-showcase-banner,
+body.craft-ui.theme-twilight .judge-showcase-banner {
+  background: rgba(250, 244, 232, 0.96);
+  border-color: rgba(154, 107, 39, 0.42);
+  color: #3b2a17;
+}
+
+body.craft-ui.theme-daylight .judge-guide-step,
+body.craft-ui.theme-twilight .judge-guide-step {
+  background: rgba(242, 235, 222, 0.85);
+  border-color: rgba(116, 92, 62, 0.26);
+  color: #5b4c3c;
+}
+
+body.craft-ui.theme-daylight .judge-guide-step.is-active,
+body.craft-ui.theme-twilight .judge-guide-step.is-active {
+  background: rgba(250, 238, 206, 0.95);
+  border-color: #9a6b27;
+  color: #4a2b08;
+}
+
+body.craft-ui.theme-daylight .judge-guide-step.is-done,
+body.craft-ui.theme-twilight .judge-guide-step.is-done {
+  background: rgba(44, 103, 83, 0.13);
+  border-color: rgba(44, 103, 83, 0.42);
+  color: #17523e;
+}
+
+body.craft-ui.theme-daylight .wind-vane-strip {
+  background: rgba(248, 240, 222, 0.94);
+  border-color: rgba(154, 107, 39, 0.40);
+  color: #593a12;
+}
+
+body.craft-ui.theme-daylight #dragGestureHint,
+body.craft-ui.theme-daylight #voteFlightBanner,
+body.craft-ui.theme-daylight #vrmLoadPill,
+body.craft-ui.theme-twilight #vrmLoadPill {
+  background: rgba(252, 248, 240, 0.95);
+  border-color: rgba(154, 107, 39, 0.46);
+  color: #4a2e0e;
+  box-shadow: 0 8px 22px rgba(52, 36, 18, 0.16);
+}
+
+body.craft-ui.theme-daylight .gpu-dual-hint,
+body.craft-ui.theme-twilight .gpu-dual-hint {
+  background: rgba(250, 240, 214, 0.92);
+  border-color: rgba(154, 107, 39, 0.44);
+  color: #5e390b;
+}
+
+body.craft-ui.theme-daylight .match-point-badge {
+  background: rgba(252, 232, 229, 0.95);
+  border-color: rgba(164, 57, 44, 0.56);
+  color: #8c2018;
+}
+
+/* 8. Vote Result, Spectator Guess & Game Over Ledger */
+body.craft-ui.theme-daylight .vote-row-out {
+  background: rgba(252, 233, 229, 0.92);
+  border-color: rgba(164, 57, 44, 0.48);
+  color: #7d2018;
+}
+
+body.craft-ui.theme-daylight .spectator-guess-bar,
+body.craft-ui.theme-daylight .gameover-guess-box {
+  background: #faf5ea;
+  border-color: rgba(154, 107, 39, 0.40);
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .spec-role-slot {
+  background: #efe7d8;
+  border-color: rgba(116, 92, 62, 0.34);
+  color: #4a3d2f;
+}
+
+body.craft-ui.theme-daylight .spec-role-slot.is-filled {
+  background: rgba(44, 103, 83, 0.13);
+  border-color: rgba(44, 103, 83, 0.46);
+  color: #18513d;
+}
+
+body.craft-ui.theme-daylight .spec-role-slot.is-active-slot {
+  background: rgba(178, 128, 48, 0.18);
+  border-color: #9a6b27;
+  color: #5a3408;
+}
+
+body.craft-ui.theme-daylight .spec-seat-chip {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.32);
+  color: #362a1e;
+}
+
+body.craft-ui.theme-daylight .spec-seat-chip.is-picked-wolf {
+  background: rgba(164, 57, 44, 0.14);
+  border-color: #a4392c;
+  color: #821d15;
+}
+
+body.craft-ui.theme-daylight .spec-seat-chip.is-picked-god {
+  background: rgba(178, 128, 48, 0.18);
+  border-color: #9a6b27;
+  color: #633b0a;
+}
+
+body.craft-ui.theme-daylight .gameover-section-head {
+  color: #784b12;
+  border-bottom-color: rgba(116, 92, 62, 0.22);
+}
+
+body.craft-ui.theme-daylight .turning-axis-title {
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .turning-axis-step {
+  background: rgba(154, 107, 39, 0.16);
+  border-color: rgba(154, 107, 39, 0.44);
+  color: #6b3f08;
+}
+
+body.craft-ui.theme-daylight .turning-axis-card.is-jade .turning-axis-step {
+  background: rgba(44, 103, 83, 0.15);
+  border-color: rgba(44, 103, 83, 0.44);
+  color: #18513d;
+}
+
+body.craft-ui.theme-daylight .turning-axis-card.is-cinnabar .turning-axis-step {
+  background: rgba(164, 57, 44, 0.14);
+  border-color: rgba(164, 57, 44, 0.44);
+  color: #8c2018;
+}
+
+body.craft-ui.theme-daylight .gameover-truth-table th {
+  background: #efe7d7;
+  color: #5a4228;
+  border-bottom-color: rgba(116, 92, 62, 0.26);
+}
+
+body.craft-ui.theme-daylight .gameover-truth-table tr.is-player-row td {
+  background: rgba(178, 128, 48, 0.12);
+}
+
+body.craft-ui.theme-daylight .gameover-truth-table tr.is-wolf-row td {
+  background: rgba(164, 57, 44, 0.08);
+}
+
+body.craft-ui.theme-daylight .truth-badge-sheriff {
+  background: rgba(178, 128, 48, 0.18);
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #6b3f08;
+}
+
+body.craft-ui.theme-daylight .truth-role-wolf {
+  color: #96261d;
+}
+
+body.craft-ui.theme-daylight .truth-role-good {
+  color: #1b5742;
+}
+
+body.craft-ui.theme-daylight .truth-status-alive {
+  color: #1b5742;
+}
+
+body.craft-ui.theme-daylight .truth-status-out {
+  color: #7c6d5c;
+}
+
+/* 9. Role Guide Popover, Role Coaster, Turn Dashboard & Seat Intel Popover */
+body.craft-ui.theme-daylight .role-nameplate.is-wolf {
+  color: #94261c;
+}
+
+body.craft-ui.theme-daylight .role-nameplate.is-masked {
+  color: #5e4f3f;
+}
+
+body.craft-ui.theme-daylight .role-mission-line,
+body.craft-ui.theme-daylight .role-action-hint,
+body.craft-ui.theme-daylight .three-good-guide-line {
+  color: #544637;
+}
+
+body.craft-ui.theme-daylight .role-mission-line.is-done,
+body.craft-ui.theme-daylight .three-good-guide-line.is-awakened {
+  color: #1b5742;
+}
+
+body.craft-ui.theme-daylight .lotus-petal-svg {
+  color: rgba(116, 92, 62, 0.34);
+}
+
+body.craft-ui.theme-daylight .lotus-petal-svg.is-lit {
+  color: #b47b26;
+}
+
+body.craft-ui.theme-daylight .role-turn-dashboard {
+  background: rgba(251, 246, 235, 0.94);
+  border-color: rgba(154, 107, 39, 0.38);
+  color: #2c231a;
+}
+
+body.craft-ui.theme-daylight .role-dash-title {
+  color: #7a4b10;
+}
+
+body.craft-ui.theme-daylight .role-dash-pill {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.30);
+  color: #3d3023;
+}
+
+body.craft-ui.theme-daylight .role-dash-pill.is-safe {
+  background: rgba(44, 103, 83, 0.13);
+  border-color: rgba(44, 103, 83, 0.42);
+  color: #17523e;
+}
+
+body.craft-ui.theme-daylight .role-dash-pill.is-danger {
+  background: rgba(164, 57, 44, 0.13);
+  border-color: rgba(164, 57, 44, 0.44);
+  color: #8c2018;
+}
+
+body.craft-ui.theme-daylight .role-dash-pill.is-warn {
+  background: rgba(178, 128, 48, 0.16);
+  border-color: rgba(154, 107, 39, 0.44);
+  color: #6b3f08;
+}
+
+body.craft-ui.theme-daylight .role-dash-hint,
+body.craft-ui.theme-daylight .player-turn-step-hint {
+  color: #5c4c3c;
+}
+
+body.craft-ui.theme-daylight .live-toolkit-strip {
+  background: rgba(244, 236, 222, 0.88);
+  border-color: rgba(116, 92, 62, 0.28);
+}
+
+body.craft-ui.theme-daylight .toolkit-pill.is-ready {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.42);
+  color: #17523e;
+}
+
+body.craft-ui.theme-daylight .toolkit-pill.is-standby {
+  background: rgba(242, 235, 222, 0.85);
+  border-color: rgba(116, 92, 62, 0.28);
+  color: #5d4e3e;
+}
+
+body.craft-ui.theme-daylight .guide-now-box,
+body.craft-ui.theme-twilight .guide-now-box {
+  background: rgba(250, 241, 218, 0.94);
+  border-color: rgba(154, 107, 39, 0.44);
+  color: #362109;
+}
+
+body.craft-ui.theme-daylight .guide-tool-item,
+body.craft-ui.theme-twilight .guide-tool-item,
+body.craft-ui.theme-daylight .role-guide-row,
+body.craft-ui.theme-twilight .role-guide-row {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.24);
+  color: #2c2219;
+}
+
+body.craft-ui.theme-daylight .role-guide-row.is-lit,
+body.craft-ui.theme-twilight .role-guide-row.is-lit {
+  background: rgba(224, 244, 235, 0.85);
+  border-color: rgba(44, 103, 83, 0.42);
+  color: #154e3b;
+}
+
+body.craft-ui.theme-daylight .guide-tool-status.is-ready,
+body.craft-ui.theme-twilight .guide-tool-status.is-ready {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.42);
+  color: #17523e;
+}
+
+body.craft-ui.theme-daylight .guide-tool-status.is-muted,
+body.craft-ui.theme-twilight .guide-tool-status.is-muted {
+  background: rgba(116, 92, 62, 0.10);
+  border-color: rgba(116, 92, 62, 0.24);
+  color: #5e4f3f;
+}
+
+body.craft-ui.theme-daylight .role-guide-reward,
+body.craft-ui.theme-twilight .role-guide-reward {
+  background: rgba(250, 240, 214, 0.94);
+  border-color: rgba(154, 107, 39, 0.44);
+  color: #633a0a;
+}
+
+body.craft-ui.theme-daylight .intel-seat-seal,
+body.craft-ui.theme-twilight .intel-seat-seal {
+  background: #2b2016;
+  color: #f7e4bc;
+  border-color: rgba(154, 107, 39, 0.62);
+}
+
+body.craft-ui.theme-daylight .intel-persona-tag,
+body.craft-ui.theme-twilight .intel-persona-tag {
+  background: rgba(154, 107, 39, 0.13);
+  border-color: rgba(154, 107, 39, 0.36);
+  color: #6f450e;
+}
+
+body.craft-ui.theme-daylight .intel-quote-meta.is-wolf,
+body.craft-ui.theme-twilight .intel-quote-meta.is-wolf {
+  color: #96261d;
+}
+
+body.craft-ui.theme-daylight .intel-quote-meta.is-good,
+body.craft-ui.theme-twilight .intel-quote-meta.is-good {
+  color: #1b5742;
+}
+
+body.craft-ui.theme-daylight .intel-quote-meta.is-god,
+body.craft-ui.theme-twilight .intel-quote-meta.is-god {
+  color: #7c4d11;
+}
+
+body.craft-ui.theme-daylight .intel-seg-btn.is-active-good,
+body.craft-ui.theme-twilight .intel-seg-btn.is-active-good {
+  background: rgba(44, 103, 83, 0.16);
+  border-color: #2c6753;
+  color: #154e3b;
+}
+
+body.craft-ui.theme-daylight .intel-seg-btn.is-active-wolf,
+body.craft-ui.theme-twilight .intel-seg-btn.is-active-wolf {
+  background: rgba(164, 57, 44, 0.15);
+  border-color: #a4392c;
+  color: #841e17;
+}
+
+body.craft-ui.theme-daylight .intel-skill-btn.is-gold,
+body.craft-ui.theme-twilight .intel-skill-btn.is-gold {
+  background: rgba(250, 240, 214, 0.94);
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #633a0a;
+}
+
+body.craft-ui.theme-daylight .intel-skill-btn.is-jade,
+body.craft-ui.theme-twilight .intel-skill-btn.is-jade {
+  background: rgba(224, 244, 235, 0.92);
+  border-color: rgba(44, 103, 83, 0.46);
+  color: #154e3b;
+}
+
+body.craft-ui.theme-daylight .intel-footer-link,
+body.craft-ui.theme-twilight .intel-footer-link {
+  color: #6f4710;
+}
+
+/* 10. Journal Matrix, Timeline, Variants, Feedback & Showcase Profiles */
+body.craft-ui.theme-daylight .matrix-seat-card,
+body.craft-ui.theme-twilight .matrix-seat-card,
+body.craft-ui.theme-daylight .variant-pick-card,
+body.craft-ui.theme-twilight .variant-pick-card,
+body.craft-ui.theme-daylight .fb-history-item,
+body.craft-ui.theme-twilight .fb-history-item,
+body.craft-ui.theme-daylight .fb-result-card,
+body.craft-ui.theme-twilight .fb-result-card {
+  background: #fbf7ee;
+  border-color: rgba(116, 92, 62, 0.26);
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .variant-pick-card.is-selected,
+body.craft-ui.theme-twilight .variant-pick-card.is-selected {
+  background: rgba(250, 240, 214, 0.94);
+  border-color: #9a6b27;
+}
+
+body.craft-ui.theme-daylight .fb-star-btn.is-lit,
+body.craft-ui.theme-twilight .fb-star-btn.is-lit {
+  background: rgba(250, 238, 204, 0.95);
+  border-color: #9a6b27;
+  color: #7a4b10;
+}
+
+body.craft-ui.theme-daylight .showcase-profile-card,
+body.craft-ui.theme-twilight .showcase-profile-card {
+  background: rgba(251, 247, 238, 0.95);
+  border-color: rgba(116, 92, 62, 0.30);
+  color: #2b2219;
+}
+
+body.craft-ui.theme-daylight .showcase-profile-row,
+body.craft-ui.theme-twilight .showcase-profile-row {
+  color: #46392c;
+}
+
+body.craft-ui.theme-daylight .showcase-profile-pill,
+body.craft-ui.theme-twilight .showcase-profile-pill {
+  background: rgba(154, 107, 39, 0.14);
+  border-color: rgba(154, 107, 39, 0.38);
+  color: #6b3f08;
+}
+
+body.craft-ui.theme-daylight .showcase-profile-pill.is-club,
+body.craft-ui.theme-twilight .showcase-profile-pill.is-club {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.38);
+  color: #17523e;
+}
+
+body.craft-ui.theme-daylight .showcase-profile-pill.is-sil,
+body.craft-ui.theme-twilight .showcase-profile-pill.is-sil {
+  background: rgba(46, 94, 134, 0.12);
+  border-color: rgba(46, 94, 134, 0.36);
+  color: #1f486c;
+}
+
+/* 11. Complete Tailwind Dark-Bg & Light-Text Remap on All Xuan-Paper Surfaces */
+body.craft-ui.theme-daylight #controlDeck :is(.text-white, .text-slate-50, .text-slate-100, .text-slate-200, .text-stone-200),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.text-white, .text-slate-50, .text-slate-100, .text-slate-200, .text-stone-200),
+body.craft-ui.theme-daylight #seatIntelPopover :is(.text-white, .text-slate-50, .text-slate-100, .text-slate-200, .text-stone-200),
+body.craft-ui.theme-daylight .craft-modal-box :is(.text-white, .text-slate-50, .text-slate-100, .text-slate-200, .text-stone-200),
+body.craft-ui.theme-daylight .setup-drawer-sheet :is(.text-white, .text-slate-50, .text-slate-100, .text-slate-200, .text-stone-200),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.text-white, .text-slate-50, .text-slate-100, .text-slate-200, .text-stone-200),
+body.craft-ui.theme-twilight #seatIntelPopover :is(.text-white, .text-slate-50, .text-slate-100, .text-slate-200, .text-stone-200),
+body.craft-ui.theme-twilight .craft-modal-box :is(.text-white, .text-slate-50, .text-slate-100, .text-slate-200, .text-stone-200),
+body.craft-ui.theme-twilight .setup-drawer-sheet :is(.text-white, .text-slate-50, .text-slate-100, .text-slate-200, .text-stone-200) {
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.text-slate-300, .text-slate-400, .text-stone-300),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.text-slate-300, .text-slate-400, .text-stone-300),
+body.craft-ui.theme-daylight #seatIntelPopover :is(.text-slate-300, .text-slate-400, .text-stone-300),
+body.craft-ui.theme-daylight .craft-modal-box :is(.text-slate-300, .text-slate-400, .text-stone-300),
+body.craft-ui.theme-daylight .setup-drawer-sheet :is(.text-slate-300, .text-slate-400, .text-stone-300),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.text-slate-300, .text-slate-400, .text-stone-300),
+body.craft-ui.theme-twilight #seatIntelPopover :is(.text-slate-300, .text-slate-400, .text-stone-300),
+body.craft-ui.theme-twilight .craft-modal-box :is(.text-slate-300, .text-slate-400, .text-stone-300),
+body.craft-ui.theme-twilight .setup-drawer-sheet :is(.text-slate-300, .text-slate-400, .text-stone-300) {
+  color: #5b4c3d;
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.text-amber-50, .text-amber-100, .text-amber-100\/90, .text-amber-100\/95, .text-amber-200, .text-amber-200\/80, .text-amber-200\/90, .text-amber-200\/95, .text-amber-300, .text-amber-300\/80, .text-amber-300\/90, .text-amber-400),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.text-amber-50, .text-amber-100, .text-amber-100\/90, .text-amber-100\/95, .text-amber-200, .text-amber-200\/80, .text-amber-200\/90, .text-amber-200\/95, .text-amber-300, .text-amber-300\/80, .text-amber-300\/90, .text-amber-400),
+body.craft-ui.theme-daylight #seatIntelPopover :is(.text-amber-50, .text-amber-100, .text-amber-200, .text-amber-300, .text-amber-400),
+body.craft-ui.theme-daylight .craft-modal-box :is(.text-amber-50, .text-amber-100, .text-amber-100\/90, .text-amber-100\/95, .text-amber-200, .text-amber-200\/80, .text-amber-200\/90, .text-amber-200\/95, .text-amber-300, .text-amber-300\/80, .text-amber-300\/90, .text-amber-400),
+body.craft-ui.theme-daylight .setup-drawer-sheet :is(.text-amber-50, .text-amber-100, .text-amber-200, .text-amber-300, .text-amber-400),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.text-amber-50, .text-amber-100, .text-amber-200, .text-amber-200\/90, .text-amber-300, .text-amber-300\/90, .text-amber-400),
+body.craft-ui.theme-twilight #seatIntelPopover :is(.text-amber-50, .text-amber-100, .text-amber-200, .text-amber-300, .text-amber-400),
+body.craft-ui.theme-twilight .craft-modal-box :is(.text-amber-50, .text-amber-100, .text-amber-100\/90, .text-amber-100\/95, .text-amber-200, .text-amber-200\/80, .text-amber-200\/90, .text-amber-200\/95, .text-amber-300, .text-amber-300\/80, .text-amber-300\/90, .text-amber-400),
+body.craft-ui.theme-twilight .setup-drawer-sheet :is(.text-amber-50, .text-amber-100, .text-amber-200, .text-amber-300, .text-amber-400) {
+  color: #7c4f13;
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.text-emerald-100, .text-emerald-200, .text-emerald-200\/90, .text-emerald-300, .text-teal-200, .text-teal-300),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.text-emerald-100, .text-emerald-200, .text-emerald-200\/90, .text-emerald-300, .text-teal-200, .text-teal-300),
+body.craft-ui.theme-daylight #seatIntelPopover :is(.text-emerald-100, .text-emerald-200, .text-emerald-300, .text-teal-200, .text-teal-300),
+body.craft-ui.theme-daylight .craft-modal-box :is(.text-emerald-100, .text-emerald-200, .text-emerald-200\/90, .text-emerald-300, .text-teal-200, .text-teal-300),
+body.craft-ui.theme-daylight .setup-drawer-sheet :is(.text-emerald-100, .text-emerald-200, .text-emerald-300, .text-teal-200, .text-teal-300),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.text-emerald-100, .text-emerald-200, .text-emerald-300, .text-teal-200, .text-teal-300),
+body.craft-ui.theme-twilight .craft-modal-box :is(.text-emerald-100, .text-emerald-200, .text-emerald-200\/90, .text-emerald-300, .text-teal-200, .text-teal-300),
+body.craft-ui.theme-twilight .setup-drawer-sheet :is(.text-emerald-100, .text-emerald-200, .text-emerald-300, .text-teal-200, .text-teal-300) {
+  color: #1b5742;
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.text-rose-50, .text-rose-100, .text-rose-200, .text-rose-300, .text-red-300),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.text-rose-50, .text-rose-100, .text-rose-200, .text-rose-300, .text-red-300),
+body.craft-ui.theme-daylight #seatIntelPopover :is(.text-rose-50, .text-rose-100, .text-rose-200, .text-rose-300, .text-red-300),
+body.craft-ui.theme-daylight .craft-modal-box :is(.text-rose-50, .text-rose-100, .text-rose-200, .text-rose-300, .text-red-300),
+body.craft-ui.theme-daylight .setup-drawer-sheet :is(.text-rose-50, .text-rose-100, .text-rose-200, .text-rose-300, .text-red-300),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.text-rose-50, .text-rose-100, .text-rose-200, .text-rose-300, .text-red-300),
+body.craft-ui.theme-twilight .craft-modal-box :is(.text-rose-50, .text-rose-100, .text-rose-200, .text-rose-300, .text-red-300),
+body.craft-ui.theme-twilight .setup-drawer-sheet :is(.text-rose-50, .text-rose-100, .text-rose-200, .text-rose-300, .text-red-300) {
+  color: #96261d;
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-daylight #seatIntelPopover :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-daylight .craft-modal-box :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-daylight .setup-drawer-sheet :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-twilight .craft-modal-box :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-twilight .setup-drawer-sheet :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300) {
+  color: #254d73;
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.text-purple-100, .text-purple-200, .text-purple-300),
+body.craft-ui.theme-daylight .craft-modal-box :is(.text-purple-100, .text-purple-200, .text-purple-300),
+body.craft-ui.theme-twilight .craft-modal-box :is(.text-purple-100, .text-purple-200, .text-purple-300) {
+  color: #5b3b75;
+}
+
+/* Remap dark slate/stone/tinted Tailwind card backgrounds inside xuan-paper surfaces */
+body.craft-ui.theme-daylight #controlDeck :is(.bg-slate-950, .bg-slate-950\/40, .bg-slate-950\/60, .bg-slate-950\/70, .bg-slate-950\/75, .bg-slate-950\/80, .bg-slate-950\/85, .bg-slate-950\/90, .bg-slate-900, .bg-slate-900\/60, .bg-slate-900\/75, .bg-slate-900\/80, .bg-slate-900\/90, .bg-stone-950\/65, .bg-stone-900\/50):not(canvas):not(img),
+body.craft-ui.theme-daylight .craft-modal-box :is(.bg-slate-950, .bg-slate-950\/40, .bg-slate-950\/60, .bg-slate-950\/70, .bg-slate-950\/75, .bg-slate-950\/80, .bg-slate-950\/85, .bg-slate-950\/90, .bg-slate-900, .bg-slate-900\/60, .bg-slate-900\/75, .bg-slate-900\/80, .bg-slate-900\/90, .bg-stone-950\/65, .bg-stone-900\/50):not(canvas):not(img),
+body.craft-ui.theme-daylight .setup-drawer-sheet :is(.bg-slate-950, .bg-slate-950\/40, .bg-slate-950\/60, .bg-slate-950\/70, .bg-slate-950\/75, .bg-slate-950\/80, .bg-slate-950\/85, .bg-slate-950\/90, .bg-slate-900, .bg-slate-900\/60, .bg-slate-900\/75, .bg-slate-900\/80, .bg-slate-900\/90):not(canvas):not(img),
+body.craft-ui.theme-twilight .craft-modal-box :is(.bg-slate-950, .bg-slate-950\/40, .bg-slate-950\/60, .bg-slate-950\/70, .bg-slate-950\/75, .bg-slate-950\/80, .bg-slate-950\/85, .bg-slate-950\/90, .bg-slate-900, .bg-slate-900\/60, .bg-slate-900\/75, .bg-slate-900\/80, .bg-slate-900\/90):not(canvas):not(img),
+body.craft-ui.theme-twilight .setup-drawer-sheet :is(.bg-slate-950, .bg-slate-950\/40, .bg-slate-950\/60, .bg-slate-950\/70, .bg-slate-950\/75, .bg-slate-950\/80, .bg-slate-950\/85, .bg-slate-950\/90, .bg-slate-900, .bg-slate-900\/60, .bg-slate-900\/75, .bg-slate-900\/80, .bg-slate-900\/90):not(canvas):not(img) {
+  background-color: #f6efe2;
+  border-color: rgba(116, 92, 62, 0.24);
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.bg-slate-800, .bg-slate-800\/35, .bg-slate-800\/80, .bg-slate-800\/90, .bg-slate-700, .bg-stone-700\/60):not(canvas):not(img),
+body.craft-ui.theme-daylight .craft-modal-box :is(.bg-slate-800, .bg-slate-800\/35, .bg-slate-800\/80, .bg-slate-800\/90, .bg-slate-700, .bg-stone-700\/60):not(canvas):not(img),
+body.craft-ui.theme-daylight .setup-drawer-sheet :is(.bg-slate-800, .bg-slate-800\/35, .bg-slate-800\/80, .bg-slate-800\/90, .bg-slate-700):not(canvas):not(img),
+body.craft-ui.theme-twilight .craft-modal-box :is(.bg-slate-800, .bg-slate-800\/35, .bg-slate-800\/80, .bg-slate-800\/90, .bg-slate-700):not(canvas):not(img),
+body.craft-ui.theme-twilight .setup-drawer-sheet :is(.bg-slate-800, .bg-slate-800\/35, .bg-slate-800\/80, .bg-slate-800\/90, .bg-slate-700):not(canvas):not(img) {
+  background-color: rgba(116, 92, 62, 0.14);
+  border-color: rgba(116, 92, 62, 0.26);
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.bg-amber-950\/25, .bg-amber-950\/30, .bg-amber-950\/45, .bg-amber-500\/10, .bg-amber-500\/12, .bg-amber-500\/15, .bg-amber-500\/20, .bg-amber-500\/25),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.bg-amber-500\/15, .bg-amber-500\/20, .bg-amber-500\/25),
+body.craft-ui.theme-daylight .craft-modal-box :is(.bg-amber-950\/25, .bg-amber-950\/30, .bg-amber-950\/45, .bg-amber-500\/10, .bg-amber-500\/12, .bg-amber-500\/15, .bg-amber-500\/20, .bg-amber-500\/25),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.bg-amber-500\/15, .bg-amber-500\/20, .bg-amber-500\/25),
+body.craft-ui.theme-twilight .craft-modal-box :is(.bg-amber-950\/25, .bg-amber-950\/30, .bg-amber-950\/45, .bg-amber-500\/10, .bg-amber-500\/12, .bg-amber-500\/15, .bg-amber-500\/20, .bg-amber-500\/25) {
+  background-color: rgba(178, 128, 48, 0.14);
+  border-color: rgba(154, 107, 39, 0.38);
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.bg-emerald-950\/25, .bg-emerald-950\/50, .bg-emerald-500\/15, .bg-emerald-500\/20, .bg-emerald-500\/25),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.bg-emerald-500\/20, .bg-emerald-500\/25),
+body.craft-ui.theme-daylight .craft-modal-box :is(.bg-emerald-950\/25, .bg-emerald-950\/50, .bg-emerald-500\/15, .bg-emerald-500\/20, .bg-emerald-500\/25),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.bg-emerald-500\/20, .bg-emerald-500\/25),
+body.craft-ui.theme-twilight .craft-modal-box :is(.bg-emerald-950\/25, .bg-emerald-950\/50, .bg-emerald-500\/15, .bg-emerald-500\/20, .bg-emerald-500\/25) {
+  background-color: rgba(44, 103, 83, 0.12);
+  border-color: rgba(44, 103, 83, 0.36);
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.bg-rose-950\/50, .bg-rose-500\/15, .bg-rose-500\/20, .bg-rose-500\/25),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.bg-rose-500\/20, .bg-rose-500\/25),
+body.craft-ui.theme-daylight .craft-modal-box :is(.bg-rose-950\/50, .bg-rose-500\/15, .bg-rose-500\/20, .bg-rose-500\/25),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.bg-rose-500\/20, .bg-rose-500\/25),
+body.craft-ui.theme-twilight .craft-modal-box :is(.bg-rose-950\/50, .bg-rose-500\/15, .bg-rose-500\/20, .bg-rose-500\/25) {
+  background-color: rgba(164, 57, 44, 0.11);
+  border-color: rgba(164, 57, 44, 0.36);
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.bg-indigo-950\/40, .bg-purple-950\/25, .bg-purple-950\/50),
+body.craft-ui.theme-daylight .craft-modal-box :is(.bg-indigo-950\/40, .bg-purple-950\/25, .bg-purple-950\/50),
+body.craft-ui.theme-twilight .craft-modal-box :is(.bg-indigo-950\/40, .bg-purple-950\/25, .bg-purple-950\/50) {
+  background-color: rgba(68, 78, 124, 0.10);
+  border-color: rgba(68, 78, 124, 0.32);
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.border-slate-700, .border-slate-700\/50, .border-slate-700\/60, .border-slate-800, .border-slate-800\/60, .border-slate-800\/70, .border-slate-800\/80, .border-slate-800\/90),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.border-slate-700\/60, .border-slate-800),
+body.craft-ui.theme-daylight .craft-modal-box :is(.border-slate-700, .border-slate-700\/50, .border-slate-700\/60, .border-slate-800, .border-slate-800\/60, .border-slate-800\/70, .border-slate-800\/80, .border-slate-800\/90),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.border-slate-700\/60, .border-slate-800),
+body.craft-ui.theme-twilight .craft-modal-box :is(.border-slate-700, .border-slate-700\/50, .border-slate-700\/60, .border-slate-800, .border-slate-800\/60, .border-slate-800\/70, .border-slate-800\/80, .border-slate-800\/90) {
+  border-color: rgba(116, 92, 62, 0.24);
+}
+
+/* 12. High-Contrast Solid Tea-Seal CTAs (Preserves crisp warm-ivory text & icons on solid buttons) */
+body.craft-ui.theme-daylight .cta-brass,
+body.craft-ui.theme-twilight .cta-brass {
+  background: linear-gradient(180deg, #b88437 0%, #966722 100%);
+  border: 1px solid rgba(132, 88, 26, 0.88);
+  color: #fffcf5;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, 0.34), 0 5px 14px rgba(132, 88, 26, 0.22);
+}
+
+body.craft-ui.theme-daylight .cta-brass:hover,
+body.craft-ui.theme-twilight .cta-brass:hover {
+  background: linear-gradient(180deg, #c6903f 0%, #a37126 100%);
+  color: #ffffff;
+}
+
+body.craft-ui.theme-daylight .cta-brass .ui-kbd,
+body.craft-ui.theme-twilight .cta-brass .ui-kbd,
+body.craft-ui.theme-daylight .cta-cinnabar .ui-kbd,
+body.craft-ui.theme-twilight .cta-cinnabar .ui-kbd {
+  background: rgba(255, 252, 244, 0.22);
+  border-color: rgba(255, 252, 244, 0.46);
+  color: #fffcf5;
+}
+
+body.craft-ui.theme-daylight .cta-cinnabar .sh-ico,
+body.craft-ui.theme-twilight .cta-cinnabar .sh-ico,
+body.craft-ui.theme-daylight .cta-brass .sh-ico,
+body.craft-ui.theme-twilight .cta-brass .sh-ico,
+body.craft-ui.theme-daylight .wolf-explode-btn .sh-ico,
+body.craft-ui.theme-daylight #btnMicVoiceSpeech.is-listening .sh-ico {
+  color: currentColor;
+}
+
+body.craft-ui.theme-daylight #controlDeck :is(.cta-cinnabar, .cta-brass, .wolf-explode-btn, .seat-pill-btn.seat-is-selected, #btnQuickFreeSend),
+body.craft-ui.theme-daylight #controlDeck :is(.cta-cinnabar, .cta-brass, .wolf-explode-btn, .seat-pill-btn.seat-is-selected, #btnQuickFreeSend) :is(.text-white, .text-amber-100, .text-amber-200, .text-slate-100, .text-slate-200),
+body.craft-ui.theme-daylight .craft-modal-box :is(.cta-cinnabar, .cta-brass, .cta-celadon, #btnTutNext, #btnLaunchGuidedDemo),
+body.craft-ui.theme-twilight .craft-modal-box :is(.cta-cinnabar, .cta-brass, .cta-celadon, #btnTutNext, #btnLaunchGuidedDemo) {
+  color: #fffcf5;
+}
+
+body.craft-ui.theme-daylight #controlDeck #sheriffElectionVoteRow .cta-celadon {
+  color: #f6fcf9;
+}
+
+body.craft-ui.theme-daylight .cta-celadon {
+  color: #194d3b;
+}
+
+body.craft-ui.theme-daylight .craft-modal-box .cta-celadon,
+body.craft-ui.theme-twilight .craft-modal-box .cta-celadon,
+body.craft-ui.theme-daylight .setup-drawer-sheet .cta-celadon,
+body.craft-ui.theme-twilight .setup-drawer-sheet .cta-celadon {
+  color: #f6fcf9;
+}
+
+body.craft-ui.theme-daylight .journal-harmony-bar,
+body.craft-ui.theme-twilight .journal-harmony-bar {
+  background: #f2eadb;
+  border-bottom-color: rgba(116, 92, 62, 0.22);
+}
+
+#modalPauseMenu #hudAutoLabel,
+#modalPauseMenu #hudViewLabel,
+#modalPauseMenu #hudSceneLabel {
+  display: inline;
 }

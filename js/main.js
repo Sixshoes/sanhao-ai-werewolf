@@ -12,6 +12,9 @@ function bindEvents() {
     indieFlow.bindEvents();
     indieFlow.syncSetupDrawerFromSelects();
   }
+  if (typeof initWerewolfJargonSystem === "function") {
+    initWerewolfJargonSystem();
+  }
 }
 
 window.addEventListener("beforeunload", function () { voice.stop(); });

@@ -147,7 +147,7 @@ const stage3d = {
       } catch (e) { }
     }
     const isSoftware = /swiftshader|llvmpipe|softpipe|software|microsoft basic render|\bwarp\b/i.test(info);
-    const isIntegrated = isSoftware || /intel.*(uhd|hd graphics|iris)|radeon\(tm\) graphics|amd radeon graphics|vega \d/i.test(info);
+    const isIntegrated = isSoftware || /intel.*(uhd|hd graphics|iris)|\bintel\(?r?\)?\s*(?:arc\(?tm\)?\s*)?graphics\b|radeon\(tm\)\s*graphics|amd radeon(?:\(tm\))?\s*(?:\d{3}m\s*)?graphics|vega \d/i.test(info);
     const isWinUa = typeof navigator !== "undefined" && /windows/i.test(String(navigator.userAgent || ""));
     const isWindowsAngle = /angle\s*\(.*direct3d/i.test(info) || (isWinUa && !/apple/i.test(info));
     let shortLabel = isSoftware ? "CPU 軟體渲染（請開硬體加速）" : (isIntegrated ? "內顯最佳化" : "獨立/標準顯卡");
@@ -188,7 +188,7 @@ const stage3d = {
     if (mobile || sw < 1920) return false;
     if (this.isSoftwareRenderer) return true;
     const raw = String(this.gpuRendererStr || "");
-    return Boolean(this.isIntegratedGpu || /intel.*(uhd|hd graphics|iris)|radeon\(tm\) graphics|amd radeon graphics|vega \d/i.test(raw));
+    return Boolean(this.isIntegratedGpu || /intel.*(uhd|hd graphics|iris)|\bintel\(?r?\)?\s*(?:arc\(?tm\)?\s*)?graphics\b|radeon\(tm\)\s*graphics|amd radeon(?:\(tm\))?\s*(?:\d{3}m\s*)?graphics|vega \d/i.test(raw));
   },
 
   getShadowUpdateStride: function () {
@@ -233,9 +233,10 @@ const stage3d = {
     const cap = this.isSoftwareRenderer
       ? 0.85
       : (this.isIntegratedGpu
-        ? (q === "eco" ? 0.9 : (q === "balanced" ? 1.0 : 1.25))
+        ? (q === "eco" ? 0.85 : (q === "balanced" ? 0.95 : 1.2))
         : (q === "eco" ? 1.0 : (q === "balanced" ? 1.25 : 1.5)));
-    return Math.min(window.devicePixelRatio || 1, cap);
+    const ecoScale = (q === "eco" && this._ecoDprScale && this._ecoDprScale < 1) ? this._ecoDprScale : 1;
+    return Math.max(0.65, Math.min(window.devicePixelRatio || 1, cap) * ecoScale);
   },
 
   getOverlayDpr: function () {
@@ -381,6 +382,7 @@ const stage3d = {
 
   toggleQualityMode: function () {
     this._manualQualityLock = true;
+    this._ecoDprScale = 1;
     state.qualityUserChosen = true;
     const order = ["high", "balanced", "eco"];
     const nextIdx = (order.indexOf(state.quality3D) + 1) % order.length;
@@ -1799,9 +1801,9 @@ const stage3d = {
               this.updateGpuStatusUi();
             }
           }
-          if (!this._manualQualityLock && state.quality3D !== "eco" && this._perfEmaMs > 44) {
+          if (!this._manualQualityLock && state.quality3D !== "eco" && this._perfEmaMs > 30) {
             this._perfSlowMs = (this._perfSlowMs || 0) + sampleDt;
-            if (this._perfSlowMs > 2400) {
+            if (this._perfSlowMs > 1500) {
               state.quality3D = (state.quality3D === "high") ? "balanced" : "eco";
               this.applyQualityMode();
               this._perfSlowMs = 0;
@@ -1809,11 +1811,19 @@ const stage3d = {
               if (typeof showToast === "function") {
                 showToast(
                   state.quality3D === "balanced"
-                    ? "偵測到負載偏高，已平滑降至「均衡畫質」（保留陰影與光暈）"
+                    ? "偵測到負載偏高，已平滑降至「均衡畫質」（保留陰影與光影色調）"
                     : "偵測到畫面負載較高，已自動切換為「省電流暢」3D 模式",
                   "sky"
                 );
               }
+            }
+          } else if (!this._manualQualityLock && state.quality3D === "eco" && (this._ecoDprScale || 1) > 0.82 && this._perfEmaMs > 40) {
+            this._perfSlowMs = (this._perfSlowMs || 0) + sampleDt;
+            if (this._perfSlowMs > 1800) {
+              this._ecoDprScale = 0.8;
+              this._perfSlowMs = 0;
+              this._perfEmaMs = 0;
+              this.applyQualityMode();
             }
           } else {
             this._perfSlowMs = Math.max(0, (this._perfSlowMs || 0) - sampleDt * 0.5);
@@ -1898,6 +1908,13 @@ const stage3d = {
       // Single authoritative ACES Filmic pass inside PostFX gradePass (prevents double tone-mapping compression!)
       if (this.renderer && THREE.NoToneMapping !== undefined && this.renderer.toneMapping !== THREE.NoToneMapping) {
         this.renderer.toneMapping = THREE.NoToneMapping;
+      }
+      // v23.3 Fillrate Saver: Bypass 11-pass UnrealBloomPass in balanced mode, iGPU, or 10-12 seat rooms while preserving crisp 1-pass ACES + FXAA gradePass!
+      if (this.postfx && this.postfx.bloomPass) {
+        const nSeatsNow = (state.match && Array.isArray(state.match.seats) && state.match.seats.length)
+          ? state.match.seats.length
+          : (state.setupSeatCount || 8);
+        this.postfx.bloomPass.enabled = Boolean(state.quality3D === "high" && !this.isIntegratedGpu && nSeatsNow < 10);
       }
       if (typeof this.postfx.setDynamicExposure === "function") {
         this.postfx.setDynamicExposure(dynExpBoost, f.dt60);

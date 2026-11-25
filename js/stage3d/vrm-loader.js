@@ -2235,26 +2235,30 @@ const stage3dVrm = {
     if (bm.rightHand) this.slerpBoneModelDelta(bm.rightHand, clamp(rWristX, -0.42, 0.42), clamp(rWristY, -0.38, 0.38), clamp(rWristZ, -0.36, 0.36), 0.22, "YXZ");
     if (bm.leftHand) this.slerpBoneModelDelta(bm.leftHand, clamp(lWristX, -0.42, 0.42), -clamp(lWristY, -0.38, 0.38), -clamp(lWristZ, -0.36, 0.36), 0.22, "YXZ");
 
-    // Expressive Finger Pose Articulation (optional proximal finger bones — graceful natural curl/point/open palm!)
-    const FINGER_PRESETS = {
-      relaxed: [0.24, 0.32, 0.40, 0.48, 0.18],
-      open_palm: [0.06, 0.08, 0.12, 0.16, 0.06],
-      point_index: [0.04, 0.96, 1.04, 1.08, 0.56],
-      fist_cheer: [1.02, 1.08, 1.12, 1.14, 0.65],
-      tea_poise: [0.14, 0.26, 0.40, 0.20, 0.14]
-    };
-    const rCurls = FINGER_PRESETS[rHandPose] || FINGER_PRESETS.relaxed;
-    const lCurls = FINGER_PRESETS[lHandPose] || FINGER_PRESETS.relaxed;
-    if (bm.rightIndexProximal) this.slerpBoneModelDelta(bm.rightIndexProximal, 0, 0, rCurls[0], 0.22, "YXZ");
-    if (bm.rightMiddleProximal) this.slerpBoneModelDelta(bm.rightMiddleProximal, 0, 0, rCurls[1], 0.22, "YXZ");
-    if (bm.rightRingProximal) this.slerpBoneModelDelta(bm.rightRingProximal, 0, 0, rCurls[2], 0.22, "YXZ");
-    if (bm.rightLittleProximal) this.slerpBoneModelDelta(bm.rightLittleProximal, 0, 0, rCurls[3], 0.22, "YXZ");
-    if (bm.rightThumbProximal) this.slerpBoneModelDelta(bm.rightThumbProximal, 0, rCurls[4] * 0.45, rCurls[4] * 0.32, 0.22, "YXZ");
-    if (bm.leftIndexProximal) this.slerpBoneModelDelta(bm.leftIndexProximal, 0, 0, -lCurls[0], 0.22, "YXZ");
-    if (bm.leftMiddleProximal) this.slerpBoneModelDelta(bm.leftMiddleProximal, 0, 0, -lCurls[1], 0.22, "YXZ");
-    if (bm.leftRingProximal) this.slerpBoneModelDelta(bm.leftRingProximal, 0, 0, -lCurls[2], 0.22, "YXZ");
-    if (bm.leftLittleProximal) this.slerpBoneModelDelta(bm.leftLittleProximal, 0, 0, -lCurls[3], 0.22, "YXZ");
-    if (bm.leftThumbProximal) this.slerpBoneModelDelta(bm.leftThumbProximal, 0, -lCurls[4] * 0.45, -lCurls[4] * 0.32, 0.22, "YXZ");
+    // Expressive Finger Pose Articulation (v23.3: run once for resting seats, animate every frame for active speakers/priority/acting seats!)
+    const runFingerPose = Boolean(!inst._fingersInitialized || o.isPriority || talking || Boolean(o.act));
+    if (runFingerPose) {
+      inst._fingersInitialized = true;
+      const FINGER_PRESETS = {
+        relaxed: [0.24, 0.32, 0.40, 0.48, 0.18],
+        open_palm: [0.06, 0.08, 0.12, 0.16, 0.06],
+        point_index: [0.04, 0.96, 1.04, 1.08, 0.56],
+        fist_cheer: [1.02, 1.08, 1.12, 1.14, 0.65],
+        tea_poise: [0.14, 0.26, 0.40, 0.20, 0.14]
+      };
+      const rCurls = FINGER_PRESETS[rHandPose] || FINGER_PRESETS.relaxed;
+      const lCurls = FINGER_PRESETS[lHandPose] || FINGER_PRESETS.relaxed;
+      if (bm.rightIndexProximal) this.slerpBoneModelDelta(bm.rightIndexProximal, 0, 0, rCurls[0], 0.22, "YXZ");
+      if (bm.rightMiddleProximal) this.slerpBoneModelDelta(bm.rightMiddleProximal, 0, 0, rCurls[1], 0.22, "YXZ");
+      if (bm.rightRingProximal) this.slerpBoneModelDelta(bm.rightRingProximal, 0, 0, rCurls[2], 0.22, "YXZ");
+      if (bm.rightLittleProximal) this.slerpBoneModelDelta(bm.rightLittleProximal, 0, 0, rCurls[3], 0.22, "YXZ");
+      if (bm.rightThumbProximal) this.slerpBoneModelDelta(bm.rightThumbProximal, 0, rCurls[4] * 0.45, rCurls[4] * 0.32, 0.22, "YXZ");
+      if (bm.leftIndexProximal) this.slerpBoneModelDelta(bm.leftIndexProximal, 0, 0, -lCurls[0], 0.22, "YXZ");
+      if (bm.leftMiddleProximal) this.slerpBoneModelDelta(bm.leftMiddleProximal, 0, 0, -lCurls[1], 0.22, "YXZ");
+      if (bm.leftRingProximal) this.slerpBoneModelDelta(bm.leftRingProximal, 0, 0, -lCurls[2], 0.22, "YXZ");
+      if (bm.leftLittleProximal) this.slerpBoneModelDelta(bm.leftLittleProximal, 0, 0, -lCurls[3], 0.22, "YXZ");
+      if (bm.leftThumbProximal) this.slerpBoneModelDelta(bm.leftThumbProximal, 0, -lCurls[4] * 0.45, -lCurls[4] * 0.32, 0.22, "YXZ");
+    }
 
     // 3. SpringBone Hair, Ribbons & Skirt Model-Space Physics (lively follow-through hair sway, flip-free seated skirt!)
     const dYaw = clamp(yawNow - (inst.prevHeadYaw || 0), -0.32, 0.32);
@@ -2262,6 +2266,7 @@ const stage3dVrm = {
     inst.headInertia = (inst.headInertia || 0) * Math.pow(0.85, dt60) + dYaw * 1.85;
 
     const qMode = (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high";
+    const skipHairSpringsNow = Boolean(!o.isPriority && !talking && (qMode === "eco" || (qMode === "balanced" && (o.seatCount || 8) >= 10)));
     const springStride = o.isPriority ? 1 : (qMode === "eco" ? 3 : (qMode === "balanced" ? 2 : 1));
     const runSprings = springStride <= 1 || typeof o.frameCounter !== "number" || ((o.frameCounter + (o.seatId || 0)) % springStride === 0);
     if (runSprings && inst.springBones && inst.springBones.length) {
@@ -2277,7 +2282,7 @@ const stage3dVrm = {
           const hemZ = clamp(Math.sin(t * 1.8 + sb.phase) * 0.028, -0.035, 0.035);
           const hemX = clamp(Math.cos(t * 1.5 + sb.phase) * 0.018, -0.022, 0.022);
           this.slerpBoneModelDelta(sb.quatMeta, hemX, 0, hemZ, 0.16, "YXZ");
-        } else {
+        } else if (!skipHairSpringsNow) {
           const baseAmp = clamp(0.072 / Math.sqrt(sb.stiffness || 0.7), 0.038, 0.115);
           const breezeZ = clamp(Math.sin(t * 2.25 + sb.phase) * baseAmp + inst.headInertia * 0.32, -0.16, 0.16);
           const breezeX = clamp(Math.cos(t * 1.85 + sb.phase) * (baseAmp * 0.72), -0.11, 0.11);

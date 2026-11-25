@@ -942,10 +942,14 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             self.send_json(500, {"ok": False, "error": str(exc)[:180]})
 
 
-class DualStackServer(ThreadingHTTPServer):
-    address_family = socket.AF_INET6
+class SanhaoHTTPServer(ThreadingHTTPServer):
     allow_reuse_address = True
     daemon_threads = True
+    request_queue_size = 128
+
+
+class DualStackServer(SanhaoHTTPServer):
+    address_family = socket.AF_INET6
 
     def server_bind(self):
         try:
@@ -1000,9 +1004,9 @@ if __name__ == "__main__":
             httpd = DualStackServer((bind_host, PORT), SanhaoHandler)
         except Exception:
             bind_host = "127.0.0.1"
-            httpd = ThreadingHTTPServer((bind_host, PORT), SanhaoHandler)
+            httpd = SanhaoHTTPServer((bind_host, PORT), SanhaoHandler)
     else:
-        httpd = ThreadingHTTPServer((bind_host, PORT), SanhaoHandler)
+        httpd = SanhaoHTTPServer((bind_host, PORT), SanhaoHandler)
     httpd.daemon_threads = True
     prune_tts_cache()
     status = "已啟用免費微軟神經多角色語音 (edge-tts)" if HAS_EDGE_TTS else "未安裝 edge-tts（自動退回瀏覽器本機語音）"

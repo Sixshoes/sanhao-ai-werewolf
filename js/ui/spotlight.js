@@ -424,9 +424,17 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
   const contraKey = activeContraRec ? ((state.match.day || 0) + ":" + spId + ":contra:" + activeContraRec.code) : "";
   const contraCaught = Boolean(contraKey && caughtMap[contraKey]);
 
+  const renderPlainChunk = function (chunk) {
+    if (!chunk) return "";
+    if (!isPartial && typeof annotateJargonPlainText === "function") {
+      return annotateJargonPlainText(chunk);
+    }
+    return escapeHtml(chunk);
+  };
+
   while ((match = combinedPattern.exec(clean)) !== null) {
     if (match.index > lastIdx) {
-      html += escapeHtml(clean.slice(lastIdx, match.index));
+      html += renderPlainChunk(clean.slice(lastIdx, match.index));
     }
     const tok = match[0];
     const seatMatch = tok.match(/^(1[0-2]|0?[1-9])號/);
@@ -448,15 +456,17 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
     } else if (isToxic && speaker && speaker.id !== getPlayerId()) {
       html += '<span class="clue-token clue-toxic' + (isCaught ? ' clue-caught' : '') + '" data-clue-type="toxic" data-clue-key="' + escapeHtml(clueKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="點擊抓包這句酸言破綻！">' + escapeHtml(tok) + (isCaught ? ' ·已記' : '') + '</span>';
     } else if (isRole) {
-      html += '<span class="clue-token clue-role' + (isCaught ? ' clue-caught' : '') + '" data-clue-type="role" data-clue-key="' + escapeHtml(clueKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="點擊記錄這項身分線索">' + escapeHtml(tok) + (isCaught ? ' ·已記' : '') + '</span>';
+      const jRole = (typeof lookupWerewolfJargon === "function") ? lookupWerewolfJargon(tok) : null;
+      const jAttr = jRole ? (' data-jargon="' + escapeHtml(jRole.term) + '"') : "";
+      html += '<span class="clue-token clue-role' + (isCaught ? ' clue-caught' : '') + '"' + jAttr + ' data-clue-type="role" data-clue-key="' + escapeHtml(clueKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="點擊記錄這項身分線索">' + escapeHtml(tok) + (isCaught ? ' ·已記' : '') + '</span>';
     } else {
-      html += escapeHtml(tok);
+      html += renderPlainChunk(tok);
     }
     lastIdx = combinedPattern.lastIndex;
   }
   if (lastIdx < clean.length) {
     const tailSlice = clean.slice(lastIdx);
-    html += escapeHtml(tailSlice);
+    html += renderPlainChunk(tailSlice);
   }
   html += isPartial ? "" : "」";
   if (activeContraRec && !contraEmitted && !isPartial && speaker && speaker.id !== getPlayerId()) {

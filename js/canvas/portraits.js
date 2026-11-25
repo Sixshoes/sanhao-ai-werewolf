@@ -333,13 +333,17 @@ function drawSpotlightPortrait(nowMs) {
   if (!pc || (pc.classList && pc.classList.contains("hidden"))) return;
   const box = el("spotlightStageBox");
   if (!box || box.classList.contains("hidden")) return;
+  const sp = getSeat(state.activeSpeakerId);
+  const talking = Boolean(state.typewriter.active || voice.speaking);
+  const sig = (sp ? sp.id : 0) + ":" + (talking ? 1 : 0);
+  if (pc._lastDrawMs && (nowMs - pc._lastDrawMs) < 50 && pc._lastDrawSig === sig) return;
+  pc._lastDrawMs = nowMs;
+  pc._lastDrawSig = sig;
   const pCtx = pc._ctx2d || (pc._ctx2d = pc.getContext("2d"));
   const w = pc.width, h = pc.height;
   pCtx.clearRect(0, 0, w, h);
 
-  const sp = getSeat(state.activeSpeakerId);
   const daylight = document.body.classList.contains("theme-daylight") || document.body.classList.contains("theme-day");
-  const talking = Boolean(state.typewriter.active || voice.speaking);
   const sweating = Boolean(sp && (state.match.microPulseRevealed || sp.sweatExposed) && sp.microPulse >= 60);
 
   const spEmotion = sp ? getSeatEmotion(sp.id, nowMs) : "neutral";

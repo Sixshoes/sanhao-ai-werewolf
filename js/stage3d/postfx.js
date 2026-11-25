@@ -221,7 +221,7 @@ function build3DPostFx(renderer, scene, camera, opts) {
         }
 
         const dMood = typeof dampFactor3D === "function" ? dampFactor3D(0.08, (f && f.dt60) || 1) : 0.08;
-        if (bloomPass) {
+        if (bloomPass && bloomPass.enabled !== false) {
           bloomPass.strength += ((tStrength + harmBoost) - bloomPass.strength) * dMood;
           bloomPass.threshold += (tThresh - bloomPass.threshold) * dMood;
         }

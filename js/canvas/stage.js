@@ -23,11 +23,15 @@ function resizeCanvas() {
   const canvas = el("sanctuaryCanvas");
   if (!container || !canvas) return;
   const rect = container.getBoundingClientRect();
+  const maxVw = (typeof window !== "undefined" && window.innerWidth) ? window.innerWidth : 1920;
+  const maxVh = (typeof window !== "undefined" && window.innerHeight) ? window.innerHeight : 1080;
+  const effW = Math.min(rect.width || maxVw, maxVw);
+  const effH = Math.min(rect.height || maxVh, maxVh);
   const dpr = (typeof stage3d !== "undefined" && typeof stage3d.getOverlayDpr === "function")
     ? stage3d.getOverlayDpr()
     : Math.min(window.devicePixelRatio || 1, (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu) ? 1.25 : 1.5);
-  const nextW = Math.max(300, Math.round(rect.width * dpr));
-  const nextH = Math.max(220, Math.round(rect.height * dpr));
+  const nextW = Math.max(300, Math.round(effW * dpr));
+  const nextH = Math.max(220, Math.round(effH * dpr));
   if (canvas.width !== nextW || canvas.height !== nextH) {
     canvas.width = nextW;
     canvas.height = nextH;

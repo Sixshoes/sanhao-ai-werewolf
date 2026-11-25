@@ -1676,6 +1676,19 @@
     </div>
   </div>
 
+  <!-- v23.2 Shared Floating Werewolf Jargon Glossary Popover (Desktop hover + Mobile/Tablet tap) -->
+  <div id="jargonTooltipPopover" class="hidden jargon-tooltip-popover" role="tooltip" aria-hidden="true">
+    <div class="jargon-tip-head">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span id="jargonTipCategory" class="jargon-tip-cat">茶席術語</span>
+        <span id="jargonTipTerm" class="jargon-tip-term font-serif-craft">術語</span>
+      </div>
+      <button id="btnCloseJargonTip" type="button" class="jargon-tip-close" aria-label="關閉術語釋義">×</button>
+    </div>
+    <p id="jargonTipPlain" class="jargon-tip-plain"></p>
+    <p id="jargonTipNote" class="jargon-tip-note hidden"></p>
+  </div>
+
   <!-- Data & Core State -->
   <script src="js/data/constants.js" defer></script>
   <script src="js/core/state.js" defer></script>
@@ -1687,9 +1700,10 @@
   <script src="js/audio/soundtrack.js" defer></script>
   <script src="js/audio/voice.js" defer></script>
 
-  <!-- Visual FX, Craft Icons, Spotlight, Intel, Flow & UI Rendering -->
+  <!-- Visual FX, Craft Icons, Jargon Glossary, Spotlight, Intel, Flow & UI Rendering -->
   <script src="js/ui/icons.js" defer></script>
   <script src="js/ui/fx.js" defer></script>
+  <script src="js/ui/jargon.js" defer></script>
   <script src="js/ui/spotlight.js" defer></script>
   <script src="js/ui/intel.js" defer></script>
   <script src="js/ui/hud.js" defer></script>

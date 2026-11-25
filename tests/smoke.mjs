@@ -7777,4 +7777,98 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 Animated Guidance E2E smoke test PASSED!");
+// ==================== v23.2 WEREWOLF JARGON DOTTED UNDERLINE & POPOVER CHECK ====================
+{
+  const v232Res = vm.runInContext(`(() => {
+    const countOk = Array.isArray(WEREWOLF_JARGON_GLOSSARY) && WEREWOLF_JARGON_GLOSSARY.length >= 40;
+    const mustTerms = ["查殺", "金水", "銀水", "悍跳", "對跳", "警徽流", "退水", "歸票", "狼坑", "好人坑", "站邊", "倒鉤", "深水", "抗推", "同守同救", "破盾", "PK", "自爆"];
+    const lookupAllOk = mustTerms.every(t => {
+      const e = lookupWerewolfJargon(t);
+      return Boolean(e && e.term && e.plain && e.plain.length >= 10);
+    });
+
+    // XSS safety + dotted underline wrapping
+    const xssAnnotated = annotateJargonPlainText('<img src=x onerror=alert(1)>這人悍跳還留警徽流想歸票');
+    const xssSafeOk = !xssAnnotated.includes("<img")
+      && xssAnnotated.includes('data-jargon="悍跳"')
+      && xssAnnotated.includes('data-jargon="警徽流"')
+      && xssAnnotated.includes('data-jargon="歸票"');
+
+    // Spotlight integrates both role-clue tokens (查殺) and jargon-term spans (警徽流 / 悍跳)
+    state.match.started = true;
+    state.match.day = 1;
+    renderInteractiveSpotlightText("這輪我報 3號 查殺，昨晚留了警徽流，別信對面悍跳！", { id: 2, name: "小澄" }, false);
+    const spotHtml = String(el("spotlightText").innerHTML || "");
+    const spotlightIntegratedOk = spotHtml.includes('clue-role')
+      && spotHtml.includes('data-jargon="查殺"')
+      && spotHtml.includes('class="jargon-term" data-jargon="警徽流"')
+      && spotHtml.includes('class="jargon-term" data-jargon="悍跳"');
+
+    // Popover open/close flow
+    const opened = showJargonPopover(null, "警徽流", { pin: true });
+    const popVisibleOk = opened
+      && !el("jargonTooltipPopover").classList.contains("hidden")
+      && el("jargonTipTerm").textContent === "警徽流"
+      && el("jargonTipPlain").textContent.includes("暗號");
+    hideJargonPopover();
+    const popClosedOk = el("jargonTooltipPopover").classList.contains("hidden");
+
+    resetMatchToLobby();
+    return {
+      countOk,
+      lookupAllOk,
+      xssSafeOk,
+      spotlightIntegratedOk,
+      popVisibleOk,
+      popClosedOk
+    };
+  })()`, ctx);
+
+  const failedV232 = Object.entries(v232Res).filter(([, v]) => !v);
+  if (failedV232.length > 0) {
+    throw new Error("v23.2 WEREWOLF JARGON check failed: " + JSON.stringify(v232Res));
+  }
+}
+
+// ==================== v23.3 FULL XUAN-PAPER CONTRAST & DESKTOP PC PERFORMANCE CHECK ====================
+{
+  const compCss233 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const envJs233 = fs.readFileSync(path.join(ROOT, "js/stage3d/environment.js"), "utf8");
+  const v233CssChecks = {
+    classicalDaylightInkOk: compCss233.includes("body.craft-ui.theme-daylight #spotlightStageBox.is-classical-speech #spotlightText"),
+    sheriffPillDaylightOk: compCss233.includes("body.craft-ui.theme-daylight .sheriff-order-pill.is-speaking"),
+    wolfBarDaylightOk: compCss233.includes("body.craft-ui.theme-daylight .wolf-explode-bar"),
+    clueRoleDaylightOk: compCss233.includes("body.craft-ui.theme-daylight .clue-role"),
+    gpuOnlySeatWaveOk: compCss233.includes("@keyframes teaSeatWaveFloat") && !compCss233.includes("@keyframes teaSeatWaveDay"),
+    gpuOnlyReadyPulseOk: compCss233.includes("@keyframes teaReadyRingRipple") && !compCss233.includes("@keyframes teaReadyPulseCinnabar"),
+    skyOverdrawCullOk: envJs233.includes("env.skyPhotoDayMesh.visible = dayOp > 0.005") && envJs233.includes("env.skyMesh.visible = Math.max")
+  };
+  const failedV233Css = Object.entries(v233CssChecks).filter(([, v]) => !v);
+  if (failedV233Css.length > 0) {
+    throw new Error("v23.3 CSS/SKY check failed: " + JSON.stringify(v233CssChecks));
+  }
+
+  const v233Runtime = vm.runInContext(`(() => {
+    const pCoreUltra = stage3d.detectGpuProfile(null, "ANGLE (Intel, Intel(R) Graphics Direct3D11 vs_5_0 ps_5_0)");
+    const pArcIgpu = stage3d.detectGpuProfile(null, "ANGLE (Intel, Intel(R) Arc(TM) Graphics Direct3D11 vs_5_0 ps_5_0)");
+    const pRyzen780m = stage3d.detectGpuProfile(null, "ANGLE (AMD, AMD Radeon 780M Graphics Direct3D11 vs_5_0 ps_5_0)");
+    const pArcDgpu = stage3d.detectGpuProfile(null, "ANGLE (Intel, Intel(R) Arc(TM) A770 Graphics Direct3D11 vs_5_0 ps_5_0)");
+    const pRxDgpu = stage3d.detectGpuProfile(null, "ANGLE (AMD, AMD Radeon RX 7800 XT Direct3D11 vs_5_0 ps_5_0)");
+    const pRtxDgpu = stage3d.detectGpuProfile(null, "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 Direct3D11 vs_5_0 ps_5_0)");
+    return {
+      coreUltraIgpuOk: pCoreUltra.isIntegratedGpu === true,
+      arcIgpuOk: pArcIgpu.isIntegratedGpu === true,
+      ryzen780mIgpuOk: pRyzen780m.isIntegratedGpu === true,
+      arcDiscreteOk: pArcDgpu.isIntegratedGpu === false,
+      rxDiscreteOk: pRxDgpu.isIntegratedGpu === false,
+      rtxDiscreteOk: pRtxDgpu.isIntegratedGpu === false,
+      jargonMutationGuardOk: typeof jargonTooltipState === "object" && "isMutating" in jargonTooltipState && "scanTimer" in jargonTooltipState
+    };
+  })()`, ctx);
+  const failedV233Run = Object.entries(v233Runtime).filter(([, v]) => !v);
+  if (failedV233Run.length > 0) {
+    throw new Error("v23.3 RUNTIME check failed: " + JSON.stringify(v233Runtime));
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 Contrast & PC Perf E2E smoke test PASSED!");

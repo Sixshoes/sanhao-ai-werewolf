@@ -769,9 +769,16 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
 
     // Drive optional VRoid .VRM / rigged .GLB avatar attached to this AI seat
     const isPrioritySeat = Boolean(isSpeaking || isHovered || isSelected || isDragSnap || isBeingAccusedNow || isVotingNow);
+    const isOffScreenPrev = Boolean(actor._wasOffScreen && actor._vrmUpdatedOnce);
     const vrmStride = isPrioritySeat
       ? 1
-      : (state.quality3D === "eco" ? 3 : ((nSeats >= 10 || (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu && state.quality3D === "balanced")) ? 2 : 1));
+      : (isOffScreenPrev
+        ? 6
+        : (state.quality3D === "eco"
+          ? (nSeats >= 10 ? 4 : 3)
+          : ((nSeats >= 10 && state.quality3D === "balanced")
+            ? 3
+            : ((nSeats >= 10 || (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu && state.quality3D === "balanced")) ? 2 : 1))));
     const runVrmFrame = vrmStride <= 1 || !actor._vrmUpdatedOnce || ((pool.frameCounter + s.id) % vrmStride === 0);
     if (actor.useVrm && actor.vrmAvatar && typeof stage3dVrm !== "undefined" && runVrmFrame) {
       actor._vrmUpdatedOnce = true;
@@ -844,6 +851,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         speechAct: speechActNow,
         isHovered: isHovered || isSelected,
         isPriority: isSpeaking || isHovered || isSelected || isDragSnap,
+        seatCount: nSeats,
         frameCounter: pool.frameCounter,
         seatId: s.id,
         act: scAct || ((isCelebration && s.team === "good") ? "celebrate" : "")
@@ -933,6 +941,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     projVec.copy(actor.headWorldPos).project(camera);
     const inFront = projVec.z >= -1.0 && projVec.z < 1.0;
     const onScreen = inFront && projVec.x >= -1.06 && projVec.x <= 1.06 && projVec.y >= -1.08 && projVec.y <= 1.12;
+    actor._wasOffScreen = !onScreen;
     const sx = (projVec.x * 0.5 + 0.5) * canvasW;
     const sy = (-projVec.y * 0.5 + 0.5) * canvasH;
 

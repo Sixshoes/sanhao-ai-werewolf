@@ -84,6 +84,7 @@ const DEVICE_TUTORIAL_DECKS = {
         '<div class="tut-step-pill"><div class="font-bold text-rose-300">參 · 公投</div><div class="font-bold mt-0.5">投籌請離</div><div class="opacity-80">鎖定可疑席位<br />最高票者離席</div></div>' +
         '</div>' +
         '</div>' +
+        '<div class="tut-tip-bar">沒玩過狼人殺也能放心玩：畫面中帶有細虛線底線的術語（如 金水、悍跳、警徽流、歸票），輕點即可即時查看白話釋義。</div>' +
         '</div>'
     },
     {
@@ -212,6 +213,7 @@ const DEVICE_TUTORIAL_DECKS = {
         '<div class="tut-step-pill"><div class="font-bold text-rose-300">參 · 公投</div><div class="font-bold mt-0.5">投籌請離</div><div class="opacity-80">頭像拖線立即投票<br />最高票者離席</div></div>' +
         '</div>' +
         '</div>' +
+        '<div class="tut-tip-bar">沒玩過狼人殺也能放心玩：介面中帶有細虛線底線的術語（如 金水、悍跳、警徽流、歸票），輕點即可即時查看白話釋義。</div>' +
         '</div>'
     },
     {
@@ -330,6 +332,7 @@ const DEVICE_TUTORIAL_DECKS = {
         '<div class="tut-step-pill"><div class="font-bold text-rose-300">參 · 公投</div><div class="font-bold mt-0.5">投籌請離</div><div class="opacity-80">拖曳連線或數字鍵<br />最高票離席・平票決選</div></div>' +
         '</div>' +
         '</div>' +
+        '<div class="tut-tip-bar">沒玩過狼人殺也能放心玩：介面中帶有細虛線底線的術語（如 金水、悍跳、警徽流、歸票），滑鼠移上或點擊即可查看白話釋義。</div>' +
         '</div>'
     },
     {
