@@ -165,12 +165,19 @@ body.craft-ui.theme-day #spotlightText {
   line-height: 1.86;
   padding-left: 11px;
   border-left: 2px solid var(--border-accent);
+  color: var(--text-main);
+}
+
+body.theme-night #spotlightStageBox.is-classical-speech #spotlightText {
   color: #f6ead4;
 }
 
-body.craft-ui.theme-day #spotlightStageBox.is-classical-speech #spotlightText {
+body.craft-ui.theme-day #spotlightStageBox.is-classical-speech #spotlightText,
+body.theme-daylight #spotlightStageBox.is-classical-speech #spotlightText,
+body.theme-twilight #spotlightStageBox.is-classical-speech #spotlightText {
   color: #2c1f12;
   border-left-color: rgba(154, 104, 35, 0.65);
+  text-shadow: none;
 }
 
 #intelPersonaBadge {
@@ -10187,6 +10194,10 @@ body.phase-mode-listen #seatButtonStrip .seat-pill-btn.is-speaking {
 }
 
 body.phase-mode-listen #spotlightText {
+  color: var(--text-main);
+}
+
+body.theme-night.phase-mode-listen #spotlightText {
   color: #fffdf8;
 }
 
@@ -10913,13 +10924,27 @@ body.theme-daylight #spotlightSpeakerBadge {
   color: #261e17;
 }
 
-body.theme-daylight #spotlightText {
+body.theme-daylight #spotlightText,
+body.theme-twilight #spotlightText,
+body.theme-daylight.phase-mode-listen #spotlightText,
+body.theme-twilight.phase-mode-listen #spotlightText {
   color: #241d17;
+  text-shadow: none;
 }
 
-body.theme-daylight #spotlightText .clue-seat {
-  color: #855616;
-  border-bottom: 1px dotted rgba(154, 107, 39, 0.72);
+body.theme-daylight #spotlightText .clue-seat,
+body.theme-twilight #spotlightText .clue-seat {
+  background: transparent;
+  border-color: transparent;
+  color: #7c4d10;
+  border-bottom: 1.5px dotted rgba(154, 107, 39, 0.78);
+}
+
+body.theme-daylight #spotlightText .clue-seat:hover,
+body.theme-twilight #spotlightText .clue-seat:hover {
+  background: rgba(154, 107, 39, 0.14);
+  border-bottom-color: #8f5c16;
+  color: #4f2f06;
 }
 
 body.theme-daylight #spotlightStageBox .spotlight-progress-track {
@@ -10945,36 +10970,72 @@ body.theme-daylight #speakerActiveBanner .spotlight-quiet-tools .cta-ink:hover {
   background: rgba(116, 92, 62, 0.08);
 }
 
+body.theme-daylight.phase-mode-listen #speakerStanceStrip,
+body.theme-twilight.phase-mode-listen #speakerStanceStrip {
+  opacity: 0.96;
+}
+
 body.theme-daylight #speakerStanceStrip .stance-chip {
-  background: rgba(238, 230, 215, 0.82);
-  border: 1px solid rgba(116, 92, 62, 0.20);
-  color: #4f4134;
+  background: rgba(238, 230, 215, 0.86);
+  border: 1px solid rgba(116, 92, 62, 0.26);
+  color: #4a3b2c;
+}
+
+body.theme-daylight #speakerStanceStrip .stance-chip.is-role {
+  background: rgba(178, 128, 48, 0.14);
+  border: 1px solid rgba(154, 107, 39, 0.38);
+  color: #6d430c;
+}
+
+body.theme-daylight #speakerStanceStrip .stance-chip.is-contra {
+  background: rgba(184, 114, 34, 0.18);
+  border: 1px solid rgba(164, 92, 24, 0.44);
+  color: #753c09;
+  font-weight: 600;
 }
 
 body.theme-daylight #speakerStanceStrip .stance-chip.is-good {
-  background: rgba(44, 103, 83, 0.10);
-  border-color: rgba(44, 103, 83, 0.30);
-  color: #225443;
+  background: rgba(44, 103, 83, 0.12);
+  border-color: rgba(44, 103, 83, 0.34);
+  color: #1f5442;
 }
 
 body.theme-daylight #speakerStanceStrip .stance-chip.is-wolf {
-  background: rgba(164, 57, 44, 0.10);
-  border-color: rgba(164, 57, 44, 0.28);
+  background: rgba(164, 57, 44, 0.11);
+  border-color: rgba(164, 57, 44, 0.32);
   color: #8c2c21;
 }
 
-body.theme-daylight #spotlightTargetReact {
-  background: rgba(242, 235, 221, 0.94);
-  border: 1px solid rgba(116, 92, 62, 0.24);
+body.theme-daylight #spotlightTargetReact,
+body.theme-daylight.phase-mode-listen #spotlightTargetReact {
+  opacity: 0.96;
+  max-width: 178px;
+  background: rgba(244, 237, 224, 0.96);
+  border: 1px solid rgba(116, 92, 62, 0.26);
+  border-left: 2.5px solid rgba(154, 107, 39, 0.56);
   color: #3a2f24;
+}
+
+body.theme-daylight #spotlightTargetReact.is-accuse,
+body.theme-daylight.phase-mode-listen #spotlightTargetReact.is-accuse {
+  border-left-color: #a4392c;
+}
+
+body.theme-daylight #spotlightTargetReact.is-trust,
+body.theme-daylight.phase-mode-listen #spotlightTargetReact.is-trust {
+  border-left-color: #2c6753;
 }
 
 body.theme-daylight #targetReactBadge {
   color: #8c2c21;
 }
 
+body.theme-daylight #spotlightTargetReact.is-trust #targetReactBadge {
+  color: #1f5c47;
+}
+
 body.theme-daylight #targetReactQuote {
-  color: #4e4033;
+  color: #4a3c2f;
 }
 
 body.theme-daylight #speakerTurnStrip .turn-chip {
@@ -12758,12 +12819,18 @@ body.theme-night .jargon-tip-note {
 /* Restores crisp dark mineral ink & warm paper surfaces for every panel/popover/pill in theme-daylight & theme-twilight */
 
 /* 1. Dialogue Spotlight & Classical / Poetic Personas (阿竹 / 晴嵐 / 墨白) */
-body.craft-ui.theme-daylight #spotlightText {
+body.craft-ui.theme-daylight #spotlightText,
+body.craft-ui.theme-twilight #spotlightText,
+body.theme-daylight #spotlightText,
+body.theme-twilight #spotlightText {
   color: #241d17;
   text-shadow: none;
 }
 
-body.craft-ui.theme-daylight #spotlightStageBox.is-classical-speech #spotlightText {
+body.craft-ui.theme-daylight #spotlightStageBox.is-classical-speech #spotlightText,
+body.craft-ui.theme-twilight #spotlightStageBox.is-classical-speech #spotlightText,
+body.theme-daylight #spotlightStageBox.is-classical-speech #spotlightText,
+body.theme-twilight #spotlightStageBox.is-classical-speech #spotlightText {
   color: #241d17;
   border-left-color: rgba(154, 107, 39, 0.62);
   text-shadow: none;
@@ -12791,6 +12858,28 @@ body.craft-ui.theme-twilight .clue-seat {
   color: #22466d;
 }
 
+body.craft-ui.theme-daylight .clue-seat:hover,
+body.craft-ui.theme-twilight .clue-seat:hover {
+  background: rgba(52, 88, 128, 0.20);
+  border-bottom-color: #22466d;
+  color: #16324f;
+}
+
+body.craft-ui.theme-daylight #spotlightText .clue-seat,
+body.craft-ui.theme-twilight #spotlightText .clue-seat {
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px dotted rgba(154, 107, 39, 0.78);
+  color: #7c4d10;
+}
+
+body.craft-ui.theme-daylight #spotlightText .clue-seat:hover,
+body.craft-ui.theme-twilight #spotlightText .clue-seat:hover {
+  background: rgba(154, 107, 39, 0.14);
+  border-bottom-color: #8f5c16;
+  color: #4f2f06;
+}
+
 body.craft-ui.theme-daylight .clue-role,
 body.craft-ui.theme-twilight .clue-role {
   background: rgba(164, 114, 38, 0.14);
@@ -12813,36 +12902,92 @@ body.craft-ui.theme-twilight .clue-token.clue-caught {
 }
 
 body.craft-ui.theme-daylight .clue-token.clue-contradiction,
-body.craft-ui.theme-twilight .clue-token.clue-contradiction {
-  background: rgba(176, 114, 32, 0.16);
-  border-bottom: 1.5px dashed #965f16;
-  color: #6b3f08;
+body.craft-ui.theme-twilight .clue-token.clue-contradiction,
+body.theme-daylight .clue-contradiction,
+body.theme-twilight .clue-contradiction {
+  background: rgba(196, 134, 42, 0.22);
+  border: 1px solid rgba(154, 107, 39, 0.46);
+  border-bottom: 2px dashed #965f16;
+  color: #5c3106;
 }
 
-/* 3. Mineral Icon Tints on Xuan-Paper */
+body.craft-ui.theme-daylight .clue-token.clue-contradiction:hover,
+body.craft-ui.theme-twilight .clue-token.clue-contradiction:hover,
+body.theme-daylight .clue-contradiction:hover,
+body.theme-twilight .clue-contradiction:hover {
+  background: rgba(196, 134, 42, 0.34);
+  border-color: #965f16;
+  color: #3f2003;
+  box-shadow: 0 2px 8px rgba(154, 107, 39, 0.22);
+}
+
+body.craft-ui.theme-daylight .clue-token.clue-contradiction.clue-caught,
+body.craft-ui.theme-twilight .clue-token.clue-contradiction.clue-caught {
+  background: rgba(44, 103, 83, 0.16);
+  border-color: rgba(44, 103, 83, 0.48);
+  border-bottom-style: solid;
+  color: #19523d;
+}
+
+/* 3. Mineral Icon Tints & Seat Strip Badges on Xuan-Paper */
 body.craft-ui.theme-daylight .sh-ico-gold,
-body.craft-ui.theme-twilight .sh-ico-gold {
+body.craft-ui.theme-twilight .sh-ico-gold,
+body.theme-daylight .sh-ico-gold,
+body.theme-twilight .sh-ico-gold {
   color: #8f5c16;
 }
 
 body.craft-ui.theme-daylight .sh-ico-jade,
-body.craft-ui.theme-twilight .sh-ico-jade {
+body.craft-ui.theme-twilight .sh-ico-jade,
+body.theme-daylight .sh-ico-jade,
+body.theme-twilight .sh-ico-jade {
   color: #1f5c47;
 }
 
 body.craft-ui.theme-daylight .sh-ico-cinnabar,
-body.craft-ui.theme-twilight .sh-ico-cinnabar {
+body.craft-ui.theme-twilight .sh-ico-cinnabar,
+body.theme-daylight .sh-ico-cinnabar,
+body.theme-twilight .sh-ico-cinnabar {
   color: #9e2d22;
 }
 
 body.craft-ui.theme-daylight .sh-ico-indigo,
-body.craft-ui.theme-twilight .sh-ico-indigo {
+body.craft-ui.theme-twilight .sh-ico-indigo,
+body.theme-daylight .sh-ico-indigo,
+body.theme-twilight .sh-ico-indigo {
   color: #2b4e74;
 }
 
 body.craft-ui.theme-daylight .sh-ico-muted,
-body.craft-ui.theme-twilight .sh-ico-muted {
+body.craft-ui.theme-twilight .sh-ico-muted,
+body.theme-daylight .sh-ico-muted,
+body.theme-twilight .sh-ico-muted {
   color: #665747;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-badge {
+  opacity: 0.94;
+  font-weight: 600;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-badge.badge-speak {
+  color: #8f2d21;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-badge.badge-good {
+  color: #1f5c47;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-badge.badge-wolf {
+  color: #9e2d22;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-badge.badge-dead {
+  color: #6b5e50;
+}
+
+body.theme-daylight #seatButtonStrip .seat-pill-btn.seat-is-selected .seat-pill-badge {
+  color: #fffaf0;
 }
 
 /* 4. Sheriff Order Pills, Badge Flow & Election Surfaces */
