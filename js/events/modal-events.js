@@ -331,12 +331,12 @@ function bindModalEvents() {
     { id: "btnAiModeOffline", mode: "offline", pane: "aiPaneOffline" }
   ];
   const AI_CLOUD_MODEL_BTNS = [
-    { id: "btnCloudModelFlash", model: "gemini-2.5-flash" },
-    { id: "btnCloudModelLite", model: "gemini-2.5-flash-lite" }
+    { id: "btnCloudModelFlash", model: "gemini-4-hydrogen" },
+    { id: "btnCloudModelLite", model: "gemini-3.1-flash-lite" }
   ];
 
   let selectedAiUiMode = "cloud";
-  let selectedCloudModelUi = "gemini-2.5-flash";
+  let selectedCloudModelUi = "gemini-4-hydrogen";
   let aiTestInFlight = false;
 
   function playAiConfigClickSfx(freq) {
@@ -401,11 +401,13 @@ function bindModalEvents() {
   function syncCloudModelButtonsUi(modelId) {
     selectedCloudModelUi = (typeof normalizeCloudGeminiModel === "function")
       ? normalizeCloudGeminiModel(modelId)
-      : (modelId === "gemini-2.5-flash-lite" ? "gemini-2.5-flash-lite" : "gemini-2.5-flash");
+      : (modelId === "gemini-3.1-flash-lite" ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen");
     AI_CLOUD_MODEL_BTNS.forEach(function (item) {
       const btn = el(item.id);
       if (!btn) return;
-      const active = item.model === selectedCloudModelUi;
+      const active = item.model === selectedCloudModelUi ||
+        (item.model === "gemini-4-hydrogen" && selectedCloudModelUi === "gemini-2.5-flash") ||
+        (item.model === "gemini-3.1-flash-lite" && selectedCloudModelUi === "gemini-2.5-flash-lite");
       btn.classList.toggle("is-active", active);
       btn.setAttribute("aria-pressed", active ? "true" : "false");
     });
@@ -526,10 +528,10 @@ function bindModalEvents() {
     if (sel) {
       const normKeyModel = typeof normalizePersonalGeminiModel === "function"
         ? normalizePersonalGeminiModel(state.geminiModel)
-        : (state.geminiModel || "gemini-2.5-flash");
+        : (state.geminiModel || "gemini-4-hydrogen");
       sel.value = normKeyModel;
     }
-    syncCloudModelButtonsUi(state.serverGeminiModel || "gemini-2.5-flash");
+    syncCloudModelButtonsUi(state.serverGeminiModel || "gemini-4-hydrogen");
     const initMode = detectCurrentActiveAiMode();
     switchAiModalMode(initMode, false);
 
@@ -576,7 +578,7 @@ function bindModalEvents() {
       if (selectedAiUiMode === "cloud") {
         const targetCloudModel = typeof normalizeCloudGeminiModel === "function"
           ? normalizeCloudGeminiModel(selectedCloudModelUi)
-          : "gemini-2.5-flash";
+          : "gemini-4-hydrogen";
         renderAiTestResult("testing", "正在向 /api/gemini 探測 " + targetCloudModel + " 連線…", "實測雲端代理可用性與真實往返耗時");
         const tStart = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
         const proto = (typeof window !== "undefined" && window.location) ? window.location.protocol : "";
@@ -606,7 +608,7 @@ function bindModalEvents() {
 
         const prox = await callServerGeminiProxyOnce("請只回覆「連線成功」四個字", 12000, {
           model: targetCloudModel,
-          lite: targetCloudModel === "gemini-2.5-flash-lite"
+          lite: targetCloudModel === "gemini-3.1-flash-lite" || targetCloudModel === "gemini-2.5-flash-lite"
         });
         const tEnd = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
         const elapsedMs = (prox && prox.latencyMs) ? prox.latencyMs : Math.max(1, Math.round(tEnd - tStart));
@@ -628,22 +630,25 @@ function bindModalEvents() {
           if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
           updateAllUI();
           syncAiModalActiveBadge();
-          renderAiTestResult("ok", "連線正常・回應耗時 " + elapsedMs + "ms（" + getActiveLlmLabel() + "）", "模型 " + state.serverGeminiModel + " 已生效，下一席發言將立即採用。");
+          const fbNote = (prox.fallbackFrom && prox.fallbackFrom !== state.serverGeminiModel)
+            ? ("（" + prox.fallbackFrom + " 不可用，已自動切換為 " + state.serverGeminiModel + "）")
+            : ("模型 " + state.serverGeminiModel + " 已生效，下一席發言將立即採用。");
+          renderAiTestResult("ok", "連線正常・回應耗時 " + elapsedMs + "ms（" + getActiveLlmLabel() + "）", fbNote);
           return;
         }
 
-        if (prox && (prox.status === 503 || prox.status === 404)) {
+        if (prox && prox.status === 503) {
           state.serverGeminiAvailable = false;
           updateAllUI();
           syncAiModalActiveBadge();
-          renderAiTestResult("error", "本機環境未啟用雲端代理，請改填金鑰或切換離線引擎", "代理回傳 HTTP " + prox.status + "（未設定雲端金鑰或端點不存在）。");
+          renderAiTestResult("error", "本機環境未啟用雲端代理，請改填金鑰或切換離線引擎", "代理回傳 HTTP 503（伺服器尚未設定 GEMINI_API_KEY）。");
           return;
         }
 
         const errMsg = (prox && prox.status === 429)
           ? ("雲端公測額度暫時繁忙（HTTP 429・耗時 " + elapsedMs + "ms），請稍後重試或改填個人金鑰。")
-          : ("雲端代理探測失敗（" + ((prox && prox.error) || ("HTTP " + (prox ? prox.status : 0))) + "・耗時 " + elapsedMs + "ms），目前維持原本引擎。");
-        renderAiTestResult(prox && prox.status === 429 ? "warn" : "error", errMsg, "您可切換至「自備 Gemini 金鑰」或「純離線內建引擎」。");
+          : ("雲端代理已連通，但上游模型回傳錯誤（" + ((prox && prox.error) || ("HTTP " + (prox ? prox.status : 0))) + "・耗時 " + elapsedMs + "ms）");
+        renderAiTestResult(prox && prox.status === 429 ? "warn" : "error", errMsg, "請確認 Vercel 環境變數 GEMINI_API_KEY 權限，或切換「自備 Gemini 金鑰」／「純離線內建引擎」。");
         updateAllUI();
         syncAiModalActiveBadge();
         return;
@@ -683,10 +688,10 @@ function bindModalEvents() {
 
       // Mode: "key" (Personal Gemini API Key)
       const key = el("inputGeminiKey") ? el("inputGeminiKey").value.trim() : "";
-      const rawModel = el("selectGeminiModel") ? el("selectGeminiModel").value : "gemini-2.5-flash";
+      const rawModel = el("selectGeminiModel") ? el("selectGeminiModel").value : "gemini-4-hydrogen";
       const chosenModel = typeof normalizePersonalGeminiModel === "function"
         ? normalizePersonalGeminiModel(rawModel)
-        : "gemini-2.5-flash";
+        : "gemini-4-hydrogen";
       if (!key) {
         if (el("inputGeminiKey") && typeof el("inputGeminiKey").focus === "function") el("inputGeminiKey").focus();
         renderAiTestResult("warn", "請先輸入 Gemini API Key", "若暫無金鑰，可點上方卡片切換「雲端免金鑰」或「純離線內建引擎」。");
@@ -716,34 +721,36 @@ function bindModalEvents() {
       }
 
       if (res && (res.status === 401 || res.status === 403)) {
-        renderAiTestResult("error", "API 金鑰無效或無權限（HTTP " + res.status + "・耗時 " + elapsedMs + "ms）", "請檢查金鑰是否複製完整，或切換其他模式。");
+        renderAiTestResult("error", "API 金鑰無效或無權限（HTTP " + res.status + "・耗時 " + elapsedMs + "ms）", (res.error || "請檢查金鑰是否複製完整，或切換其他模式。"));
         updateAllUI();
         syncAiModalActiveBadge();
         return;
       }
 
-      if (chosenModel !== "gemini-2.5-flash") {
-        const fb25 = await callGeminiModelOnce("gemini-2.5-flash", "請只回覆「連線成功」四個字", 10000, { apiKey: key });
+      const keyFallbackOrder = ["gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-flash"].filter(function (m) { return m !== chosenModel; });
+      for (let fi = 0; fi < keyFallbackOrder.length; fi++) {
+        const fbModel = keyFallbackOrder[fi];
+        const fbRes = await callGeminiModelOnce(fbModel, "請只回覆「連線成功」四個字", 10000, { apiKey: key });
         const totalMs = Math.max(1, Math.round(((typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now()) - tStart));
-        if (fb25 && fb25.ok && fb25.text) {
+        if (fbRes && fbRes.ok && fbRes.text) {
           state.localLlmModel = "";
           state.serverGeminiOptOut = false;
           state.serverGeminiCooldownUntil = 0;
           state._personalKeyCooldownUntil = 0;
           state.geminiApiKey = key;
-          state.geminiModel = "gemini-2.5-flash";
-          if (el("selectGeminiModel")) el("selectGeminiModel").value = "gemini-2.5-flash";
+          state.geminiModel = fbModel;
+          if (el("selectGeminiModel")) el("selectGeminiModel").value = fbModel;
           if (typeof saveSessionGeminiKey === "function") saveSessionGeminiKey(key);
           saveUserPrefs();
           if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
           updateAllUI();
           syncAiModalActiveBadge();
-          renderAiTestResult("ok", chosenModel + " 配額受限，已自動改用自備 2.5 Flash・耗時 " + totalMs + "ms", "已套用至對局，下一席發言立即生效。");
+          renderAiTestResult("ok", chosenModel + " 不可用，已自動改用 " + getActiveLlmLabel() + "・耗時 " + totalMs + "ms", "模型 " + fbModel + " 已生效，下一席發言立即套用。");
           return;
         }
       }
 
-      const failStatus = (res && res.status) ? ("HTTP " + res.status) : "連線逾時或網路受限";
+      const failStatus = (res && res.status) ? ("HTTP " + res.status + (res.error ? ("・" + res.error) : "")) : "連線逾時或網路受限";
       renderAiTestResult("error", "個人金鑰連線測試失敗（" + failStatus + "・耗時 " + elapsedMs + "ms）", "已保留原本生效引擎，請確認網路狀態或金鑰額度。");
       updateAllUI();
       syncAiModalActiveBadge();

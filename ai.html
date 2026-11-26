@@ -1404,15 +1404,15 @@
             <span id="aiCloudProxyTag" class="text-[13px] text-slate-400">經由 /api/gemini 安全代理</span>
           </div>
           <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="雲端免金鑰模型">
-            <button id="btnCloudModelFlash" type="button" data-cloudmodel="gemini-2.5-flash" aria-pressed="true"
+            <button id="btnCloudModelFlash" type="button" data-cloudmodel="gemini-4-hydrogen" aria-pressed="true"
               class="ai-cloud-model-btn voice-rate-btn is-active text-left px-2.5 py-2 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">
-              <div class="text-[13px] font-bold leading-snug">gemini-2.5-flash</div>
-              <div class="text-[13px] opacity-80 mt-0.5">標準版・語氣推理均衡</div>
+              <div class="text-[13px] font-bold leading-snug">gemini-4-hydrogen</div>
+              <div class="text-[13px] opacity-80 mt-0.5">標準強力版・推理更穩</div>
             </button>
-            <button id="btnCloudModelLite" type="button" data-cloudmodel="gemini-2.5-flash-lite" aria-pressed="false"
+            <button id="btnCloudModelLite" type="button" data-cloudmodel="gemini-3.1-flash-lite" aria-pressed="false"
               class="ai-cloud-model-btn voice-rate-btn text-left px-2.5 py-2 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">
-              <div class="text-[13px] font-bold leading-snug">gemini-2.5-flash-lite</div>
-              <div class="text-[13px] opacity-80 mt-0.5">極速版・回應延遲最低</div>
+              <div class="text-[13px] font-bold leading-snug">gemini-3.1-flash-lite</div>
+              <div class="text-[13px] opacity-80 mt-0.5">極速輕量版・最低延遲</div>
             </button>
           </div>
           <div id="aiCloudEnvHint" class="text-[13px] text-slate-300 leading-relaxed">
@@ -1428,12 +1428,13 @@
               class="w-full rounded px-3 py-2 text-sm border focus:outline-none focus:border-amber-400" />
           </div>
           <div>
-            <label for="selectGeminiModel" class="block font-medium text-slate-200 text-[13px] mb-1">選擇直連官方模型（自備金鑰開放 2.5 Pro）</label>
+            <label for="selectGeminiModel" class="block font-medium text-slate-200 text-[13px] mb-1">選擇直連官方模型</label>
             <select id="selectGeminiModel"
               class="w-full rounded px-3 py-2 text-sm font-bold border focus:outline-none focus:border-amber-400">
-              <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash（標準版・免費額度可用・均衡推理）</option>
-              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite（極速版・最低延遲高吞吐）</option>
-              <option value="gemini-2.5-pro">Gemini 2.5 Pro（旗艦深度推理・盤坑首選）</option>
+              <option value="gemini-4-hydrogen" selected>Gemini 4 Flash（gemini-4-hydrogen・標準強力・推薦預設）</option>
+              <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite（極速低延遲高吞吐）</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro（舊版深度推理・限既有可用金鑰）</option>
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash（舊版相容）</option>
             </select>
           </div>
         </div>

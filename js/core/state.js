@@ -5,9 +5,9 @@
 
 const state = {
   geminiApiKey: "",
-  geminiModel: "gemini-2.5-flash",
+  geminiModel: "gemini-4-hydrogen",
   serverGeminiAvailable: false,
-  serverGeminiModel: "gemini-2.5-flash",
+  serverGeminiModel: "gemini-4-hydrogen",
   serverGeminiModelUserChosen: false,
   serverGeminiOptOut: false,
   serverGeminiCooldownUntil: 0,
@@ -201,8 +201,8 @@ function saveUserPrefs() {
       activeVariant: state.activeVariant || "standard",
       sheriffMode: Boolean(state.sheriffMode),
       guardMode: Boolean(state.guardMode),
-      geminiModel: state.geminiModel || "gemini-2.5-flash",
-      serverGeminiModel: state.serverGeminiModel || "gemini-2.5-flash",
+      geminiModel: state.geminiModel || "gemini-4-hydrogen",
+      serverGeminiModel: state.serverGeminiModel || "gemini-4-hydrogen",
       serverGeminiModelUserChosen: Boolean(state.serverGeminiModelUserChosen),
       localLlmModel: state.localLlmModel || "",
       serverGeminiOptOut: Boolean(state.serverGeminiOptOut),
@@ -271,16 +271,21 @@ function loadUserPrefs() {
     if (typeof p.guardMode === "boolean") state.guardMode = p.guardMode;
     if (typeof p.geminiModel === "string" && p.geminiModel) {
       const mNorm = p.geminiModel.trim();
-      if (mNorm === "gemini-2.5-pro" || mNorm === "gemini-2.5-flash" || mNorm === "gemini-2.5-flash-lite") {
+      if (mNorm === "gemini-4-hydrogen" || mNorm === "gemini-3.1-flash-lite" || mNorm === "gemini-2.5-pro" || mNorm === "gemini-2.5-flash" || mNorm === "gemini-2.5-flash-lite") {
         state.geminiModel = mNorm;
-      } else if (mNorm.indexOf("pro") !== -1 || mNorm.indexOf("argon") !== -1) {
-        state.geminiModel = "gemini-2.5-pro";
+      } else if (mNorm.indexOf("lite") !== -1) {
+        state.geminiModel = "gemini-3.1-flash-lite";
       } else {
-        state.geminiModel = "gemini-2.5-flash";
+        state.geminiModel = "gemini-4-hydrogen";
       }
     }
     if (typeof p.serverGeminiModel === "string" && p.serverGeminiModel) {
-      state.serverGeminiModel = p.serverGeminiModel === "gemini-2.5-flash-lite" ? "gemini-2.5-flash-lite" : "gemini-2.5-flash";
+      const smNorm = p.serverGeminiModel.trim();
+      if (smNorm === "gemini-4-hydrogen" || smNorm === "gemini-3.1-flash-lite" || smNorm === "gemini-2.5-flash" || smNorm === "gemini-2.5-flash-lite") {
+        state.serverGeminiModel = smNorm;
+      } else {
+        state.serverGeminiModel = "gemini-4-hydrogen";
+      }
     }
     if (typeof p.serverGeminiModelUserChosen === "boolean") {
       state.serverGeminiModelUserChosen = p.serverGeminiModelUserChosen;

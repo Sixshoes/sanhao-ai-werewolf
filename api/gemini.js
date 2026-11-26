@@ -16,9 +16,14 @@
 "use strict";
 
 const ALLOWED_PUBLIC_MODELS = new Set([
+  "gemini-4-hydrogen",
+  "gemini-3.1-flash-lite",
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite"
 ]);
+const PUBLIC_DEFAULT_MODEL = "gemini-4-hydrogen";
+const PUBLIC_LITE_MODEL = "gemini-3.1-flash-lite";
+const PUBLIC_FALLBACK_ORDER = ["gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
 
 const MAX_PROMPT_CHARS = 14000;
 const RATE_WINDOW_MS = 60 * 1000;
@@ -179,16 +184,21 @@ function isModelCoolingDown(modelId, nowMs) {
 }
 
 function resolveSafeModel(requestedModel, tierHint, nowMs) {
-  const defModel = String(process.env.GEMINI_DEFAULT_MODEL || "gemini-2.5-flash").trim();
+  const defModel = String(process.env.GEMINI_DEFAULT_MODEL || PUBLIC_DEFAULT_MODEL).trim();
   const req = String(requestedModel || "").trim();
-  let chosen = "gemini-2.5-flash";
+  let chosen = PUBLIC_DEFAULT_MODEL;
   if (req && ALLOWED_PUBLIC_MODELS.has(req)) chosen = req;
   else if (defModel && ALLOWED_PUBLIC_MODELS.has(defModel)) chosen = defModel;
-  if (tierHint === "lite" && chosen === "gemini-2.5-flash" && !isModelCoolingDown("gemini-2.5-flash-lite", nowMs)) {
-    chosen = "gemini-2.5-flash-lite";
+  if (tierHint === "lite" && chosen === PUBLIC_DEFAULT_MODEL && !isModelCoolingDown(PUBLIC_LITE_MODEL, nowMs)) {
+    chosen = PUBLIC_LITE_MODEL;
   }
-  if (chosen !== "gemini-2.5-flash" && isModelCoolingDown(chosen, nowMs)) {
-    chosen = "gemini-2.5-flash";
+  if (isModelCoolingDown(chosen, nowMs)) {
+    for (let i = 0; i < PUBLIC_FALLBACK_ORDER.length; i++) {
+      if (!isModelCoolingDown(PUBLIC_FALLBACK_ORDER[i], nowMs)) {
+        chosen = PUBLIC_FALLBACK_ORDER[i];
+        break;
+      }
+    }
   }
   return chosen;
 }
@@ -197,6 +207,14 @@ function clampTemperature(reqTemp) {
   const num = Number(reqTemp);
   const base = (Number.isFinite(num) && num > 0) ? num : 0.65;
   return Math.round(Math.max(0.45, Math.min(0.85, base)) * 100) / 100;
+}
+
+function sanitizeUpstreamReason(rawMsg) {
+  return String(rawMsg || "")
+    .replace(/AIza[0-9A-Za-z_-]{10,}/g, "[redacted]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 140);
 }
 
 async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeoutMs, temperature) {
@@ -210,7 +228,7 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeout
   }
 
   const controller = typeof AbortController === "function" ? new AbortController() : null;
-  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 5200) : null;
+  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 4800) : null;
   try {
     const fetchOpts = {
       method: "POST",
@@ -226,7 +244,9 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeout
     if (controller) fetchOpts.signal = controller.signal;
     const resp = await fetch(endpoint, fetchOpts);
     if (!resp.ok) {
-      return { ok: false, status: resp.status, text: "" };
+      const errJson = await resp.json().catch(function () { return null; });
+      const reason = sanitizeUpstreamReason(errJson && errJson.error && errJson.error.message);
+      return { ok: false, status: resp.status, text: "", reason: reason };
     }
     const data = await resp.json().catch(function () { return null; });
     const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
@@ -235,9 +255,9 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeout
       parts.forEach(function (pt) { if (pt && !pt.thought && typeof pt.text === "string") joined += pt.text; });
     }
     const text = joined.trim();
-    return { ok: Boolean(text), status: text ? resp.status : 502, text: text };
+    return { ok: Boolean(text), status: text ? resp.status : 502, text: text, reason: text ? "" : "Empty response" };
   } catch (err) {
-    return { ok: false, status: 504, text: "" };
+    return { ok: false, status: 504, text: "", reason: "Upstream timeout" };
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -325,27 +345,45 @@ async function handler(req, res) {
   const tierHint = body.tier === "lite" ? "lite" : "standard";
   const primaryModel = resolveSafeModel(body.model, tierHint);
 
-  // v24.2 Vercel Hobby 10s budget guard: 5.2s primary + 3.2s fallback = 8.4s max (leaves 1.6s cold-start/JSON margin)
+  // v24.2.4 Vercel 10s budget guard with automatic multi-model fallback (never return raw 404 for upstream model errors)
+  const startedAt = Date.now();
   const first = await callUpstreamGemini(apiKey, primaryModel, promptText, jsonMode, 5200, safeTemp);
   if (first.ok && first.text) {
     return sendJson(res, 200, { ok: true, model: primaryModel, text: first.text });
   }
-  if (primaryModel !== "gemini-2.5-flash" && (first.status === 400 || first.status === 404)) {
+  if (first.status === 400 || first.status === 404) {
     _badModelCooldown.set(primaryModel, Date.now() + BAD_MODEL_COOLDOWN_MS);
   }
 
-  const canFallback = primaryModel !== "gemini-2.5-flash" &&
-    (first.status === 400 || first.status === 404 || first.status === 429 || first.status === 500 || first.status === 502 || first.status === 503 || first.status === 504 || !first.text);
-  if (canFallback) {
-    const fb = await callUpstreamGemini(apiKey, "gemini-2.5-flash", promptText, jsonMode, 3200, safeTemp);
-    if (fb.ok && fb.text) {
-      return sendJson(res, 200, { ok: true, model: "gemini-2.5-flash", text: fb.text });
+  const shouldFallback = (first.status === 400 || first.status === 404 || first.status === 429 || first.status === 500 || first.status === 502 || first.status === 503 || first.status === 504 || !first.text);
+  let lastFail = first;
+  if (shouldFallback) {
+    const fbQueue = PUBLIC_FALLBACK_ORDER.filter(function (m) {
+      return m !== primaryModel && !isModelCoolingDown(m, Date.now());
+    });
+    for (let i = 0; i < fbQueue.length; i++) {
+      const elapsed = Date.now() - startedAt;
+      if (8400 - elapsed < 1800) break;
+      const fbModel = fbQueue[i];
+      const fb = await callUpstreamGemini(apiKey, fbModel, promptText, jsonMode, 3200, safeTemp);
+      if (fb.ok && fb.text) {
+        return sendJson(res, 200, { ok: true, model: fbModel, fallbackFrom: primaryModel, text: fb.text });
+      }
+      if (fb.status === 400 || fb.status === 404) {
+        _badModelCooldown.set(fbModel, Date.now() + BAD_MODEL_COOLDOWN_MS);
+      }
+      lastFail = fb;
+      if (fb.status === 401 || fb.status === 403) break;
     }
-    return sendJson(res, fb.status === 429 ? 429 : 502, { ok: false, error: "Upstream Gemini unavailable (HTTP " + fb.status + ")" });
   }
 
-  const outStatus = first.status === 429 ? 429 : (first.status >= 400 && first.status !== 401 && first.status !== 403 ? first.status : 502);
-  return sendJson(res, outStatus, { ok: false, error: "Upstream Gemini error (HTTP " + (first.status || 502) + ")" });
+  const outStatus = lastFail.status === 429 ? 429 : 502;
+  const reasonSuffix = lastFail.reason ? (": " + lastFail.reason) : "";
+  return sendJson(res, outStatus, {
+    ok: false,
+    upstreamStatus: lastFail.status || 502,
+    error: "Upstream Gemini HTTP " + (lastFail.status || 502) + reasonSuffix
+  });
 }
 
 handler._isAllowedOrigin = isAllowedOrigin;

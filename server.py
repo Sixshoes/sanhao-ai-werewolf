@@ -356,9 +356,14 @@ def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=12):
 
 
 ALLOWED_PROXY_GEMINI_MODELS = {
+    "gemini-4-hydrogen",
+    "gemini-3.1-flash-lite",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
 }
+DEFAULT_PROXY_GEMINI_MODEL = "gemini-4-hydrogen"
+LITE_PROXY_GEMINI_MODEL = "gemini-3.1-flash-lite"
+PROXY_GEMINI_FALLBACK_ORDER = ("gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-flash")
 
 
 def get_server_gemini_key():
@@ -391,7 +396,7 @@ def clamp_gemini_temperature(raw_temp, default_val=0.65):
 
 
 def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeout=9, temperature=0.65):
-    safe_model = model_id if model_id in ALLOWED_PROXY_GEMINI_MODELS else "gemini-2.5-flash"
+    safe_model = model_id if model_id in ALLOWED_PROXY_GEMINI_MODELS else DEFAULT_PROXY_GEMINI_MODEL
     gen_cfg = {
         "temperature": clamp_gemini_temperature(temperature),
         "maxOutputTokens": 1280 if json_mode else 768,
@@ -542,13 +547,13 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
 
         if route == "/api/gemini":
             gem_key = get_server_gemini_key()
-            def_m = os.environ.get("GEMINI_DEFAULT_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
-            safe_def = def_m if def_m in ALLOWED_PROXY_GEMINI_MODELS else "gemini-2.5-flash"
+            def_m = os.environ.get("GEMINI_DEFAULT_MODEL", DEFAULT_PROXY_GEMINI_MODEL).strip() or DEFAULT_PROXY_GEMINI_MODEL
+            safe_def = def_m if def_m in ALLOWED_PROXY_GEMINI_MODELS else DEFAULT_PROXY_GEMINI_MODEL
             self.send_json(200, {
                 "ok": True,
                 "available": bool(gem_key),
                 "model": safe_def,
-                "supportedModels": ["gemini-2.5-flash", "gemini-2.5-flash-lite"],
+                "supportedModels": [DEFAULT_PROXY_GEMINI_MODEL, LITE_PROXY_GEMINI_MODEL, "gemini-2.5-flash"],
                 "mode": "local-server-proxy",
             })
             return
@@ -671,48 +676,37 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         if not prompt_text:
             self.send_json(400, {"ok": False, "error": "Empty prompt"})
             return
-        req_model = str(req.get("model") or os.environ.get("GEMINI_DEFAULT_MODEL", "gemini-2.5-flash")).strip()
-        primary_model = req_model if req_model in ALLOWED_PROXY_GEMINI_MODELS else "gemini-2.5-flash"
-        if str(req.get("tier") or "").strip() == "lite" and primary_model == "gemini-2.5-flash":
-            primary_model = "gemini-2.5-flash-lite"
+        req_model = str(req.get("model") or os.environ.get("GEMINI_DEFAULT_MODEL", DEFAULT_PROXY_GEMINI_MODEL)).strip()
+        primary_model = req_model if req_model in ALLOWED_PROXY_GEMINI_MODELS else DEFAULT_PROXY_GEMINI_MODEL
+        if str(req.get("tier") or "").strip() == "lite" and primary_model == DEFAULT_PROXY_GEMINI_MODEL:
+            primary_model = LITE_PROXY_GEMINI_MODEL
         json_mode = bool(req.get("jsonMode"))
         safe_temp = clamp_gemini_temperature(req.get("temperature"))
-        try:
-            out_text, used_model = call_gemini_text_rest(api_key, primary_model, prompt_text, json_mode=json_mode, timeout=9, temperature=safe_temp)
-            if out_text:
-                self.send_json(200, {"ok": True, "model": used_model, "text": out_text})
-                return
-            if primary_model != "gemini-2.5-flash":
-                fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode, timeout=8, temperature=safe_temp)
-                if fb_text:
-                    self.send_json(200, {"ok": True, "model": fb_model, "text": fb_text})
+        candidates = [primary_model] + [m for m in PROXY_GEMINI_FALLBACK_ORDER if m != primary_model]
+        last_http = 502
+        last_err = "Empty Gemini output"
+        for idx, cand in enumerate(candidates):
+            try:
+                out_text, used_model = call_gemini_text_rest(
+                    api_key, cand, prompt_text, json_mode=json_mode, timeout=9 if idx == 0 else 7, temperature=safe_temp
+                )
+                if out_text:
+                    payload = {"ok": True, "model": used_model, "text": out_text}
+                    if idx > 0:
+                        payload["fallbackFrom"] = primary_model
+                    self.send_json(200, payload)
                     return
-        except urllib.error.HTTPError as hexc:
-            if primary_model != "gemini-2.5-flash" and hexc.code in (400, 404, 429, 500, 503, 504):
-                try:
-                    fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode, timeout=8, temperature=safe_temp)
-                    if fb_text:
-                        self.send_json(200, {"ok": True, "model": fb_model, "text": fb_text})
-                        return
-                except urllib.error.HTTPError as fb_exc:
-                    self.send_json(429 if fb_exc.code == 429 else 502, {"ok": False, "error": f"Upstream Gemini HTTP {fb_exc.code}"})
-                    return
-                except Exception:
-                    pass
-            self.send_json(429 if hexc.code == 429 else 502, {"ok": False, "error": f"Upstream Gemini HTTP {hexc.code}"})
-            return
-        except Exception as exc:
-            if primary_model != "gemini-2.5-flash":
-                try:
-                    fb_text, fb_model = call_gemini_text_rest(api_key, "gemini-2.5-flash", prompt_text, json_mode=json_mode, timeout=8)
-                    if fb_text:
-                        self.send_json(200, {"ok": True, "model": fb_model, "text": fb_text})
-                        return
-                except Exception:
-                    pass
-            self.send_json(502, {"ok": False, "error": f"Upstream Gemini error: {str(exc)[:100]}"})
-            return
-        self.send_json(502, {"ok": False, "error": "Empty Gemini output"})
+            except urllib.error.HTTPError as hexc:
+                last_http = hexc.code
+                last_err = f"Upstream Gemini HTTP {hexc.code}"
+                if hexc.code in (401, 403):
+                    break
+                if hexc.code not in (400, 404, 429, 500, 502, 503, 504):
+                    break
+            except Exception as exc:
+                last_http = 502
+                last_err = f"Upstream Gemini error: {str(exc)[:100]}"
+        self.send_json(429 if last_http == 429 else 502, {"ok": False, "upstreamStatus": last_http, "error": last_err})
 
     def is_allowed_api_origin(self):
         origin = (self.headers.get("Origin") or "").strip()
