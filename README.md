@@ -1,4 +1,4 @@
-# 三好 AI 狼人殺（青嵐書院・清茗茶席 3D 互動反霸凌推理系統 v24.2）
+# 三好 AI 狼人殺（青嵐書院・清茗茶席 3D 互動反霸凌推理系統 v24.2.1）
 
 一款將 **「三好（做好事、說好話、存好心）」** 與 **「四給（給信心、給歡喜、給希望、給方便）」** 融入社會推理規則的純網頁 3D 反霸凌桌遊。全站採免註冊、零外部 CDN 腳本依賴與 100% 盲審匿名架構，支援桌機、平板與手機跨裝置體驗，並內建五層自動化驗證流水線。
 
@@ -19,7 +19,7 @@
 - **評審 150 秒全亮點導覽局與終局覆盤升級**：
   - 首頁「更多模式 → 評審導覽」一鍵切入第 2 日五人聽牌雙觀察員對跳高潮盤面，搭配不遮擋三步提示，於 150 秒內依序體驗舉杯追問、三選一潤飾籤與五人聽牌公投。
   - 終局面板自動生成 **「本局三大勝負轉折軸」** 與 **「全席底牌與言行對照表」**，並支援一鍵複製或下載文字覆盤戰報。
-- **PWA 雙池離線快取（`sw.js`）**：將核心程式碼（`sanhao-shell-v20.0`，Network-First）與不可變 3D／語音媒體（`sanhao-assets-v1`，Cache-First，上限 200 筆）分離管理，避免大型資產擠出核心腳本並確保版本即時更新。
+- **PWA 雙池離線快取（`sw.js`）**：將核心程式碼（`sanhao-shell-v24.2.1`，Network-First）與不可變 3D／語音媒體（`sanhao-assets-v24.2.1`，Cache-First，上限 200 筆）分離管理，避免大型資產擠出核心腳本並確保版本即時更新。
 
 ---
 
@@ -58,13 +58,13 @@ python server.py
 ├── index.html                  # 靜態部署導向入口
 ├── ai.html                     # 主畫面結構（離線打包、零 Emoji、100% 匿名）
 ├── manifest.webmanifest        # PWA 離線應用清單
-├── sw.js                       # 雙池 Service Worker（sanhao-shell-v20.0 + sanhao-assets-v1）
+├── sw.js                       # 雙池 Service Worker（sanhao-shell-v24.2.1 + sanhao-assets-v24.2.1）
 ├── api/gemini.js               # 雲端 Serverless Gemini 代理（含溫度夾限 [0.45, 0.85]）
 ├── server.py                   # 本機伺服器＋免費 Edge-TTS 語音快取＋Gemini/Ollama 代理
 ├── CREDITS.md                  # 第三方開放素材與開源授權聲明（CC0 / MIT）
 ├── docs/
-│   ├── 作品說明書_初稿.md       # 競賽九大章節完整說明書（v20.0，100% 匿名）
-│   └── 三分鐘Demo影片腳本.md    # 180 秒實機錄影分鏡表與口播稿（v20.0，100% 匿名）
+│   ├── 作品說明書.md            # 競賽九大章節完整說明書（100% 匿名）
+│   └── 三分鐘Demo影片腳本.md    # 180 秒實機錄影分鏡表與口播稿（100% 匿名）
 ├── assets/                     # CC0 VRM 角色、厚塗立繪、360 度天穹、PBR 貼圖與語音包
 ├── css/                        # tailwind-local.css / theme.css / components.css（0 !important）
 ├── js/
