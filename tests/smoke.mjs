@@ -7128,7 +7128,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.8") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.9") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7521,7 +7521,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.8"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.9"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8382,4 +8382,78 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.4 Release-Freeze E2E smoke test PASSED!");
+// v24.2.9 WOLF KING SHOT NO-LAST-WORDS RULE & ALL-11 PERSONA DRAMATIC LAST WORDS CHECK
+{
+  const v2429Res = vm.runInContext(`(() => {
+    clearStepTimer();
+    const prevStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+
+    // 1. 10-seat match: AI Wolf King voted out & fires -> ZERO LAST_WORDS_SPEECH (transitions directly to Night!)
+    el("selectModeCount").value = "10";
+    el("selectRuleDepth").value = "full";
+    el("selectPreferredRole").value = "villager";
+    state.sheriffMode = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.day = 1;
+    state.match.phase = "DAY_VOTE";
+    const pid = getPlayerId();
+    const wkSeat = state.match.seats.find(function (s) { return s.alive && s.isWolfKing && s.id !== pid; });
+    const goodVictim = state.match.seats.find(function (s) { return s.alive && s.team === "good" && s.id !== pid && s.role === "villager"; });
+    wkSeat.alive = false;
+    wkSeat.outReason = "公投離席";
+    state.match.pendingVotedHunterId = wkSeat.id;
+    triggerHunterResonance(wkSeat, "AFTER_VOTE");
+    executeHunterShotPresentation(wkSeat, goodVictim);
+    const pendingClearedOnWkShot = state.match.pendingVotedHunterId === null;
+    if (typeof state.hunterResolveCommit === "function") state.hunterResolveCommit();
+    const wkNoLastWordsOk = Boolean(
+      pendingClearedOnWkShot &&
+      !goodVictim.alive &&
+      state.match.phase !== "LAST_WORDS_SPEECH" &&
+      state.match.phase !== "LAST_WORDS_PLAYER" &&
+      state.match.lastWordSpeakerId !== wkSeat.id &&
+      state.match.lastWordSpeakerId !== goodVictim.id
+    );
+
+    // 2. All 11 personas produce non-empty dramatic last words across all 7 kinds with zero archaic pronouns & zero toxic slurs
+    const allNames = Object.keys(PERSONA_COGNITIVE_PROFILES);
+    const kinds = ["seer", "witch", "guard", "hunter", "good_voted", "good_night1", "wolf_voted"];
+    const archaicRe = /吾|汝|諸君|妾身|小生/;
+    const toxicRe = /白癡|笨蛋|智障|閉嘴|去死|廢物|垃圾|腦殘|亂玩|瞎子|好了啦|下去吧|笑死|邏輯死亡|少裝了|別演了|根本在演|胡說八道/;
+    let personaLwAllOk = allNames.length === 11;
+    allNames.forEach(function (nm, idx) {
+      const dummySeat = { id: idx + 1, name: nm };
+      kinds.forEach(function (k) {
+        const txt = buildPersonaLastWordsText(dummySeat, k, {
+          isFirstNight: k === "good_night1",
+          tLbl: "03號小澄",
+          isWolf: true,
+          callouts: "04號阿松 跟 05號星兒",
+          wolfTotal: 3,
+          day: 2
+        });
+        if (!txt || txt.length < 20 || archaicRe.test(txt) || toxicRe.test(txt)) {
+          personaLwAllOk = false;
+        }
+      });
+      const flv = PERSONA_FLAVORS[nm];
+      if (!flv || !flv.lastGood || !flv.lastWolf || archaicRe.test(flv.lastGood) || toxicRe.test(flv.lastGood) || archaicRe.test(flv.lastWolf) || toxicRe.test(flv.lastWolf)) {
+        personaLwAllOk = false;
+      }
+    });
+
+    clearStepTimer();
+    antiCheatMonitor.strictThrow = prevStrict;
+    resetMatchToLobby();
+    return { wkNoLastWordsOk, personaLwAllOk, phaseAfterWkCommit: state.match.phase };
+  })()`, ctx);
+
+  if (!v2429Res.wkNoLastWordsOk || !v2429Res.personaLwAllOk) {
+    throw new Error("v24.2.9 WOLF KING / DRAMATIC LAST WORDS check failed: " + JSON.stringify(v2429Res));
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 Release-Freeze E2E smoke test PASSED!");
+

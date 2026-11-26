@@ -1118,7 +1118,7 @@ function triggerHunterResonance(hunterSeat, nextStage) {
   if (hunterSeat.id === getPlayerId()) {
     addLog({
       kind: "secret",
-      title: isWK ? "流言首領最後帶風向！選 1 位好夥伴一同離席冷靜" : "直心糾察長正氣共鳴！選 1 人一同離席冷靜",
+      title: isWK ? "流言首領最後帶風向！選 1 位好夥伴一同離席冷靜（開槍反撲無遺言）" : "直心糾察長正氣共鳴！選 1 人一同離席冷靜",
       text: ""
     });
     updateAllUI();
@@ -1132,15 +1132,17 @@ function triggerHunterResonance(hunterSeat, nextStage) {
         executeHunterShotPresentation(hunterSeat, best);
       } else {
         const hName = hunterSeat.name || "";
+        const holdRoleLabel = isWK ? "流言首領" : "直心糾察長";
+        const holdActLabel = isWK ? "壓下反撲" : "壓下共鳴";
         state.match.lastHunterShot = null;
         state.match.phase = "HUNTER_RESOLVE";
-        setCanvasBubble(hunterSeat.id, "局勢還不明朗，我先壓下共鳴不亂帶人！", "normal");
-        addLog({ kind: "dawn", title: "直心糾察長 " + hunterSeat.id + "號選擇壓下共鳴，未帶走任何人。", text: "" });
+        setCanvasBubble(hunterSeat.id, isWK ? "這波先收手不帶人了，留口氣講完遺言再走！" : "局勢還不明朗，我先壓下共鳴不亂帶人！", "normal");
+        addLog({ kind: "dawn", title: holdRoleLabel + " " + hunterSeat.id + "號選擇" + holdActLabel + "，未帶走任何人。", text: "" });
         if (typeof triggerCutIn === "function") {
-          triggerCutIn("直心糾察長壓下共鳴", fmtSeatNum(hunterSeat.id) + "號 " + hName + " 局勢未明，未帶走任何人", "gold", 1500);
+          triggerCutIn(holdRoleLabel + holdActLabel, fmtSeatNum(hunterSeat.id) + "號 " + hName + " 未帶走任何人", "gold", 1500);
         }
         if (typeof showToast === "function") {
-          showToast("直心糾察長 " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 選擇壓下共鳴，未帶走任何人。", "gold");
+          showToast(holdRoleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 選擇" + holdActLabel + "，未帶走任何人。", "gold");
         }
         updateAllUI();
         let holdCommitted = false;
@@ -1174,6 +1176,10 @@ function executeHunterShotPresentation(hunterSeat, targetSeat) {
 
   const hName = hunterSeat.id === getPlayerId() ? "你" : hunterSeat.name;
   const tName = targetSeat.id === getPlayerId() ? "你" : targetSeat.name;
+  // 標準狼王規則：狼王開槍帶人後不再發表遺言（被帶走者亦無遺言），直接結算並入夜；直心糾察長公投離席開槍後仍保留遺言。
+  if (isWK) {
+    state.match.pendingVotedHunterId = null;
+  }
   state.match.lastHunterShot = {
     hunterId: hunterSeat.id,
     hunterName: hName,
@@ -1199,29 +1205,31 @@ function executeHunterShotPresentation(hunterSeat, targetSeat) {
   spawnBurst(targetSeat.id, ["#f43f5e", "#fbbf24", "#ffffff"], 40, "spark");
   setSeatEmotion(targetSeat.id, "shock", 4000);
   nudgeSeat(targetSeat.id, { scale: 0.8, vScale: 0.28, vy: 10, vTilt: 0.36 });
-  spawnFx(hunterSeat.id, isWK ? "流言反撲" : "糾察開槍", "#fbbf24", { durationMs: 2200, scale: 1.2 });
+  spawnFx(hunterSeat.id, isWK ? "流言反撲・無遺言" : "糾察開槍", "#fbbf24", { durationMs: 2200, scale: 1.2 });
   spawnFx(targetSeat.id, "被 " + fmtSeatNum(hunterSeat.id) + "號帶走", "#f43f5e", { durationMs: 2600, scale: 1.35 });
   setCanvasBubble(hunterSeat.id, "我是" + roleLabel + "！帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + "！", "suspect");
   setSeatBubble(targetSeat.id, "遭 " + fmtSeatNum(hunterSeat.id) + "號 " + actLabel + "帶走！", "suspect", 4800);
   if (typeof triggerCutIn === "function") {
     triggerCutIn(
       actLabel + "・帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName,
-      roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 臨離前鎖定目標一同離席",
+      isWK
+        ? (roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 開槍反撲不留遺言，帶走目標直接離席")
+        : (roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 臨離前鎖定目標一同離席"),
       "crimson",
       2350
     );
   }
   if (typeof showToast === "function") {
-    showToast(roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + " 一同離席。", "warn");
+    showToast(roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + (isWK ? " 一同離席（開槍反撲無遺言）。" : " 一同離席。"), "warn");
   }
   addLog({
     kind: "dawn",
-    title: roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 發動" + actLabel + "，帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + " 一同離席。",
+    title: roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 發動" + actLabel + "，帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + (isWK ? " 一同離席（開槍反撲無遺言）。" : " 一同離席。"),
     text: ""
   });
   const ffHunter = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   if (!ffHunter && typeof voice !== "undefined" && voice.canSpeak()) {
-    voice.speakHost(roleLabel + " " + hunterSeat.id + "號" + hName + " 發動" + actLabel + "，帶走 " + targetSeat.id + "號" + tName + " 一同離席冷靜！");
+    voice.speakHost(roleLabel + " " + hunterSeat.id + "號" + hName + " 發動" + actLabel + "，帶走 " + targetSeat.id + "號" + tName + (isWK ? " 一同離席冷靜，開槍反撲不留遺言！" : " 一同離席冷靜！"));
   }
   updateAllUI();
 
@@ -1253,7 +1261,11 @@ function resumeAfterHunter() {
     const votedHid = state.match.pendingVotedHunterId;
     state.match.pendingVotedHunterId = null;
     const vHunter = getSeat(votedHid);
-    if (vHunter) {
+    const shotInfo = state.match.lastHunterShot;
+    const wkFiredNoLastWords = Boolean(
+      vHunter && vHunter.isWolfKing && shotInfo && shotInfo.isWolfKing && shotInfo.hunterId === vHunter.id
+    );
+    if (vHunter && !wkFiredNoLastWords) {
       startLastWordsSequence([votedHid], "vote_out", function () {
         resumeAfterHunter();
       });
@@ -1272,9 +1284,14 @@ function resumeAfterHunter() {
       : ((shot && shot.hunterId)
         ? (ico + " 你已遭 " + fmtSeatNum(shot.hunterId) + "號 " + shot.hunterName + " " + actText + "帶走離席！")
         : (playerNumTag() + " 你已發動" + actText + "並離席"));
+    const noLwNote = (shot && shot.isWolfKing)
+      ? (shot.hunterId === getPlayerId()
+        ? "（流言首領開槍反撲不留遺言，直接進入夜晚）"
+        : "（遭流言首領開槍反撲帶走，無遺言直接進入夜晚）")
+      : "";
     state.voteResultPayload = {
       headline: shotHeadline,
-      lastWord: "",
+      lastWord: noLwNote,
       tallies: {},
       groupedVoters: {},
       outId: getPlayerId(),
@@ -1285,7 +1302,7 @@ function resumeAfterHunter() {
     };
     state.match.phase = "DAY_VOTE_RESULT";
     updateAllUI();
-    voice.speakHost(actText + "已結算，你可以選擇直接結束看底牌，或繼續往下看觀戰。");
+    voice.speakHost((shot && shot.isWolfKing ? "流言首領開槍反撲不留遺言，" : (actText + "已結算，")) + "你可以選擇直接結束看底牌，或繼續往下看觀戰。");
     return;
   }
   if (state.match.afterHunterNext === "AFTER_ELECTION_EXPLODE") {

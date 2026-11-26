@@ -405,7 +405,7 @@ function renderNightAndHunterPanel(p) {
       ? (lastG ? ("護心結界 · 擇一席守護，昨夜已守 " + fmtSeatNum(lastG) + "號不可連守") : "護心結界 · 擇一席守護，可護自己")
       : (p === "NIGHT_SEER"
         ? "明心靜察 · 擇一席查證立場"
-        : (isPlayerWK ? "流言反撲 · 擇一好人席同行" : "請擇定席位")));
+        : (isPlayerWK ? "流言反撲 · 擇一好人席同行（開槍反撲無遺言直接入夜）" : "請擇定席位")));
 }
 
 function renderStepperPanel(p) {

@@ -1099,7 +1099,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "1. 【最高優先】嚴守上方【本輪最高鎖定規則】與今日發言時序！被前置位點進狼坑或指認時第一句必須回應；雙觀察員對跳時務必比較站 A 坑與站 B 坑；若你自己就是跳明心觀察員且已有對跳對手，對方在你眼中已是定狼，絕對不可說「今晚再去驗對跳觀察員」，警徽流只能驗其他未驗的中立位（且你自己跳觀察員時 JSON 的 standWithSeerId 必為 null）！\n" +
     "2. 【獨立綜合判斷】你完全不知道其他人的真實底牌（除同伴或觀察員親查對象外）！必須參考前面「所有」已發言者的話與三好四給線索來綜合判斷誰在狼坑、誰在好人坑。\n" +
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
-    "4. 【嚴禁 AI 機器味與朗讀播報腔・像真實台灣大學茶社同儕圍桌聊天】提到任何座位請一律寫「阿拉伯數字＋號」（如 1號、3號、6號、11號），嚴禁寫前導零（01、06）、嚴禁省略「號」字（站3、抓6），也嚴禁寫中文數字（三號、六號）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或生硬古文代詞（「吾、汝、諸君、妾身、夫、蓋」），亦禁止機械重複以「先這樣，過！」或制式開場白作結。全桌以自然台灣現代白話為基底（墨白、晴嵐、阿竹保留溫和書卷氣質與適度四字成語），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感），自然接前一位的話回嘴或點破剛剛的席間神情／追問。\n" +
+    "4. 【生動有趣、像真實台灣大學社團好友圍桌玩面殺・嚴禁機器腔】請展現強烈個人幽默感與真實情緒起伏：直接抓前幾位剛講的某句話俏皮吐槽、挑眉反問、善意調侃或拍桌附和，依角色性格自然融入生活比喻、微自嘲、苦笑或驚訝（例如笑對方轉彎太急、調侃茶還沒喝完就搶著甩鍋、誇隊友剛抓到神細節），讓每段發言都有畫面感與對話火花，絕不要冷冰冰條列分析！每輪開頭與收尾自由變化，禁止重複套用制式開場白或「先這樣，過！」。提到任何座位請一律寫「阿拉伯數字＋號」（如 1號、3號、6號、11號），嚴禁寫前導零（01、06）、嚴禁省略「號」字（站3、抓6），也嚴禁寫中文數字（三號、六號）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或生硬古文代詞（「吾、汝、諸君、妾身、小生、夫、蓋」）。全桌以自然台灣現代白話為基底（墨白、晴嵐、阿竹保留溫和書卷氣質與適度四字成語），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感）。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
     "6. 【依回合進度遞增的動態句長配額與純口語格式】本輪句長檔位為「" + ((snap && snap.speechCharCap > 0)
       ? ("閃電快棋短兵相接（嚴格 " + snap.speechCharCap + " 字以內，直指關鍵一針見血！）")
@@ -1295,7 +1295,7 @@ function buildBlindGeminiSheriffPrompt(cand, priorSpeeches, built, opts) {
     "【在場座位】：" + aliveList + "\n" +
     "【前面已完成之警上真實發言】：\n" + priorTranscript + "\n" +
     "【本輪警上任務與硬性規則】：\n- " + standRules.join("\n- ") + "\n" +
-    "【口語要求】：自然台灣現代白話（墨白、晴嵐、阿竹保留淡雅書卷氣），座號一律寫阿拉伯數字加「號」（如 3號、7號），禁止前導零、禁止換行、禁止 Markdown、禁止表情符號與括號動作、禁止「綜上所述／根據上述資料」等 AI 腔。只輸出你要說的一段純台詞文字（不要加引號與 JSON）：";
+    "【口語要求】：自然生動、有梗有火花的台灣大學社團面殺口語（墨白、晴嵐、阿竹保留淡雅書卷幽默），可俏皮調侃或正面交鋒前面剛發言的人，別像背稿；座號一律寫阿拉伯數字加「號」（如 3號、7號），禁止前導零、禁止換行、禁止 Markdown、禁止表情符號與括號動作、禁止「綜上所述／根據上述資料」等 AI 腔。只輸出你要說的一段純台詞文字（不要加引號與 JSON）：";
 
   const audit = typeof auditLlmPromptLeak === "function"
     ? auditLlmPromptLeak(snap, secretIntel, prompt)
@@ -1347,12 +1347,16 @@ function buildBlindGeminiLastWordsPrompt(seat, mode, lwObj) {
   if (lwObj && lwObj.claimRole && ROLE_DEFS[lwObj.claimRole]) {
     const rName = ROLE_DEFS[lwObj.claimRole].name;
     if (lwObj.isFakeGodBluff) {
-      directives.push("你臨走決定反向攪局，假裝自己是「" + rName + "」替 " + (lwObj.targetId ? (lwObj.targetId + "號") : "同伴") + " 站台喊冤，動搖好人陣營判斷！");
+      directives.push("你臨走決定反向攪局演一齣大戲！用有點委屈又理直氣壯的戲劇張力，假裝自己是低調藏牌的「" + rName + "」替 " + (lwObj.targetId ? (lwObj.targetId + "號") : "同伴") + " 站台喊冤，笑稱要在場邊看大家明天怎麼後悔，徹底動搖好人判斷！");
     } else {
-      directives.push("你本輪公開亮明自己是「" + rName + "」交代遺言" + (lwObj.targetId ? ("，務必明確點出 " + lwObj.targetId + "號 的關鍵資訊（" + (lwObj.isWolf ? "可疑／酸民狼" : "好人／已保護對象") + "）") : "") + "。");
+      directives.push("你本輪公開亮明自己是真「" + rName + "」交代遺言，可以先來一句俏皮微戲劇化的攤牌反將一軍（像驚不驚喜或感嘆茶都還沒喝完就離場），同時務必清楚點出 " + (lwObj.targetId ? (lwObj.targetId + "號 的關鍵資訊（" + (lwObj.isWolf ? "酸民狼／必投" : "鐵好人／已保護對象") + "）") : "你的核心提醒") + "。");
     }
+  } else if (self && self.team === "wolf") {
+    directives.push("你以低調離席的酸民狼身分發表最後遺言（嚴禁自爆同伴座號、嚴禁冒充未授權神職）：可以帶點狡黠不服輸或自嘲落幕的小戲劇張力（像稱讚這桌眼睛太毒、神秘預告桌上還有好戲等著大家），留下令人印象深刻的退場彩蛋" + (lwObj && lwObj.targetId ? ("，或順勢點一下 " + lwObj.targetId + "號 攪亂視線") : "") + "。");
   } else {
-    directives.push("你以一般茶客（好人或低調偽裝）身分發表離席遺言，嚴禁冒充未授權的神職；自然流露不甘或叮嚀，點出你最在意或最懷疑的對象" + (lwObj && lwObj.targetId ? ("（重點提及 " + lwObj.targetId + "號）") : "") + "。");
+    directives.push("你以清白好人身分發表離席遺言（嚴禁冒充未授權神職）：" + (isFirstNight
+      ? "才剛開局茶都還沒喝熱就首夜領便當，可以帶點無奈搞笑的小 drama 吐嘈狼隊太狠心，並叮嚀大家今天仔細抓狼！"
+      : "被大家誤投出場，可以帶一點可愛的小 drama——例如假裝記仇、笑說要端茶坐場邊看大家明天怎麼翻車後悔，同時犀利點出你最懷疑的對象" + (lwObj && lwObj.targetId ? ("（重點點名 " + lwObj.targetId + "號）") : "") + "！"));
   }
 
   const prompt =
@@ -1362,7 +1366,7 @@ function buildBlindGeminiLastWordsPrompt(seat, mode, lwObj) {
     "【目前仍在場座位】：" + aliveList + "\n" +
     "【近期公開場況】：\n" + recentLogs + "\n" +
     "【遺言指引】：\n- " + directives.join("\n- ") + "\n" +
-    "【口語要求】：35～75 字自然台灣口語，帶一點離席前的真誠情緒或犀利點評；座號寫阿拉伯數字加「號」（如 3號），禁止換行、Markdown、表情符號與括號動作，只輸出純台詞文字：";
+    "【戲劇感與口語要求】：40～88 字自然生動的台灣口語，鼓勵帶一點點可愛的戲劇張力（小小的 drama、幽默記仇、戲劇性攤牌或瀟灑看戲），但維持社團好友互虧分寸、絕不人身攻擊辱罵；座號寫阿拉伯數字加「號」（如 3號），禁止換行、Markdown、表情符號與括號動作，只輸出純台詞文字：";
 
   const audit = typeof auditLlmPromptLeak === "function"
     ? auditLlmPromptLeak(snap, secretIntel, prompt)
@@ -1384,7 +1388,7 @@ async function tryGenerateGeminiLastWords(seat, mode, lwObj) {
     : null;
   const clean = _validateMiniLiveText(raw, pack.snap ? pack.snap.self : seat, {
     minLen: 18,
-    maxLen: 96,
+    maxLen: 115,
     allowedClaim: (lwObj && lwObj.claimRole) ? lwObj.claimRole : null,
     mustContainSeatId: mustSeat
   });
@@ -1410,9 +1414,9 @@ function buildBlindGeminiInterjectionPrompt(targetSeat, questionText, fallbackRe
     secretIntel + "\n" +
     ownSpeechBit +
     "【玩家當場對你的追問】：「" + String(questionText || "").trim() + "」\n" +
-    "【回應指引】：請直接針對玩家這句追問臨場回防（嚴禁答非所問，絕不可自爆狼人身分，也不可冒充未宣稱的神職）。" +
-    (isTense ? "你此刻其實有點被問中要害，語氣略微閃躲或急著找理由圓場，但仍要維持理性對話。" : "語氣自然坦蕩、切中玩家問題要點。") + "\n" +
-    "【字數與格式】：嚴格 16～42 字單句自然台灣口語，座號寫阿拉伯數字加「號」，禁止換行、表情符號與括號動作，只輸出純回覆文字：";
+    "【回應指引】：請直接針對玩家這句追問即興接招（嚴禁答非所問，絕不可自爆狼人身分，也不可冒充未宣稱的神職）。" +
+    (isTense ? "你此刻被問中要害有點措手不及，語氣帶點心虛搞笑的急忙圓場或轉移話題，但仍維持理性對話。" : "語氣自然機智、帶點俏皮反問或幽默回嘴，切中玩家問題要點。") + "\n" +
+    "【字數與格式】：嚴格 16～44 字單句生動台灣口語，座號寫阿拉伯數字加「號」，禁止換行、表情符號與括號動作，只輸出純回覆文字：";
 
   const audit = typeof auditLlmPromptLeak === "function"
     ? auditLlmPromptLeak(snap, secretIntel, prompt)
@@ -1431,7 +1435,7 @@ async function tryGenerateGeminiInterjectionReply(targetSeat, questionText, fall
   if (!raw) return null;
   const clean = _validateMiniLiveText(raw, pack.snap ? pack.snap.self : targetSeat, {
     minLen: 10,
-    maxLen: 52,
+    maxLen: 54,
     allowedClaim: targetSeat.claimedRole || null
   });
   if (!clean) return null;
@@ -1461,8 +1465,8 @@ function buildBlindGeminiConfrontationPrompt(speaker, rival, baseLine) {
     _buildMiniPersonaBlock(self) +
     secretIntel + "\n" +
     "【對質現況】：" + rivalQuote + "\n" +
-    "【你的對質立場】：直接點名反駁 " + rival.id + "號 的言行或邏輯破綻，並亮出你目前盤的狼坑（" + pitsStr + "）。絕不可暴露自己是狼，也不可冒充未宣稱神職。\n" +
-    "【字數與格式】：嚴格 28～62 字犀利而有禮的台灣圓桌口語，必須點出 " + rival.id + "號，禁止換行、表情符號與括號動作，只輸出純台詞：";
+    "【你的對質立場】：像熟識對手正面交鋒一樣，帶著機鋒與俏皮反問直接點破 " + rival.id + "號 的言行或邏輯破綻，並亮出你目前盤的狼坑（" + pitsStr + "）。絕不可暴露自己是狼，也不可冒充未宣稱神職。\n" +
+    "【字數與格式】：嚴格 28～66 字犀利生動、有張力又有風度的台灣圓桌口語，必須點出 " + rival.id + "號，禁止換行、表情符號與括號動作，只輸出純台詞：";
 
   const audit = typeof auditLlmPromptLeak === "function"
     ? auditLlmPromptLeak(snap, secretIntel, prompt)
