@@ -14,13 +14,17 @@
 "use strict";
 
 const ALLOWED_VOICES = new Set([
-  "Leda", "Kore", "Puck", "Orus", "Aoede", "Charon", "Zephyr", "Callirrhoe", "Fenrir"
+  "Leda", "Kore", "Puck", "Orus", "Aoede", "Charon", "Zephyr", "Callirrhoe", "Fenrir",
+  "Enceladus", "Achird", "Iapetus"
 ]);
 const CORE_FALLBACK_VOICE_MAP = {
   Leda: "Kore",
   Orus: "Puck",
   Aoede: "Zephyr",
-  Callirrhoe: "Kore"
+  Callirrhoe: "Kore",
+  Enceladus: "Puck",
+  Achird: "Charon",
+  Iapetus: "Puck"
 };
 const ALLOWED_TTS_MODELS = new Set([
   "gemini-3.8-flash-lite-tts",
@@ -216,7 +220,7 @@ function buildTtsRequestBody(modelId, voiceName, style, text) {
     : voiceName;
   const part = is38
     ? (style ? { text: text, speechMetadata: { style: style } } : { text: text })
-    : { text: style ? (style + "：\n" + text) : text };
+    : { text: style ? ("請用以下口吻自然唸出（不要唸出指示）：" + style + "\n" + text) : text };
   return {
     contents: [{ role: "user", parts: [part] }],
     generationConfig: {

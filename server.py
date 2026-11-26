@@ -152,11 +152,11 @@ VOICE_PROFILES_ANIME = {
     "阿松":  {"voice": "zh-TW-YunJheNeural",           "rate": "+0%", "pitch": "+0Hz"},
     "星兒":  {"voice": "zh-CN-XiaoyiNeural",           "rate": "+5%", "pitch": "+2Hz"},
     "小雲":  {"voice": "zh-TW-HsiaoYuNeural",          "rate": "+4%", "pitch": "-1Hz"},
-    "阿竹":  {"voice": "zh-CN-YunxiNeural",            "rate": "-6%", "pitch": "-2Hz"},
-    "晨晨":  {"voice": "zh-CN-YunjianNeural",          "rate": "+6%", "pitch": "+1Hz"},
-    "墨白":  {"voice": "zh-CN-YunyangNeural",          "rate": "-10%", "pitch": "-4Hz"},
+    "阿竹":  {"voice": "zh-CN-YunxiNeural",            "rate": "-3%", "pitch": "-1Hz"},
+    "晨晨":  {"voice": "zh-CN-YunjianNeural",          "rate": "+4%", "pitch": "+1Hz"},
+    "墨白":  {"voice": "zh-CN-YunjianNeural",          "rate": "-5%", "pitch": "-2Hz"},
     "晴嵐":  {"voice": "zh-CN-XiaoxiaoNeural",         "rate": "-7%", "pitch": "-2Hz"},
-    "阿朗":  {"voice": "zh-CN-YunjianNeural",          "rate": "+2%", "pitch": "-2Hz"},
+    "阿朗":  {"voice": "zh-CN-YunjianNeural",          "rate": "+2%", "pitch": "-1Hz"},
     "柚子":  {"voice": "zh-CN-XiaoxiaoNeural",         "rate": "+6%", "pitch": "+4Hz"},
 }
 
@@ -181,7 +181,8 @@ VOICE_PROFILES = VOICE_PROFILES_ANIME
 
 ALLOWED_CLAUSE_ROLES = {"", "open", "pivot", "question", "climax", "close", "backchannel"}
 ALLOWED_GEMINI_VOICES = {
-    "Leda", "Kore", "Puck", "Orus", "Aoede", "Charon", "Zephyr", "Callirrhoe", "Fenrir"
+    "Leda", "Kore", "Puck", "Orus", "Aoede", "Charon", "Zephyr", "Callirrhoe", "Fenrir",
+    "Enceladus", "Achird", "Iapetus"
 }
 
 
@@ -312,46 +313,118 @@ async def synthesize_edge_mp3(text, voice_name, rate_str, pitch_str, out_path):
             raise
 
 
-def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=12):
-    """Call official Gemini 2.5 Flash Preview TTS generateContent API; return WAV/PCM audio bytes."""
+GEMINI_TTS_VOICE_FALLBACK = {
+    "Enceladus": "Puck",
+    "Achird": "Charon",
+    "Iapetus": "Orus",
+    "Leda": "Kore",
+    "Aoede": "Zephyr",
+    "Callirrhoe": "Kore",
+}
+
+
+def wrap_pcm_to_wav(raw_bytes, sample_rate=24000, channels=1, bits_per_sample=16):
+    """Wrap raw 16-bit LE PCM bytes into a standard 44-byte RIFF WAV container if not already WAV."""
+    if not raw_bytes or len(raw_bytes) < 16:
+        return raw_bytes
+    if raw_bytes[:4] == b"RIFF" and len(raw_bytes) > 44:
+        return raw_bytes
+    import struct
+    byte_rate = sample_rate * channels * (bits_per_sample // 8)
+    block_align = channels * (bits_per_sample // 8)
+    data_size = len(raw_bytes)
+    header = struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF",
+        36 + data_size,
+        b"WAVE",
+        b"fmt ",
+        16,
+        1,
+        channels,
+        sample_rate,
+        byte_rate,
+        block_align,
+        bits_per_sample,
+        b"data",
+        data_size,
+    )
+    return header + raw_bytes
+
+
+def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=14):
+    """Call official Gemini TTS generateContent API (3.8 Flash Lite TTS -> 2.5 Flash Preview TTS); return RIFF WAV bytes."""
     import base64
     v_name = voice_name if voice_name in ALLOWED_GEMINI_VOICES else "Kore"
-    prompt_line = f"{style_prompt}：\n{text}" if style_prompt else str(text)
-    payload = {
-        "contents": [{
-            "parts": [{"text": prompt_line}]
-        }],
-        "generationConfig": {
-            "responseModalities": ["AUDIO"],
-            "speechConfig": {
-                "voiceConfig": {
-                    "prebuiltVoiceConfig": {
-                        "voiceName": v_name
+    voices_to_try = [v_name]
+    fb_v = GEMINI_TTS_VOICE_FALLBACK.get(v_name)
+    if fb_v and fb_v != v_name:
+        voices_to_try.append(fb_v)
+    models_to_try = ("gemini-3.8-flash-lite-tts", "gemini-2.5-flash-preview-tts")
+    last_err = None
+    for model_id in models_to_try:
+        is_38 = model_id.startswith("gemini-3.8-")
+        for cand_voice in voices_to_try:
+            if is_38:
+                part = {"text": str(text), "speechMetadata": {"style": style_prompt}} if style_prompt else {"text": str(text)}
+            else:
+                prompt_line = f"請用以下口吻自然朗讀（不要唸出指示）：{style_prompt}\n{text}" if style_prompt else str(text)
+                part = {"text": prompt_line}
+            payload = {
+                "contents": [{
+                    "role": "user",
+                    "parts": [part]
+                }],
+                "generationConfig": {
+                    "responseModalities": ["AUDIO"],
+                    "speechConfig": {
+                        "voiceConfig": {
+                            "prebuiltVoiceConfig": {
+                                "voiceName": cand_voice
+                            }
+                        }
                     }
                 }
             }
-        }
-    }
-    body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
-        data=body_bytes,
-        headers={
-            "Content-Type": "application/json; charset=utf-8",
-            "x-goog-api-key": api_key,
-        },
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
-    for cand in (data.get("candidates") or []):
-        parts = ((cand.get("content") or {}).get("parts") or [])
-        for part in parts:
-            inline = part.get("inlineData") or part.get("inline_data") or {}
-            if inline.get("data"):
-                raw_bytes = base64.b64decode(inline["data"])
-                mime = str(inline.get("mimeType") or inline.get("mime_type") or "audio/L16;rate=24000")
-                return raw_bytes, mime
+            body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            req = urllib.request.Request(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent",
+                data=body_bytes,
+                headers={
+                    "Content-Type": "application/json; charset=utf-8",
+                    "x-goog-api-key": api_key,
+                    "User-Agent": "aistudio-build",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+            except urllib.error.HTTPError as hexc:
+                err_detail = ""
+                try:
+                    err_detail = hexc.read().decode("utf-8", "ignore")[:220]
+                except Exception:
+                    pass
+                last_err = RuntimeError(f"Gemini TTS {model_id}/{cand_voice} HTTP {hexc.code}: {err_detail}")
+                if hexc.code in (401, 403):
+                    raise hexc
+                if hexc.code in (400, 404, 429, 500, 502, 503):
+                    continue
+                raise hexc
+            for cand in (data.get("candidates") or []):
+                parts = ((cand.get("content") or {}).get("parts") or [])
+                for pt in parts:
+                    inline = pt.get("inlineData") or pt.get("inline_data") or {}
+                    if inline.get("data"):
+                        raw_bytes = base64.b64decode(inline["data"])
+                        mime = str(inline.get("mimeType") or inline.get("mime_type") or "audio/L16;rate=24000")
+                        rate_m = re.search(r"rate=(\d+)", mime)
+                        sr = int(rate_m.group(1)) if rate_m else 24000
+                        wav_bytes = wrap_pcm_to_wav(raw_bytes, sample_rate=sr)
+                        return wav_bytes, "audio/wav"
+    if last_err:
+        raise last_err
     return None, ""
 
 
@@ -551,6 +624,16 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
                 "hasPavilionGlb": bool(pavilion_rel),
                 "pavilionModel": pavilion_rel,
                 "seatModels": seat_models,
+            })
+            return
+
+        if route == "/api/tts":
+            gem_key = get_server_gemini_key()
+            self.send_json(200, {
+                "ok": True,
+                "available": bool(gem_key),
+                "model": "gemini-2.5-flash-preview-tts",
+                "mode": "vercel-gemini-tts",
             })
             return
 
@@ -794,29 +877,34 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             return
         self.send_json(200, {"ok": True, "saved": True, "id": fb_id})
 
-    def handle_post_gemini_tts(self):
-        raw_len = self.headers.get("Content-Length", "0")
-        try:
-            length = int(raw_len)
-        except (TypeError, ValueError):
-            self.send_json(400, {"ok": False, "error": "Invalid Content-Length"})
-            return
-        if length < 0:
-            self.send_json(400, {"ok": False, "error": "Invalid Content-Length"})
-            return
-        if length > 16384:
-            self.send_json(413, {"ok": False, "error": "Payload too large"})
-            return
+    def handle_post_gemini_tts(self, pre_req=None, use_server_key=False):
+        if pre_req is None:
+            raw_len = self.headers.get("Content-Length", "0")
+            try:
+                length = int(raw_len)
+            except (TypeError, ValueError):
+                self.send_json(400, {"ok": False, "error": "Invalid Content-Length"})
+                return
+            if length < 0:
+                self.send_json(400, {"ok": False, "error": "Invalid Content-Length"})
+                return
+            if length > 16384:
+                self.send_json(413, {"ok": False, "error": "Payload too large"})
+                return
+            raw = self.rfile.read(length)
+            try:
+                req = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self.send_json(400, {"ok": False, "error": "Invalid JSON body"})
+                return
+            if not isinstance(req, dict):
+                self.send_json(400, {"ok": False, "error": "JSON body must be an object"})
+                return
+        else:
+            req = pre_req
         api_key = (self.headers.get("x-goog-api-key") or "").strip()
-        raw = self.rfile.read(length)
-        try:
-            req = json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            self.send_json(400, {"ok": False, "error": "Invalid JSON body"})
-            return
-        if not isinstance(req, dict):
-            self.send_json(400, {"ok": False, "error": "JSON body must be an object"})
-            return
+        if not api_key and use_server_key:
+            api_key = get_server_gemini_key()
         raw_text = req.get("text")
         text = raw_text.strip() if isinstance(raw_text, str) else ""
         voice_name = str(req.get("voice") or "Kore").strip()
@@ -833,7 +921,7 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         # Serve directly from disk cache even without API call if already synthesized earlier!
         if not wav_path.exists() or wav_path.stat().st_size < 128:
             if not api_key:
-                self.send_json(401, {"ok": False, "error": "Missing x-goog-api-key header"})
+                self.send_json(503 if use_server_key else 401, {"ok": False, "error": "Server Gemini TTS not configured" if use_server_key else "Missing x-goog-api-key header"})
                 return
             with get_tts_key_lock(key):
                 if not wav_path.exists() or wav_path.stat().st_size < 128:
@@ -897,9 +985,6 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         if route != "/api/tts":
             self.send_json(404, {"ok": False, "error": "Not found"})
             return
-        if not HAS_EDGE_TTS:
-            self.send_json(503, {"ok": False, "error": "edge-tts not installed"})
-            return
         try:
             raw_len = self.headers.get("Content-Length", "0")
             try:
@@ -921,6 +1006,13 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
                 return
             if not isinstance(req, dict):
                 self.send_json(400, {"ok": False, "error": "JSON body must be an object"})
+                return
+            # Cloud/Server Gemini Studio TTS track ({ voice, style, text }) when server GEMINI_API_KEY is available
+            if "voice" in req and get_server_gemini_key():
+                self.handle_post_gemini_tts(pre_req=req, use_server_key=True)
+                return
+            if not HAS_EDGE_TTS:
+                self.send_json(503, {"ok": False, "error": "edge-tts not installed"})
                 return
             raw_text = req.get("text")
             text = raw_text.strip() if isinstance(raw_text, str) else ("" if raw_text is None else str(raw_text).strip())

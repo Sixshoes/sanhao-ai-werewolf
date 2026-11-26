@@ -7128,7 +7128,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.9") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.11") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7521,7 +7521,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.9"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.11"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8455,5 +8455,71 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 Release-Freeze E2E smoke test PASSED!");
+// v24.2.10 NATURAL MALE VOICE ENGINE: Banish legacy SAPI5 robotic male voices (Zhiwei/Kangkang) from male pool, smooth male EQ & natural male pitch floor
+{
+  const v24210Res = vm.runInContext(`(() => {
+    const prevSynth = window.speechSynthesis;
+    const prevAll = voice.allVoices;
+    const prevZh = voice.zhVoices;
+    const prevMale = voice.maleVoices;
+    const prevFemale = voice.femaleVoices;
+    const prevBest = voice.bestPool;
+
+    // 1. Windows Edge scenario: Natural YunJhe + legacy robotic Zhiwei/Kangkang -> maleVoices MUST exclude Zhiwei & Kangkang
+    window.speechSynthesis = {
+      getVoices: () => [
+        { name: "Microsoft HsiaoChen Online (Natural) - Chinese (Taiwan)", lang: "zh-TW", voiceURI: "ms-hc" },
+        { name: "Microsoft YunJhe Online (Natural) - Chinese (Taiwan)", lang: "zh-TW", voiceURI: "ms-yj" },
+        { name: "Microsoft Zhiwei - Chinese (Traditional, Taiwan)", lang: "zh-TW", voiceURI: "ms-zw" },
+        { name: "Microsoft Kangkang - Chinese (Simplified, PRC)", lang: "zh-CN", voiceURI: "ms-kk" }
+      ],
+      cancel: () => {},
+      speak: () => {}
+    };
+    voice.refreshVoices();
+    const edgeNaturalOnlyOk = voice.maleVoices.length === 1 && /YunJhe/i.test(voice.maleVoices[0].name);
+
+    // 2. Windows Chrome scenario: Google 國語（臺灣）(female) + Taiwanese Zhiwei + Mainland Kangkang -> male models MUST keep Taiwanese male Zhiwei (never female Google voice, never Mainland Kangkang!)
+    window.speechSynthesis = {
+      getVoices: () => [
+        { name: "Google 國語（臺灣）", lang: "zh-TW", voiceURI: "g-tw" },
+        { name: "Microsoft Zhiwei - Chinese (Traditional, Taiwan)", lang: "zh-TW", voiceURI: "ms-zw" },
+        { name: "Microsoft Kangkang - Chinese (Simplified, PRC)", lang: "zh-CN", voiceURI: "ms-kk" }
+      ],
+      cancel: () => {},
+      speak: () => {}
+    };
+    voice.refreshVoices();
+    const chromeTwMaleMatchedOk = voice.maleVoices.length === 1 && /Zhiwei/i.test(voice.maleVoices[0].name) && /Zhiwei/i.test(voice.pickVoiceForProfile(PERSONA_VOICE_PROFILES["阿松"]).name);
+
+    // 3. Male EQ presence/mid curves stay warm & smooth (no harsh > 1.0 dB presence/mid spikes)
+    const maleNames = ["你_男", "小澄", "阿松", "阿竹", "晨晨", "墨白", "阿朗"];
+    const maleEqSmoothOk = maleNames.every(n => {
+      const eq = PERSONA_AUDIO_EQ[n];
+      return Boolean(eq && eq.midGain <= 0.7 && eq.presGain <= 1.0 && eq.gainTrim >= 1.06);
+    });
+
+    // 4. Male voice profiles match 3D character casting (阿松 mature Charon, 晨晨 upbeat Puck, 阿竹 warm Enceladus) & natural rateMul >= 0.90
+    const maleProfileSmoothOk = maleNames.every(n => {
+      const p = PERSONA_VOICE_PROFILES[n];
+      return Boolean(p && p.rateMul >= 0.90 && p.basicPitch >= 0.92 && PERSONA_TTS_DIRECTIONS[n]);
+    }) && PERSONA_VOICE_PROFILES["阿松"].studioVoice === "Charon" && PERSONA_VOICE_PROFILES["晨晨"].studioVoice === "Puck" && PERSONA_VOICE_PROFILES["阿竹"].studioVoice === "Enceladus";
+
+    window.speechSynthesis = prevSynth;
+    voice.allVoices = prevAll;
+    voice.zhVoices = prevZh;
+    voice.maleVoices = prevMale;
+    voice.femaleVoices = prevFemale;
+    voice.bestPool = prevBest;
+    return { edgeNaturalOnlyOk, chromeTwMaleMatchedOk, maleEqSmoothOk, maleProfileSmoothOk };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(v24210Res)) {
+    if (!v) {
+      throw new Error("v24.2.11 NATURAL MALE VOICE check failed for " + k + ": " + JSON.stringify(v24210Res));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 Release-Freeze E2E smoke test PASSED!");
 

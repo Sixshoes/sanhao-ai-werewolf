@@ -7,35 +7,35 @@
 const PERSONA_VOICE_PROFILES = {
   "主持":  { gender: "f", slot: 0, seatHint: 0, studioVoice: "Leda",       pitch: 1.00, basicPitch: 1.00, rateMul: 0.96 },
   "你":    { gender: "f", slot: 1, seatHint: 1, studioVoice: "Kore",       pitch: 1.04, basicPitch: 1.03, rateMul: 1.00 },
-  "你_男": { gender: "m", slot: 0, seatHint: 1, studioVoice: "Puck",       pitch: 0.92, basicPitch: 0.90, rateMul: 1.00 },
-  "小澄":  { gender: "m", slot: 1, seatHint: 2, studioVoice: "Orus",       pitch: 0.95, basicPitch: 0.94, rateMul: 1.08 },
+  "你_男": { gender: "m", slot: 0, seatHint: 1, studioVoice: "Puck",       pitch: 0.94, basicPitch: 0.98, rateMul: 1.00 },
+  "小澄":  { gender: "m", slot: 1, seatHint: 2, studioVoice: "Orus",       pitch: 0.96, basicPitch: 1.00, rateMul: 1.04 },
   "暖暖":  { gender: "f", slot: 2, seatHint: 3, studioVoice: "Aoede",      pitch: 1.08, basicPitch: 1.06, rateMul: 0.92 },
-  "阿松":  { gender: "m", slot: 2, seatHint: 4, studioVoice: "Charon",     pitch: 0.80, basicPitch: 0.82, rateMul: 0.88 },
+  "阿松":  { gender: "m", slot: 2, seatHint: 4, studioVoice: "Charon",     pitch: 0.85, basicPitch: 0.94, rateMul: 0.94 },
   "星兒":  { gender: "f", slot: 3, seatHint: 5, studioVoice: "Zephyr",     pitch: 1.18, basicPitch: 1.13, rateMul: 1.12 },
   "小雲":  { gender: "f", slot: 4, seatHint: 6, studioVoice: "Callirrhoe", pitch: 0.97, basicPitch: 0.98, rateMul: 1.11 },
-  "阿竹":  { gender: "m", slot: 3, seatHint: 7,  studioVoice: "Fenrir",     pitch: 0.88, basicPitch: 0.89, rateMul: 0.90 },
-  "晨晨":  { gender: "m", slot: 4, seatHint: 8,  studioVoice: "Puck",       pitch: 1.08, basicPitch: 1.04, rateMul: 1.16 },
-  "墨白":  { gender: "m", slot: 5, seatHint: 9,  studioVoice: "Charon",     pitch: 0.74, basicPitch: 0.78, rateMul: 0.83 },
+  "阿竹":  { gender: "m", slot: 3, seatHint: 7,  studioVoice: "Enceladus",  pitch: 0.90, basicPitch: 0.96, rateMul: 0.95 },
+  "晨晨":  { gender: "m", slot: 4, seatHint: 8,  studioVoice: "Puck",       pitch: 1.04, basicPitch: 1.03, rateMul: 1.08 },
+  "墨白":  { gender: "m", slot: 5, seatHint: 9,  studioVoice: "Iapetus",    pitch: 0.80, basicPitch: 0.93, rateMul: 0.92 },
   "晴嵐":  { gender: "f", slot: 5, seatHint: 10, studioVoice: "Leda",       pitch: 0.88, basicPitch: 0.90, rateMul: 0.86 },
-  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Orus",       pitch: 1.01, basicPitch: 0.98, rateMul: 1.14 },
+  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Orus",       pitch: 0.99, basicPitch: 1.01, rateMul: 1.06 },
   "柚子":  { gender: "f", slot: 6, seatHint: 12, studioVoice: "Zephyr",     pitch: 1.26, basicPitch: 1.18, rateMul: 1.14 }
 };
 
 const PERSONA_TTS_DIRECTIONS = {
-  "主持":  "沉穩溫雅的台灣書院說書女聲，語氣端莊自然，像真實茶席主持人近距離引導，避免機械播音腔",
-  "你":    "自然親切的台灣女大學生日常對話口吻，呼吸自然、不字正腔圓唸稿",
-  "你_男": "自然沉穩的台灣男大學生日常口語，吐字輕鬆真實、條理分明",
-  "小澄":  "冷靜銳利的台灣資工系男大生自然口語，先沉思半拍再俐落切入重點，不帶播音腔",
-  "暖暖":  "溫柔親切、帶淺淺笑意與呼吸氣音的台灣女大生日常聊天語氣",
-  "阿松":  "渾厚接地氣、帶台灣山林老學長江湖人情味與鬆弛幽默感的成熟男聲",
-  "星兒":  "靈動直覺、像綜藝圓桌現場突然眼睛一亮的台灣少女真實口語",
-  "小雲":  "俐落清晰、在茶桌上翻看筆記冷靜追問細節的台灣知性學姊口吻",
-  "阿竹":  "溫潤從容、帶江南書院茶人雅韻與舒緩呼吸停頓的青年男聲",
-  "晨晨":  "爽朗直率、像球社隊長在圓桌直接表態的陽光台灣男大生口吻",
-  "墨白":  "低沉冷峻、胸腔共鳴渾厚、如魏晉名士從容落筆判詞般古雅端重的男聲",
-  "晴嵐":  "溫婉清雅、帶宋詞古箏柔韻與輕柔氣息、柔中帶剛的古典學姊女聲",
-  "阿朗":  "節奏明快、重音鮮明、像辯論社主辯現場反問質詢的台灣男大生聲線",
-  "柚子":  "甜美元氣、輕快自然像點心社學妹在圓桌分享直覺的台灣少女口語"
+  "主持":  "氣質端莊溫潤的二十多歲台灣女書院主持，吐字清朗從容，像茶席主人近距離溫和引導，絕不機械播音",
+  "你":    "自然親切的二十出頭台灣女大學生日常對話口吻，呼吸自然、不字正腔圓唸稿",
+  "你_男": "二十多歲自然放鬆的台灣男大學生日常口語，像坐在茶桌旁跟朋友輕鬆聊天，語調有起伏、不唸稿",
+  "小澄":  "二十多歲冷靜斯文的台灣理科男大生，聲線清晰俐落、不急不躁，像戴眼鏡的理智學長在茶桌旁條理分析",
+  "暖暖":  "二十出頭溫柔愛笑的台灣女大生日常聊天聲線，語調柔和親切、帶點溫暖呼吸氣音",
+  "阿松":  "年約四十多歲、聲音低沉渾厚有磁性的台灣成熟大叔，像茶館裡見多識廣的老大哥親切泡茶聊天，語速沉穩帶點幽默人情味",
+  "星兒":  "十八九歲活潑機靈的台灣少女口語，聲線清亮輕快、帶點古靈精怪的直覺反應",
+  "小雲":  "二十多歲知性冷靜的台灣都會學姊聲線，口齒俐落、音色偏清冷沉穩，像翻筆記冷靜追問細節",
+  "阿竹":  "二十多歲溫潤斯文的台灣青年男聲，聲音輕柔誠懇、語速從容柔和，像愛泡茶的溫和文青學長自然交談",
+  "晨晨":  "二十出頭陽光熱血的台灣運動系大男孩，聲音明亮爽朗、語速輕快有朝氣，像球社好友直接開心表態",
+  "墨白":  "二十五六歲清冷克制的台灣青年低沉男聲，聲線沉靜乾淨、說話簡短篤定，帶點書卷氣但自然不朗誦",
+  "晴嵐":  "二十多歲溫婉優雅的台灣古典氣質學姊女聲，語氣柔美從容、輕聲細語但立場堅定",
+  "阿朗":  "二十多歲自信俐落的台灣男大生辯手聲線，吐字清脆有力、抑揚頓挫鮮明、節奏明快",
+  "柚子":  "十八九歲甜美可愛的台灣學妹口語，語調輕盈元氣、笑意自然，像點心社學妹分享直覺"
 };
 
 // 圓桌聽眾臨場微插話台詞庫（純依公開發言點名／對跳／保人觸發，零底牌洩漏，固定短句 100% 命中快取）
@@ -221,6 +221,9 @@ const voice = {
       if (res.ok) {
         const data = await res.json();
         this.localNeuralAvailable = Boolean(data && data.freeNeural);
+        if (!this.localNeuralAvailable) {
+          await this.probeCloudGeminiTts();
+        }
       } else if (res.status === 404 || res.status === 405 || res.status === 501) {
         this._localTtsEndpointUnavailable = true;
         this.localNeuralAvailable = false;
@@ -286,7 +289,7 @@ const voice = {
     else if (/Meijia|Mei-Jia|美佳/i.test(name)) score += 45;
     else if (/Tingting|婷婷/i.test(name)) score += 35;
 
-    if (/Desktop|Hanhan|Yating|Zhiwei|Compact/i.test(name) && !/Natural|Online|Enhanced|Premium/i.test(name)) score -= 35;
+    if (/Desktop|Hanhan|Yating|Zhiwei|Kangkang|Huihui|Yaoyao|Compact/i.test(name) && !/Natural|Online|Enhanced|Premium/i.test(name)) score -= 60;
     return score;
   },
 
@@ -362,8 +365,20 @@ const voice = {
         return topScore >= 135 ? sc >= 135 : sc >= Math.max(60, topScore - 20);
       });
       const pool = highTier.length ? highTier : zh.slice(0, 1);
-      // Scan ALL zh voices for genuine male voices so Chrome OS Google female voice is not forced onto male characters when a local male voice exists!
-      this.maleVoices = zh.filter(function (v) { return self.isMaleVoice(v); });
+      // Tiered male voice selection:
+      // 1) High-tier natural/neural male voices (Edge YunJhe Online / macOS Enhanced) -> exclusively used, banishing legacy SAPI5!
+      // 2) Taiwanese local male voice (e.g. Zhiwei on Windows Chrome) -> keeps gender 100% matched to male 3D models (never puts a female voice on male models!) while excluding Mainland Kangkang!
+      // 3) Any remaining Mandarin male voice.
+      const highTierMale = pool.filter(function (v) { return self.isMaleVoice(v); });
+      const decentMale = zh.filter(function (v) { return self.isMaleVoice(v) && self.scoreVoiceQuality(v) >= 85; });
+      const twMale = zh.filter(function (v) {
+        return self.isMaleVoice(v) && (/zh[-_]?tw/i.test(String(v.lang || "")) || /Taiwan|臺灣|台灣|YunJhe|Zhiwei/i.test(String(v.name || "")));
+      });
+      this.maleVoices = highTierMale.length > 0
+        ? highTierMale
+        : (decentMale.length > 0
+          ? decentMale
+          : (twMale.length > 0 ? twMale : zh.filter(function (v) { return self.isMaleVoice(v); })));
       this.femaleVoices = pool.filter(function (v) { return !self.isMaleVoice(v); });
       this.bestPool = pool;
 
@@ -1115,7 +1130,9 @@ const voice = {
     let baseDetune = 0;
     const eqCfg = (typeof PERSONA_AUDIO_EQ !== "undefined" && PERSONA_AUDIO_EQ[pKey]) ? PERSONA_AUDIO_EQ[pKey] : null;
     if (eqCfg && !(opts && opts.skipDetune)) {
-      baseDetune = this.accentMode === "tw" ? (eqCfg.twDetuneCents || 0) : (eqCfg.detuneCents || 0);
+      const rawDetune = this.accentMode === "tw" ? (eqCfg.twDetuneCents || 0) : (eqCfg.detuneCents || 0);
+      // Keep audible PCM pitch shift within a subtle, artifact-free ±20 cents envelope so neural male voices never turn metallic
+      baseDetune = clamp(Math.round(rawDetune * 0.35), -20, 20);
     }
     const detuneNudge = (opts && typeof opts.detuneNudge === "number" && !(opts && opts.skipDetune)) ? opts.detuneNudge : 0;
     // Allow true 1.0x / 1.15x / 1.3x / 1.5x speed without chipmunk pitch via HTMLAudioElement(preservesPitch=true)!
@@ -1612,7 +1629,7 @@ const voice = {
           if (cloudRes && cloudRes.ok) {
             const arrBuf = await cloudRes.arrayBuffer();
             if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
-          } else if (cloudRes && (cloudRes.status === 429 || cloudRes.status === 503)) {
+          } else if (cloudRes && (cloudRes.status === 429 || cloudRes.status === 401 || cloudRes.status === 403 || cloudRes.status >= 500)) {
             self.cloudGeminiTtsCooldownUntil = Date.now() + (cloudRes.status === 429 ? 45000 : 180000);
           }
         }
@@ -1638,39 +1655,49 @@ const voice = {
         }
         // Track C: Direct browser Gemini TTS when user manually provided their own API key on static host
         if (!audioBytes && hasPersonalKey) {
-          const ttsPromptText = payload.stylePrompt ? (payload.stylePrompt + "：\n" + payload.taggedTranscript) : payload.taggedTranscript;
-          const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-goog-api-key": state.geminiApiKey
-            },
-            signal: controller ? controller.signal : undefined,
-            body: JSON.stringify({
-              contents: [{
-                parts: [{ text: ttsPromptText }]
-              }],
-              generationConfig: {
-                responseModalities: ["AUDIO"],
-                speechConfig: {
-                  voiceConfig: {
-                    prebuiltVoiceConfig: { voiceName: payload.voiceName }
+          const ttsPromptText = payload.stylePrompt
+            ? ("請用以下口吻自然唸出（不要唸出指示）：" + payload.stylePrompt + "\n" + payload.taggedTranscript)
+            : payload.taggedTranscript;
+          const fallbackVoiceMap = { Enceladus: "Puck", Achird: "Charon", Iapetus: "Orus", Leda: "Kore", Aoede: "Zephyr", Callirrhoe: "Kore" };
+          const tryVoices = [payload.voiceName];
+          if (fallbackVoiceMap[payload.voiceName]) tryVoices.push(fallbackVoiceMap[payload.voiceName]);
+          for (let vi = 0; vi < tryVoices.length && !audioBytes; vi++) {
+            const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": state.geminiApiKey
+              },
+              signal: controller ? controller.signal : undefined,
+              body: JSON.stringify({
+                contents: [{
+                  role: "user",
+                  parts: [{ text: ttsPromptText }]
+                }],
+                generationConfig: {
+                  responseModalities: ["AUDIO"],
+                  speechConfig: {
+                    voiceConfig: {
+                      prebuiltVoiceConfig: { voiceName: tryVoices[vi] }
+                    }
                   }
                 }
+              })
+            });
+            if (res && res.ok) {
+              const data = await res.json();
+              let b64 = null;
+              if (data && data.candidates && data.candidates[0] && data.candidates[0].content && Array.isArray(data.candidates[0].content.parts)) {
+                const audioPart = data.candidates[0].content.parts.find(function (pt) { return pt && pt.inlineData && pt.inlineData.data; });
+                if (audioPart) b64 = audioPart.inlineData.data;
               }
-            })
-          });
-          if (res && res.ok) {
-            const data = await res.json();
-            let b64 = null;
-            if (data && data.candidates && data.candidates[0] && data.candidates[0].content && Array.isArray(data.candidates[0].content.parts)) {
-              const audioPart = data.candidates[0].content.parts.find(function (pt) { return pt && pt.inlineData && pt.inlineData.data; });
-              if (audioPart) b64 = audioPart.inlineData.data;
-            }
-            if (b64) {
-              const rawBin = atob(b64);
-              audioBytes = new Uint8Array(rawBin.length);
-              for (let i = 0; i < rawBin.length; i++) audioBytes[i] = rawBin.charCodeAt(i);
+              if (b64) {
+                const rawBin = atob(b64);
+                audioBytes = new Uint8Array(rawBin.length);
+                for (let i = 0; i < rawBin.length; i++) audioBytes[i] = rawBin.charCodeAt(i);
+              }
+            } else if (!res || res.status !== 400) {
+              break;
             }
           }
         }
@@ -1767,7 +1794,8 @@ const voice = {
         if (!state.match || state.match.phase !== "DAY_SPEECH" || state.activeSpeakerId !== capturedSpeakerId || (state.match.day || 0) !== capturedDay) return;
         const eq = (typeof PERSONA_AUDIO_EQ !== "undefined" && PERSONA_AUDIO_EQ[effKey]) ? PERSONA_AUDIO_EQ[effKey] : null;
         const pbRate = self.accentMode === "tw" && eq ? (eq.twRateMul || 1.0) : 1.02;
-        const detune = eq ? (self.accentMode === "tw" ? (eq.twDetuneCents || 0) : (eq.detuneCents || 0)) : 0;
+        const rawBcDetune = eq ? (self.accentMode === "tw" ? (eq.twDetuneCents || 0) : (eq.detuneCents || 0)) : 0;
+        const detune = clamp(Math.round(rawBcDetune * 0.35), -20, 20);
         sound.playBackchannelBuffer(buf, seat.id, effKey, pbRate, detune);
       });
     }, waitMs);
@@ -1892,14 +1920,15 @@ const voice = {
       const seatIdNow = (opts && opts.seatId) || 0;
       const pKey = (opts && opts.personaKey) || this.activePersonaName;
 
-      // Natural human pitch sweet spot (0.86-1.10) avoids metallic phase-vocoder artifacts in Chrome/macOS/Windows SpeechSynthesis!
-      const rawPitch = isBasicVoice ? (profile.basicPitch || 1.0) : (profile.pitch || 1.0);
-      const gentlePitch = 1.0 + (rawPitch - 1.0) * 0.48;
-      const basePitch = missingMaleFallback
-        ? clamp(gentlePitch - 0.06, 0.86, 0.94)
-        : clamp(gentlePitch, isBasicVoice ? 0.90 : 0.88, isBasicVoice ? 1.08 : 1.11);
+      // Natural human pitch sweet spot avoids metallic phase-vocoder artifacts in Chrome/macOS/Windows SpeechSynthesis!
       const isMalePersona = Boolean(profile && profile.gender === "m");
-      const isLowPitchVoice = basePitch < 0.93 || missingMaleFallback;
+      const rawPitch = isBasicVoice ? (profile.basicPitch || 1.0) : (profile.pitch || 1.0);
+      const pitchScale = (isMalePersona && isBasicVoice) ? 0.25 : (isMalePersona ? 0.34 : 0.46);
+      const gentlePitch = 1.0 + (rawPitch - 1.0) * pitchScale;
+      const basePitch = missingMaleFallback
+        ? clamp(gentlePitch - 0.04, 0.89, 0.95)
+        : clamp(gentlePitch, (isMalePersona && isBasicVoice) ? 0.96 : (isMalePersona ? 0.91 : (isBasicVoice ? 0.90 : 0.88)), (isMalePersona && isBasicVoice) ? 1.03 : (isBasicVoice ? 1.08 : 1.11));
+      const isLowPitchVoice = basePitch < 0.94 || missingMaleFallback;
       const genderVolMul = isMalePersona
         ? (isLowPitchVoice ? 1.22 : 1.16)
         : (basePitch >= 1.06 ? 0.84 : 0.88);
