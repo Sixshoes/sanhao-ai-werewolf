@@ -649,8 +649,13 @@ function prefetchNextAiSpeech() {
   entry.promise = runDispatch.then(function (resMeta) {
     if (resMeta && m._prefetchedSpeech === entry) {
       entry.resolvedMeta = resMeta;
-      if (resMeta.text && typeof voice !== "undefined" && voice.canSpeak() && voice.localNeuralAvailable && typeof voice.prefetchFreeLocalNeural === "function") {
-        voice.prefetchFreeLocalNeural(nextSeat.name, resMeta.text, _computeSpeechVoiceMood(nextSeat, resMeta));
+      if (resMeta.text && typeof voice !== "undefined" && voice.canSpeak()) {
+        const nextMood = _computeSpeechVoiceMood(nextSeat, resMeta);
+        if (voice.localNeuralAvailable && typeof voice.prefetchFreeLocalNeural === "function") {
+          voice.prefetchFreeLocalNeural(nextSeat.name, resMeta.text, nextMood);
+        } else if (typeof voice.prefetchCloudGeminiTts === "function") {
+          voice.prefetchCloudGeminiTts(nextSeat.name, resMeta.text, nextMood);
+        }
       }
     }
     return resMeta;

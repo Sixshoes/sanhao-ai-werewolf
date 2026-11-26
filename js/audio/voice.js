@@ -111,6 +111,9 @@ const voice = {
   localNeuralAvailable: false,
   localNeuralChecked: false,
   _localTtsEndpointUnavailable: false,
+  cloudGeminiTtsAvailable: false,
+  cloudGeminiTtsChecked: false,
+  cloudGeminiTtsCooldownUntil: 0,
   volume: 0.86,
   rate: 0.96,
   zhVoices: [],
@@ -126,9 +129,13 @@ const voice = {
   keepAliveTimer: null,
   clauseTimer: null,
   studioCache: {},
+  studioPending: {},
   hostPackCache: {},
   localNeuralCache: {},
   localNeuralPending: {},
+  _liveTargetPbRate: 1.0,
+  _liveBufferState: null,
+  _liveBrowserRestart: null,
   lastSpokenPayload: null,
   _lastBackchannelAt: 0,
   _lastBackchannelTurnKey: "",
@@ -161,6 +168,37 @@ const voice = {
     }
   },
 
+  probeCloudGeminiTts: async function () {
+    if (this.cloudGeminiTtsChecked) return this.cloudGeminiTtsAvailable;
+    this.cloudGeminiTtsChecked = true;
+    try {
+      if (typeof window === "undefined" || !window.location || !/^https?:$/.test(window.location.protocol) || typeof fetch !== "function") {
+        return false;
+      }
+      const controller = typeof AbortController === "function" ? new AbortController() : null;
+      const t = controller ? setTimeout(function () { controller.abort(); }, 2600) : null;
+      const res = await fetch("/api/tts", controller ? { method: "GET", cache: "no-store", signal: controller.signal } : { method: "GET", cache: "no-store" });
+      if (t) clearTimeout(t);
+      if (res && res.ok) {
+        const data = await res.json().catch(function () { return null; });
+        this.cloudGeminiTtsAvailable = Boolean(data && data.ok && data.available && data.mode === "vercel-gemini-tts");
+      } else {
+        this.cloudGeminiTtsAvailable = false;
+      }
+    } catch (e) {
+      this.cloudGeminiTtsAvailable = false;
+    }
+    this.updateEngineStatusUi();
+    return this.cloudGeminiTtsAvailable;
+  },
+
+  isCloudGeminiTtsActive: function () {
+    if (!this.cloudGeminiTtsAvailable) return false;
+    if (this.cloudGeminiTtsCooldownUntil && Date.now() < this.cloudGeminiTtsCooldownUntil) return false;
+    if (typeof state !== "undefined" && state.serverGeminiOptOut) return false;
+    return true;
+  },
+
   probeLocalNeuralServer: async function () {
     if (this.localNeuralChecked) return this.localNeuralAvailable;
     this.localNeuralChecked = true;
@@ -171,6 +209,7 @@ const voice = {
       if (this.isStaticCloudHost()) {
         this._localTtsEndpointUnavailable = true;
         this.localNeuralAvailable = false;
+        await this.probeCloudGeminiTts();
         this.updateEngineStatusUi();
         this.refreshVoices();
         return false;
@@ -185,6 +224,7 @@ const voice = {
       } else if (res.status === 404 || res.status === 405 || res.status === 501) {
         this._localTtsEndpointUnavailable = true;
         this.localNeuralAvailable = false;
+        await this.probeCloudGeminiTts();
       }
     } catch (e) {
       this.localNeuralAvailable = false;
@@ -215,7 +255,7 @@ const voice = {
   },
 
   canSpeak: function () {
-    return this.enabled && (this.mode === "tts" || this.mode === "hybrid") && this.volume > 0.02 && (this.isSupported() || this.localNeuralAvailable || Boolean(typeof sound !== "undefined" && sound.ctx) || Boolean(typeof state !== "undefined" && state.geminiApiKey));
+    return this.enabled && (this.mode === "tts" || this.mode === "hybrid") && this.volume > 0.02 && (this.isSupported() || this.localNeuralAvailable || this.cloudGeminiTtsAvailable || Boolean(typeof sound !== "undefined" && sound.ctx) || Boolean(typeof state !== "undefined" && state.geminiApiKey));
   },
 
   getModeLabel: function () {
@@ -227,7 +267,7 @@ const voice = {
 
   isNoveltyOrRoboticVoice: function (v) {
     const name = String(v.name || "");
-    return /\b(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley|Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Kathy|Ralph|Kathy)\b/i.test(name);
+    return /\b(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley|Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Kathy|Ralph)\b/i.test(name);
   },
 
   scoreVoiceQuality: function (v) {
@@ -235,18 +275,18 @@ const voice = {
     const name = String(v.name || "");
     if (this.isNoveltyOrRoboticVoice(v)) return -200;
     let score = 0;
-    const isTw = /zh[-_]?tw/i.test(lang) || /Taiwan|臺灣|台灣|HsiaoChen|HsiaoYu|YunJhe|Meijia|美佳/i.test(name);
-    if (isTw) score += 70;
+    const isTw = /zh[-_]?tw/i.test(lang) || /Taiwan|臺灣|台灣|HsiaoChen|HsiaoYu|YunJhe|Meijia|Mei-Jia|美佳/i.test(name);
+    if (isTw) score += 72;
     else if (/^zh|^cmn/i.test(lang)) score += 25;
 
-    if (/Online.*Natural|Natural|Neural/i.test(name)) score += 130;
-    else if (/Siri|Premium|優質|Enhanced|進階/i.test(name)) score += 105;
+    if (/Online.*Natural|Natural.*Online|Natural|Neural/i.test(name)) score += 145;
+    else if (/Siri|Premium|優質|Enhanced|進階/i.test(name)) score += 115;
     else if (/Google\s*國語|Google.*Taiwan/i.test(name)) score += 90;
     else if (/Google.*Chinese|Google\s*普通话/i.test(name)) score += 72;
-    else if (/Meijia|美佳/i.test(name)) score += 45;
+    else if (/Meijia|Mei-Jia|美佳/i.test(name)) score += 45;
     else if (/Tingting|婷婷/i.test(name)) score += 35;
 
-    if (/Desktop|Hanhan|Yating|Zhiwei|Compact/i.test(name) && !/Natural|Online|Enhanced|Premium/i.test(name)) score -= 30;
+    if (/Desktop|Hanhan|Yating|Zhiwei|Compact/i.test(name) && !/Natural|Online|Enhanced|Premium/i.test(name)) score -= 35;
     return score;
   },
 
@@ -263,9 +303,12 @@ const voice = {
       const hintBox = document.getElementById("voiceQualityHintBox");
       if (lbl) {
         const hasGemKey = Boolean(typeof state !== "undefined" && state.geminiApiKey);
-        const useGemFirst = hasGemKey && this.enginePref !== "local";
+        const hasCloudTts = this.isCloudGeminiTtsActive();
+        const useGemFirst = (hasGemKey || hasCloudTts) && this.enginePref !== "local";
         if (this.mode === "cozy") {
           lbl.textContent = "目前：12角色療癒原音樂音（零機械感・3D定位）";
+        } else if (useGemFirst && hasCloudTts && !hasGemKey) {
+          lbl.textContent = "雲端 Gemini 真人語音已連線（12 位自然角色聲線）";
         } else if (useGemFirst) {
           lbl.textContent = "Gemini 3.8 真人氣口演技（12 位真人級聲線" + (this.localNeuralAvailable ? "・含硬碟快取）" : "）");
         } else if (this.localNeuralAvailable) {
@@ -273,15 +316,15 @@ const voice = {
         } else if (bestScore >= 150) {
           lbl.textContent = "免費神經聲線：" + zh[0].name.split(" ")[0];
         } else if (bestScore >= 130) {
-          lbl.textContent = "高清晰聲線：" + zh[0].name.split(" ")[0] + "（已啟用分句柔化）";
+          lbl.textContent = "高清晰聲線：" + zh[0].name.split(" ")[0] + "（已啟用自然句流柔化）";
         } else if (zh.length > 0) {
-          lbl.textContent = "系統基本聲線（已啟用台灣韻律柔化）";
+          lbl.textContent = "系統基本聲線（已啟用自然句流柔化）";
         } else {
           lbl.textContent = "未偵測到華語人聲（推薦切療癒樂音）";
         }
       }
       if (hintBox) {
-        hintBox.classList.toggle("hidden", Boolean(this.localNeuralAvailable || (typeof state !== "undefined" && state.geminiApiKey) || bestScore >= 145 || this.mode === "cozy"));
+        hintBox.classList.toggle("hidden", Boolean(this.localNeuralAvailable || this.isCloudGeminiTtsActive() || (typeof state !== "undefined" && state.geminiApiKey) || bestScore >= 145 || this.mode === "cozy"));
       }
     } catch (e) {}
   },
@@ -387,7 +430,7 @@ const voice = {
       .replace(/[「」『』【】]/g, "")
       .replace(/[｜|·・—]/g, "，")
       .replace(/：(?=\S)/g, "，")
-      .replace(/(?<!，)(我是明心觀察員|我是滴水奉茶師|我是護心守衛|我是直心糾察長)/g, "，$1")
+      .replace(/(?<![，。！？\s])(我是明心觀察員|我是滴水奉茶師|我是護心守衛|我是直心糾察長)/g, "，$1")
       .replace(/…+/g, "…")
       .replace(/，{2,}/g, "，")
       .replace(/^，+/, "")
@@ -837,6 +880,8 @@ const voice = {
     this.clearTimers();
     this.paused = false;
     this.pauseMeta = null;
+    this._liveBufferState = null;
+    this._liveBrowserRestart = null;
     this._resumePendingClause = null;
     this._resumeWatchdogFinish = null;
     this.activeUtterance = null;
@@ -881,20 +926,110 @@ const voice = {
     }
   },
 
+  getSpeedMultiplier: function () {
+    const r = Number(this.rate) || 0.96;
+    if (r >= 1.34) return 1.50;
+    if (r >= 1.18) return 1.30;
+    if (r >= 1.08 && r <= 1.12) return 1.15;
+    if (Math.abs(r - 0.96) < 0.02) return 1.00;
+    return clamp(r / 0.96, 0.78, 1.65);
+  },
+
+  computeBufferedPlaybackRate: function (opts) {
+    const pKey = (opts && opts.personaKey) ? opts.personaKey : this.activePersonaName;
+    const sitCfg = (opts && opts.sitCfg) || { rateMul: 1.0 };
+    const eqCfg = (typeof PERSONA_AUDIO_EQ !== "undefined" && PERSONA_AUDIO_EQ[pKey]) ? PERSONA_AUDIO_EQ[pKey] : null;
+    const twTrim = eqCfg ? (this.accentMode === "tw" ? (eqCfg.twRateMul || 1.0) : (eqCfg.animeRateMul || 1.0)) : 1.0;
+    const rateNudge = ((opts && typeof opts.rateNudge === "number") ? opts.rateNudge : 1.0) * (sitCfg.rateMul || 1.0);
+    const speedMul = this.getSpeedMultiplier();
+    return clamp(twTrim * rateNudge * speedMul, 0.80, 1.68);
+  },
+
   syncQuickSpeedButtonUi: function () {
     const btn = typeof document !== "undefined" ? document.getElementById("btnQuickVoiceSpeed") : null;
     if (!btn) return;
     const label = this.rate >= 1.34 ? "1.5×" : (this.rate >= 1.18 ? "1.3×" : (this.rate >= 1.05 ? "1.15×" : "1.0×"));
     btn.textContent = label;
+    btn.classList.toggle("is-active", this.rate >= 1.05);
+  },
+
+  applyLiveRateChange: function () {
+    if (this.paused || !this.speaking) return;
+    // 1. Live pitch-preserving HTMLAudioElement: instant zero-glitch playbackRate update
+    if (this.activeAudioEl && this.pauseMeta && this._liveBufferState) {
+      const st = this._liveBufferState;
+      const newPbRate = this.computeBufferedPlaybackRate(st.opts);
+      this._liveTargetPbRate = newPbRate;
+      try {
+        this.activeAudioEl.preservesPitch = true;
+        this.activeAudioEl.mozPreservesPitch = true;
+        this.activeAudioEl.webkitPreservesPitch = true;
+        this.activeAudioEl.defaultPlaybackRate = newPbRate;
+        this.activeAudioEl.playbackRate = newPbRate;
+      } catch (e) {}
+      const curTime = this.activeAudioEl.currentTime || 0;
+      const totalDur = (this.pauseMeta.audioBuf && this.pauseMeta.audioBuf.duration) ? this.pauseMeta.audioBuf.duration : 2.5;
+      this.pauseMeta.offset = Math.min(Math.max(0, totalDur - 0.05), curTime);
+      this.pauseMeta.startedAt = sound.ctx ? sound.ctx.currentTime : 0;
+      this.pauseMeta.playbackRate = newPbRate;
+      const remainPlayMs = Math.max(120, ((totalDur - curTime) / newPbRate) * 1000);
+      if (this.watchdogTimer) {
+        clearTimeout(this.watchdogTimer);
+        this.watchdogTimer = setTimeout(st.finishOnce, Math.max(2200, Math.round(remainPlayMs) + 3200));
+      }
+      if (typeof syncTypewriterToAudioDuration === "function") {
+        syncTypewriterToAudioDuration(remainPlayMs);
+      }
+      return;
+    }
+    // 2. Live Web Audio BufferSourceNode: seamlessly transition to pitch-preserved HTMLAudioElement when speeding up!
+    if (this.activeAudioNode && this.pauseMeta && this.pauseMeta.audioBuf && sound.ctx) {
+      const pm = this.pauseMeta;
+      const elapsed = Math.max(0, (sound.ctx.currentTime - pm.startedAt) * (pm.playbackRate || 1));
+      const nextOffset = Math.min(Math.max(0, pm.audioBuf.duration - 0.08), (pm.offset || 0) + elapsed);
+      const newPbRate = this.computeBufferedPlaybackRate(pm.opts);
+      const canUsePitchEl = Boolean(
+        Math.abs(newPbRate - 1.0) > 0.03 &&
+        typeof Audio === "function" &&
+        typeof sound.ctx.createMediaElementSource === "function" &&
+        typeof pm.audioBuf.getChannelData === "function"
+      );
+      if (canUsePitchEl) {
+        this.clearTimers();
+        try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); this.activeAudioNode.disconnect(); } catch (e) {}
+        this.activeAudioNode = null;
+        this.playBufferedStudioAudio(pm.seq, pm.audioBuf, pm.onDone, Object.assign({}, pm.opts, {
+          startOffset: nextOffset,
+          skipPreBreath: true,
+          skipPrepBeat: true
+        }));
+      } else {
+        try { this.activeAudioNode.playbackRate.value = newPbRate; } catch (e) {}
+        pm.offset = nextOffset;
+        pm.startedAt = sound.ctx.currentTime;
+        pm.playbackRate = newPbRate;
+      }
+      return;
+    }
+    // 3. Live Browser Web Speech API: immediately re-speak active clause at new rate!
+    if (typeof this._liveBrowserRestart === "function") {
+      try { this._liveBrowserRestart(); } catch (e) {}
+    }
+  },
+
+  setRate: function (nextRate) {
+    const clamped = clamp(Number(nextRate) || 0.96, 0.75, 1.65);
+    this.rate = clamped;
+    this.syncQuickSpeedButtonUi();
+    this.applyLiveRateChange();
+    if (typeof syncPrefsToControls === "function") syncPrefsToControls();
+    if (typeof saveUserPrefs === "function") saveUserPrefs();
+    return clamped;
   },
 
   cycleQuickRate: function () {
     const next = this.rate < 1.05 ? 1.10 : (this.rate < 1.18 ? 1.22 : (this.rate < 1.34 ? 1.42 : 0.96));
-    this.rate = next;
-    this.syncQuickSpeedButtonUi();
-    if (typeof syncPrefsToControls === "function") syncPrefsToControls();
-    if (typeof saveUserPrefs === "function") saveUserPrefs();
-    return next;
+    return this.setRate(next);
   },
 
   togglePause: function () {
@@ -977,26 +1112,15 @@ const voice = {
       sound.applyPersonaVoiceChain(pKey, (opts && opts.mood) || "normal", opts && opts.seatId, sitKey);
     }
 
-    let twTrim = 1.0;
     let baseDetune = 0;
     const eqCfg = (typeof PERSONA_AUDIO_EQ !== "undefined" && PERSONA_AUDIO_EQ[pKey]) ? PERSONA_AUDIO_EQ[pKey] : null;
-    if (eqCfg) {
-      if (this.accentMode === "tw") {
-        twTrim = eqCfg.twRateMul || 1.0;
-        baseDetune = eqCfg.twDetuneCents || 0;
-      } else {
-        twTrim = eqCfg.animeRateMul || 1.0;
-        baseDetune = eqCfg.detuneCents || 0;
-      }
+    if (eqCfg && !(opts && opts.skipDetune)) {
+      baseDetune = this.accentMode === "tw" ? (eqCfg.twDetuneCents || 0) : (eqCfg.detuneCents || 0);
     }
-    const isYunJheFixed = Boolean(pKey === "阿松" || (this.accentMode === "tw" && (pKey === "你_男" || pKey === "小澄" || pKey === "阿竹" || pKey === "晨晨" || pKey === "墨白" || pKey === "阿朗")));
-    const userRateBlend = isYunJheFixed ? clamp(1.0 + (this.rate - 0.96) * 0.72, 0.92, 1.48) : clamp(this.rate / 0.96, 0.92, 1.48);
-    const rateNudge = ((opts && typeof opts.rateNudge === "number") ? opts.rateNudge : 1.0) * (sitCfg.rateMul || 1.0);
-    const detuneNudge = (opts && typeof opts.detuneNudge === "number") ? opts.detuneNudge : 0;
-    // Allow true 1.5x speed without chipmunk pitch via HTMLAudioElement(preservesPitch=true)!
-    const pbRate = skipRateAdjust
-      ? clamp(twTrim * rateNudge * userRateBlend, 0.84, 1.52)
-      : clamp(this.rate * twTrim * rateNudge, 0.84, 1.52);
+    const detuneNudge = (opts && typeof opts.detuneNudge === "number" && !(opts && opts.skipDetune)) ? opts.detuneNudge : 0;
+    // Allow true 1.0x / 1.15x / 1.3x / 1.5x speed without chipmunk pitch via HTMLAudioElement(preservesPitch=true)!
+    const pbRate = this.computeBufferedPlaybackRate(opts);
+    this._liveTargetPbRate = pbRate;
 
     const effGain = clamp(this.volume * (sitCfg.tailVolMul || 1.0), 0, 1);
     vGain.gain.value = effGain;
@@ -1086,10 +1210,12 @@ const voice = {
         try { vGain.disconnect(); } catch (e) {}
         if (self.activeAudioGain === vGain) self.activeAudioGain = null;
         self.pauseMeta = null;
+        self._liveBufferState = null;
         if (!(opts && opts.keepSeqOpen)) self.setVisualSpeaking(false);
         self.syncPauseButtonUi();
         if (typeof onDone === "function") onDone();
       };
+      self._liveBufferState = { opts: opts || {}, finishOnce: finishOnce };
 
       const estMs = Math.max(3000, Math.round(estPlayMs) + 3500);
       self.watchdogTimer = setTimeout(finishOnce, estMs);
@@ -1105,6 +1231,7 @@ const voice = {
       }
 
       // v18.0 True Pitch-Preserving Speed Playback via HTMLAudioElement (preservesPitch = true) + MediaElementAudioSourceNode!
+      // Always set defaultPlaybackRate + enforce on loadedmetadata/playing so browsers NEVER reset playbackRate back to 1.0 during Blob load!
       const wantPitchPreserveEl = Boolean(
         Math.abs(pbRate - 1.0) > 0.03 &&
         typeof Audio === "function" &&
@@ -1117,11 +1244,20 @@ const voice = {
         if (blobUrl) {
           try {
             const aEl = new Audio(blobUrl);
-            aEl.preservesPitch = true;
-            aEl.mozPreservesPitch = true;
-            aEl.webkitPreservesPitch = true;
-            aEl.playbackRate = pbRate;
+            const enforceRate = function () {
+              const targetR = self._liveTargetPbRate || pbRate;
+              try {
+                aEl.preservesPitch = true;
+                aEl.mozPreservesPitch = true;
+                aEl.webkitPreservesPitch = true;
+                aEl.defaultPlaybackRate = targetR;
+                if (Math.abs(aEl.playbackRate - targetR) > 0.005) aEl.playbackRate = targetR;
+              } catch (err) {}
+            };
+            enforceRate();
             aEl.volume = 1.0;
+            aEl.addEventListener("loadedmetadata", enforceRate);
+            aEl.addEventListener("playing", enforceRate);
             if (startOffset > 0) {
               try { aEl.currentTime = startOffset; } catch (e) {}
             }
@@ -1133,6 +1269,7 @@ const voice = {
             aEl.onended = finishOnce;
             aEl.onerror = finishOnce;
             const playP = aEl.play();
+            enforceRate();
             if (playP && typeof playP.catch === "function") {
               playP.catch(function () { finishOnce(); });
             }
@@ -1197,7 +1334,7 @@ const voice = {
       body: JSON.stringify({
         persona: effKey,
         text: cleanText,
-        rate: this.rate,
+        rate: 0.96,
         mood: mood || "normal",
         accent: this.accentMode || "anime",
         clauseRole: clauseRole || "",
@@ -1324,8 +1461,8 @@ const voice = {
       }
       return;
     }
-    // Single-pass seamless cache key (matches playFreeLocalNeuralTts 1-to-1 for zero splice hiccups & 100% prefetch hit!)
-    const cacheKey = effKey + "|" + this.accentMode + "|" + Math.round(this.rate * 100) + "|" + (mood || "normal") + "||" + cleanText;
+    // Single-pass seamless cache key at baseline rate (speed is applied live via pitch-preserved HTMLAudioElement -> 100% cache hit!)
+    const cacheKey = effKey + "|" + this.accentMode + "|base|" + (mood || "normal") + "||" + cleanText;
     if (this.localNeuralCache[cacheKey] || this.localNeuralPending[cacheKey]) return;
     this._fetchLocalNeuralAudio(cacheKey, effKey, cleanText, mood || "normal", null, "");
   },
@@ -1336,7 +1473,7 @@ const voice = {
     if (!cleanText) return false;
 
     // Single-pass seamless neural synthesis: preserves natural cross-clause co-articulation with zero pitch/speed seam jumps!
-    const ck = effKey + "|" + this.accentMode + "|" + Math.round(this.rate * 100) + "|" + (mood || "normal") + "||" + cleanText;
+    const ck = effKey + "|" + this.accentMode + "|base|" + (mood || "normal") + "||" + cleanText;
     let audioBuf = this.localNeuralCache[ck] || null;
     if (!audioBuf) {
       const controller = typeof AbortController === "function" ? new AbortController() : null;
@@ -1420,14 +1557,8 @@ const voice = {
     return this.trimAudioBufferSilence(audioBuf);
   },
 
-  playGeminiStudioTts: async function (seq, profile, cleanText, mood, onDone, opts) {
-    if (!state.geminiApiKey || !sound.ctx) return false;
-    const voiceName = profile.studioVoice || "Kore";
-    const effKey = (opts && opts.personaKey) ? opts.personaKey : this.activePersonaName;
-    const cacheKey = voiceName + ":" + effKey + ":" + (mood || "normal") + ":" + (this.rate >= 1.18 ? "f2" : (this.rate >= 1.06 ? "f1" : "n")) + ":" + cleanText;
-    if (this.studioCache[cacheKey]) {
-      return this.playBufferedStudioAudio(seq, this.studioCache[cacheKey], onDone, Object.assign({}, opts, { skipPreBreath: true, skipRateAdjust: true }));
-    }
+  _buildGeminiTtsPayload: function (profile, effKey, cleanText, mood) {
+    const voiceName = (profile && profile.studioVoice) || "Kore";
     const baseDir = PERSONA_TTS_DIRECTIONS[effKey] || "自然親切的台灣年輕人日常口語";
     const moodDirMap = {
       panic: "略帶緊張急促與真實換氣感，急著替自己澄清",
@@ -1440,88 +1571,156 @@ const voice = {
       host_night: "語氣低沉溫潤、營造靜謐山城夜色",
       host_dawn: "語氣清朗明快、揭曉天亮結果"
     };
-    const paceDir = this.rate >= 1.18 ? "；整體語速明顯輕快緊湊" : (this.rate >= 1.06 ? "；語速略快自然" : "");
-    const stylePrompt = baseDir + "；" + (moodDirMap[mood] || "自然流暢像圍坐木桌泡茶聊天，有真實抑揚頓挫與呼吸感") + paceDir;
+    const stylePrompt = baseDir + "；" + (moodDirMap[mood] || "自然流暢像圍坐木桌泡茶聊天，有真實抑揚頓挫與呼吸感");
     const taggedTranscript = this.injectGeminiVocalTags(cleanText, effKey, mood || "normal");
+    const cacheKey = voiceName + ":" + effKey + ":" + (mood || "normal") + ":" + cleanText;
+    return { voiceName: voiceName, stylePrompt: stylePrompt, taggedTranscript: taggedTranscript, cacheKey: cacheKey };
+  },
 
-    const controller = new AbortController();
-    const geminiTtsTimeoutMs = clamp(10000 + cleanText.length * 75, 11000, 24000);
-    const timer = setTimeout(function () { controller.abort(); }, geminiTtsTimeoutMs);
-    try {
-      let audioBytes = null;
-      // Route through local disk-caching proxy (/api/tts/gemini -> .tts_cache/gem_*.wav) when server.py is active!
-      if (this.localNeuralAvailable) {
-        const proxyRes = await fetch("/api/tts/gemini", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": state.geminiApiKey
-          },
-          signal: controller.signal,
-          body: JSON.stringify({
-            voice: voiceName,
-            style: stylePrompt,
-            text: taggedTranscript
-          })
-        });
-        if (proxyRes && proxyRes.ok) {
-          const arrBuf = await proxyRes.arrayBuffer();
-          if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
+  _fetchGeminiStudioAudio: function (profile, effKey, cleanText, mood) {
+    const hasPersonalKey = Boolean(typeof state !== "undefined" && state.geminiApiKey);
+    const hasCloudProxy = !hasPersonalKey && this.isCloudGeminiTtsActive();
+    if ((!hasPersonalKey && !hasCloudProxy) || !sound || !sound.ctx) return Promise.resolve(null);
+    const payload = this._buildGeminiTtsPayload(profile, effKey, cleanText, mood || "normal");
+    const cacheKey = payload.cacheKey;
+    if (this.studioCache[cacheKey]) return Promise.resolve(this.studioCache[cacheKey]);
+    if (this.studioPending[cacheKey]) return this.studioPending[cacheKey];
+
+    const self = this;
+    const p = (async function () {
+      const controller = typeof AbortController === "function" ? new AbortController() : null;
+      const geminiTtsTimeoutMs = clamp(10000 + cleanText.length * 75, 11000, 22000);
+      const timer = controller ? setTimeout(function () { controller.abort(); }, geminiTtsTimeoutMs) : null;
+      try {
+        let audioBytes = null;
+        // Track A: Vercel Serverless Cloud Proxy (/api/tts using server GEMINI_API_KEY)
+        if (hasCloudProxy) {
+          const hdrs = { "Content-Type": "application/json" };
+          if (typeof getOrCreateProxySessionId === "function") {
+            hdrs["X-Tea-Session"] = getOrCreateProxySessionId();
+          }
+          const cloudRes = await fetch("/api/tts", {
+            method: "POST",
+            headers: hdrs,
+            signal: controller ? controller.signal : undefined,
+            body: JSON.stringify({
+              voice: payload.voiceName,
+              style: payload.stylePrompt,
+              text: payload.taggedTranscript
+            })
+          });
+          if (cloudRes && cloudRes.ok) {
+            const arrBuf = await cloudRes.arrayBuffer();
+            if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
+          } else if (cloudRes && (cloudRes.status === 429 || cloudRes.status === 503)) {
+            self.cloudGeminiTtsCooldownUntil = Date.now() + (cloudRes.status === 429 ? 45000 : 180000);
+          }
         }
-      }
-      // Pure-static cloud fallback: call official Gemini 2.5 Flash Preview TTS generateContent API directly
-      if (!audioBytes) {
-        const ttsPromptText = stylePrompt ? (stylePrompt + "：\n" + taggedTranscript) : taggedTranscript;
-        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": state.geminiApiKey
-          },
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents: [{
-              parts: [{ text: ttsPromptText }]
-            }],
-            generationConfig: {
-              responseModalities: ["AUDIO"],
-              speechConfig: {
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: voiceName }
+        // Track B: Local server.py disk-caching proxy (/api/tts/gemini) when personal key + local server active
+        if (!audioBytes && hasPersonalKey && self.localNeuralAvailable) {
+          const proxyRes = await fetch("/api/tts/gemini", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": state.geminiApiKey
+            },
+            signal: controller ? controller.signal : undefined,
+            body: JSON.stringify({
+              voice: payload.voiceName,
+              style: payload.stylePrompt,
+              text: payload.taggedTranscript
+            })
+          });
+          if (proxyRes && proxyRes.ok) {
+            const arrBuf = await proxyRes.arrayBuffer();
+            if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
+          }
+        }
+        // Track C: Direct browser Gemini TTS when user manually provided their own API key on static host
+        if (!audioBytes && hasPersonalKey) {
+          const ttsPromptText = payload.stylePrompt ? (payload.stylePrompt + "：\n" + payload.taggedTranscript) : payload.taggedTranscript;
+          const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": state.geminiApiKey
+            },
+            signal: controller ? controller.signal : undefined,
+            body: JSON.stringify({
+              contents: [{
+                parts: [{ text: ttsPromptText }]
+              }],
+              generationConfig: {
+                responseModalities: ["AUDIO"],
+                speechConfig: {
+                  voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName: payload.voiceName }
+                  }
                 }
               }
+            })
+          });
+          if (res && res.ok) {
+            const data = await res.json();
+            let b64 = null;
+            if (data && data.candidates && data.candidates[0] && data.candidates[0].content && Array.isArray(data.candidates[0].content.parts)) {
+              const audioPart = data.candidates[0].content.parts.find(function (pt) { return pt && pt.inlineData && pt.inlineData.data; });
+              if (audioPart) b64 = audioPart.inlineData.data;
             }
-          })
-        });
-        if (res && res.ok) {
-          const data = await res.json();
-          let b64 = null;
-          if (data && data.candidates && data.candidates[0] && data.candidates[0].content && Array.isArray(data.candidates[0].content.parts)) {
-            const audioPart = data.candidates[0].content.parts.find(function (pt) { return pt && pt.inlineData && pt.inlineData.data; });
-            if (audioPart) b64 = audioPart.inlineData.data;
-          }
-          if (b64) {
-            const rawBin = atob(b64);
-            audioBytes = new Uint8Array(rawBin.length);
-            for (let i = 0; i < rawBin.length; i++) audioBytes[i] = rawBin.charCodeAt(i);
+            if (b64) {
+              const rawBin = atob(b64);
+              audioBytes = new Uint8Array(rawBin.length);
+              for (let i = 0; i < rawBin.length; i++) audioBytes[i] = rawBin.charCodeAt(i);
+            }
           }
         }
+        if (timer) clearTimeout(timer);
+        if (!audioBytes) return null;
+        const audioBuf = await self.decodeGeminiAudioBytes(audioBytes);
+        if (!audioBuf) return null;
+        if (cleanText.length <= 160) {
+          const keys = Object.keys(self.studioCache);
+          if (keys.length > 40) delete self.studioCache[keys[0]];
+          self.studioCache[cacheKey] = audioBuf;
+        }
+        return audioBuf;
+      } catch (e) {
+        if (timer) clearTimeout(timer);
+        return null;
+      } finally {
+        delete self.studioPending[cacheKey];
       }
-      clearTimeout(timer);
-      if (!audioBytes || seq !== this.utteranceSeq) return false;
-      const audioBuf = await this.decodeGeminiAudioBytes(audioBytes);
-      if (!audioBuf || seq !== this.utteranceSeq) return false;
-      if (cleanText.length <= 96) {
-        const keys = Object.keys(this.studioCache);
-        if (keys.length > 32) delete this.studioCache[keys[0]];
-        this.studioCache[cacheKey] = audioBuf;
-      }
-      // Gemini 3.8 TTS already renders natural <breath> inline, so skip synthetic pre-breath!
-      return this.playBufferedStudioAudio(seq, audioBuf, onDone, Object.assign({}, opts, { skipPreBreath: true, skipRateAdjust: true }));
-    } catch (e) {
-      clearTimeout(timer);
-      return false;
-    }
+    })();
+    const pKeys = Object.keys(this.studioPending);
+    if (pKeys.length > 16) delete this.studioPending[pKeys[0]];
+    this.studioPending[cacheKey] = p;
+    return p;
+  },
+
+  prefetchCloudGeminiTts: function (personaName, rawText, mood) {
+    if (!this.canSpeak() || this.enginePref === "local") return;
+    if (!(typeof state !== "undefined" && state.geminiApiKey) && !this.isCloudGeminiTtsActive()) return;
+    if (!sound || !sound.ctx) return;
+    const effKey = this.resolvePersonaKey(personaName);
+    const cleanText = this.formatMandarinText(rawText);
+    if (!cleanText || this.lookupBundledVoicePackUrl(effKey, cleanText)) return;
+    const profile = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["你"];
+    this._fetchGeminiStudioAudio(profile, effKey, cleanText, mood || "normal");
+  },
+
+  playGeminiStudioTts: async function (seq, profile, cleanText, mood, onDone, opts) {
+    const hasPersonalKey = Boolean(typeof state !== "undefined" && state.geminiApiKey);
+    const hasCloudProxy = !hasPersonalKey && this.isCloudGeminiTtsActive();
+    if ((!hasPersonalKey && !hasCloudProxy) || !sound.ctx) return false;
+    const effKey = (opts && opts.personaKey) ? opts.personaKey : this.activePersonaName;
+    const audioBuf = await this._fetchGeminiStudioAudio(profile, effKey, cleanText, mood || "normal");
+    if (!audioBuf || seq !== this.utteranceSeq) return false;
+    // Gemini Studio TTS already renders natural <breath> and native human vocal timbre, so skip synthetic pre-breath & detune!
+    return this.playBufferedStudioAudio(seq, audioBuf, onDone, Object.assign({}, opts, {
+      skipPreBreath: true,
+      skipRateAdjust: true,
+      skipDetune: true
+    }));
   },
 
   triggerSeatBackchannel: function (seatId, kind, delayMs) {
@@ -1602,8 +1801,8 @@ const voice = {
       sound.applyPersonaVoiceChain(effKey, mood || "normal", seatId, sitCfg.key);
     }
 
-    // Proactively ensure Web Audio Context is initialized before neural TTS check so we never accidentally leak browser Google TTS!
-    if (this.localNeuralAvailable && !sound.ctx && typeof sound.unlock === "function") {
+    // Proactively ensure Web Audio Context is initialized before neural/cloud TTS check so we never accidentally leak robotic browser TTS!
+    if ((this.localNeuralAvailable || this.isCloudGeminiTtsActive() || Boolean(typeof state !== "undefined" && state.geminiApiKey)) && !sound.ctx && typeof sound.unlock === "function") {
       sound.unlock();
     }
 
@@ -1645,10 +1844,10 @@ const voice = {
       return;
     }
 
-    // Dual-Track Priority Router (v13.1):
-    // - If user connected Gemini API key AND enginePref !== "local": run Gemini 3.8 Flash TTS (with .tts_cache disk caching!) -> seamless fallback to $0 Local Neural -> Browser TTS!
-    // - Otherwise: run $0 Free Local Neural (multi-clause prosody arc + silence trim) -> Gemini fallback -> Browser TTS!
-    const wantGeminiFirst = Boolean(state.geminiApiKey && sound.ctx && this.enginePref !== "local");
+    // Dual-Track Priority Router:
+    // - If user connected Gemini API key OR Vercel cloud Gemini TTS proxy is available AND enginePref !== "local": run Gemini Studio TTS -> seamless fallback to $0 Local Neural -> Upgraded Browser TTS!
+    // - Otherwise: run $0 Free Local Neural -> Upgraded Browser TTS!
+    const wantGeminiFirst = Boolean((state.geminiApiKey || this.isCloudGeminiTtsActive()) && sound.ctx && this.enginePref !== "local");
     if (wantGeminiFirst) {
       this.setVisualSpeaking(true);
       this.playGeminiStudioTts(seq, profile, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
@@ -1689,25 +1888,30 @@ const voice = {
       const vScore = chosenVoice ? this.scoreVoiceQuality(chosenVoice) : 0;
       const isBasicVoice = vScore < 135;
       const missingMaleFallback = (profile && profile.gender === "m" && (!chosenVoice || !this.isMaleVoice(chosenVoice)));
-      const sitCfg = (opts && opts.sitCfg) || { key: "standard", rateMul: 1.0, commaPauseMs: 110, periodPauseMs: 180, hesitateBeforeAccuseMs: 0, tailVolMul: 1.0 };
+      const sitCfg = (opts && opts.sitCfg) || { key: "standard", rateMul: 1.0, commaPauseMs: 55, periodPauseMs: 115, hesitateBeforeAccuseMs: 0, tailVolMul: 1.0 };
       const seatIdNow = (opts && opts.seatId) || 0;
       const pKey = (opts && opts.personaKey) || this.activePersonaName;
 
-      // Expressive Per-Persona Vocal Range + 4-State Situational Speed Modulation
-      const baseRate = clamp(this.rate * (profile.rateMul || 1.0) * (sitCfg.rateMul || 1.0), 0.76, 1.44);
+      // Natural human pitch sweet spot (0.86-1.10) avoids metallic phase-vocoder artifacts in Chrome/macOS/Windows SpeechSynthesis!
+      const rawPitch = isBasicVoice ? (profile.basicPitch || 1.0) : (profile.pitch || 1.0);
+      const gentlePitch = 1.0 + (rawPitch - 1.0) * 0.48;
       const basePitch = missingMaleFallback
-        ? clamp((profile.pitch || 0.94) - 0.14, 0.68, 0.94)
-        : (isBasicVoice
-          ? clamp(profile.basicPitch || 1.0, 0.76, 1.20)
-          : clamp(profile.pitch || 1.0, 0.70, 1.30));
+        ? clamp(gentlePitch - 0.06, 0.86, 0.94)
+        : clamp(gentlePitch, isBasicVoice ? 0.90 : 0.88, isBasicVoice ? 1.08 : 1.11);
       const isMalePersona = Boolean(profile && profile.gender === "m");
-      const isLowPitchVoice = basePitch < 0.90 || missingMaleFallback;
+      const isLowPitchVoice = basePitch < 0.93 || missingMaleFallback;
       const genderVolMul = isMalePersona
         ? (isLowPitchVoice ? 1.22 : 1.16)
-        : (basePitch >= 1.12 ? 0.83 : 0.87);
+        : (basePitch >= 1.06 ? 0.84 : 0.88);
       const effVol = clamp(this.volume * genderVolMul * (sitCfg.tailVolMul || 1.0), 0, 1);
 
-      const clauses = this.splitMandarinClauses(clean);
+      const computeLiveBaseRate = function () {
+        const speedMul = self.getSpeedMultiplier();
+        return clamp(speedMul * (profile.rateMul || 1.0) * (sitCfg.rateMul || 1.0), 0.78, 1.85);
+      };
+
+      // Group into natural sentence-length units (~46 chars, safely under Chrome ~14s cutoff) so browser TTS intonation flows continuously!
+      const clauses = this.splitMandarinClauses(clean, { maxLen: 46 });
       const clauseOffsets = [];
       let scanPos = 0;
       clauses.forEach(function (cl) {
@@ -1723,6 +1927,7 @@ const voice = {
         self.utteranceSeq += 1;
         self.clearTimers();
         self.activeUtterance = null;
+        self._liveBrowserRestart = null;
         self.liveInPause = false;
         if (self.isSupported()) {
           try { window.speechSynthesis.cancel(); } catch (e) {}
@@ -1740,7 +1945,7 @@ const voice = {
       }, 8500);
 
       // Scale global ceiling generously up to 95s + per-clause watchdog so long AI speeches NEVER cut off mid-sentence!
-      const totalEstMs = Math.min(95000, Math.max(8000, Math.round((clean.length * 460) / baseRate) + clauses.length * 420 + 4000));
+      const totalEstMs = Math.min(95000, Math.max(8000, Math.round((clean.length * 460) / Math.max(0.75, computeLiveBaseRate())) + clauses.length * 360 + 4000));
       this._resumeWatchdogMs = totalEstMs;
       this._resumeWatchdogFinish = finishOnce;
       this.watchdogTimer = setTimeout(function () {
@@ -1748,6 +1953,24 @@ const voice = {
       }, totalEstMs);
 
       let idx = 0;
+      let activeClauseIdx = 0;
+      let activeClauseGen = 0;
+
+      // Enable instant live speed switching mid-sentence for browser SpeechSynthesis!
+      self._liveBrowserRestart = function () {
+        if (seq !== self.utteranceSeq || self.paused) return;
+        activeClauseGen += 1;
+        if (self.clauseTimer) { clearTimeout(self.clauseTimer); self.clauseTimer = null; }
+        if (self.clauseWatchdogTimer) { clearTimeout(self.clauseWatchdogTimer); self.clauseWatchdogTimer = null; }
+        if (self.charProgressTimer) { clearInterval(self.charProgressTimer); self.charProgressTimer = null; }
+        idx = Math.min(clauses.length - 1, Math.max(0, activeClauseIdx));
+        try { window.speechSynthesis.cancel(); } catch (e) {}
+        self.clauseTimer = setTimeout(function () {
+          self.clauseTimer = null;
+          speakNextClause();
+        }, 45);
+      };
+
       function speakNextClause() {
         if (seq !== self.utteranceSeq) return;
         if (self.clauseWatchdogTimer) {
@@ -1768,6 +1991,8 @@ const voice = {
           return;
         }
         const curClauseIdx = idx;
+        activeClauseIdx = curClauseIdx;
+        const myGen = ++activeClauseGen;
         if (typeof state !== "undefined" && curClauseIdx === 0) {
           state.speechPrepUntil = 0;
           state.speechPrepSeatId = null;
@@ -1784,19 +2009,19 @@ const voice = {
         if (chosenVoice) utter.voice = chosenVoice;
         utter.lang = (chosenVoice && chosenVoice.lang) ? chosenVoice.lang : "zh-TW";
 
-        let cRate = baseRate;
+        let cRate = computeLiveBaseRate();
         let cPitch = basePitch;
         if (sitCfg.key === "under_fire") {
-          cRate = clamp(cRate * 1.03, 0.94, 1.46);
-          cPitch = clamp(cPitch + (isBasicVoice ? 0.01 : 0.025), 0.72, 1.28);
+          cRate = clamp(cRate * 1.03, 0.94, 1.88);
+          cPitch = clamp(cPitch + 0.015, 0.86, 1.12);
         } else if (sitCfg.key === "last_words" && idx === clauses.length) {
-          cRate = clamp(cRate * 0.94, 0.72, 1.12);
+          cRate = clamp(cRate * 0.94, 0.76, 1.65);
         }
         if (isQuestion) {
-          cPitch = clamp(cPitch + (isBasicVoice ? 0.012 : 0.028), 0.72, 1.28);
-          cRate = clamp(cRate * 0.98, 0.76, 1.42);
+          cPitch = clamp(cPitch + 0.018, 0.86, 1.13);
+          cRate = clamp(cRate * 0.98, 0.78, 1.82);
         } else if (isExclaim) {
-          cRate = clamp(cRate * 1.03, 0.78, 1.46);
+          cRate = clamp(cRate * 1.03, 0.80, 1.88);
         }
 
         utter.rate = cRate;
@@ -1807,16 +2032,16 @@ const voice = {
         self._notifyCharProgress(clauseStartChar, seatIdNow, sitCfg.key);
 
         const clauseStartAt = performance.now();
-        const estClauseMs = Math.max(380, Math.round((clause.length * 225) / Math.max(0.7, cRate)));
+        const estClauseMs = Math.max(320, Math.round((clause.length * 215) / Math.max(0.7, cRate)));
         self.charProgressTimer = setInterval(function () {
-          if (seq !== self.utteranceSeq || self.paused || self.liveInPause) return;
+          if (seq !== self.utteranceSeq || myGen !== activeClauseGen || self.paused || self.liveInPause) return;
           const frac = clamp((performance.now() - clauseStartAt) / estClauseMs, 0, 0.99);
           const curCi = clauseStartChar + Math.floor(frac * clause.length);
           self._notifyCharProgress(curCi, seatIdNow, sitCfg.key);
         }, 55);
 
         utter.onboundary = function (ev) {
-          if (seq !== self.utteranceSeq) return;
+          if (seq !== self.utteranceSeq || myGen !== activeClauseGen) return;
           if (ev && typeof ev.charIndex === "number") {
             self._notifyCharProgress(clauseStartChar + ev.charIndex, seatIdNow, sitCfg.key);
           }
@@ -1824,7 +2049,7 @@ const voice = {
 
         let clauseDone = false;
         const onClauseDone = function () {
-          if (clauseDone || seq !== self.utteranceSeq) return;
+          if (clauseDone || seq !== self.utteranceSeq || myGen !== activeClauseGen) return;
           clauseDone = true;
           self.liveInPause = true;
           if (self.charProgressTimer) {
@@ -1840,13 +2065,18 @@ const voice = {
             return;
           }
           const nextClause = clauses[idx] || "";
-          // v18.0 Nervous Wolf Micro-Hesitation: 240ms pause + light throat-clear right before accusing a seat!
+          // v18.0 Nervous Wolf Micro-Hesitation: pause + light throat-clear right before accusing a seat!
           const nextMentionsSeat = /(?:1[0-2]|0?[1-9])號/.test(nextClause);
           const wolfHesitateAdd = (sitCfg.key === "wolf_nervous" && nextMentionsSeat && sitCfg.hesitateBeforeAccuseMs) ? sitCfg.hesitateBeforeAccuseMs : 0;
           if (wolfHesitateAdd > 0 && typeof sound.playPreSpeechBreath === "function") {
             sound.playPreSpeechBreath(pKey, mood || "normal", seatIdNow, "wolf_nervous");
           }
-          const pauseMs = (isEllipsis ? 210 : (isMajorStop ? (sitCfg.periodPauseMs || 180) : (sitCfg.commaPauseMs || 110))) + wolfHesitateAdd;
+          const speedScale = Math.max(1.0, self.getSpeedMultiplier());
+          const basePause = isEllipsis
+            ? 145
+            : (isMajorStop ? Math.round((sitCfg.periodPauseMs || 180) * 0.62) : Math.round((sitCfg.commaPauseMs || 110) * 0.55));
+          const rawPause = basePause + wolfHesitateAdd;
+          const pauseMs = Math.max(24, Math.round(rawPause / speedScale));
           self._resumePendingClause = speakNextClause;
           self.clauseTimer = setTimeout(speakNextClause, pauseMs);
         };
@@ -1854,7 +2084,7 @@ const voice = {
         utter.onerror = onClauseDone;
         const clauseMaxMs = Math.max(4800, Math.round((clause.length * 460) / cRate) + 3400);
         self.clauseWatchdogTimer = setTimeout(function () {
-          if (!self.paused && !clauseDone && seq === self.utteranceSeq) {
+          if (!self.paused && !clauseDone && seq === self.utteranceSeq && myGen === activeClauseGen) {
             try { window.speechSynthesis.cancel(); } catch (e) {}
             onClauseDone();
           }

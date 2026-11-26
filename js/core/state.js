@@ -247,7 +247,7 @@ function loadUserPrefs() {
     if (p.voiceEnginePref === "local" || p.voiceEnginePref === "gemini" || p.voiceEnginePref === "auto") voice.enginePref = p.voiceEnginePref;
     if ((p.voicePrefVersion >= 2) && typeof p.voiceLiveBackchannel === "boolean") voice.liveBackchannel = p.voiceLiveBackchannel;
     if (typeof p.voiceHumanBreath === "boolean") voice.humanBreath = p.voiceHumanBreath;
-    if (typeof p.voiceRate === "number" && p.voiceRate >= 0.7 && p.voiceRate <= 1.35) voice.rate = p.voiceRate;
+    if (typeof p.voiceRate === "number" && p.voiceRate >= 0.7 && p.voiceRate <= 1.8) voice.rate = p.voiceRate;
     if (typeof p.voiceVolume === "number" && p.voiceVolume >= 0 && p.voiceVolume <= 1) voice.volume = p.voiceVolume;
     if (typeof p.voiceUri === "string" && p.voiceUri) voice.selectedVoiceUri = p.voiceUri;
     if (typeof p.soundMuted === "boolean") sound.muted = p.soundMuted;

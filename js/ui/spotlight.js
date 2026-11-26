@@ -141,9 +141,13 @@ function maybeScheduleAutoAdvanceAfterSpeech() {
   if (pNow !== "DAY_SPEECH" && pNow !== "LAST_WORDS_SPEECH" && !isSheriffSpeechAuto) return;
   if (state.speakingInFlight || state.typewriter.active || voice.speaking) return;
   if (state.stepTimer) clearTimeout(state.stepTimer);
+  const speedMul = (typeof voice !== "undefined" && typeof voice.getSpeedMultiplier === "function")
+    ? Math.max(1.0, voice.getSpeedMultiplier())
+    : 1.0;
+  const basePauseMs = voice.canSpeak() ? (state.typewriter.narrativeHoldMs ?? 720) : (state.typewriter.holdMs ?? 2400);
   const pauseMs = ff
     ? 260
-    : (voice.canSpeak() ? (state.typewriter.narrativeHoldMs ?? 720) : (state.typewriter.holdMs ?? 2400));
+    : Math.max(voice.canSpeak() ? 260 : 850, Math.round(basePauseMs / speedMul));
   if (!ff && state.typewriter.isBombshellHold && typeof sound !== "undefined" && typeof sound.playSeatFoley === "function") {
     sound.playSeatFoley("cup_set", state.typewriter.speakerId || 0);
   }

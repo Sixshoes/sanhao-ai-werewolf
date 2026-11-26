@@ -173,11 +173,15 @@ function bindAudioVoiceEvents() {
     el(id).addEventListener("click", function () {
       sound.unlock();
       const r = parseFloat(el(id).getAttribute("data-vrate")) || 0.96;
-      voice.rate = r;
+      if (typeof voice.setRate === "function") {
+        voice.setRate(r);
+      } else {
+        voice.rate = r;
+        saveUserPrefs();
+      }
       ["btnVoiceRateSlow", "btnVoiceRateDefault", "btnVoiceRateFast"].forEach(function (other) {
         el(other).classList.toggle("is-active", other === id);
       });
-      saveUserPrefs();
     });
   });
 
