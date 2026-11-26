@@ -428,6 +428,10 @@ const indieFlow = {
       el("cornerFourGDeck").classList.toggle("hidden", isTitle || isGameOver || !fourGUsable);
       el("cornerFourGDeck").classList.toggle("is-compact-fan", p === "DAY_PLAYER_TURN");
     }
+    if (el("virtueQuickDeck")) {
+      const isClassic = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
+      el("virtueQuickDeck").classList.toggle("hidden", isTitle || isGameOver || !fourGUsable || isClassic);
+    }
     if (el("seatButtonStrip")) el("seatButtonStrip").classList.toggle("hidden", !showSeatBar);
     if (!isTitle) {
       this.openSetupDrawer(false);

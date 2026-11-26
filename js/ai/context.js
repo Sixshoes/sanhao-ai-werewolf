@@ -76,9 +76,30 @@ function buildCrossDayMemoryLedger(viewerSeat, snapArg) {
 }
 
 function buildPriorCallbackPhrase(speaker, dayEvents, seatLabel, snapArg) {
-  if (!speaker || !Array.isArray(dayEvents) || dayEvents.length === 0) return "";
+  if (!speaker) return "";
   const snap = snapArg || (typeof createBlindMatchSnapshot === "function" ? createBlindMatchSnapshot(speaker, { module: "prior_callback" }) : null);
-  const prior = dayEvents.filter(function (ev) { return ev && ev.speakerId && ev.speakerId !== speaker.id; });
+  const dayList = Array.isArray(dayEvents) ? dayEvents : [];
+  const prior = dayList.filter(function (ev) { return ev && ev.speakerId && ev.speakerId !== speaker.id; });
+  const pidPub = (snap && snap.playerSeatId) ? snap.playerSeatId : 1;
+  const echoes = (snap && Array.isArray(snap.fourGEchoes)) ? snap.fourGEchoes : [];
+  const savedEcho = echoes.find(function (e) {
+    return e && e.kind === "confidence" && e.targetId === speaker.id && e.savedFromVoteOut && e.day >= ((snap && snap.day ? snap.day : 1) - 1);
+  });
+  if (savedEcho) {
+    const allMine = (snap && Array.isArray(snap.allSpeechEvents)) ? snap.allSpeechEvents : [];
+    const thankedAlready = allMine.some(function (ev) {
+      return ev && ev.speakerId === speaker.id && ev.day === (snap ? snap.day : 1) && /奉茶護席|給我信心/.test(ev.rawText || "");
+    });
+    if (!thankedAlready) {
+      return "先跟 " + pidPub + "號道個謝，上一輪被集火時多虧你給我信心奉茶護席才免於直接離席；";
+    }
+  }
+  const convEcho = echoes.find(function (e) {
+    return e && e.kind === "convenience" && e.day === (snap ? snap.day : 1) && e.targetId !== speaker.id;
+  });
+  if (convEcho && ((speaker.id + (snap ? snap.day : 1)) % 3 === 0)) {
+    return "剛才 " + pidPub + "號給大家方便把關係線都理出來，聽起來清楚多了；";
+  }
   if (prior.length === 0) return "";
 
   const nameOf = function (id) {
@@ -113,6 +134,9 @@ function buildPriorCallbackPhrase(speaker, dayEvents, seatLabel, snapArg) {
 
   const toxicEv = prior.slice().reverse().find(function (ev) { return ev.hasToxicSlip; });
   if (toxicEv) {
+    if (snap && snap.harmonyScore <= 45) {
+      return "現在茶席流言起霧氣氛太躁，剛才 " + nameOf(toxicEv.speakerId) + " 語氣太衝容易把大家帶偏，";
+    }
     return "剛才 " + nameOf(toxicEv.speakerId) + " 講話火氣稍微衝了點、語氣不太友善，";
   }
 
@@ -910,10 +934,11 @@ function buildSpeechContext(speaker) {
 function applySpeechInfluence(speaker, speechMeta) {
   const diff = state.aiDifficulty || "normal";
   const harmony = (state.match && typeof state.match.harmonyScore === "number") ? state.match.harmonyScore : 72;
-  const toxicPenalty = (diff === "easy" ? 15 : (diff === "pro" ? 9 : 11)) + (harmony >= 85 ? 5 : 0);
-  // Zero-Leak Fair Play: Low-harmony haze increases susceptibility uniformly to assertive claims (NEVER peeks at hidden speaker.team!)
+  const toxicPenalty = (diff === "easy" ? 15 : (diff === "pro" ? 9 : 11)) + (harmony >= 80 ? 6 : 0);
+  // Zero-Leak Fair Play: Low-harmony haze increases susceptibility uniformly to assertive claims, while clear tea wind strengthens reasoned persuasion (NEVER peeks at hidden speaker.team!)
   const hazeFogBoost = (harmony <= 45 && (speechMeta.claimSeer || speechMeta.accuseId)) ? 1.22 : 1.0;
-  const diffCredMul = (diff === "easy" ? 1.18 : (diff === "pro" ? 0.88 : 1.0)) * hazeFogBoost;
+  const clearMindMul = (harmony >= 80 && !speechMeta.hasToxicSlip) ? 1.15 : 1.0;
+  const diffCredMul = (diff === "easy" ? 1.18 : (diff === "pro" ? 0.88 : 1.0)) * hazeFogBoost * clearMindMul;
   const extraWolfPits = Array.isArray(speechMeta.wolfPits) ? speechMeta.wolfPits : [];
 
   state.match.seats.forEach(function (listener) {

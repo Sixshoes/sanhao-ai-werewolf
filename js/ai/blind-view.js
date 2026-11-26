@@ -546,6 +546,22 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     }
   }
 
+  const fourGEchoes = Array.isArray(m.fourGEchoes)
+    ? m.fourGEchoes.slice(-8).map(function (e) {
+        return Object.freeze({
+          day: e.day || 1,
+          kind: e.kind || "",
+          targetId: e.targetId || null,
+          savedFromVoteOut: Boolean(e.savedFromVoteOut),
+          brokeFog: Boolean(e.brokeFog),
+          pair: Array.isArray(e.pair) ? Object.freeze(e.pair.slice(0, 2)) : null
+        });
+      })
+    : [];
+  const teaAtmosphere = typeof getTeaAtmosphereState === "function"
+    ? getTeaAtmosphereState(typeof m.harmonyScore === "number" ? m.harmonyScore : 72).id
+    : ((m.harmonyScore || 72) >= 80 ? "clear" : ((m.harmonyScore || 72) <= 45 ? "fog" : "calm"));
+
   return Object.freeze({
     started: true,
     module: moduleTag,
@@ -555,6 +571,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     playerSeatId: pid,
     aiDifficulty: (typeof state !== "undefined" && state.aiDifficulty) ? state.aiDifficulty : (m.aiDifficulty || "normal"),
     harmonyScore: typeof m.harmonyScore === "number" ? m.harmonyScore : 72,
+    teaAtmosphere: teaAtmosphere,
     sheriffSeatId: m.sheriffSeatId || null,
     sheriffElectionPending: Boolean(m.sheriffElectionPending),
     hasGuardMode: hasGuardMode,
@@ -567,6 +584,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     firstNightIntel: m.firstNightIntel ? Object.assign({}, m.firstNightIntel) : null,
     fourGJoySuspects: Array.isArray(m.fourGJoySuspects) ? m.fourGJoySuspects.slice() : [],
     fourGHopePair: Array.isArray(m.fourGHopePair) ? m.fourGHopePair.slice() : null,
+    fourGEchoes: Object.freeze(fourGEchoes),
     hopeConfrontation: hopeConfSnap,
     variantMode: variantModeNow,
     fogSealMode: fogSealModeNow,

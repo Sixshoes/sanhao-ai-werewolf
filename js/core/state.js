@@ -138,6 +138,8 @@ const state = {
     fourGivingsUsed: { confidence: false, joy: false, hope: false, convenience: false },
     fourGJoySuspects: [],
     fourGHopePair: null,
+    fourGEchoes: [],
+    threeGoodImpactLog: [],
     directorEventInteractedDay: 0,
     fourGSynergyTriggered: false,
     teaServedDay: 0,
@@ -161,7 +163,9 @@ const state = {
       sheriffPassed: 0,
       teaServedCount: 0,
       kindDeescalations: 0,
-      fourGSynergies: 0
+      fourGSynergies: 0,
+      confidenceSaves: 0,
+      clearWindTurns: 0
     }
   }
 };
@@ -411,6 +415,60 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
+function getTeaAtmosphereState(scoreArg) {
+  const score = typeof scoreArg === "number"
+    ? scoreArg
+    : ((typeof state !== "undefined" && state.match && typeof state.match.harmonyScore === "number") ? state.match.harmonyScore : 72);
+  if (score >= 80) {
+    return {
+      id: "clear",
+      label: "清朗茶風",
+      shortTag: "清朗",
+      tone: "jade",
+      desc: "席間理性清明：說理說服力 +15%，急躁酸言將遭更強反噬"
+    };
+  }
+  if (score <= 45) {
+    return {
+      id: "fog",
+      label: "流言起霧",
+      shortTag: "起霧",
+      tone: "rose",
+      desc: "情緒帶風向升溫：席間盲從效應放大，需以說好話或四給奉茶破霧"
+    };
+  }
+  return {
+    id: "calm",
+    label: "茶席平瀾",
+    shortTag: "",
+    tone: "gold",
+    desc: "理性推理中，累積三好與四給可將茶風拉入清朗"
+  };
+}
+
+function recordThreeGoodImpact(key, title, detail, tone) {
+  if (typeof state === "undefined" || !state.match || !state.match.started) return false;
+  if (!Array.isArray(state.match.threeGoodImpactLog)) state.match.threeGoodImpactLog = [];
+  const dayNum = state.match.day || 1;
+  const normKey = String(key || "virtue");
+  const normDetail = String(detail || "");
+  const dup = state.match.threeGoodImpactLog.some(function (it) {
+    return it && it.day === dayNum && it.key === normKey && it.detail === normDetail;
+  });
+  if (dup) return false;
+  state.match.threeGoodImpactLog.push({
+    day: dayNum,
+    key: normKey,
+    title: String(title || ""),
+    detail: normDetail,
+    tone: tone || "jade"
+  });
+  if (state.match.threeGoodImpactLog.length > 12) {
+    state.match.threeGoodImpactLog = state.match.threeGoodImpactLog.slice(-12);
+  }
+  return true;
+}
+
 function addThreeGoodPoint(kind, reasonText) {
   if (!state.match.started || !state.match.threeGood) return;
   const tg = state.match.threeGood;
@@ -470,6 +528,7 @@ function addThreeGoodPoint(kind, reasonText) {
         title: "三好蓮花覺醒（反派演技）：全場好人對你的懷疑度大幅下降，心虛值平息！",
         text: ""
       });
+      recordThreeGoodImpact("lotus_awaken", "深水三好光環", "三瓣齊亮讓全席放下戒心，以溫雅風度掩護深水身分", "gold");
       showToast("蓮花三瓣全亮！你以極高風度獲得深水信任光環！", "emerald");
     } else {
       // Good Team Awakening: +1 Golden Goodwill Vote weight + enlighten 1 wavering Good AI on observable focus (ZERO hidden-wolf leak!)
@@ -521,6 +580,7 @@ function addThreeGoodPoint(kind, reasonText) {
         title: "三好蓮花覺醒！你獲得「黃金善意票（公投權重 +1）」" + enlightenNote + "！",
         text: ""
       });
+      recordThreeGoodImpact("lotus_awaken", "三好蓮花圓滿", "集齊存好心、說好話、做好事，開啟黃金善意票 +1" + enlightenNote, "jade");
       showToast("蓮花三瓣全亮！獲得公投「黃金善意票 +1」" + enlightenNote + "！", "emerald");
     }
     if (typeof stage3d !== "undefined" && stage3d.isActive() && typeof stage3d.triggerSkillFx === "function") {

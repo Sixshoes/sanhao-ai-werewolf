@@ -5724,7 +5724,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const frownPrompt5 = buildBlindGeminiSpeechPrompt(seat5, buildHeuristicAiSpeech(seat5));
     const frownSyncOk = Boolean(
       (state.match.tableStateRev || 0) > revBeforeFrown &&
-      state.match._prefetchedSpeech === null &&
+      (!state.match._prefetchedSpeech || (state.match._prefetchedSpeech.key !== "stale_before_frown" && state.match._prefetchedSpeech.key === _buildSpeechPrefetchKey(5))) &&
       state.match.tableReactions.some(r => r.targetId === 4 && r.kind === "frown") &&
       frownPrompt5 && frownPrompt5.audit && frownPrompt5.audit.ok &&
       frownPrompt5.prompt.includes("皺了眉頭")
@@ -5744,7 +5744,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       state.match.interjectUsedDay === state.match.day &&
       !canUseTeaInterjectNow() &&
       (state.match.tableStateRev || 0) > revBeforeInterj &&
-      state.match._prefetchedSpeech === null &&
+      (!state.match._prefetchedSpeech || (state.match._prefetchedSpeech.key !== "stale_before_interject" && state.match._prefetchedSpeech.key === _buildSpeechPrefetchKey(5))) &&
       downstreamPrompt5 && downstreamPrompt5.audit && downstreamPrompt5.audit.ok &&
       downstreamPrompt5.prompt.includes("方才席間神情與舉杯交鋒紀錄") &&
       downstreamPrompt5.prompt.includes("為何急著替他緩頰")
@@ -7134,7 +7134,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.14") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.3.1") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7537,7 +7537,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.14"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.3.1"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8279,7 +8279,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
       && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
     docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("v24.2") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
-    scriptV242Ok: docScript241.includes("v24.2") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
+    scriptV242Ok: docScript241.includes("v24.3.1") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
     voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
     apiTimeout8400AndLruOk: apiGem242.includes("resolvePrimaryTimeoutMs(primaryModel)") && apiGem242.includes("21500 - elapsed") && apiGem242.includes("if (++evicted >= 200) break;") && apiGem242.includes("if (timer) clearTimeout(timer);"),
     webglContextLostOk: eng242.includes('canvas3d.addEventListener("webglcontextlost"'),
@@ -8831,10 +8831,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     specSyncedModelsAndCacheOk:
       docSpec2414.includes("gemini-4-hydrogen") &&
       docSpec2414.includes("api/tts.js") &&
-      docSpec2414.includes("sanhao-shell-v24.2.14") &&
+      docSpec2414.includes("sanhao-shell-v24.3.1") &&
       docSpec2414.length <= 5000,
     readmeSyncedOk:
-      readme2414.includes("sanhao-shell-v24.2.14") &&
+      readme2414.includes("sanhao-shell-v24.3.1") &&
       readme2414.includes("api/tts.js"),
     ...v24214Runtime
   };
@@ -8845,6 +8845,468 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 Release-Freeze E2E smoke test PASSED!");
+// --- v24.2.15: Voice zero-stall prefetch & first-sentence fast-start regression checks ---
+{
+  const splitShort = ctx.__voice._splitFirstSentenceForFastStart("這句話比較短，不需要切分。");
+  const splitTerminalText = "我昨晚驗了三號確實是查殺牌，請大家今天把票集中歸在三號身上！如果還有疑慮可以聽聽看後置位的看法。";
+  const splitTerminal = ctx.__voice._splitFirstSentenceForFastStart(splitTerminalText);
+  const splitCommaText = "我這輪先整理場上目前的對話邏輯與警徽歸屬方向，大家注意二號跟五號的視角其實有點衝突先記錄下來";
+  const splitComma = ctx.__voice._splitFirstSentenceForFastStart(splitCommaText);
+  const splitFastStartOk =
+    splitShort === null &&
+    Array.isArray(splitTerminal) &&
+    splitTerminal.length === 2 &&
+    splitTerminal[0].endsWith("！") &&
+    (splitTerminal[0] + splitTerminal[1]) === splitTerminalText &&
+    Array.isArray(splitComma) &&
+    splitComma.length === 2 &&
+    splitComma[0].endsWith("，") &&
+    splitComma[0].length >= 20 &&
+    splitComma[1].length >= 18;
+
+  const prevSoundCtx = ctx.__sound.ctx;
+  const prevCanSpeak = ctx.__voice.canSpeak;
+  const prevLookupBundled = ctx.__voice.lookupBundledVoicePackUrl;
+  const prevPrefetchCloud = ctx.__voice.prefetchCloudGeminiTts;
+  const prevPrefetchLocal = ctx.__voice.prefetchFreeLocalNeural;
+  const prevDecode = ctx.__voice.decodeGeminiAudioBytes;
+  const prevFetch = ctx.fetch;
+  const prevEnginePref = ctx.__voice.enginePref;
+  const prevCloudAvail = ctx.__voice.cloudGeminiTtsAvailable;
+  const prevCloudCooldown = ctx.__voice.cloudGeminiTtsCooldownUntil;
+  const prevLocalAvail = ctx.__voice.localNeuralAvailable;
+  const prevApiKey = ctx.__state.geminiApiKey;
+  const prevOptOut = ctx.__state.serverGeminiOptOut;
+  const prevStudioCache = ctx.__voice.studioCache;
+
+  let cloudCalls = 0;
+  let localCalls = 0;
+  let studio216Cached = false;
+  let studio342Skipped = false;
+  let sheriffPrefetchOk = false;
+
+  try {
+    ctx.__sound.ctx = {
+      createBufferSource: () => ({ buffer: null, playbackRate: { value: 1 }, connect() {}, start() {}, stop() {}, onended: null }),
+      createGain: () => ({ gain: { value: 1 }, connect() {} }),
+      destination: {},
+      decodeAudioData: async () => ({ duration: 1.4, numberOfChannels: 1, length: 44100, sampleRate: 44100 })
+    };
+    ctx.__voice.canSpeak = () => true;
+    ctx.__voice.lookupBundledVoicePackUrl = () => "";
+    ctx.__voice.prefetchCloudGeminiTts = () => { cloudCalls += 1; };
+    ctx.__voice.prefetchFreeLocalNeural = () => { localCalls += 1; };
+
+    ctx.__state.geminiApiKey = "TEST_KEY_V24215";
+    ctx.__state.serverGeminiOptOut = false;
+    ctx.__voice.enginePref = "auto";
+    ctx.__voice.localNeuralAvailable = true;
+    const pCloudFirst = ctx.__voice.prefetchBestTts("暖暖", "測試雲端語音優先權高於本機。", "normal");
+
+    ctx.__voice.enginePref = "local";
+    const pLocalFallback = ctx.__voice.prefetchBestTts("暖暖", "強制本機時才走本地神經語音。", "normal");
+
+    const prefetchPriorityOk =
+      pCloudFirst === true &&
+      pLocalFallback === true &&
+      cloudCalls === 1 &&
+      localCalls === 1;
+
+    ctx.__voice.prefetchCloudGeminiTts = prevPrefetchCloud;
+    ctx.__voice.prefetchFreeLocalNeural = prevPrefetchLocal;
+    ctx.__voice.decodeGeminiAudioBytes = async () => ({ duration: 1.2, numberOfChannels: 1, length: 44100, sampleRate: 44100 });
+    ctx.fetch = async (url) => {
+      if (String(url) === "/api/tts") {
+        return { ok: true, arrayBuffer: async () => new ArrayBuffer(256) };
+      }
+      return prevFetch ? prevFetch(url) : { ok: false };
+    };
+    ctx.__state.geminiApiKey = "";
+    ctx.__voice.cloudGeminiTtsAvailable = true;
+    ctx.__voice.cloudGeminiTtsCooldownUntil = 0;
+    ctx.__voice.enginePref = "auto";
+    ctx.__voice.studioCache = {};
+
+    const text216 = "測試語音快取上限。".repeat(24);
+    const text342 = "測試語音快取上限。".repeat(38);
+    const profileNuannuan = vm.runInContext("PERSONA_VOICE_PROFILES['暖暖']", ctx);
+    await ctx.__voice._fetchGeminiStudioAudio(profileNuannuan, "暖暖", text216, "normal");
+    const keysAfter216 = Object.keys(ctx.__voice.studioCache).length;
+    await ctx.__voice._fetchGeminiStudioAudio(profileNuannuan, "暖暖", text342, "normal");
+    const keysAfter342 = Object.keys(ctx.__voice.studioCache).length;
+    studio216Cached = text216.length > 160 && text216.length <= 320 && keysAfter216 === 1;
+    studio342Skipped = text342.length > 320 && keysAfter342 === 1;
+
+    sheriffPrefetchOk = vm.runInContext(`(() => {
+      resetMatchToLobby();
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = true;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      const m = state.match;
+      m.phase = "SHERIFF_ELECTION";
+      const aiCands = m.seats.filter(s => s.id !== getPlayerId() && s.alive).slice(0, 2);
+      if (aiCands.length < 2) return false;
+      const shCtx = {
+        stage: "speech",
+        epoch: orchestrator.matchEpoch,
+        activeReelSeatId: aiCands[0].id,
+        candidateIds: [aiCands[0].id, aiCands[1].id],
+        speechOrderIds: [aiCands[0].id, aiCands[1].id],
+        speechIndex: 0,
+        playerRunning: false,
+        withdrawnIds: [],
+        spokenSpeeches: [],
+        doneCb: null
+      };
+      m.sheriffElectionCtx = shCtx;
+      const triggered = prefetchNextSheriffSpeech(shCtx);
+      const entry = shCtx._prefetchedSheriff;
+      const populatedOk = Boolean(
+        triggered &&
+        entry &&
+        entry.seatId === aiCands[1].id &&
+        typeof entry.resolvedText === "string" &&
+        entry.resolvedText.length > 0
+      );
+      shCtx.playerRunning = true;
+      shCtx.candidateIds.push(getPlayerId());
+      shCtx.speechOrderIds.push(getPlayerId());
+      resolveSheriffElectionAction("withdraw");
+      const clearedOnWithdraw = shCtx._prefetchedSheriff === null;
+      resetMatchToLobby();
+      return populatedOk && clearedOnWithdraw;
+    })()`, ctx);
+
+    const v24215Res = {
+      splitFastStartOk,
+      prefetchPriorityOk,
+      studio216Cached,
+      studio342Skipped,
+      sheriffPrefetchOk
+    };
+    for (const [k, v] of Object.entries(v24215Res)) {
+      if (!v) {
+        throw new Error("v24.2.15 REGRESSION check failed for " + k + ": " + JSON.stringify(v24215Res));
+      }
+    }
+  } finally {
+    ctx.__sound.ctx = prevSoundCtx;
+    ctx.__voice.canSpeak = prevCanSpeak;
+    ctx.__voice.lookupBundledVoicePackUrl = prevLookupBundled;
+    ctx.__voice.prefetchCloudGeminiTts = prevPrefetchCloud;
+    ctx.__voice.prefetchFreeLocalNeural = prevPrefetchLocal;
+    ctx.__voice.decodeGeminiAudioBytes = prevDecode;
+    ctx.fetch = prevFetch;
+    ctx.__voice.enginePref = prevEnginePref;
+    ctx.__voice.cloudGeminiTtsAvailable = prevCloudAvail;
+    ctx.__voice.cloudGeminiTtsCooldownUntil = prevCloudCooldown;
+    ctx.__voice.localNeuralAvailable = prevLocalAvail;
+    ctx.__state.geminiApiKey = prevApiKey;
+    ctx.__state.serverGeminiOptOut = prevOptOut;
+    ctx.__voice.studioCache = prevStudioCache;
+  }
+}
+
+// --- v24.3.0: Deepened Three-Good & Four-Givings causal ecology, echoes & virtue ledger ---
+{
+  const v243Res = vm.runInContext(`(() => {
+    const clearAtm = getTeaAtmosphereState(80);
+    const calmAtm = getTeaAtmosphereState(72);
+    const fogAtm = getTeaAtmosphereState(45);
+    const atmThresholdsOk = Boolean(
+      clearAtm && clearAtm.id === "clear" && clearAtm.label === "清朗茶風" &&
+      calmAtm && calmAtm.id === "calm" &&
+      fogAtm && fogAtm.id === "fog" && fogAtm.label === "流言起霧"
+    );
+
+    const prevVoteFn = chooseAiVoteTarget;
+    let badgeToggleOk = false;
+    let speechInfluenceAtmOk = false;
+    let fourGConfidenceSaveEchoOk = false;
+    let speechCausalLogOk = false;
+    let virtueLedgerOk = false;
+
+    try {
+      resetMatchToLobby();
+      el("selectModeCount").value = "6";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      el("chkGuardMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      const m = state.match;
+      const pid = getPlayerId();
+      m.sheriffSeatId = null;
+      m.sheriffElectionPending = false;
+
+      // 1. HUD teaAtmosphereBadge toggle across clear / calm / fog
+      m.harmonyScore = 82;
+      updateAllUI();
+      const clearShow = !el("teaAtmosphereBadge").classList.contains("hidden") &&
+        el("teaAtmosphereBadge").classList.contains("is-clear") &&
+        el("teaAtmosphereBadge").textContent === "清朗茶風";
+      m.harmonyScore = 60;
+      updateAllUI();
+      const calmHide = el("teaAtmosphereBadge").classList.contains("hidden");
+      m.harmonyScore = 40;
+      updateAllUI();
+      const fogShow = !el("teaAtmosphereBadge").classList.contains("hidden") &&
+        el("teaAtmosphereBadge").classList.contains("is-fog") &&
+        el("teaAtmosphereBadge").textContent === "流言起霧";
+      badgeToggleOk = clearShow && calmHide && fogShow;
+
+      // 2. applySpeechInfluence: clear wind boosts reasoned persuasion & toxic penalty
+      const pSeat = getPlayerSeat();
+      const prevDiffV243 = state.aiDifficulty;
+      state.aiDifficulty = "normal";
+      const goodTgt = m.seats.find(s => s.id !== pid && s.alive && s.team === "good");
+      const goodListener = m.seats.find(s => s.id !== pid && s.id !== goodTgt.id && s.alive && s.team === "good" && s.role !== "seer");
+      goodListener.suspicionMap[goodTgt.id] = 50;
+      m.harmonyScore = 60;
+      applySpeechInfluence(pSeat, { claimSeer: true, accuseId: goodTgt.id, hasToxicSlip: false });
+      const susCalm = goodListener.suspicionMap[goodTgt.id];
+
+      goodListener.suspicionMap[goodTgt.id] = 50;
+      m.harmonyScore = 85;
+      applySpeechInfluence(pSeat, { claimSeer: true, accuseId: goodTgt.id, hasToxicSlip: false });
+      const susClear = goodListener.suspicionMap[goodTgt.id];
+
+      goodListener.suspicionMap[pid] = 50;
+      m.harmonyScore = 60;
+      applySpeechInfluence(pSeat, { accuseId: goodTgt.id, hasToxicSlip: true });
+      const toxCalm = goodListener.suspicionMap[pid];
+
+      goodListener.suspicionMap[pid] = 50;
+      m.harmonyScore = 85;
+      applySpeechInfluence(pSeat, { accuseId: goodTgt.id, hasToxicSlip: true });
+      const toxClear = goodListener.suspicionMap[pid];
+      state.aiDifficulty = prevDiffV243;
+      speechInfluenceAtmOk = susClear > susCalm && toxClear > toxCalm;
+
+      // 3. useFourGConfidence -> finalizeVoteRound detects save, updates fourGEchoes, freezes safely & echoes Day 2 gratitude
+      m.phase = "DAY_SPEECH";
+      m.day = 1;
+      const shieldTarget = m.seats.find(s => s.id !== pid && s.alive);
+      const runnerUp = m.seats.find(s => s.id !== pid && s.id !== shieldTarget.id && s.alive);
+      state.selectedSeatId = shieldTarget.id;
+      useFourGConfidence();
+      const echoAddedOnUse = m.fourGEchoes.some(e => e.kind === "confidence" && e.targetId === shieldTarget.id);
+
+      m.phase = "DAY_VOTE";
+      m._voteFinalizing = false;
+      m.pkCandidates = null;
+      m.pkUsedToday = false;
+      const votePool = m.seats.filter(s => s.alive && s.id !== pid);
+      const threeVoters = votePool.slice(0, 3).map(s => s.id);
+      chooseAiVoteTarget = function (voter) {
+        return threeVoters.indexOf(voter.id) !== -1 ? shieldTarget.id : runnerUp.id;
+      };
+      finalizeVoteRound(null);
+      const savedCountOk = m.stats.confidenceSaves === 1;
+      const echoMarkedSaved = m.fourGEchoes.some(e => e.kind === "confidence" && e.targetId === shieldTarget.id && e.savedFromVoteOut === true);
+
+      m.day = 2;
+      const blindSnap = createBlindMatchSnapshot(shieldTarget, { module: "smoke_v243_echo" });
+      const snapEchoFrozen = Boolean(
+        blindSnap &&
+        Array.isArray(blindSnap.fourGEchoes) &&
+        Object.isFrozen(blindSnap.fourGEchoes) &&
+        blindSnap.fourGEchoes.some(e => e.kind === "confidence" && e.targetId === shieldTarget.id && e.savedFromVoteOut) &&
+        blindSnap.fourGEchoes.every(e => !("team" in e) && !("role" in e))
+      );
+      const echoClause = buildPriorCallbackPhrase(shieldTarget, [], null, blindSnap);
+      fourGConfidenceSaveEchoOk = echoAddedOnUse && savedCountOk && echoMarkedSaved && snapEchoFrozen &&
+        echoClause.includes("奉茶護席") && echoClause.includes("給我信心");
+
+      // 4. submitPlayerSpeech rewrite vs toxic causal logging into threeGoodImpactLog
+      m.phase = "DAY_PLAYER_TURN";
+      m.harmonyScore = 72;
+      m.rewriteCritReady = true;
+      el("playerSpeechInput").value = "請大家冷靜比對線索，我們可以先留意 " + runnerUp.id + "號的立場。";
+      submitPlayerSpeech();
+      const hasRewriteLog = m.threeGoodImpactLog.some(it => it && it.key === "words_rewrite");
+
+      m.phase = "DAY_PLAYER_TURN";
+      m.rewriteCritReady = false;
+      const toxWord = (typeof TOXIC_PATTERNS !== "undefined" && TOXIC_PATTERNS[0]) ? TOXIC_PATTERNS[0].word : "別演了";
+      el("playerSpeechInput").value = runnerUp.id + "號" + toxWord + "！";
+      submitPlayerSpeech();
+      const hasToxicLog = m.threeGoodImpactLog.some(it => it && it.key === "toxic_backfire");
+      speechCausalLogOk = hasRewriteLog && hasToxicLog;
+
+      // 5. buildThreeGoodFourGLedger() renders #gameOverVirtueLedger & exports in buildMatchReplayReport() without emojis
+      finishMatch("good", "測試三好四給因果錄結算");
+      const ledger = buildThreeGoodFourGLedger();
+      const ledgerHtml = el("gameOverVirtueLedger").innerHTML || "";
+      const replayTxt = buildMatchReplayReport();
+      const emojiReV243 = /[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\uFE0F]/u;
+      virtueLedgerOk = Boolean(
+        ledger &&
+        typeof ledger.virtueTitle === "string" &&
+        ledger.virtueTitle.length > 0 &&
+        !el("gameOverVirtueLedger").classList.contains("hidden") &&
+        ledgerHtml.includes("本局三好四給因果錄") &&
+        ledgerHtml.includes(ledger.virtueTitle) &&
+        replayTxt.includes("■ 三好四給因果錄：") &&
+        !emojiReV243.test(ledgerHtml) &&
+        !emojiReV243.test(replayTxt)
+      );
+
+      return {
+        atmThresholdsOk,
+        badgeToggleOk,
+        speechInfluenceAtmOk,
+        fourGConfidenceSaveEchoOk,
+        speechCausalLogOk,
+        virtueLedgerOk
+      };
+    } finally {
+      chooseAiVoteTarget = prevVoteFn;
+      resetMatchToLobby();
+    }
+  })()`, ctx);
+  for (const [k, v] of Object.entries(v243Res)) {
+    if (!v) {
+      throw new Error("v24.3.0 REGRESSION check failed for " + k + ": " + JSON.stringify(v243Res));
+    }
+  }
+}
+
+// --- v24.3.1: Prominent #virtueQuickDeck & Pre-Game bootPreloader tests ---
+{
+  const v2431Res = vm.runInContext(`(() => {
+    const prevIsHttp = bootPreloader.isBrowserHttp;
+    let quickDeckHiddenInLobbyOk = false;
+    let quickDeckHiddenInNightOk = false;
+    let quickDeckDaySyncOk = false;
+    let quickDeckClickSyncOk = false;
+    let preloaderHeadlessOk = false;
+    let preloaderProgressSkipOk = false;
+    let preloaderCompleteOk = false;
+
+    try {
+      // 1. Prominent #virtueQuickDeck visibility & click sync with #cornerFourGDeck
+      resetMatchToLobby();
+      quickDeckHiddenInLobbyOk = el("virtueQuickDeck").classList.contains("hidden");
+
+      el("selectModeCount").value = "6";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      el("chkGuardMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      state.match.phase = "NIGHT_WOLF";
+      updateAllUI();
+      quickDeckHiddenInNightOk = el("virtueQuickDeck").classList.contains("hidden");
+
+      state.match.phase = "DAY_SPEECH";
+      state.match.harmonyScore = 84;
+      updateAllUI();
+      quickDeckDaySyncOk = Boolean(
+        !el("virtueQuickDeck").classList.contains("hidden") &&
+        el("vqLotusLabel").textContent.includes("三好") &&
+        el("btnQuickTeaAtmosphere").textContent.includes("清朗茶風") &&
+        !el("btnQuick4GJoy").disabled &&
+        el("btnQuick4GJoy").classList.contains("is-ready")
+      );
+
+      el("btnQuick4GJoy").click();
+      quickDeckClickSyncOk = Boolean(
+        state.match.fourGivingsUsed.joy === true &&
+        el("btnQuick4GJoy").disabled === true &&
+        el("btnQuick4GJoy").classList.contains("is-spent") &&
+        el("btn4GJoy").disabled === true &&
+        el("btn4GJoy").classList.contains("is-spent")
+      );
+
+      // 2. bootPreloader headless fast-dismiss, HTTP progress buckets, skip button, and completion transition
+      bootPreloader.isBrowserHttp = function () { return false; };
+      bootPreloader.start();
+      preloaderHeadlessOk = Boolean(
+        bootPreloader.finished === true &&
+        el("bootPreloadOverlay").classList.contains("hidden")
+      );
+
+      bootPreloader.isBrowserHttp = function () { return true; };
+      bootPreloader.start();
+      let readyFiredSkip = false;
+      bootPreloader.whenReady(function () { readyFiredSkip = true; });
+      const startedOpenOk = !bootPreloader.finished && bootPreloader.active === true && !el("bootPreloadOverlay").classList.contains("hidden");
+      bootPreloader.reportBucket("sky", 4, 4);
+      bootPreloader.reportBucket("portraits", 5, 10);
+      const midPct = parseInt(el("bootPreloadPct").textContent, 10);
+      const midOk = midPct > 6 && midPct < 100 && !readyFiredSkip;
+      el("btnSkipBootPreload").click();
+      preloaderProgressSkipOk = Boolean(
+        startedOpenOk &&
+        midOk &&
+        bootPreloader.finished === true &&
+        readyFiredSkip === true &&
+        el("bootPreloadOverlay").classList.contains("hidden")
+      );
+
+      bootPreloader.start();
+      let readyFiredComplete = false;
+      bootPreloader.whenReady(function () { readyFiredComplete = true; });
+      bootPreloader.reportBucket("sky", 4, 4);
+      bootPreloader.reportBucket("portraits", 1, 1);
+      bootPreloader.reportBucket("hero", 1, 1);
+      bootPreloader.reportBucket("avatars", 1, 1);
+      const bar100Ok = el("bootPreloadPct").textContent === "100%" && el("bootPreloadBarFill").style.width === "100%";
+      bootPreloader.dismiss("complete");
+      preloaderCompleteOk = Boolean(
+        bar100Ok &&
+        bootPreloader.finished === true &&
+        readyFiredComplete === true &&
+        el("bootPreloadOverlay").classList.contains("is-fading")
+      );
+
+      return {
+        quickDeckHiddenInLobbyOk,
+        quickDeckHiddenInNightOk,
+        quickDeckDaySyncOk,
+        quickDeckClickSyncOk,
+        preloaderHeadlessOk,
+        preloaderProgressSkipOk,
+        preloaderCompleteOk
+      };
+    } finally {
+      bootPreloader.isBrowserHttp = prevIsHttp;
+      bootPreloader.finished = false;
+      bootPreloader.start();
+      if (el("bootPreloadOverlay")) {
+        el("bootPreloadOverlay").classList.add("hidden");
+        el("bootPreloadOverlay").classList.remove("is-fading");
+      }
+      resetMatchToLobby();
+    }
+  })()`, ctx);
+  const docScriptV2431 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
+  const demoScriptVirtueSyncOk = [
+    "v24.3.1",
+    "啟席預載遮罩",
+    "三好四給主動茶禮列",
+    "茶席風氣",
+    "給信心",
+    "給歡喜",
+    "給希望",
+    "給方便",
+    "三好四給因果錄"
+  ].every((k) => docScriptV2431.includes(k));
+  if (!demoScriptVirtueSyncOk) {
+    throw new Error("v24.3.1 DEMO SCRIPT sync check failed!");
+  }
+
+  for (const [k, v] of Object.entries(v2431Res)) {
+    if (!v) {
+      throw new Error("v24.3.1 REGRESSION check failed for " + k + ": " + JSON.stringify(v2431Res));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 Release-Freeze E2E smoke test PASSED!");
 
 

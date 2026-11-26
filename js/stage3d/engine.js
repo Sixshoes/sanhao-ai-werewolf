@@ -1204,11 +1204,14 @@ const stage3d = {
   updateVrmLoadIndicator: function () {
     const pill = el("vrmLoadPill");
     const txt = el("vrmLoadPillText");
-    if (!pill || !txt) return;
     const total = this.avatarTotalQueued || 0;
     const done = Math.min(total, this.avatarDoneCount || 0);
     const active = this.avatarActiveLoads || 0;
     const queued = (this.avatarQueue && this.avatarQueue.length) || 0;
+    if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function" && total > 0) {
+      bootPreloader.reportBucket("avatars", done, total);
+    }
+    if (!pill || !txt) return;
     if (total > 0 && (active > 0 || queued > 0)) {
       pill.classList.remove("hidden");
       txt.textContent = "正在喚醒茶席夥伴 " + done + "/" + total;
@@ -1354,7 +1357,14 @@ const stage3d = {
       self.avatarQueuedKeys[key] = true;
       newJobs.push({ seat: s, slug: item.slug, avatarKey: item.avatarKey, url: item.url, key: key, prio: prio });
     });
-    if (!newJobs.length) return;
+    if (!newJobs.length) {
+      if (this.avatarActiveLoads === 0 && (!this.avatarQueue || this.avatarQueue.length === 0)) {
+        if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+          bootPreloader.reportBucket("avatars", 1, 1);
+        }
+      }
+      return;
+    }
     if (this.avatarActiveLoads === 0 && this.avatarQueue.length === 0) {
       this.avatarDoneCount = 0;
       this.avatarTotalQueued = 0;
@@ -1449,20 +1459,30 @@ const stage3d = {
   },
 
   checkAutoAvatars: function () {
-    if (this.isSoftwareRenderer) return;
-    if (typeof window === "undefined" || !window.location) return;
+    const settleBootAvatars = function () {
+      if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+        bootPreloader.reportBucket("hero", 1, 1);
+        bootPreloader.reportBucket("avatars", 1, 1);
+      }
+    };
+    if (this.isSoftwareRenderer) { settleBootAvatars(); return; }
+    if (typeof window === "undefined" || !window.location) { settleBootAvatars(); return; }
     const proto = window.location.protocol;
-    if (proto !== "http:" && proto !== "https:") return;
-    if (typeof fetch !== "function" || typeof THREE.GLTFLoader !== "function") return;
+    if (proto !== "http:" && proto !== "https:") { settleBootAvatars(); return; }
+    if (typeof fetch !== "function" || typeof THREE.GLTFLoader !== "function") { settleBootAvatars(); return; }
     const self = this;
     const applyManifest = function (info) {
-      if (!info) return;
+      if (!info) { settleBootAvatars(); return; }
       const startSeats = function () {
         if (info.seatModels) {
           self.avatarManifest = info.seatModels;
           if (typeof getStageSeatListFor3D === "function") {
             self.syncSeatAvatars(getStageSeatListFor3D());
+          } else if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+            bootPreloader.reportBucket("avatars", 1, 1);
           }
+        } else if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+          bootPreloader.reportBucket("avatars", 1, 1);
         }
       };
       const loader = new THREE.GLTFLoader();
@@ -1475,11 +1495,20 @@ const stage3d = {
       if (heroUrl && self.hero) {
         loader.load(heroUrl, function (gltf) {
           self.attachNormalizedHeroGlb(gltf, heroUrl.split("/").pop(), true, false);
+          if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+            bootPreloader.reportBucket("hero", 1, 1);
+          }
           setTimeout(startSeats, 120);
         }, undefined, function () {
+          if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+            bootPreloader.reportBucket("hero", 1, 1);
+          }
           startSeats();
         });
       } else {
+        if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+          bootPreloader.reportBucket("hero", 1, 1);
+        }
         startSeats();
       }
     };
@@ -1495,7 +1524,7 @@ const stage3d = {
       .then(function (r) { return r && r.ok ? r.json() : loadStaticFallback(); })
       .catch(function () { return loadStaticFallback(); })
       .then(applyManifest)
-      .catch(function () { });
+      .catch(function () { settleBootAvatars(); });
   },
 
   checkAutoHeroGlb: function () {

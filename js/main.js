@@ -3,6 +3,172 @@
  */
 "use strict";
 
+const bootPreloader = {
+  active: false,
+  finished: false,
+  maxPct: 6,
+  readyCallbacks: [],
+  skipTimer: null,
+  hardTimer: null,
+  _skipBound: false,
+  buckets: {
+    sky: { done: 0, total: 4, weight: 20 },
+    portraits: { done: 0, total: 1, weight: 20 },
+    hero: { done: 0, total: 1, weight: 15 },
+    avatars: { done: 0, total: 1, weight: 45 }
+  },
+
+  isBrowserHttp: function () {
+    if (typeof window === "undefined" || !window.location) return false;
+    const proto = window.location.protocol;
+    if (proto !== "http:" && proto !== "https:") return false;
+    return typeof window.matchMedia === "function";
+  },
+
+  resetBuckets: function () {
+    this.buckets = {
+      sky: { done: 0, total: 4, weight: 20 },
+      portraits: { done: 0, total: 1, weight: 20 },
+      hero: { done: 0, total: 1, weight: 15 },
+      avatars: { done: 0, total: 1, weight: 45 }
+    };
+    this.maxPct = 6;
+  },
+
+  start: function () {
+    const self = this;
+    this.finished = false;
+    this.resetBuckets();
+    if (this.skipTimer) { clearTimeout(this.skipTimer); this.skipTimer = null; }
+    if (this.hardTimer) { clearTimeout(this.hardTimer); this.hardTimer = null; }
+    const skipBtn = typeof el === "function" ? el("btnSkipBootPreload") : null;
+    if (skipBtn && !this._skipBound && typeof skipBtn.addEventListener === "function") {
+      this._skipBound = true;
+      skipBtn.addEventListener("click", function () {
+        self.dismiss("skip");
+      });
+    }
+    if (skipBtn) skipBtn.classList.add("hidden");
+
+    if (!this.isBrowserHttp()) {
+      this.reportBucket("sky", 4, 4);
+      this.reportBucket("portraits", 1, 1);
+      this.reportBucket("hero", 1, 1);
+      this.reportBucket("avatars", 1, 1);
+      this.dismiss("headless");
+      return;
+    }
+
+    this.active = true;
+    const ov = typeof el === "function" ? el("bootPreloadOverlay") : null;
+    if (ov) {
+      ov.classList.remove("hidden");
+      ov.classList.remove("is-fading");
+    }
+    this.render();
+    this.skipTimer = setTimeout(function () {
+      const sb = typeof el === "function" ? el("btnSkipBootPreload") : null;
+      if (!self.finished && sb) sb.classList.remove("hidden");
+    }, 4500);
+    this.hardTimer = setTimeout(function () {
+      self.dismiss("timeout");
+    }, 14000);
+  },
+
+  render: function () {
+    const b = this.buckets;
+    let pctSum = 0;
+    ["sky", "portraits", "hero", "avatars"].forEach(function (k) {
+      const item = b[k];
+      const frac = item.total > 0 ? Math.min(1, item.done / item.total) : 1;
+      pctSum += frac * item.weight;
+    });
+    const pct = Math.min(100, Math.max(this.maxPct, Math.round(6 + pctSum * 0.94)));
+    this.maxPct = pct;
+
+    const fillEl = typeof el === "function" ? el("bootPreloadBarFill") : null;
+    const pctEl = typeof el === "function" ? el("bootPreloadPct") : null;
+    const stEl = typeof el === "function" ? el("bootPreloadStatus") : null;
+    if (fillEl && fillEl.style) fillEl.style.width = pct + "%";
+    if (pctEl) pctEl.textContent = pct + "%";
+    if (stEl) {
+      if (b.sky.done < b.sky.total) {
+        stEl.textContent = "正在點亮書院天穹與古亭光影…";
+      } else if (b.portraits.done < b.portraits.total) {
+        stEl.textContent = "正在載入茶席夥伴立繪（" + b.portraits.done + "/" + b.portraits.total + "）…";
+      } else if (b.hero.done < b.hero.total) {
+        stEl.textContent = "正在喚醒清茗主茶師 3D 模型…";
+      } else if (b.avatars.done < b.avatars.total) {
+        stEl.textContent = "正在喚醒茶席夥伴 3D 模型（" + b.avatars.done + "/" + b.avatars.total + "）…";
+      } else {
+        stEl.textContent = "茶席已備妥，即將入席…";
+      }
+    }
+  },
+
+  reportBucket: function (name, done, total) {
+    if (!this.buckets[name]) return;
+    const normTotal = Math.max(1, total || 1);
+    const normDone = Math.min(normTotal, Math.max(0, done || 0));
+    this.buckets[name].total = normTotal;
+    this.buckets[name].done = normDone;
+    this.render();
+    const allDone = ["sky", "portraits", "hero", "avatars"].every(function (k) {
+      return this.buckets[k].done >= this.buckets[k].total;
+    }, this);
+    if (allDone && this.active && !this.finished) {
+      const fillEl = typeof el === "function" ? el("bootPreloadBarFill") : null;
+      const pctEl = typeof el === "function" ? el("bootPreloadPct") : null;
+      if (fillEl && fillEl.style) fillEl.style.width = "100%";
+      if (pctEl) pctEl.textContent = "100%";
+      this.maxPct = 100;
+      const self = this;
+      setTimeout(function () { self.dismiss("complete"); }, 260);
+    }
+  },
+
+  dismiss: function (reason) {
+    if (this.finished) return;
+    this.finished = true;
+    this.active = false;
+    if (this.skipTimer) { clearTimeout(this.skipTimer); this.skipTimer = null; }
+    if (this.hardTimer) { clearTimeout(this.hardTimer); this.hardTimer = null; }
+    const fillEl = typeof el === "function" ? el("bootPreloadBarFill") : null;
+    const pctEl = typeof el === "function" ? el("bootPreloadPct") : null;
+    const skipBtn = typeof el === "function" ? el("btnSkipBootPreload") : null;
+    const ov = typeof el === "function" ? el("bootPreloadOverlay") : null;
+    if (fillEl && fillEl.style) fillEl.style.width = "100%";
+    if (pctEl) pctEl.textContent = "100%";
+    if (skipBtn) skipBtn.classList.add("hidden");
+    if (ov) {
+      if (reason === "complete" && this.isBrowserHttp()) {
+        ov.classList.add("is-fading");
+        setTimeout(function () {
+          ov.classList.add("hidden");
+          ov.classList.remove("is-fading");
+        }, 420);
+      } else {
+        ov.classList.add("hidden");
+        ov.classList.remove("is-fading");
+      }
+    }
+    const cbs = this.readyCallbacks.splice(0, this.readyCallbacks.length);
+    cbs.forEach(function (cb) {
+      try { if (typeof cb === "function") cb(); } catch (e) {}
+    });
+  },
+
+  whenReady: function (cb) {
+    if (typeof cb !== "function") return;
+    if (this.finished) {
+      cb();
+      return;
+    }
+    this.readyCallbacks.push(cb);
+  }
+};
+if (typeof window !== "undefined") window.bootPreloader = bootPreloader;
+
 function bindEvents() {
   bindCanvasEvents();
   bindAudioVoiceEvents();
@@ -29,9 +195,21 @@ window.onload = function () {
     orchestrator.bindSensoryChoreography();
   }
   initParticles();
+  bootPreloader.start();
+  let stageOk = false;
   if (typeof stage3d !== "undefined") {
-    stage3d.init();
+    stageOk = Boolean(stage3d.init());
     stage3d.applyBodyModeClass();
+  }
+  if (!stageOk || (typeof stage3d !== "undefined" && (stage3d.isSoftwareRenderer || state.viewMode === "2d"))) {
+    bootPreloader.reportBucket("sky", 4, 4);
+    if (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.preloadPortraitImages === "function") {
+      stage3dTextures.preloadPortraitImages();
+    } else {
+      bootPreloader.reportBucket("portraits", 1, 1);
+    }
+    bootPreloader.reportBucket("hero", 1, 1);
+    bootPreloader.reportBucket("avatars", 1, 1);
   }
   renderTutorialSlide();
   bindEvents();
@@ -43,7 +221,9 @@ window.onload = function () {
     if (typeof window !== "undefined" && window.location && window.location.search && typeof startJudgeShowcaseMatch === "function") {
       const qs = new URLSearchParams(window.location.search);
       if (qs.get("demo") === "judge") {
-        setTimeout(function () { startJudgeShowcaseMatch(); }, 280);
+        bootPreloader.whenReady(function () {
+          setTimeout(function () { startJudgeShowcaseMatch(); }, 280);
+        });
       }
     }
   } catch (e) {}

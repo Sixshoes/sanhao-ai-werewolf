@@ -541,6 +541,9 @@ function handleSpotlightClueClick(targetEl) {
     sound.tone(720, 0.12, "triangle", 0.06, 0);
     pinClue(sp.id, labelStr, rebText, "contradiction");
     addThreeGoodPoint("heart", "存好心抓破矛盾");
+    if (typeof recordThreeGoodImpact === "function") {
+      recordThreeGoodImpact("heart_clue", "存好心・理性查證", "抓破 " + fmtSeatNum(sp.id) + "號前後「" + labelStr + "」，累積具體事證而非隨意貼標籤", "jade");
+    }
     bumpCombo("抓破矛盾" + (extraFeast ? "（茶點×2）" : ""));
     if (extraFeast) bumpCombo("茶點加碼連擊");
     if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
@@ -562,6 +565,9 @@ function handleSpotlightClueClick(targetEl) {
     sound.tone(580, 0.08, "triangle", 0.05, 0);
     pinClue(sp.id, "記下酸言「" + word + "」", "剛才 " + fmtSeatNum(sp.id) + "號" + sp.name + "發言用了挑撥字眼「" + word + "」，大家留意他的動機與立場。", "toxic");
     addThreeGoodPoint("heart", "存好心蒐證");
+    if (typeof recordThreeGoodImpact === "function") {
+      recordThreeGoodImpact("heart_clue", "存好心・識別酸言", "敏銳記下 " + fmtSeatNum(sp.id) + "號帶風向字眼「" + word + "」，讓席間提升 +6 友善度", "jade");
+    }
     bumpCombo("靜默筆記蒐證");
     if (state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "anonymous_wall") {
       bumpCombo("匿名牆破綻連擊");

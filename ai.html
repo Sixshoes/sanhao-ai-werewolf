@@ -29,6 +29,22 @@
 </head>
 
 <body class="craft-ui theme-twilight screen-title selection:bg-amber-400/30 selection:text-amber-100">
+  <div id="bootPreloadOverlay" class="boot-preload-overlay" role="status" aria-live="polite" aria-label="遊戲資源預載中">
+    <div class="boot-preload-card">
+      <div class="boot-preload-seal" aria-hidden="true">茶</div>
+      <div class="boot-preload-eyebrow">青嵐書院 · 清茗茶席</div>
+      <h2 class="boot-preload-title">三好・清茗茶席</h2>
+      <div class="boot-preload-bar-track">
+        <div id="bootPreloadBarFill" class="boot-preload-bar-fill" style="width: 6%;"></div>
+      </div>
+      <div class="boot-preload-meta">
+        <span id="bootPreloadStatus">正在喚醒書院古亭與茶席夥伴…</span>
+        <span id="bootPreloadPct" class="tabular-nums">6%</span>
+      </div>
+      <p id="bootPreloadCreed" class="boot-preload-creed">存好心明辨真偽 · 說好話凝聚共識 · 做好事護持茶席</p>
+      <button id="btnSkipBootPreload" type="button" class="hidden cta-ink px-4 py-1.5 text-[14px] mt-2">略過等待 · 直接入席</button>
+    </div>
+  </div>
   <div id="worldSkyBackdrop"></div>
 
   <!-- Literary Chapter Intertitle Curtain -->
@@ -152,6 +168,7 @@
               <span id="comboBadge"
                 class="hidden text-[13px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-200 border border-amber-400/40">連擊 ×2</span>
               <span id="matchPointBadge" class="hidden match-point-badge" title="茶涼聽牌：當輪發言限 28 字短兵相接">聽牌</span>
+              <button id="teaAtmosphereBadge" type="button" class="hidden tea-atmosphere-badge" title=""></button>
               <button id="directorEventPill" type="button"
                 class="hidden text-[13px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-200 border border-emerald-400/45 hover:bg-emerald-500/25 transition truncate max-w-[155px]"
                 title="清茗茶席導演事件（點擊查看詳細效果）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>突發事件</button>
@@ -233,6 +250,37 @@
             <!-- Quick Seat Picker Bar (In-flow above dock — mathematically 0px overlap!) -->
             <div id="seatButtonStrip" class="hidden"></div>
 
+            <!-- v24.3.1 Prominent In-Flow Three-Good & Four-Givings Deck -->
+            <div id="virtueQuickDeck" class="hidden virtue-quick-deck" role="region" aria-label="三好四給主動茶禮列">
+              <button id="btnQuickLotus" type="button" class="vq-lotus-btn" title="點擊檢視三好蓮花修為與點亮條件">
+                <span class="vq-lotus-dots" aria-hidden="true">
+                  <span id="vqDotHeart" class="vq-dot"></span>
+                  <span id="vqDotWords" class="vq-dot"></span>
+                  <span id="vqDotDeeds" class="vq-dot"></span>
+                </span>
+                <span id="vqLotusLabel">三好 0/3</span>
+              </button>
+              <div class="vq-cards-row">
+                <button id="btnQuick4GConfidence" type="button" class="vq-card-btn is-confidence" title="給信心・奉茶護席：先選席位再點按，替對方隱密擋 1 票">
+                  <span class="vq-card-name">給信心</span>
+                  <span id="vqSubConfidence" class="vq-card-sub">擋 1 票</span>
+                </button>
+                <button id="btnQuick4GJoy" type="button" class="vq-card-btn is-joy" title="給歡喜・溫言破冰：笑語化戾氣，同時辨識兩位神色微僵者">
+                  <span class="vq-card-name">給歡喜</span>
+                  <span id="vqSubJoy" class="vq-card-sub">破冰辨脈</span>
+                </button>
+                <button id="btnQuick4GHope" type="button" class="vq-card-btn is-hope" title="給希望・明燈對質：點名兩席展開 15 秒公開對質比對矛盾">
+                  <span class="vq-card-name">給希望</span>
+                  <span id="vqSubHope" class="vq-card-sub">明燈對質</span>
+                </button>
+                <button id="btnQuick4GConvenience" type="button" class="vq-card-btn is-convenience" title="給方便・緩議歸票：展開全場關係連線並號召集中覆議">
+                  <span class="vq-card-name">給方便</span>
+                  <span id="vqSubConvenience" class="vq-card-sub">理線歸票</span>
+                </button>
+              </div>
+              <button id="btnQuickTeaAtmosphere" type="button" class="vq-atm-btn" title="點擊查看茶席風氣對說服力與從眾之影響">茶席平瀾 72</button>
+            </div>
+
             <div id="bottomUnifiedRow">
               <!-- Bottom-Left: Ultra-Slim 2-Line Secret Role Plaque (Full details open cleanly in 指南 popover!) -->
               <div id="cornerRoleTile" class="corner-role-tile hidden">
@@ -258,6 +306,7 @@
                     <svg id="lotusPetalDeeds" class="lotus-petal-svg" viewBox="0 0 24 24">
                       <path d="M12 3C9 8 7 12 12 20c5-8 3-12 0-17z" />
                     </svg>
+                    <span class="lotus-meter-label">三好</span>
                     <span id="tgHeartPill" class="hidden"></span>
                     <span id="tgWordsPill" class="hidden"></span>
                     <span id="tgDeedsPill" class="hidden"></span>
@@ -774,6 +823,7 @@
                   <div id="gameOverTurningPoints" class="hidden gameover-turning-axis"></div>
                   <div id="gameOverGuessBox" class="hidden gameover-guess-box"></div>
                   <div id="gameOverMetrics" class="grid grid-cols-4 gap-2 text-center text-sm"></div>
+                  <div id="gameOverVirtueLedger" class="hidden gameover-virtue-ledger"></div>
                   <div id="gameOverSeatTruthBox" class="hidden gameover-truth-table-wrap"></div>
                   <div id="gameOverCoachBox" class="space-y-1 text-left mt-2"></div>
                   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">

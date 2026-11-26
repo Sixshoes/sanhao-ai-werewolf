@@ -343,6 +343,10 @@ function startJudgeShowcaseMatch() {
     fourGivingsUsed: { confidence: false, joy: true, hope: false, convenience: true },
     fourGJoySuspects: [],
     fourGHopePair: null,
+    fourGEchoes: [],
+    threeGoodImpactLog: [
+      { day: 1, key: "heart_clue", title: "存好心・查證言票背離", detail: "記下 7號口頭點打 5號卻跟票 6號的矛盾，避免席間誤傷好人", tone: "jade" }
+    ],
     directorEventInteractedDay: 0,
     fourGSynergyTriggered: false,
     teaServedDay: 0,
@@ -373,7 +377,9 @@ function startJudgeShowcaseMatch() {
       elderExempted: 0,
       wolfKingStrikes: 0,
       sheriffDramaWins: 1,
-      hypocrisyFlags: 0
+      hypocrisyFlags: 0,
+      confidenceSaves: 0,
+      clearWindTurns: 0
     }
   };
 
@@ -714,6 +720,8 @@ function startNewGame() {
     fourGivingsUsed: { confidence: false, joy: false, hope: false, convenience: false },
     fourGJoySuspects: [],
     fourGHopePair: null,
+    fourGEchoes: [],
+    threeGoodImpactLog: [],
     directorEventInteractedDay: 0,
     fourGSynergyTriggered: false,
     teaServedDay: 0,
@@ -743,7 +751,9 @@ function startNewGame() {
       sheriffDramaWins: 0,
       guardBlocks: 0,
       wolfExplosions: 0,
-      spiritBetsWon: 0
+      spiritBetsWon: 0,
+      confidenceSaves: 0,
+      clearWindTurns: 0
     }
   };
 

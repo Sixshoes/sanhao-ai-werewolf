@@ -7,3 +7,10 @@
 __pycache__/
 *.pyc
 public/assets/aistudio/
+docs/*.pdf
+docs/*.mp3
+docs/*.srt
+docs/*.vtt
+docs/*.mp4
+docs/demo_voiceover.txt
+

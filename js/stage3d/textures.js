@@ -142,24 +142,67 @@ const stage3dTextures = {
   },
 
   preloadPortraitImages: function () {
-    if (!this.canLoadExternalImages()) return;
+    if (!this.canLoadExternalImages()) {
+      if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+        bootPreloader.reportBucket("portraits", 1, 1);
+      }
+      return;
+    }
     const self = this;
-    Object.keys(PORTRAIT_ART_MAP).forEach(function (key) {
-      if (self.portraitImages[key] || self.portraitLoading[key]) return;
+    const paintedKeys = Object.keys(PORTRAIT_ART_MAP);
+    const vrmKeys = Object.keys(VRM_PORTRAIT_ART_MAP);
+    const totalPortraits = paintedKeys.length + vrmKeys.length;
+    if (totalPortraits === 0) {
+      if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+        bootPreloader.reportBucket("portraits", 1, 1);
+      }
+      return;
+    }
+    let settledCount = 0;
+    const reportOnePortrait = function () {
+      settledCount += 1;
+      if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+        bootPreloader.reportBucket("portraits", settledCount, totalPortraits);
+      }
+    };
+    paintedKeys.forEach(function (key) {
+      if (self.portraitImages[key] || self.portraitLoading[key]) {
+        reportOnePortrait();
+        return;
+      }
       self.portraitLoading[key] = true;
+      let counted = false;
+      const doneOnce = function () {
+        if (counted) return;
+        counted = true;
+        reportOnePortrait();
+      };
       const img = new Image();
       img.onload = function () {
         if (img.naturalWidth > 0) self.portraitImages[key] = img;
+        doneOnce();
       };
+      img.onerror = doneOnce;
       img.src = PORTRAIT_ART_MAP[key];
     });
-    Object.keys(VRM_PORTRAIT_ART_MAP).forEach(function (key) {
-      if (self.vrmPortraitImages[key] || self.portraitLoading["vrm:" + key]) return;
+    vrmKeys.forEach(function (key) {
+      if (self.vrmPortraitImages[key] || self.portraitLoading["vrm:" + key]) {
+        reportOnePortrait();
+        return;
+      }
       self.portraitLoading["vrm:" + key] = true;
+      let counted = false;
+      const doneOnce = function () {
+        if (counted) return;
+        counted = true;
+        reportOnePortrait();
+      };
       const img = new Image();
       img.onload = function () {
         if (img.naturalWidth > 0) self.vrmPortraitImages[key] = img;
+        doneOnce();
       };
+      img.onerror = doneOnce;
       img.src = VRM_PORTRAIT_ART_MAP[key];
     });
   },

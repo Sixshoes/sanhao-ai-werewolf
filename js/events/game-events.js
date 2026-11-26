@@ -94,6 +94,8 @@ function resetMatchToLobby() {
     document.body.classList.remove("is-match-point");
   }
   if (el("matchPointBadge")) el("matchPointBadge").classList.add("hidden");
+  if (el("teaAtmosphereBadge")) el("teaAtmosphereBadge").classList.add("hidden");
+  if (el("virtueQuickDeck")) el("virtueQuickDeck").classList.add("hidden");
   state.match.sheriffRallyUsedDay = 0;
   state.match.pendingSheriffTransfer = null;
   state.match.pendingEvidenceTargetId = null;
@@ -119,6 +121,8 @@ function resetMatchToLobby() {
   state.match.sheriffVoteRecord = null;
   state.match.sheriffOrderCtx = null;
   state.match.fourGHopePair = null;
+  state.match.fourGEchoes = [];
+  state.match.threeGoodImpactLog = [];
   state.match.activeDirectorEvent = null;
   state.match.usedDirectorEventIds = [];
   state.match.directorEventClearedDay = 0;
@@ -144,7 +148,12 @@ function resetMatchToLobby() {
     logicBreaksLanded: 0,
     microInspectsUsed: 0,
     microWolfSpotted: 0,
-    sheriffPassed: 0
+    sheriffPassed: 0,
+    teaServedCount: 0,
+    kindDeescalations: 0,
+    fourGSynergies: 0,
+    confidenceSaves: 0,
+    clearWindTurns: 0
   };
   state.match.microPulseRevealed = false;
   state.match.winner = null;
@@ -1197,6 +1206,26 @@ function bindNightVoteAndFourGEvents() {
   el("btn4GJoy").addEventListener("click", useFourGJoy);
   el("btn4GHope").addEventListener("click", useFourGHope);
   el("btn4GConvenience").addEventListener("click", useFourGConvenience);
+  if (el("btnQuick4GConfidence")) el("btnQuick4GConfidence").addEventListener("click", useFourGConfidence);
+  if (el("btnQuick4GJoy")) el("btnQuick4GJoy").addEventListener("click", useFourGJoy);
+  if (el("btnQuick4GHope")) el("btnQuick4GHope").addEventListener("click", useFourGHope);
+  if (el("btnQuick4GConvenience")) el("btnQuick4GConvenience").addEventListener("click", useFourGConvenience);
+  if (el("btnQuickLotus")) {
+    el("btnQuickLotus").addEventListener("click", function () {
+      sound.unlock();
+      if (typeof openRoleGuidePopover === "function") openRoleGuidePopover("threegood");
+    });
+  }
+  const showAtmToast = function () {
+    sound.unlock();
+    const score = (typeof state !== "undefined" && state.match && typeof state.match.harmonyScore === "number") ? state.match.harmonyScore : 72;
+    const atm = typeof getTeaAtmosphereState === "function" ? getTeaAtmosphereState(score) : { id: "calm", label: "茶席平瀾", desc: "理性推理中" };
+    if (typeof showToast === "function") {
+      showToast(atm.label + "（友善度 " + score + "）：" + atm.desc, atm.id === "fog" ? "warn" : "emerald");
+    }
+  };
+  if (el("btnQuickTeaAtmosphere")) el("btnQuickTeaAtmosphere").addEventListener("click", showAtmToast);
+  if (el("teaAtmosphereBadge")) el("teaAtmosphereBadge").addEventListener("click", showAtmToast);
 
   // v10.3 Collapsible Four-Givings Pouch: click header pill to toggle open/close cleanly on both touch and desktop
   if (el("fourGDeckHeader") && el("cornerFourGDeck")) {

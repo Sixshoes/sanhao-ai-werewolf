@@ -6965,6 +6965,332 @@ body.craft-ui.theme-day .gpu-dual-hint {
   display: none;
 }
 
+.tea-atmosphere-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  background: rgba(16, 185, 129, 0.14);
+  color: #a7f3d0;
+}
+
+.tea-atmosphere-badge.is-fog {
+  border-color: rgba(251, 113, 133, 0.56);
+  background: rgba(190, 18, 60, 0.22);
+  color: #fecdd3;
+}
+
+.tea-atmosphere-badge.hidden {
+  display: none;
+}
+
+body.craft-ui.theme-daylight .tea-atmosphere-badge.is-clear {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.48);
+  color: #18513d;
+}
+
+body.craft-ui.theme-daylight .tea-atmosphere-badge.is-fog {
+  background: rgba(164, 57, 44, 0.14);
+  border-color: rgba(164, 57, 44, 0.48);
+  color: #8c2018;
+}
+
+/* v24.3.1 Pre-Game Asset Preloader Overlay */
+.boot-preload-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 38%, #1e292d 0%, #101317 64%, #090b0e 100%);
+  opacity: 1;
+  transition: opacity 0.42s ease;
+}
+
+.boot-preload-overlay.is-fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boot-preload-overlay.hidden {
+  display: none;
+}
+
+.boot-preload-card {
+  width: min(440px, 100%);
+  padding: 26px 24px 22px;
+  border-radius: 12px;
+  background: rgba(16, 22, 28, 0.96);
+  border: 1px solid rgba(212, 166, 87, 0.42);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 240, 200, 0.14);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.boot-preload-seal {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  color: #fef3c7;
+  background: linear-gradient(155deg, #9d2f24 0%, #6f1d16 100%);
+  border: 1.5px solid rgba(245, 212, 135, 0.72);
+  box-shadow: 0 8px 20px rgba(157, 47, 36, 0.42);
+}
+
+.boot-preload-eyebrow {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #d4a657;
+}
+
+.boot-preload-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #fef3c7;
+  margin: 0;
+}
+
+.boot-preload-bar-track {
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  border: 1px solid rgba(212, 166, 87, 0.28);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.boot-preload-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #34d399 0%, #d4a657 55%, #fde68a 100%);
+  transition: width 0.24s ease;
+}
+
+.boot-preload-meta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.boot-preload-creed {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 4px 0 0;
+  line-height: 1.45;
+}
+
+/* v24.3.1 Prominent In-Flow Three-Good & Four-Givings Deck */
+.virtue-quick-deck {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: rgba(13, 21, 26, 0.92);
+  border: 1px solid rgba(52, 211, 153, 0.36);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.virtue-quick-deck.hidden {
+  display: none;
+}
+
+.vq-lotus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(212, 166, 87, 0.42);
+  background: rgba(212, 166, 87, 0.12);
+  color: #fde68a;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.vq-lotus-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245, 212, 135, 0.78);
+}
+
+.vq-lotus-btn.is-awakened {
+  border-color: rgba(52, 211, 153, 0.65);
+  background: rgba(16, 185, 129, 0.18);
+  color: #a7f3d0;
+}
+
+.vq-lotus-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vq-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.vq-dot.is-lit {
+  background: #34d399;
+  border-color: #fde68a;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.72);
+}
+
+.vq-cards-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.vq-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 7px;
+  border: 1px solid rgba(212, 166, 87, 0.38);
+  border-left-width: 3px;
+  background: rgba(20, 28, 36, 0.94);
+  color: #f8fafc;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.vq-card-btn.is-confidence {
+  border-left-color: #34d399;
+}
+
+.vq-card-btn.is-joy {
+  border-left-color: #fbbf24;
+}
+
+.vq-card-btn.is-hope {
+  border-left-color: #38bdf8;
+}
+
+.vq-card-btn.is-convenience {
+  border-left-color: #c084fc;
+}
+
+.vq-card-btn.is-ready:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(245, 212, 135, 0.78);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.38);
+}
+
+.vq-card-btn.is-spent,
+.vq-card-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.vq-card-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 14px;
+  color: #fef3c7;
+}
+
+.vq-card-sub {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.vq-atm-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(212, 166, 87, 0.36);
+  background: rgba(212, 166, 87, 0.12);
+  color: #fde68a;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.vq-atm-btn.is-clear {
+  border-color: rgba(52, 211, 153, 0.52);
+  background: rgba(16, 185, 129, 0.16);
+  color: #a7f3d0;
+}
+
+.vq-atm-btn.is-fog {
+  border-color: rgba(251, 113, 133, 0.56);
+  background: rgba(190, 18, 60, 0.22);
+  color: #fecdd3;
+}
+
+.lotus-meter-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fde68a;
+  margin-left: 3px;
+}
+
+#cornerFourGDeck.has-ready-cards .fourg-deck-head {
+  border-color: rgba(52, 211, 153, 0.62);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.25);
+}
+
+@media (max-width: 640px) {
+  .virtue-quick-deck {
+    padding: 5px 6px;
+    gap: 5px;
+  }
+
+  .vq-card-btn {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+
+  .vq-atm-btn {
+    display: none;
+  }
+}
+
 @keyframes matchPointPulse {
 
   0%,
@@ -8019,6 +8345,152 @@ body.craft-ui.theme-day .gameover-section-head {
   font-size: 13px;
   color: #cbd5e1;
   line-height: 1.48;
+}
+
+.gameover-virtue-ledger {
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 30, 0.86);
+  border: 1px solid rgba(52, 211, 153, 0.30);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gameover-virtue-ledger.hidden {
+  display: none;
+}
+
+.virtue-ledger-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.virtue-ledger-head .gameover-section-head {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.virtue-title-seal {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(52, 211, 153, 0.16);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #a7f3d0;
+}
+
+.virtue-ledger-sub {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.virtue-petal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.virtue-petal-item {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(15, 19, 26, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.virtue-petal-item.is-lit {
+  border-color: rgba(52, 211, 153, 0.48);
+  background: rgba(16, 185, 129, 0.10);
+}
+
+.virtue-petal-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fde68a;
+}
+
+.virtue-petal-item.is-lit .virtue-petal-name {
+  color: #86efac;
+}
+
+.virtue-petal-note {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+.virtue-fourg-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.virtue-fourg-chip {
+  font-size: 13px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 19, 26, 0.7);
+  color: #94a3b8;
+}
+
+.virtue-fourg-chip.is-used {
+  border-color: rgba(245, 185, 66, 0.5);
+  background: rgba(245, 185, 66, 0.14);
+  color: #fde68a;
+}
+
+.virtue-impact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.22);
+}
+
+.virtue-impact-row {
+  font-size: 13px;
+  line-height: 1.42;
+  color: #e2e8f0;
+}
+
+.virtue-impact-day {
+  display: inline-block;
+  font-weight: 800;
+  font-size: 13px;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: rgba(52, 211, 153, 0.16);
+  color: #86efac;
+}
+
+.virtue-impact-row.is-cinnabar .virtue-impact-day {
+  background: rgba(251, 113, 133, 0.2);
+  color: #fda4af;
+}
+
+.virtue-impact-row.is-gold .virtue-impact-day {
+  background: rgba(245, 185, 66, 0.2);
+  color: #fde68a;
+}
+
+.virtue-impact-title {
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.virtue-impact-detail {
+  color: #cbd5e1;
 }
 
 body.craft-ui.theme-day .turning-axis-card {
@@ -13713,8 +14185,152 @@ body.craft-ui.theme-daylight .truth-role-wolf {
   color: #96261d;
 }
 
+body.craft-ui.theme-daylight .gameover-virtue-ledger {
+  background: #faf5ea;
+  border-color: rgba(44, 103, 83, 0.36);
+}
+
+body.craft-ui.theme-daylight .virtue-title-seal {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.45);
+  color: #18513d;
+}
+
+body.craft-ui.theme-daylight .virtue-ledger-sub,
+body.craft-ui.theme-daylight .virtue-impact-detail {
+  color: #4a3d2f;
+}
+
+body.craft-ui.theme-daylight .virtue-petal-item {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.28);
+}
+
+body.craft-ui.theme-daylight .virtue-petal-item.is-lit {
+  background: rgba(44, 103, 83, 0.11);
+  border-color: rgba(44, 103, 83, 0.44);
+}
+
+body.craft-ui.theme-daylight .virtue-petal-name {
+  color: #784b12;
+}
+
+body.craft-ui.theme-daylight .virtue-petal-item.is-lit .virtue-petal-name {
+  color: #18513d;
+}
+
+body.craft-ui.theme-daylight .virtue-petal-note {
+  color: #6b5842;
+}
+
+body.craft-ui.theme-daylight .virtue-fourg-chip {
+  background: #efe7d7;
+  border-color: rgba(116, 92, 62, 0.30);
+  color: #5a4228;
+}
+
+body.craft-ui.theme-daylight .virtue-fourg-chip.is-used {
+  background: rgba(178, 128, 48, 0.18);
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #6b3f08;
+}
+
+body.craft-ui.theme-daylight .virtue-impact-title {
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .virtue-impact-day {
+  background: rgba(44, 103, 83, 0.14);
+  color: #18513d;
+}
+
+body.craft-ui.theme-daylight .virtue-impact-row.is-cinnabar .virtue-impact-day {
+  background: rgba(164, 57, 44, 0.14);
+  color: #8c2018;
+}
+
+body.craft-ui.theme-daylight .virtue-impact-row.is-gold .virtue-impact-day {
+  background: rgba(178, 128, 48, 0.18);
+  color: #6b3f08;
+}
+
 body.craft-ui.theme-daylight .truth-role-good {
   color: #1b5742;
+}
+
+body.craft-ui.theme-daylight .boot-preload-overlay {
+  background: radial-gradient(circle at 50% 38%, #f6efe2 0%, #eadfcb 64%, #dfd1b8 100%);
+}
+
+body.craft-ui.theme-daylight .boot-preload-card {
+  background: #fdf9f0;
+  border-color: rgba(154, 107, 39, 0.45);
+}
+
+body.craft-ui.theme-daylight .boot-preload-title {
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .boot-preload-eyebrow {
+  color: #784b12;
+}
+
+body.craft-ui.theme-daylight .boot-preload-meta,
+body.craft-ui.theme-daylight .boot-preload-creed {
+  color: #4a3d2f;
+}
+
+body.craft-ui.theme-daylight .virtue-quick-deck {
+  background: rgba(250, 245, 234, 0.96);
+  border-color: rgba(44, 103, 83, 0.42);
+}
+
+body.craft-ui.theme-daylight .vq-lotus-btn {
+  background: rgba(178, 128, 48, 0.14);
+  border-color: rgba(154, 107, 39, 0.42);
+  color: #6b3f08;
+}
+
+body.craft-ui.theme-daylight .vq-lotus-btn.is-awakened {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.48);
+  color: #18513d;
+}
+
+body.craft-ui.theme-daylight .vq-card-btn {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.34);
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .vq-card-name {
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .vq-card-sub {
+  color: #5a4228;
+}
+
+body.craft-ui.theme-daylight .vq-atm-btn {
+  background: rgba(178, 128, 48, 0.14);
+  border-color: rgba(154, 107, 39, 0.4);
+  color: #6b3f08;
+}
+
+body.craft-ui.theme-daylight .vq-atm-btn.is-clear {
+  background: rgba(44, 103, 83, 0.14);
+  border-color: rgba(44, 103, 83, 0.46);
+  color: #18513d;
+}
+
+body.craft-ui.theme-daylight .vq-atm-btn.is-fog {
+  background: rgba(164, 57, 44, 0.14);
+  border-color: rgba(164, 57, 44, 0.46);
+  color: #8c2018;
+}
+
+body.craft-ui.theme-daylight .lotus-meter-label {
+  color: #6b3f08;
 }
 
 body.craft-ui.theme-daylight .truth-status-alive {

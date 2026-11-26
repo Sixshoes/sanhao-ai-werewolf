@@ -175,8 +175,21 @@ function updateAllUI() {
   updatePhaseTrackUI();
 
   el("harmonyBar").style.width = m.harmonyScore + "%";
-  const auraTag = m.started ? (m.harmonyScore >= 85 ? "・清風" : (m.harmonyScore <= 48 ? "・陰霾" : "")) : "";
+  const atm = typeof getTeaAtmosphereState === "function"
+    ? getTeaAtmosphereState(m.harmonyScore)
+    : { id: m.harmonyScore >= 80 ? "clear" : (m.harmonyScore <= 45 ? "fog" : "calm"), label: "", shortTag: "", desc: "" };
+  const auraTag = m.started && atm.shortTag ? ("・" + atm.shortTag) : "";
   el("harmonyText").textContent = String(m.harmonyScore) + auraTag;
+  const atmBadge = el("teaAtmosphereBadge");
+  if (atmBadge) {
+    if (m.started && (atm.id === "clear" || atm.id === "fog")) {
+      atmBadge.textContent = atm.label;
+      atmBadge.title = atm.desc;
+      atmBadge.className = "tea-atmosphere-badge " + (atm.id === "clear" ? "is-clear" : "is-fog");
+    } else {
+      atmBadge.className = "hidden tea-atmosphere-badge";
+    }
+  }
   const tg = m.threeGood || { heart: 0, words: 0, deeds: 0 };
   if (el("tgHeartPill")) el("tgHeartPill").textContent = (tg.heart > 0 ? "[已修] " : "") + "存好心 " + tg.heart;
   if (el("tgWordsPill")) el("tgWordsPill").textContent = (tg.words > 0 ? "[已修] " : "") + "說好話 " + tg.words;
@@ -852,7 +865,10 @@ function renderFourGBlessings() {
   const synHint = el("fourGSynergyHint");
   const deckHead = el("fourGDeckHeader");
   const synReady = Boolean(allow && !state.match.fourGSynergyTriggered && usedCount === 1 && remain > 0);
-  if (deck) deck.classList.toggle("is-synergy-ready", synReady);
+  if (deck) {
+    deck.classList.toggle("is-synergy-ready", synReady);
+    deck.classList.toggle("has-ready-cards", Boolean(allow && remain > 0));
+  }
   if (synHint) synHint.classList.toggle("hidden", !synReady);
   const defaultHeadText = remain > 0
     ? ("四給奉茶 · " + remain + "/4 ▴")
@@ -908,6 +924,60 @@ function renderFourGBlessings() {
       el(it.tag).textContent = isUsed ? "已奉用" : (allow ? defSub[it.key] : "待白天");
     }
   });
+
+  // v24.3.1 Sync Prominent In-Flow Virtue Quick Deck
+  const qDeck = el("virtueQuickDeck");
+  if (qDeck) {
+    const classicMode = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
+    const showQuickDeck = Boolean(state.match && state.match.started && !classicMode && pAlive && allow);
+    qDeck.classList.toggle("hidden", !showQuickDeck);
+    if (showQuickDeck) {
+      const tg = state.match.threeGood || { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
+      const heartLit = (tg.heart || 0) >= 1;
+      const wordsLit = (tg.words || 0) >= 1;
+      const deedsLit = (tg.deeds || 0) >= 1;
+      const litCount = (heartLit ? 1 : 0) + (wordsLit ? 1 : 0) + (deedsLit ? 1 : 0);
+      if (el("vqDotHeart")) el("vqDotHeart").classList.toggle("is-lit", heartLit);
+      if (el("vqDotWords")) el("vqDotWords").classList.toggle("is-lit", wordsLit);
+      if (el("vqDotDeeds")) el("vqDotDeeds").classList.toggle("is-lit", deedsLit);
+      if (el("vqLotusLabel")) {
+        el("vqLotusLabel").textContent = tg.resonanceTriggered
+          ? (isWolf ? "深水光環" : "三好圓滿 +1票")
+          : ("三好 " + litCount + "/3");
+      }
+      if (el("btnQuickLotus")) {
+        el("btnQuickLotus").classList.toggle("is-awakened", Boolean(tg.resonanceTriggered));
+      }
+      [
+        { key: "confidence", btn: "btnQuick4GConfidence", sub: "vqSubConfidence", readyText: "擋 1 票", spentText: "已奉用" },
+        { key: "joy", btn: "btnQuick4GJoy", sub: "vqSubJoy", readyText: "破冰辨脈", spentText: "已奉用" },
+        { key: "hope", btn: "btnQuick4GHope", sub: "vqSubHope", readyText: "明燈對質", spentText: "已奉用" },
+        { key: "convenience", btn: "btnQuick4GConvenience", sub: "vqSubConvenience", readyText: "理線歸票", spentText: "看票型" }
+      ].forEach(function (qItem) {
+        const isSpent = Boolean(used[qItem.key]);
+        const qBtn = el(qItem.btn);
+        const qSub = el(qItem.sub);
+        if (qBtn) {
+          qBtn.disabled = qItem.key === "convenience" ? !state.match.started : (isSpent || !allow);
+          qBtn.classList.toggle("is-spent", isSpent);
+          qBtn.classList.toggle("is-ready", Boolean(allow && !isSpent));
+          qBtn.title = isWolf ? wolfTips[qItem.key] : goodTips[qItem.key];
+        }
+        if (qSub) {
+          qSub.textContent = isSpent ? qItem.spentText : qItem.readyText;
+        }
+      });
+      const qAtm = el("btnQuickTeaAtmosphere");
+      if (qAtm) {
+        const atmNow = typeof getTeaAtmosphereState === "function"
+          ? getTeaAtmosphereState(state.match.harmonyScore)
+          : { id: "calm", label: "茶席平瀾", desc: "理性推理中" };
+        qAtm.textContent = atmNow.label + " " + state.match.harmonyScore;
+        qAtm.title = atmNow.desc;
+        qAtm.className = "vq-atm-btn is-" + atmNow.id;
+      }
+    }
+  }
 }
 
 function syncPkPortrait(imgEl, seat) {

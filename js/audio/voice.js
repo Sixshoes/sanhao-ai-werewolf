@@ -1209,11 +1209,14 @@ const voice = {
       const playStartAt = performance.now();
       // Track live spoken char index & fire exact seat-mention gesture beats in sync with playback!
       if (self.liveSpokenText && self.liveSpokenText.length > 0 && estPlayMs > 80) {
+        const rangeStart = (opts && typeof opts.charRangeStart === "number") ? opts.charRangeStart : 0;
+        const rangeEnd = (opts && typeof opts.charRangeEnd === "number") ? opts.charRangeEnd : self.liveSpokenText.length;
+        const rangeSpan = Math.max(1, rangeEnd - rangeStart);
         if (self.charProgressTimer) clearInterval(self.charProgressTimer);
         self.charProgressTimer = setInterval(function () {
           if (seq !== self.utteranceSeq || self.paused) return;
           const frac = clamp((performance.now() - playStartAt) / estPlayMs, 0, 1);
-          const ci = Math.min(self.liveSpokenText.length - 1, Math.floor(frac * self.liveSpokenText.length));
+          const ci = Math.min(rangeEnd - 1, rangeStart + Math.floor(frac * rangeSpan));
           self._notifyCharProgress(ci, seatIdNow, sitKey);
         }, 55);
       }
@@ -1744,9 +1747,9 @@ const voice = {
         if (!audioBytes) return null;
         const audioBuf = await self.decodeGeminiAudioBytes(audioBytes);
         if (!audioBuf) return null;
-        if (cleanText.length <= 160) {
+        if (cleanText.length <= 320) {
           const keys = Object.keys(self.studioCache);
-          if (keys.length > 40) delete self.studioCache[keys[0]];
+          if (keys.length > 64) delete self.studioCache[keys[0]];
           self.studioCache[cacheKey] = audioBuf;
         }
         return audioBuf;
@@ -1763,9 +1766,40 @@ const voice = {
     return p;
   },
 
+  isGeminiTtsPreferred: function () {
+    return Boolean(((typeof state !== "undefined" && state.geminiApiKey) || this.isCloudGeminiTtsActive()) && this.enginePref !== "local");
+  },
+
+  _splitFirstSentenceForFastStart: function (cleanText) {
+    const s = String(cleanText || "").trim();
+    if (s.length < 46) return null;
+    for (let i = 14; i <= Math.min(58, s.length - 13); i++) {
+      const ch = s.charAt(i);
+      if (ch === "。" || ch === "！" || ch === "？" || ch === "；") {
+        let cut = i + 1;
+        while (cut < s.length && (s.charAt(cut) === "」" || s.charAt(cut) === "』" || s.charAt(cut) === "）")) cut += 1;
+        const head = s.slice(0, cut).trim();
+        const tail = s.slice(cut).trim();
+        if (head.length >= 14 && tail.length >= 12) return [head, tail];
+      }
+    }
+    for (let i = 20; i <= Math.min(52, s.length - 19); i++) {
+      const ch = s.charAt(i);
+      if (ch === "，" || ch === "、") {
+        const head = s.slice(0, i + 1).trim();
+        const tail = s.slice(i + 1).trim();
+        if (head.length >= 20 && tail.length >= 18) return [head, tail];
+      }
+    }
+    return null;
+  },
+
   prefetchCloudGeminiTts: function (personaName, rawText, mood) {
     if (!this.canSpeak() || this.enginePref === "local") return;
     if (!(typeof state !== "undefined" && state.geminiApiKey) && !this.isCloudGeminiTtsActive()) return;
+    if (typeof sound !== "undefined" && sound && !sound.ctx && typeof sound.unlock === "function") {
+      try { sound.unlock(); } catch (e) {}
+    }
     if (!sound || !sound.ctx) return;
     const effKey = this.resolvePersonaKey(personaName);
     const cleanText = this.formatMandarinText(rawText);
@@ -1774,12 +1808,91 @@ const voice = {
     this._fetchGeminiStudioAudio(profile, effKey, cleanText, mood || "normal");
   },
 
+  prefetchBestTts: function (personaName, rawText, mood) {
+    if (!this.canSpeak()) return false;
+    const effKey = this.resolvePersonaKey(personaName);
+    const clean = this.formatMandarinText(rawText);
+    if (!clean) return false;
+    const bundledUrl = this.lookupBundledVoicePackUrl(effKey, clean);
+    const forceCustomGemini = Boolean(typeof state !== "undefined" && state.geminiApiKey && this.enginePref === "gemini");
+    if (bundledUrl && !forceCustomGemini) {
+      if (typeof sound !== "undefined" && sound && !sound.ctx && typeof sound.unlock === "function") {
+        try { sound.unlock(); } catch (e) {}
+      }
+      this.prefetchBundledVoicePackUrl(bundledUrl);
+      return true;
+    }
+    if (this.isGeminiTtsPreferred()) {
+      this.prefetchCloudGeminiTts(effKey, clean, mood || "normal");
+      return true;
+    }
+    if (this.localNeuralAvailable) {
+      this.prefetchFreeLocalNeural(effKey, clean, mood || "normal");
+      return true;
+    }
+    return false;
+  },
+
   playGeminiStudioTts: async function (seq, profile, cleanText, mood, onDone, opts) {
     const hasPersonalKey = Boolean(typeof state !== "undefined" && state.geminiApiKey);
     const hasCloudProxy = !hasPersonalKey && this.isCloudGeminiTtsActive();
     if ((!hasPersonalKey && !hasCloudProxy) || !sound.ctx) return false;
     const effKey = (opts && opts.personaKey) ? opts.personaKey : this.activePersonaName;
-    const audioBuf = await this._fetchGeminiStudioAudio(profile, effKey, cleanText, mood || "normal");
+    const moodNow = mood || "normal";
+    const fullPayload = this._buildGeminiTtsPayload(profile, effKey, cleanText, moodNow);
+    const hasWarmFull = Boolean(this.studioCache[fullPayload.cacheKey] || this.studioPending[fullPayload.cacheKey]);
+    const parts = !hasWarmFull ? this._splitFirstSentenceForFastStart(cleanText) : null;
+    if (parts) {
+      const headText = parts[0];
+      const tailText = parts[1];
+      const headP = this._fetchGeminiStudioAudio(profile, effKey, headText, moodNow);
+      const tailP = this._fetchGeminiStudioAudio(profile, effKey, tailText, moodNow);
+      const headBuf = await headP;
+      if (!headBuf || seq !== this.utteranceSeq) return false;
+      const self = this;
+      const tailStartIdx = Math.min(cleanText.length, headText.length);
+      const onHeadDone = async function () {
+        if (seq !== self.utteranceSeq) return;
+        const finishTailFallback = function () {
+          if (seq !== self.utteranceSeq) return;
+          self.utteranceSeq += 1;
+          self.setVisualSpeaking(false);
+          self.syncPauseButtonUi();
+          if (typeof onDone === "function") onDone();
+        };
+        try {
+          const tailBuf = await tailP;
+          if (!tailBuf || seq !== self.utteranceSeq) {
+            finishTailFallback();
+            return;
+          }
+          const startedTail = self.playBufferedStudioAudio(seq, tailBuf, onDone, Object.assign({}, opts, {
+            skipPreBreath: true,
+            skipPrepBeat: true,
+            skipRateAdjust: true,
+            skipDetune: true,
+            onAudioReady: null,
+            charRangeStart: tailStartIdx,
+            charRangeEnd: cleanText.length,
+            totalDurationHintMs: Math.round(tailBuf.duration * 1000)
+          }));
+          if (!startedTail) finishTailFallback();
+        } catch (e) {
+          finishTailFallback();
+        }
+      };
+      return this.playBufferedStudioAudio(seq, headBuf, onHeadDone, Object.assign({}, opts, {
+        keepSeqOpen: true,
+        skipPreBreath: true,
+        skipRateAdjust: true,
+        skipDetune: true,
+        skipTypewriterSync: true,
+        charRangeStart: 0,
+        charRangeEnd: tailStartIdx,
+        totalDurationHintMs: Math.round(headBuf.duration * 1000)
+      }));
+    }
+    const audioBuf = await this._fetchGeminiStudioAudio(profile, effKey, cleanText, moodNow);
     if (!audioBuf || seq !== this.utteranceSeq) return false;
     // Gemini Studio TTS already renders natural <breath> and native human vocal timbre, so skip synthetic pre-breath & detune!
     return this.playBufferedStudioAudio(seq, audioBuf, onDone, Object.assign({}, opts, {

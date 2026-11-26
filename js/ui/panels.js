@@ -1069,6 +1069,55 @@ function renderGameOverMetrics() {
     box.appendChild(d);
   });
 
+  // v24.3 Three-Good & Four-Givings Causal Ledger
+  const virtueWrap = el("gameOverVirtueLedger");
+  if (virtueWrap) {
+    const ledger = typeof buildThreeGoodFourGLedger === "function" ? buildThreeGoodFourGLedger() : null;
+    if (ledger) {
+      let vHtml =
+        '<div class="virtue-ledger-head">' +
+          '<div class="gameover-section-head">本局三好四給因果錄</div>' +
+          '<span class="virtue-title-seal">' + escapeHtml(ledger.virtueTitle) + '</span>' +
+        '</div>' +
+        '<div class="virtue-ledger-sub">' + escapeHtml(ledger.virtueSubtitle) +
+          '（終局茶風：' + escapeHtml(ledger.atmosphere.label) + ' · 友善度 ' + escapeHtml(ledger.harmonyScore) + '）</div>' +
+        '<div class="virtue-petal-grid">';
+      ledger.petals.forEach(function (pt) {
+        vHtml +=
+          '<div class="virtue-petal-item' + (pt.lit ? ' is-lit' : '') + '">' +
+            '<div class="virtue-petal-name">' + escapeHtml(pt.name) + (pt.lit ? ' · 已修' : ' · 未修') + '</div>' +
+            '<div class="virtue-petal-note">' + escapeHtml(pt.note) + '</div>' +
+          '</div>';
+      });
+      vHtml += '</div><div class="virtue-fourg-row">';
+      ledger.fourG.forEach(function (fg) {
+        vHtml +=
+          '<span class="virtue-fourg-chip' + (fg.used ? ' is-used' : '') + '">' +
+            escapeHtml(fg.name) + ' · ' + escapeHtml(fg.tag) +
+          '</span>';
+      });
+      vHtml += '</div>';
+      if (ledger.impacts && ledger.impacts.length > 0) {
+        vHtml += '<div class="virtue-impact-list">';
+        ledger.impacts.forEach(function (imp) {
+          const impCls = imp.tone === "cinnabar" ? " is-cinnabar" : (imp.tone === "gold" ? " is-gold" : " is-jade");
+          vHtml +=
+            '<div class="virtue-impact-row' + impCls + '">' +
+              '<span class="virtue-impact-day">D' + escapeHtml(imp.day) + '</span>' +
+              '<span class="virtue-impact-title">' + escapeHtml(imp.title) + '：</span>' +
+              '<span class="virtue-impact-detail">' + escapeHtml(imp.detail) + '</span>' +
+            '</div>';
+        });
+        vHtml += '</div>';
+      }
+      virtueWrap.innerHTML = vHtml;
+      virtueWrap.classList.remove("hidden");
+    } else {
+      virtueWrap.innerHTML = "";
+      virtueWrap.classList.add("hidden");
+    }
+  }
+
   // v20.0 2) Full Seat Truth & Speech-Action Comparison Table
   const truthWrap = el("gameOverSeatTruthBox");
   if (truthWrap) {

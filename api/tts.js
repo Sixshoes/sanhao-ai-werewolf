@@ -6,7 +6,7 @@
  * - GEMINI_API_KEY               (必填) Google AI Studio API Key
  * - GEMINI_PUBLIC_TTS_ENABLED    (選填，預設開啟；設為 "false" 可一鍵關閉公版雲端語音)
  * - GEMINI_TTS_MODEL             (選填，預設 gemini-3.8-flash-lite-tts，失敗自動降級 gemini-2.5-flash-preview-tts)
- * - GEMINI_TTS_SESSION_MAX_RPM   (選填，每瀏覽器會話每分鐘上限，預設 24)
+ * - GEMINI_TTS_SESSION_MAX_RPM   (選填，每瀏覽器會話每分鐘上限，預設 36)
  * - GEMINI_TTS_SESSION_MAX_RPD   (選填，每瀏覽器會話每日上限，預設 180)
  * - GEMINI_TTS_NAT_IP_MAX_RPM    (選填，同區網共用 IP 總上限，預設 96)
  * - GEMINI_TTS_NAT_IP_MAX_RPD    (選填，同區網共用 IP 每日總上限，預設 1200)
@@ -175,7 +175,7 @@ function checkRateLimit(ip, nowMs, sessionId) {
   }
   const hasSession = Boolean(sessionId && SESSION_ID_RE.test(sessionId));
   if (hasSession) {
-    const sessRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "24", 10) || 24);
+    const sessRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "36", 10) || 36);
     const sessRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPD || "180", 10) || 180);
     const natRpm = Math.max(sessRpm, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPM || "96", 10) || 96);
     const natRpd = Math.max(sessRpd, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPD || "1200", 10) || 1200);
@@ -190,7 +190,7 @@ function checkRateLimit(ip, nowMs, sessionId) {
     ipRes.rec.dayCount += 1;
     return { allowed: true, retryAfterSec: 0, reason: "" };
   }
-  const maxRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "20", 10) || 20);
+  const maxRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "30", 10) || 30);
   const maxRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPD || "160", 10) || 160);
   const res = _checkSingleBucket("tts_ip:" + (ip || "unknown"), maxRpm, maxRpd, now, "ip");
   if (!res.allowed) return { allowed: false, retryAfterSec: res.retryAfterSec, reason: res.reason };

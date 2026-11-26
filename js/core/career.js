@@ -534,6 +534,24 @@ function buildMatchTurningPoints() {
       nameOf(m.lastHunterShot.hunterId) + " 帶走 " + nameOf(m.lastHunterShot.targetId) + "，直接牽動終局人數。",
       "cinnabar"
     );
+  } else if (m.stats && (m.stats.confidenceSaves || 0) > 0) {
+    pushPoint(
+      "fourg_conf_save",
+      "第 " + (m.day || 1) + " 日公投",
+      "給信心擋票逆轉",
+      "施展「給信心・奉茶護席」替被集火夥伴擋下關鍵 1 票，當輪免於遭冤出離席。",
+      "jade"
+    );
+  } else if (m.threeGood && m.threeGood.resonanceTriggered) {
+    pushPoint(
+      "three_good_awaken",
+      "第 " + (m.day || 1) + " 日茶席",
+      "三好蓮花三瓣圓滿",
+      m.goodwillVoteBonus
+        ? "實踐存好心、說好話、做好事點亮三好蓮花，開啟黃金善意票 +1 穩住公投方向。"
+        : "實踐三好言行贏得全席信任，大幅扭轉場上戒心與觀感。",
+      "jade"
+    );
   } else if (m.fourGivingsUsed && m.fourGivingsUsed.confidence) {
     pushPoint(
       "fourg_conf",
@@ -573,6 +591,104 @@ function buildMatchTurningPoints() {
   }
 
   return points.slice(0, 3);
+}
+
+function buildThreeGoodFourGLedger() {
+  const m = state.match;
+  if (!m || !m.started) return null;
+  const tg = m.threeGood || { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
+  const used4G = m.fourGivingsUsed || {};
+  const st = m.stats || {};
+  const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+  const pSeat = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
+  const isWolfPlayer = Boolean(pSeat && pSeat.team === "wolf");
+  const vmPost = typeof buildVoteSpeechMatrix === "function" ? buildVoteSpeechMatrix(null) : null;
+  const selfDiv = (vmPost && vmPost.divergenceBySeat && vmPost.divergenceBySeat[pid]) || 0;
+  const atm = typeof getTeaAtmosphereState === "function"
+    ? getTeaAtmosphereState(m.harmonyScore)
+    : { id: "calm", label: "茶席平瀾", shortTag: "", tone: "gold", desc: "" };
+
+  let virtueTitle = "清茗初修・靜觀茶席";
+  let virtueSubtitle = "在查證、陳詞與奉茶之間累積互信，下局可試著用「四給」化解席間對立。";
+  if (isWolfPlayer) {
+    if (tg.resonanceTriggered || (m.harmonyScore || 0) >= 80) {
+      virtueTitle = "深水笑面・溫雅暗流";
+      virtueSubtitle = "你以溫和言行贏得全席鬆懈戒心；真正的善意是表裡一致，而非只做表面工夫。";
+    } else if ((st.toxicSentCount || 0) >= 1) {
+      virtueTitle = "急鋒酸浪・躁進試煉";
+      virtueSubtitle = "急著帶風向貼標籤立刻引來全席防備，反而暴露破綻。";
+    } else {
+      virtueTitle = "藏鋒試水・茶席博弈";
+      virtueSubtitle = "體驗了酸民狼話術偽裝，更懂得識破刻意迎合或挑撥情緒的手腕。";
+    }
+  } else if (selfDiv === 0 && tg.resonanceTriggered && (st.fourGCount || 0) >= 2) {
+    virtueTitle = "明鏡止水・清流執盞";
+    virtueSubtitle = "言票表裡如一，點亮三好蓮花並善用四給護席破霧，成為全場定海神針。";
+  } else if ((st.confidenceSaves || 0) >= 1 || (st.rewritesUsed || 0) >= 1) {
+    virtueTitle = "溫言化鋒・解圍茶士";
+    virtueSubtitle = "以婉轉理據代替尖銳指責，或在關鍵公投出手護席，讓理性討論站穩腳步。";
+  } else if (selfDiv === 0 && (m.harmonyScore || 0) >= 80) {
+    virtueTitle = "表裡如一・正氣書生";
+    virtueSubtitle = "維持清朗茶風且口頭立場與投票完全一致，不盲從、不亂扣帽子。";
+  } else if (selfDiv >= 1) {
+    virtueTitle = "言溫行岐・修心待證";
+    virtueSubtitle = "曾出現「嘴上溫和卻投票背離」的言票落差；真正的存好心需讓查證與行動合一。";
+  } else if ((st.toxicSentCount || 0) >= 2) {
+    virtueTitle = "詞鋒過急・戒躁養氣";
+    virtueSubtitle = "多次急躁貼標籤導致友善度下滑與全場戒心升高，婉轉講理才真正有說服力。";
+  }
+
+  const petals = [
+    {
+      key: "heart",
+      name: "存好心",
+      lit: (tg.heart || 0) >= 1,
+      count: tg.heart || 0,
+      note: ((st.contradictionsFound || 0) + (st.cluesCaught || 0)) > 0
+        ? ("實證抓破線索 " + ((st.cluesCaught || 0) + (st.logicBreaksLanded || 0)) + " 次")
+        : "抓破矛盾與酸言即點亮"
+    },
+    {
+      key: "words",
+      name: "說好話",
+      lit: (tg.words || 0) >= 1,
+      count: tg.words || 0,
+      note: (st.rewritesUsed || 0) > 0
+        ? ("婉轉潤飾 " + st.rewritesUsed + " 次・好話 " + (st.goodWordsCount || 0) + " 輪")
+        : ("理性好話 " + (st.goodWordsCount || 0) + " 輪")
+    },
+    {
+      key: "deeds",
+      name: "做好事",
+      lit: (tg.deeds || 0) >= 1,
+      count: tg.deeds || 0,
+      note: m.goodwillVoteBonus
+        ? "三瓣圓滿・黃金善意票 +1"
+        : ("奉茶・四給助席 " + ((st.teaServedCount || 0) + (st.fourGCount || 0)) + " 次")
+    }
+  ];
+
+  const echoes = Array.isArray(m.fourGEchoes) ? m.fourGEchoes : [];
+  const confSaved = echoes.some(function (e) { return e && e.kind === "confidence" && e.savedFromVoteOut; }) || (st.confidenceSaves || 0) > 0;
+  const joyBrokeFog = echoes.some(function (e) { return e && e.kind === "joy" && e.brokeFog; });
+  const fourG = [
+    { key: "confidence", name: "給信心", used: Boolean(used4G.confidence), tag: confSaved ? "護席救票" : (used4G.confidence ? "擋 1 票" : "待用") },
+    { key: "joy", name: "給歡喜", used: Boolean(used4G.joy), tag: joyBrokeFog ? "破霧回溫" : (used4G.joy ? "辨脈搏" : "待用") },
+    { key: "hope", name: "給希望", used: Boolean(used4G.hope), tag: used4G.hope ? "明燈對質" : "待用" },
+    { key: "convenience", name: "給方便", used: Boolean(used4G.convenience), tag: used4G.convenience ? "理線歸票" : "待用" }
+  ];
+
+  const rawImpacts = Array.isArray(m.threeGoodImpactLog) ? m.threeGoodImpactLog : [];
+  return {
+    virtueTitle: virtueTitle,
+    virtueSubtitle: virtueSubtitle,
+    harmonyScore: typeof m.harmonyScore === "number" ? m.harmonyScore : 72,
+    atmosphere: atm,
+    goodwillVoteBonus: Boolean(m.goodwillVoteBonus),
+    petals: petals,
+    fourG: fourG,
+    impacts: rawImpacts.slice(-3)
+  };
 }
 
 function buildFullSeatTruthRows() {
@@ -740,6 +856,21 @@ function buildMatchReplayReport() {
     lines.push("", "■ 本局三大勝負轉折軸：");
     turningPts.forEach(function (tp, idx) {
       lines.push("  " + (idx + 1) + ". [" + tp.stage + "] " + tp.title + "：" + tp.detail);
+    });
+  }
+  const vLedger = typeof buildThreeGoodFourGLedger === "function" ? buildThreeGoodFourGLedger() : null;
+  if (vLedger) {
+    const petalLine = vLedger.petals.map(function (p) { return p.name + (p.lit ? "(已修)" : "(未修)"); }).join("｜");
+    const fgLine = vLedger.fourG.map(function (g) { return g.name + ":" + g.tag; }).join("｜");
+    lines.push(
+      "",
+      "■ 三好四給因果錄：" + vLedger.virtueTitle + "（" + vLedger.atmosphere.label + "）",
+      "  " + vLedger.virtueSubtitle,
+      "  三好修為：" + petalLine,
+      "  四給運用：" + fgLine
+    );
+    (vLedger.impacts || []).forEach(function (imp) {
+      lines.push("  - [D" + imp.day + "] " + imp.title + "：" + imp.detail);
     });
   }
   const coachList = buildAiPostMatchCoachInsights();

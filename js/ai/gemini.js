@@ -1003,7 +1003,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   const fgNotes = [];
   const fgDetailLines = [];
   const harmNow = (snap && typeof snap.harmonyScore === "number") ? snap.harmonyScore : 70;
-  fgDetailLines.push("當前茶席三好友善度：" + harmNow + "（" + (harmNow >= 85 ? "清風和煦、全場理性清明" : (harmNow <= 45 ? "酸言霧霾偏重、氣氛緊繃" : "平和推理中")) + "）");
+  fgDetailLines.push("當前茶席三好友善度：" + harmNow + "（" + (harmNow >= 80 ? "清朗茶風、理性查證佔上風，酸言挑撥容易反噬" : (harmNow <= 45 ? "流言起霧、情緒帶風向升溫，席間易受激進說詞左右" : "茶席平瀾、理性推理中")) + "）");
   if (snap && snap.activeDirectorEvent) {
     fgNotes.push("今日茶會事件：「" + snap.activeDirectorEvent.shortTitle + "」");
     fgDetailLines.push("今日茶會事件「" + snap.activeDirectorEvent.shortTitle + "」：" + (snap.activeDirectorEvent.desc || ""));
@@ -1014,6 +1014,19 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   }
   if (self && self.ironFollowPlayer) {
     fgDetailLines.push("【你的個人承諾】：你剛剛收到玩家（" + pidNow + "號）的給信心護盾，內心高度信任玩家並決定本輪投票跟隨玩家立場，發言切勿反打玩家！");
+  }
+  const snapEchoes = (snap && Array.isArray(snap.fourGEchoes)) ? snap.fourGEchoes : [];
+  const savedMeEcho = self ? snapEchoes.find(function (e) {
+    return e && e.kind === "confidence" && e.targetId === self.id && e.savedFromVoteOut && e.day >= day - 1;
+  }) : null;
+  if (savedMeEcho) {
+    fgDetailLines.push("【四給人情回響】：上一輪你遭集火時，玩家（" + pidNow + "號）曾以「給信心・奉茶護席」替你擋下關鍵 1 票免於出局，發言時可自然致謝並就事論事！");
+  }
+  if (snapEchoes.some(function (e) { return e && e.kind === "joy" && e.day === day && e.brokeFog; })) {
+    fgDetailLines.push("玩家方才以「給歡喜・溫言破冰」驅散了流言迷霧，氣氛回溫。");
+  }
+  if (snapEchoes.some(function (e) { return e && e.kind === "convenience" && e.day === day; })) {
+    fgDetailLines.push("玩家剛施展「給方便」替大家理出關係線，方便查證矛盾。");
   }
   const aliveJoyIds = (snap && Array.isArray(snap.fourGJoySuspects) ? snap.fourGJoySuspects : []).filter(function (id) {
     const s = readSeat(id);

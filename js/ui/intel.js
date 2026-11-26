@@ -613,6 +613,9 @@ function serveWarmTeaToSeat(seatId) {
   setSeatBubble(target.id, reply, "trust", 4200);
   bumpCombo("奉茶結緣");
   addThreeGoodPoint("deeds", "做好事・奉茶結緣");
+  if (typeof recordThreeGoodImpact === "function") {
+    recordThreeGoodImpact("deeds_tea", "做好事・奉暖茶結緣", "向 " + fmtSeatNum(target.id) + "號" + target.name + "奉上暖茶化解隔閡，增進席間互信", "jade");
+  }
   if (typeof orchestrator !== "undefined") {
     orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
   }

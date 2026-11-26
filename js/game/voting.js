@@ -330,10 +330,22 @@ function finalizeVoteRound(playerTargetId) {
   state.match.convenienceRallyTargetId = null;
   state.match.seats.forEach(function (s) { s.ironFollowPlayer = false; });
 
+  const rawTallies = Object.assign({}, tallies);
+  let rawMaxVotes = 0;
+  let rawTopIds = [];
+  Object.keys(rawTallies).forEach(function (k) {
+    const rv = rawTallies[k];
+    const rid = parseInt(k, 10);
+    if (rv > rawMaxVotes) { rawMaxVotes = rv; rawTopIds = [rid]; }
+    else if (rv === rawMaxVotes && rv > 0) rawTopIds.push(rid);
+  });
+
   let shieldNote = "";
+  const shieldedTriggeredIds = [];
   state.match.seats.forEach(function (s) {
     if (s.trustShield && tallies[s.id]) {
       tallies[s.id] = Math.round(Math.max(0, tallies[s.id] - 1) * 10) / 10;
+      shieldedTriggeredIds.push(s.id);
       shieldNote = " (" + s.id + "號擋1票)";
     }
   });
@@ -349,6 +361,25 @@ function finalizeVoteRound(playerTargetId) {
     const idNum = parseInt(k, 10);
     if (v > maxVotes) { maxVotes = v; topIds = [idNum]; }
     else if (v === maxVotes && v > 0) topIds.push(idNum);
+  });
+
+  shieldedTriggeredIds.forEach(function (sid) {
+    const savedFromOut = (rawTopIds.length === 1 && rawTopIds[0] === sid && !(topIds.length === 1 && topIds[0] === sid));
+    if (!savedFromOut) return;
+    shieldNote = " (" + sid + "號奉茶護席擋1票免出)";
+    if (state.match.stats) state.match.stats.confidenceSaves = (state.match.stats.confidenceSaves || 0) + 1;
+    if (!Array.isArray(state.match.fourGEchoes)) state.match.fourGEchoes = [];
+    const confEcho = state.match.fourGEchoes.slice().reverse().find(function (e) { return e && e.kind === "confidence" && e.targetId === sid; });
+    if (confEcho) {
+      confEcho.savedFromVoteOut = true;
+    } else {
+      state.match.fourGEchoes.push({ day: state.match.day || 1, kind: "confidence", targetId: sid, savedFromVoteOut: true, brokeFog: false, pair: null });
+    }
+    if (typeof recordThreeGoodImpact === "function") {
+      recordThreeGoodImpact("fourg_confidence_save", "給信心・一盞護清白", "替 " + fmtSeatNum(sid) + "號擋下關鍵 1 票，避免當輪遭集火直接請離", "jade");
+    }
+    addLog({ kind: "blessing", title: "一盞護清白（給信心）：奉茶護席替 " + fmtSeatNum(sid) + "號擋下關鍵 1 票，成功逆轉公投免於直接離席！", text: "" });
+    showToast("一盞護清白：給信心替 " + fmtSeatNum(sid) + "號擋下關鍵 1 票免於直接出局！", "emerald");
   });
 
   const groupedVoters = {};
@@ -796,6 +827,8 @@ function useFourGConfidence() {
   animateFourGCardCast("btn4GConfidence");
   state.match.fourGivingsUsed.confidence = true;
   state.match.stats.fourGCount += 1;
+  if (!Array.isArray(state.match.fourGEchoes)) state.match.fourGEchoes = [];
+  state.match.fourGEchoes.push({ day: state.match.day || 1, kind: "confidence", targetId: target.id, savedFromVoteOut: false, brokeFog: false, pair: null });
   state.match.harmonyScore = clamp(state.match.harmonyScore + 8, 0, 100);
   if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
   target.trustShield = true;
@@ -805,6 +838,9 @@ function useFourGConfidence() {
   }
   recordRelation(getPlayerId(), target.id, "trust");
   addThreeGoodPoint("deeds", "做好事・給信心");
+  if (typeof recordThreeGoodImpact === "function") {
+    recordThreeGoodImpact("fourg_confidence", "給信心・奉茶護席", "替 " + fmtSeatNum(target.id) + "號" + target.name + "推盞護席（本輪公投少計 1 票），穩定夥伴信心", "jade");
+  }
   sound.playBlessing();
   spawnBeam(getPlayerId(), target.id, "#34d399", "trust");
   if (typeof stage3d !== "undefined" && stage3d.isActive()) {
@@ -840,9 +876,21 @@ function useFourGJoy() {
   animateFourGCardCast("btn4GJoy");
   state.match.fourGivingsUsed.joy = true;
   state.match.stats.fourGCount += 1;
+  const wasFoggy = (state.match.harmonyScore || 70) <= 45;
   state.match.harmonyScore = clamp(state.match.harmonyScore + 16, 0, 100);
+  const brokeFog = Boolean(wasFoggy && state.match.harmonyScore > 45);
+  if (!Array.isArray(state.match.fourGEchoes)) state.match.fourGEchoes = [];
+  state.match.fourGEchoes.push({ day: state.match.day || 1, kind: "joy", targetId: null, savedFromVoteOut: false, brokeFog: brokeFog, pair: null });
   if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
   addThreeGoodPoint("words", "說好話・給歡喜");
+  if (typeof recordThreeGoodImpact === "function") {
+    recordThreeGoodImpact(
+      "fourg_joy",
+      brokeFog ? "給歡喜・破霧化戾" : "給歡喜・溫言破冰",
+      brokeFog ? "以茶席幽默驅散流言起霧，全場友善度回溫並辨識脈搏破綻" : "以溫言笑語化解緊繃對立，讓真性情自然浮現",
+      "jade"
+    );
+  }
   sound.playBlessing();
   const joyJoke = FOURG_JOY_JOKES[((state.match.day || 1) + (state.match.stats.fourGCount || 0)) % FOURG_JOY_JOKES.length];
   setSeatBubble(getPlayerId(), "「" + joyJoke + "」", "trust", 4200);
@@ -899,9 +947,10 @@ function useFourGJoy() {
       ? ("溫言破冰（給歡喜）：唯有 " + pairLabels[0] + " 神色微僵（緊張度 " + getSeat(sortedNervous[0]).microPulse + "%）")
       : "溫言破冰（給歡喜）：茶席笑語讓氣氛大幅回溫");
   addLog({ kind: "blessing", title: clueMsg, text: "" });
-  showToast(pairLabels.length >= 2
+  const joyToastBase = pairLabels.length >= 2
     ? ("溫言試探：" + sortedNervous.map(function (id) { return fmtSeatNum(id) + "號"; }).join(" 與 ") + " 同時神色僵硬，可搭配「給希望」交會比對。")
-    : (pairLabels.length === 1 ? ("留意茶席：" + pairLabels[0] + " 笑意僵硬，似有心虛。") : "茶席笑聲驅散了緊繃氣氛。"), "emerald");
+    : (pairLabels.length === 1 ? ("留意茶席：" + pairLabels[0] + " 笑意僵硬，似有心虛。") : "茶席笑聲驅散了緊繃氣氛。");
+  showToast(joyToastBase + (brokeFog ? "（流言迷霧已驅散！）" : ""), "emerald");
   triggerFourGSynergyCheck("joy");
   if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
   updateAllUI();
@@ -1077,9 +1126,14 @@ function executeHopeConfrontation(seatAId, seatBId) {
   animateFourGCardCast("btn4GHope");
   state.match.fourGivingsUsed.hope = true;
   state.match.stats.fourGCount += 1;
+  if (!Array.isArray(state.match.fourGEchoes)) state.match.fourGEchoes = [];
+  state.match.fourGEchoes.push({ day: state.match.day || 1, kind: "hope", targetId: null, savedFromVoteOut: false, brokeFog: false, pair: [sA.id, sB.id] });
   state.match.harmonyScore = clamp(state.match.harmonyScore + 10, 0, 100);
   if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
   addThreeGoodPoint("heart", "存好心・明燈雙向對質");
+  if (typeof recordThreeGoodImpact === "function") {
+    recordThreeGoodImpact("fourg_hope", "給希望・明燈澄清", "給 " + fmtSeatNum(sA.id) + "號與 " + fmtSeatNum(sB.id) + "號公開對質澄清的機會，以事證取代暗箭猜忌", "gold");
+  }
   sound.playBlessing();
 
   // Strictly Blind-View: NEVER inspect sA.role/sB.role or sA.team/sB.team!
@@ -1513,6 +1567,7 @@ function useFourGConvenience() {
     // Rally undecided Good AIs toward your selected target OR highlight the sharpest contradiction!
     const sel = getSeat(state.selectedSeatId);
     const hasRallyTarget = Boolean(sel && sel.alive && sel.id !== getPlayerId());
+    let convEchoTargetId = hasRallyTarget ? sel.id : null;
     if (hasRallyTarget) {
       state.match.convenienceRallyTargetId = sel.id;
       getAliveSeats().forEach(function (ai) {
@@ -1544,6 +1599,7 @@ function useFourGConvenience() {
         || evs.find(function (ev) { return ev.speakerId !== getPlayerId(); })
         || evs[0];
       const highlightId = susEv ? susEv.speakerId : null;
+      convEchoTargetId = highlightId;
       const hs = highlightId ? getSeat(highlightId) : null;
       if (hs && hs.alive) {
         state.selectedSeatId = hs.id;
@@ -1560,6 +1616,15 @@ function useFourGConvenience() {
         text: ""
       });
       showToast(digestText + "（下次先點選目標再施展「給方便」即可直接歸票覆議）", "emerald");
+    }
+    if (!Array.isArray(state.match.fourGEchoes)) state.match.fourGEchoes = [];
+    state.match.fourGEchoes.push({ day: state.match.day || 1, kind: "convenience", targetId: convEchoTargetId, savedFromVoteOut: false, brokeFog: false, pair: null });
+    if (typeof recordThreeGoodImpact === "function") {
+      recordThreeGoodImpact("fourg_convenience", "給方便・理線歸票", "替全席展開關係連線並整理票型脈絡，降低旁觀者誤判與盲從", "jade");
+    }
+    const helperSeat = getAliveSeats().find(function (s) { return s.id !== getPlayerId() && s.id !== convEchoTargetId; });
+    if (helperSeat) {
+      setSeatBubble(helperSeat.id, "謝謝 " + getPlayerId() + "號幫忙把關係線理順，這樣好判斷多了！", "trust", 3400);
     }
     triggerFourGSynergyCheck("convenience");
     if (typeof bumpTableStateRev === "function") bumpTableStateRev(true);
@@ -2623,6 +2688,146 @@ function startSheriffCampaignSpeeches() {
   return advanceSheriffSpeechTurn();
 }
 
+function _prepareSheriffCandidateDraft(cand, ctx, m) {
+  const built = buildSheriffCandidateLine(cand, ctx.spokenSpeeches);
+
+  // v22.1 Natural AI Sheriff Withdrawal ("詐身分／亂聊後拱手退水" & "見真預退水") — NEVER withdraws if last candidate!
+  const bSnapW = typeof createBlindMatchSnapshot === "function"
+    ? createBlindMatchSnapshot(cand, { module: "sheriff_bluff_withdraw" })
+    : null;
+  const bSelfW = (bSnapW && bSnapW.self) ? bSnapW.self : cand;
+  const remainingOthersOnStand = (ctx.candidateIds || []).filter(function (id) { return id !== cand.id; });
+  const priorSeerAlreadySpoke = (ctx.spokenSpeeches || []).some(function (sp) {
+    return sp && sp.id !== cand.id && (sp.tone === "seer" || sp.tone === "clash");
+  });
+  const isBluffEligible = Boolean(
+    remainingOthersOnStand.length >= 1 &&
+    built.tone !== "seer" && built.tone !== "clash" &&
+    bSelfW.role !== "seer" && !(bSelfW.role === "wolf" && bSelfW.fakeSeer)
+  );
+  const withdrawSeed = (m && typeof m.sheriffElectionSeed === "number") ? m.sheriffElectionSeed : 0;
+  const bluffRoll = _hashSheriffRoll(withdrawSeed, cand.id, 173 + (ctx.spokenSpeeches || []).length);
+  const withdrawChance = built.tone === "bluff"
+    ? 0.78
+    : (built.tone === "playful" ? 0.62 : (priorSeerAlreadySpoke ? 0.45 : 0.24));
+  const aiBluffWithdraw = Boolean(isBluffEligible && bluffRoll < withdrawChance);
+  const finalTag = aiBluffWithdraw ? (built.tone === "playful" ? "亂聊退水" : "詐身分退水") : built.tag;
+  const fallbackFinalText = aiBluffWithdraw
+    ? (built.text.replace(/」$/, "") + (built.tone === "playful"
+      ? "——好啦麥克風過過癮就夠了，我先拱手退水回警下投票！」"
+      : "——試探完畢收工，我先拱手退水回警下把票投正！」"))
+    : (remainingOthersOnStand.length === 0 && (built.tone === "playful" || built.tone === "bluff")
+      ? (built.text.replace(/」$/, "") + "——欸等等，警上居然只剩我一個？那這枚警徽我就不客氣笑納啦！」")
+      : built.text);
+  const voiceMood = built.tone === "clash" ? "accuse" : (built.tone === "seer" ? "claim_seer" : "normal");
+  return {
+    built: built,
+    aiBluffWithdraw: aiBluffWithdraw,
+    finalTag: finalTag,
+    fallbackFinalText: fallbackFinalText,
+    voiceMood: voiceMood
+  };
+}
+
+function _buildSheriffPrefetchKey(candId, ctx) {
+  const spLen = Array.isArray(ctx && ctx.spokenSpeeches) ? ctx.spokenSpeeches.length : 0;
+  const cids = Array.isArray(ctx && ctx.candidateIds) ? ctx.candidateIds.join(",") : "";
+  const llmTag = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : "";
+  return candId + ":" + spLen + ":" + cids + ":" + llmTag;
+}
+
+function prefetchNextSheriffSpeech(ctx) {
+  const m = state.match;
+  if (!m || !ctx || m.phase !== "SHERIFF_ELECTION") return false;
+  if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
+  const order = Array.isArray(ctx.speechOrderIds) ? ctx.speechOrderIds : [];
+  const pid = getPlayerId();
+  let scanIdx = (typeof ctx.speechIndex === "number" ? ctx.speechIndex : -1) + 1;
+  let nextCand = null;
+  while (scanIdx < order.length) {
+    const cid = order[scanIdx];
+    const cs = getSeat(cid);
+    if (cs && cs.alive && Array.isArray(ctx.candidateIds) && ctx.candidateIds.indexOf(cid) !== -1) {
+      nextCand = cs;
+      break;
+    }
+    scanIdx += 1;
+  }
+  if (!nextCand) {
+    if (typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+      voice.prefetchBestTts(
+        "主持",
+        ctx.playerRunning
+          ? "警上輪流發言結束！你是警上候選人，請點擊開始警下開票決選！"
+          : "警上輪流發言結束！請警下夥伴投票選出本局警長！",
+        "normal"
+      );
+    }
+    return false;
+  }
+  if (nextCand.id === pid) {
+    if (typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+      voice.prefetchBestTts("主持", "輪到" + pid + "號你進行警上發言，可選擇警徽流並發表競選宣言！", "normal");
+    }
+    return false;
+  }
+
+  const useLiveSheriffLlm = Boolean(
+    typeof isExternalLlmActive === "function" &&
+    isExternalLlmActive() &&
+    typeof tryGenerateGeminiSheriffSpeech === "function"
+  );
+  const canSpeakNow = typeof voice !== "undefined" && voice.canSpeak();
+  if (!useLiveSheriffLlm && !canSpeakNow) return false;
+
+  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const shPrefKey = _buildSheriffPrefetchKey(nextCand.id, ctx);
+  if (ctx._prefetchedSheriff && ctx._prefetchedSheriff.epoch === ep && ctx._prefetchedSheriff.key === shPrefKey) {
+    return true;
+  }
+
+  const draft = _prepareSheriffCandidateDraft(nextCand, ctx, m);
+  const entry = {
+    epoch: ep,
+    seatId: nextCand.id,
+    key: shPrefKey,
+    resolvedText: null,
+    promise: null
+  };
+  ctx._prefetchedSheriff = entry;
+
+  if (!useLiveSheriffLlm) {
+    entry.resolvedText = draft.fallbackFinalText;
+    if (canSpeakNow && typeof voice.prefetchBestTts === "function") {
+      voice.prefetchBestTts(nextCand.name, draft.fallbackFinalText, draft.voiceMood);
+    }
+    return true;
+  }
+
+  entry.promise = tryGenerateGeminiSheriffSpeech(nextCand, ctx.spokenSpeeches, draft.built, { aiBluffWithdraw: draft.aiBluffWithdraw })
+    .then(function (liveText) {
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return null;
+      const resolved = liveText || draft.fallbackFinalText;
+      if (ctx._prefetchedSheriff === entry) {
+        entry.resolvedText = resolved;
+        if (typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+          voice.prefetchBestTts(nextCand.name, resolved, draft.voiceMood);
+        }
+      }
+      return resolved;
+    })
+    .catch(function () {
+      if (ctx._prefetchedSheriff === entry) {
+        entry.resolvedText = draft.fallbackFinalText;
+        if (typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+          voice.prefetchBestTts(nextCand.name, draft.fallbackFinalText, draft.voiceMood);
+        }
+      }
+      return draft.fallbackFinalText;
+    });
+  return true;
+}
+
 function advanceSheriffSpeechTurn() {
   clearStepTimer();
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
@@ -2696,39 +2901,15 @@ function advanceSheriffSpeechTurn() {
     if (typeof voice !== "undefined" && voice.canSpeak()) {
       voice.speakHost("輪到" + pid + "號你進行警上發言，可選擇警徽流並發表競選宣言！");
     }
+    prefetchNextSheriffSpeech(ctx);
     return true;
   }
 
-  const built = buildSheriffCandidateLine(cand, ctx.spokenSpeeches);
-
-  // v22.1 Natural AI Sheriff Withdrawal ("詐身分／亂聊後拱手退水" & "見真預退水") — NEVER withdraws if last candidate!
-  const bSnapW = typeof createBlindMatchSnapshot === "function"
-    ? createBlindMatchSnapshot(cand, { module: "sheriff_bluff_withdraw" })
-    : null;
-  const bSelfW = (bSnapW && bSnapW.self) ? bSnapW.self : cand;
-  const remainingOthersOnStand = (ctx.candidateIds || []).filter(function (id) { return id !== cand.id; });
-  const priorSeerAlreadySpoke = (ctx.spokenSpeeches || []).some(function (sp) {
-    return sp && sp.id !== cand.id && (sp.tone === "seer" || sp.tone === "clash");
-  });
-  const isBluffEligible = Boolean(
-    remainingOthersOnStand.length >= 1 &&
-    built.tone !== "seer" && built.tone !== "clash" &&
-    bSelfW.role !== "seer" && !(bSelfW.role === "wolf" && bSelfW.fakeSeer)
-  );
-  const withdrawSeed = (m && typeof m.sheriffElectionSeed === "number") ? m.sheriffElectionSeed : 0;
-  const bluffRoll = _hashSheriffRoll(withdrawSeed, cand.id, 173 + (ctx.spokenSpeeches || []).length);
-  const withdrawChance = built.tone === "bluff"
-    ? 0.78
-    : (built.tone === "playful" ? 0.62 : (priorSeerAlreadySpoke ? 0.45 : 0.24));
-  const aiBluffWithdraw = Boolean(isBluffEligible && bluffRoll < withdrawChance);
-  const finalTag = aiBluffWithdraw ? (built.tone === "playful" ? "亂聊退水" : "詐身分退水") : built.tag;
-  const fallbackFinalText = aiBluffWithdraw
-    ? (built.text.replace(/」$/, "") + (built.tone === "playful"
-      ? "——好啦麥克風過過癮就夠了，我先拱手退水回警下投票！」"
-      : "——試探完畢收工，我先拱手退水回警下把票投正！」"))
-    : (remainingOthersOnStand.length === 0 && (built.tone === "playful" || built.tone === "bluff")
-      ? (built.text.replace(/」$/, "") + "——欸等等，警上居然只剩我一個？那這枚警徽我就不客氣笑納啦！」")
-      : built.text);
+  const draft = _prepareSheriffCandidateDraft(cand, ctx, m);
+  const built = draft.built;
+  const aiBluffWithdraw = draft.aiBluffWithdraw;
+  const finalTag = draft.finalTag;
+  const fallbackFinalText = draft.fallbackFinalText;
 
   const commitAiSheriffSpeech = function (resolvedText) {
     const finalText = resolvedText || fallbackFinalText;
@@ -2751,7 +2932,8 @@ function advanceSheriffSpeechTurn() {
       if (ctx.withdrawnIds.indexOf(cand.id) === -1) ctx.withdrawnIds.push(cand.id);
       if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
       ctx.dramaEvents.unshift("拱手退水：" + fmtSeatNum(cand.id) + "號 " + cand.name + " 試探後置位後主動退水回警下，警上局勢生變。");
-      if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
+      ctx._prefetchedSheriff = null;
+    if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
       addLog({
         kind: "system",
         speakerId: cand.id,
@@ -2794,25 +2976,36 @@ function advanceSheriffSpeechTurn() {
         badge: fmtSeatNum(cand.id) + "號 " + cand.name + (aiBluffWithdraw ? " · 拱手退水" : " · 警上發言"),
         trait: finalTag,
         rawText: finalText,
-        voiceMood: built.tone === "clash" ? "accuse" : (built.tone === "seer" ? "claim_seer" : "normal"),
+        voiceMood: draft.voiceMood,
         holdMs: 2400
       });
     }
+    prefetchNextSheriffSpeech(ctx);
   };
 
   const ffSh = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const epShNow = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const curShKey = _buildSheriffPrefetchKey(cand.id, ctx);
+  const pfSh = ctx._prefetchedSheriff;
+  const pfShMatch = !ffSh && Boolean(pfSh && pfSh.epoch === epShNow && pfSh.seatId === cand.id && pfSh.key === curShKey);
+  if (pfShMatch) ctx._prefetchedSheriff = null;
+
   const useLiveSheriffLlm = Boolean(
     !ffSh &&
     typeof isExternalLlmActive === "function" && isExternalLlmActive() &&
     typeof tryGenerateGeminiSheriffSpeech === "function"
   );
+  if (pfShMatch && pfSh.resolvedText) {
+    commitAiSheriffSpeech(pfSh.resolvedText);
+    return true;
+  }
   if (!useLiveSheriffLlm) {
     commitAiSheriffSpeech(fallbackFinalText);
     return true;
   }
 
   // Live Gemini Sheriff Campaign Speech with gentle 350ms cue + full matchEpoch / turnSeq abort protection!
-  const epSh = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const epSh = epShNow;
   const shSeq = (state._sheriffTurnSeq = (state._sheriffTurnSeq || 0) + 1);
   state.speakingInFlight = true;
   updateAllUI();
@@ -2827,7 +3020,10 @@ function advanceSheriffSpeechTurn() {
     }
   }, 350);
 
-  tryGenerateGeminiSheriffSpeech(cand, ctx.spokenSpeeches, built, { aiBluffWithdraw: aiBluffWithdraw })
+  const sheriffSpeechPromise = (pfShMatch && pfSh.promise)
+    ? pfSh.promise
+    : tryGenerateGeminiSheriffSpeech(cand, ctx.spokenSpeeches, built, { aiBluffWithdraw: aiBluffWithdraw });
+  sheriffSpeechPromise
     .then(function (liveText) {
       if (shCueTimer) clearTimeout(shCueTimer);
       if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epSh)) return;
@@ -3409,6 +3605,7 @@ function resolveSheriffElectionAction(actionOrVoteId) {
       if (typeof stopTypewriterOnly === "function") stopTypewriterOnly();
       if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     }
+    ctx._prefetchedSheriff = null;
     if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
     const topAi = ctx.candidateIds.map(getSeat).filter(Boolean)[0];
     if (topAi) {

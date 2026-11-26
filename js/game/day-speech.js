@@ -606,13 +606,23 @@ function _commitDeferredSeatPatch(speaker, generated) {
 function prefetchNextAiSpeech() {
   const m = state.match;
   if (!m || !m.started) return false;
-  const extLlmOn = typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel);
-  if (!extLlmOn) return false;
   if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
+  const extLlmOn = typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel);
+  const wantNetTts = Boolean(
+    typeof voice !== "undefined" &&
+    voice.canSpeak() &&
+    ((typeof voice.isGeminiTtsPreferred === "function" && voice.isGeminiTtsPreferred()) || voice.localNeuralAvailable)
+  );
+  if (!extLlmOn && !wantNetTts) return false;
   const q = m.speechQueue || [];
   if (!q.length) return false;
   const nextId = q[0];
-  if (nextId === getPlayerId()) return false;
+  if (nextId === getPlayerId()) {
+    if (typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+      voice.prefetchBestTts("主持", "輪到" + nextId + "號你發言了，請選擇卡牌表態。", "normal");
+    }
+    return false;
+  }
   const nextSeat = getSeat(nextId);
   if (!nextSeat || !nextSeat.alive) return false;
 
@@ -632,29 +642,42 @@ function prefetchNextAiSpeech() {
   };
   m._prefetchedSpeech = entry;
 
+  if (!extLlmOn) {
+    entry.resolvedMeta = fallbackMeta;
+    if (fallbackMeta && fallbackMeta.text && typeof voice !== "undefined" && voice.canSpeak()) {
+      const nextMoodLocal = _computeSpeechVoiceMood(nextSeat, fallbackMeta);
+      if (typeof voice.prefetchBestTts === "function") {
+        voice.prefetchBestTts(nextSeat.name, fallbackMeta.text, nextMoodLocal);
+      }
+    }
+    return true;
+  }
+
   const runDispatch = (typeof orchestrator !== "undefined" && typeof orchestrator.dispatchAgent === "function")
     ? orchestrator.dispatchAgent("PersonaAgent", { speaker: nextSeat, fallbackMeta: fallbackMeta, deferSeatMutation: true }).then(function (dispatched) {
-        if (!dispatched || !dispatched.epochValid || !orchestrator.isEpochValid(ep)) return null;
-        return dispatched.generated || fallbackMeta;
-      })
+      if (!dispatched || !dispatched.epochValid || !orchestrator.isEpochValid(ep)) return null;
+      return dispatched.generated || fallbackMeta;
+    })
     : tryGenerateGeminiAiSpeech(nextSeat, fallbackMeta).then(function (liveRes) {
-        const liveTxt = typeof liveRes === "string" ? liveRes : (liveRes && liveRes.text);
-        if (liveTxt) {
-          if (typeof syncGeminiSpeechMeta === "function") syncGeminiSpeechMeta(nextSeat, fallbackMeta, liveRes, { deferSeatMutation: true });
-          else fallbackMeta.text = liveTxt;
-          fallbackMeta.text = (typeof normalizeGeminiSpeechText === "function")
-            ? normalizeGeminiSpeechText(fallbackMeta.text)
-            : String(fallbackMeta.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").trim();
-        }
-        return fallbackMeta;
-      });
+      const liveTxt = typeof liveRes === "string" ? liveRes : (liveRes && liveRes.text);
+      if (liveTxt) {
+        if (typeof syncGeminiSpeechMeta === "function") syncGeminiSpeechMeta(nextSeat, fallbackMeta, liveRes, { deferSeatMutation: true });
+        else fallbackMeta.text = liveTxt;
+        fallbackMeta.text = (typeof normalizeGeminiSpeechText === "function")
+          ? normalizeGeminiSpeechText(fallbackMeta.text)
+          : String(fallbackMeta.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").trim();
+      }
+      return fallbackMeta;
+    });
 
   entry.promise = runDispatch.then(function (resMeta) {
     if (resMeta && m._prefetchedSpeech === entry) {
       entry.resolvedMeta = resMeta;
       if (resMeta.text && typeof voice !== "undefined" && voice.canSpeak()) {
         const nextMood = _computeSpeechVoiceMood(nextSeat, resMeta);
-        if (voice.localNeuralAvailable && typeof voice.prefetchFreeLocalNeural === "function") {
+        if (typeof voice.prefetchBestTts === "function") {
+          voice.prefetchBestTts(nextSeat.name, resMeta.text, nextMood);
+        } else if (voice.localNeuralAvailable && typeof voice.prefetchFreeLocalNeural === "function") {
           voice.prefetchFreeLocalNeural(nextSeat.name, resMeta.text, nextMood);
         } else if (typeof voice.prefetchCloudGeminiTts === "function") {
           voice.prefetchCloudGeminiTts(nextSeat.name, resMeta.text, nextMood);
@@ -1025,12 +1048,15 @@ async function executeAiTurnSpeech(speaker) {
   prefetchNextAiSpeech();
 
   // Prefetch next predictable host prompt so transitions feel zero-latency!
-  if (typeof voice !== "undefined" && typeof voice.prefetchFreeLocalNeural === "function") {
-    const q = state.match.speechQueue || [];
-    if (q.length === 0) {
-      voice.prefetchFreeLocalNeural("主持", "全員發言結束，請點擊外圍座位投票抓狼。", "normal");
-    } else if (q[0] === getPlayerId()) {
-      voice.prefetchFreeLocalNeural("主持", "輪到" + getPlayerId() + "號你發言了，請選擇卡牌表態。", "normal");
+  if (typeof voice !== "undefined") {
+    const pfHost = typeof voice.prefetchBestTts === "function" ? voice.prefetchBestTts.bind(voice) : (typeof voice.prefetchFreeLocalNeural === "function" ? voice.prefetchFreeLocalNeural.bind(voice) : null);
+    if (pfHost) {
+      const q = state.match.speechQueue || [];
+      if (q.length === 0) {
+        pfHost("主持", "全員發言結束，請點擊外圍座位投票抓狼。", "normal");
+      } else if (q[0] === getPlayerId()) {
+        pfHost("主持", "輪到" + getPlayerId() + "號你發言了，請選擇卡牌表態。", "normal");
+      }
     }
   }
 }

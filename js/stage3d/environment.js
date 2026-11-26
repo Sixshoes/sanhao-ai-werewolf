@@ -152,8 +152,13 @@ function build3DEnvironmentMap(renderer, scene, env) {
     if (!isFileProto && typeof THREE.TextureLoader === "function") {
       const loader = new THREE.TextureLoader();
       let pendingSkyCount = 4;
+      let settledSkyCount = 0;
       const onSkySettled = function () {
         pendingSkyCount -= 1;
+        settledSkyCount += 1;
+        if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+          bootPreloader.reportBucket("sky", settledSkyCount, 4);
+        }
         if (pendingSkyCount <= 0) disposePmrem();
       };
       loader.load("assets/sky/sanctuary_day.jpg?v=12", function (tex) {
@@ -210,6 +215,9 @@ function build3DEnvironmentMap(renderer, scene, env) {
       }, undefined, onSkySettled);
     } else {
       disposePmrem();
+      if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
+        bootPreloader.reportBucket("sky", 4, 4);
+      }
     }
   } catch (e) { }
 }

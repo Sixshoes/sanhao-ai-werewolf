@@ -1854,10 +1854,13 @@ function submitPlayerSpeech() {
     });
   }
 
+  const harmBefore = state.match.harmonyScore || 70;
+  const atmBefore = typeof getTeaAtmosphereState === "function" ? getTeaAtmosphereState(harmBefore) : { id: "calm" };
   const critMult = state.match.rewriteCritReady ? 1.5 : 1;
   const comboMult = state.match.comboBoostReady ? 1.15 : 1;
   const bobaActive = Boolean(state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "boba_truce");
   const directorMult = (!res.isToxic && bobaActive) ? 1.25 : 1;
+  const atmosphereMult = (!res.isToxic && atmBefore.id === "clear") ? 1.15 : 1.0;
 
   if (res.isToxic) {
     state.match.stats.toxicSentCount += 1;
@@ -1869,15 +1872,22 @@ function submitPlayerSpeech() {
     state.match.seats.forEach(function (ai) {
       if (ai.id !== pid && ai.alive) ai.suspicionMap[pid] = clamp((ai.suspicionMap[pid] || 50) + 20, 10, 96);
     });
+    if (typeof recordThreeGoodImpact === "function") {
+      recordThreeGoodImpact("toxic_backfire", "酸言反噬警示", "急躁標籤語氣使友善度 -10、全席對你戒心 +20，論點難以被採信", "cinnabar");
+    }
     triggerAiCrowdReactions("doubt", pid);
     if (typeof orchestrator !== "undefined") orchestrator.emit("clash:detected", { kind: "player_toxic", speakerId: pid });
-    showToast("講話太衝！AI 夥伴開始懷疑你是酸民狼了！", "warn");
+    showToast("語氣帶刺引發反感：友善度 -10、全場對你戒心 +20，論點難以服眾！", "warn");
   } else {
     state.match.stats.goodWordsCount += 1;
+    if (atmBefore.id === "clear" && state.match.stats) {
+      state.match.stats.clearWindTurns = (state.match.stats.clearWindTurns || 0) + 1;
+    }
     const isKindDuel = Boolean(state.match.activeDirectorEvent && state.match.activeDirectorEvent.id === "kind_word_duel");
     const harmGain = (critMult > 1 ? 8 : 5) * (bobaActive ? 2 : 1);
     state.match.harmonyScore = clamp(state.match.harmonyScore + harmGain, 0, 100);
-    const persuasion = Math.round((res.kindScore >= 82 ? 16 : 10) * critMult * comboMult * directorMult) + (isKindDuel ? 10 : 0);
+    const brokeFogByWords = Boolean(atmBefore.id === "fog" && state.match.harmonyScore > 45);
+    const persuasion = Math.round((res.kindScore >= 82 ? 16 : 10) * critMult * comboMult * directorMult * atmosphereMult) + (isKindDuel ? 10 : 0);
     if (isKindDuel && state.match.directorEventClearedDay !== state.match.day && typeof addThreeGoodPoint === "function") {
       state.match.directorEventClearedDay = state.match.day;
       const tgNow = state.match.threeGood || { heart: 0, words: 0, deeds: 0 };
@@ -1899,6 +1909,7 @@ function submitPlayerSpeech() {
     } else {
       setSeatEmotion(pid, "happy", 2400);
     }
+    const shiftedAiIds = {};
     const applyTargetDelta = function (tgtId, asVouch, mult) {
       if (!tgtId) return;
       const tgtSeatObj = getSeat(tgtId);
@@ -1912,7 +1923,10 @@ function submitPlayerSpeech() {
           const witchSaveProtected = (ai.role === "witch" && ai.savedSeatId === tgtId && !asVouch);
           if (!wolfMateProtected && !seerTruthProtected && !witchSaveProtected) {
             const delta = asVouch ? -effPersuasion : effPersuasion;
-            ai.suspicionMap[tgtId] = clamp((ai.suspicionMap[tgtId] || 50) + delta, 5, 96);
+            const prevSus = ai.suspicionMap[tgtId] || 50;
+            const nextSus = clamp(prevSus + delta, 5, 96);
+            ai.suspicionMap[tgtId] = nextSus;
+            if (nextSus !== prevSus) shiftedAiIds[ai.id] = true;
           }
         }
       });
@@ -1931,7 +1945,10 @@ function submitPlayerSpeech() {
       if (ai.id !== pid && ai.alive && (ai.suspicionMap[pid] || 0) < 100 && !(plClaimedGod && aiEffRole === plClaimedGod)) {
         const rawBoost = Math.round((comboMult > 1 ? 11 : 8) * critMult);
         const trustBoost = Math.max(2, Math.round(rawBoost * hypocrisyPenalty));
-        ai.suspicionMap[pid] = clamp((ai.suspicionMap[pid] || 50) - trustBoost, 5, 95);
+        const prevSelfSus = ai.suspicionMap[pid] || 50;
+        const nextSelfSus = clamp(prevSelfSus - trustBoost, 5, 95);
+        ai.suspicionMap[pid] = nextSelfSus;
+        if (nextSelfSus < prevSelfSus) shiftedAiIds[ai.id] = true;
       }
     });
     plWolfPits.forEach(function (wId, idx) {
@@ -1940,6 +1957,22 @@ function submitPlayerSpeech() {
     plGoodPits.forEach(function (gId, idx) {
       applyTargetDelta(gId, true, idx === 0 ? 1 : 0.65);
     });
+    const persuadedAiCount = Object.keys(shiftedAiIds).length;
+    if (critMult > 1) {
+      if (typeof recordThreeGoodImpact === "function") {
+        recordThreeGoodImpact("words_rewrite", "說好話・轉鋒為理", "婉轉潤飾讓說服力提升 50%，使 " + persuadedAiCount + " 位席間夥伴放下戒心傾聽論點", "jade");
+      }
+      showToast("辭溫理正：婉轉潤飾讓說服力 +50%，" + persuadedAiCount + " 位茶友放下戒心採納你的論點！", "emerald");
+    } else if (brokeFogByWords) {
+      if (typeof recordThreeGoodImpact === "function") {
+        recordThreeGoodImpact("words_clear_fog", "說好話・破霧回溫", "於流言起霧時以理性陳詞穩住場域，讓茶席重歸平瀾", "jade");
+      }
+      showToast("以溫潤陳詞驅散流言起霧，茶席重歸平瀾！", "emerald");
+    } else if (playerDivCount >= 1) {
+      showToast("席間察覺先前言票略有落差，本輪說服力折半——言行一致最能服眾。", "gold");
+    } else if (atmBefore.id === "clear" && persuadedAiCount > 0) {
+      showToast("清朗茶風加持：理性陳詞說服力 +15%，" + persuadedAiCount + " 位茶友點頭採信。", "emerald");
+    }
     triggerAiCrowdReactions(critMult > 1 ? "crit" : "cheer", accuseId || vouchId || targetNum || pid);
     if (typeof triggerSpeechAudienceReactions === "function") {
       triggerSpeechAudienceReactions(player, { accuseId: accuseId, vouchId: vouchId, wolfPits: plWolfPits, goodPits: plGoodPits });
@@ -1958,6 +1991,9 @@ function submitPlayerSpeech() {
     const evTarget = getSeat(evTgtId);
     if (evTarget && evTarget.alive) {
       state.match.stats.logicBreaksLanded = (state.match.stats.logicBreaksLanded || 0) + 1;
+      if (typeof recordThreeGoodImpact === "function") {
+        recordThreeGoodImpact("heart_logic_break", "存好心・實證破防", "不貼標籤、以公開事證呈堂指證 " + fmtSeatNum(evTarget.id) + "號破綻，贏得全席信任", "jade");
+      }
       evTarget.sweatExposed = true;
       state.match.seats.forEach(function (ai) {
         if (ai.id !== pid && ai.alive && ai.team === "good") {

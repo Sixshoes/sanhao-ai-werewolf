@@ -336,6 +336,17 @@ function advanceLastWordsQueue() {
       charDelay: 32,
       holdMs: 2600
     });
+    if (ctx.queue && ctx.queue.length > 0 && typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+      if (ctx.queue[0] === getPlayerId()) {
+        voice.prefetchBestTts(
+          "主持",
+          ctx.mode === "first_night"
+            ? "昨晚你首夜離席，請發表首夜遺言留下線索給好人夥伴。"
+            : "你已高票離席，請發表最後遺言，場上玩家會記住你的線索。",
+          "last_words"
+        );
+      }
+    }
   };
 
   const ffLw = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
