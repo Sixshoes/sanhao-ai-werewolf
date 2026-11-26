@@ -1209,7 +1209,7 @@
           </button>
           <button id="btnOpenAiModal" type="button" class="pause-action-btn">
             <span class="flex items-center gap-1.5"><span id="aiModeDot"
-                class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span id="aiModeLabel">內建AI</span></span>
+                class="w-2 h-2 rounded-full bg-emerald-400"></span><span id="aiModeLabel">離線規則</span></span>
             <span class="text-[13px] text-slate-400">設定</span>
           </button>
           <button id="btnToggle3D" type="button" class="pause-action-btn">3D舞台</button>
@@ -1358,42 +1358,116 @@
 
   <!-- AI Engine Modal -->
   <div id="modalAiConfig" class="hidden fixed inset-0 z-50 craft-modal-backdrop flex items-center justify-center p-4">
-    <div class="craft-modal-box max-w-md w-full max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl">
-      <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between shrink-0">
-        <h3 class="modal-title-serif text-lg font-bold text-amber-300 tracking-wider">AI 推理引擎設定</h3>
-        <button id="btnCloseAiModal" type="button" class="cta-ink text-[15px] px-2.5 py-1">關閉</button>
+    <div class="craft-modal-box max-w-lg w-full max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+        <div class="min-w-0">
+          <h3 class="modal-title-serif text-lg font-bold text-amber-300 tracking-wider">AI 推理引擎設定</h3>
+          <div id="aiModalActiveBadge" class="ai-active-badge-line mt-0.5 flex items-center gap-1.5 text-[13px] text-slate-300">
+            <span id="aiModalActiveDot" class="ai-status-dot is-ok" aria-hidden="true"></span>
+            <span>目前生效：</span>
+            <strong id="aiModalActiveLabel" class="text-amber-200 font-bold">離線規則</strong>
+          </div>
+        </div>
+        <button id="btnCloseAiModal" type="button" class="cta-ink text-[15px] px-2.5 py-1 shrink-0">關閉</button>
       </div>
       <div class="p-4 space-y-3 text-sm text-slate-300 overflow-y-auto custom-scroll">
-        <div class="p-2.5 rounded bg-amber-500/10 border border-amber-400/30 text-amber-100 leading-relaxed space-y-1">
-          <div><strong class="text-amber-300">最新旗艦 Gemini（雲端）</strong>：到 Google AI Studio 取得免費 API Key 即可用最新 <code>Gemini 3.8 Flash</code>，或選頂級旗艦 <code>Gemini 4 Argon</code>／<code>3.1 Pro</code>。</div>
-          <div class="text-sky-200"><strong class="text-sky-300">本機免費 Ollama（免 Key）</strong>：下方自動偵測電腦已安裝的本機高階模型。</div>
-        </div>
         <div>
-          <label for="selectGeminiModel" class="block font-medium text-slate-200 mb-1">選擇推理模型</label>
-          <select id="selectGeminiModel"
+          <div class="text-[13px] font-medium text-slate-300 mb-1.5">選擇推理模式（點選即時展開對應設定）</div>
+          <div id="aiModeCardGrid" class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="AI 推理模式">
+            <button id="btnAiModeCloud" type="button" data-aimode="cloud" aria-pressed="true"
+              class="ai-mode-card voice-rate-btn is-active text-left px-3 py-2.5 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">
+              <div class="ai-mode-card-title text-[14px] font-bold leading-snug">雲端免金鑰（預設）</div>
+              <div class="ai-mode-card-sub text-[13px] opacity-80 mt-0.5 leading-snug">公測代理・免填金鑰</div>
+            </button>
+            <button id="btnAiModeKey" type="button" data-aimode="key" aria-pressed="false"
+              class="ai-mode-card voice-rate-btn text-left px-3 py-2.5 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">
+              <div class="ai-mode-card-title text-[14px] font-bold leading-snug">自備 Gemini 金鑰</div>
+              <div class="ai-mode-card-sub text-[13px] opacity-80 mt-0.5 leading-snug">直連官方・開放 2.5 Pro</div>
+            </button>
+            <button id="btnAiModeOllama" type="button" data-aimode="ollama" aria-pressed="false"
+              class="ai-mode-card voice-rate-btn text-left px-3 py-2.5 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">
+              <div class="ai-mode-card-title text-[14px] font-bold leading-snug">本機 Ollama</div>
+              <div class="ai-mode-card-sub text-[13px] opacity-80 mt-0.5 leading-snug">電腦離線免費模型</div>
+            </button>
+            <button id="btnAiModeOffline" type="button" data-aimode="offline" aria-pressed="false"
+              class="ai-mode-card voice-rate-btn text-left px-3 py-2.5 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">
+              <div class="ai-mode-card-title text-[14px] font-bold leading-snug">純離線內建引擎</div>
+              <div class="ai-mode-card-sub text-[13px] opacity-80 mt-0.5 leading-snug">免網路・零延遲規則</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Pane 1: Cloud Proxy (No Key) -->
+        <div id="aiPaneCloud" class="ai-config-pane rounded bg-slate-950/75 border border-slate-800 p-3 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-bold text-amber-200 text-[13px]">選擇雲端免金鑰模型</span>
+            <span id="aiCloudProxyTag" class="text-[13px] text-slate-400">經由 /api/gemini 安全代理</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="雲端免金鑰模型">
+            <button id="btnCloudModelFlash" type="button" data-cloudmodel="gemini-2.5-flash" aria-pressed="true"
+              class="ai-cloud-model-btn voice-rate-btn is-active text-left px-2.5 py-2 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">
+              <div class="text-[13px] font-bold leading-snug">gemini-2.5-flash</div>
+              <div class="text-[13px] opacity-80 mt-0.5">標準版・語氣推理均衡</div>
+            </button>
+            <button id="btnCloudModelLite" type="button" data-cloudmodel="gemini-2.5-flash-lite" aria-pressed="false"
+              class="ai-cloud-model-btn voice-rate-btn text-left px-2.5 py-2 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">
+              <div class="text-[13px] font-bold leading-snug">gemini-2.5-flash-lite</div>
+              <div class="text-[13px] opacity-80 mt-0.5">極速版・回應延遲最低</div>
+            </button>
+          </div>
+          <div id="aiCloudEnvHint" class="text-[13px] text-slate-300 leading-relaxed">
+            按下「測試並套用」將實測雲端代理連線並回報往返耗時。
+          </div>
+        </div>
+
+        <!-- Pane 2: Personal Gemini API Key -->
+        <div id="aiPaneKey" class="hidden ai-config-pane rounded bg-slate-950/75 border border-slate-800 p-3 space-y-2.5">
+          <div>
+            <label for="inputGeminiKey" class="block font-medium text-slate-200 text-[13px] mb-1">Gemini API Key（僅存本分頁記憶體，關閉分頁即自動清除）</label>
+            <input id="inputGeminiKey" type="password" autocomplete="off" placeholder="AIza...（請貼上 Google AI Studio 免費或付費金鑰）"
+              class="w-full rounded px-3 py-2 text-sm border focus:outline-none focus:border-amber-400" />
+          </div>
+          <div>
+            <label for="selectGeminiModel" class="block font-medium text-slate-200 text-[13px] mb-1">選擇直連官方模型（自備金鑰開放 2.5 Pro）</label>
+            <select id="selectGeminiModel"
+              class="w-full rounded px-3 py-2 text-sm font-bold border focus:outline-none focus:border-amber-400">
+              <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash（標準版・免費額度可用・均衡推理）</option>
+              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite（極速版・最低延遲高吞吐）</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro（旗艦深度推理・盤坑首選）</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Pane 3: Local Ollama -->
+        <div id="aiPaneOllama" class="hidden ai-config-pane rounded bg-slate-950/75 border border-slate-800 p-3 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <label for="selectOllamaModel" class="font-medium text-slate-200 text-[13px]">選擇本機已安裝的 Ollama 模型</label>
+            <button id="btnRefreshOllama" type="button" class="cta-ink text-[13px] px-2 py-0.5 shrink-0">重新偵測</button>
+          </div>
+          <select id="selectOllamaModel"
             class="w-full rounded px-3 py-2 text-sm font-bold border focus:outline-none focus:border-amber-400">
-            <optgroup label="最新雲端旗艦 Gemini（Google AI Studio）">
-              <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash（2026 最新旗艦・免費額度可用・高速強推理）</option>
-              <option value="gemini-4-argon">Gemini 4 Argon（最新頂級旗艦・需付費 API 方案）</option>
-              <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro（旗艦 Pro 推理・盤坑首選）</option>
-              <option value="gemini-3.6-flash">Gemini 3.6 Flash（高速穩定）</option>
-              <option value="gemini-2.5-pro">Gemini 2.5 Pro（經典高階相容）</option>
-              <option value="gemini-2.5-flash">Gemini 2.5 Flash（輕量相容備援）</option>
-            </optgroup>
             <optgroup id="localOllamaOptGroup" label="本機免費離線 Ollama（免 API Key）">
               <option value="" disabled>偵測本機 Ollama 模型中…</option>
             </optgroup>
           </select>
+          <div class="text-[13px] text-slate-400 leading-relaxed">
+            需在本機同時啟動 <code>python3 server.py</code> 與 <code>ollama serve</code>，免金鑰且完全於電腦端推論。
+          </div>
         </div>
-        <div>
-          <label for="inputGeminiKey" class="block font-medium text-slate-200 mb-1">Gemini API Key（僅存本分頁記憶體・關分頁即清；雲端公測版與 Ollama 可免填）</label>
-          <input id="inputGeminiKey" type="password" placeholder="AIza...（可留空使用公測雲端 Gemini，或填入個人 Key）"
-            class="w-full rounded px-3 py-2 text-sm border focus:outline-none focus:border-amber-400" />
+
+        <!-- Pane 4: Built-in Offline Rules Engine -->
+        <div id="aiPaneOffline" class="hidden ai-config-pane rounded bg-slate-950/75 border border-slate-800 p-3 space-y-1.5">
+          <div class="font-bold text-emerald-300 text-[13px]">純離線內建三好推理引擎（離線規則）</div>
+          <p class="text-[13px] text-slate-300 leading-relaxed">
+            全程由瀏覽器本地盲視盤坑演算法與角色語風庫驅動，不連網、不耗額度、0ms 即時出句，並保有完整反作弊隔離與對跳邏輯。
+          </p>
         </div>
-        <div id="aiTestResultBox" class="hidden p-2 rounded bg-slate-950 border border-slate-800 text-[13px]"></div>
-        <div class="flex justify-end gap-2">
-          <button id="btnClearApiKey" type="button" class="cta-ink px-3 py-1.5">切回內建AI</button>
-          <button id="btnSaveApiKey" type="button" class="cta-brass px-4 py-1.5">連線並套用</button>
+
+        <div id="aiTestResultBox" class="hidden ai-test-result p-2.5 rounded bg-slate-950 border border-slate-800 text-[13px] leading-relaxed" role="status" aria-live="polite"></div>
+
+        <div class="flex items-center justify-between gap-2 pt-1">
+          <button id="btnClearApiKey" type="button" class="cta-ink px-3 py-1.5 text-[13px]">切回離線規則</button>
+          <button id="btnSaveApiKey" type="button" class="cta-brass px-4 py-1.5 text-[14px]">測試並套用</button>
         </div>
       </div>
     </div>

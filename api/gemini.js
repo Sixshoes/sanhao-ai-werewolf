@@ -17,9 +17,7 @@
 
 const ALLOWED_PUBLIC_MODELS = new Set([
   "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
-  "gemini-3.8-flash",
-  "gemini-3.6-flash"
+  "gemini-2.5-flash-lite"
 ]);
 
 const MAX_PROMPT_CHARS = 14000;
@@ -203,14 +201,10 @@ function clampTemperature(reqTemp) {
 
 async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeoutMs, temperature) {
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
-  const isGen3 = modelId.indexOf("gemini-3") === 0;
   const genCfg = {
     temperature: clampTemperature(temperature),
-    maxOutputTokens: isGen3 ? (jsonMode ? 3072 : 1536) : (jsonMode ? 1280 : 768)
+    maxOutputTokens: jsonMode ? 1280 : 768
   };
-  if (isGen3) {
-    genCfg.thinkingConfig = { thinkingLevel: "LOW" };
-  }
   if (jsonMode) {
     genCfg.responseMimeType = "application/json";
   }
@@ -287,6 +281,7 @@ async function handler(req, res) {
       ok: true,
       available: Boolean(apiKey),
       model: defaultModel,
+      supportedModels: Array.from(ALLOWED_PUBLIC_MODELS),
       mode: "vercel-proxy"
     });
   }

@@ -358,16 +358,16 @@ class ServerTestCase(unittest.TestCase):
 
         # With server key & mocked upstream call, POST /api/gemini succeeds cleanly & rejects empty/bad bodies
         with patch.object(server, "get_server_gemini_key", return_value="fake-test-key"), \
-             patch.object(server, "call_gemini_text_rest", return_value=("連線成功", "gemini-3.8-flash")):
+             patch.object(server, "call_gemini_text_rest", return_value=("連線成功", "gemini-2.5-flash")):
             st_empty, _, _ = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"  "}')
             self.assertEqual(st_empty, 400)
 
-            st_ok, _, raw_ok = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"test","model":"gemini-4-argon"}')
+            st_ok, _, raw_ok = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"test","model":"gemini-2.5-pro"}')
             self.assertEqual(st_ok, 200)
             res = json.loads(raw_ok.decode("utf-8"))
             self.assertTrue(res.get("ok"))
             self.assertEqual(res.get("text"), "連線成功")
-            self.assertEqual(res.get("model"), "gemini-3.8-flash")
+            self.assertEqual(res.get("model"), "gemini-2.5-flash")
 
         # v20.0 tiered temperature clamping [0.45, 0.85] (default 0.65)
         self.assertEqual(server.clamp_gemini_temperature(0.58), 0.58)
@@ -376,7 +376,7 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual(server.clamp_gemini_temperature(1.9), 0.85)
         self.assertEqual(server.clamp_gemini_temperature(None), 0.65)
         with patch.object(server, "get_server_gemini_key", return_value="fake-test-key"), \
-             patch.object(server, "call_gemini_text_rest", return_value=("分階段溫度回應", "gemini-3.8-flash")) as mock_call:
+             patch.object(server, "call_gemini_text_rest", return_value=("分階段溫度回應", "gemini-2.5-flash")) as mock_call:
             st_t, _, _ = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"test","temperature":0.95}')
             self.assertEqual(st_t, 200)
             _, kwargs = mock_call.call_args

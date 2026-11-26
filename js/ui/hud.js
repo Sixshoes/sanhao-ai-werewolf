@@ -177,25 +177,18 @@ function updateAllUI() {
 
   const extLlmOn = Boolean(typeof isExternalLlmActive === "function" ? isExternalLlmActive() : (state.geminiApiKey || state.localLlmModel));
   const cloudProxyOn = Boolean(typeof isServerGeminiProxyActive === "function" && isServerGeminiProxyActive());
-  el("aiModeDot").className = state.localLlmModel
-    ? "w-2 h-2 rounded-full bg-sky-400"
-    : ((state.geminiApiKey || cloudProxyOn) ? "w-2 h-2 rounded-full bg-indigo-400" : "w-2 h-2 rounded-full bg-emerald-400");
-  let modelShort = "內建AI";
-  if (state.localLlmModel) {
-    modelShort = "本地 " + String(state.localLlmModel).split(":")[0];
-  } else if (state.geminiApiKey) {
-    const gm = state.geminiModel || "gemini-3.8-flash";
-    if (gm === "gemini-4-argon") modelShort = "4 Argon";
-    else if (gm === "gemini-3.8-flash") modelShort = "3.8 Flash";
-    else if (gm === "gemini-3.1-pro-preview") modelShort = "3.1 Pro";
-    else if (gm === "gemini-3.6-flash") modelShort = "3.6 Flash";
-    else if (gm === "gemini-2.5-pro") modelShort = "2.5 Pro";
-    else if (gm === "gemini-2.5-flash") modelShort = "2.5 Flash";
-    else modelShort = "Gemini";
-  } else if (cloudProxyOn) {
-    modelShort = "雲端 Gemini";
+  const aiDotEl = el("aiModeDot");
+  if (aiDotEl) {
+    aiDotEl.className = state.localLlmModel
+      ? "w-2 h-2 rounded-full bg-sky-400"
+      : (state.geminiApiKey
+        ? "w-2 h-2 rounded-full bg-amber-400"
+        : (cloudProxyOn ? "w-2 h-2 rounded-full bg-indigo-400" : "w-2 h-2 rounded-full bg-emerald-400"));
   }
-  el("aiModeLabel").textContent = extLlmOn ? modelShort : "內建AI";
+  const activeLlmText = (typeof getActiveLlmLabel === "function")
+    ? getActiveLlmLabel()
+    : (extLlmOn ? "雲端 2.5 Flash" : "離線規則");
+  if (el("aiModeLabel")) el("aiModeLabel").textContent = activeLlmText;
 
   const lobbyWolfN = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
   const pForHead = m.started ? getPlayerSeat() : null;

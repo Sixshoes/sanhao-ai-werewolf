@@ -16,23 +16,37 @@ function isExternalLlmActive() {
   return typeof state !== "undefined" && Boolean(state.geminiApiKey || state.localLlmModel || isServerGeminiProxyActive());
 }
 
+const OFFICIAL_CLOUD_GEMINI_MODELS = Object.freeze(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
+const OFFICIAL_PERSONAL_GEMINI_MODELS = Object.freeze(["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"]);
+
+function normalizeCloudGeminiModel(modelId) {
+  const m = String(modelId || "").trim();
+  return m === "gemini-2.5-flash-lite" ? "gemini-2.5-flash-lite" : "gemini-2.5-flash";
+}
+
+function normalizePersonalGeminiModel(modelId) {
+  const m = String(modelId || "").trim();
+  if (OFFICIAL_PERSONAL_GEMINI_MODELS.indexOf(m) !== -1) return m;
+  return "gemini-2.5-flash";
+}
+
 function getActiveLlmLabel() {
-  if (typeof state === "undefined") return "內建AI";
+  if (typeof state === "undefined") return "離線規則";
   if (state.localLlmModel) {
-    return "本機 " + String(state.localLlmModel);
+    return "本機 " + String(state.localLlmModel).trim();
   }
-  if (!state.geminiApiKey && isServerGeminiProxyActive()) {
-    return "雲端 Gemini";
+  if (state.geminiApiKey) {
+    const m = normalizePersonalGeminiModel(state.geminiModel);
+    if (m === "gemini-2.5-pro") return "自備 2.5 Pro";
+    if (m === "gemini-2.5-flash-lite") return "自備 2.5 Lite";
+    return "自備 2.5 Flash";
   }
-  if (!state.geminiApiKey) return "內建AI";
-  const m = state.geminiModel || "gemini-3.8-flash";
-  if (m === "gemini-4-argon") return "Gemini 4 Argon";
-  if (m === "gemini-3.8-flash") return "Gemini 3.8 Flash";
-  if (m === "gemini-3.1-pro-preview") return "Gemini 3.1 Pro";
-  if (m === "gemini-3.6-flash") return "Gemini 3.6 Flash";
-  if (m === "gemini-2.5-pro") return "Gemini 2.5 Pro";
-  if (m === "gemini-2.5-flash") return "Gemini 2.5 Flash";
-  return m;
+  if (isServerGeminiProxyActive()) {
+    const cm = normalizeCloudGeminiModel(state.serverGeminiModel);
+    if (cm === "gemini-2.5-flash-lite") return "雲端 2.5 Lite";
+    return "雲端 2.5 Flash";
+  }
+  return "離線規則";
 }
 
 async function probeServerGeminiProxy() {
@@ -46,18 +60,27 @@ async function probeServerGeminiProxy() {
     if (controller) opts.signal = controller.signal;
     const res = await fetch("/api/gemini", opts);
     if (timer) clearTimeout(timer);
-    if (!res || !res.ok) return false;
+    if (!res || !res.ok) {
+      state.serverGeminiAvailable = false;
+      return false;
+    }
     const data = await res.json().catch(function () { return null; });
     if (data && data.ok && data.available) {
       state.serverGeminiAvailable = true;
-      state.serverGeminiModel = String(data.model || "gemini-2.5-flash");
+      if (!state.serverGeminiModelUserChosen) {
+        state.serverGeminiModel = normalizeCloudGeminiModel(data.model);
+      } else {
+        state.serverGeminiModel = normalizeCloudGeminiModel(state.serverGeminiModel);
+      }
       if (typeof updateAllUI === "function") updateAllUI();
       return true;
     }
     state.serverGeminiAvailable = false;
+    if (typeof updateAllUI === "function") updateAllUI();
     return false;
   } catch (e) {
     if (timer) clearTimeout(timer);
+    state.serverGeminiAvailable = false;
     return false;
   }
 }
@@ -113,11 +136,14 @@ function resolveGeminiSpeechTemperature(sceneKind, ctxOpts) {
 }
 
 async function callServerGeminiProxyOnce(promptText, timeoutMs, opts) {
-  if (typeof fetch !== "function") return { ok: false, status: 0, text: null };
+  if (typeof fetch !== "function") return { ok: false, status: 0, text: null, model: "", error: "瀏覽器不支援網路請求", latencyMs: 0 };
   const controller = typeof AbortController === "function" ? new AbortController() : null;
   const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 14000) : null;
   const sid = getOrCreateProxySessionId();
   const safeTemp = clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard);
+  const chosenModel = normalizeCloudGeminiModel((opts && opts.model) ? opts.model : state.serverGeminiModel);
+  const tierVal = (chosenModel === "gemini-2.5-flash-lite" || Boolean(opts && opts.lite)) ? "lite" : "standard";
+  const tStart = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
   try {
     const fetchOpts = {
       method: "POST",
@@ -127,8 +153,8 @@ async function callServerGeminiProxyOnce(promptText, timeoutMs, opts) {
       },
       body: JSON.stringify({
         prompt: promptText,
-        model: state.serverGeminiModel || "gemini-2.5-flash",
-        tier: (opts && opts.lite) ? "lite" : "standard",
+        model: chosenModel,
+        tier: tierVal,
         sessionId: sid,
         jsonMode: Boolean(opts && opts.jsonMode),
         temperature: safeTemp
@@ -137,14 +163,31 @@ async function callServerGeminiProxyOnce(promptText, timeoutMs, opts) {
     if (controller) fetchOpts.signal = controller.signal;
     const res = await fetch("/api/gemini", fetchOpts);
     if (timer) clearTimeout(timer);
+    const tEnd = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
+    const latencyMs = Math.max(1, Math.round(tEnd - tStart));
     const data = await res.json().catch(function () { return null; });
     if (!res.ok || !data || !data.ok || !data.text) {
-      return { ok: false, status: res.status, text: null };
+      return {
+        ok: false,
+        status: res.status,
+        text: null,
+        model: (data && data.model) ? String(data.model) : chosenModel,
+        error: (data && data.error) ? String(data.error) : ("HTTP " + res.status),
+        latencyMs: latencyMs
+      };
     }
-    return { ok: true, status: res.status, text: String(data.text).trim() };
+    return {
+      ok: true,
+      status: res.status,
+      text: String(data.text).trim(),
+      model: normalizeCloudGeminiModel(data.model || chosenModel),
+      error: "",
+      latencyMs: latencyMs
+    };
   } catch (err) {
     if (timer) clearTimeout(timer);
-    return { ok: false, status: 0, text: null };
+    const tEnd = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
+    return { ok: false, status: 0, text: null, model: chosenModel, error: "連線逾時或網路無法連通", latencyMs: Math.max(1, Math.round(tEnd - tStart)) };
   }
 }
 
@@ -196,71 +239,25 @@ function extractInteractionsText(data) {
 }
 
 async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
-  // Gemini 4 Argon official Interactions REST API (own AbortController so fallback :generateContent never inherits an aborted signal!)
-  if (modelId && modelId.indexOf("gemini-4") === 0) {
-    const iCtrl = typeof AbortController === "function" ? new AbortController() : null;
-    const iTimer = iCtrl ? setTimeout(function () { iCtrl.abort(); }, Math.min(timeoutMs || 14000, 12000)) : null;
-    try {
-      const iFetchOpts = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": state.geminiApiKey
-        },
-        body: JSON.stringify({
-          model: modelId,
-          input: promptText,
-          generation_config: {
-            thinking_level: "low",
-            max_output_tokens: 4096
-          }
-        })
-      };
-      if (iCtrl) iFetchOpts.signal = iCtrl.signal;
-      const iRes = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", iFetchOpts);
-      if (iTimer) clearTimeout(iTimer);
-      if (iRes && iRes.ok) {
-        const iData = await iRes.json();
-        const iText = extractInteractionsText(iData);
-        if (iText) {
-          return { ok: true, status: iRes.status, text: iText };
-        }
-        const iParts = iData && iData.candidates && iData.candidates[0] && iData.candidates[0].content && iData.candidates[0].content.parts;
-        if (Array.isArray(iParts)) {
-          let pj = "";
-          iParts.forEach(function (pt) { if (pt && !pt.thought && pt.text) pj += pt.text; });
-          if (pj.trim()) {
-            return { ok: true, status: iRes.status, text: pj.trim() };
-          }
-        }
-      }
-    } catch (e) {
-      if (iTimer) clearTimeout(iTimer);
-    }
-  }
-
+  const safeModel = normalizePersonalGeminiModel(modelId);
   const controller = typeof AbortController === "function" ? new AbortController() : null;
   const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 16000) : null;
-  const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
-  const isGen34 = modelId && (modelId.indexOf("gemini-3") === 0 || modelId.indexOf("gemini-4") === 0);
+  const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(safeModel) + ":generateContent";
+  const isPro = safeModel === "gemini-2.5-pro";
   const genCfg = {
-    maxOutputTokens: isGen34 ? ((opts && opts.jsonMode) ? 3072 : 2048) : ((opts && opts.jsonMode) ? 1280 : 768)
+    temperature: clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard),
+    maxOutputTokens: isPro ? ((opts && opts.jsonMode) ? 2048 : 1280) : ((opts && opts.jsonMode) ? 1280 : 768)
   };
-  if (!modelId || modelId.indexOf("gemini-4") !== 0) {
-    genCfg.temperature = clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard);
-  }
-  if (isGen34) {
-    genCfg.thinkingConfig = { thinkingLevel: "LOW" };
-  }
   if (opts && opts.jsonMode) {
     genCfg.responseMimeType = "application/json";
   }
+  const tStart = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
   try {
     const fetchOpts = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": state.geminiApiKey
+        "x-goog-api-key": (opts && opts.apiKey) ? String(opts.apiKey) : state.geminiApiKey
       },
       body: JSON.stringify({
         contents: [{ parts: [{ text: promptText }] }],
@@ -270,17 +267,20 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
     if (controller) fetchOpts.signal = controller.signal;
     const res = await fetch(endpoint, fetchOpts);
     if (timer) clearTimeout(timer);
-    if (!res.ok) return { ok: false, status: res.status, text: null };
+    const tEnd = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
+    const latencyMs = Math.max(1, Math.round(tEnd - tStart));
+    if (!res.ok) return { ok: false, status: res.status, text: null, model: safeModel, latencyMs: latencyMs };
     const data = await res.json();
     const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
     let joined = "";
     if (Array.isArray(parts)) {
       parts.forEach(function (pt) { if (pt && !pt.thought && pt.text) joined += pt.text; });
     }
-    return { ok: Boolean(joined.trim()), status: res.status, text: joined.trim() || null };
+    return { ok: Boolean(joined.trim()), status: res.status, text: joined.trim() || null, model: safeModel, latencyMs: latencyMs };
   } catch (err) {
     if (timer) clearTimeout(timer);
-    return { ok: false, status: 0, text: null };
+    const tEnd = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
+    return { ok: false, status: 0, text: null, model: safeModel, latencyMs: Math.max(1, Math.round(tEnd - tStart)) };
   }
 }
 
@@ -327,39 +327,34 @@ async function callGeminiText(promptText, opts) {
   if (state._personalKeyCooldownUntil && Date.now() < state._personalKeyCooldownUntil) {
     return null;
   }
-  const primary = state.geminiModel || "gemini-3.8-flash";
-  const isHeavy = primary.indexOf("pro") !== -1 || primary.indexOf("argon") !== -1;
+  const primary = normalizePersonalGeminiModel(state.geminiModel);
+  const isHeavy = primary === "gemini-2.5-pro";
   const first = await callGeminiModelOnce(primary, promptText, isHeavy ? 20000 : 12000, opts);
   if (first.ok && first.text) {
     state._lastGeminiWarnKey = null;
     return first.text;
   }
-  // Abort redundant retries immediately on invalid key (401/403) unless it's a tier-restricted flagship model
-  if ((first.status === 401 || first.status === 403) && primary.indexOf("gemini-4") !== 0) {
+  if (first.status === 401 || first.status === 403) {
     state._personalKeyCooldownUntil = Date.now() + 120000;
-    notifyGeminiIssueOnce("auth:" + primary + ":" + first.status, "Gemini API Key 無效或無權限（HTTP " + first.status + "），暫改由內建 AI 推理", "warn");
+    notifyGeminiIssueOnce("auth:" + primary + ":" + first.status, "Gemini API Key 無效或無權限（HTTP " + first.status + "），暫改由離線規則推理", "warn");
     return null;
   }
-  if (primary !== "gemini-3.8-flash") {
-    const fb38 = await callGeminiModelOnce("gemini-3.8-flash", promptText, 12000, opts);
-    if (fb38.ok && fb38.text) {
-      if (primary.indexOf("gemini-4") === 0 && (first.status === 403 || first.status === 429 || first.status === 404)) {
-        notifyGeminiIssueOnce("downgrade:" + primary, "Gemini 4 Argon 需付費額度，已自動降級至 Gemini 3.8 Flash", "emerald");
+  if (primary !== "gemini-2.5-flash") {
+    const fb25 = await callGeminiModelOnce("gemini-2.5-flash", promptText, 10000, opts);
+    if (fb25.ok && fb25.text) {
+      if (primary === "gemini-2.5-pro" && (first.status === 429 || first.status === 404)) {
+        notifyGeminiIssueOnce("downgrade:" + primary, "Gemini 2.5 Pro 配額暫滿，本回合自動降級至 Gemini 2.5 Flash", "emerald");
       }
-      return fb38.text;
+      return fb25.text;
     }
-    if (fb38.status === 401 || fb38.status === 403) {
+    if (fb25.status === 401 || fb25.status === 403) {
       state._personalKeyCooldownUntil = Date.now() + 120000;
-      notifyGeminiIssueOnce("auth:38:" + fb38.status, "Gemini API Key 無效或無權限（HTTP " + fb38.status + "），暫改由內建 AI 推理", "warn");
+      notifyGeminiIssueOnce("auth:25:" + fb25.status, "Gemini API Key 無效或無權限（HTTP " + fb25.status + "），暫改由離線規則推理", "warn");
       return null;
     }
   }
-  if (primary !== "gemini-2.5-flash") {
-    const fb25 = await callGeminiModelOnce("gemini-2.5-flash", promptText, 9000, opts);
-    if (fb25.ok && fb25.text) return fb25.text;
-  }
   if (first.status === 429) {
-    notifyGeminiIssueOnce("quota:" + primary, "Gemini API 額度暫滿（HTTP 429），本回合自動由內建 AI 接手", "warn");
+    notifyGeminiIssueOnce("quota:" + primary, "Gemini API 額度暫滿（HTTP 429），本回合自動由離線規則接手", "warn");
   }
   return null;
 }

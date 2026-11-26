@@ -85,10 +85,10 @@ function collectFeedbackDiagnostics() {
   const aiEngine = (typeof state !== "undefined" && state.localLlmModel)
     ? ("Ollama:" + state.localLlmModel)
     : ((typeof state !== "undefined" && state.geminiApiKey)
-      ? ("Gemini:" + (state.geminiModel || "gemini-3.8-flash"))
+      ? ("Gemini:" + (state.geminiModel || "gemini-2.5-flash"))
       : ((typeof isServerGeminiProxyActive === "function" && isServerGeminiProxyActive())
-        ? ("CloudGemini:" + (state.serverGeminiModel || "gemini-3.8-flash"))
-        : "內建三好AI"));
+        ? ("CloudGemini:" + (state.serverGeminiModel || "gemini-2.5-flash"))
+        : "離線規則"));
   const w = typeof window !== "undefined" ? (window.innerWidth || 0) : 0;
   const h = typeof window !== "undefined" ? (window.innerHeight || 0) : 0;
   const uaRaw = (typeof navigator !== "undefined" && navigator.userAgent) ? String(navigator.userAgent) : "unknown";

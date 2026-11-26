@@ -6,3 +6,4 @@
 .feedback_inbox/
 __pycache__/
 *.pyc
+public/assets/aistudio/

@@ -11,3 +11,4 @@ start_server.bat
 *.bak
 *.tmp
 feedback_submissions.jsonl
+public/assets/aistudio/

@@ -356,8 +356,6 @@ def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=12):
 
 
 ALLOWED_PROXY_GEMINI_MODELS = {
-    "gemini-3.8-flash",
-    "gemini-3.6-flash",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
 }
@@ -393,14 +391,11 @@ def clamp_gemini_temperature(raw_temp, default_val=0.65):
 
 
 def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeout=9, temperature=0.65):
-    safe_model = model_id if model_id in ALLOWED_PROXY_GEMINI_MODELS else "gemini-3.8-flash"
-    is_gen3 = safe_model.startswith("gemini-3")
+    safe_model = model_id if model_id in ALLOWED_PROXY_GEMINI_MODELS else "gemini-2.5-flash"
     gen_cfg = {
         "temperature": clamp_gemini_temperature(temperature),
-        "maxOutputTokens": (3072 if json_mode else 1536) if is_gen3 else (1280 if json_mode else 768),
+        "maxOutputTokens": 1280 if json_mode else 768,
     }
-    if is_gen3:
-        gen_cfg["thinkingConfig"] = {"thinkingLevel": "LOW"}
     if json_mode:
         gen_cfg["responseMimeType"] = "application/json"
     body = json.dumps({
@@ -547,10 +542,13 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
 
         if route == "/api/gemini":
             gem_key = get_server_gemini_key()
+            def_m = os.environ.get("GEMINI_DEFAULT_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
+            safe_def = def_m if def_m in ALLOWED_PROXY_GEMINI_MODELS else "gemini-2.5-flash"
             self.send_json(200, {
                 "ok": True,
                 "available": bool(gem_key),
-                "model": os.environ.get("GEMINI_DEFAULT_MODEL", "gemini-3.8-flash").strip() or "gemini-3.8-flash",
+                "model": safe_def,
+                "supportedModels": ["gemini-2.5-flash", "gemini-2.5-flash-lite"],
                 "mode": "local-server-proxy",
             })
             return
@@ -673,8 +671,10 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         if not prompt_text:
             self.send_json(400, {"ok": False, "error": "Empty prompt"})
             return
-        req_model = str(req.get("model") or os.environ.get("GEMINI_DEFAULT_MODEL", "gemini-3.8-flash")).strip()
-        primary_model = req_model if req_model in ALLOWED_PROXY_GEMINI_MODELS else "gemini-3.8-flash"
+        req_model = str(req.get("model") or os.environ.get("GEMINI_DEFAULT_MODEL", "gemini-2.5-flash")).strip()
+        primary_model = req_model if req_model in ALLOWED_PROXY_GEMINI_MODELS else "gemini-2.5-flash"
+        if str(req.get("tier") or "").strip() == "lite" and primary_model == "gemini-2.5-flash":
+            primary_model = "gemini-2.5-flash-lite"
         json_mode = bool(req.get("jsonMode"))
         safe_temp = clamp_gemini_temperature(req.get("temperature"))
         try:

@@ -2336,8 +2336,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     }
     return { ok: false };
   };
-  if (!html.includes('value="gemini-3.8-flash"') || !html.includes('value="gemini-4-argon"') || !html.includes('value="gemini-3.1-pro-preview"') || !html.includes('id="localOllamaOptGroup"')) {
-    throw new Error("ai.html #selectGeminiModel missing latest Gemini 3.8/4 Argon/3.1 Pro or localOllamaOptGroup!");
+  if (!html.includes('value="gemini-2.5-flash"') || !html.includes('value="gemini-2.5-flash-lite"') || !html.includes('value="gemini-2.5-pro"') || !html.includes('id="localOllamaOptGroup"') || html.includes('gemini-3.8-flash') || html.includes('gemini-4-argon') || html.includes('gemini-3.1-pro-preview') || html.includes('gemini-3.6-flash')) {
+    throw new Error("ai.html #modalAiConfig must only expose official Gemini 2.5 Flash/Lite/Pro models plus localOllamaOptGroup!");
   }
   vm.runInContext(`
     el("selectPreferredRole").value = "villager";
@@ -5338,9 +5338,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     state.serverGeminiAvailable = true;
     state.serverGeminiOptOut = false;
     state.serverGeminiCooldownUntil = 0;
-    const cloudProxyOnOk = isServerGeminiProxyActive() && isExternalLlmActive() && getActiveLlmLabel() === "雲端 Gemini";
+    state.serverGeminiModel = "gemini-2.5-flash";
+    const cloudProxyOnOk = isServerGeminiProxyActive() && isExternalLlmActive() && getActiveLlmLabel() === "雲端 2.5 Flash";
     state.serverGeminiCooldownUntil = Date.now() + 60000;
-    const cloudProxyCooldownOk = !isServerGeminiProxyActive() && !isExternalLlmActive();
+    const cloudProxyCooldownOk = !isServerGeminiProxyActive() && !isExternalLlmActive() && getActiveLlmLabel() === "離線規則";
     state.serverGeminiCooldownUntil = 0;
     state.serverGeminiOptOut = true;
     const cloudProxyOptOutOk = !isServerGeminiProxyActive();
@@ -5499,8 +5500,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     throw new Error("api/gemini.js must route lite tier hint to gemini-2.5-flash-lite");
   }
   apiGeminiHandler._resetRateLimit();
-  apiGeminiHandler._markBadModel("gemini-3.8-flash", 2000000);
-  if (apiGeminiHandler._resolveSafeModel("gemini-3.8-flash", "standard", 2000500) !== "gemini-2.5-flash") {
+  apiGeminiHandler._markBadModel("gemini-2.5-flash-lite", 2000000);
+  if (apiGeminiHandler._resolveSafeModel("gemini-2.5-flash-lite", "lite", 2000500) !== "gemini-2.5-flash") {
     throw new Error("api/gemini.js bad-model circuit breaker failed to skip cooling-down model");
   }
   apiGeminiHandler._resetRateLimit();
@@ -7113,7 +7114,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.1") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.3") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7506,7 +7507,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.1"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.3"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8260,6 +8261,111 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   if (failedV242.length > 0) {
     throw new Error("v24.2 RELEASE-FREEZE check failed: " + JSON.stringify(v242Checks));
   }
+
+  // ==================== v24.2.2 AI ENGINE MODAL 4-MODE CARDS, CLOUD MODEL SWITCH & LIVE PROBE CHECK ====================
+  const prevFetch2422 = ctx.fetch;
+  const prevProto2422 = ctx.location.protocol;
+  ctx.location.protocol = "https:";
+  let capturedProxyModel = "";
+  let mockProxyAvailable = true;
+  ctx.fetch = async (url, opts) => {
+    const u = String(url || "");
+    const method = (opts && opts.method) ? String(opts.method).toUpperCase() : "GET";
+    if (u === "/api/gemini" && method === "GET") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, available: mockProxyAvailable, model: "gemini-2.5-flash", supportedModels: ["gemini-2.5-flash", "gemini-2.5-flash-lite"], mode: "local-server-proxy" })
+      };
+    }
+    if (u === "/api/gemini" && method === "POST") {
+      const parsed = JSON.parse(String((opts && opts.body) || "{}"));
+      capturedProxyModel = parsed.model || "";
+      if (!mockProxyAvailable) {
+        return { ok: false, status: 503, json: async () => ({ ok: false, error: "Server Gemini proxy not configured" }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ ok: true, model: parsed.model || "gemini-2.5-flash", text: "連線成功" }) };
+    }
+    if (u === "/api/local-llm/status") {
+      return { ok: true, status: 200, json: async () => ({ ok: true, running: false, models: [] }) };
+    }
+    return prevFetch2422 ? prevFetch2422(url, opts) : { ok: false, status: 404, json: async () => ({}) };
+  };
+  const flushAsync2422 = () => new Promise(r => setTimeout(r, 30));
+  const keyPaneOpenOk = vm.runInContext(`(() => {
+    el("btnOpenAiModal").click();
+    el("btnAiModeKey").click();
+    return el("btnAiModeKey").classList.contains("is-active")
+      && !el("aiPaneKey").classList.contains("hidden")
+      && el("aiPaneCloud").classList.contains("hidden")
+      && el("aiPaneOllama").classList.contains("hidden")
+      && el("aiPaneOffline").classList.contains("hidden");
+  })()`, ctx);
+
+  const revBefore2422 = vm.runInContext(`(() => {
+    el("btnAiModeCloud").click();
+    el("btnCloudModelLite").click();
+    const rev = state.match.tableStateRev || 0;
+    el("btnSaveApiKey").click();
+    return rev;
+  })()`, ctx);
+  await flushAsync2422();
+  const cloudLiteAppliedOk = vm.runInContext(`(() => {
+    const readTree = n => !n ? "" : (n.textContent || "") + " " + (n._children || []).map(readTree).join(" ");
+    const boxTxt = readTree(el("aiTestResultBox"));
+    return state.serverGeminiModel === "gemini-2.5-flash-lite"
+      && getActiveLlmLabel() === "雲端 2.5 Lite"
+      && el("aiModeLabel").textContent === "雲端 2.5 Lite"
+      && boxTxt.includes("連線正常")
+      && boxTxt.includes("ms")
+      && (state.match.tableStateRev || 0) > ${revBefore2422};
+  })()`, ctx);
+
+  const proLabelOk = vm.runInContext(`(() => {
+    state.geminiApiKey = "TEST_KEY_PRO";
+    state.geminiModel = "gemini-2.5-pro";
+    updateAllUI();
+    return getActiveLlmLabel() === "自備 2.5 Pro" && el("aiModeLabel").textContent === "自備 2.5 Pro";
+  })()`, ctx);
+
+  vm.runInContext(`
+    el("btnAiModeOffline").click();
+    el("btnSaveApiKey").click();
+  `, ctx);
+  await flushAsync2422();
+  const offlineAppliedOk = vm.runInContext(`(() => {
+    return getActiveLlmLabel() === "離線規則"
+      && el("aiModeLabel").textContent === "離線規則"
+      && state.serverGeminiOptOut === true;
+  })()`, ctx);
+
+  // Verify localhost without cloud proxy shows explicit guidance (never silently claims success)
+  mockProxyAvailable = false;
+  vm.runInContext(`
+    el("btnAiModeCloud").click();
+    el("btnSaveApiKey").click();
+  `, ctx);
+  await flushAsync2422();
+  const v2422NoProxyOk = vm.runInContext(`(() => {
+    const readTree = n => !n ? "" : (n.textContent || "") + " " + (n._children || []).map(readTree).join(" ");
+    const msg = readTree(el("aiTestResultBox"));
+    el("modalAiConfig").classList.add("hidden");
+    return msg.includes("本機環境未啟用雲端代理，請改填金鑰或切換離線引擎") && el("aiTestResultBox").classList.contains("is-error");
+  })()`, ctx);
+  ctx.fetch = prevFetch2422;
+  ctx.location.protocol = prevProto2422;
+
+  const v2422Checks = {
+    keyPaneOpenOk,
+    cloudLiteAppliedOk: cloudLiteAppliedOk && capturedProxyModel === "gemini-2.5-flash-lite",
+    proLabelOk,
+    offlineAppliedOk,
+    noProxyExplicitMsgOk: v2422NoProxyOk
+  };
+  const failedV2422 = Object.entries(v2422Checks).filter(([, v]) => !v);
+  if (failedV2422.length > 0) {
+    throw new Error("v24.2.2 AI CONFIG MODAL check failed: " + JSON.stringify(v2422Checks));
+  }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 Release-Freeze E2E smoke test PASSED!");
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.2 Release-Freeze E2E smoke test PASSED!");

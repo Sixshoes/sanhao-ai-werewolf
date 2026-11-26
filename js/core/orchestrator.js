@@ -388,7 +388,7 @@ const orchestrator = {
       let filtered = false;
 
       if (typeof state !== "undefined" && (typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel)) && typeof tryGenerateGeminiAiSpeech === "function") {
-        const usedModel = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : (state.geminiModel || "gemini-3.8-flash");
+        const usedModel = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : (state.geminiModel || "gemini-2.5-flash");
         const liveRes = await tryGenerateGeminiAiSpeech(speaker, generated);
         if (!this.isEpochValid(ep)) {
           return { epochValid: false, generated: generated, tier: tier, filtered: false };
@@ -470,7 +470,7 @@ const orchestrator = {
           if (cand && cand.length >= 16 && !recheck.isToxic) {
             outText = cand;
             filtered = san.filtered;
-            tier = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : (state.geminiModel || "gemini-3.8-flash");
+            tier = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : (state.geminiModel || "gemini-2.5-flash");
             this.stats.geminiHits += 1;
           }
         }
