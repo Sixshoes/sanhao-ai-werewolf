@@ -1520,9 +1520,16 @@ const stage3d = {
           return staticInfo || self.getDefaultStaticAvatarManifest();
         });
     };
-    fetch("/api/assets/status")
-      .then(function (r) { return r && r.ok ? r.json() : loadStaticFallback(); })
-      .catch(function () { return loadStaticFallback(); })
+    const host = (typeof window !== "undefined" && window.location && window.location.hostname)
+      ? String(window.location.hostname).toLowerCase()
+      : "";
+    const isLocalDev = host === "127.0.0.1" || host === "localhost" || host === "::1";
+    const manifestPromise = isLocalDev
+      ? fetch("/api/assets/status")
+          .then(function (r) { return r && r.ok ? r.json() : loadStaticFallback(); })
+          .catch(function () { return loadStaticFallback(); })
+      : loadStaticFallback();
+    manifestPromise
       .then(applyManifest)
       .catch(function () { settleBootAvatars(); });
   },

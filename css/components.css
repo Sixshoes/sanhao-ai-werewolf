@@ -14650,14 +14650,14 @@ body.craft-ui.theme-twilight .setup-drawer-sheet :is(.text-rose-50, .text-rose-1
   color: #96261d;
 }
 
-body.craft-ui.theme-daylight #controlDeck :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
-body.craft-ui.theme-daylight #roleGuidePopover :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
-body.craft-ui.theme-daylight #seatIntelPopover :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
-body.craft-ui.theme-daylight .craft-modal-box :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
-body.craft-ui.theme-daylight .setup-drawer-sheet :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
-body.craft-ui.theme-twilight #roleGuidePopover :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
-body.craft-ui.theme-twilight .craft-modal-box :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
-body.craft-ui.theme-twilight .setup-drawer-sheet :is(.text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300) {
+body.craft-ui.theme-daylight #controlDeck :is(.text-sky-100, .text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-daylight #roleGuidePopover :is(.text-sky-100, .text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-daylight #seatIntelPopover :is(.text-sky-100, .text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-daylight .craft-modal-box :is(.text-sky-100, .text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-daylight .setup-drawer-sheet :is(.text-sky-100, .text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-twilight #roleGuidePopover :is(.text-sky-100, .text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-twilight .craft-modal-box :is(.text-sky-100, .text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300),
+body.craft-ui.theme-twilight .setup-drawer-sheet :is(.text-sky-100, .text-sky-200, .text-sky-300, .text-cyan-200, .text-cyan-300, .text-indigo-100, .text-indigo-200, .text-indigo-300) {
   color: #254d73;
 }
 
@@ -14713,9 +14713,9 @@ body.craft-ui.theme-twilight .craft-modal-box :is(.bg-rose-950\/50, .bg-rose-500
   border-color: rgba(164, 57, 44, 0.36);
 }
 
-body.craft-ui.theme-daylight #controlDeck :is(.bg-indigo-950\/40, .bg-purple-950\/25, .bg-purple-950\/50),
-body.craft-ui.theme-daylight .craft-modal-box :is(.bg-indigo-950\/40, .bg-purple-950\/25, .bg-purple-950\/50),
-body.craft-ui.theme-twilight .craft-modal-box :is(.bg-indigo-950\/40, .bg-purple-950\/25, .bg-purple-950\/50) {
+body.craft-ui.theme-daylight #controlDeck :is(.bg-indigo-950\/40, .bg-purple-950\/25, .bg-purple-950\/50, .bg-sky-950\/20),
+body.craft-ui.theme-daylight .craft-modal-box :is(.bg-indigo-950\/40, .bg-purple-950\/25, .bg-purple-950\/50, .bg-sky-950\/20),
+body.craft-ui.theme-twilight .craft-modal-box :is(.bg-indigo-950\/40, .bg-purple-950\/25, .bg-purple-950\/50, .bg-sky-950\/20) {
   background-color: rgba(68, 78, 124, 0.10);
   border-color: rgba(68, 78, 124, 0.32);
 }
@@ -16444,6 +16444,19 @@ body.craft-ui.theme-twilight .career-seal-desc,
 body.craft-ui.theme-daylight .career-seal-desc {
   color: #4f3e2d;
 }
+
+/* Game Over focal card top clearance below floating HUD bar (zero !important) */
+body.screen-ingame.screen-gameover #controlDeck {
+  inset: 0;
+  bottom: 0;
+  padding: 58px 16px 18px;
+  justify-content: flex-start;
+}
+
+body.screen-ingame.screen-gameover #focalCenterCard {
+  max-height: calc(100dvh - 80px);
+}
+
 
 
 
