@@ -385,25 +385,25 @@
                   </div>
 
                   <details class="lobby-more-drawer max-w-[290px]">
-                    <summary class="lobby-more-summary text-[14px] text-slate-300 hover:text-amber-200 cursor-pointer select-none">更多模式・教學與設定 ▾</summary>
-                    <div class="pt-3 space-y-2">
+                    <summary class="lobby-more-summary text-[14px] text-slate-300 hover:text-amber-200 cursor-pointer select-none">
+                      <span>更多模式・教學與設定</span>
+                      <span class="lobby-more-caret" aria-hidden="true"></span>
+                    </summary>
+                    <div class="lobby-more-body pt-3 space-y-2.5">
                       <div class="grid grid-cols-2 gap-2">
-                        <button id="btnStartTutorialMatch" type="button" class="cta-celadon py-2 px-3 text-[15px]">新手帶玩</button>
-                        <button id="btnOpenTutorial" type="button" class="cta-brass py-2 px-3 text-[15px]">遊戲教學</button>
+                        <button id="btnStartTutorialMatch" type="button" class="cta-celadon py-2 px-2.5 text-[14px]">新手帶玩</button>
+                        <button id="btnOpenTutorial" type="button" class="cta-brass py-2 px-2.5 text-[14px]">遊戲教學</button>
                       </div>
-                      <div class="flex items-center flex-wrap gap-x-3 gap-y-1.5 pt-1 text-sm text-slate-300">
+                      <div class="lobby-quick-links" role="group" aria-label="導覽與書院工具">
                         <button id="btnStartJudgeShowcase" type="button"
-                          class="text-amber-300 hover:text-amber-200 transition underline underline-offset-4 font-semibold"
+                          class="lobby-quick-link is-featured"
                           title="150 秒全亮點導覽局：五人聽牌雙觀察員對跳、舉杯追問、三選一潤飾籤與終局底牌對照覆盤">評審導覽</button>
-                        <span>·</span>
                         <button id="btnTitleOpenGuide" type="button"
-                          class="hover:text-amber-300 transition underline underline-offset-4">規則理念</button>
-                        <span>·</span>
+                          class="lobby-quick-link">規則理念</button>
                         <button id="btnTitleOpenMusic" type="button"
-                          class="hover:text-amber-300 transition underline underline-offset-4">語音雅樂</button>
-                        <span>·</span>
+                          class="lobby-quick-link">語音雅樂</button>
                         <button id="btnTitleOpenCareer" type="button"
-                          class="hover:text-amber-300 transition underline underline-offset-4">書院印記</button>
+                          class="lobby-quick-link">書院印記</button>
                       </div>
                     </div>
                   </details>

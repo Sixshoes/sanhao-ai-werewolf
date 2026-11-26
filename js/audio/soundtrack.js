@@ -4,20 +4,20 @@
 "use strict";
 
 const PERSONA_AUDIO_EQ = {
-  "主持":  { lowFreq: 185, lowGain: 1.2,  midFreq: 880,  midGain: 0.6,  presFreq: 2850, presGain: 0.5, highFreq: 5900, highGain: -1.8, revSend: 0.16, gainTrim: 0.99, animeRateMul: 1.00,  twRateMul: 1.00,  detuneCents: -8,  twDetuneCents: -10, breathFreq: 1220, breathDur: 0.125 },
-  "你":    { lowFreq: 205, lowGain: 0.7,  midFreq: 980,  midGain: 0.4,  presFreq: 3000, presGain: 0.7, highFreq: 6100, highGain: -1.6, revSend: 0.09, gainTrim: 1.00, animeRateMul: 1.00,  twRateMul: 1.00,  detuneCents: 6,   twDetuneCents: 10,  breathFreq: 1380, breathDur: 0.105 },
-  "你_男": { lowFreq: 180, lowGain: 1.1,  midFreq: 820,  midGain: 0.6,  presFreq: 2700, presGain: 0.7, highFreq: 5800, highGain: -1.8, revSend: 0.10, gainTrim: 1.01, animeRateMul: 1.00,  twRateMul: 1.00,  detuneCents: -6,  twDetuneCents: -8,  breathFreq: 1080, breathDur: 0.110 },
-  "小澄":  { lowFreq: 220, lowGain: -1.6, midFreq: 1240, midGain: 1.3,  presFreq: 3400, presGain: 1.4, highFreq: 6150, highGain: -1.5, revSend: 0.08, gainTrim: 0.99, animeRateMul: 1.045, twRateMul: 1.055, detuneCents: 26,  twDetuneCents: 52,  breathFreq: 1320, breathDur: 0.092 },
-  "暖暖":  { lowFreq: 225, lowGain: 1.0,  midFreq: 910,  midGain: 0.5,  presFreq: 2800, presGain: 0.4, highFreq: 6500, highGain: -0.9, revSend: 0.12, gainTrim: 0.97, animeRateMul: 0.99,  twRateMul: 0.975, detuneCents: 14,  twDetuneCents: 22,  breathFreq: 1480, breathDur: 0.120 },
-  "阿松":  { lowFreq: 155, lowGain: 2.8,  midFreq: 590,  midGain: 1.4,  presFreq: 2300, presGain: 0.3, highFreq: 5200, highGain: -2.4, revSend: 0.13, gainTrim: 1.05, animeRateMul: 0.935, twRateMul: 0.925, detuneCents: -46, twDetuneCents: -68, breathFreq: 960,  breathDur: 0.135 },
-  "星兒":  { lowFreq: 235, lowGain: -0.9, midFreq: 1180, midGain: 0.5,  presFreq: 3550, presGain: 0.9, highFreq: 6600, highGain: -1.1, revSend: 0.10, gainTrim: 0.96, animeRateMul: 1.015, twRateMul: 1.045, detuneCents: 28,  twDetuneCents: 46,  breathFreq: 1620, breathDur: 0.090 },
-  "小雲":  { lowFreq: 210, lowGain: -0.6, midFreq: 1060, midGain: 0.9,  presFreq: 2950, presGain: 1.1, highFreq: 5900, highGain: -1.7, revSend: 0.09, gainTrim: 1.00, animeRateMul: 1.01,  twRateMul: 1.025, detuneCents: -10, twDetuneCents: -24, breathFreq: 1360, breathDur: 0.095 },
-  "阿竹":  { lowFreq: 188, lowGain: 1.5,  midFreq: 700,  midGain: 1.4,  presFreq: 2580, presGain: 0.3, highFreq: 5550, highGain: -2.1, revSend: 0.15, gainTrim: 1.01, animeRateMul: 0.985, twRateMul: 0.955, detuneCents: -18, twDetuneCents: -38, breathFreq: 1050, breathDur: 0.132 },
-  "晨晨":  { lowFreq: 205, lowGain: 0.5,  midFreq: 1120, midGain: 1.0,  presFreq: 3450, presGain: 1.4, highFreq: 6300, highGain: -1.3, revSend: 0.10, gainTrim: 1.02, animeRateMul: 1.02,  twRateMul: 1.070, detuneCents: 26,  twDetuneCents: 68,  breathFreq: 1280, breathDur: 0.088 },
-  "墨白":  { lowFreq: 148, lowGain: 3.0,  midFreq: 540,  midGain: 1.4,  presFreq: 2180, presGain: 0.4, highFreq: 5000, highGain: -2.5, revSend: 0.16, gainTrim: 1.04, animeRateMul: 0.97,  twRateMul: 0.905, detuneCents: -38, twDetuneCents: -92, breathFreq: 890,  breathDur: 0.148 },
-  "晴嵐":  { lowFreq: 200, lowGain: 1.2,  midFreq: 870,  midGain: 0.9,  presFreq: 2740, presGain: 0.5, highFreq: 6150, highGain: -1.5, revSend: 0.15, gainTrim: 0.99, animeRateMul: 0.975, twRateMul: 0.955, detuneCents: -20, twDetuneCents: -30, breathFreq: 1320, breathDur: 0.136 },
-  "阿朗":  { lowFreq: 192, lowGain: -0.5, midFreq: 1160, midGain: 1.3,  presFreq: 3380, presGain: 1.5, highFreq: 6050, highGain: -1.5, revSend: 0.09, gainTrim: 1.02, animeRateMul: 1.02,  twRateMul: 1.050, detuneCents: 14,  twDetuneCents: 34,  breathFreq: 1240, breathDur: 0.090 },
-  "柚子":  { lowFreq: 245, lowGain: -1.0, midFreq: 1280, midGain: 0.7,  presFreq: 3720, presGain: 1.1, highFreq: 6850, highGain: -0.7, revSend: 0.10, gainTrim: 0.97, animeRateMul: 1.03,  twRateMul: 1.055, detuneCents: 36,  twDetuneCents: 64,  breathFreq: 1680, breathDur: 0.094 }
+  "主持":  { lowFreq: 185, lowGain: 1.0,  midFreq: 880,  midGain: 0.5,  presFreq: 2850, presGain: 0.4, highFreq: 5900, highGain: -1.8, revSend: 0.16, gainTrim: 0.96, animeRateMul: 1.00,  twRateMul: 1.00,  detuneCents: -8,  twDetuneCents: -10, breathFreq: 1220, breathDur: 0.125 },
+  "你":    { lowFreq: 205, lowGain: 0.6,  midFreq: 980,  midGain: 0.4,  presFreq: 3000, presGain: 0.6, highFreq: 6100, highGain: -1.6, revSend: 0.09, gainTrim: 0.97, animeRateMul: 1.00,  twRateMul: 1.00,  detuneCents: 6,   twDetuneCents: 10,  breathFreq: 1380, breathDur: 0.105 },
+  "你_男": { lowFreq: 180, lowGain: 1.2,  midFreq: 820,  midGain: 0.9,  presFreq: 2680, presGain: 1.7, highFreq: 6000, highGain: -1.3, revSend: 0.10, gainTrim: 1.07, animeRateMul: 1.00,  twRateMul: 1.00,  detuneCents: -6,  twDetuneCents: -8,  breathFreq: 1080, breathDur: 0.110 },
+  "小澄":  { lowFreq: 210, lowGain: -0.6, midFreq: 1240, midGain: 1.4,  presFreq: 3250, presGain: 1.9, highFreq: 6200, highGain: -1.2, revSend: 0.08, gainTrim: 1.08, animeRateMul: 1.045, twRateMul: 1.055, detuneCents: 26,  twDetuneCents: 52,  breathFreq: 1320, breathDur: 0.092 },
+  "暖暖":  { lowFreq: 225, lowGain: 0.8,  midFreq: 910,  midGain: 0.4,  presFreq: 2800, presGain: 0.3, highFreq: 6500, highGain: -1.1, revSend: 0.12, gainTrim: 0.95, animeRateMul: 0.99,  twRateMul: 0.975, detuneCents: 14,  twDetuneCents: 22,  breathFreq: 1480, breathDur: 0.120 },
+  "阿松":  { lowFreq: 160, lowGain: 2.2,  midFreq: 620,  midGain: 1.5,  presFreq: 2450, presGain: 1.8, highFreq: 5600, highGain: -1.4, revSend: 0.12, gainTrim: 1.10, animeRateMul: 0.935, twRateMul: 0.925, detuneCents: -46, twDetuneCents: -68, breathFreq: 960,  breathDur: 0.135 },
+  "星兒":  { lowFreq: 235, lowGain: -0.9, midFreq: 1180, midGain: 0.4,  presFreq: 3550, presGain: 0.6, highFreq: 6600, highGain: -1.3, revSend: 0.10, gainTrim: 0.94, animeRateMul: 1.015, twRateMul: 1.045, detuneCents: 28,  twDetuneCents: 46,  breathFreq: 1620, breathDur: 0.090 },
+  "小雲":  { lowFreq: 210, lowGain: -0.6, midFreq: 1060, midGain: 0.8,  presFreq: 2950, presGain: 0.9, highFreq: 5900, highGain: -1.7, revSend: 0.09, gainTrim: 0.97, animeRateMul: 1.01,  twRateMul: 1.025, detuneCents: -10, twDetuneCents: -24, breathFreq: 1360, breathDur: 0.095 },
+  "阿竹":  { lowFreq: 188, lowGain: 1.4,  midFreq: 720,  midGain: 1.5,  presFreq: 2600, presGain: 1.6, highFreq: 5800, highGain: -1.4, revSend: 0.14, gainTrim: 1.08, animeRateMul: 0.985, twRateMul: 0.955, detuneCents: -18, twDetuneCents: -38, breathFreq: 1050, breathDur: 0.132 },
+  "晨晨":  { lowFreq: 205, lowGain: 0.7,  midFreq: 1120, midGain: 1.2,  presFreq: 3200, presGain: 1.8, highFreq: 6300, highGain: -1.1, revSend: 0.10, gainTrim: 1.07, animeRateMul: 1.02,  twRateMul: 1.070, detuneCents: 26,  twDetuneCents: 68,  breathFreq: 1280, breathDur: 0.088 },
+  "墨白":  { lowFreq: 152, lowGain: 2.3,  midFreq: 560,  midGain: 1.6,  presFreq: 2380, presGain: 1.9, highFreq: 5500, highGain: -1.5, revSend: 0.15, gainTrim: 1.11, animeRateMul: 0.97,  twRateMul: 0.905, detuneCents: -38, twDetuneCents: -92, breathFreq: 890,  breathDur: 0.148 },
+  "晴嵐":  { lowFreq: 200, lowGain: 1.0,  midFreq: 870,  midGain: 0.8,  presFreq: 2740, presGain: 0.5, highFreq: 6150, highGain: -1.5, revSend: 0.15, gainTrim: 0.97, animeRateMul: 0.975, twRateMul: 0.955, detuneCents: -20, twDetuneCents: -30, breathFreq: 1320, breathDur: 0.136 },
+  "阿朗":  { lowFreq: 192, lowGain: 0.2,  midFreq: 1160, midGain: 1.4,  presFreq: 3200, presGain: 1.9, highFreq: 6100, highGain: -1.2, revSend: 0.09, gainTrim: 1.07, animeRateMul: 1.02,  twRateMul: 1.050, detuneCents: 14,  twDetuneCents: 34,  breathFreq: 1240, breathDur: 0.090 },
+  "柚子":  { lowFreq: 245, lowGain: -1.0, midFreq: 1280, midGain: 0.5,  presFreq: 3720, presGain: 0.7, highFreq: 6850, highGain: -1.0, revSend: 0.10, gainTrim: 0.94, animeRateMul: 1.03,  twRateMul: 1.055, detuneCents: 36,  twDetuneCents: 64,  breathFreq: 1680, breathDur: 0.094 }
 };
 
 const sound = {
@@ -112,9 +112,9 @@ const sound = {
         this.voiceDeEss.gain.value = -2.0;
 
         const vComp = this.ctx.createDynamicsCompressor();
-        vComp.threshold.value = -18;
-        vComp.knee.value = 16;
-        vComp.ratio.value = 3.5;
+        vComp.threshold.value = -20;
+        vComp.knee.value = 20;
+        vComp.ratio.value = 3.0;
 
         this.voiceAnalyser = this.ctx.createAnalyser();
         this.voiceAnalyser.fftSize = 128;
@@ -468,7 +468,7 @@ const sound = {
         this.voiceRevSend.gain.setTargetAtTime(rev, now, 0.04);
       }
       if (this.voiceOutGain) {
-        this.voiceOutGain.gain.setTargetAtTime(clamp(0.92 * (eq.gainTrim || 1.0), 0.72, 1.15), now, 0.04);
+        this.voiceOutGain.gain.setTargetAtTime(clamp(0.95 * (eq.gainTrim || 1.0), 0.76, 1.22), now, 0.04);
       }
       if (personaKey === "主持" || personaKey === "你" || personaKey === "你_男") {
         this.setVoicePan(0);

@@ -1684,6 +1684,33 @@ const stage3dVrm = {
       ? new THREE.AnimationMixer(rawScene)
       : null;
 
+    // Parse VRM lookAt anatomical eye-bone bounds (VRoid models typically specify 7.7°–12°; cap safely inside socket!)
+    let maxEyeYawRad = 0.095;
+    let maxEyePitchUpRad = 0.058;
+    let maxEyePitchDownRad = 0.072;
+    try {
+      const deg2rad = Math.PI / 180;
+      if (isVrm0 && ext && ext.VRM && ext.VRM.firstPerson) {
+        const fp = ext.VRM.firstPerson;
+        const hIn = Number(fp.lookAtHorizontalInner && fp.lookAtHorizontalInner.yRange) || 8;
+        const hOut = Number(fp.lookAtHorizontalOuter && fp.lookAtHorizontalOuter.yRange) || 10;
+        const vUp = Number(fp.lookAtVerticalUp && fp.lookAtVerticalUp.yRange) || 10;
+        const vDn = Number(fp.lookAtVerticalDown && fp.lookAtVerticalDown.yRange) || 10;
+        maxEyeYawRad = clamp(Math.min(hIn, hOut) * deg2rad * 0.72, 0.065, 0.105);
+        maxEyePitchUpRad = clamp(vUp * deg2rad * 0.45, 0.042, 0.064);
+        maxEyePitchDownRad = clamp(vDn * deg2rad * 0.52, 0.050, 0.078);
+      } else if (isVrm1 && ext && ext.VRMC_vrm && ext.VRMC_vrm.lookAt) {
+        const la = ext.VRMC_vrm.lookAt;
+        const hIn = Number(la.rangeMapHorizontalInner && la.rangeMapHorizontalInner.outputScale) || 8;
+        const hOut = Number(la.rangeMapHorizontalOuter && la.rangeMapHorizontalOuter.outputScale) || 10;
+        const vUp = Number(la.rangeMapVerticalUp && la.rangeMapVerticalUp.outputScale) || 10;
+        const vDn = Number(la.rangeMapVerticalDown && la.rangeMapVerticalDown.outputScale) || 10;
+        maxEyeYawRad = clamp(Math.min(hIn, hOut) * deg2rad * 0.72, 0.065, 0.105);
+        maxEyePitchUpRad = clamp(vUp * deg2rad * 0.45, 0.042, 0.064);
+        maxEyePitchDownRad = clamp(vDn * deg2rad * 0.52, 0.050, 0.078);
+      }
+    } catch (e) {}
+
     return {
       root: root,
       modelWrap: modelWrap,
@@ -1695,6 +1722,11 @@ const stage3dVrm = {
       baseY: modelWrap.position.y,
       bones: bones,
       boneMeta: boneMeta,
+      eyeLimits: {
+        maxYaw: maxEyeYawRad,
+        maxPitchUp: maxEyePitchUpRad,
+        maxPitchDown: maxEyePitchDownRad
+      },
       restRot: restRot,
       morphs: morphs,
       springBones: springBones,
@@ -1842,8 +1874,9 @@ const stage3dVrm = {
     const isSecondBlink = hasDoubleBlink && blinkPhase > 0.14 && blinkPhase < 0.26;
     const isBlinking = !sleeping && !o.isLastWordsEnd && emotion !== "shock" && emotion !== "nervous" && (isPrimaryBlink || isSecondBlink);
     const isPlayfulWink = !sleeping && !isLastWordsMode && (emotion === "happy" || emotion === "laugh") && ((t + seed * 1.9) % 5.2 > 4.92);
-    const targetBlink = (sleeping || o.isLastWordsEnd) ? 1.0 : (isBlinking ? 1.0 : 0.0);
-    const targetWinkL = isPlayfulWink ? 0.88 : 0.0;
+    const happyLidGuard = clamp(1.0 - (inst.happyAmt || 0) * 0.72, 0.22, 1.0);
+    const targetBlink = (sleeping || o.isLastWordsEnd) ? 1.0 : (isBlinking ? happyLidGuard : 0.0);
+    const targetWinkL = isPlayfulWink ? (0.82 * happyLidGuard) : 0.0;
 
     let tA = 0, tI = 0, tU = 0, tE = 0, tO = 0;
     if (talking) {
@@ -1902,7 +1935,11 @@ const stage3dVrm = {
     inst.surprisedAmt += (targetSurprised - inst.surprisedAmt) * d22;
 
     this.applyMorphWeight(inst.morphs.blink, inst.blinkAmt);
-    if (inst.winkLAmt > 0.02) this.applyMorphWeight(inst.morphs.blink_l, inst.winkLAmt);
+    if (inst.winkLAmt > 0.005) {
+      this.applyMorphWeight(inst.morphs.blink_l, inst.winkLAmt);
+    } else if (inst.morphs.blink_l && inst.morphs.blink_l.length) {
+      this.applyMorphWeight(inst.morphs.blink_l, 0);
+    }
     this.applyMorphWeight(inst.morphs.aa, inst.vowelAmts.aa);
     this.applyMorphWeight(inst.morphs.ih, inst.vowelAmts.ih);
     this.applyMorphWeight(inst.morphs.ou, inst.vowelAmts.ou);
@@ -1950,8 +1987,8 @@ const stage3dVrm = {
     const nodOffset = (emotion === "happy" || o.isBeingVouched)
       ? Math.sin(t * 6.8 + seed) * 0.115
       : (listenNod + talkHeadBob);
-    const accusedShake = (!sleeping && o.isAccusing) ? Math.sin(t * 10.5 + seed) * 0.15 : 0;
-    const shakeOffset = accusedShake || ((emotion === "nervous" || sweating) ? Math.sin(t * 13.5 + seed) * 0.085 : 0);
+    const accusedShake = (!sleeping && o.isAccusing) ? Math.sin(t * 6.8 + seed) * 0.095 : 0;
+    const shakeOffset = accusedShake || ((emotion === "nervous" || sweating) ? Math.sin(t * 4.2 + seed) * 0.026 : 0);
     const curiousRoll = (!sleeping && !isActiveSpeaker && o.isListeningCurious) ? ((seed % 2 > 1 ? 1 : -1) * 0.095) : 0;
     const idleActRoll = (iname === "chin_rest")
       ? (((seed % 2 > 1 ? 1 : -1) * 0.11) * iw)
@@ -2062,21 +2099,44 @@ const stage3dVrm = {
         "YXZ"
       );
     }
-    // Expressive Eye-Bone Micro-Saccades (小雲 fastest scanning saccades; nervous wolves execute 180ms side-downward eye dart on accusation beat!)
+    // Calm Stepped Eye-Bone Fixation (respects each VRM's anatomical lookAt socket limits; zero continuous sine-wave eye wobbling!)
     if (bm.leftEye || bm.rightEye) {
-      const sacSpd = arch.gazeSaccadeSpeed || 1.0;
+      const lim = inst.eyeLimits || { maxYaw: 0.095, maxPitchUp: 0.058, maxPitchDown: 0.072 };
+      const sacSpd = clamp(arch.gazeSaccadeSpeed || 1.0, 0.7, 1.85);
       const nowFrameMs = o.nowMs || (t * 1000);
       const isWolfLieDart = Boolean(o.mentionBeat && o.mentionBeat.eyeDartUntil && nowFrameMs < o.mentionBeat.eyeDartUntil);
-      const dartEye = isWolfLieDart
-        ? ((seed % 2 > 1 ? 1 : -1) * 0.24)
-        : ((!sleeping && (sweating || emotion === "nervous"))
-          ? Math.sin(t * 7.2 + seed * 1.3) * 0.16
-          : (!sleeping ? Math.sin(t * 1.65 * sacSpd + seed * 2.1) * (0.065 * Math.min(1.45, sacSpd)) : 0));
-      const dartPitch = isWolfLieDart ? 0.15 : 0;
-      const eyeYaw = sleeping ? 0 : clamp(yawNow * 0.32 + dartEye, -0.30, 0.30);
-      const eyePitch = (sleeping || o.isLastWordsEnd) ? 0.16 : clamp(pitchNow * 0.26 + starLookPitch * 0.45 + dartPitch, -0.20, 0.22);
-      if (bm.leftEye) this.slerpBoneModelDelta(bm.leftEye, eyePitch, eyeYaw, 0, isWolfLieDart ? 0.65 : 0.38, "YXZ");
-      if (bm.rightEye) this.slerpBoneModelDelta(bm.rightEye, eyePitch, eyeYaw, 0, isWolfLieDart ? 0.65 : 0.38, "YXZ");
+
+      let fixYaw = 0;
+      let fixPitch = 0;
+      if (isWolfLieDart) {
+        fixYaw = (seed % 2 > 1 ? 1 : -1) * Math.min(0.078, lim.maxYaw * 0.85);
+        fixPitch = Math.min(0.050, lim.maxPitchDown * 0.78);
+      } else if (!sleeping && !o.isLastWordsEnd) {
+        if (sweating || emotion === "nervous") {
+          // Realistic uneasy stepped glances (~1.45s hold) instead of high-frequency eye vibration
+          const nervBucket = Math.floor((t + seed * 1.13) / 1.45);
+          const nHash = Math.sin(nervBucket * 19.31 + seed * 5.71);
+          fixYaw = (Math.abs(nHash) > 0.28) ? ((nHash > 0 ? 1 : -1) * Math.min(0.052, lim.maxYaw * 0.58)) : 0;
+          fixPitch = Math.cos(nervBucket * 11.17 + seed * 3.19) * 0.014;
+        } else {
+          // Steady human-like gaze fixation (3.2s–5.2s calm hold between subtle micro-shifts)
+          const fixPeriod = clamp(4.4 / Math.sqrt(sacSpd), 3.2, 5.2);
+          const fixBucket = Math.floor((t + seed * 1.37) / fixPeriod);
+          const hYaw = Math.sin(fixBucket * 12.9898 + seed * 4.1414);
+          const hPitch = Math.cos(fixBucket * 7.233 + seed * 2.71);
+          fixYaw = (Math.abs(hYaw) > 0.48) ? (hYaw * Math.min(0.032, lim.maxYaw * 0.36)) : 0;
+          fixPitch = (Math.abs(hPitch) > 0.62) ? (hPitch * 0.012) : 0;
+        }
+      }
+
+      // Spine+Chest+Neck+Head already deliver 100% of yawNow/pitchNow; eyes add only a subtle anatomical lead inside socket bounds
+      const eyeYaw = sleeping ? 0 : clamp(yawNow * 0.075 + fixYaw, -lim.maxYaw, lim.maxYaw);
+      const eyePitch = (sleeping || o.isLastWordsEnd)
+        ? Math.min(0.068, lim.maxPitchDown)
+        : clamp(pitchNow * 0.055 + starLookPitch * 0.22 + fixPitch, -lim.maxPitchUp, lim.maxPitchDown);
+      const eyeAlpha = isWolfLieDart ? 0.28 : 0.14;
+      if (bm.leftEye) this.slerpBoneModelDelta(bm.leftEye, eyePitch, eyeYaw, 0, eyeAlpha, "YXZ");
+      if (bm.rightEye) this.slerpBoneModelDelta(bm.rightEye, eyePitch, eyeYaw, 0, eyeAlpha, "YXZ");
     }
 
     // Subtle Living Seated Lower-Body Micro-Rhythm (keeps thighWorld.z > 0.85; skirted avatars keep knees modestly together!)

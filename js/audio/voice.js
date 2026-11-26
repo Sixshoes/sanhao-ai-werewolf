@@ -396,21 +396,80 @@ const voice = {
       .trim();
   },
 
+  normalizeAudioBufferLoudness: function (audioBuf, opts) {
+    // Active-speech RMS broadcast loudness normalizer + soft peak limiter (eliminates -6dB male vs female TTS loudness gaps!)
+    if (!audioBuf || typeof audioBuf.getChannelData !== "function") return audioBuf;
+    try {
+      const nCh = Math.max(1, audioBuf.numberOfChannels || 1);
+      const len = audioBuf.length || 0;
+      if (len < 128) return audioBuf;
+      const targetRms = (opts && typeof opts.targetRms === "number") ? opts.targetRms : 0.185;
+      const gate = 0.015;
+      let activeSq = 0;
+      let activeCount = 0;
+      let totalSq = 0;
+      let peak = 0;
+      for (let c = 0; c < nCh; c++) {
+        const ch = audioBuf.getChannelData(c);
+        if (!ch) continue;
+        for (let i = 0; i < len; i++) {
+          const v = ch[i];
+          const av = v < 0 ? -v : v;
+          if (av > peak) peak = av;
+          const sq = v * v;
+          totalSq += sq;
+          if (av > gate) {
+            activeSq += sq;
+            activeCount += 1;
+          }
+        }
+      }
+      if (peak < 0.005) return audioBuf;
+      const activeRms = activeCount >= 64
+        ? Math.sqrt(activeSq / activeCount)
+        : Math.sqrt(totalSq / Math.max(1, len * nCh));
+      if (!activeRms || activeRms < 0.004) return audioBuf;
+      const gain = clamp(targetRms / activeRms, 0.58, 2.85);
+      if (Math.abs(gain - 1.0) < 0.04 && peak <= 0.94) return audioBuf;
+
+      // Apply gain with smooth soft-knee ceiling above 0.88 (max 0.96) so quiet male voices lift cleanly with zero clipping
+      const knee = 0.88;
+      const headroom = 0.08;
+      for (let c = 0; c < nCh; c++) {
+        const ch = audioBuf.getChannelData(c);
+        if (!ch) continue;
+        for (let i = 0; i < len; i++) {
+          let s = ch[i] * gain;
+          const av = s < 0 ? -s : s;
+          if (av > knee) {
+            const over = (av - knee) / headroom;
+            const shaped = knee + headroom * (over / (1 + over));
+            s = s < 0 ? -shaped : shaped;
+          }
+          ch[i] = s;
+        }
+      }
+      return audioBuf;
+    } catch (e) {
+      return audioBuf;
+    }
+  },
+
   trimAudioBufferSilence: function (audioBuf) {
     if (!audioBuf || !sound || !sound.ctx || typeof audioBuf.getChannelData !== "function" || typeof sound.ctx.createBuffer !== "function") {
-      return audioBuf;
+      return this.normalizeAudioBufferLoudness(audioBuf);
     }
     try {
       const ch0 = audioBuf.getChannelData(0);
       const total = ch0 ? ch0.length : 0;
       const sr = audioBuf.sampleRate || 24000;
-      if (!total || total < sr * 0.16) return audioBuf;
+      if (!total || total < sr * 0.16) return this.normalizeAudioBufferLoudness(audioBuf);
       const thresh = 0.0038;
       let start = 0;
       while (start < total && Math.abs(ch0[start]) < thresh) start++;
       let end = total - 1;
       while (end > start && Math.abs(ch0[end]) < thresh) end--;
-      if (start >= end) return audioBuf;
+      if (start >= end) return this.normalizeAudioBufferLoudness(audioBuf);
 
       // Keep a natural 11ms acoustic margin & apply a 5ms cosine micro-fade so splices never click or pop
       const pad = Math.floor(sr * 0.011);
@@ -418,7 +477,7 @@ const voice = {
       const cutEnd = Math.min(total, end + pad + 1);
       const newLen = cutEnd - cutStart;
       if (newLen >= total - Math.floor(sr * 0.018) || newLen < Math.floor(sr * 0.08)) {
-        return audioBuf;
+        return this.normalizeAudioBufferLoudness(audioBuf);
       }
       const nCh = audioBuf.numberOfChannels || 1;
       const trimmed = sound.ctx.createBuffer(nCh, newLen, sr);
@@ -435,9 +494,9 @@ const voice = {
           dstData[newLen - 1 - f] *= w;
         }
       }
-      return trimmed;
+      return this.normalizeAudioBufferLoudness(trimmed);
     } catch (e) {
-      return audioBuf;
+      return this.normalizeAudioBufferLoudness(audioBuf);
     }
   },
 
@@ -1641,7 +1700,12 @@ const voice = {
         : (isBasicVoice
           ? clamp(profile.basicPitch || 1.0, 0.76, 1.20)
           : clamp(profile.pitch || 1.0, 0.70, 1.30));
-      const effVol = clamp(this.volume * (isBasicVoice ? 0.92 : 1.0) * (sitCfg.tailVolMul || 1.0), 0, 1);
+      const isMalePersona = Boolean(profile && profile.gender === "m");
+      const isLowPitchVoice = basePitch < 0.90 || missingMaleFallback;
+      const genderVolMul = isMalePersona
+        ? (isLowPitchVoice ? 1.22 : 1.16)
+        : (basePitch >= 1.12 ? 0.83 : 0.87);
+      const effVol = clamp(this.volume * genderVolMul * (sitCfg.tailVolMul || 1.0), 0, 1);
 
       const clauses = this.splitMandarinClauses(clean);
       const clauseOffsets = [];

@@ -8344,9 +8344,87 @@ body.screen-title #lobbySeatSummary {
 }
 
 .lobby-more-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 2px;
   font-weight: 400;
   letter-spacing: 0.08em;
-  color: rgba(214, 202, 184, 0.64);
+  color: rgba(214, 202, 184, 0.72);
+  transition: color 0.18s ease;
+}
+
+.lobby-more-caret {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  opacity: 0.72;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+  flex-shrink: 0;
+}
+
+.lobby-more-drawer[open] .lobby-more-caret {
+  transform: rotate(-135deg) translateY(-1px);
+  opacity: 0.95;
+}
+
+.lobby-quick-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(216, 185, 124, 0.16);
+}
+
+.lobby-quick-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 3px;
+  font-family: var(--font-literary);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  background: rgba(255, 250, 240, 0.035);
+  border: 1px solid rgba(216, 185, 124, 0.20);
+  color: rgba(232, 222, 206, 0.84);
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.16s ease;
+}
+
+.lobby-quick-link:hover {
+  background: rgba(216, 185, 124, 0.11);
+  border-color: rgba(226, 194, 126, 0.50);
+  color: #fffaf0;
+  transform: translateY(-1px);
+}
+
+.lobby-quick-link:focus-visible {
+  outline: 2px solid rgba(230, 196, 126, 0.75);
+  outline-offset: 2px;
+}
+
+.lobby-quick-link.is-featured {
+  background: rgba(216, 168, 92, 0.11);
+  border-color: rgba(226, 190, 118, 0.42);
+  border-left: 2px solid #dfa94e;
+  color: #f4d89f;
+  font-weight: 600;
+}
+
+.lobby-quick-link.is-featured:hover {
+  background: rgba(216, 168, 92, 0.19);
+  border-color: rgba(238, 204, 134, 0.70);
+  border-left-color: #f2c26b;
+  color: #fff5de;
 }
 
 .title-top-actions .title-scene-btn,
@@ -9748,6 +9826,11 @@ body.screen-ingame #toastContainer {
     font-size: 16px;
   }
 
+  body.screen-title .lobby-quick-link {
+    min-height: 38px;
+    font-size: 13.5px;
+  }
+
   /* Compact Single-Row Top HUD with Safe Area & Zero Truncation */
   #inGameTopHud {
     top: max(6px, env(safe-area-inset-top));
@@ -10722,32 +10805,69 @@ body.theme-twilight.screen-title .title-menu-item.is-primary:hover {
   color: #ffffff;
 }
 
-body.theme-twilight.screen-title .lobby-more-summary {
-  color: #655544;
+body.theme-twilight.screen-title .lobby-more-summary,
+body.theme-daylight.screen-title .lobby-more-summary {
+  color: #5c4d3d;
 }
 
-body.theme-twilight.screen-title .lobby-more-summary:hover {
+body.theme-twilight.screen-title .lobby-more-summary:hover,
+body.theme-daylight.screen-title .lobby-more-summary:hover {
   color: #8e5f1e;
 }
 
-body.theme-twilight.screen-title .lobby-more-drawer button {
-  color: #544537;
-}
-
-body.theme-twilight.screen-title .lobby-more-drawer .cta-celadon {
+body.theme-twilight.screen-title .lobby-more-drawer .cta-celadon,
+body.theme-daylight.screen-title .lobby-more-drawer .cta-celadon {
   background: linear-gradient(180deg, #357660 0%, #265a48 100%);
   border-color: rgba(38, 90, 72, 0.82);
   color: #f6fcf9;
 }
 
-body.theme-twilight.screen-title .lobby-more-drawer .cta-brass {
+body.theme-twilight.screen-title .lobby-more-drawer .cta-brass,
+body.theme-daylight.screen-title .lobby-more-drawer .cta-brass {
   background: linear-gradient(180deg, #bd8a3d 0%, #996a24 100%);
   border-color: rgba(153, 106, 36, 0.82);
   color: #fffcf5;
 }
 
-body.theme-twilight.screen-title #btnStartJudgeShowcase {
-  color: #9c3528;
+body.theme-twilight.screen-title .lobby-quick-links,
+body.theme-daylight.screen-title .lobby-quick-links {
+  border-top-color: rgba(116, 92, 62, 0.18);
+}
+
+body.theme-twilight.screen-title .lobby-quick-link,
+body.theme-daylight.screen-title .lobby-quick-link {
+  background: rgba(116, 92, 62, 0.055);
+  border-color: rgba(116, 92, 62, 0.24);
+  color: #46392d;
+}
+
+body.theme-twilight.screen-title .lobby-quick-link:hover,
+body.theme-daylight.screen-title .lobby-quick-link:hover {
+  background: rgba(154, 107, 39, 0.11);
+  border-color: rgba(154, 107, 39, 0.50);
+  color: #241c16;
+}
+
+body.theme-twilight.screen-title .lobby-quick-link:focus-visible,
+body.theme-daylight.screen-title .lobby-quick-link:focus-visible {
+  outline: 2px solid rgba(154, 107, 39, 0.65);
+  outline-offset: 2px;
+}
+
+body.theme-twilight.screen-title #btnStartJudgeShowcase.lobby-quick-link.is-featured,
+body.theme-daylight.screen-title #btnStartJudgeShowcase.lobby-quick-link.is-featured {
+  background: rgba(164, 57, 44, 0.075);
+  border-color: rgba(164, 57, 44, 0.34);
+  border-left: 2px solid #a4392c;
+  color: #962f22;
+}
+
+body.theme-twilight.screen-title #btnStartJudgeShowcase.lobby-quick-link.is-featured:hover,
+body.theme-daylight.screen-title #btnStartJudgeShowcase.lobby-quick-link.is-featured:hover {
+  background: rgba(164, 57, 44, 0.14);
+  border-color: rgba(164, 57, 44, 0.58);
+  border-left-color: #962f22;
+  color: #7c2217;
 }
 
 body.theme-twilight .title-top-actions .title-scene-btn,
