@@ -331,6 +331,7 @@ function bindModalEvents() {
     { id: "btnAiModeOffline", mode: "offline", pane: "aiPaneOffline" }
   ];
   const AI_CLOUD_MODEL_BTNS = [
+    { id: "btnCloudModelPro", model: "gemini-2.5-pro" },
     { id: "btnCloudModelFlash", model: "gemini-4-hydrogen" },
     { id: "btnCloudModelLite", model: "gemini-3.1-flash-lite" }
   ];
@@ -401,7 +402,7 @@ function bindModalEvents() {
   function syncCloudModelButtonsUi(modelId) {
     selectedCloudModelUi = (typeof normalizeCloudGeminiModel === "function")
       ? normalizeCloudGeminiModel(modelId)
-      : (modelId === "gemini-3.1-flash-lite" ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen");
+      : (modelId === "gemini-2.5-pro" ? "gemini-2.5-pro" : (modelId === "gemini-3.1-flash-lite" ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen"));
     AI_CLOUD_MODEL_BTNS.forEach(function (item) {
       const btn = el(item.id);
       if (!btn) return;
@@ -538,7 +539,7 @@ function bindModalEvents() {
     const box = el("aiTestResultBox");
     if (box) {
       if (initMode === "cloud" && typeof isServerGeminiProxyActive === "function" && isServerGeminiProxyActive()) {
-        renderAiTestResult("ok", "目前使用：" + getActiveLlmLabel() + "（雲端免金鑰已啟用）", "切換標準版／極速版後按下「測試並套用」即可即時實測與切換。");
+        renderAiTestResult("ok", "目前使用：" + getActiveLlmLabel() + "（雲端免金鑰已啟用）", "切換高階／標準／極速模型後按下「測試並套用」即可即時實測與切換。");
       } else {
         box.classList.add("hidden");
       }
@@ -606,7 +607,8 @@ function bindModalEvents() {
           return;
         }
 
-        const prox = await callServerGeminiProxyOnce("請只回覆「連線成功」四個字", 12000, {
+        const probeTimeoutMs = targetCloudModel === "gemini-2.5-pro" ? 18000 : 12000;
+        const prox = await callServerGeminiProxyOnce("請只回覆「連線成功」四個字", probeTimeoutMs, {
           model: targetCloudModel,
           lite: targetCloudModel === "gemini-3.1-flash-lite" || targetCloudModel === "gemini-2.5-flash-lite"
         });

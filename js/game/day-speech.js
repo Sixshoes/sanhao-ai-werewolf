@@ -41,18 +41,26 @@ function evaluateMatchPointState() {
     mpBadge.classList.toggle("hidden", !active);
     if (active) {
       mpBadge.textContent = "聽牌";
-      mpBadge.title = m.variantMode === "blitz_3m" ? "茶涼聽牌・發言上限 22 字" : "茶涼聽牌・發言上限 28 字";
+      mpBadge.title = m.variantMode === "blitz_3m" ? "茶涼聽牌・閃電快棋 22 字上限" : "茶涼聽牌・決勝深度盤坑";
     }
   }
   if (typeof refreshSpeechCharCounter === "function") refreshSpeechCharCounter();
   if (active && !wasActive) {
+    const isBlitzMp = m.variantMode === "blitz_3m";
     addLog({
       kind: "dawn",
-      title: "茶涼聽牌（決死加速）：局勢已逼近臨界，全場發言上限壓縮至 28 字內短兵相接。",
+      title: isBlitzMp
+        ? "茶涼聽牌（閃電決勝）：局勢已逼近臨界，全場維持 22 字內短兵相接。"
+        : "茶涼聽牌（決勝盤坑）：局勢已逼近臨界，全場進入深度複盤與關鍵歸票。",
       text: ""
     });
     if (typeof triggerCutIn === "function") {
-      triggerCutIn("茶涼聽牌・決死加速", "勝敗僅在一念之間，全場陳詞強制壓縮至 28 字內短兵相接", "crimson", 1800);
+      triggerCutIn(
+        isBlitzMp ? "茶涼聽牌・閃電決勝" : "茶涼聽牌・決勝歸票",
+        isBlitzMp ? "勝敗僅在一念之間，22 字內一針見血決出勝負" : "勝敗僅在一念之間，全場全面展開深度盤坑與關鍵拉票",
+        "crimson",
+        1800
+      );
     }
     if (typeof sound !== "undefined" && typeof sound.syncAtmosphere === "function") {
       sound.syncAtmosphere();
@@ -65,7 +73,6 @@ function getActiveSpeechCharLimit(matchObj) {
   const m = matchObj || (typeof state !== "undefined" ? state.match : null);
   if (!m) return 0;
   if (m.variantMode === "blitz_3m") return 22;
-  if (m.isMatchPoint) return 28;
   return 0;
 }
 

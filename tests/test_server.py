@@ -362,12 +362,13 @@ class ServerTestCase(unittest.TestCase):
             st_empty, _, _ = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"  "}')
             self.assertEqual(st_empty, 400)
 
-            st_ok, _, raw_ok = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"test","model":"gemini-2.5-pro"}')
+            st_ok, _, raw_ok = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"test","model":"gemini-4-argon"}')
             self.assertEqual(st_ok, 200)
             res = json.loads(raw_ok.decode("utf-8"))
             self.assertTrue(res.get("ok"))
             self.assertEqual(res.get("text"), "連線成功")
             self.assertEqual(res.get("model"), "gemini-4-hydrogen")
+            self.assertIn("gemini-2.5-pro", server.ALLOWED_PROXY_GEMINI_MODELS)
 
         # v20.0 tiered temperature clamping [0.45, 0.85] (default 0.65)
         self.assertEqual(server.clamp_gemini_temperature(0.58), 0.58)

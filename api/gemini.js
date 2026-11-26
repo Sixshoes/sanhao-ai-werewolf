@@ -3,19 +3,23 @@
  * 安全代理公測 2.0 線上版 Gemini 推論請求（金鑰僅存於 Vercel Environment Variables，絕不暴露至前端）
  *
  * 環境變數設定（於 Vercel Project → Settings → Environment Variables）：
- * - GEMINI_API_KEY         (必填) Google AI Studio API Key
- * - GEMINI_DEFAULT_MODEL   (選填，預設 gemini-2.5-flash)
- * - GEMINI_ALLOWED_ORIGINS (選填，逗號分隔自訂網域白名單，例如 https://game.example.com)
- * - GEMINI_SESSION_MAX_RPM (選填，每瀏覽器會話每分鐘上限，預設 24)
- * - GEMINI_SESSION_MAX_RPD (選填，每瀏覽器會話每日上限，預設 200)
- * - GEMINI_NAT_IP_MAX_RPM  (選填，帶會話標頭之同校網共用 IP 總上限，預設 96)
- * - GEMINI_NAT_IP_MAX_RPD  (選填，帶會話標頭之同校網共用 IP 每日總上限，預設 1200)
- * - GEMINI_MAX_RPM         (選填，無會話標頭舊版單 IP 每分鐘上限，預設 24)
- * - GEMINI_MAX_RPD         (選填，無會話標頭舊版單 IP 每日上限，預設 240)
+ * - GEMINI_API_KEY            (必填) Google AI Studio API Key
+ * - GEMINI_DEFAULT_MODEL      (選填，預設 gemini-4-hydrogen；可設為 gemini-2.5-pro / gemini-3.1-flash-lite)
+ * - GEMINI_THINKING_LEVEL     (選填，Gemini 4 思考深度：LOW / MEDIUM / HIGH，預設 LOW)
+ * - GEMINI_PRO_THINKING_BUDGET (選填，2.5 Pro 思考 token 上限 128~2048，預設 512)
+ * - GEMINI_UPSTREAM_TIMEOUT_MS (選填，單次上游逾時毫秒，預設 Pro 14000 / Flash 8500)
+ * - GEMINI_ALLOWED_ORIGINS    (選填，逗號分隔自訂網域白名單，例如 https://game.example.com)
+ * - GEMINI_SESSION_MAX_RPM    (選填，每瀏覽器會話每分鐘上限，預設 24)
+ * - GEMINI_SESSION_MAX_RPD    (選填，每瀏覽器會話每日上限，預設 200)
+ * - GEMINI_NAT_IP_MAX_RPM     (選填，帶會話標頭之同校網共用 IP 總上限，預設 96)
+ * - GEMINI_NAT_IP_MAX_RPD     (選填，帶會話標頭之同校網共用 IP 每日總上限，預設 1200)
+ * - GEMINI_MAX_RPM            (選填，無會話標頭舊版單 IP 每分鐘上限，預設 24)
+ * - GEMINI_MAX_RPD            (選填，無會話標頭舊版單 IP 每日上限，預設 240)
  */
 "use strict";
 
 const ALLOWED_PUBLIC_MODELS = new Set([
+  "gemini-2.5-pro",
   "gemini-4-hydrogen",
   "gemini-3.1-flash-lite",
   "gemini-2.5-flash",
@@ -217,18 +221,52 @@ function sanitizeUpstreamReason(rawMsg) {
     .slice(0, 140);
 }
 
-async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeoutMs, temperature) {
-  const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
+function resolveGemini4ThinkingLevel() {
+  const raw = String(process.env.GEMINI_THINKING_LEVEL || "LOW").trim().toUpperCase();
+  if (raw === "LOW" || raw === "MEDIUM" || raw === "HIGH") return raw;
+  return "LOW";
+}
+
+function resolveProThinkingBudget() {
+  const n = parseInt(process.env.GEMINI_PRO_THINKING_BUDGET || "512", 10);
+  if (!Number.isFinite(n) || n <= 0) return 512;
+  return Math.max(128, Math.min(2048, n));
+}
+
+function buildGenerationConfig(modelId, jsonMode, temperature) {
+  const isGemini4 = /^gemini-4-/.test(String(modelId || ""));
+  const isPro25 = modelId === "gemini-2.5-pro";
   const genCfg = {
-    temperature: clampTemperature(temperature),
-    maxOutputTokens: jsonMode ? 1280 : 768
+    maxOutputTokens: isPro25 ? (jsonMode ? 2048 : 1152) : (jsonMode ? 1536 : 896)
   };
+  if (isGemini4) {
+    genCfg.thinkingConfig = { thinkingLevel: resolveGemini4ThinkingLevel() };
+  } else {
+    genCfg.temperature = clampTemperature(temperature);
+    if (isPro25) {
+      genCfg.thinkingConfig = { thinkingBudget: resolveProThinkingBudget() };
+    }
+  }
   if (jsonMode) {
     genCfg.responseMimeType = "application/json";
   }
+  return genCfg;
+}
+
+function resolvePrimaryTimeoutMs(modelId) {
+  const envMs = parseInt(process.env.GEMINI_UPSTREAM_TIMEOUT_MS || "", 10);
+  if (Number.isFinite(envMs) && envMs >= 3000) {
+    return Math.min(20000, envMs);
+  }
+  return modelId === "gemini-2.5-pro" ? 14000 : 8500;
+}
+
+async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeoutMs, temperature) {
+  const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
+  const genCfg = buildGenerationConfig(modelId, jsonMode, temperature);
 
   const controller = typeof AbortController === "function" ? new AbortController() : null;
-  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 4800) : null;
+  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 8500) : null;
   try {
     const fetchOpts = {
       method: "POST",
@@ -345,9 +383,10 @@ async function handler(req, res) {
   const tierHint = body.tier === "lite" ? "lite" : "standard";
   const primaryModel = resolveSafeModel(body.model, tierHint);
 
-  // v24.2.4 Vercel 10s budget guard with automatic multi-model fallback (never return raw 404 for upstream model errors)
+  // v24.2.5 Vercel 25s maxDuration budget guard (Pro 14s / Flash 8.5s) with automatic multi-model fallback
   const startedAt = Date.now();
-  const first = await callUpstreamGemini(apiKey, primaryModel, promptText, jsonMode, 5200, safeTemp);
+  const primaryTimeoutMs = resolvePrimaryTimeoutMs(primaryModel);
+  const first = await callUpstreamGemini(apiKey, primaryModel, promptText, jsonMode, primaryTimeoutMs, safeTemp);
   if (first.ok && first.text) {
     return sendJson(res, 200, { ok: true, model: primaryModel, text: first.text });
   }
@@ -363,9 +402,11 @@ async function handler(req, res) {
     });
     for (let i = 0; i < fbQueue.length; i++) {
       const elapsed = Date.now() - startedAt;
-      if (8400 - elapsed < 1800) break;
+      const remainingBudget = 21500 - elapsed;
+      if (remainingBudget < 2400) break;
       const fbModel = fbQueue[i];
-      const fb = await callUpstreamGemini(apiKey, fbModel, promptText, jsonMode, 3200, safeTemp);
+      const fbTimeout = Math.min(5500, remainingBudget - 400);
+      const fb = await callUpstreamGemini(apiKey, fbModel, promptText, jsonMode, fbTimeout, safeTemp);
       if (fb.ok && fb.text) {
         return sendJson(res, 200, { ok: true, model: fbModel, fallbackFrom: primaryModel, text: fb.text });
       }
@@ -391,6 +432,8 @@ handler._checkRateLimit = checkRateLimit;
 handler._resolveSafeModel = resolveSafeModel;
 handler._extractSessionId = extractSessionId;
 handler._clampTemperature = clampTemperature;
+handler._buildGenerationConfig = buildGenerationConfig;
+handler._resolvePrimaryTimeoutMs = resolvePrimaryTimeoutMs;
 handler._markBadModel = function (modelId, nowMs) {
   _badModelCooldown.set(modelId, (typeof nowMs === "number" ? nowMs : Date.now()) + BAD_MODEL_COOLDOWN_MS);
 };

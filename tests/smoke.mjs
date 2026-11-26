@@ -5494,10 +5494,24 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
   const apiGeminiHandler = (await import("../api/gemini.js")).default;
   if (apiGeminiHandler._resolveSafeModel("gemini-4-argon") !== "gemini-4-hydrogen") {
-    throw new Error("api/gemini.js must cap public proxy models to public Flash tier (gemini-4-hydrogen)");
+    throw new Error("api/gemini.js must cap unapproved models to default public model (gemini-4-hydrogen)");
+  }
+  if (apiGeminiHandler._resolveSafeModel("gemini-2.5-pro") !== "gemini-2.5-pro") {
+    throw new Error("api/gemini.js must allow gemini-2.5-pro in public proxy whitelist");
+  }
+  if (apiGeminiHandler._resolveSafeModel("gemini-2.5-pro", "lite") !== "gemini-2.5-pro") {
+    throw new Error("api/gemini.js must not silently downgrade explicit gemini-2.5-pro requests on lite hint");
   }
   if (apiGeminiHandler._resolveSafeModel("gemini-4-hydrogen", "lite") !== "gemini-3.1-flash-lite") {
     throw new Error("api/gemini.js must route lite tier hint to gemini-3.1-flash-lite");
+  }
+  const g4Cfg = apiGeminiHandler._buildGenerationConfig("gemini-4-hydrogen", true, 0.72);
+  if ("temperature" in g4Cfg || !g4Cfg.thinkingConfig || g4Cfg.thinkingConfig.thinkingLevel !== "LOW") {
+    throw new Error("api/gemini.js must omit temperature and set thinkingLevel for gemini-4-hydrogen");
+  }
+  const proCfg = apiGeminiHandler._buildGenerationConfig("gemini-2.5-pro", true, 0.65);
+  if (!proCfg.thinkingConfig || proCfg.thinkingConfig.thinkingBudget !== 512 || apiGeminiHandler._resolvePrimaryTimeoutMs("gemini-2.5-pro") < 12000) {
+    throw new Error("api/gemini.js must cap gemini-2.5-pro thinkingBudget and allow extended timeout within Vercel 25s budget");
   }
   apiGeminiHandler._resetRateLimit();
   apiGeminiHandler._markBadModel("gemini-3.1-flash-lite", 2000000);
@@ -5667,7 +5681,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const briefTierHits = [];
     const intenseTierHits = [];
     const calmCtxMock = {
-      snap: createBlindMatchSnapshot(getSeat(3), { module: "smoke_v150_len" }),
+      snap: Object.assign({}, createBlindMatchSnapshot(getSeat(3), { module: "smoke_v150_len" }), { isMatchPoint: false }),
       day: 2, spokenIdsToday: [2, 3], spokenOthers: [getSeat(2)], unspokenOthers: [getSeat(5)],
       seatLabel: s => s ? (s.id + "號" + s.name) : "",
       isFirstToday: false, seerWolfOnMe: null, wolfPitOnMe: null, accuseOnMe: null,
@@ -6130,7 +6144,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       orchestrator.matchEpoch > epBeforeWd
     );
 
-    // Trigger Match Point by leaving 5 alive seats
+    // Trigger Match Point by leaving 5 alive seats (endgame keeps matchpoint track & intense deep speeches, no 28-char choke!)
     state.match.phase = "DAY_SPEECH";
     state.match.sheriffElectionCtx = null;
     const aliveListMp = getAliveSeats();
@@ -6139,7 +6153,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const mpTrackOk = sound.resolveTargetTrack() === "matchpoint";
     const mpSpeaker = getAliveSeats().find(s => s.id !== getPlayerId());
     const mpSpeech = buildHeuristicAiSpeech(mpSpeaker);
-    const mpCapOk = Boolean(mpOn && mpTrackOk && mpSpeech && mpSpeech.text && mpSpeech.text.length <= 28);
+    const mpCapOk = Boolean(mpOn && mpTrackOk && getActiveSpeechCharLimit() === 0 && mpSpeech && mpSpeech.lengthTier === "intense" && mpSpeech.text && mpSpeech.text.length >= 28);
 
     // (6) Human Wolf Screen 3 Tactics ("mate_fake_seer_gold", "player_fake_seer_push", "deep_stealth_bus")
     el("selectPreferredRole").value = "wolf";
@@ -6405,11 +6419,11 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const mpConciseBadgeOk = Boolean(el("matchPointBadge").textContent === "聽牌" && !el("matchPointBadge").classList.contains("hidden"));
     el("quickFreeInput").value = "";
     refreshSpeechCharCounter();
-    const counterMp28Ok = Boolean(!el("speechCharCounter").classList.contains("hidden") && el("speechCharCounter").textContent === "0 / 28" && !el("speechCharCounter").classList.contains("is-over"));
+    const counterMp28Ok = Boolean(el("speechCharCounter").classList.contains("hidden") && !el("speechCharCounter").classList.contains("is-over"));
     state.match.variantMode = "blitz_3m";
     el("quickFreeInput").value = "這是一段超過二十二個字的閃電局測試台詞看看字數計數器有沒有紅字";
     refreshSpeechCharCounter();
-    const counterBlitz22OverOk = Boolean(el("speechCharCounter").textContent.endsWith("/ 22") && el("speechCharCounter").classList.contains("is-over"));
+    const counterBlitz22OverOk = Boolean(!el("speechCharCounter").classList.contains("hidden") && el("speechCharCounter").textContent.endsWith("/ 22") && el("speechCharCounter").classList.contains("is-over"));
     el("quickFreeInput").value = "";
 
     // 9. Auto-dismiss #dragGestureHint + Ordinal Sky Curtains
@@ -7114,7 +7128,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.4") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.5") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7507,7 +7521,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.4"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.5"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -7577,14 +7591,14 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       state.match.fourGivingsUsed.hope === false
     );
 
-    // Step 2 transition (DAY_PLAYER_TURN): compact Match-Point rephrase slips fit <= 28 chars without truncation
+    // Step 2 transition (DAY_PLAYER_TURN): Match-Point rephrase slips preserve full natural depth (no 28-char choke)
     state.match.phase = "DAY_PLAYER_TURN";
     renderJudgeShowcaseGuideBanner();
     const mpSlips = buildRephraseChoiceSlips("4號別硬拗了快投他！");
     const guideStep2Ok = Boolean(
       el("judgeGuideStep2").classList.contains("is-active") &&
       mpSlips.length === 3 &&
-      mpSlips.every(s => s.text.length <= 28)
+      mpSlips.every(s => s.text && s.text.length >= 16)
     );
 
     // Step 3 transition (DAY_VOTE) -> cast vote on Seat 4 (last wolf) -> immediate GOOD victory!
@@ -8251,7 +8265,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("v24.2") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
     scriptV242Ok: docScript241.includes("v24.2") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
     voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
-    apiTimeout8400AndLruOk: apiGem242.includes("5200, safeTemp") && apiGem242.includes("3200, safeTemp") && apiGem242.includes("finally {\n    if (timer) clearTimeout(timer);") || (apiGem242.includes("5200, safeTemp") && apiGem242.includes("3200, safeTemp") && apiGem242.includes("if (++evicted >= 200) break;")),
+    apiTimeout8400AndLruOk: apiGem242.includes("resolvePrimaryTimeoutMs(primaryModel)") && apiGem242.includes("21500 - elapsed") && apiGem242.includes("if (++evicted >= 200) break;") && apiGem242.includes("if (timer) clearTimeout(timer);"),
     webglContextLostOk: eng242.includes('canvas3d.addEventListener("webglcontextlost"'),
     showcaseOrchestratorBootOk: setup242.includes('orchestrator.schedule("showcase_boot"'),
     serverSafeLockPruneOk: srv242.includes("if not v.locked()") && srv242.includes("with _TTS_LOCKS_GUARD:"),

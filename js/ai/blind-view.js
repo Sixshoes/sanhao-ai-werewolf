@@ -456,7 +456,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
   const variantModeNow = m.variantMode || "standard";
   const fogSealModeNow = variantModeNow === "fog_seal";
   const isMatchPointNow = Boolean(m.isMatchPoint);
-  const speechCharCapNow = variantModeNow === "blitz_3m" ? 22 : (isMatchPointNow ? 28 : 0);
+  const speechCharCapNow = variantModeNow === "blitz_3m" ? 22 : 0;
   const hopeConfSnap = (m.hopeConfrontation && Array.isArray(m.hopeConfrontation.seatIds) && m.hopeConfrontation.seatIds.length === 2)
     ? Object.freeze({
         day: m.hopeConfrontation.day || m.day || 1,

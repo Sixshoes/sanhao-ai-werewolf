@@ -1403,11 +1403,16 @@
             <span class="font-bold text-amber-200 text-[13px]">選擇雲端免金鑰模型</span>
             <span id="aiCloudProxyTag" class="text-[13px] text-slate-400">經由 /api/gemini 安全代理</span>
           </div>
-          <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="雲端免金鑰模型">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="雲端免金鑰模型">
+            <button id="btnCloudModelPro" type="button" data-cloudmodel="gemini-2.5-pro" aria-pressed="false"
+              class="ai-cloud-model-btn voice-rate-btn text-left px-2.5 py-2 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">
+              <div class="text-[13px] font-bold leading-snug">gemini-2.5-pro</div>
+              <div class="text-[13px] opacity-80 mt-0.5">高階推理版・深度盤坑</div>
+            </button>
             <button id="btnCloudModelFlash" type="button" data-cloudmodel="gemini-4-hydrogen" aria-pressed="true"
               class="ai-cloud-model-btn voice-rate-btn is-active text-left px-2.5 py-2 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">
               <div class="text-[13px] font-bold leading-snug">gemini-4-hydrogen</div>
-              <div class="text-[13px] opacity-80 mt-0.5">標準強力版・推理更穩</div>
+              <div class="text-[13px] opacity-80 mt-0.5">標準強力版・均衡預設</div>
             </button>
             <button id="btnCloudModelLite" type="button" data-cloudmodel="gemini-3.1-flash-lite" aria-pressed="false"
               class="ai-cloud-model-btn voice-rate-btn text-left px-2.5 py-2 rounded border border-slate-700 bg-slate-900 text-slate-200 transition">

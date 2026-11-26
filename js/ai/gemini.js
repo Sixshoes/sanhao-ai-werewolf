@@ -16,7 +16,7 @@ function isExternalLlmActive() {
   return typeof state !== "undefined" && Boolean(state.geminiApiKey || state.localLlmModel || isServerGeminiProxyActive());
 }
 
-const OFFICIAL_CLOUD_GEMINI_MODELS = Object.freeze(["gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
+const OFFICIAL_CLOUD_GEMINI_MODELS = Object.freeze(["gemini-2.5-pro", "gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
 const OFFICIAL_PERSONAL_GEMINI_MODELS = Object.freeze(["gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
 
 function normalizeCloudGeminiModel(modelId) {
@@ -147,7 +147,7 @@ async function callServerGeminiProxyOnce(promptText, timeoutMs, opts) {
   const sid = getOrCreateProxySessionId();
   const safeTemp = clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard);
   const chosenModel = normalizeCloudGeminiModel((opts && opts.model) ? opts.model : state.serverGeminiModel);
-  const tierVal = (chosenModel === "gemini-3.1-flash-lite" || chosenModel === "gemini-2.5-flash-lite" || Boolean(opts && opts.lite)) ? "lite" : "standard";
+  const tierVal = (chosenModel === "gemini-3.1-flash-lite" || chosenModel === "gemini-2.5-flash-lite" || (chosenModel !== "gemini-2.5-pro" && Boolean(opts && opts.lite))) ? "lite" : "standard";
   const tStart = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
   try {
     const fetchOpts = {
@@ -251,10 +251,18 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
   const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 16000) : null;
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(safeModel) + ":generateContent";
   const isPro = safeModel === "gemini-2.5-pro";
+  const isGemini4 = /^gemini-4-/.test(safeModel);
   const genCfg = {
-    temperature: clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard),
-    maxOutputTokens: isPro ? ((opts && opts.jsonMode) ? 2048 : 1280) : ((opts && opts.jsonMode) ? 1280 : 768)
+    maxOutputTokens: isPro ? ((opts && opts.jsonMode) ? 2048 : 1152) : ((opts && opts.jsonMode) ? 1536 : 896)
   };
+  if (isGemini4) {
+    genCfg.thinkingConfig = { thinkingLevel: "LOW" };
+  } else {
+    genCfg.temperature = clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard);
+    if (isPro) {
+      genCfg.thinkingConfig = { thinkingBudget: 512 };
+    }
+  }
   if (opts && opts.jsonMode) {
     genCfg.responseMimeType = "application/json";
   }
@@ -311,7 +319,7 @@ async function callGeminiText(promptText, opts) {
   }
   if (!state.geminiApiKey) {
     if (!isServerGeminiProxyActive()) return null;
-    const prox = await callServerGeminiProxyOnce(promptText, 19000, opts);
+    const prox = await callServerGeminiProxyOnce(promptText, 22000, opts);
     if (prox.ok && prox.text) {
       state._lastGeminiWarnKey = null;
       state._proxyFailStreak = 0;
@@ -408,15 +416,15 @@ function normalizeGeminiSpeechText(txt) {
       .replace(/(?<!\d)0([1-9])\s*號/g, "$1號")
       .replace(/(?<!\d)0([1-9])(?=[\u4e00-\u9fff，。！？、；：,\.!?;:\s]|$)/g, "$1號");
   }
-  // Gracefully trim rambling > 145-char LLM paragraphs at a natural sentence boundary so UI & TTS stay crisp
-  if (s.length > 145) {
-    const windowStr = s.slice(0, 145);
+  // Gracefully trim rambling > 185-char LLM paragraphs at a natural sentence boundary while giving late-game deductions room to breathe
+  if (s.length > 185) {
+    const windowStr = s.slice(0, 185);
     const lastStop = Math.max(windowStr.lastIndexOf("。"), windowStr.lastIndexOf("！"), windowStr.lastIndexOf("？"));
-    if (lastStop >= 55) {
+    if (lastStop >= 85) {
       s = windowStr.slice(0, lastStop + 1);
     } else {
       const lastComma = Math.max(windowStr.lastIndexOf("，"), windowStr.lastIndexOf("；"));
-      s = (lastComma >= 65 ? windowStr.slice(0, lastComma) : windowStr.slice(0, 138)) + "。";
+      s = (lastComma >= 95 ? windowStr.slice(0, lastComma) : windowStr.slice(0, 178)) + "。";
     }
   }
   return s;
@@ -1093,7 +1101,19 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
     "4. 【嚴禁 AI 機器味與朗讀播報腔・像真實台灣大學茶社同儕圍桌聊天】提到任何座位請一律寫「阿拉伯數字＋號」（如 1號、3號、6號、11號），嚴禁寫前導零（01、06）、嚴禁省略「號」字（站3、抓6），也嚴禁寫中文數字（三號、六號）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或生硬古文代詞（「吾、汝、諸君、妾身、夫、蓋」），亦禁止機械重複以「先這樣，過！」或制式開場白作結。全桌以自然台灣現代白話為基底（墨白、晴嵐、阿竹保留溫和書卷氣質與適度四字成語），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感），自然接前一位的話回嘴或點破剛剛的席間神情／追問。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
-    "6. 【三檔動態句長配額與純口語格式】本輪句長檔位為「" + ((snap && snap.speechCharCap > 0) ? ("茶涼聽牌／閃電快棋決死短兵相接（嚴格 " + snap.speechCharCap + " 字以內，直指關鍵一針見血！）") : ((fallbackMeta && fallbackMeta.lengthTier === "brief") ? "極短留白過水（嚴格 15～28 字，簡短自然表態即停）" : ((fallbackMeta && fallbackMeta.lengthTier === "intense") ? "焦點交鋒反詰（60～95 字，直面質疑拆解坑位）" : (totalSeatsNow >= 10 ? "標準推演（42～75 字）" : "標準推演（45～82 字）")))) + "」（切勿長篇大論、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
+    "6. 【依回合進度遞增的動態句長配額與純口語格式】本輪句長檔位為「" + ((snap && snap.speechCharCap > 0)
+      ? ("閃電快棋短兵相接（嚴格 " + snap.speechCharCap + " 字以內，直指關鍵一針見血！）")
+      : ((snap && snap.isMatchPoint)
+        ? "聽牌決勝深度盤坑（95～145 字，越到後期線索越齊，務必完整回顧前幾輪公投票型、離席刀口與剩餘狼坑並全力拉票歸票！）"
+        : ((fallbackMeta && fallbackMeta.lengthTier === "brief" && day <= 2)
+          ? "前期留白過水（嚴格 18～32 字，前期資訊尚淺，簡短自然表態即停）"
+          : (day >= 3
+            ? "後期深層複盤交鋒（85～135 字，結合跨日票型、前後發言矛盾與剩餘席位徹底拆解狼坑！）"
+            : ((fallbackMeta && fallbackMeta.lengthTier === "intense")
+              ? "焦點交鋒反詰（65～105 字，直面質疑拆解坑位）"
+              : (day >= 2
+                ? "中局邏輯展開（60～98 字，結合前輪投票與昨夜離席線索清楚盤坑）"
+                : (totalSeatsNow >= 10 ? "首日開局推演（42～75 字）" : "首日開局推演（45～82 字）"))))))) + "」（禁止空話水字、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
     '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":' + (lockedClaim ? ('"' + lockedClaim + '"') : 'null') + ',"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員且你本人非觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
 
   const audit = typeof auditLlmPromptLeak === "function"

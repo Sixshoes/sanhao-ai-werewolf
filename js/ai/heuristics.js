@@ -6,12 +6,14 @@
 function determineSpeechLengthTier(speaker, ctx) {
   if (!speaker || !ctx) return "standard";
   const inPk = Boolean(ctx.snap && ctx.snap.pkActive && Array.isArray(ctx.snap.pkCandidates) && ctx.snap.pkCandidates.indexOf(speaker.id) !== -1);
+  const isEndgameMatchPoint = Boolean(ctx.snap && ctx.snap.isMatchPoint && ctx.snap.variantMode !== "blitz_3m");
   const hasInterjOnMe = Boolean(
     Array.isArray(ctx.publicInterjections) &&
     ctx.publicInterjections.some(function (it) { return it && it.targetId === speaker.id; })
   );
   if (
     inPk ||
+    isEndgameMatchPoint ||
     ctx.seerWolfOnMe ||
     ctx.wolfPitOnMe ||
     ctx.accuseOnMe ||
@@ -22,6 +24,14 @@ function determineSpeechLengthTier(speaker, ctx) {
   ) {
     return "intense";
   }
+  const dayNow = ctx.day || (ctx.snap && ctx.snap.day) || 1;
+  const topSusScore = (ctx.spokenOthers || []).reduce(function (mx, s) {
+    return Math.max(mx, (speaker.suspicionMap && speaker.suspicionMap[s.id]) || 50);
+  }, 50);
+  // Late-game (Day 3+) has rich cross-day vote & death intel: never do brief throwaway passes
+  if (dayNow >= 3) {
+    return (ctx.prevVoteNote || ctx.isLateSeat || topSusScore >= 58) ? "intense" : "standard";
+  }
   const hasKeyRoleIntel = Boolean(
     (speaker.role === "seer" && Array.isArray(speaker.checkedHistory) && speaker.checkedHistory.length > 0) ||
     (speaker.role === "witch" && speaker.savedSeatId && !speaker.witchAnnouncedSave) ||
@@ -30,12 +40,9 @@ function determineSpeechLengthTier(speaker, ctx) {
     ctx.isFirstToday
   );
   if (hasKeyRoleIntel) return "standard";
-  const topSusScore = (ctx.spokenOthers || []).reduce(function (mx, s) {
-    return Math.max(mx, (speaker.suspicionMap && speaker.suspicionMap[s.id]) || 50);
-  }, 50);
   if (topSusScore >= 64) return "standard";
-  // ~35-40% of calm edge/plain seats speak concisely (15-28 chars) so table rhythm breathes naturally!
-  const h = (speaker.id * 7 + (ctx.day || 1) * 13 + (ctx.spokenIdsToday ? ctx.spokenIdsToday.length : 0) * 5) % 10;
+  // Early rounds (Day 1-2): ~35-40% of calm plain seats speak concisely (15-28 chars) so early rhythm breathes naturally
+  const h = (speaker.id * 7 + dayNow * 13 + (ctx.spokenIdsToday ? ctx.spokenIdsToday.length : 0) * 5) % 10;
   return h < 4 ? "brief" : "standard";
 }
 

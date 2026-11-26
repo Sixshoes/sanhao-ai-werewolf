@@ -281,7 +281,7 @@ function loadUserPrefs() {
     }
     if (typeof p.serverGeminiModel === "string" && p.serverGeminiModel) {
       const smNorm = p.serverGeminiModel.trim();
-      if (smNorm === "gemini-4-hydrogen" || smNorm === "gemini-3.1-flash-lite" || smNorm === "gemini-2.5-flash" || smNorm === "gemini-2.5-flash-lite") {
+      if (smNorm === "gemini-2.5-pro" || smNorm === "gemini-4-hydrogen" || smNorm === "gemini-3.1-flash-lite" || smNorm === "gemini-2.5-flash" || smNorm === "gemini-2.5-flash-lite") {
         state.serverGeminiModel = smNorm;
       } else {
         state.serverGeminiModel = "gemini-4-hydrogen";

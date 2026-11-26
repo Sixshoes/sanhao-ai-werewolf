@@ -356,6 +356,7 @@ def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=12):
 
 
 ALLOWED_PROXY_GEMINI_MODELS = {
+    "gemini-2.5-pro",
     "gemini-4-hydrogen",
     "gemini-3.1-flash-lite",
     "gemini-2.5-flash",
@@ -395,12 +396,20 @@ def clamp_gemini_temperature(raw_temp, default_val=0.65):
     return round(max(0.45, min(0.85, val)), 2)
 
 
-def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeout=9, temperature=0.65):
+def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeout=14, temperature=0.65):
     safe_model = model_id if model_id in ALLOWED_PROXY_GEMINI_MODELS else DEFAULT_PROXY_GEMINI_MODEL
+    is_gemini4 = safe_model.startswith("gemini-4-")
+    is_pro25 = safe_model == "gemini-2.5-pro"
     gen_cfg = {
-        "temperature": clamp_gemini_temperature(temperature),
-        "maxOutputTokens": 1280 if json_mode else 768,
+        "maxOutputTokens": (2048 if json_mode else 1152) if is_pro25 else (1536 if json_mode else 896),
     }
+    if is_gemini4:
+        t_lvl = str(os.environ.get("GEMINI_THINKING_LEVEL") or "LOW").strip().upper()
+        gen_cfg["thinkingConfig"] = {"thinkingLevel": t_lvl if t_lvl in ("LOW", "MEDIUM", "HIGH") else "LOW"}
+    else:
+        gen_cfg["temperature"] = clamp_gemini_temperature(temperature)
+        if is_pro25:
+            gen_cfg["thinkingConfig"] = {"thinkingBudget": 512}
     if json_mode:
         gen_cfg["responseMimeType"] = "application/json"
     body = json.dumps({
