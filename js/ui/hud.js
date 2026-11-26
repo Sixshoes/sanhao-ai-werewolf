@@ -102,11 +102,13 @@ function renderTutorialSlide() {
   const devMeta = (typeof DEVICE_TUTORIAL_META !== "undefined" && DEVICE_TUTORIAL_META[devKey]) ? DEVICE_TUTORIAL_META[devKey] : null;
   const bodyEl = el("tutorialSlideBody");
   bodyEl.innerHTML =
-    (devMeta ? '<div class="tut-device-banner"><span><strong>' + escapeHtml(devMeta.shortTitle) + '</strong> — ' + escapeHtml(devMeta.banner) + '</span></div>' : '') +
-    '<div class="inline-block mx-auto px-3 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 text-[13px] font-bold tracking-widest text-amber-300">' + (devMeta ? (escapeHtml(devMeta.label) + ' · ') : '') + '第 ' + slide.icon + ' 章 · ' + escapeHtml(slide.tab || "") + '</div>' +
-    '<h4 class="font-serif-craft text-base sm:text-lg font-bold text-white tracking-wide">' + slide.title + '</h4>' +
-    '<div>' + slide.html + '</div>' +
-    '<div class="tut-swipe-hint">左右滑動可快速切換上一章／下一章</div>';
+    '<header class="tut-masthead">' +
+      '<div class="tut-masthead-eyebrow">' + (devMeta ? (escapeHtml(devMeta.label) + ' · ') : '') + '第 ' + slide.icon + ' 章 · ' + escapeHtml(slide.tab || "") + '</div>' +
+      '<h4 class="tut-masthead-title">' + slide.title + '</h4>' +
+      (devMeta ? '<p class="tut-masthead-note">' + escapeHtml(devMeta.banner) + '</p>' : '') +
+    '</header>' +
+    '<div class="tut-slide-content">' + slide.html + '</div>' +
+    '<div class="tut-swipe-hint">左右滑動切換章節</div>';
   if (bodyEl.parentElement && typeof bodyEl.parentElement.scrollTop === "number") {
     bodyEl.parentElement.scrollTop = 0;
   }
@@ -670,24 +672,27 @@ function openRoleGuidePopover(mode) {
     }
     const rowHtml = function (ok, icon, name, count, how) {
       return '<div class="role-guide-row ' + (ok ? "is-lit" : "") + '">' +
-        '<div class="font-bold ' + (ok ? "text-emerald-300" : "text-amber-200") + '">' + escapeHtml((ok ? "[已修] " : "[待修] ") + icon + " " + name + "（已修 " + count + " 次）") + "</div>" +
-        '<div class="text-[13px] opacity-90">' + escapeHtml(how) + "</div>" +
+        '<div class="flex items-center justify-between gap-2">' +
+          '<span class="font-bold ' + (ok ? "text-emerald-300" : "text-amber-200") + '">' + escapeHtml(icon + "・" + name) + '</span>' +
+          '<span class="text-[13px] tabular-nums ' + (ok ? "text-emerald-300 font-bold" : "text-slate-400") + '">' + (ok ? ("已修 " + count + " 次") : "待修") + '</span>' +
+        '</div>' +
+        '<div class="text-[13px] opacity-90 mt-0.5">' + escapeHtml(how) + "</div>" +
         "</div>";
     };
     const rewardText = isRoleMasked
-      ? "三瓣全亮獎勵：解鎖本陣營三好蓮花覺醒加成（取消底牌遮蔽即可檢視詳細效果）"
+      ? "三瓣全亮：解鎖本陣營覺醒加成（顯示底牌可檢視詳情）"
       : (isWolf
-        ? "三瓣全亮獎勵：觸發「深水三好光環」，全場好人對你的懷疑度大幅下降且心虛值平息。"
-        : "三瓣全亮獎勵：獲得「黃金善意票（公投 +1 票權重）」，並感化 1 位好夥伴與你同步聚焦。");
+        ? "三瓣全亮：觸發深水三好光環，大幅降低全場戒心。"
+        : "三瓣全亮：獲得黃金善意票（公投 +1 票），並凝聚好人焦點。");
     const synText = state.match.fourGSynergyTriggered
-      ? "「雙四給連心」已觸發（友善度 +8 並自動點亮 1 瓣蓮花）"
-      : ("雙四給連心：已奉用 " + fgUsedCount + "/2 項茶禮（累積 2 項額外友善 +8 並點亮 1 瓣）");
+      ? "雙四給連心：已觸發（友善 +8、點亮 1 瓣）"
+      : ("雙四給連心：已奉 " + fgUsedCount + "/2 項（滿 2 項友善 +8 並亮 1 瓣）");
     bodyEl.innerHTML =
-      rowHtml(tg.heart > 0, "心", "存好心", tg.heart, "夜間查證、理性點出邏輯矛盾、打「存好心」陳詞卡或「給希望」。") +
-      rowHtml(tg.words > 0, "語", "說好話", tg.words, "溫和陳詞、用「潤飾詞句」靈感籤、按「說好話化解」或「給歡喜」。") +
-      rowHtml(tg.deeds > 0, "行", "做好事", tg.deeds, "白天「奉暖茶」、奉茶師救人、守衛守護、或「給信心／給方便」。") +
+      rowHtml(tg.heart > 0, "心", "存好心", tg.heart, "查證線索、點出矛盾，或打存好心牌／給希望。") +
+      rowHtml(tg.words > 0, "語", "說好話", tg.words, "溫和陳詞、用潤飾籤、說好話化解或給歡喜。") +
+      rowHtml(tg.deeds > 0, "行", "做好事", tg.deeds, "奉暖茶、救人守護，或施放給信心／給方便。") +
       '<div class="role-guide-reward">' + escapeHtml(rewardText) + "</div>" +
-      '<div class="text-[13px] text-amber-200/90 pt-0.5">' + escapeHtml(synText) + "</div>";
+      '<div class="ed-sub-note pt-0.5">' + escapeHtml(synText) + "</div>";
   } else {
     if (titleEl) {
       titleEl.textContent = rDef.name + "・指南";
@@ -717,13 +722,13 @@ function openRoleGuidePopover(mode) {
     bodyEl.innerHTML =
       '<div class="guide-now-box"><div class="text-[13px] font-bold text-amber-300/90">現在這一步</div><div class="font-bold text-amber-50 mt-0.5">' + escapeHtml(nowHint) + "</div></div>" +
       misGuideHtml +
-      '<div class="space-y-1"><div class="text-[13px] font-bold text-slate-300">目前可用道具與按鈕</div>' + toolsHtml + "</div>" +
-      '<div class="pt-1 border-t border-slate-700/60 space-y-1">' +
-      '<div class="role-guide-row"><span class="font-bold text-amber-200">勝利目標：</span>' + escapeHtml(guide.winCond) + "</div>" +
-      '<div class="role-guide-row"><span class="font-bold text-indigo-300">夜晚職能：</span>' + escapeHtml(guide.nightAction) + "</div>" +
-      '<div class="role-guide-row"><span class="font-bold text-emerald-300">白天職能：</span>' + escapeHtml(guide.dayAction) + "</div>" +
-      '<div class="role-guide-reward"><span class="font-bold">三好心法：</span>' + escapeHtml(guide.threeGoodTip) + "</div>" +
-      "</div>";
+      '<div class="space-y-1"><div class="ed-field-label">可用道具</div>' + toolsHtml + "</div>" +
+      '<dl class="ed-kv-list pt-1.5 border-t border-slate-700/60">' +
+      '<div class="ed-kv-row"><dt>目標</dt><dd>' + escapeHtml(guide.winCond) + "</dd></div>" +
+      '<div class="ed-kv-row"><dt>入夜</dt><dd>' + escapeHtml(guide.nightAction) + "</dd></div>" +
+      '<div class="ed-kv-row"><dt>白天</dt><dd>' + escapeHtml(guide.dayAction) + "</dd></div>" +
+      "</dl>" +
+      '<div class="role-guide-reward"><span class="font-bold">心法：</span>' + escapeHtml(guide.threeGoodTip) + "</div>";
   }
   pop.classList.remove("hidden");
 }

@@ -14895,4 +14895,873 @@ body.craft-ui.theme-twilight .play-card-preview {
   }
 }
 
+/* ==========================================================================
+   v24.2.13 UNIFIED SONG-DYNASTY EDITORIAL & ART DIRECTION SYSTEM
+   Cohesive radius scale (12px modal / 8px card / 6px control / 4px chop),
+   calm warm surfaces, hairline dividers, scannable key-value reading rhythm,
+   and full parity across Night Cedar & Xuan-Paper Day/Twilight themes.
+   ========================================================================== */
+
+/* 1. Unified Modal Shell & Framing */
+.craft-modal-box {
+  border-radius: 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(246, 224, 172, 0.14),
+    0 24px 56px rgba(12, 8, 5, 0.56);
+}
+
+.ed-eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: rgba(232, 198, 126, 0.84);
+  margin-bottom: 2px;
+}
+
+.ed-field-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(214, 196, 168, 0.88);
+}
+
+.ed-section-label {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(212, 166, 87, 0.22);
+}
+
+.ed-sub-note {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(210, 195, 174, 0.84);
+}
+
+.ed-step-counter {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(232, 198, 126, 0.9);
+  padding-left: 10px;
+  border-left: 1px solid rgba(212, 166, 87, 0.34);
+}
+
+/* 2. Editorial Reading Layout (#modalGuide, #modalJournal, #modalAiConfig) */
+.ed-reading-body {
+  line-height: 1.72;
+}
+
+.ed-lead {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  line-height: 1.78;
+  color: #f6e8cf;
+  padding: 2px 0 14px;
+  border-bottom: 1px solid rgba(212, 166, 87, 0.26);
+  margin: 0;
+}
+
+.ed-kv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 639px) {
+  .ed-kv-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ed-card {
+  border-radius: 8px;
+  padding: 13px 15px;
+  background: rgba(34, 26, 20, 0.72);
+  border: 1px solid rgba(212, 166, 87, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 204, 0.06);
+}
+
+.ed-card-head {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(212, 166, 87, 0.18);
+}
+
+.ed-kv-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ed-kv-list.ed-kv-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 14px;
+}
+
+@media (max-width: 639px) {
+  .ed-kv-list.ed-kv-two {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ed-kv-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.58;
+}
+
+.ed-kv-row dt {
+  flex: 0 0 auto;
+  min-width: 58px;
+  font-weight: 700;
+  color: #ebd09a;
+}
+
+.ed-kv-row dd {
+  margin: 0;
+  flex: 1 1 auto;
+  color: rgba(242, 232, 214, 0.92);
+}
+
+.ed-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 639px) {
+  .ed-rule-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.ed-rule-col {
+  padding-right: 10px;
+  border-right: 1px solid rgba(212, 166, 87, 0.16);
+}
+
+.ed-rule-col:last-child {
+  padding-right: 0;
+  border-right: none;
+}
+
+@media (max-width: 639px) {
+  .ed-rule-col {
+    padding-right: 0;
+    padding-bottom: 9px;
+    border-right: none;
+    border-bottom: 1px solid rgba(212, 166, 87, 0.16);
+  }
+
+  .ed-rule-col:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+}
+
+.ed-rule-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #e9c478;
+  margin-bottom: 4px;
+}
+
+.ed-rule-col p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.64;
+  color: rgba(235, 224, 206, 0.9);
+}
+
+/* Collapsible Technical Transparency Accordion */
+.ed-accordion {
+  border-radius: 8px;
+  background: rgba(28, 22, 18, 0.68);
+  border: 1px solid rgba(212, 166, 87, 0.22);
+  overflow: hidden;
+}
+
+.ed-accordion-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: #a8dec7;
+  user-select: none;
+}
+
+.ed-accordion-summary::-webkit-details-marker {
+  display: none;
+}
+
+.ed-accordion-caret {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(214, 196, 168, 0.78);
+}
+
+.ed-accordion[open] .ed-accordion-caret {
+  color: #ebd09a;
+}
+
+.ed-accordion-body {
+  padding: 11px 14px 13px;
+  border-top: 1px solid rgba(212, 166, 87, 0.18);
+}
+
+/* Unified Setup Toggle Rows & Ledger Elements */
+.ed-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(34, 26, 20, 0.66);
+  border: 1px solid rgba(212, 166, 87, 0.22);
+}
+
+.ed-ledger-status {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(216, 204, 186, 0.9);
+}
+
+.ed-ledger-status.is-top {
+  color: #f3a49a;
+}
+
+.ed-ledger-status.is-tie {
+  color: #f2cf84;
+}
+
+.ed-ledger-status.is-clean {
+  color: #8ce0bc;
+}
+
+.ed-vote-item {
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(26, 20, 16, 0.66);
+  border: 1px solid rgba(212, 166, 87, 0.18);
+}
+
+.ed-vote-item.is-top {
+  background: rgba(140, 42, 34, 0.18);
+  border-color: rgba(224, 114, 102, 0.42);
+}
+
+.ed-seat-chop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: rgba(212, 166, 87, 0.14);
+  border: 1px solid rgba(212, 166, 87, 0.34);
+  color: #f3d79e;
+  flex-shrink: 0;
+}
+
+.ed-seat-chop.is-top {
+  background: #a63226;
+  border-color: #d96b5f;
+  color: #fff8ef;
+}
+
+.ed-vote-bar-track {
+  height: 5px;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(212, 166, 87, 0.14);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.ed-vote-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(212, 166, 87, 0.78);
+}
+
+.ed-vote-bar-fill.is-top {
+  background: #d95d4e;
+}
+
+.ed-voter-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(46, 36, 28, 0.78);
+  border: 1px solid rgba(212, 166, 87, 0.22);
+  color: #ebe0ce;
+}
+
+.ed-voter-chip.is-me {
+  background: rgba(36, 106, 80, 0.24);
+  border-color: rgba(94, 196, 159, 0.45);
+  color: #b7ebd6;
+}
+
+.ed-voter-chip.is-abstain {
+  opacity: 0.74;
+}
+
+.ed-vote-abstain {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: rgba(24, 19, 15, 0.54);
+  border: 1px dashed rgba(212, 166, 87, 0.22);
+}
+
+.ed-table-wrap {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(212, 166, 87, 0.22);
+  background: rgba(28, 22, 17, 0.74);
+}
+
+.ed-table-wrap thead tr {
+  background: rgba(44, 34, 26, 0.76);
+}
+
+.ed-stat-cell {
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(28, 22, 17, 0.74);
+  border: 1px solid rgba(212, 166, 87, 0.2);
+}
+
+.ed-trace-item {
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  background: rgba(28, 22, 17, 0.72);
+  border: 1px solid rgba(212, 166, 87, 0.18);
+}
+
+/* 3. Tutorial Editorial Chapter Masthead & Refined Reading Cards */
+.tut-masthead {
+  text-align: left;
+  padding: 2px 2px 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(212, 166, 87, 0.24);
+}
+
+.tut-masthead-eyebrow {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #e6c278;
+}
+
+.tut-masthead-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff6e6;
+  margin: 4px 0 0;
+  line-height: 1.35;
+}
+
+.tut-masthead-note {
+  font-size: 13.5px;
+  line-height: 1.58;
+  color: rgba(220, 206, 184, 0.86);
+  margin: 5px 0 0;
+}
+
+.tut-slide-content {
+  line-height: 1.66;
+}
+
+#modalTutorial .tut-card {
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 240, 204, 0.05);
+}
+
+#modalTutorial .tut-tip-bar {
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-size: 13.5px;
+  line-height: 1.62;
+}
+
+#modalTutorial .tut-role-item {
+  border-radius: 8px;
+  padding: 9px 11px;
+  line-height: 1.56;
+}
+
+#modalTutorial .tut-step-pill {
+  border-radius: 6px;
+  padding: 9px 8px;
+  line-height: 1.5;
+}
+
+/* 4. Career Ledger & Seal-Chop Grid (All >= 13px, Xuan-paper + Cedar Unified) */
+.career-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 479px) {
+  .career-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.career-kpi-cell {
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+  background: rgba(34, 26, 20, 0.72);
+  border: 1px solid rgba(212, 166, 87, 0.24);
+}
+
+.career-kpi-label {
+  font-size: 13px;
+  color: rgba(212, 196, 170, 0.84);
+  margin-bottom: 2px;
+}
+
+.career-kpi-val {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.career-kpi-val.is-gold {
+  color: #f2cf84;
+}
+
+.career-kpi-val.is-jade {
+  color: #8ce0bc;
+}
+
+.career-kpi-val.is-indigo {
+  color: #9ec5f0;
+}
+
+.career-kpi-val.is-cinnabar {
+  color: #f09c92;
+}
+
+.career-progress-wrap {
+  margin-bottom: 12px;
+}
+
+.career-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.career-progress-track {
+  height: 5px;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(212, 166, 87, 0.16);
+  overflow: hidden;
+}
+
+.career-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b68432 0%, #e6c278 100%);
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.career-seal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+@media (max-width: 479px) {
+  .career-seal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.career-seal-card {
+  border-radius: 8px;
+  padding: 11px 12px;
+  border: 1px solid rgba(212, 166, 87, 0.2);
+  background: rgba(30, 23, 18, 0.64);
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.career-seal-card.is-unlocked {
+  background: rgba(36, 92, 70, 0.2);
+  border-color: rgba(110, 198, 162, 0.44);
+}
+
+.career-seal-card.is-locked {
+  opacity: 0.66;
+}
+
+.career-seal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.career-seal-chop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: rgba(54, 44, 36, 0.8);
+  border: 1px solid rgba(180, 158, 128, 0.3);
+  color: rgba(196, 180, 156, 0.78);
+}
+
+.career-seal-chop.is-unlocked {
+  background: linear-gradient(145deg, #b83b2e 0%, #8f2419 100%);
+  border-color: #e59387;
+  color: #fff7eb;
+  box-shadow: 0 2px 8px rgba(148, 36, 25, 0.34);
+}
+
+.career-seal-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: #f6e7c8;
+}
+
+.career-seal-card.is-locked .career-seal-title {
+  color: rgba(210, 196, 176, 0.76);
+}
+
+.career-seal-desc {
+  font-size: 13px;
+  line-height: 1.54;
+  color: rgba(226, 214, 194, 0.88);
+  margin-top: 6px;
+}
+
+/* 5. Xuan-Paper Daylight / Twilight Theme Parity */
+body.craft-ui.theme-day .craft-modal-box,
+body.craft-ui.theme-twilight .craft-modal-box,
+body.craft-ui.theme-daylight .craft-modal-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 248, 0.85),
+    0 20px 48px rgba(56, 38, 18, 0.22);
+}
+
+body.craft-ui.theme-day .ed-eyebrow,
+body.craft-ui.theme-twilight .ed-eyebrow,
+body.craft-ui.theme-daylight .ed-eyebrow {
+  color: #8b5a1b;
+}
+
+body.craft-ui.theme-day .ed-field-label,
+body.craft-ui.theme-twilight .ed-field-label,
+body.craft-ui.theme-daylight .ed-field-label,
+body.craft-ui.theme-day .ed-sub-note,
+body.craft-ui.theme-twilight .ed-sub-note,
+body.craft-ui.theme-daylight .ed-sub-note {
+  color: #5a4834;
+}
+
+body.craft-ui.theme-day .ed-step-counter,
+body.craft-ui.theme-twilight .ed-step-counter,
+body.craft-ui.theme-daylight .ed-step-counter {
+  color: #7d4e16;
+  border-left-color: rgba(140, 102, 54, 0.36);
+}
+
+body.craft-ui.theme-day .ed-lead,
+body.craft-ui.theme-twilight .ed-lead,
+body.craft-ui.theme-daylight .ed-lead {
+  color: #2f2318;
+  border-bottom-color: rgba(140, 102, 54, 0.28);
+}
+
+body.craft-ui.theme-day .ed-card,
+body.craft-ui.theme-twilight .ed-card,
+body.craft-ui.theme-daylight .ed-card,
+body.craft-ui.theme-day .ed-toggle-row,
+body.craft-ui.theme-twilight .ed-toggle-row,
+body.craft-ui.theme-daylight .ed-toggle-row,
+body.craft-ui.theme-day .ed-accordion,
+body.craft-ui.theme-twilight .ed-accordion,
+body.craft-ui.theme-daylight .ed-accordion,
+body.craft-ui.theme-day .ed-table-wrap,
+body.craft-ui.theme-twilight .ed-table-wrap,
+body.craft-ui.theme-daylight .ed-table-wrap,
+body.craft-ui.theme-day .ed-stat-cell,
+body.craft-ui.theme-twilight .ed-stat-cell,
+body.craft-ui.theme-daylight .ed-stat-cell,
+body.craft-ui.theme-day .ed-trace-item,
+body.craft-ui.theme-twilight .ed-trace-item,
+body.craft-ui.theme-daylight .ed-trace-item,
+body.craft-ui.theme-day .career-kpi-cell,
+body.craft-ui.theme-twilight .career-kpi-cell,
+body.craft-ui.theme-daylight .career-kpi-cell,
+body.craft-ui.theme-day .career-seal-card,
+body.craft-ui.theme-twilight .career-seal-card,
+body.craft-ui.theme-daylight .career-seal-card {
+  background: rgba(251, 245, 234, 0.92);
+  border-color: rgba(144, 108, 62, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 253, 248, 0.72);
+  color: #36281c;
+}
+
+body.craft-ui.theme-day .ed-card-head,
+body.craft-ui.theme-twilight .ed-card-head,
+body.craft-ui.theme-daylight .ed-card-head,
+body.craft-ui.theme-day .ed-section-label,
+body.craft-ui.theme-twilight .ed-section-label,
+body.craft-ui.theme-daylight .ed-section-label {
+  border-bottom-color: rgba(144, 108, 62, 0.22);
+}
+
+body.craft-ui.theme-day .ed-kv-row dt,
+body.craft-ui.theme-twilight .ed-kv-row dt,
+body.craft-ui.theme-daylight .ed-kv-row dt,
+body.craft-ui.theme-day .ed-rule-label,
+body.craft-ui.theme-twilight .ed-rule-label,
+body.craft-ui.theme-daylight .ed-rule-label {
+  color: #7b4a12;
+}
+
+body.craft-ui.theme-day .ed-kv-row dd,
+body.craft-ui.theme-twilight .ed-kv-row dd,
+body.craft-ui.theme-daylight .ed-kv-row dd,
+body.craft-ui.theme-day .ed-rule-col p,
+body.craft-ui.theme-twilight .ed-rule-col p,
+body.craft-ui.theme-daylight .ed-rule-col p {
+  color: #3a2d21;
+}
+
+body.craft-ui.theme-day .ed-rule-col,
+body.craft-ui.theme-twilight .ed-rule-col,
+body.craft-ui.theme-daylight .ed-rule-col {
+  border-color: rgba(144, 108, 62, 0.22);
+}
+
+body.craft-ui.theme-day .ed-accordion-summary,
+body.craft-ui.theme-twilight .ed-accordion-summary,
+body.craft-ui.theme-daylight .ed-accordion-summary {
+  color: #1c5941;
+}
+
+body.craft-ui.theme-day .ed-accordion-caret,
+body.craft-ui.theme-twilight .ed-accordion-caret,
+body.craft-ui.theme-daylight .ed-accordion-caret {
+  color: #6b5640;
+}
+
+body.craft-ui.theme-day .ed-accordion-body,
+body.craft-ui.theme-twilight .ed-accordion-body,
+body.craft-ui.theme-daylight .ed-accordion-body {
+  border-top-color: rgba(144, 108, 62, 0.22);
+}
+
+body.craft-ui.theme-day .ed-vote-item,
+body.craft-ui.theme-twilight .ed-vote-item,
+body.craft-ui.theme-daylight .ed-vote-item {
+  background: rgba(255, 251, 243, 0.94);
+  border-color: rgba(144, 108, 62, 0.24);
+}
+
+body.craft-ui.theme-day .ed-vote-item.is-top,
+body.craft-ui.theme-twilight .ed-vote-item.is-top,
+body.craft-ui.theme-daylight .ed-vote-item.is-top {
+  background: rgba(180, 58, 46, 0.08);
+  border-color: rgba(168, 50, 38, 0.38);
+}
+
+body.craft-ui.theme-day .ed-seat-chop,
+body.craft-ui.theme-twilight .ed-seat-chop,
+body.craft-ui.theme-daylight .ed-seat-chop {
+  background: rgba(180, 128, 46, 0.14);
+  border-color: rgba(154, 104, 35, 0.36);
+  color: #6b420f;
+}
+
+body.craft-ui.theme-day .ed-voter-chip,
+body.craft-ui.theme-twilight .ed-voter-chip,
+body.craft-ui.theme-daylight .ed-voter-chip {
+  background: rgba(244, 235, 218, 0.92);
+  border-color: rgba(144, 108, 62, 0.28);
+  color: #382a1e;
+}
+
+body.craft-ui.theme-day .ed-voter-chip.is-me,
+body.craft-ui.theme-twilight .ed-voter-chip.is-me,
+body.craft-ui.theme-daylight .ed-voter-chip.is-me {
+  background: rgba(36, 106, 80, 0.14);
+  border-color: rgba(36, 106, 80, 0.42);
+  color: #164e38;
+}
+
+body.craft-ui.theme-day .ed-vote-abstain,
+body.craft-ui.theme-twilight .ed-vote-abstain,
+body.craft-ui.theme-daylight .ed-vote-abstain {
+  background: rgba(244, 236, 222, 0.65);
+  border-color: rgba(144, 108, 62, 0.28);
+}
+
+body.craft-ui.theme-day .ed-table-wrap thead tr,
+body.craft-ui.theme-twilight .ed-table-wrap thead tr,
+body.craft-ui.theme-daylight .ed-table-wrap thead tr {
+  background: rgba(242, 232, 214, 0.88);
+}
+
+body.craft-ui.theme-day .ed-ledger-status,
+body.craft-ui.theme-twilight .ed-ledger-status,
+body.craft-ui.theme-daylight .ed-ledger-status {
+  color: #544332;
+}
+
+body.craft-ui.theme-day .ed-ledger-status.is-top,
+body.craft-ui.theme-twilight .ed-ledger-status.is-top,
+body.craft-ui.theme-daylight .ed-ledger-status.is-top {
+  color: #9e2a20;
+}
+
+body.craft-ui.theme-day .ed-ledger-status.is-tie,
+body.craft-ui.theme-twilight .ed-ledger-status.is-tie,
+body.craft-ui.theme-daylight .ed-ledger-status.is-tie {
+  color: #8a5610;
+}
+
+body.craft-ui.theme-day .ed-ledger-status.is-clean,
+body.craft-ui.theme-twilight .ed-ledger-status.is-clean,
+body.craft-ui.theme-daylight .ed-ledger-status.is-clean {
+  color: #1b5c42;
+}
+
+body.craft-ui.theme-day .tut-masthead,
+body.craft-ui.theme-twilight .tut-masthead,
+body.craft-ui.theme-daylight .tut-masthead {
+  border-bottom-color: rgba(144, 108, 62, 0.28);
+}
+
+body.craft-ui.theme-day .tut-masthead-eyebrow,
+body.craft-ui.theme-twilight .tut-masthead-eyebrow,
+body.craft-ui.theme-daylight .tut-masthead-eyebrow {
+  color: #8a5514;
+}
+
+body.craft-ui.theme-day .tut-masthead-title,
+body.craft-ui.theme-twilight .tut-masthead-title,
+body.craft-ui.theme-daylight .tut-masthead-title {
+  color: #2c2015;
+}
+
+body.craft-ui.theme-day .tut-masthead-note,
+body.craft-ui.theme-twilight .tut-masthead-note,
+body.craft-ui.theme-daylight .tut-masthead-note {
+  color: #5b4936;
+}
+
+body.craft-ui.theme-day .career-kpi-label,
+body.craft-ui.theme-twilight .career-kpi-label,
+body.craft-ui.theme-daylight .career-kpi-label {
+  color: #5e4c38;
+}
+
+body.craft-ui.theme-day .career-kpi-val.is-gold,
+body.craft-ui.theme-twilight .career-kpi-val.is-gold,
+body.craft-ui.theme-daylight .career-kpi-val.is-gold {
+  color: #8d5510;
+}
+
+body.craft-ui.theme-day .career-kpi-val.is-jade,
+body.craft-ui.theme-twilight .career-kpi-val.is-jade,
+body.craft-ui.theme-daylight .career-kpi-val.is-jade {
+  color: #1a5c42;
+}
+
+body.craft-ui.theme-day .career-kpi-val.is-indigo,
+body.craft-ui.theme-twilight .career-kpi-val.is-indigo,
+body.craft-ui.theme-daylight .career-kpi-val.is-indigo {
+  color: #264d7a;
+}
+
+body.craft-ui.theme-day .career-kpi-val.is-cinnabar,
+body.craft-ui.theme-twilight .career-kpi-val.is-cinnabar,
+body.craft-ui.theme-daylight .career-kpi-val.is-cinnabar {
+  color: #9e2a20;
+}
+
+body.craft-ui.theme-day .career-seal-card.is-unlocked,
+body.craft-ui.theme-twilight .career-seal-card.is-unlocked,
+body.craft-ui.theme-daylight .career-seal-card.is-unlocked {
+  background: rgba(214, 241, 228, 0.62);
+  border-color: rgba(36, 106, 80, 0.42);
+}
+
+body.craft-ui.theme-day .career-seal-chop,
+body.craft-ui.theme-twilight .career-seal-chop,
+body.craft-ui.theme-daylight .career-seal-chop {
+  background: rgba(232, 222, 204, 0.9);
+  border-color: rgba(144, 108, 62, 0.34);
+  color: #6b5842;
+}
+
+body.craft-ui.theme-day .career-seal-title,
+body.craft-ui.theme-twilight .career-seal-title,
+body.craft-ui.theme-daylight .career-seal-title {
+  color: #2e2116;
+}
+
+body.craft-ui.theme-day .career-seal-desc,
+body.craft-ui.theme-twilight .career-seal-desc,
+body.craft-ui.theme-daylight .career-seal-desc {
+  color: #4f3e2d;
+}
+
+
 

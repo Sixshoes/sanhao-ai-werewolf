@@ -7128,7 +7128,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.12") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.13") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7521,7 +7521,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.12"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.13"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8597,7 +8597,46 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       throw new Error("v24.2.12 YOUTHFUL FEMALE VOICE / SMART SPEECH / MOBILE & 3-DEVICE POLISH check failed for " + k + ": " + JSON.stringify(v24212Res));
     }
   }
+
+  // v24.2.13 Regression: Unified Song-dynasty editorial aesthetics, concise text-heavy surfaces, collapsible technical accordion, >= 13px career ledger
+  const aiHtmlSrc2413 = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const careerSrc2413 = fs.readFileSync(path.join(ROOT, "js/core/career.js"), "utf8");
+  const cssCompSrc2413 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const hudSrc2413 = fs.readFileSync(path.join(ROOT, "js/ui/hud.js"), "utf8");
+  const modalsSrc2413 = fs.readFileSync(path.join(ROOT, "js/ui/modals.js"), "utf8");
+  const cssCompNoComments2413 = cssCompSrc2413.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  const v24213Res = {
+    guideEditorialAndAccordionOk:
+      aiHtmlSrc2413.includes('class="ed-lead"') &&
+      aiHtmlSrc2413.includes('class="ed-rule-grid"') &&
+      aiHtmlSrc2413.includes('<details class="ed-accordion">') &&
+      aiHtmlSrc2413.includes("書院對弈核心規則（標準屠邊制）") &&
+      !aiHtmlSrc2413.includes("MATCH LEDGER"),
+    careerReadableAndUnifiedOk:
+      careerSrc2413.includes("career-kpi-grid") &&
+      careerSrc2413.includes("career-seal-card") &&
+      !careerSrc2413.includes("text-[10px]") &&
+      !careerSrc2413.includes("text-[10.5px]") &&
+      !careerSrc2413.includes("text-[11px]"),
+    tutorialMastheadAndModalsUnifiedOk:
+      hudSrc2413.includes("tut-masthead") &&
+      modalsSrc2413.includes("ed-vote-item") &&
+      modalsSrc2413.includes("ed-trace-item"),
+    editorialCssCleanOk:
+      cssCompSrc2413.includes("v24.2.13 UNIFIED SONG-DYNASTY EDITORIAL") &&
+      cssCompSrc2413.includes(".career-seal-chop.is-unlocked") &&
+      !/!important/.test(cssCompNoComments2413) &&
+      !/backdrop-filter\s*:\s*blur/i.test(cssCompNoComments2413)
+  };
+
+  for (const [k, v] of Object.entries(v24213Res)) {
+    if (!v) {
+      throw new Error("v24.2.13 UNIFIED EDITORIAL ART DIRECTION check failed for " + k + ": " + JSON.stringify(v24213Res));
+    }
+  }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 Release-Freeze E2E smoke test PASSED!");
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 Release-Freeze E2E smoke test PASSED!");
+
 

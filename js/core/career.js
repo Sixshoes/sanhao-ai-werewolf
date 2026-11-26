@@ -209,28 +209,33 @@ function openCareerModal() {
   if (!modal || !body) return;
   const c = loadCareerStats();
   const winRate = c.gamesPlayed > 0 ? Math.round((c.wins / c.gamesPlayed) * 100) : 0;
+  const unlockPct = ACHIEVEMENT_DEFS.length > 0 ? Math.round((c.unlockedBadges.length / ACHIEVEMENT_DEFS.length) * 100) : 0;
 
   let html =
-    '<div class="grid grid-cols-4 gap-2 text-center mb-3">' +
-    '<div class="p-2 rounded-xl bg-slate-950 border border-slate-800"><div class="text-[10px] text-slate-400">總對局</div><div class="text-base font-black text-amber-300 tabular-nums">' + c.gamesPlayed + '</div></div>' +
-    '<div class="p-2 rounded-xl bg-slate-950 border border-slate-800"><div class="text-[10px] text-slate-400">勝率</div><div class="text-base font-black text-emerald-300 tabular-nums">' + winRate + '%</div></div>' +
-    '<div class="p-2 rounded-xl bg-slate-950 border border-slate-800"><div class="text-[10px] text-slate-400">說好話</div><div class="text-base font-black text-sky-300 tabular-nums">' + c.totalGoodWords + '</div></div>' +
-    '<div class="p-2 rounded-xl bg-slate-950 border border-slate-800"><div class="text-[10px] text-slate-400">最高連擊</div><div class="text-base font-black text-rose-300 tabular-nums">' + c.bestCombo + '</div></div>' +
+    '<div class="career-kpi-grid">' +
+      '<div class="career-kpi-cell"><div class="career-kpi-label">總對局</div><div class="career-kpi-val is-gold tabular-nums">' + c.gamesPlayed + '</div></div>' +
+      '<div class="career-kpi-cell"><div class="career-kpi-label">勝率</div><div class="career-kpi-val is-jade tabular-nums">' + winRate + '%</div></div>' +
+      '<div class="career-kpi-cell"><div class="career-kpi-label">說好話</div><div class="career-kpi-val is-indigo tabular-nums">' + c.totalGoodWords + '</div></div>' +
+      '<div class="career-kpi-cell"><div class="career-kpi-label">最高連擊</div><div class="career-kpi-val is-cinnabar tabular-nums">' + c.bestCombo + '</div></div>' +
     '</div>' +
-    '<div class="text-[11px] font-bold text-amber-300 mb-1.5">三好成就勳章（已解鎖 ' + c.unlockedBadges.length + ' / ' + ACHIEVEMENT_DEFS.length + '）</div>' +
-    '<div class="grid grid-cols-2 gap-2">';
+    '<div class="career-progress-wrap">' +
+      '<div class="career-progress-head">' +
+        '<span class="font-serif-craft font-bold text-amber-300">三好書院印記</span>' +
+        '<span class="tabular-nums text-[13px] text-slate-300">已解鎖 ' + c.unlockedBadges.length + ' / ' + ACHIEVEMENT_DEFS.length + '</span>' +
+      '</div>' +
+      '<div class="career-progress-track"><div class="career-progress-fill" style="width:' + unlockPct + '%"></div></div>' +
+    '</div>' +
+    '<div class="career-seal-grid">';
 
   ACHIEVEMENT_DEFS.forEach(function (a) {
     const unlocked = c.unlockedBadges.indexOf(a.id) !== -1;
     html +=
-      '<div class="p-2.5 rounded-xl border ' + (unlocked
-        ? "bg-emerald-950/40 border-emerald-400/50"
-        : "bg-slate-950/60 border-slate-800 opacity-55") + '">' +
-      '<div class="flex items-center gap-1.5">' +
-      '<span class="inline-flex items-center justify-center w-5 h-5 rounded text-[10.5px] font-serif-craft font-black border ' + (unlocked ? "bg-amber-500/20 text-amber-200 border-amber-400/50" : "bg-slate-900 text-slate-500 border-slate-700") + '">' + (unlocked ? escapeHtml(a.icon) : "鎖") + '</span>' +
-      '<span class="text-xs font-black ' + (unlocked ? "text-amber-200" : "text-slate-400") + '">' + escapeHtml(a.title) + '</span>' +
-      '</div>' +
-      '<div class="text-[10.5px] text-slate-300 mt-1 leading-snug">' + escapeHtml(a.desc) + '</div>' +
+      '<div class="career-seal-card ' + (unlocked ? "is-unlocked" : "is-locked") + '">' +
+        '<div class="career-seal-head">' +
+          '<span class="career-seal-chop ' + (unlocked ? "is-unlocked" : "") + '">' + (unlocked ? escapeHtml(a.icon) : "封") + '</span>' +
+          '<span class="career-seal-title">' + escapeHtml(a.title) + '</span>' +
+        '</div>' +
+        '<div class="career-seal-desc">' + escapeHtml(a.desc) + '</div>' +
       '</div>';
   });
   html += '</div>';
