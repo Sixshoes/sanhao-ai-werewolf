@@ -16457,6 +16457,299 @@ body.screen-ingame.screen-gameover #focalCenterCard {
   max-height: calc(100dvh - 80px);
 }
 
+/* ==================== v24.3.2 UNIFIED WIDE SPEECH COMPOSER & TEMPLATE-TO-ADVANCED SYNC ==================== */
+/* Zero !important · Zero backdrop-filter · All font sizes >= 13px */
+
+/* 1. Wider Focal Center Stage during Player Speech Turns (#quickFreeInput, #lastWordsFreeInput, #sheriffPlayerInput) */
+body.screen-ingame.phase-mode-speak #focalCenterCard {
+  max-width: min(940px, calc(100vw - 36px));
+}
+
+@media (min-width: 1200px) {
+  body.screen-ingame.phase-mode-speak #bottomUnifiedRow {
+    max-width: 1460px;
+    grid-template-columns: 236px minmax(0, 940px) 236px;
+  }
+
+  body.screen-ingame.phase-mode-speak #cornerRoleTile,
+  body.screen-ingame.phase-mode-speak #cornerFourGDeck {
+    width: 236px;
+    max-width: 236px;
+  }
+
+  body.screen-ingame.phase-mode-speak #focalCenterCard {
+    max-width: 940px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  body.screen-ingame.phase-mode-speak #bottomUnifiedRow {
+    max-width: 1180px;
+    grid-template-columns: 204px minmax(0, 1fr) 156px;
+  }
+
+  body.screen-ingame.phase-mode-speak #cornerRoleTile {
+    width: 204px;
+    max-width: 204px;
+  }
+
+  body.screen-ingame.phase-mode-speak #cornerFourGDeck {
+    width: 156px;
+  }
+
+  body.screen-ingame.phase-mode-speak #focalCenterCard {
+    max-width: 840px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  body.screen-ingame.phase-mode-speak #bottomUnifiedRow,
+  body.screen-ingame.phase-mode-speak #focalCenterCard {
+    max-width: min(900px, calc(100vw - 28px));
+  }
+}
+
+/* 2. Template-to-Advanced Sync Banner & Loaded Card Visual State */
+.pit-template-sync-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  background: rgba(24, 58, 46, 0.42);
+  border: 1px solid rgba(94, 174, 144, 0.36);
+  color: #b8eed8;
+}
+
+.pit-template-sync-bar.hidden {
+  display: none;
+}
+
+#quickSpeechChips .play-card-btn.is-draft-loaded {
+  border-color: rgba(94, 174, 144, 0.78);
+  background: rgba(20, 44, 36, 0.86);
+  box-shadow: 0 0 0 1px rgba(94, 174, 144, 0.28), 0 8px 18px rgba(0, 0, 0, 0.32);
+}
+
+/* 3. Spacious Two-Row Unified Composer Box (Full-Width Textarea + Toolbar Below) */
+.speech-composer-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px 7px;
+  border-radius: 8px;
+  background: rgba(14, 12, 10, 0.88);
+  border: 1px solid rgba(94, 174, 144, 0.32);
+  transition: border-color 160ms ease, background-color 160ms ease, opacity 160ms ease;
+}
+
+.speech-composer-box:hover,
+.speech-composer-box:focus-within {
+  opacity: 1;
+  border-color: rgba(94, 174, 144, 0.68);
+}
+
+.speech-composer-box.is-amber-composer {
+  border-color: rgba(216, 185, 124, 0.34);
+}
+
+.speech-composer-box.is-amber-composer:hover,
+.speech-composer-box.is-amber-composer:focus-within {
+  border-color: rgba(232, 198, 126, 0.72);
+}
+
+.speech-composer-textarea,
+body.screen-ingame #panelPlayerSpeech #quickFreeInput,
+body.screen-ingame #panelLastWords #lastWordsFreeInput,
+body.screen-ingame #panelSheriffElection #sheriffPlayerInput {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  max-height: 132px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  font-family: var(--font-literary);
+  font-size: 15px;
+  line-height: 1.62;
+  letter-spacing: 0.02em;
+  resize: vertical;
+  overflow-y: auto;
+  background: rgba(9, 8, 7, 0.56);
+  border: 1px solid rgba(216, 185, 124, 0.16);
+  color: #f6eedf;
+}
+
+body.screen-ingame #panelPlayerSpeech #quickFreeInput:focus,
+body.screen-ingame #panelLastWords #lastWordsFreeInput:focus,
+body.screen-ingame #panelSheriffElection #sheriffPlayerInput:focus {
+  outline: none;
+  border-color: rgba(94, 174, 144, 0.68);
+  background: rgba(12, 11, 9, 0.78);
+}
+
+body.screen-ingame #panelLastWords #lastWordsFreeInput:focus,
+body.screen-ingame #panelSheriffElection #sheriffPlayerInput:focus {
+  border-color: rgba(232, 198, 126, 0.72);
+}
+
+.speech-composer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 5px;
+  border-top: 1px solid rgba(216, 185, 124, 0.14);
+  font-size: 13px;
+}
+
+.composer-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 2px 9px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #dfd2bc;
+  background: rgba(216, 185, 124, 0.09);
+  border: 1px solid rgba(216, 185, 124, 0.24);
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.composer-pill-btn:hover {
+  background: rgba(216, 185, 124, 0.20);
+  border-color: rgba(232, 198, 126, 0.56);
+  color: #fffaf0;
+}
+
+.composer-pill-btn.is-muted {
+  color: rgba(214, 202, 182, 0.78);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(216, 185, 124, 0.16);
+}
+
+.composer-pill-btn.is-muted:hover {
+  color: #fecdd3;
+  border-color: rgba(244, 63, 94, 0.45);
+  background: rgba(186, 66, 52, 0.16);
+}
+
+.composer-pill-btn.hidden {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  body.screen-ingame.phase-mode-speak #focalCenterCard {
+    max-width: 100%;
+  }
+
+  .speech-composer-box {
+    padding: 6px 8px;
+    gap: 5px;
+  }
+
+  .speech-composer-textarea,
+  body.screen-ingame #panelPlayerSpeech #quickFreeInput,
+  body.screen-ingame #panelLastWords #lastWordsFreeInput,
+  body.screen-ingame #panelSheriffElection #sheriffPlayerInput {
+    min-height: 52px;
+    font-size: 16px;
+    padding: 6px 8px;
+  }
+}
+
+/* 4. Light Themes (Xuan-Paper Daylight & Twilight Academy) Contrast Alignment */
+body.craft-ui.theme-day .pit-template-sync-bar,
+body.craft-ui.theme-daylight .pit-template-sync-bar,
+body.craft-ui.theme-twilight .pit-template-sync-bar {
+  background: rgba(44, 103, 83, 0.12);
+  border-color: rgba(44, 103, 83, 0.36);
+  color: #17523e;
+}
+
+body.craft-ui.theme-day #quickSpeechChips .play-card-btn.is-draft-loaded,
+body.craft-ui.theme-daylight #quickSpeechChips .play-card-btn.is-draft-loaded,
+body.craft-ui.theme-twilight #quickSpeechChips .play-card-btn.is-draft-loaded {
+  border-color: rgba(44, 103, 83, 0.74);
+  background: rgba(232, 245, 238, 0.94);
+  box-shadow: 0 0 0 1px rgba(44, 103, 83, 0.22), 0 6px 14px rgba(56, 39, 19, 0.10);
+}
+
+body.craft-ui.theme-day .speech-composer-box,
+body.craft-ui.theme-daylight .speech-composer-box,
+body.craft-ui.theme-twilight .speech-composer-box {
+  background: rgba(252, 248, 240, 0.96);
+  border-color: rgba(44, 103, 83, 0.34);
+  color: #2b2118;
+}
+
+body.craft-ui.theme-day .speech-composer-box.is-amber-composer,
+body.craft-ui.theme-daylight .speech-composer-box.is-amber-composer,
+body.craft-ui.theme-twilight .speech-composer-box.is-amber-composer {
+  border-color: rgba(154, 107, 39, 0.40);
+}
+
+body.craft-ui.theme-day .speech-composer-textarea,
+body.craft-ui.theme-daylight .speech-composer-textarea,
+body.craft-ui.theme-twilight .speech-composer-textarea,
+body.theme-daylight.screen-ingame #panelPlayerSpeech #quickFreeInput,
+body.theme-daylight.screen-ingame #panelLastWords #lastWordsFreeInput,
+body.theme-daylight.screen-ingame #panelSheriffElection #sheriffPlayerInput,
+body.theme-twilight.screen-ingame #panelPlayerSpeech #quickFreeInput,
+body.theme-twilight.screen-ingame #panelLastWords #lastWordsFreeInput,
+body.theme-twilight.screen-ingame #panelSheriffElection #sheriffPlayerInput {
+  background: #fffdf8;
+  border-color: rgba(116, 92, 62, 0.28);
+  color: #241b14;
+}
+
+body.craft-ui.theme-day .speech-composer-toolbar,
+body.craft-ui.theme-daylight .speech-composer-toolbar,
+body.craft-ui.theme-twilight .speech-composer-toolbar {
+  border-top-color: rgba(116, 92, 62, 0.18);
+  color: #4f3f2f;
+}
+
+body.craft-ui.theme-day .composer-pill-btn,
+body.craft-ui.theme-daylight .composer-pill-btn,
+body.craft-ui.theme-twilight .composer-pill-btn {
+  color: #443322;
+  background: rgba(242, 232, 214, 0.90);
+  border-color: rgba(116, 92, 62, 0.30);
+}
+
+body.craft-ui.theme-day .composer-pill-btn:hover,
+body.craft-ui.theme-daylight .composer-pill-btn:hover,
+body.craft-ui.theme-twilight .composer-pill-btn:hover {
+  background: rgba(232, 218, 192, 0.98);
+  border-color: rgba(154, 107, 39, 0.62);
+  color: #1f160e;
+}
+
+body.craft-ui.theme-day .composer-pill-btn.is-muted,
+body.craft-ui.theme-daylight .composer-pill-btn.is-muted,
+body.craft-ui.theme-twilight .composer-pill-btn.is-muted {
+  color: #6b5842;
+  background: rgba(116, 92, 62, 0.08);
+  border-color: rgba(116, 92, 62, 0.22);
+}
+
+body.craft-ui.theme-day .composer-pill-btn.is-muted:hover,
+body.craft-ui.theme-daylight .composer-pill-btn.is-muted:hover,
+body.craft-ui.theme-twilight .composer-pill-btn.is-muted:hover {
+  color: #8f2219;
+  border-color: rgba(164, 57, 44, 0.50);
+  background: rgba(164, 57, 44, 0.10);
+}
+
+
 
 
 

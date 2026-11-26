@@ -873,8 +873,8 @@ const makeEl = id => {
   const _children = [];
   let _innerHtml = "";
   const guessTag = id === "body" ? "BODY"
-    : (id === "playerSpeechInput" ? "TEXTAREA"
-      : (id.startsWith("input") || id === "quickFreeInput" || id === "lastWordsFreeInput" ? "INPUT"
+    : (id === "playerSpeechInput" || id === "quickFreeInput" || id === "lastWordsFreeInput" || id === "sheriffPlayerInput" ? "TEXTAREA"
+      : (id.startsWith("input") ? "INPUT"
         : (id.startsWith("select") ? "SELECT" : "DIV")));
   const obj = {
     id, tagName: guessTag,
@@ -887,7 +887,14 @@ const makeEl = id => {
     get innerHTML() { return _innerHtml; },
     set innerHTML(v) {
       _innerHtml = String(v == null ? "" : v);
-      if (_innerHtml === "") _children.length = 0;
+      if (_innerHtml === "") {
+        _children.length = 0;
+      } else if (_innerHtml.includes('data-card-load="1"') && !_children.some(c => c && c.getAttribute && c.getAttribute("data-card-load") === "1")) {
+        const sp = makeEl("dyn_span_" + Math.random());
+        sp.tagName = "SPAN";
+        sp.setAttribute("data-card-load", "1");
+        _children.push(sp);
+      }
     },
     get className() { return Array.from(cl).join(" "); },
     set className(v) { cl.clear(); String(v || "").split(/\s+/).filter(Boolean).forEach(x => cl.add(x)); },
@@ -969,6 +976,14 @@ const wolfTacticRowSeed = makeEl("wolfTacticRow");
   b.tagName = "BUTTON";
   b.setAttribute("data-wolf-tactic", tac);
   wolfTacticRowSeed.appendChild(b);
+});
+
+const quickStancePillsSeed = makeEl("quickStancePills");
+["accuse", "vouch", "peace"].forEach(st => {
+  const b = makeEl("dyn_qs_" + st);
+  b.tagName = "BUTTON";
+  b.setAttribute("data-stance", st);
+  quickStancePillsSeed.appendChild(b);
 });
 
 const ctx = vm.createContext(sb);
@@ -7134,7 +7149,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.3.1") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.3.2") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7537,7 +7552,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.3.1"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.3.2"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8279,7 +8294,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
       && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
     docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("v24.2") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
-    scriptV242Ok: docScript241.includes("v24.3.1") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
+    scriptV242Ok: docScript241.includes("v24.3.2") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
     voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
     apiTimeout8400AndLruOk: apiGem242.includes("resolvePrimaryTimeoutMs(primaryModel)") && apiGem242.includes("21500 - elapsed") && apiGem242.includes("if (++evicted >= 200) break;") && apiGem242.includes("if (timer) clearTimeout(timer);"),
     webglContextLostOk: eng242.includes('canvas3d.addEventListener("webglcontextlost"'),
@@ -8831,10 +8846,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     specSyncedModelsAndCacheOk:
       docSpec2414.includes("gemini-4-hydrogen") &&
       docSpec2414.includes("api/tts.js") &&
-      docSpec2414.includes("sanhao-shell-v24.3.1") &&
+      docSpec2414.includes("sanhao-shell-v24.3.2") &&
       docSpec2414.length <= 5000,
     readmeSyncedOk:
-      readme2414.includes("sanhao-shell-v24.3.1") &&
+      readme2414.includes("sanhao-shell-v24.3.2") &&
       readme2414.includes("api/tts.js"),
     ...v24214Runtime
   };
@@ -9286,7 +9301,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   })()`, ctx);
   const docScriptV2431 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
   const demoScriptVirtueSyncOk = [
-    "v24.3.1",
+    "v24.3.2",
     "啟席預載遮罩",
     "三好四給主動茶禮列",
     "茶席風氣",
@@ -9307,6 +9322,164 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 Release-Freeze E2E smoke test PASSED!");
+// --- v24.3.2: Unified Wide Speech Composer & Quick Template -> Advanced Panel Sync ---
+{
+  const html2432 = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const css2432 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const htmlComposerOk =
+    html2432.includes('<textarea id="quickFreeInput"') &&
+    html2432.includes('<textarea id="lastWordsFreeInput"') &&
+    html2432.includes('<textarea id="sheriffPlayerInput"') &&
+    html2432.includes('id="pitTemplateSyncBar"') &&
+    html2432.includes('id="btnRebuildFromPits"') &&
+    html2432.includes('id="btnClearSpeechDraft"') &&
+    html2432.includes('id="quickStancePills" class="flex items-center');
+  const cssWideSpeakOk =
+    css2432.includes("body.screen-ingame.phase-mode-speak #focalCenterCard") &&
+    css2432.includes("grid-template-columns: 236px minmax(0, 940px) 236px") &&
+    css2432.includes("max-width: 940px;") &&
+    css2432.includes(".speech-composer-box") &&
+    css2432.includes(".speech-composer-textarea");
+
+  const v2432Runtime = vm.runInContext(`(() => {
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    el("chkSheriffMode").checked = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+
+    const pid = getPlayerId();
+    const others = getAliveSeats().filter(s => s.id !== pid);
+    const pSeat = getPlayerSeat();
+    pSeat.checkedHistory = [{ day: 1, targetId: others[0].id, isWolf: true }];
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    updateAllUI();
+
+    const cardCountEq3 = el("quickSpeechChips").querySelectorAll("button").length === 3;
+    const advDefaultCollapsed = el("speechAdvancedDrawer").classList.contains("hidden");
+    const firstCard = el("quickSpeechChips").querySelectorAll("button")[0];
+    const firstLoadSpan = firstCard && firstCard.querySelector ? firstCard.querySelector("[data-card-load]") : null;
+    if (firstLoadSpan) firstLoadSpan.click();
+
+    const advOpenedOnCardLoad = !el("speechAdvancedDrawer").classList.contains("hidden") && el("btnToggleCustomSpeech").classList.contains("is-active");
+    const syncBarShown = !el("pitTemplateSyncBar").classList.contains("hidden");
+    const draftHydrated = Boolean(
+      state.match.playerDraftPits.claimRole === "seer" &&
+      state.match.playerDraftPits.wolfIds.includes(others[0].id) &&
+      el("quickFreeInput").value.includes("觀察員") &&
+      el("playerSpeechInput").value === el("quickFreeInput").value
+    );
+
+    // Toggling an extra seat in #playerPitBuilder keeps the loaded Seer claim + previous wolf pit!
+    togglePlayerDraftSeatPit(others[1].id);
+    const stackedEditPreservedRole = Boolean(
+      state.match.playerDraftPits.claimRole === "seer" &&
+      state.match.playerDraftPits.wolfIds.includes(others[0].id) &&
+      state.match.playerDraftPits.wolfIds.includes(others[1].id) &&
+      el("quickFreeInput").value.includes("觀察員") &&
+      el("quickFreeInput").value.includes(fmtSeatNum(others[1].id) + "號")
+    );
+
+    // Stance pill & Clear button test
+    const stanceBtn = el("quickStancePills").querySelectorAll("[data-stance]")[2];
+    if (stanceBtn) stanceBtn.click();
+    const stanceAppended = el("quickFreeInput").value.includes("三好風度");
+    el("btnClearSpeechDraft").click();
+    const clearedDraftOk = Boolean(
+      el("quickFreeInput").value === "" &&
+      el("playerSpeechInput").value === "" &&
+      el("pitTemplateSyncBar").classList.contains("hidden") &&
+      state.match.playerDraftPits.wolfIds.length === 0 &&
+      !state.match.playerDraftPits.claimRole
+    );
+
+    // Shift+Enter & IME isComposing guard must NOT submit speech; plain Enter submits cleanly
+    el("quickFreeInput").value = "這段我想先換行繼續補完整一點的邏輯";
+    el("quickFreeInput").dispatchEvent({ type: "input" });
+    el("quickFreeInput").dispatchEvent({ type: "keydown", key: "Enter", shiftKey: true, isComposing: false, preventDefault() {} });
+    const shiftEnterDidNotSend = state.match.phase === "DAY_PLAYER_TURN";
+    el("quickFreeInput").dispatchEvent({ type: "keydown", key: "Enter", shiftKey: false, isComposing: true, preventDefault() {} });
+    const composingDidNotSend = state.match.phase === "DAY_PLAYER_TURN";
+    el("quickFreeInput").dispatchEvent({ type: "keydown", key: "Enter", shiftKey: false, isComposing: false, preventDefault() {} });
+    const plainEnterSent = state.match.phase === "DAY_SPEECH";
+
+    // Sheriff player speech wide mode + [data-card-load] sync
+    clearStepTimer();
+    el("chkSheriffMode").checked = true;
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pidSh = getPlayerId();
+    const pSh = getPlayerSeat();
+    const shOthers = getAliveSeats().filter(s => s.id !== pidSh);
+    pSh.checkedHistory = [{ day: 1, targetId: shOthers[0].id, isWolf: false }];
+    state.match.phase = "SHERIFF_ELECTION";
+    state.match.sheriffElectionCtx = {
+      stage: "speech",
+      candidateIds: [pidSh, shOthers[0].id],
+      speechOrderIds: [pidSh, shOthers[0].id],
+      speechIndex: 0,
+      activeReelSeatId: pidSh,
+      spokenSpeeches: [],
+      withdrawnIds: [],
+      playerRunning: true,
+      playerBadgeFlowDraft: { firstTargetId: null, secondTargetId: null, explicit: false }
+    };
+    el("sheriffPlayerInput").value = "";
+    updateAllUI();
+    const sheriffWideModeOn = document.body.classList.contains("phase-mode-speak");
+    const shCard = el("sheriffPlayerQuickChips").querySelectorAll("button")[0];
+    const shLoadBtn = shCard && shCard.querySelector ? shCard.querySelector("[data-card-load]") : null;
+    if (shLoadBtn) shLoadBtn.click();
+    const sheriffCardLoadedOk = Boolean(
+      state.match.phase === "SHERIFF_ELECTION" &&
+      el("sheriffPlayerInput").value.includes("觀察員") &&
+      state.match.sheriffElectionCtx.playerBadgeFlowDraft.firstTargetId !== null
+    );
+
+    // Last words [data-card-load] populates input without skipping phase
+    state.match.phase = "LAST_WORDS_PLAYER";
+    state.lastWordsCtx = { mode: "vote", queue: [pidSh], idx: 0 };
+    preparePlayerLastWordsPanel("vote");
+    updateAllUI();
+    const lwCard = el("lastWordsChips").querySelectorAll("button")[0];
+    const lwLoadBtn = lwCard && lwCard.querySelector ? lwCard.querySelector("[data-card-load]") : null;
+    if (lwLoadBtn) lwLoadBtn.click();
+    const lastWordsLoadedOk = Boolean(
+      state.match.phase === "LAST_WORDS_PLAYER" &&
+      el("lastWordsFreeInput").value.trim().length > 10
+    );
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      cardCountEq3,
+      advDefaultCollapsed,
+      advOpenedOnCardLoad,
+      syncBarShown,
+      draftHydrated,
+      stackedEditPreservedRole,
+      stanceAppended,
+      clearedDraftOk,
+      shiftEnterDidNotSend,
+      composingDidNotSend,
+      plainEnterSent,
+      sheriffWideModeOn,
+      sheriffCardLoadedOk,
+      lastWordsLoadedOk
+    };
+  })()`, ctx);
+
+  const v2432Res = { htmlComposerOk, cssWideSpeakOk, ...v2432Runtime };
+  for (const [k, v] of Object.entries(v2432Res)) {
+    if (!v) {
+      throw new Error("v24.3.2 REGRESSION check failed for " + k + ": " + JSON.stringify(v2432Res));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 Release-Freeze E2E smoke test PASSED!");
 
 

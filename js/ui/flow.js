@@ -393,8 +393,9 @@ const indieFlow = {
     const isGameOver = p === "GAME_OVER";
     const isPickSeat = p === "NIGHT_GUARD" || p === "NIGHT_SEER" || p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "HUNTER_TRIGGER" || p === "DAY_VOTE" || p === "DAY_PLAYER_TURN";
     const shSpeechNow = Boolean(p === "SHERIFF_ELECTION" && state.match && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech");
-    const isListening = !isTitle && (p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH" || shSpeechNow);
-    const isSpeaking = !isTitle && (p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_PLAYER");
+    const shPlayerSpeaking = Boolean(shSpeechNow && state.match.sheriffElectionCtx.activeReelSeatId === getPlayerId());
+    const isListening = !isTitle && (p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH" || (shSpeechNow && !shPlayerSpeaking));
+    const isSpeaking = !isTitle && (p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_PLAYER" || shPlayerSpeaking);
     const isVoting = !isTitle && (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT");
     const isNightMode = !isTitle && (p === "NIGHT_GUARD" || p === "NIGHT_SEER" || p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "HUNTER_TRIGGER" || p === "HUNTER_RESOLVE");
     const isSheriffMode = !isTitle && (p === "SHERIFF_ELECTION" || p === "SHERIFF_ORDER" || p === "SHERIFF_TRANSFER");

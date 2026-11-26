@@ -182,7 +182,9 @@ function resetMatchToLobby() {
   if (el("quickFreeInput")) el("quickFreeInput").value = "";
   if (el("playerSpeechInput")) el("playerSpeechInput").value = "";
   if (el("lastWordsFreeInput")) el("lastWordsFreeInput").value = "";
-  if (el("btnQuickFreeSend")) el("btnQuickFreeSend").textContent = "陳詞";
+  if (el("pitTemplateSyncBar")) el("pitTemplateSyncBar").classList.add("hidden");
+  if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(el("quickFreeInput"));
+  if (el("btnQuickFreeSend")) el("btnQuickFreeSend").textContent = "陳詞送出 ↵";
   if (el("speechThreeGoodBadge")) el("speechThreeGoodBadge").classList.add("hidden");
   if (el("btnQuickInlineRewrite")) el("btnQuickInlineRewrite").classList.add("hidden");
   updateSpotlightBox("主持播報", "準備開局", "選擇下方人數與角色，按下「開始對局」即可進入第一晚！", "");
@@ -796,8 +798,11 @@ function bindSpeechInputEvents() {
     });
   }
   if (el("lastWordsFreeInput")) {
+    el("lastWordsFreeInput").addEventListener("input", function () {
+      if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(el("lastWordsFreeInput"));
+    });
     el("lastWordsFreeInput").addEventListener("keydown", function (ev) {
-      if (ev.key === "Enter") {
+      if (ev.key === "Enter" && !ev.shiftKey && !ev.isComposing) {
         ev.preventDefault();
         if (el("btnSendLastWords")) el("btnSendLastWords").click();
       }
@@ -947,7 +952,7 @@ function bindSpeechInputEvents() {
   }
   if (el("interjectCustomInput")) {
     el("interjectCustomInput").addEventListener("keydown", function (ev) {
-      if (ev.key === "Enter") {
+      if (ev.key === "Enter" && !ev.isComposing) {
         ev.preventDefault();
         const q = el("interjectCustomInput").value.trim();
         if (q && typeof executeTeaInterjection === "function") executeTeaInterjection(q);
@@ -983,17 +988,18 @@ function bindSpeechInputEvents() {
   el("quickFreeInput").addEventListener("input", function () {
     state.match.rewriteCritReady = false;
     if (el("playerSpeechInput")) el("playerSpeechInput").value = el("quickFreeInput").value;
+    if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(el("quickFreeInput"));
     refreshQuickFreeInputHint();
     refreshLiveNlpUI();
   });
   el("quickFreeInput").addEventListener("keydown", function (ev) {
-    if (ev.key === "Enter") {
+    if (ev.key === "Enter" && !ev.shiftKey && !ev.isComposing) {
       ev.preventDefault();
       sendQuickFreeSpeech();
     }
   });
   // v24.2 Mobile virtual-keyboard viewport guard: keep input & send CTA visible when soft keyboard opens
-  ["quickFreeInput", "lastWordsFreeInput"].forEach(function (inId) {
+  ["quickFreeInput", "lastWordsFreeInput", "sheriffPlayerInput"].forEach(function (inId) {
     const inp = el(inId);
     if (!inp) return;
     inp.addEventListener("focus", function () {
@@ -1008,7 +1014,7 @@ function bindSpeechInputEvents() {
     window.visualViewport.addEventListener("resize", function () {
       if (window.innerWidth > 767) return;
       const active = document.activeElement;
-      if (active && (active.id === "quickFreeInput" || active.id === "lastWordsFreeInput")) {
+      if (active && (active.id === "quickFreeInput" || active.id === "lastWordsFreeInput" || active.id === "sheriffPlayerInput")) {
         try { active.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {}
       }
     });
@@ -1039,6 +1045,7 @@ function bindSpeechInputEvents() {
       const pickedRoast = roasts[((state.match.day || 1) + t.id) % roasts.length];
       qIn.value = pickedRoast;
       if (el("playerSpeechInput")) el("playerSpeechInput").value = pickedRoast;
+      if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(qIn);
       refreshQuickFreeInputHint();
       refreshLiveNlpUI();
       sound.tone(420, 0.07, "triangle", 0.045, 0);
@@ -1059,6 +1066,28 @@ function bindSpeechInputEvents() {
     });
   }
 
+  if (el("btnRebuildFromPits")) {
+    el("btnRebuildFromPits").addEventListener("click", function () {
+      sound.unlock();
+      if (typeof syncDraftSpeechToInput === "function") syncDraftSpeechToInput();
+      const qIn = el("quickFreeInput");
+      if (qIn && typeof qIn.focus === "function") qIn.focus();
+      sound.tone(600, 0.06, "triangle", 0.04, 0);
+      showToast("已依進階排坑與亮牌選項重新組句。", "emerald");
+    });
+  }
+
+  if (el("btnClearSpeechDraft")) {
+    el("btnClearSpeechDraft").addEventListener("click", function () {
+      sound.unlock();
+      if (typeof clearPlayerDraftPits === "function") clearPlayerDraftPits();
+      if (el("rephraseChoicesTray")) el("rephraseChoicesTray").classList.add("hidden");
+      const qIn = el("quickFreeInput");
+      if (qIn && typeof qIn.focus === "function") qIn.focus();
+      sound.tone(360, 0.05, "sine", 0.03, 0);
+    });
+  }
+
   if (el("quickStancePills")) {
     el("quickStancePills").querySelectorAll("[data-stance]").forEach(function (pill) {
       pill.addEventListener("click", function () {
@@ -1075,11 +1104,20 @@ function bindSpeechInputEvents() {
           vouch: "聽完 " + tTag + " 的分析我覺得真誠有條理，這輪我選擇相信 " + target.id + "號 是好人夥伴！",
           peace: "請大家保持三好風度、別被酸言帶風向，我們冷靜把選票集中投給邏輯最不合的人！"
         };
+        const snippet = templates[stance] || "";
         const qIn = el("quickFreeInput");
-        if (qIn) {
-          qIn.value = templates[stance] || "";
-          qIn.focus();
+        if (qIn && snippet) {
+          const cur = qIn.value.trim();
+          const nextVal = (!cur || cur.indexOf(snippet) !== -1)
+            ? snippet
+            : (cur + (/[。！？\n]$/.test(cur) ? " " : "，") + snippet);
+          qIn.value = nextVal;
+          if (el("playerSpeechInput")) el("playerSpeechInput").value = nextVal;
+          state.match.rewriteCritReady = false;
+          if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(qIn);
+          if (typeof qIn.focus === "function") qIn.focus();
           refreshQuickFreeInputHint();
+          refreshLiveNlpUI();
         }
         sound.tone(580, 0.07, "triangle", 0.04, 0);
       });
@@ -1331,17 +1369,28 @@ function bindNightVoteAndFourGEvents() {
       if (typeof advanceSheriffSpeechTurn === "function") advanceSheriffSpeechTurn();
     });
   }
+  const sendEditedSheriffSpeech = function () {
+    const inp = el("sheriffPlayerInput");
+    const rawVal = inp ? inp.value : "";
+    const shCtx = state.match && state.match.sheriffElectionCtx;
+    const meta = shCtx && shCtx._draftCardMeta ? shCtx._draftCardMeta : null;
+    const opts = meta && meta.withdrawAfter && /退水|讓出警徽|禮讓/.test(rawVal)
+      ? { withdrawAfter: true }
+      : undefined;
+    if (shCtx) shCtx._draftCardMeta = null;
+    if (typeof submitPlayerSheriffSpeech === "function") submitPlayerSheriffSpeech(rawVal, null, opts);
+  };
   if (el("btnSheriffPlayerSend")) {
-    el("btnSheriffPlayerSend").addEventListener("click", function () {
-      const inp = el("sheriffPlayerInput");
-      if (typeof submitPlayerSheriffSpeech === "function") submitPlayerSheriffSpeech(inp ? inp.value : "");
-    });
+    el("btnSheriffPlayerSend").addEventListener("click", sendEditedSheriffSpeech);
   }
   if (el("sheriffPlayerInput")) {
+    el("sheriffPlayerInput").addEventListener("input", function () {
+      if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(el("sheriffPlayerInput"));
+    });
     el("sheriffPlayerInput").addEventListener("keydown", function (ev) {
-      if (ev.key === "Enter" && !ev.shiftKey) {
+      if (ev.key === "Enter" && !ev.shiftKey && !ev.isComposing) {
         ev.preventDefault();
-        if (typeof submitPlayerSheriffSpeech === "function") submitPlayerSheriffSpeech(el("sheriffPlayerInput").value);
+        sendEditedSheriffSpeech();
       }
     });
   }

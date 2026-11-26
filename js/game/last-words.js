@@ -407,7 +407,10 @@ function preparePlayerLastWordsPanel(mode) {
   if (el("lastWordsSubHint")) {
     el("lastWordsSubHint").textContent = "依《凹嗚狼人殺》規則，你的遺言會被全場 AI 記住並影響後續站邊！";
   }
-  if (el("lastWordsFreeInput")) el("lastWordsFreeInput").value = "";
+  if (el("lastWordsFreeInput")) {
+    el("lastWordsFreeInput").value = "";
+    if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(el("lastWordsFreeInput"));
+  }
 
   const aliveOthers = getAliveSeats().filter(function (s) { return s.id !== player.id; });
   const pickSus = aliveOthers.find(function (s) { return state.playerMarks[s.id] === "wolf"; }) || aliveOthers[0] || null;
@@ -489,11 +492,39 @@ function preparePlayerLastWordsPanel(mode) {
     btn.type = "button";
     const toneCls = idx === 0 ? "card-heart" : (idx === 1 ? "card-words" : "card-deeds");
     const stampCls = idx === 0 ? "stamp-heart" : (idx === 1 ? "stamp-words" : "stamp-deeds");
-    btn.className = "play-card-btn w-full text-left px-2.5 py-2 flex items-center justify-between gap-2 " + toneCls;
+    btn.className = "play-card-btn is-compact-card w-full text-left flex flex-col justify-between gap-1 " + toneCls;
     btn.innerHTML =
-      '<div class="min-w-0"><div class="text-xs font-bold truncate">' + escapeHtml(item.label) + '</div>' +
-      '<div class="text-[11px] opacity-75 truncate mt-0.5">' + escapeHtml(item.text) + '</div></div>' +
-      '<span class="play-card-stamp ' + stampCls + '">' + escapeHtml(item.tag) + '</span>';
+      '<div class="flex items-center justify-between gap-1.5 w-full">' +
+      '<span class="play-card-stamp ' + stampCls + '">' + escapeHtml(item.tag) + '</span>' +
+      '<span role="button" tabindex="0" class="play-card-load-btn shrink-0" data-card-load="1" title="帶入下方遺言欄微調後再送出">帶入改詞</span>' +
+      '</div>' +
+      '<div class="play-card-title text-[13px] font-bold leading-snug line-clamp-1">' + escapeHtml(item.label) + '</div>' +
+      '<div class="play-card-preview text-[13px] leading-snug line-clamp-2 opacity-80">' + escapeHtml(item.text) + '</div>';
+    const loadEl = typeof btn.querySelector === "function" ? btn.querySelector("[data-card-load]") : null;
+    if (loadEl && typeof loadEl.addEventListener === "function") {
+      const loadLwDraft = function (ev) {
+        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+        if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+        sound.unlock();
+        const lwInp = el("lastWordsFreeInput");
+        if (lwInp) {
+          lwInp.value = item.text || "";
+          if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(lwInp);
+          if (typeof lwInp.focus === "function") lwInp.focus();
+          try {
+            if (typeof lwInp.setSelectionRange === "function") {
+              lwInp.setSelectionRange(lwInp.value.length, lwInp.value.length);
+            }
+          } catch (e) { }
+        }
+        if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(540, 0.05, "triangle", 0.04, 0);
+        if (typeof showToast === "function") showToast("已將遺言範本帶入下方輸入框，可自由編輯後送出。", "emerald");
+      };
+      loadEl.addEventListener("click", loadLwDraft);
+      loadEl.addEventListener("keydown", function (ev) {
+        if (ev && (ev.key === "Enter" || ev.key === " ")) loadLwDraft(ev);
+      });
+    }
     btn.addEventListener("click", function () {
       submitPlayerLastWords(item.text);
     });
@@ -514,6 +545,10 @@ function submitPlayerLastWords(rawText) {
     ctx.lastRecordedText = "（選擇略過遺言，靜靜離席）";
     advanceLastWordsQueue();
     return;
+  }
+  if (el("lastWordsFreeInput")) {
+    el("lastWordsFreeInput").value = "";
+    if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(el("lastWordsFreeInput"));
   }
   const lwLabel = ctx.mode === "first_night" ? "首夜遺言" : "離席遺言";
   applyLastWordsInfluence(player, clean);

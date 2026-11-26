@@ -876,10 +876,53 @@ function renderSheriffElectionPanel() {
       qOpts.forEach(function (opt) {
         const card = document.createElement("button");
         card.type = "button";
-        card.className = "play-card-btn is-compact-card text-left";
+        card.className = "play-card-btn is-compact-card text-left flex flex-col justify-between gap-1";
         card.innerHTML =
-          '<div class="text-[13px] font-bold text-amber-200">' + escapeHtml(opt.title) + '</div>' +
-          '<div class="text-[13px] text-slate-300 line-clamp-2 mt-0.5">' + escapeHtml(opt.text) + '</div>';
+          '<div class="flex items-center justify-between gap-1.5 w-full">' +
+          '<span class="text-[13px] font-bold text-amber-200 truncate">' + escapeHtml(opt.title) + '</span>' +
+          '<span role="button" tabindex="0" class="play-card-load-btn shrink-0" data-card-load="1" title="帶入下方陳詞欄並同步警徽流微調">帶入改詞</span>' +
+          '</div>' +
+          '<div class="text-[13px] text-slate-300 line-clamp-2">' + escapeHtml(opt.text) + '</div>';
+        const loadEl = typeof card.querySelector === "function" ? card.querySelector("[data-card-load]") : null;
+        if (loadEl && typeof loadEl.addEventListener === "function") {
+          const loadShDraft = function (ev) {
+            if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+            if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+            sound.unlock();
+            ctx._draftCardMeta = {
+              claimsSeer: typeof opt.claimsSeer === "boolean" ? opt.claimsSeer : null,
+              withdrawAfter: Boolean(opt.withdrawAfter)
+            };
+            if (opt.badgeFlow && opt.badgeFlow.firstTargetId) {
+              ctx.playerBadgeFlowDraft = {
+                firstTargetId: opt.badgeFlow.firstTargetId || null,
+                secondTargetId: opt.badgeFlow.secondTargetId || null,
+                explicit: true
+              };
+              if (typeof buildPlayerSheriffQuickOptions === "function") {
+                ctx.playerQuickOptions = buildPlayerSheriffQuickOptions(pSeat, ctx.playerBadgeFlowDraft);
+              }
+              renderSheriffElectionPanel();
+            }
+            const shInp = el("sheriffPlayerInput");
+            if (shInp) {
+              shInp.value = opt.text || "";
+              if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(shInp);
+              if (typeof shInp.focus === "function") shInp.focus();
+              try {
+                if (typeof shInp.setSelectionRange === "function") {
+                  shInp.setSelectionRange(shInp.value.length, shInp.value.length);
+                }
+              } catch (e) { }
+            }
+            if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(540, 0.05, "triangle", 0.04, 0);
+            if (typeof showToast === "function") showToast("已將上警宣言帶入下方輸入框" + (opt.badgeFlow ? "（同步警徽流）" : "") + "，可自由改詞後送出。", "emerald");
+          };
+          loadEl.addEventListener("click", loadShDraft);
+          loadEl.addEventListener("keydown", function (ev) {
+            if (ev && (ev.key === "Enter" || ev.key === " ")) loadShDraft(ev);
+          });
+        }
         card.addEventListener("click", function () {
           if (typeof submitPlayerSheriffSpeech === "function") {
             submitPlayerSheriffSpeech(opt.text, opt.badgeFlow || null, {
@@ -890,6 +933,9 @@ function renderSheriffElectionPanel() {
         });
         chipsBox.appendChild(card);
       });
+    }
+    if (isPlayerSpeechNow && typeof autoResizeSpeechTextarea === "function") {
+      autoResizeSpeechTextarea(el("sheriffPlayerInput"));
     }
   }
 
