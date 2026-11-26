@@ -148,6 +148,7 @@ const indieFlow = {
   openPauseMenu: function (open) {
     const m = el("modalPauseMenu");
     if (!m) return;
+    if (open && typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
     m.classList.toggle("hidden", !open);
   },
 
@@ -155,12 +156,14 @@ const indieFlow = {
     const m = el("modalPauseMenu");
     if (!m) return;
     const isHidden = m.classList.contains("hidden");
+    if (isHidden && typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
     m.classList.toggle("hidden", !isHidden);
   },
 
   openJournal: function (tabKey) {
     const m = el("modalJournal");
     if (!m) return;
+    if (typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
     m.classList.remove("hidden");
     this.switchJournalTab(tabKey || "log");
   },
@@ -1067,8 +1070,10 @@ const indieFlow = {
     if (el("btnUploadHeroGlb") && el("inputHeroGlb")) {
       el("btnUploadHeroGlb").addEventListener("click", function () { el("inputHeroGlb").click(); });
       el("inputHeroGlb").addEventListener("change", function () {
-        const f = el("inputHeroGlb").files && el("inputHeroGlb").files[0];
+        const inp = el("inputHeroGlb");
+        const f = inp && inp.files && inp.files[0];
         if (f && typeof stage3d !== "undefined") stage3d.loadCustomHeroGlb(f);
+        if (inp) inp.value = "";
       });
     }
     if (typeof scheduleDragGestureHintAutoHide === "function") {

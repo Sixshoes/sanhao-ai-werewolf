@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * 三好AI狼人殺 — 四層自動化系統驗證統一執行器
+ * 三好AI狼人殺 — 五層自動化系統驗證統一執行器
  * 1. Python 後端語法編譯檢查
- * 2. Python 後端安全性 / ETag / TTS 輸入驗證單元測試
- * 3. 前端靜態檢查 / 10 VRMs / GLSL Shader / UI 易操作性 / 快捷鍵煙霧測試
- * 4. 60 局全規則多角色亂數壓力與不變量測試
+ * 2. Python 後端安全性 / ETag / API / TTS 輸入驗證單元測試
+ * 3. 前端靜態檢查 / 10 VRMs / GLSL Shader / UI 易操作性 / 匿名與快捷鍵煙霧測試
+ * 4. 60 局多規模多奇局全規則亂數壓力與不變量測試
+ * 5. v9.0 反作弊盲視隔離與反事實不變性證明測試（496 項 A/B 檢核）
  */
 import fs from "node:fs";
 import path from "node:path";

@@ -524,6 +524,7 @@ function inspectSeatMicroExpression(seatId) {
     }
     addLog({
       kind: "blessing",
+      isPrivate: true,
       title: "靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 神情明顯緊繃閃躲（緊張讀數 " + reading + "%），已存為「呈堂證供」素材！",
       text: ""
     });
@@ -534,6 +535,7 @@ function inspectSeatMicroExpression(seatId) {
     spawnBurst(target.id, ["#34d399", "#a7f3d0"], 12, "petal");
     addLog({
       kind: "blessing",
+      isPrivate: true,
       title: "靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 目光坦然、呼吸沉穩（緊張讀數 " + reading + "%）。",
       text: ""
     });
@@ -542,6 +544,7 @@ function inspectSeatMicroExpression(seatId) {
     spawnFx(target.id, "尚稱克制 " + reading + "%", "#fde68a");
     addLog({
       kind: "blessing",
+      isPrivate: true,
       title: "靜心觀微：" + fmtSeatNum(target.id) + "號 " + target.name + " 情緒壓抑尚無明顯波瀾（讀數 " + reading + "%），仍需聽後續言行比對。",
       text: ""
     });

@@ -112,7 +112,7 @@ function bindCanvasEvents() {
         const nowRay = performance.now();
         if (!canvas._lastPropRayAt || nowRay - canvas._lastPropRayAt >= 48) {
           canvas._lastPropRayAt = nowRay;
-          canvas._lastHitProp = Boolean(stage3d.raycastCenterCrystal(ev.clientX, ev.clientY) || stage3d.raycastIdCard(ev.clientX, ev.clientY) || stage3d.raycastCandle(ev.clientX, ev.clientY) || stage3d.raycastGuishan(ev.clientX, ev.clientY) || stage3d.raycastHeroHost(ev.clientX, ev.clientY));
+          canvas._lastHitProp = Boolean(stage3d.raycastCenterCrystal(ev.clientX, ev.clientY) || stage3d.raycastIdCard(ev.clientX, ev.clientY) || stage3d.raycastCandle(ev.clientX, ev.clientY) || stage3d.raycastCloudIsle(ev.clientX, ev.clientY) || stage3d.raycastHeroHost(ev.clientX, ev.clientY));
         }
         hitProp = Boolean(canvas._lastHitProp);
       }
@@ -299,8 +299,8 @@ function bindCanvasEvents() {
       stage3d.pokeCandle(stage3d.raycastCandle(ev.clientX, ev.clientY));
     } else if (typeof stage3d !== "undefined" && stage3d.isActive() && stage3d.raycastHeroHost(ev.clientX, ev.clientY)) {
       stage3d.interactWithHeroHost();
-    } else if (typeof stage3d !== "undefined" && stage3d.isActive() && stage3d.raycastGuishan(ev.clientX, ev.clientY)) {
-      stage3d.interactWithGuishan();
+    } else if (typeof stage3d !== "undefined" && stage3d.isActive() && stage3d.raycastCloudIsle(ev.clientX, ev.clientY)) {
+      stage3d.interactWithCloudIsle();
     } else {
       if (typeof stage3d !== "undefined" && stage3d.closeUpSeatId) stage3d.clearCloseUp();
       closeRadialMenu();

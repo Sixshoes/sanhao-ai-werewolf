@@ -121,9 +121,14 @@ const stage3dTextures = {
     if (!personaKey) return;
     delete this.vrmPortraitUrls[personaKey];
     if (this.vrmPortraitImages) delete this.vrmPortraitImages[personaKey];
+    if (this.portraitLoading) delete this.portraitLoading["vrm:" + personaKey];
     if (personaKey === "你") {
       if (this.vrmPortraitUrls) delete this.vrmPortraitUrls["你_男"];
       if (this.vrmPortraitImages) delete this.vrmPortraitImages["你_男"];
+      if (this.portraitLoading) delete this.portraitLoading["vrm:你_男"];
+    }
+    if (typeof this.preloadPortraitImages === "function") {
+      this.preloadPortraitImages();
     }
   },
 

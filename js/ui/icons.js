@@ -327,7 +327,7 @@ function installCraftIconObserver() {
         } else if (mut.type === "childList" && mut.addedNodes) {
           for (let j = 0; j < mut.addedNodes.length; j++) {
             const added = mut.addedNodes[j];
-            if (added.nodeType === 1 && added.tagName !== "SVG") scheduleNode(added);
+            if (added.nodeType === 1 && String(added.tagName || "").toLowerCase() !== "svg") scheduleNode(added);
             else if (added.nodeType === 3) scheduleNode(mut.target);
           }
         }

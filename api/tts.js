@@ -8,8 +8,8 @@
  * - GEMINI_TTS_MODEL             (選填，預設 gemini-3.8-flash-lite-tts，失敗自動降級 gemini-2.5-flash-preview-tts)
  * - GEMINI_TTS_SESSION_MAX_RPM   (選填，每瀏覽器會話每分鐘上限，預設 24)
  * - GEMINI_TTS_SESSION_MAX_RPD   (選填，每瀏覽器會話每日上限，預設 180)
- * - GEMINI_TTS_NAT_IP_MAX_RPM    (選填，同校網共用 IP 總上限，預設 96)
- * - GEMINI_TTS_NAT_IP_MAX_RPD    (選填，同校網共用 IP 每日總上限，預設 1200)
+ * - GEMINI_TTS_NAT_IP_MAX_RPM    (選填，同區網共用 IP 總上限，預設 96)
+ * - GEMINI_TTS_NAT_IP_MAX_RPD    (選填，同區網共用 IP 每日總上限，預設 1200)
  */
 "use strict";
 
@@ -24,8 +24,8 @@ const CORE_FALLBACK_VOICE_MAP = {
   Callirrhoe: "Zephyr",
   Autonoe: "Zephyr",
   Laomedeia: "Zephyr",
-  Vindemiatrix: "Leda",
-  Sulafat: "Leda",
+  Vindemiatrix: "Zephyr",
+  Sulafat: "Zephyr",
   Enceladus: "Puck",
   Achird: "Charon",
   Iapetus: "Puck"
@@ -105,6 +105,7 @@ function isAllowedOrigin(req) {
   const referer = String(headers.referer || "").trim();
   const reqHost = getHostname(headers["x-forwarded-host"] || headers.host || "");
   const secFetchSite = String(headers["sec-fetch-site"] || "").toLowerCase();
+  const isProd = String(process.env.VERCEL_ENV || "").toLowerCase() === "production";
 
   const extraList = String(process.env.GEMINI_ALLOWED_ORIGINS || "")
     .split(",")
@@ -119,7 +120,7 @@ function isAllowedOrigin(req) {
   const checkCandidate = function (rawUrl) {
     const h = getHostname(rawUrl);
     if (!h) return false;
-    if (h === "localhost" || h === "127.0.0.1" || h === "::1") return true;
+    if (!isProd && (h === "localhost" || h === "127.0.0.1" || h === "::1")) return true;
     if (reqHost && h === reqHost) return true;
     if (envHosts.has(h)) return true;
     return false;
@@ -128,7 +129,7 @@ function isAllowedOrigin(req) {
   if (origin && origin !== "null") return checkCandidate(origin);
   if (referer) return checkCandidate(referer);
   if (secFetchSite === "same-origin") return true;
-  if (reqHost === "localhost" || reqHost === "127.0.0.1") return true;
+  if (!isProd && (reqHost === "localhost" || reqHost === "127.0.0.1")) return true;
   return false;
 }
 
@@ -156,11 +157,19 @@ function _checkSingleBucket(bucketKey, maxRpm, maxRpd, now, reasonPrefix) {
 
 function checkRateLimit(ip, nowMs, sessionId) {
   const now = typeof nowMs === "number" ? nowMs : Date.now();
-  if (now - _lastPruneAt > 5 * 60 * 1000 && _rateStore.size > 512) {
+  if (now - _lastPruneAt > 120000 || _rateStore.size > 800) {
     _lastPruneAt = now;
     for (const [k, rec] of _rateStore.entries()) {
       if (now - rec.dayStart > DAY_WINDOW_MS && (!rec.minStamps.length || now - rec.minStamps[rec.minStamps.length - 1] > RATE_WINDOW_MS)) {
         _rateStore.delete(k);
+      }
+    }
+    // Same-day burst LRU cap: evict oldest 200 keys if store still exceeds 800
+    if (_rateStore.size > 800) {
+      let evicted = 0;
+      for (const oldKey of _rateStore.keys()) {
+        _rateStore.delete(oldKey);
+        if (++evicted >= 200) break;
       }
     }
   }
@@ -170,10 +179,11 @@ function checkRateLimit(ip, nowMs, sessionId) {
     const sessRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPD || "180", 10) || 180);
     const natRpm = Math.max(sessRpm, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPM || "96", 10) || 96);
     const natRpd = Math.max(sessRpd, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPD || "1200", 10) || 1200);
-    const sessRes = _checkSingleBucket("tts_sid:" + sessionId, sessRpm, sessRpd, now, "session");
-    if (!sessRes.allowed) return { allowed: false, retryAfterSec: sessRes.retryAfterSec, reason: sessRes.reason };
+    // Check IP bucket BEFORE allocating/checking session bucket to block random-sessionId floods
     const ipRes = _checkSingleBucket("tts_nat:" + (ip || "unknown"), natRpm, natRpd, now, "ip");
     if (!ipRes.allowed) return { allowed: false, retryAfterSec: ipRes.retryAfterSec, reason: ipRes.reason };
+    const sessRes = _checkSingleBucket("tts_sid:" + sessionId, sessRpm, sessRpd, now, "session");
+    if (!sessRes.allowed) return { allowed: false, retryAfterSec: sessRes.retryAfterSec, reason: sessRes.reason };
     sessRes.rec.minStamps.push(now);
     sessRes.rec.dayCount += 1;
     ipRes.rec.minStamps.push(now);
@@ -196,32 +206,55 @@ function sendJson(res, status, obj) {
   res.end(JSON.stringify(obj));
 }
 
+const MAX_TTS_BODY_BYTES = 8192;
+
 async function readJsonBody(req) {
-  if (req && req.body && typeof req.body === "object") return req.body;
   if (req && typeof req.body === "string") {
-    try { return JSON.parse(req.body); } catch (e) { return null; }
+    if (Buffer.byteLength(req.body, "utf8") > MAX_TTS_BODY_BYTES) return { __tooBig: true };
+    try {
+      const parsedStr = JSON.parse(req.body);
+      return (parsedStr && typeof parsedStr === "object" && !Array.isArray(parsedStr)) ? parsedStr : null;
+    } catch (e) { return null; }
+  }
+  if (req && req.body && typeof req.body === "object") {
+    if (Array.isArray(req.body)) return null;
+    try {
+      if (Buffer.byteLength(JSON.stringify(req.body), "utf8") > MAX_TTS_BODY_BYTES) return { __tooBig: true };
+    } catch (e) { return null; }
+    return req.body;
   }
   return await new Promise(function (resolve) {
-    let raw = "";
+    const chunks = [];
+    let totalBytes = 0;
     let tooBig = false;
     req.on("data", function (chunk) {
       if (tooBig) return;
-      raw += String(chunk);
-      if (raw.length > 8192) tooBig = true;
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), "utf8");
+      totalBytes += buf.length;
+      if (totalBytes > MAX_TTS_BODY_BYTES) {
+        tooBig = true;
+        return;
+      }
+      chunks.push(buf);
     });
     req.on("end", function () {
       if (tooBig) return resolve({ __tooBig: true });
-      try { resolve(raw ? JSON.parse(raw) : {}); } catch (e) { resolve(null); }
+      const raw = Buffer.concat(chunks).toString("utf8");
+      try {
+        const parsed = raw ? JSON.parse(raw) : {};
+        resolve(parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null);
+      } catch (e) { resolve(null); }
     });
     req.on("error", function () { resolve(null); });
   });
 }
 
-function buildTtsRequestBody(modelId, voiceName, style, text) {
+function buildTtsRequestBody(modelId, voiceName, style, text, useFallbackVoice) {
   const is38 = modelId.startsWith("gemini-3.8-");
-  const safeVoice = is38 && CORE_FALLBACK_VOICE_MAP[voiceName]
-    ? voiceName
+  const mappedVoice = (useFallbackVoice && CORE_FALLBACK_VOICE_MAP[voiceName])
+    ? CORE_FALLBACK_VOICE_MAP[voiceName]
     : voiceName;
+  const safeVoice = ALLOWED_VOICES.has(mappedVoice) ? mappedVoice : "Kore";
   const part = is38
     ? (style ? { text: text, speechMetadata: { style: style } } : { text: text })
     : { text: style ? ("請用以下口吻自然唸出（不要唸出指示）：" + style + "\n" + text) : text };
@@ -238,10 +271,10 @@ function buildTtsRequestBody(modelId, voiceName, style, text) {
   };
 }
 
-async function callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, timeoutMs) {
+async function callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, timeoutMs, useFallbackVoice) {
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
   const controller = typeof AbortController === "function" ? new AbortController() : null;
-  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 11000) : null;
+  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 7500) : null;
   try {
     const fetchOpts = {
       method: "POST",
@@ -250,7 +283,7 @@ async function callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, ti
         "x-goog-api-key": apiKey,
         "User-Agent": "aistudio-build"
       },
-      body: JSON.stringify(buildTtsRequestBody(modelId, voiceName, style, text))
+      body: JSON.stringify(buildTtsRequestBody(modelId, voiceName, style, text, useFallbackVoice))
     };
     if (controller) fetchOpts.signal = controller.signal;
     const resp = await fetch(endpoint, fetchOpts);
@@ -307,6 +340,11 @@ async function handler(req, res) {
     return sendJson(res, 503, { ok: false, error: "Server Gemini TTS not configured" });
   }
 
+  const reqContentType = String((req && req.headers && req.headers["content-type"]) || "").trim().toLowerCase();
+  if (reqContentType && reqContentType.indexOf("application/json") === -1) {
+    return sendJson(res, 415, { ok: false, error: "Unsupported Content-Type" });
+  }
+
   const body = await readJsonBody(req);
   if (!body || typeof body !== "object") {
     return sendJson(res, 400, { ok: false, error: "Invalid JSON body" });
@@ -352,15 +390,23 @@ async function handler(req, res) {
 
   let lastStatus = 502;
   const startedAt = Date.now();
+  const TOTAL_BUDGET_MS = 17500;
+  const PRIMARY_TIMEOUT_MS = 7500;
+  const RETRY_400_TIMEOUT_MS = 4000;
+  const FALLBACK_MODEL_TIMEOUT_MS = 6000;
   for (let i = 0; i < queue.length; i++) {
     const modelId = queue[i];
-    const remaining = 17500 - (Date.now() - startedAt);
+    const remaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
     if (remaining < 2600) break;
-    const timeoutMs = Math.min(i === 0 ? 10500 : 7500, remaining - 400);
-    let out = await callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, timeoutMs);
+    const timeoutMs = Math.min(i === 0 ? PRIMARY_TIMEOUT_MS : FALLBACK_MODEL_TIMEOUT_MS, remaining - 400);
+    let out = await callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, timeoutMs, false);
     if (!out.ok && out.status === 400 && CORE_FALLBACK_VOICE_MAP[voiceName]) {
-      // Retry once with core prebuilt voice if an extended voice name is rejected by a model revision
-      out = await callUpstreamGeminiTts(apiKey, modelId, CORE_FALLBACK_VOICE_MAP[voiceName], style, text, Math.min(6000, timeoutMs));
+      const retryRemaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
+      if (retryRemaining >= 2600) {
+        // Retry once with guaranteed core prebuilt voice while preserving >= 6s budget for fallback model
+        const retryTimeoutMs = Math.min(RETRY_400_TIMEOUT_MS, retryRemaining - 400);
+        out = await callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, retryTimeoutMs, true);
+      }
     }
     if (out.ok && out.bytes) {
       if (_ttsCache.size >= MAX_TTS_CACHE) {

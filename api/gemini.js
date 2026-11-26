@@ -11,8 +11,8 @@
  * - GEMINI_ALLOWED_ORIGINS    (選填，逗號分隔自訂網域白名單，例如 https://game.example.com)
  * - GEMINI_SESSION_MAX_RPM    (選填，每瀏覽器會話每分鐘上限，預設 24)
  * - GEMINI_SESSION_MAX_RPD    (選填，每瀏覽器會話每日上限，預設 200)
- * - GEMINI_NAT_IP_MAX_RPM     (選填，帶會話標頭之同校網共用 IP 總上限，預設 96)
- * - GEMINI_NAT_IP_MAX_RPD     (選填，帶會話標頭之同校網共用 IP 每日總上限，預設 1200)
+ * - GEMINI_NAT_IP_MAX_RPM     (選填，帶會話標頭之同區網共用 IP 總上限，預設 96)
+ * - GEMINI_NAT_IP_MAX_RPD     (選填，帶會話標頭之同區網共用 IP 每日總上限，預設 1200)
  * - GEMINI_MAX_RPM            (選填，無會話標頭舊版單 IP 每分鐘上限，預設 24)
  * - GEMINI_MAX_RPD            (選填，無會話標頭舊版單 IP 每日上限，預設 240)
  */
@@ -71,6 +71,7 @@ function isAllowedOrigin(req) {
   const referer = String(headers.referer || "").trim();
   const reqHost = getHostname(headers["x-forwarded-host"] || headers.host || "");
   const secFetchSite = String(headers["sec-fetch-site"] || "").toLowerCase();
+  const isProd = String(process.env.VERCEL_ENV || "").toLowerCase() === "production";
 
   const extraList = String(process.env.GEMINI_ALLOWED_ORIGINS || "")
     .split(",")
@@ -85,7 +86,7 @@ function isAllowedOrigin(req) {
   const checkCandidate = function (rawUrl) {
     const h = getHostname(rawUrl);
     if (!h) return false;
-    if (h === "localhost" || h === "127.0.0.1" || h === "::1") return true;
+    if (!isProd && (h === "localhost" || h === "127.0.0.1" || h === "::1")) return true;
     if (reqHost && h === reqHost) return true;
     if (envHosts.has(h)) return true;
     return false;
@@ -100,7 +101,7 @@ function isAllowedOrigin(req) {
   if (secFetchSite === "same-origin") {
     return true;
   }
-  if (reqHost === "localhost" || reqHost === "127.0.0.1") {
+  if (!isProd && (reqHost === "localhost" || reqHost === "127.0.0.1")) {
     return true;
   }
   return false;
@@ -308,22 +309,51 @@ function sendJson(res, status, obj) {
   res.end(JSON.stringify(obj));
 }
 
+const MAX_GEMINI_BODY_BYTES = 49152;
+
+function isModelConfigBad400(reason) {
+  const r = String(reason || "").toLowerCase();
+  if (!r) return false;
+  if (/api[_ ]?key|invalid.*key|permission|quota|safety|block/.test(r)) return false;
+  return /model|thinking|not found|not supported|unsupported|unknown name/.test(r);
+}
+
 async function readJsonBody(req) {
-  if (req && req.body && typeof req.body === "object") return req.body;
   if (req && typeof req.body === "string") {
-    try { return JSON.parse(req.body); } catch (e) { return null; }
+    if (Buffer.byteLength(req.body, "utf8") > MAX_GEMINI_BODY_BYTES) return { __tooBig: true };
+    try {
+      const parsedStr = JSON.parse(req.body);
+      return (parsedStr && typeof parsedStr === "object" && !Array.isArray(parsedStr)) ? parsedStr : null;
+    } catch (e) { return null; }
+  }
+  if (req && req.body && typeof req.body === "object") {
+    if (Array.isArray(req.body)) return null;
+    try {
+      if (Buffer.byteLength(JSON.stringify(req.body), "utf8") > MAX_GEMINI_BODY_BYTES) return { __tooBig: true };
+    } catch (e) { return null; }
+    return req.body;
   }
   return await new Promise(function (resolve) {
-    let raw = "";
+    const chunks = [];
+    let totalBytes = 0;
     let tooBig = false;
     req.on("data", function (chunk) {
       if (tooBig) return;
-      raw += String(chunk);
-      if (raw.length > 49152) tooBig = true;
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), "utf8");
+      totalBytes += buf.length;
+      if (totalBytes > MAX_GEMINI_BODY_BYTES) {
+        tooBig = true;
+        return;
+      }
+      chunks.push(buf);
     });
     req.on("end", function () {
       if (tooBig) return resolve({ __tooBig: true });
-      try { resolve(raw ? JSON.parse(raw) : {}); } catch (e) { resolve(null); }
+      const raw = Buffer.concat(chunks).toString("utf8");
+      try {
+        const parsed = raw ? JSON.parse(raw) : {};
+        resolve(parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null);
+      } catch (e) { resolve(null); }
     });
     req.on("error", function () { resolve(null); });
   });
@@ -355,6 +385,11 @@ async function handler(req, res) {
 
   if (!apiKey) {
     return sendJson(res, 503, { ok: false, error: "Server Gemini proxy not configured" });
+  }
+
+  const reqContentType = String((req && req.headers && req.headers["content-type"]) || "").trim().toLowerCase();
+  if (reqContentType && reqContentType.indexOf("application/json") === -1) {
+    return sendJson(res, 415, { ok: false, error: "Unsupported Content-Type" });
   }
 
   const body = await readJsonBody(req);
@@ -390,16 +425,19 @@ async function handler(req, res) {
   if (first.ok && first.text) {
     return sendJson(res, 200, { ok: true, model: primaryModel, text: first.text });
   }
-  if (first.status === 400 || first.status === 404) {
+  if (first.status === 404 || (first.status === 400 && isModelConfigBad400(first.reason))) {
     _badModelCooldown.set(primaryModel, Date.now() + BAD_MODEL_COOLDOWN_MS);
   }
 
-  const shouldFallback = (first.status === 400 || first.status === 404 || first.status === 429 || first.status === 500 || first.status === 502 || first.status === 503 || first.status === 504 || !first.text);
+  const shouldFallback = (first.status !== 401 && first.status !== 403) && (first.status === 400 || first.status === 404 || first.status === 429 || first.status === 500 || first.status === 502 || first.status === 503 || first.status === 504 || !first.text);
   let lastFail = first;
   if (shouldFallback) {
     const fbQueue = PUBLIC_FALLBACK_ORDER.filter(function (m) {
       return m !== primaryModel && !isModelCoolingDown(m, Date.now());
     });
+    if (!fbQueue.length && primaryModel !== "gemini-2.5-flash") {
+      fbQueue.push("gemini-2.5-flash");
+    }
     for (let i = 0; i < fbQueue.length; i++) {
       const elapsed = Date.now() - startedAt;
       const remainingBudget = 21500 - elapsed;
@@ -410,7 +448,7 @@ async function handler(req, res) {
       if (fb.ok && fb.text) {
         return sendJson(res, 200, { ok: true, model: fbModel, fallbackFrom: primaryModel, text: fb.text });
       }
-      if (fb.status === 400 || fb.status === 404) {
+      if (fb.status === 404 || (fb.status === 400 && isModelConfigBad400(fb.reason))) {
         _badModelCooldown.set(fbModel, Date.now() + BAD_MODEL_COOLDOWN_MS);
       }
       lastFail = fb;

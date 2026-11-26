@@ -1,13 +1,13 @@
-# 三好 AI 狼人殺（青嵐書院・清茗茶席 3D 互動反霸凌推理系統 v24.2.1）
+# 三好 AI 狼人殺（青嵐書院・清茗茶席 3D 互動反霸凌推理系統 v24.2.14）
 
 一款將 **「三好（做好事、說好話、存好心）」** 與 **「四給（給信心、給歡喜、給希望、給方便）」** 融入社會推理規則的純網頁 3D 反霸凌桌遊。全站採免註冊、零外部 CDN 腳本依賴與 100% 盲審匿名架構，支援桌機、平板與手機跨裝置體驗，並內建五層自動化驗證流水線。
 
 ---
 
-## 核心特色與系統架構（v24.2.1 / 公測 3.5）
+## 核心特色與系統架構（v24.2.14）
 
 - **零洩漏盲視防弊架構（`js/ai/blind-view.js`）**：透過 JavaScript `Proxy` 陷阱與凍結快照隔離 AI 視角，非狼人角色無法讀取任何他席真實底牌或隱藏欄位，並於送出大型語言模型前執行 `auditLlmPromptLeak()` 靜態字串稽核（通過 496/496 項防弊壓力檢測，0 次洩漏）。
-- **雙核四代理編排與分階段動態溫度**：集中編排器（`js/core/orchestrator.js`）統籌角色推理、三好語意合規、茶席事件導演與賽後覆盤四大代理，支援雲端 Gemini API、本機免費 Ollama 與本地啟發式推理三層自動降級；依發言場景動態切換 LLM 生成溫度（警上與雙觀察員盤邏輯 `0.58`、標準日間發言 `0.65`、舉杯追問與明燈對質 `0.74`、平票 PK 與遺言 `0.78`，前後端統一夾限 `[0.45, 0.85]`）。
+- **雙核四代理編排、雲端主力模型與配音代理**：集中編排器（`js/core/orchestrator.js`）統籌四大代理，雲端代理（`api/gemini.js`）以 `gemini-4-hydrogen` 為主力並支援 `gemini-3.1-flash-lite` 備援、`gemini-2.5-pro` 深度選配與本機 Ollama／本地引擎自動降級（溫度夾限 `[0.45, 0.85]`）；雲端配音代理（`api/tts.js`）整合 `gemini-3.8-flash-lite-tts` 主力與 `gemini-2.5-flash-preview-tts` 雙模備援（16 種角色音色與核心音色降級）。
 - **三好與四給實戰機制化**：
   - **三選一婉轉潤飾籤**：偵測尖銳字眼時展開「直指矛盾／溫言請教／留白觀望」三張選擇籤，保留玩家推理主導權。
   - **言行一致防偽善雷達**：跨輪比對口頭點名與實際投票，終局呈現「言語溫度 × 言行一致度」覆盤。
@@ -19,7 +19,7 @@
 - **評審 150 秒全亮點導覽局與終局覆盤升級**：
   - 首頁「更多模式 → 評審導覽」一鍵切入第 2 日五人聽牌雙觀察員對跳高潮盤面，搭配不遮擋三步提示，於 150 秒內依序體驗舉杯追問、三選一潤飾籤與五人聽牌公投。
   - 終局面板自動生成 **「本局三大勝負轉折軸」** 與 **「全席底牌與言行對照表」**，並支援一鍵複製或下載文字覆盤戰報。
-- **PWA 雙池離線快取（`sw.js`）**：將核心程式碼（`sanhao-shell-v24.2.1`，Network-First）與不可變 3D／語音媒體（`sanhao-assets-v24.2.1`，Cache-First，上限 200 筆）分離管理，避免大型資產擠出核心腳本並確保版本即時更新。
+- **PWA 雙池離線快取（`sw.js`）**：將核心程式碼（`sanhao-shell-v24.2.14`，Network-First）與不可變 3D／語音媒體（`sanhao-assets-v24.2.1`，Cache-First，上限 200 筆）分離管理，避免大型資產擠出核心腳本並確保版本即時更新。
 
 ---
 
@@ -58,8 +58,9 @@ python server.py
 ├── index.html                  # 靜態部署導向入口
 ├── ai.html                     # 主畫面結構（離線打包、零 Emoji、100% 匿名）
 ├── manifest.webmanifest        # PWA 離線應用清單
-├── sw.js                       # 雙池 Service Worker（sanhao-shell-v24.2.1 + sanhao-assets-v24.2.1）
-├── api/gemini.js               # 雲端 Serverless Gemini 代理（含溫度夾限 [0.45, 0.85]）
+├── sw.js                       # 雙池 Service Worker（sanhao-shell-v24.2.14 + sanhao-assets-v24.2.1）
+├── api/gemini.js               # 雲端 Serverless Gemini 代理（gemini-4-hydrogen 主力／多模降級）
+├── api/tts.js                  # 雲端 Serverless Gemini TTS 配音代理（3.8 Flash Lite -> 2.5 Flash 備援）
 ├── server.py                   # 本機伺服器＋免費 Edge-TTS 語音快取＋Gemini/Ollama 代理
 ├── CREDITS.md                  # 第三方開放素材與開源授權聲明（CC0 / MIT）
 ├── docs/
@@ -89,8 +90,8 @@ node tests/run_all.mjs
 ```
 
 驗證依序涵蓋：
-1. `[1/5]` 靜態資源完整性、語法檢查、零 `!important`、零 Unicode Emoji 與盲審匿名規範。
-2. `[2/5]` 全流程端對端回歸測試（`tests/smoke.mjs`）。
-3. `[3/5]` 496 項零洩漏防弊 Proxy 壓力驗證（`tests/anti_cheat.mjs`）。
+1. `[1/5]` Python 後端語法編譯檢查（`py_compile server.py`）。
+2. `[2/5]` 後端安全迴路、溫度夾限、ETag 與 TTS 快取單元測試（`tests/test_server.py`）。
+3. `[3/5]` 全站靜態資源、10 隻 VRM、GLSL、零 `!important`、零 Emoji、匿名規範與端對端回歸測試（`tests/smoke.mjs`）。
 4. `[4/5]` 60 局多規模多奇局亂數壓力與不變量測試（`tests/fuzz.mjs`）。
-5. `[5/5]` Python 伺服器安全迴路、溫度夾限與 TTS 快取單元測試（`tests/test_server.py`）。
+5. `[5/5]` 496 項零洩漏防弊 Proxy 壓力驗證（`tests/anti_cheat.mjs`）。

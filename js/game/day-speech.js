@@ -174,8 +174,10 @@ function startDayDiscussion(dawnVoiceLine, opts) {
     syncSpeakerBannerVisuals(null, "主持播報 · 天亮結果", "第 " + state.match.day + " 天", false);
     updateSpotlightBox("主持播報 · 天亮結果", "第 " + state.match.day + " 天", dawnVoiceLine);
     let kickedOff = false;
+    const epDawn = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
     const goFirstSpeaker = function () {
-      if (kickedOff || state.match.phase !== "DAY_SPEECH") return;
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epDawn)) return;
+      if (kickedOff || !state.match || state.match.phase !== "DAY_SPEECH") return;
       kickedOff = true;
       if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
       if (state.stepTimer) {
@@ -492,7 +494,8 @@ function executeTeaInterjection(questionText) {
         }
         showToast(fmtSeatNum(sp.id) + "號 " + sp.name + " 即時回防：「" + finalIntText + "」", "gold");
         if (liveReply && typeof bumpTableStateRev === "function") bumpTableStateRev(true);
-        if (typeof voice !== "undefined" && voice.canSpeak() && !voice.speaking && state.activeSpeakerId === sp.id) {
+        if (typeof voice !== "undefined" && voice.canSpeak() && state.activeSpeakerId === sp.id) {
+          if (typeof commitPendingSpeechLog === "function") commitPendingSpeechLog(sp.id);
           voice.speakCharacter(sp, finalIntText, replyObj.tense ? "panic" : "rebut", function () {
             if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epInt)) return;
             if (!state.match || state.match.phase !== "DAY_SPEECH") return;
@@ -773,8 +776,11 @@ async function executeAiTurnSpeech(speaker) {
     }
   } finally {
     if (cueTimer) clearTimeout(cueTimer);
-    if (state._speechTurnSeq === turnSeq) state.speakingInFlight = false;
+    if (state._speechTurnSeq === turnSeq && (typeof orchestrator === "undefined" || orchestrator.isEpochValid(ep))) {
+      state.speakingInFlight = false;
+    }
   }
+  if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return;
   if (state._speechTurnSeq !== turnSeq || state.match.phase !== "DAY_SPEECH" || state.activeSpeakerId !== speaker.id || !speaker.alive) return;
 
   // Commit deferred seat flags & role claim right on this seat's actual speaking turn!

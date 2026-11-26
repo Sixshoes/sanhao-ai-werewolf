@@ -199,6 +199,7 @@ function beginNightPhase() {
   closeRadialMenu();
   state.dragAction.active = false;
   state.lastWordsCtx = null;
+  state.voteResultPayload = null;
   state.match.day += 1;
   state.match.activeDirectorEvent = null;
   state.match.directorEventClearedDay = 0;
@@ -215,13 +216,26 @@ function beginNightPhase() {
   state.seatBubbles = {};
   state.selectedSeatId = null;
 
+  const isLoneWolfKing = Boolean(state.match && state.match.variantMode === "lone_wolf_king");
+  const curAiDiff = (state.match && state.match.aiDifficulty) || state.aiDifficulty;
   state.match.seats.forEach(function (s) {
     s.trustShield = false;
     s.publicVouchId = null;
     s.emojiMood = "";
-    s.microPulse = s.role === "wolf"
-      ? clamp(68 + Math.floor(Math.random() * 25), 55, 96)
-      : clamp(14 + Math.floor(Math.random() * 24), 10, 46);
+    if (s.role === "wolf") {
+      let pulse = clamp(68 + Math.floor(Math.random() * 25), 55, 96);
+      if (isLoneWolfKing) {
+        pulse = Math.max(48, pulse - 16);
+      }
+      if (curAiDiff === "pro") {
+        pulse = Math.max(isLoneWolfKing ? 44 : 58, pulse - 12);
+      } else if (curAiDiff === "easy") {
+        pulse = Math.min(96, pulse + 8);
+      }
+      s.microPulse = pulse;
+    } else {
+      s.microPulse = clamp(14 + Math.floor(Math.random() * 24), 10, 46);
+    }
   });
   state.match.nightState = { guardTarget: null, wolfTarget: null, seerTarget: null, witchSaved: false, witchPoisonTarget: null };
 
@@ -245,8 +259,23 @@ function beginNightPhase() {
 
   // v16.0 Eliminated spectator gets a 5s Spirit Intuition Bet before Night resolution!
   if (isBrowserUi && !ffNow && typeof openSpiritRoundBet === "function" && state.match.day >= 2) {
-    const openedNightBet = openSpiritRoundBet("night_kill", runNightRoles);
-    if (openedNightBet) return;
+    const canOpenNightBet = (typeof isSpectatorGuessActive !== "function" || isSpectatorGuessActive())
+      && !(typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive())
+      && getAliveSeats().length >= 2;
+    if (canOpenNightBet) {
+      if (!isNightPhase(state.match.phase)) {
+        state.match.phase = "NIGHT_WOLF";
+        if (typeof orchestrator !== "undefined") {
+          orchestrator.emit("phase:changed", { phase: "NIGHT_WOLF", day: state.match.day });
+        }
+      }
+      if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") {
+        stage3d.clearCloseUp();
+      }
+      updateAllUI();
+      const openedNightBet = openSpiritRoundBet("night_kill", runNightRoles);
+      if (openedNightBet) return;
+    }
   }
   // v15.0 Civilians / Non-acting players on Night 2+ enter "燭下覆茶" quote review instead of staring at empty timers!
   if (isBrowserUi && !ffNow && state.match.day >= 2 && !playerHasActiveNightSkillNow()) {
@@ -1001,6 +1030,45 @@ function settleNightCasualtiesOnElectionExplode() {
       names.push(wk.id + "號" + wk.name);
     }
   }
+  const seerSeatObj = m.seats.find(function (s) { return s.role === "seer"; });
+  const witchSeatObj = m.seats.find(function (s) { return s.role === "witch"; });
+  const guardSeatObj = m.seats.find(function (s) { return s.role === "guard"; });
+  const seerChkSeat = ns.seerTarget ? getSeat(ns.seerTarget) : null;
+  if (!m.nightArchive) m.nightArchive = [];
+
+  // 凹嗚《狼刀在先》原則：先判定狼刀是否已達成屠神／屠民終局，再結算清心茶毒殺！
+  const wolfKnifeWinReason = (wolfKillSeat && typeof evaluateNightWolfKnifeWin === "function")
+    ? evaluateNightWolfKnifeWin(wolfKillSeat, poisonedId)
+    : null;
+  if (wolfKnifeWinReason) {
+    m.nightArchive.push({
+      day: m.day,
+      wolfTarget: ns.wolfTarget || null,
+      guardId: guardSeatObj ? guardSeatObj.id : null,
+      guardTarget: guardedId,
+      doubleSaveClash: isDoubleSaveClash,
+      seerId: seerSeatObj ? seerSeatObj.id : null,
+      seerTarget: ns.seerTarget || null,
+      seerIsWolf: seerChkSeat ? (seerChkSeat.team === "wolf") : null,
+      witchId: witchSeatObj ? witchSeatObj.id : null,
+      witchSaved: Boolean(ns.witchSaved),
+      witchPoisonTarget: ns.witchPoisonTarget || null,
+      casualties: casualties.map(function (c) { return { id: c.id, cause: c.cause }; }),
+      hunterShot: null
+    });
+    m.lastNightCasualties = casualties.map(function (c) { return c.id; });
+    m.dawnAfterSheriffRan = false;
+    if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation(casualties);
+    addLog({ kind: "dawn", title: "警上自爆吞警徽・公布昨夜死訊：" + names.join("、") + " 首夜倒牌離席（狼刀在先達成終局）", text: "" });
+    if (casualties.some(function (c) { return c.id === getPlayerId(); }) && typeof autoEnableSpectatorCompactPace === "function") {
+      autoEnableSpectatorCompactPace();
+    }
+    if (typeof evaluateRoleMission === "function") evaluateRoleMission();
+    if (typeof evaluateMatchPointState === "function") evaluateMatchPointState();
+    finishMatch("wolf", wolfKnifeWinReason);
+    return true;
+  }
+
   if (poisonedId && (!wolfKillSeat || poisonedId !== wolfKillSeat.id)) {
     const ps = getSeat(poisonedId);
     if (ps && ps.alive) {
@@ -1010,11 +1078,6 @@ function settleNightCasualtiesOnElectionExplode() {
       names.push(ps.id + "號" + ps.name);
     }
   }
-  const seerSeatObj = m.seats.find(function (s) { return s.role === "seer"; });
-  const witchSeatObj = m.seats.find(function (s) { return s.role === "witch"; });
-  const guardSeatObj = m.seats.find(function (s) { return s.role === "guard"; });
-  const seerChkSeat = ns.seerTarget ? getSeat(ns.seerTarget) : null;
-  if (!m.nightArchive) m.nightArchive = [];
   m.nightArchive.push({
     day: m.day,
     wolfTarget: ns.wolfTarget || null,
@@ -1044,13 +1107,6 @@ function settleNightCasualtiesOnElectionExplode() {
   }
   if (typeof evaluateRoleMission === "function") evaluateRoleMission();
   if (typeof evaluateMatchPointState === "function") evaluateMatchPointState();
-  const wolfKnifeWinReason = (wolfKillSeat && typeof evaluateNightWolfKnifeWin === "function")
-    ? evaluateNightWolfKnifeWin(wolfKillSeat, poisonedId)
-    : null;
-  if (wolfKnifeWinReason) {
-    finishMatch("wolf", wolfKnifeWinReason);
-    return true;
-  }
   if (checkAndHandleGameOver()) return true;
 
   // v18.0 標準規則：警上狼自爆雖吞警徽與遺言，但首夜遭狼刀（非清心茶毒殺）倒牌的直心糾察長仍可翻牌開槍帶人再入夜！

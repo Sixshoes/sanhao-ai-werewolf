@@ -325,23 +325,23 @@ vm.runInContext(`
     if (!rEnv.lotusRingInner || !rEnv.skyPhotoDuskMat || !rEnv.latticeScreenMat) {
       throw new Error("Round 2 art assets (curved glass-jade lotus, dusk skybox dome, backlit lattice transom) failed to build!");
     }
-    if (!rEnv.linmeiGardenGroup || !rEnv.celestialGardenGroup || !rEnv.skyPhotoCelestialMat) {
-      throw new Error("v12.0 Dual 3D Scene themes (linmeiGardenGroup / celestialGardenGroup / skyPhotoCelestialMat) failed to build!");
+    if (!rEnv.academyGardenGroup || !rEnv.celestialGardenGroup || !rEnv.skyPhotoCelestialMat) {
+      throw new Error("v12.0 Dual 3D Scene themes (academyGardenGroup / celestialGardenGroup / skyPhotoCelestialMat) failed to build!");
     }
     if (!rEnv.bambooGroves || rEnv.bambooGroves.length < 6 || !rEnv.blossomTrees || rEnv.blossomTrees.length < 4) {
-      throw new Error("v12.0 Linmei Academy garden flora (bambooGroves / blossomTrees) failed to build!");
+      throw new Error("v12.0 Qinglan Academy garden flora (bambooGroves / blossomTrees) failed to build!");
     }
     if (!rEnv.celestialSpires || rEnv.celestialSpires.length < 8 || !rEnv.celestialSteppingStones || rEnv.celestialSteppingStones.length < 4 || !rEnv.celestialWisps) {
       throw new Error("v12.0 Celestial Qinglü garden assets (celestialSpires / steppingStones / wisps) failed to build!");
     }
     apply3DSceneTheme(rSc, rEnv, "celestial");
-    if (rEnv.linmeiGardenGroup.visible !== false || rEnv.celestialGardenGroup.visible !== true) {
+    if (rEnv.academyGardenGroup.visible !== false || rEnv.celestialGardenGroup.visible !== true) {
       throw new Error("v12.0 apply3DSceneTheme('celestial') failed to toggle garden visibility!");
     }
     update3DEnvironment(rSc, rEnv, { tSec: 2.0, nowMs: 2000, p: "DAY_SPEECH", daylight: true, night: false }, {});
-    apply3DSceneTheme(rSc, rEnv, "linmei");
-    if (rEnv.linmeiGardenGroup.visible !== true || rEnv.celestialGardenGroup.visible !== false) {
-      throw new Error("v12.0 apply3DSceneTheme('linmei') failed to restore Linmei garden visibility!");
+    apply3DSceneTheme(rSc, rEnv, "academy");
+    if (rEnv.academyGardenGroup.visible !== true || rEnv.celestialGardenGroup.visible !== false) {
+      throw new Error("v12.0 apply3DSceneTheme('academy') failed to restore Academy garden visibility!");
     }
     update3DEnvironment(rSc, rEnv, { tSec: 2.5, nowMs: 2500, p: "LOBBY", daylight: false, night: false }, {});
     const rHero = buildHeroCharacter(rSc);
@@ -1072,11 +1072,11 @@ vm.runInContext(`
   drawSanctuaryFrame(5000);
   if (state.match.phase !== "NIGHT_WOLF") throw new Error("Expected NIGHT_WOLF phase when player is wolf");
 
-  // v4.5 Competition Edition: Guishan Island Easter Egg + Respectful Roles + Lotus Awakening + Harmony Aura!
-  stage3d.raycastGuishan(0.2, 0.1);
-  stage3d.interactWithGuishan();
+  // v4.5 Competition Edition: Cloud Isle Easter Egg + Respectful Roles + Lotus Awakening + Harmony Aura!
+  stage3d.raycastCloudIsle(0.2, 0.1);
+  stage3d.interactWithCloudIsle();
   if (ROLE_DEFS.witch.name !== "滴水奉茶師" || ROLE_DEFS.seer.name !== "明心觀察員" || ROLE_DEFS.hunter.name !== "直心糾察長") {
-    throw new Error("Expected respectful Linmei Academy role names in ROLE_DEFS!");
+    throw new Error("Expected respectful Qinglan Academy role names in ROLE_DEFS!");
   }
   el("selectPreferredRole").value = "seer";
   startNewGame();
@@ -4306,7 +4306,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const visibleHtml = html
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<script[\s\S]*?<\/script>/gi, "");
-  const htmlEmojiHits = visibleHtml.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{23F0}-\u{23FF}\u{2B50}\u{2B55}]/gu) || [];
+  const htmlEmojiHits = visibleHtml.match(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{23F0}-\u{23FF}\u{2B50}\u{2B55}\u{FE0F}]/gu) || [];
   const disallowedHtmlEmojis = htmlEmojiHits.filter(ch => !["✓", "✕", "✦", "○", "▶", "▸", "▾", "★", "☆", "↺", "↻", "→", "←"].includes(ch));
   if (disallowedHtmlEmojis.length > 0) {
     throw new Error("v10.1 CRAFT-ICONS: cartoon emojis still present in visible ai.html: " + [...new Set(disallowedHtmlEmojis)].join(" "));
@@ -4518,7 +4518,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 
     // 5. Public Release 2.0 diagnostics & anonymous host helper
     const diag11 = collectFeedbackDiagnostics();
-    const version11Ok = /公測\\s*[2-9]\\.[0-9]+/.test(diag11.version) && typeof isAnonymousReviewHost === "function";
+    const version11Ok = /^v\\d+\\.\\d+/.test(String(diag11.version || "")) && typeof isAnonymousReviewHost === "function";
 
     clearStepTimer();
     resetMatchToLobby();
@@ -4922,13 +4922,19 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     }
   }
 
-  // Verify sw.js IMMUTABLE_RE actually matches .vrm models!
+  // Verify sw.js IMMUTABLE_RE actually matches .vrm models & excludes manifest.json + offline safety guards!
   const swSrc = fs.readFileSync("sw.js", "utf8");
   const swReMatch = swSrc.match(/const IMMUTABLE_RE = (\/.*\/[a-z]*);/);
   if (!swReMatch) throw new Error("sw.js IMMUTABLE_RE not found!");
   const swRe = vm.runInNewContext(swReMatch[1]);
   if (!swRe.test("/assets/models/qingming.vrm") || !swRe.test("/assets/sky/sanctuary_day.jpg") || !swRe.test("/js/vendor/three.min.js")) {
     throw new Error("sw.js IMMUTABLE_RE failed to match .vrm / sky / vendor paths!");
+  }
+  if (swRe.test("/assets/models/manifest.json")) {
+    throw new Error("sw.js IMMUTABLE_RE must exclude /assets/models/manifest.json!");
+  }
+  if (!swSrc.includes("resp.status === 200") || !swSrc.includes("ignoreSearch: true") || !swSrc.includes("status: 503")) {
+    throw new Error("sw.js missing status===200 gate, ignoreSearch matching, or 503 offline fallback!");
   }
 }
 
@@ -4974,8 +4980,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const noSameDayPhantomSignalOk = (state.match.badgeFlowSignals || []).length === sigBefore;
 
     // 4. Dual 3D Scene Theme live toggle + HUD/Title/Pause label sync + persistence
-    stage3d.setSceneTheme("linmei", { silent: true });
-    const linmeiUiOk = state.sceneTheme === "linmei"
+    stage3d.setSceneTheme("academy", { silent: true });
+    const academyUiOk = state.sceneTheme === "academy"
       && el("hudSceneLabel").textContent === "書院"
       && el("titleSceneThemeLabel").textContent === "青嵐書院"
       && el("btnToggleSceneThemePause").textContent === "造景:青嵐書院";
@@ -4984,7 +4990,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       && el("hudSceneLabel").textContent === "仙境"
       && el("titleSceneThemeLabel").textContent === "絕雲仙境"
       && el("btnToggleSceneThemePause").textContent === "造景:絕雲仙境";
-    stage3d.setSceneTheme("linmei", { silent: true });
+    stage3d.setSceneTheme("academy", { silent: true });
 
     // 5. Camera reset & setShowcaseMode(false) invariants (P1 3.1, 3.5)
     stage3d.closeUpSeatId = 3;
@@ -5100,7 +5106,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       silentHideBlocksStaleOk,
       guardKeeps12pOk,
       noSameDayPhantomSignalOk,
-      linmeiUiOk,
+      academyUiOk,
       celestialUiOk,
       resetClearsCloseUpOk,
       showcaseResetsTargetOk,
@@ -6649,7 +6655,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       el("showcaseProfileCard").innerHTML.includes("好人癖好");
     const showcaseCardOk = Boolean(cardHiddenHero && cardShownMobai);
     const diag17 = collectFeedbackDiagnostics();
-    const version17Ok = Boolean(diag17 && diag17.version === "v20.0 (公測 3.5)");
+    const version17Ok = Boolean(diag17 && diag17.version === "v24.2.14");
 
     // 6. Standard Day-1 Werewolf Order: Sheriff Election FIRST, THEN Night-1 Death Reveal (+ Dead-Sheriff Transfer + Election Explode Settlement)
     el("selectModeCount").value = "8";
@@ -7128,7 +7134,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.13") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.14") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7444,7 +7450,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 
 // v20.0 FINAL POLISH & EXPERIENCE UPGRADE VERIFICATION (P0-1..4 + TIERED TEMP + 150s JUDGE SHOWCASE + TURNING AXIS & TRUTH TABLE + ZERO-EMOJI + DOCS)
 {
-  const emojiGuardRe = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+  const emojiGuardRe = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u;
   const collectJsFiles = (dir) => {
     const out = [];
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -7461,10 +7467,14 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const scanTargets = [
     path.join(ROOT, "ai.html"),
     path.join(ROOT, "index.html"),
+    path.join(ROOT, "manifest.webmanifest"),
     path.join(ROOT, "sw.js"),
+    path.join(ROOT, "server.py"),
     path.join(ROOT, "api/gemini.js"),
+    path.join(ROOT, "api/tts.js"),
     path.join(ROOT, "css/theme.css"),
     path.join(ROOT, "css/components.css"),
+    path.join(ROOT, "CREDITS.md"),
     path.join(ROOT, "README.md"),
     path.join(ROOT, "docs/作品說明書.md"),
     path.join(ROOT, "docs/三分鐘Demo影片腳本.md"),
@@ -7478,18 +7488,24 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
   const globalZeroEmojiOk = emojiHits.length === 0;
 
-  // Anonymity & Plain Non-AI Copy check across UI + docs + README + CREDITS + manifest + all JS
+  // Anonymity & Plain Non-AI Copy check across UI + docs + README + CREDITS + manifest + APIs + SW + CSS + server + all JS
   const anonTargets = [
     path.join(ROOT, "ai.html"),
     path.join(ROOT, "index.html"),
     path.join(ROOT, "manifest.webmanifest"),
+    path.join(ROOT, "sw.js"),
+    path.join(ROOT, "server.py"),
+    path.join(ROOT, "api/gemini.js"),
+    path.join(ROOT, "api/tts.js"),
+    path.join(ROOT, "css/theme.css"),
+    path.join(ROOT, "css/components.css"),
     path.join(ROOT, "CREDITS.md"),
     path.join(ROOT, "README.md"),
     path.join(ROOT, "docs/作品說明書.md"),
     path.join(ROOT, "docs/三分鐘Demo影片腳本.md"),
     ...collectJsFiles(path.join(ROOT, "js"))
   ];
-  const bannedCopyRe = /Sixshoes|高情商|一句話秒懂|幾秒看懂|瞬間白熱化|史詩級|佛光大學|林美|雲起/;
+  const bannedCopyRe = /Sixshoes|高情商|一句話秒懂|幾秒看懂|瞬間白熱化|史詩級|佛光大學|台灣大學|林美|雲起|linmei|yilan|guishan|龜山島|fgu\.edu\.tw|\bfgu\b|3goodai|chenyiting/i;
   const copyHits = [];
   for (const fp of anonTargets) {
     const raw = fs.readFileSync(fp, "utf8");
@@ -7521,7 +7537,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.13"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.14"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8635,8 +8651,200 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       throw new Error("v24.2.13 UNIFIED EDITORIAL ART DIRECTION check failed for " + k + ": " + JSON.stringify(v24213Res));
     }
   }
+
+  // v24.2.14 Regression: api/tts.js handler + blind-view blessing/wolf-tactic + lone_wolf_king + showcase + soundtrack/career hardening
+  const apiTtsHandler = (await import("../api/tts.js")).default;
+  const docSpec2414 = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
+  const readme2414 = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  const ttsBodyPrimary = apiTtsHandler._buildTtsRequestBody("gemini-3.8-flash-lite-tts", "Vindemiatrix", "清雅溫和", "測試語音", false);
+  const ttsBodyFallback = apiTtsHandler._buildTtsRequestBody("gemini-3.8-flash-lite-tts", "Vindemiatrix", "清雅溫和", "測試語音", true);
+  const ttsBodyLedaFb = apiTtsHandler._buildTtsRequestBody("gemini-3.8-flash-lite-tts", "Leda", "", "測試語音", true);
+
+  // api/tts.js handler security checks (origin, prod localhost, 415, 413, IP-first session-flood rate limit)
+  const runTtsHandler = async (method, headers, body) => {
+    let status = 0;
+    let raw = "";
+    const mockRes = {
+      statusCode: 200,
+      setHeader() { },
+      end(chunk) { status = this.statusCode; raw = String(chunk || ""); }
+    };
+    await apiTtsHandler({ method, headers: headers || {}, body, socket: { remoteAddress: "198.51.100.42" } }, mockRes);
+    return { status, body: raw };
+  };
+  const savedTtsKey = process.env.GEMINI_API_KEY;
+  const savedVercelEnv = process.env.VERCEL_ENV;
+  process.env.GEMINI_API_KEY = "dummy-test-key";
+  process.env.VERCEL_ENV = "production";
+  apiTtsHandler._resetRateLimit();
+  const ttsCrossRes = await runTtsHandler("POST", { host: "sanhao.vercel.app", origin: "https://evil.example", "content-type": "application/json" }, { text: "測試" });
+  const ttsProdLocalRes = await runTtsHandler("POST", { host: "sanhao.vercel.app", origin: "http://localhost:8788", "content-type": "application/json" }, { text: "測試" });
+  const ttsBadCtRes = await runTtsHandler("POST", { host: "sanhao.vercel.app", origin: "https://sanhao.vercel.app", "content-type": "text/plain" }, { text: "測試" });
+  const ttsTooBigRes = await runTtsHandler("POST", { host: "sanhao.vercel.app", origin: "https://sanhao.vercel.app", "content-type": "application/json" }, { text: "a".repeat(9000) });
+  // Rotating random sessionIds behind one IP MUST hit the IP NAT bucket cap (96 RPM) before allocating unbounded sessions
+  apiTtsHandler._resetRateLimit();
+  let ttsIpFirstBlocked = false;
+  for (let ri = 0; ri < 105; ri++) {
+    const r = apiTtsHandler._checkRateLimit("198.51.100.99", 5000000 + ri * 10, "flood_sess_" + String(ri).padStart(4, "0"));
+    if (!r.allowed && r.reason === "ip_rpm") { ttsIpFirstBlocked = true; break; }
+  }
+  apiTtsHandler._resetRateLimit();
+  if (savedTtsKey === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = savedTtsKey;
+  if (savedVercelEnv === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = savedVercelEnv;
+
+  const v24214Runtime = vm.runInContext(`(() => {
+    clearStepTimer();
+    const prevStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+
+    // 1. Default mate_fake_seer_gold wolf-mate prompt passes auditLlmPromptLeak with 0 violations
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "wolf";
+    state.activeVariant = "standard";
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    state.match.wolfTactic = "mate_fake_seer_gold";
+    state.match.phase = "DAY_SPEECH";
+    const aiWolfMate = state.match.seats.find(s => s.alive && s.team === "wolf" && s.id !== getPlayerId());
+    const wolfFb = buildHeuristicAiSpeech(aiWolfMate);
+    const wolfBuilt = buildBlindGeminiSpeechPrompt(aiWolfMate, wolfFb);
+    const mateFakeSeerPromptOk = Boolean(wolfBuilt && wolfBuilt.audit && wolfBuilt.audit.ok);
+
+    // 2. isPrivate: true blessing logs stay out of AI publicLogs, auditLlmPromptLeak blocks private markers & allows public truth_lantern
+    addLog({ kind: "blessing", isPrivate: true, title: "靜心觀微", text: "靜心觀微：02號脈搏偏快" });
+    addLog({ kind: "blessing", isPrivate: true, title: "三好蓮花覺醒（反派演技）", text: "暗影帶風已啟動" });
+    addLog({ kind: "blessing", title: "清茗事件", text: "今日「靜心觀微」可用次數加一，大家可自由觀察。" });
+    const goodViewer = state.match.seats.find(s => s.alive && s.team === "good");
+    const privSnap = createBlindMatchSnapshot(goodViewer, { module: "v24214_priv_check" });
+    const pubLogText = (privSnap.publicLogs || []).map(l => (l.title || "") + " " + (l.text || "")).join(" ");
+    const privateBlessingIsolatedOk = !pubLogText.includes("反派演技") && !pubLogText.includes("靜心觀微：") && pubLogText.includes("可用次數加一");
+    antiCheatMonitor.strictThrow = false;
+    const leakBlockedOk = !auditLlmPromptLeak(privSnap, "底牌：書院生", "靜心觀微：02號脈搏偏快").ok
+      && !auditLlmPromptLeak(privSnap, "底牌：書院生", "三好蓮花覺醒（反派演技）").ok
+      && auditLlmPromptLeak(privSnap, "底牌：書院生", "今日「靜心觀微」可用次數加一").ok;
+    antiCheatMonitor.strictThrow = true;
+
+    // 3. lone_wolf_king: getInitialWolfCount()===1, lowered microPulse persists across beginNightPhase(), sole Wolf King vote-out triggers shot
+    const prevCareerRaw = localStorage.getItem(CAREER_STORAGE_KEY);
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({
+      gamesPlayed: 10, wins: 8, unlockedBadges: ["first_win", "zero_toxic", "kind_crit", "resonance", "combo_master", "four_g_sage", "pro_slayer", "wolf_actor"]
+    }));
+    state.activeVariant = "lone_wolf_king";
+    el("selectPreferredRole").value = "villager";
+    el("selectAiDifficulty").value = "normal";
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    const lwkSeat = state.match.seats.find(s => s.team === "wolf");
+    const lwkCountOk = state.match.variantMode === "lone_wolf_king" && getInitialWolfCount() === 1 && Boolean(lwkSeat && lwkSeat.isWolfKing);
+    state.match.phase = "DAY_VOTE_RESULT";
+    const origRandLwk = Math.random;
+    Math.random = () => 0.99; // standard wolf = 92; lone_wolf_king (-16) = 76
+    beginNightPhase();
+    Math.random = origRandLwk;
+    const lwkPulseLowOk = Boolean(lwkSeat && lwkSeat.microPulse === 76);
+    clearStepTimer();
+    state.match.phase = "DAY_VOTE";
+    state.match.day = 1;
+    state.match.seats.forEach(s => { s.alive = true; });
+    const origChooseVoteLwk = chooseAiVoteTarget;
+    chooseAiVoteTarget = () => lwkSeat.id;
+    finalizeVoteRound(lwkSeat.id);
+    chooseAiVoteTarget = origChooseVoteLwk;
+    if (state.voteFlight && typeof state.voteFlight.finish === "function") state.voteFlight.finish();
+    const lwkShotTriggeredOk = Boolean(!lwkSeat.alive && (state.match.phase === "HUNTER_TRIGGER" || state.match.pendingVotedHunterId === lwkSeat.id));
+    state.activeVariant = "standard";
+    clearStepTimer();
+
+    // 4. Judge Showcase: Day-2 quick cards reference lastNightCasualties (not 平安夜) & finishMatch() does NOT write to CAREER_STORAGE_KEY
+    const careerBeforeShowcase = JSON.stringify({ gamesPlayed: 3, wins: 2, unlockedBadges: ["first_win"] });
+    localStorage.setItem(CAREER_STORAGE_KEY, careerBeforeShowcase);
+    startJudgeShowcaseMatch();
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    const scCardText = Array.from(el("quickSpeechChips") ? (el("quickSpeechChips")._children || []) : []).map(c => String(c.innerHTML || "") + String(c.textContent || "")).join(" ");
+    const showcaseCardsUseCasualtiesOk = !scCardText.includes("昨晚平安夜") && Array.isArray(state.match.lastNightCasualties) && state.match.lastNightCasualties.length > 0;
+    finishMatch("good", "評審導覽測試結束");
+    const showcaseNoCareerWriteOk = localStorage.getItem(CAREER_STORAGE_KEY) === careerBeforeShowcase;
+
+    // 5. soundtrack.js: getVoiceVowelWeights() returns all zeros when voice.paused === true
+    const prevPaused = voice.paused;
+    voice.paused = true;
+    const vwPaused = sound.getVoiceVowelWeights();
+    const pausedZeroVowelsOk = vwPaused && vwPaused.a === 0 && vwPaused.i === 0 && vwPaused.u === 0 && vwPaused.e === 0 && vwPaused.o === 0;
+    voice.paused = prevPaused;
+
+    // 6. career.js: corrupted localStorage payload sanitizes cleanly & openCareerModal() escapes markup and clamps widths <= 100%
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({
+      gamesPlayed: -5,
+      wins: 999,
+      goodWins: "NaN",
+      wolfWins: -1,
+      unlockedBadges: ["first_win", "first_win", "<img src=x onerror=alert(1)>", "nonexistent_badge"]
+    }));
+    const cleanCareer = loadCareerStats();
+    openCareerModal();
+    const careerModalHtml = String(el("careerBadgesGrid") ? el("careerBadgesGrid").innerHTML : "") + String(el("careerStatsGrid") ? el("careerStatsGrid").innerHTML : "");
+    el("modalCareer").classList.add("hidden");
+    const careerSanitizedOk = cleanCareer.gamesPlayed === 0
+      && cleanCareer.wins === 999
+      && cleanCareer.goodWins === 0
+      && cleanCareer.unlockedBadges.length === 1
+      && cleanCareer.unlockedBadges[0] === "first_win"
+      && !careerModalHtml.includes("<img")
+      && !/width:\\s*(?:1[0-9]{2}|[2-9][0-9]{2})%/.test(careerModalHtml);
+
+    if (prevCareerRaw === null) localStorage.removeItem ? localStorage.removeItem(CAREER_STORAGE_KEY) : localStorage.setItem(CAREER_STORAGE_KEY, "");
+    else localStorage.setItem(CAREER_STORAGE_KEY, prevCareerRaw);
+    antiCheatMonitor.strictThrow = prevStrict;
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      mateFakeSeerPromptOk,
+      privateBlessingIsolatedOk,
+      leakBlockedOk,
+      lwkCountOk,
+      lwkPulseLowOk,
+      lwkShotTriggeredOk,
+      showcaseCardsUseCasualtiesOk,
+      showcaseNoCareerWriteOk,
+      pausedZeroVowelsOk,
+      careerSanitizedOk
+    };
+  })()`, ctx);
+
+  const v24214Res = {
+    ttsVoiceFallbackMappingOk:
+      ttsBodyPrimary.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === "Vindemiatrix" &&
+      ttsBodyFallback.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === "Zephyr" &&
+      ttsBodyLedaFb.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === "Zephyr" &&
+      !ttsApiSrc2412.includes("? voiceName\n    : voiceName"),
+    ttsTimeoutBudgetHeadroomOk:
+      ttsApiSrc2412.includes("PRIMARY_TIMEOUT_MS = 7500") &&
+      ttsApiSrc2412.includes("RETRY_400_TIMEOUT_MS = 4000") &&
+      ttsApiSrc2412.includes("FALLBACK_MODEL_TIMEOUT_MS = 6000"),
+    ttsHandlerSecurityOk:
+      ttsCrossRes.status === 403 &&
+      ttsProdLocalRes.status === 403 &&
+      ttsBadCtRes.status === 415 &&
+      ttsTooBigRes.status === 413 &&
+      ttsIpFirstBlocked,
+    specSyncedModelsAndCacheOk:
+      docSpec2414.includes("gemini-4-hydrogen") &&
+      docSpec2414.includes("api/tts.js") &&
+      docSpec2414.includes("sanhao-shell-v24.2.14") &&
+      docSpec2414.length <= 5000,
+    readmeSyncedOk:
+      readme2414.includes("sanhao-shell-v24.2.14") &&
+      readme2414.includes("api/tts.js"),
+    ...v24214Runtime
+  };
+  for (const [k, v] of Object.entries(v24214Res)) {
+    if (!v) {
+      throw new Error("v24.2.14 REGRESSION check failed for " + k + ": " + JSON.stringify(v24214Res));
+    }
+  }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 Release-Freeze E2E smoke test PASSED!");
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 Release-Freeze E2E smoke test PASSED!");
 
 

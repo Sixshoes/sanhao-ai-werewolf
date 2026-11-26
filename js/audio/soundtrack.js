@@ -78,11 +78,15 @@ const sound = {
 
         this.sfxGain = this.ctx.createGain();
         this.reverb = this.buildHallReverb(2.1);
+        const bgmRevSend = this.ctx.createGain();
+        bgmRevSend.gain.value = 0.85;
         const revReturn = this.ctx.createGain();
         revReturn.gain.value = 0.38;
 
         this.bgmGain.connect(this.bgmVocalCarve);
         this.bgmVocalCarve.connect(this.comp);
+        this.bgmVocalCarve.connect(bgmRevSend);
+        bgmRevSend.connect(this.reverb);
         this.sfxGain.connect(this.comp);
         this.reverb.connect(revReturn);
         revReturn.connect(this.comp);
@@ -546,6 +550,9 @@ const sound = {
   },
 
   getVoiceVowelWeights: function (seatId, nowMs) {
+    if (typeof voice !== "undefined" && voice.paused) {
+      return { a: 0, i: 0, u: 0, e: 0, o: 0, amp: 0 };
+    }
     const amp = this.getVoiceMouthLevel();
     const hasLiveAudioSource = Boolean(typeof voice !== "undefined" && (voice.activeAudioNode || voice.activeAudioEl));
     if (this.voiceAnalyser && this.voiceFreqData && hasLiveAudioSource) {
@@ -844,7 +851,6 @@ const sound = {
       osc2Mix.connect(filt);
       filt.connect(gain);
       gain.connect(this.bgmGain);
-      if (this.reverb) gain.connect(this.reverb);
 
       osc1.start(t);
       osc2.start(t);
@@ -878,7 +884,6 @@ const sound = {
         osc.connect(filt);
         filt.connect(gain);
         gain.connect(self.bgmGain);
-        if (self.reverb) gain.connect(self.reverb);
 
         osc.start(t);
         osc.stop(t + dur + 0.05);
@@ -910,7 +915,6 @@ const sound = {
       modGain.connect(carrier.frequency);
       carrier.connect(env);
       env.connect(this.bgmGain);
-      if (this.reverb) env.connect(this.reverb);
 
       carrier.start(t);
       mod.start(t);

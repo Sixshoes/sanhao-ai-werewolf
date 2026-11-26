@@ -351,8 +351,12 @@ const stage3dVrm = {
           const oldestKey = this._recolorCacheKeys.shift();
           if (oldestKey && oldestKey !== cacheKey && this._recolorCache[oldestKey]) {
             const oldTex = this._recolorCache[oldestKey];
-            if (oldTex && typeof oldTex.dispose === "function") {
-              try { oldTex.dispose(); } catch (e) { }
+            if (oldTex) {
+              if (typeof this.disposeTextureResource === "function") {
+                this.disposeTextureResource(oldTex);
+              } else if (typeof oldTex.dispose === "function") {
+                try { oldTex.dispose(); } catch (e) { }
+              }
             }
             delete this._recolorCache[oldestKey];
           }
@@ -385,8 +389,9 @@ const stage3dVrm = {
       if (!hex) continue;
       const newTex = this.recolorVrmTextureMap(s.origMap, hex, str);
       if (newTex) {
+        const hadMap = Boolean(s.mat.map);
         s.mat.map = newTex;
-        s.mat.needsUpdate = true;
+        if (!hadMap) s.mat.needsUpdate = true;
         updated = true;
       }
     }
@@ -495,8 +500,12 @@ const stage3dVrm = {
           const oldestKey = this._recolorCacheKeys.shift();
           if (oldestKey && oldestKey !== cacheKey && this._recolorCache[oldestKey]) {
             const oldTex = this._recolorCache[oldestKey];
-            if (oldTex && typeof oldTex.dispose === "function") {
-              try { oldTex.dispose(); } catch (e) { }
+            if (oldTex) {
+              if (typeof this.disposeTextureResource === "function") {
+                this.disposeTextureResource(oldTex);
+              } else if (typeof oldTex.dispose === "function") {
+                try { oldTex.dispose(); } catch (e) { }
+              }
             }
             delete this._recolorCache[oldestKey];
           }

@@ -368,15 +368,15 @@ function advanceLastWordsQueue() {
   tryGenerateGeminiLastWords(seat, ctx.mode, lwObj)
     .then(function (liveText) {
       if (lwCueTimer) clearTimeout(lwCueTimer);
-      if (state._lastWordsTurnSeq === lwSeq) state.speakingInFlight = false;
       if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epLw)) return;
+      if (state._lastWordsTurnSeq === lwSeq) state.speakingInFlight = false;
       if (state.lastWordsCtx !== ctx || state.activeSpeakerId !== seat.id) return;
       commitAiLastWords(liveText);
     })
     .catch(function () {
       if (lwCueTimer) clearTimeout(lwCueTimer);
-      if (state._lastWordsTurnSeq === lwSeq) state.speakingInFlight = false;
       if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epLw)) return;
+      if (state._lastWordsTurnSeq === lwSeq) state.speakingInFlight = false;
       if (state.lastWordsCtx !== ctx || state.activeSpeakerId !== seat.id) return;
       commitAiLastWords(null);
     });

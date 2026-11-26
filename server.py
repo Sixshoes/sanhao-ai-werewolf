@@ -2,7 +2,7 @@
 """
 三好AI狼人殺 — 100% 免費本地遊戲與神經語音伺服器（$0 零花費、免 API Key）
 功能：
-1. 提供靜態網頁預覽（預設 http://localhost:8765/ai.html）
+1. 提供靜態網頁預覽（預設 http://localhost:8788/ai.html）
 2. 提供 /api/tts 端點，透過開源免費 edge-tts 驅動微軟神經台灣／華語多角色配音
 3. 內建 .tts_cache/ 磁碟快取，重播或常見系統播報毫秒級零延遲
 """
@@ -314,13 +314,22 @@ async def synthesize_edge_mp3(text, voice_name, rate_str, pitch_str, out_path):
 
 
 GEMINI_TTS_VOICE_FALLBACK = {
+    "Orus": "Puck",
     "Enceladus": "Puck",
     "Achird": "Charon",
-    "Iapetus": "Orus",
-    "Leda": "Kore",
+    "Iapetus": "Puck",
+    "Leda": "Zephyr",
     "Aoede": "Zephyr",
-    "Callirrhoe": "Kore",
+    "Callirrhoe": "Zephyr",
+    "Autonoe": "Zephyr",
+    "Laomedeia": "Zephyr",
+    "Vindemiatrix": "Zephyr",
+    "Sulafat": "Zephyr",
 }
+
+
+def redact_api_keys(msg):
+    return re.sub(r"AIza[0-9A-Za-z_-]{10,}", "[redacted]", str(msg or ""))
 
 
 def wrap_pcm_to_wav(raw_bytes, sample_rate=24000, channels=1, bits_per_sample=16):
@@ -403,7 +412,7 @@ def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=14):
             except urllib.error.HTTPError as hexc:
                 err_detail = ""
                 try:
-                    err_detail = hexc.read().decode("utf-8", "ignore")[:220]
+                    err_detail = redact_api_keys(hexc.read().decode("utf-8", "ignore"))[:220]
                 except Exception:
                     pass
                 last_err = RuntimeError(f"Gemini TTS {model_id}/{cand_voice} HTTP {hexc.code}: {err_detail}")
@@ -559,8 +568,52 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.write_bytes_chunked(body)
 
+    def _validate_static_path(self, route):
+        unquoted = urllib.parse.unquote(route)
+        parts = [p for p in unquoted.split("/") if p]
+        blocked_top = ("server.py", "api", "tests", "tools", "__pycache__")
+        if (
+            any(p.startswith(".") or p == ".." or p.lower() == "__pycache__" for p in parts)
+            or (parts and parts[0].lower() in blocked_top)
+        ):
+            return None
+        raw_fs_path = Path(self.translate_path(self.path))
+        try:
+            resolved_fs = raw_fs_path.resolve()
+        except OSError:
+            return None
+        if resolved_fs != ROOT_DIR and ROOT_DIR not in resolved_fs.parents:
+            return None
+        try:
+            rel_parts = resolved_fs.relative_to(ROOT_DIR).parts
+        except ValueError:
+            return None
+        if (
+            any(p.startswith(".") or p.lower() == "__pycache__" for p in rel_parts)
+            or (rel_parts and rel_parts[0].lower() in blocked_top)
+        ):
+            return None
+        return raw_fs_path
+
+    def do_HEAD(self):
+        clean_path = self.path.split("#", 1)[0]
+        route = clean_path.split("?", 1)[0]
+        if route == "/":
+            qs = clean_path.split("?", 1)[1] if "?" in clean_path else ""
+            self.path = "/ai.html" + (("?" + qs) if qs else "")
+            route = "/ai.html"
+        raw_fs_path = self._validate_static_path(route)
+        if raw_fs_path is None:
+            self.send_response(403)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            return
+        super().do_HEAD()
+
     def do_GET(self):
-        route = self.path.split("?")[0]
+        clean_path = self.path.split("#", 1)[0]
+        route = clean_path.split("?", 1)[0]
         if route == "/api/tts/status":
             self.send_json(200, {
                 "ok": True,
@@ -632,7 +685,7 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {
                 "ok": True,
                 "available": bool(gem_key),
-                "model": "gemini-2.5-flash-preview-tts",
+                "model": "gemini-3.8-flash-lite-tts",
                 "mode": "vercel-gemini-tts",
             })
             return
@@ -651,27 +704,12 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             return
 
         if route == "/":
-            qs = self.path.split("?", 1)[1] if "?" in self.path else ""
+            qs = clean_path.split("?", 1)[1] if "?" in clean_path else ""
             self.path = "/ai.html" + (("?" + qs) if qs else "")
             route = "/ai.html"
 
-        unquoted = urllib.parse.unquote(route)
-        parts = [p for p in unquoted.split("/") if p]
-        blocked_top = ("server.py", "api", "tests", "tools", "__pycache__")
-        if (
-            any(p.startswith(".") or p == ".." or p == "__pycache__" for p in parts)
-            or (parts and parts[0] in blocked_top)
-        ):
-            self.send_json(403, {"ok": False, "error": "Forbidden"})
-            return
-
-        raw_fs_path = Path(self.translate_path(self.path))
-        try:
-            resolved_fs = raw_fs_path.resolve()
-        except OSError:
-            self.send_json(403, {"ok": False, "error": "Forbidden"})
-            return
-        if resolved_fs != ROOT_DIR and ROOT_DIR not in resolved_fs.parents:
+        raw_fs_path = self._validate_static_path(route)
+        if raw_fs_path is None:
             self.send_json(403, {"ok": False, "error": "Forbidden"})
             return
 
@@ -797,13 +835,15 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
                     break
             except Exception as exc:
                 last_http = 502
-                last_err = f"Upstream Gemini error: {str(exc)[:100]}"
+                last_err = f"Upstream Gemini error: {redact_api_keys(exc)[:100]}"
         self.send_json(429 if last_http == 429 else 502, {"ok": False, "upstreamStatus": last_http, "error": last_err})
 
     def is_allowed_api_origin(self):
         origin = (self.headers.get("Origin") or "").strip()
-        if not origin or origin == "null":
+        if not origin:
             return True
+        if origin.lower() == "null":
+            return False
         try:
             parsed = urllib.parse.urlparse(origin)
             ohost = (parsed.hostname or "").lower()
@@ -931,7 +971,7 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
                         self.send_json(hexc.code if 400 <= hexc.code < 600 else 502, {"ok": False, "error": f"Gemini TTS HTTP {hexc.code}"})
                         return
                     except Exception as exc:
-                        self.send_json(502, {"ok": False, "error": f"Gemini TTS error: {str(exc)[:120]}"})
+                        self.send_json(502, {"ok": False, "error": f"Gemini TTS error: {redact_api_keys(exc)[:120]}"})
                         return
                     if not audio_bytes or len(audio_bytes) < 128:
                         self.send_json(502, {"ok": False, "error": "Empty Gemini TTS audio"})
@@ -1072,7 +1112,7 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.write_bytes_chunked(audio_bytes)
         except Exception as exc:
-            self.send_json(500, {"ok": False, "error": str(exc)[:180]})
+            self.send_json(500, {"ok": False, "error": redact_api_keys(exc)[:180]})
 
 
 class SanhaoHTTPServer(ThreadingHTTPServer):

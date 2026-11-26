@@ -1,13 +1,13 @@
 /**
- * 三好AI狼人殺 — 離線快取 Service Worker（v24.2.13 雙快取池架構）
- * - SHELL_CACHE（sanhao-shell-v24.2.13）：核心 HTML / CSS / JS / manifest，採 Network-First 策略，確保回訪即得最新版
+ * 三好AI狼人殺 — 離線快取 Service Worker（v24.2.14 雙快取池架構）
+ * - SHELL_CACHE（sanhao-shell-v24.2.14）：核心 HTML / CSS / JS / manifest，採 Network-First 策略，確保回訪即得最新版
  * - ASSET_CACHE（sanhao-assets-v24.2.1）：大型 3D VRM / 靜態語音包 / 立繪 / 360 天穹 / PBR 貼圖 / Vendor 函式庫，
  *   採 Cache-First 策略（上限 200 筆），與程式外殼完全隔離、絕不互相擠出快取
  * - /api/* 即時端點一律跳過快取
  */
 "use strict";
 
-const SHELL_CACHE = "sanhao-shell-v24.2.13";
+const SHELL_CACHE = "sanhao-shell-v24.2.14";
 const ASSET_CACHE = "sanhao-assets-v24.2.1";
 const ACTIVE_CACHES = [SHELL_CACHE, ASSET_CACHE];
 const MAX_ASSET_ENTRIES = 200;
@@ -23,7 +23,7 @@ const CORE_SHELL_URLS = [
   "./css/components.css"
 ];
 
-const IMMUTABLE_RE = /\/assets\/(?:models|sky|textures|portraits|portraits_vrm|voice_pack)\/|\/js\/vendor\/|\.(?:vrm|glb|png|jpe?g|webp|woff2?|mp3|wav)$/i;
+const IMMUTABLE_RE = /^(?!.*\/manifest\.json$).*(?:\/assets\/(?:models|sky|textures|portraits|portraits_vrm|voice_pack)\/|\/js\/vendor\/|\.(?:vrm|glb|png|jpe?g|webp|woff2?|mp3|wav)$)/i;
 
 function isCoreShellUrl(urlStr) {
   return CORE_SHELL_URLS.some(function (u) {
@@ -94,17 +94,21 @@ self.addEventListener("fetch", function (event) {
   if (IMMUTABLE_RE.test(url.pathname)) {
     event.respondWith(
       caches.open(ASSET_CACHE).then(function (cache) {
-        return cache.match(req).then(function (cached) {
+        return cache.match(req, { ignoreSearch: true }).then(function (cached) {
           if (cached) return cached;
           return fetch(req).then(function (resp) {
-            if (resp && resp.ok && resp.type === "basic") {
+            if (resp && resp.status === 200 && resp.type === "basic") {
               cache.put(req, resp.clone()).then(function () {
                 return trimCacheIfNeeded(ASSET_CACHE, MAX_ASSET_ENTRIES);
-              });
+              }).catch(function () { return null; });
             }
             return resp;
+          }).catch(function () {
+            return new Response("Offline asset unavailable", { status: 503, statusText: "Service Unavailable" });
           });
         });
+      }).catch(function () {
+        return new Response("Offline asset unavailable", { status: 503, statusText: "Service Unavailable" });
       })
     );
     return;
@@ -114,19 +118,29 @@ self.addEventListener("fetch", function (event) {
   event.respondWith(
     fetch(req)
       .then(function (resp) {
-        if (resp && resp.ok && resp.type === "basic") {
+        if (resp && resp.status === 200 && resp.type === "basic") {
           const clone = resp.clone();
           caches.open(SHELL_CACHE).then(function (cache) {
-            cache.put(req, clone).then(function () {
+            return cache.put(req, clone).then(function () {
               return trimCacheIfNeeded(SHELL_CACHE, MAX_SHELL_ENTRIES);
             });
-          });
+          }).catch(function () { return null; });
         }
         return resp;
       })
       .catch(function () {
         return caches.open(SHELL_CACHE).then(function (cache) {
-          return cache.match(req);
+          return cache.match(req, { ignoreSearch: true }).then(function (hit) {
+            if (hit) return hit;
+            if (req.mode === "navigate") {
+              return cache.match("./ai.html", { ignoreSearch: true }).then(function (navHit) {
+                return navHit || new Response("Offline", { status: 503, statusText: "Service Unavailable" });
+              });
+            }
+            return new Response("Offline", { status: 503, statusText: "Service Unavailable" });
+          });
+        }).catch(function () {
+          return new Response("Offline", { status: 503, statusText: "Service Unavailable" });
         });
       })
   );

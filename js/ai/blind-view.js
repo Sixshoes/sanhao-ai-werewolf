@@ -358,7 +358,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
   }).map(function (c) { return Object.assign({}, c); });
 
   const publicLogs = (m.logs || []).filter(function (l) {
-    return l && l.kind !== "secret";
+    return l && l.kind !== "secret" && !l.isPrivate;
   }).map(function (l) {
     return {
       day: l.day,
@@ -648,7 +648,7 @@ function auditLlmPromptLeak(blindSnap, secretIntelText, fullPromptText) {
   }
 
   const fullStr = String(fullPromptText || "");
-  if (/nightArchive|playerKnownRoles|wolfGodMarks|suspicionMap|上帝視角逐日故事軸/.test(fullStr)) {
+  if (/nightArchive|playerKnownRoles|wolfGodMarks|suspicionMap|上帝視角逐日故事軸|反派演技|角色密令覺醒|暗影帶風|流言策動|火眼破迷|暖茶濟世|護心屏風|正氣壓陣|泰山定海|靜心觀微：|精準請離酸民狼/.test(fullStr)) {
     reasons.push("fullPrompt_contains_internal_godview_key");
   }
 

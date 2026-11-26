@@ -1114,10 +1114,12 @@ const voice = {
 
   playBufferedStudioAudio: function (seq, audioBuf, onDone, opts) {
     if (seq !== this.utteranceSeq || !sound.ctx) return false;
+    let vGain = null;
+    try {
     if (sound.ctx.state === "suspended" && typeof sound.ctx.resume === "function") {
       sound.ctx.resume().catch(function () {});
     }
-    const vGain = sound.ctx.createGain();
+    vGain = sound.ctx.createGain();
     const skipRateAdjust = Boolean(opts && opts.skipRateAdjust);
     const pKey = (opts && opts.personaKey) ? opts.personaKey : this.activePersonaName;
     const sitCfg = (opts && opts.sitCfg) || { key: "standard", rateMul: 1.0, tailFadeSec: 0, tailVolMul: 1.0 };
@@ -1159,6 +1161,7 @@ const voice = {
       playbackRate: pbRate
     };
     if (this.paused) {
+      try { vGain.disconnect(); } catch (e) {}
       this.activeAudioNode = null;
       this.activeAudioGain = null;
       this.setVisualSpeaking(false);
@@ -1276,7 +1279,19 @@ const voice = {
             aEl.addEventListener("loadedmetadata", enforceRate);
             aEl.addEventListener("playing", enforceRate);
             if (startOffset > 0) {
-              try { aEl.currentTime = startOffset; } catch (e) {}
+              const applySeek = function () {
+                try {
+                  const maxSeek = (Number.isFinite(aEl.duration) && aEl.duration > 0.1)
+                    ? Math.max(0, aEl.duration - 0.08)
+                    : startOffset;
+                  aEl.currentTime = Math.min(startOffset, maxSeek);
+                } catch (e) {}
+              };
+              if (aEl.readyState >= 1) {
+                applySeek();
+              } else {
+                aEl.addEventListener("loadedmetadata", applySeek, { once: true });
+              }
             }
             const mediaSrc = sound.ctx.createMediaElementSource(aEl);
             mediaSrc.connect(vGain);
@@ -1299,16 +1314,20 @@ const voice = {
       }
 
       if (!usedPitchEl) {
-        const src = sound.ctx.createBufferSource();
-        src.buffer = audioBuf;
-        src.playbackRate.value = pbRate;
-        if (src.detune && (baseDetune || detuneNudge)) {
-          try { src.detune.value = clamp(baseDetune + detuneNudge, -135, 135); } catch (e) {}
+        try {
+          const src = sound.ctx.createBufferSource();
+          src.buffer = audioBuf;
+          src.playbackRate.value = pbRate;
+          if (src.detune && (baseDetune || detuneNudge)) {
+            try { src.detune.value = clamp(baseDetune + detuneNudge, -135, 135); } catch (e) {}
+          }
+          src.connect(vGain);
+          self.activeAudioNode = src;
+          src.onended = finishOnce;
+          src.start(0, startOffset);
+        } catch (errBuf) {
+          finishOnce();
         }
-        src.connect(vGain);
-        self.activeAudioNode = src;
-        src.onended = finishOnce;
-        src.start(0, startOffset);
       }
     };
 
@@ -1334,6 +1353,23 @@ const voice = {
       launchActualPlayback();
     }
     return true;
+    } catch (err) {
+      this.clearTimers();
+      this._cleanupActiveAudioEl();
+      if (this.activeAudioNode) {
+        try { this.activeAudioNode.onended = null; this.activeAudioNode.stop(); this.activeAudioNode.disconnect(); } catch (e) {}
+        this.activeAudioNode = null;
+      }
+      if (vGain) {
+        try { vGain.disconnect(); } catch (e) {}
+        if (this.activeAudioGain === vGain) this.activeAudioGain = null;
+      }
+      this.pauseMeta = null;
+      this._liveBufferState = null;
+      this.setVisualSpeaking(false);
+      this.syncPauseButtonUi();
+      return false;
+    }
   },
 
   _fetchLocalNeuralAudio: function (cacheKey, effKey, cleanText, mood, signal, clauseRole) {
@@ -1630,7 +1666,10 @@ const voice = {
             const arrBuf = await cloudRes.arrayBuffer();
             if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
           } else if (cloudRes && (cloudRes.status === 429 || cloudRes.status === 401 || cloudRes.status === 403 || cloudRes.status >= 500)) {
-            self.cloudGeminiTtsCooldownUntil = Date.now() + (cloudRes.status === 429 ? 45000 : 180000);
+            const backoffMs = (cloudRes.status === 401 || cloudRes.status === 403 || cloudRes.status === 503)
+              ? 180000
+              : (cloudRes.status === 429 ? 45000 : 25000);
+            self.cloudGeminiTtsCooldownUntil = Date.now() + backoffMs;
           }
         }
         // Track B: Local server.py disk-caching proxy (/api/tts/gemini) when personal key + local server active
@@ -1848,6 +1887,12 @@ const voice = {
       onAudioReady: opts && opts.onAudioReady
     };
 
+    const fallbackToBrowser = function () {
+      if (seq !== self.utteranceSeq) return;
+      if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
+      self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
+    };
+
     // Priority 0: Pre-generated Qingming Host + Judge Showcase Neural Voice Pack (0.02s studio playback + real FFT lip-sync even on static Vercel with zero API key!)
     const bundledUrl = this.lookupBundledVoicePackUrl(effKey, clean);
     if (bundledUrl && !sound.ctx && typeof sound.unlock === "function") {
@@ -1861,14 +1906,12 @@ const voice = {
         if (self.localNeuralAvailable && sound.ctx) {
           self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
             if (ok2 || seq !== self.utteranceSeq) return;
-            if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-            self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
-          });
+            fallbackToBrowser();
+          }).catch(fallbackToBrowser);
           return;
         }
-        if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
-      });
+        fallbackToBrowser();
+      }).catch(fallbackToBrowser);
       return;
     }
 
@@ -1883,14 +1926,12 @@ const voice = {
         if (self.localNeuralAvailable && sound.ctx) {
           self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
             if (ok2 || seq !== self.utteranceSeq) return;
-            if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-            self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
-          });
+            fallbackToBrowser();
+          }).catch(fallbackToBrowser);
           return;
         }
-        if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
-      });
+        fallbackToBrowser();
+      }).catch(fallbackToBrowser);
       return;
     }
 
@@ -1898,15 +1939,13 @@ const voice = {
       this.setVisualSpeaking(true);
       this.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
         if (ok || seq !== self.utteranceSeq) return;
-        if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-        self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
-      });
+        fallbackToBrowser();
+      }).catch(fallbackToBrowser);
       return;
     }
 
     // Priority 3 (100% Free $0 Offline): Upgraded Browser Neural/OS TTS with Natural Clause Cadence
-    if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-    this.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
+    fallbackToBrowser();
   },
 
   speakLocalBrowserTts: function (seq, profile, clean, mood, wasBusy, onDone, opts) {
@@ -1993,6 +2032,14 @@ const voice = {
         if (self.clauseWatchdogTimer) { clearTimeout(self.clauseWatchdogTimer); self.clauseWatchdogTimer = null; }
         if (self.charProgressTimer) { clearInterval(self.charProgressTimer); self.charProgressTimer = null; }
         idx = Math.min(clauses.length - 1, Math.max(0, activeClauseIdx));
+        const remClauses = clauses.slice(idx);
+        const remChars = remClauses.reduce(function (acc, cl) { return acc + cl.length; }, 0);
+        const newEstMs = Math.min(95000, Math.max(8000, Math.round((remChars * 460) / Math.max(0.75, computeLiveBaseRate())) + remClauses.length * 360 + 4000));
+        self._resumeWatchdogMs = newEstMs;
+        if (self.watchdogTimer) { clearTimeout(self.watchdogTimer); self.watchdogTimer = null; }
+        self.watchdogTimer = setTimeout(function () {
+          if (!self.paused) finishOnce();
+        }, newEstMs);
         try { window.speechSynthesis.cancel(); } catch (e) {}
         self.clauseTimer = setTimeout(function () {
           self.clauseTimer = null;
@@ -2062,8 +2109,9 @@ const voice = {
 
         const clauseStartAt = performance.now();
         const estClauseMs = Math.max(320, Math.round((clause.length * 215) / Math.max(0.7, cRate)));
+        let boundaryActive = false;
         self.charProgressTimer = setInterval(function () {
-          if (seq !== self.utteranceSeq || myGen !== activeClauseGen || self.paused || self.liveInPause) return;
+          if (boundaryActive || seq !== self.utteranceSeq || myGen !== activeClauseGen || self.paused || self.liveInPause) return;
           const frac = clamp((performance.now() - clauseStartAt) / estClauseMs, 0, 0.99);
           const curCi = clauseStartChar + Math.floor(frac * clause.length);
           self._notifyCharProgress(curCi, seatIdNow, sitCfg.key);
@@ -2071,6 +2119,13 @@ const voice = {
 
         utter.onboundary = function (ev) {
           if (seq !== self.utteranceSeq || myGen !== activeClauseGen) return;
+          if (!boundaryActive) {
+            boundaryActive = true;
+            if (self.charProgressTimer) {
+              clearInterval(self.charProgressTimer);
+              self.charProgressTimer = null;
+            }
+          }
           if (ev && typeof ev.charIndex === "number") {
             self._notifyCharProgress(clauseStartChar + ev.charIndex, seatIdNow, sitCfg.key);
           }

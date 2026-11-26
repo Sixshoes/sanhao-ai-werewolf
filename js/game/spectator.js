@@ -28,6 +28,9 @@ function enableSpectatorGodView() {
   g.locked = false;
   g.wolfIds = [];
   g.godRoles = { seer: null, witch: null, hunter: null, guard: null };
+  const sb = ensureSpiritBetState();
+  const hadOpenBet = Boolean(sb.active && sb.active.open);
+  if (sb.active) sb.active.targetId = null;
   if (typeof sound !== "undefined" && typeof sound.playBlessing === "function") sound.playBlessing();
   if (typeof addLog === "function") {
     addLog({ kind: "secret", title: "已開啟「上帝視角觀戰」（放棄席外押注加分，可透視全員底牌與即時懷疑熱度）", text: "" });
@@ -36,6 +39,11 @@ function enableSpectatorGodView() {
     showToast("已啟用上帝視角實況！座位與茶席手札將即時揭曉全員底牌與 AI 懷疑度。", "sky");
   }
   if (typeof updateAllUI === "function") updateAllUI();
+  if (hadOpenBet) {
+    closeSpiritRoundBet(true);
+  } else if (sb.active) {
+    sb.active = null;
+  }
   return true;
 }
 
@@ -91,7 +99,7 @@ function toggleSpectatorWolfGuess(seatId) {
   const idx = g.wolfIds.indexOf(seatId);
   let selectedNow = false;
   const wolfCap = (state.match && state.match.seats)
-    ? Math.max(2, state.match.seats.filter(function (s) { return s.role === "wolf"; }).length)
+    ? Math.max(1, state.match.seats.filter(function (s) { return s.role === "wolf"; }).length)
     : (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2);
   if (idx !== -1) {
     g.wolfIds.splice(idx, 1);
@@ -169,7 +177,7 @@ function lockSpectatorGuess() {
 
   const mode = getSpectatorGuessMode();
   const wolfNeed = (state.match && state.match.seats)
-    ? Math.max(2, state.match.seats.filter(function (s) { return s.role === "wolf"; }).length)
+    ? Math.max(1, state.match.seats.filter(function (s) { return s.role === "wolf"; }).length)
     : (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2);
   if (mode === "wolf_hunt") {
     if (g.wolfIds.length < wolfNeed) {
@@ -193,6 +201,7 @@ function lockSpectatorGuess() {
   if (typeof addLog === "function") {
     addLog({
       kind: "blessing",
+      isPrivate: true,
       title: mode === "wolf_hunt" ? "席外猜狼押注已鎖定（終局全中另享 +8 勇氣加分）" : "席外獵神押注已鎖定（終局揭曉享 +8 勇氣加分）",
       text: ""
     });
@@ -368,7 +377,7 @@ function renderSpiritBetBanner() {
   const chipsEl = el("spiritBetChips");
   if (!banner) return;
   const sb = ensureSpiritBetState();
-  if (!sb.active || !sb.active.open || !isSpectatorGuessActive()) {
+  if (!sb.active || !sb.active.open || !isSpectatorGuessActive() || isSpectatorGodViewActive()) {
     banner.classList.add("hidden");
     return;
   }
@@ -433,6 +442,7 @@ function openSpiritRoundBet(kind, onDone) {
 }
 
 function placeSpiritRoundBet(targetId) {
+  if (!isSpectatorGuessActive() || isSpectatorGodViewActive()) return false;
   const sb = ensureSpiritBetState();
   const act = sb.active;
   const seat = getSeat(targetId);
@@ -453,6 +463,10 @@ function placeSpiritRoundBet(targetId) {
 function resolveSpiritRoundBet(kind, actualSeatId) {
   const sb = ensureSpiritBetState();
   const act = sb.active;
+  if (isSpectatorGodViewActive()) {
+    if (act && act.kind === kind) sb.active = null;
+    return null;
+  }
   if (!act || act.kind !== kind || !act.targetId) {
     if (act && act.kind === kind) sb.active = null;
     return null;
@@ -476,7 +490,7 @@ function resolveSpiritRoundBet(kind, actualSeatId) {
       showToast("席外茶靈押注命中！連勝 " + sb.streak + "（" + mult + "x）計入生涯積分 +" + earned + "。", "emerald");
     }
     if (typeof addLog === "function") {
-      addLog({ kind: "blessing", title: "席外茶靈押注命中（" + (kind === "night_kill" ? "夜襲預測" : "公投預測") + "）：連勝 " + sb.streak + "，生涯積分 +" + earned, text: "" });
+      addLog({ kind: "blessing", isPrivate: true, title: "席外茶靈押注命中（" + (kind === "night_kill" ? "夜襲預測" : "公投預測") + "）：連勝 " + sb.streak + "，生涯積分 +" + earned, text: "" });
     }
   } else {
     sb.streak = 0;
@@ -505,6 +519,11 @@ function toggleSpectatorFastForward() {
     state.autoPlay = true;
     if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     showToast("已開啟 2× 觀戰快進，自動加速推進至結局！", "emerald");
+    const sbFf = ensureSpiritBetState();
+    if (sbFf.active && sbFf.active.open) {
+      closeSpiritRoundBet(true);
+      return true;
+    }
     if (state.match && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH")) {
       if (state.typewriter && state.typewriter.active && typeof completeCurrentTypewriter === "function") {
         completeCurrentTypewriter(true);
@@ -557,7 +576,7 @@ function renderSpectatorGuessPanel() {
   const badge = document.createElement("span");
   badge.className = "text-[11px] font-bold tracking-wider truncate " + (mode === "god_hunt" ? "text-amber-300" : "text-emerald-300");
   const wNeed = (state.match && state.match.seats)
-    ? Math.max(2, state.match.seats.filter(function (s) { return s.role === "wolf"; }).length)
+    ? Math.max(1, state.match.seats.filter(function (s) { return s.role === "wolf"; }).length)
     : (typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2);
   badge.textContent = mode === "god_hunt" ? "席外獵神挑戰・揪出真神職" : ("席外猜狼挑戰・鎖定 " + wNeed + " 名酸民狼");
   const progress = document.createElement("span");

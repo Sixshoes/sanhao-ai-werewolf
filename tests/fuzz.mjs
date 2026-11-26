@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * 三好AI狼人殺 — 60 局全流程多角色亂數壓力與不變量測試
- * 涵蓋：6/8 人局、全 5 種玩家身分 (seer/witch/hunter/villager/wolf)、3 難度、警長開關、
- * 觀戰雙陣營競猜 (wolf_hunt / god_hunt)、微表情觀微、呈堂證供、狼隊夜間戰術、平票 PK
+ * 三好AI狼人殺 — 60 局全流程多角色多奇局決定性亂數壓力與不變量測試
+ * 涵蓋：6/8/10/12 人局、全 6 種玩家身分 (seer/witch/hunter/guard/villager/wolf)、3 難度、警長開關、
+ * 4 大青嵐奇局 (fog_seal / blitz_3m / twin_tea / lone_wolf_king)、觀戰雙陣營競猜、微表情觀微、
+ * 呈堂證供、狼隊夜間戰術、平票 PK
  * 執行方式：node tests/fuzz.mjs
  */
 import fs from "node:fs";
@@ -101,6 +102,17 @@ const THREE = {
   Line: function (g, m) { return makeObj3D(g, m); }
 };
 
+function makeSeededRng(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const seededRandom = makeSeededRng(20260416);
+
 let timerSeq = 1;
 const pendingTimers = new Map();
 const memStorage = new Map();
@@ -146,7 +158,7 @@ const sb = {
   document: {
     hidden: false,
     getElementById: makeEl,
-    createElement: t => makeEl("dyn_" + t + "_" + Math.random()),
+    createElement: t => makeEl("dyn_" + t + "_" + seededRandom()),
     querySelectorAll: () => [], querySelector: () => null,
     addEventListener() { },
     body: makeEl("body")
@@ -163,20 +175,34 @@ const sb = {
 sb.window = sb;
 
 const ctx = vm.createContext(sb);
+ctx.Math.random = seededRandom;
 for (const f of jsMatches) {
   vm.runInContext(fs.readFileSync(f, "utf8"), ctx, { filename: f });
 }
+// Unlock all 4 Cloud Variants via mock career stats so fuzz suite genuinely exercises every variantMode
+memStorage.set("sanhao_ai_werewolf_career_v1", JSON.stringify({
+  gamesPlayed: 12,
+  wins: 10,
+  goodWins: 6,
+  wolfWins: 4,
+  unlockedBadges: [
+    "first_win", "zero_toxic", "kind_crit", "resonance",
+    "combo_master", "four_g_sage", "pro_slayer", "wolf_actor"
+  ]
+}));
 sb.window.onload();
 const gState = vm.runInContext("state", ctx);
 
 const roles = ["seer", "witch", "hunter", "guard", "villager", "wolf"];
 const diffs = ["easy", "normal", "pro"];
-const forbiddenSpeech = ["女巫", "毒藥", "解藥", "佛光大學", "fgu.edu.tw", "3goodai"];
+const variantPool = ["standard", "standard", "fog_seal", "blitz_3m", "twin_tea", "lone_wolf_king"];
+const forbiddenSpeech = ["女巫", "毒藥", "解藥", "佛光大學", "fgu.edu.tw", "3goodai", "Sixshoes", "林美", "龜山島"];
 
 let goodWins = 0;
 let wolfWins = 0;
 let pkTriggeredMatches = 0;
 let maxDaysSeen = 0;
+const variantCounts = { standard: 0, fog_seal: 0, blitz_3m: 0, twin_tea: 0, lone_wolf_king: 0 };
 
 async function drainMicrotasks() {
   for (let i = 0; i < 6; i++) {
@@ -223,11 +249,12 @@ function assertMatchInvariants(matchIdx) {
 const modeCounts = ["6", "8", "10", "12"];
 for (let i = 0; i < 60; i++) {
   pendingTimers.clear();
-  const count = modeCounts[i % modeCounts.length];
-  const prefRole = roles[i % roles.length];
+  const variant = variantPool[i % variantPool.length];
+  const count = variant === "lone_wolf_king" ? "6" : modeCounts[i % modeCounts.length];
+  const prefRole = (variant === "lone_wolf_king" && roles[i % roles.length] === "seer") ? "wolf" : roles[i % roles.length];
   const diff = diffs[i % diffs.length];
   const sheriffOn = count === "12" ? true : (i % 2 === 1);
-  const guardOn = count === "12" ? true : (Number(count) >= 8 && (prefRole === "guard" || i % 3 === 0));
+  const guardOn = variant === "lone_wolf_king" || count === "12" ? true : (Number(count) >= 8 && (prefRole === "guard" || i % 3 === 0));
 
   vm.runInContext(`
     el("selectModeCount").value = ${JSON.stringify(count)};
@@ -235,12 +262,17 @@ for (let i = 0; i < 60; i++) {
     el("selectAiDifficulty").value = ${JSON.stringify(diff)};
     el("chkSheriffMode").checked = ${JSON.stringify(sheriffOn)};
     if (el("chkGuardMode")) el("chkGuardMode").checked = ${JSON.stringify(guardOn)};
+    state.activeVariant = ${JSON.stringify(variant)};
     voice.enabled = false;
     state.autoPlay = false;
     if (typeof antiCheatMonitor !== "undefined") antiCheatMonitor.strictThrow = true;
     startNewGame();
     indieFlow.hideRoleDealRitual();
   `, ctx);
+  if (gState.match.variantMode !== variant) {
+    throw new Error(`Match ${i}: expected variantMode=${variant}, got ${gState.match.variantMode}`);
+  }
+  variantCounts[variant] += 1;
 
   let steps = 0;
   let sawPk = false;
@@ -294,7 +326,8 @@ for (let i = 0; i < 60; i++) {
         ctx.proceedToNightWitch();
       }
     } else if (ph === "NIGHT_WITCH" && pSelf && pSelf.alive && pSelf.role === "witch") {
-      if (gState.match.witchPotions.purify && gState.match.day >= 2 && aliveOthers.length) {
+      const canPurifyTonight = gState.match.witchPotions.purify && (gState.match.day >= 2 || gState.match.variantMode === "twin_tea");
+      if (canPurifyTonight && aliveOthers.length) {
         gState.selectedSeatId = aliveOthers[0].id;
         gState.match.nightState.witchPoisonTarget = aliveOthers[0].id;
         gState.match.witchPotions.purify = false;
@@ -419,4 +452,4 @@ for (let i = 0; i < 60; i++) {
   }
 }
 
-console.log(`[OK] 60-match full-game fuzz & invariant suite PASSED! (goodWins=${goodWins}, wolfWins=${wolfWins}, pkMatches=${pkTriggeredMatches}, maxDays=${maxDaysSeen})`);
+console.log(`[OK] 60-match deterministic multi-variant fuzz & invariant suite PASSED! (goodWins=${goodWins}, wolfWins=${wolfWins}, pkMatches=${pkTriggeredMatches}, maxDays=${maxDaysSeen}, variants=${JSON.stringify(variantCounts)})`);

@@ -194,7 +194,7 @@ function evaluateRoleMission() {
     }
     const awText = mis.title + "即時覺醒：" + (mis.awakenDesc || "本局獲得額外微能力加持");
     if (typeof addLog === "function") {
-      addLog({ kind: "blessing", title: "角色密令覺醒 · " + awText, text: "" });
+      addLog({ kind: "blessing", isPrivate: true, title: "角色密令覺醒 · " + awText, text: "" });
     }
     if (typeof showToast === "function") {
       showToast("密令覺醒｜" + awText, "emerald");

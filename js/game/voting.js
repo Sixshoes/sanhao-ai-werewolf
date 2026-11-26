@@ -324,7 +324,7 @@ function finalizeVoteRound(playerTargetId) {
     }
   });
   if (guardBonusUsedThisRound) {
-    addLog({ kind: "blessing", title: "護心屏風覺醒生效：你本輪獲得 +0.5 票暗中護航權重。", text: "" });
+    addLog({ kind: "blessing", isPrivate: true, title: "護心屏風覺醒生效：你本輪獲得 +0.5 票暗中護航權重。", text: "" });
   }
 
   state.match.convenienceRallyTargetId = null;
@@ -528,7 +528,7 @@ function finalizeVoteRound(playerTargetId) {
       if (playerVotedOutWolf) {
         state.match.harmonyScore = clamp(state.match.harmonyScore + 12, 0, 100);
         spawnFx(getPlayerId(), "清茗賞茶 +12", "#fbbf24");
-        addLog({ kind: "blessing", title: "清茗奉茶公道席：精準請離酸民狼，全場友善度額外 +12。", text: "" });
+        addLog({ kind: "blessing", isPrivate: true, title: "清茗奉茶公道席：精準請離酸民狼，全場友善度額外 +12。", text: "" });
         if (typeof orchestrator !== "undefined") orchestrator.emit("harmony:changed", { score: state.match.harmonyScore });
       }
     }
@@ -536,7 +536,7 @@ function finalizeVoteRound(playerTargetId) {
 
     function continueAfterVoteSheriff() {
       const aliveWolvesAfterOut = getAliveSeats().filter(function (s) { return s.team === "wolf"; }).length;
-      const canWkShot = Boolean(outSeat.isWolfKing && aliveWolvesAfterOut > 0);
+      const canWkShot = Boolean(outSeat.isWolfKing && (aliveWolvesAfterOut > 0 || state.match.variantMode === "lone_wolf_king"));
       if (outSeat.role === "hunter" || canWkShot) {
         state.match.pendingVotedHunterId = outSeat.id;
         voice.speakHost(canWkShot
@@ -613,7 +613,7 @@ function finalizeVoteRound(playerTargetId) {
       }
     }
 
-    const canWkShotOut = Boolean(outSeat.isWolfKing && getAliveSeats().some(function (s) { return s.team === "wolf"; }));
+    const canWkShotOut = Boolean(outSeat.isWolfKing && (getAliveSeats().some(function (s) { return s.team === "wolf"; }) || state.match.variantMode === "lone_wolf_king"));
     if (outSeat.role === "hunter" || canWkShotOut) {
       continueAfterVoteSheriff();
       return;
@@ -2830,15 +2830,15 @@ function advanceSheriffSpeechTurn() {
   tryGenerateGeminiSheriffSpeech(cand, ctx.spokenSpeeches, built, { aiBluffWithdraw: aiBluffWithdraw })
     .then(function (liveText) {
       if (shCueTimer) clearTimeout(shCueTimer);
-      if (state._sheriffTurnSeq === shSeq) state.speakingInFlight = false;
       if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epSh)) return;
+      if (state._sheriffTurnSeq === shSeq) state.speakingInFlight = false;
       if (!state.match || state.match.phase !== "SHERIFF_ELECTION" || state.match.sheriffElectionCtx !== ctx || ctx.activeReelSeatId !== cand.id) return;
       commitAiSheriffSpeech(liveText || fallbackFinalText);
     })
     .catch(function () {
       if (shCueTimer) clearTimeout(shCueTimer);
-      if (state._sheriffTurnSeq === shSeq) state.speakingInFlight = false;
       if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epSh)) return;
+      if (state._sheriffTurnSeq === shSeq) state.speakingInFlight = false;
       if (!state.match || state.match.phase !== "SHERIFF_ELECTION" || state.match.sheriffElectionCtx !== ctx || ctx.activeReelSeatId !== cand.id) return;
       commitAiSheriffSpeech(fallbackFinalText);
     });
@@ -3232,7 +3232,6 @@ function finalizeSheriffElectionWinner(chosenCandId, opts) {
     } else {
       m.sheriffBadgeFlow = null;
     }
-    m.stats.sheriffPassed = (m.stats.sheriffPassed || 0) + 1;
     if (winner.id === pid && ctx.playerRunning) {
       m.stats.sheriffDramaWins = (m.stats.sheriffDramaWins || 0) + 1;
     }
@@ -3402,15 +3401,15 @@ function resolveSheriffElectionAction(actionOrVoteId) {
     if (!Array.isArray(ctx.withdrawnIds)) ctx.withdrawnIds = [];
     if (ctx.withdrawnIds.indexOf(pid) === -1) ctx.withdrawnIds.push(pid);
     if (!Array.isArray(ctx.dramaEvents)) ctx.dramaEvents = [];
-    // Guardrail: cleanly clear stale audio/prefetch on withdraw!
-    if (typeof orchestrator !== "undefined" && typeof orchestrator.bumpInterruptEpoch === "function") {
-      orchestrator.bumpInterruptEpoch("sheriff_withdraw");
-    }
-    if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
+    // Guardrail: cleanly clear stale audio/prefetch on withdraw ONLY when interrupting player's own turn (never abort in-flight AI speech)!
     if (wasPlayerTurn) {
+      if (typeof orchestrator !== "undefined" && typeof orchestrator.bumpInterruptEpoch === "function") {
+        orchestrator.bumpInterruptEpoch("sheriff_withdraw");
+      }
       if (typeof stopTypewriterOnly === "function") stopTypewriterOnly();
       if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
     }
+    if (typeof bumpTableStateRev === "function") bumpTableStateRev(false);
     const topAi = ctx.candidateIds.map(getSeat).filter(Boolean)[0];
     if (topAi) {
       const smirkLine = fmtSeatNum(topAi.id) + "號 " + topAi.name + " 笑道：「詐完身分便拱手退水了嗎？那這枚警徽我就笑納了。」";
@@ -3455,7 +3454,7 @@ function startSheriffOrderPick(arg) {
       startDayDiscussion(typeof arg === "string" ? arg : "", dir ? { forcedDir: dir } : undefined);
     };
   const ffOrd = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-  if (!state.sheriffMode || !sh || !sh.alive || sh.id !== getPlayerId() || ffOrd) {
+  if (!state.sheriffMode || !sh || !sh.alive || sh.id !== getPlayerId() || ffOrd || state.autoPlay) {
     onPicked(null);
     return false;
   }

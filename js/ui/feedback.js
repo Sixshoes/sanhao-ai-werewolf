@@ -6,7 +6,7 @@
 
 const FEEDBACK_CONFIG = {
   githubOwner: "",
-  githubRepo: "sanhao-ai-werewolf",
+  githubRepo: "",
   // 若未來希望靜態網頁免登入 GitHub 也能靜默收件，可於此貼上 Formspree / Google Apps Script Webhook 網址
   webhookUrl: "",
   storageKey: "sanhao_feedback_history_v1",
@@ -85,9 +85,9 @@ function collectFeedbackDiagnostics() {
   const aiEngine = (typeof state !== "undefined" && state.localLlmModel)
     ? ("Ollama:" + state.localLlmModel)
     : ((typeof state !== "undefined" && state.geminiApiKey)
-      ? ("Gemini:" + (state.geminiModel || "gemini-2.5-flash"))
+      ? ("Gemini:" + (state.geminiModel || "gemini-4-hydrogen"))
       : ((typeof isServerGeminiProxyActive === "function" && isServerGeminiProxyActive())
-        ? ("CloudGemini:" + (state.serverGeminiModel || "gemini-2.5-flash"))
+        ? ("CloudGemini:" + (state.serverGeminiModel || "gemini-4-hydrogen"))
         : "離線規則"));
   const w = typeof window !== "undefined" ? (window.innerWidth || 0) : 0;
   const h = typeof window !== "undefined" ? (window.innerHeight || 0) : 0;
@@ -101,7 +101,7 @@ function collectFeedbackDiagnostics() {
     : "未開局或已遮蔽";
 
   return {
-    version: "v20.0 (公測 3.5)",
+    version: "v24.2.14",
     timestamp: new Date().toISOString(),
     started: Boolean(m.started),
     phase: String(m.phase || "LOBBY"),

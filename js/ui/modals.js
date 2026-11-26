@@ -291,7 +291,8 @@ function renderVoteSheetIntoBody() {
       let dayVoteLine = "";
       if (dayVoteRec.length > 0) {
         const lastRound = dayVoteRec[dayVoteRec.length - 1];
-        const maxV = Math.max.apply(null, Object.values(lastRound.tallies || { _: 0 }));
+        const tallyVals = Object.values(lastRound.tallies || {});
+        const maxV = Math.max.apply(null, tallyVals.length ? tallyVals : [0]);
         const topK = Object.keys(lastRound.tallies || {}).filter(function (k) { return lastRound.tallies[k] === maxV && maxV > 0; });
         if (lastRound.outId) {
           dayVoteLine = '<div class="text-amber-200">第 ' + nr.day + ' 天公投請離：' + escapeHtml(seatTag(lastRound.outId)) + '（' + maxV + ' 票）</div>';

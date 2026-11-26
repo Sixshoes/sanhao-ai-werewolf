@@ -6646,6 +6646,7 @@ body.craft-ui.theme-day .fourg-deck-head.is-previewing {
 body.craft-ui.hero-showcase-active #canvasStageWrap {
   height: 100dvh;
   min-height: 100dvh;
+  max-height: none;
 }
 
 @media (max-width: 820px) and (min-width: 540px) {
@@ -11351,8 +11352,12 @@ body.theme-daylight #quickSpeechChips .play-card-btn.card-evidence .play-card-st
   color: #912c20;
 }
 
+body.craft-ui.theme-daylight .rephrase-tray,
 body.theme-daylight #rephraseChoicesTray {
-  border-top-color: rgba(116, 92, 62, 0.18);
+  background: rgba(249, 243, 230, 0.96);
+  border-color: rgba(154, 114, 48, 0.38);
+  border-top-color: rgba(116, 92, 62, 0.24);
+  color: #2b221a;
 }
 
 body.theme-daylight #rephraseTrayHint {
@@ -11372,6 +11377,60 @@ body.theme-daylight #rephraseSlipsGrid .rephrase-slip-btn {
 body.theme-daylight #rephraseSlipsGrid .rephrase-slip-btn:hover {
   background: #f5ebd8;
   border-color: rgba(154, 107, 39, 0.54);
+}
+
+body.craft-ui.theme-daylight .director-choice-bar {
+  background: rgba(236, 246, 240, 0.78);
+  border-top: 1px solid rgba(44, 103, 83, 0.26);
+  color: #19543f;
+}
+
+body.craft-ui.theme-daylight .director-choice-bar span {
+  color: #19543f;
+}
+
+body.craft-ui.theme-daylight .director-choice-bar button {
+  background: rgba(44, 103, 83, 0.13);
+  border: 1px solid rgba(44, 103, 83, 0.42);
+  color: #154a37;
+}
+
+body.craft-ui.theme-daylight .director-choice-bar button:hover {
+  background: rgba(44, 103, 83, 0.24);
+  color: #0d3527;
+}
+
+body.craft-ui.theme-daylight .target-react-card {
+  background: rgba(252, 248, 240, 0.96);
+  border-left-color: rgba(154, 107, 39, 0.56);
+  color: #2c1e14;
+  box-shadow: 0 4px 12px rgba(52, 36, 18, 0.12);
+}
+
+body.craft-ui.theme-daylight .target-react-card.is-accuse {
+  background: rgba(253, 242, 240, 0.96);
+  border-left-color: rgba(168, 50, 38, 0.68);
+}
+
+body.craft-ui.theme-daylight .target-react-card.is-trust {
+  background: rgba(238, 248, 243, 0.96);
+  border-left-color: rgba(36, 106, 80, 0.64);
+}
+
+body.craft-ui.theme-daylight .target-react-badge {
+  color: #7c4e12;
+}
+
+body.craft-ui.theme-daylight .target-react-card.is-accuse .target-react-badge {
+  color: #9e241b;
+}
+
+body.craft-ui.theme-daylight .target-react-card.is-trust .target-react-badge {
+  color: #185a42;
+}
+
+body.craft-ui.theme-daylight .target-react-quote {
+  color: #46372a;
 }
 
 body.theme-daylight #panelPlayerSpeech #quickFreeInput,
@@ -14812,6 +14871,13 @@ body.craft-ui.theme-twilight .play-card-preview {
     padding: 6px 11px;
     border-radius: 9px;
     font-size: 13px;
+  }
+
+  body.screen-ingame #cornerFourGDeck .fourg-fan-tray {
+    left: auto;
+    right: 0;
+    width: max-content;
+    transform-origin: bottom right;
   }
 
   /* Clean Phone Speaker Header: Zero double ellipsis, crisp single-line name + Pause/Replay */

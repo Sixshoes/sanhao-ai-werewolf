@@ -172,9 +172,15 @@ class ServerTestCase(unittest.TestCase):
     def test_security_blocks_dotfiles_and_source(self):
         for blocked in (
             "/.gitignore",
+            "/.env",
             "/.tts_cache/",
             "/.venv/",
             "/server.py",
+            "/server.py#",
+            "/Server.py",
+            "/api/gemini.js",
+            "/api/tts.js",
+            "/API/tts.js",
             "/tests/smoke.mjs",
             "/tools/blender_sanctuary_guide.py",
             "/__pycache__/",
@@ -182,7 +188,31 @@ class ServerTestCase(unittest.TestCase):
             "/assets/../server.py",
         ):
             st, _, _ = dispatch_handler("GET", blocked)
-            self.assertEqual(st, 403, f"Expected 403 for {blocked}, got {st}")
+            self.assertEqual(st, 403, f"Expected 403 for GET {blocked}, got {st}")
+
+        for head_blocked in ("/.env", "/server.py", "/Server.py", "/api/tts.js"):
+            st_h, _, _ = dispatch_handler("HEAD", head_blocked)
+            self.assertEqual(st_h, 403, f"Expected 403 for HEAD {head_blocked}, got {st_h}")
+
+        st_head_ok, _, head_body = dispatch_handler("HEAD", "/ai.html")
+        self.assertEqual(st_head_ok, 200)
+        self.assertEqual(head_body, b"")
+
+        st_origin_null_tts, _, _ = dispatch_handler(
+            "POST",
+            "/api/tts",
+            body=b'{"text":"hi"}',
+            headers={"Origin": "null"},
+        )
+        self.assertEqual(st_origin_null_tts, 403)
+
+        st_origin_null_gem, _, _ = dispatch_handler(
+            "POST",
+            "/api/gemini",
+            body=b'{"prompt":"hi"}',
+            headers={"Origin": "null"},
+        )
+        self.assertEqual(st_origin_null_gem, 403)
 
     def test_tts_key_lock_consistency(self):
         lk_a1 = server.get_tts_key_lock("same_key_test")

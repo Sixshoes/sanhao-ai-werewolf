@@ -370,10 +370,17 @@ const stage3d = {
       if (!this._ctxLostBound && typeof canvas3d.addEventListener === "function") {
         this._ctxLostBound = true;
         const self3d = this;
-        canvas3d.addEventListener("webglcontextlost", function (ev) {
-          if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+        canvas3d.addEventListener("webglcontextlost", function () {
           self3d.failed = true;
           self3d.ready = false;
+          if (self3d.showcaseMode) self3d.setShowcaseMode(false);
+          self3d.avatarQueue = [];
+          self3d.avatarQueuedKeys = {};
+          self3d.avatarLoadingKeys = {};
+          self3d.avatarActiveLoads = 0;
+          self3d.avatarTotalQueued = 0;
+          self3d.avatarDoneCount = 0;
+          self3d.updateVrmLoadIndicator();
           state.viewMode = "2d";
           self3d.applyBodyModeClass();
           if (typeof updateAllUI === "function") updateAllUI();
@@ -480,7 +487,7 @@ const stage3d = {
   },
 
   setSceneTheme: function (themeKey, opts) {
-    const next = themeKey === "celestial" ? "celestial" : "linmei";
+    const next = themeKey === "celestial" ? "celestial" : "academy";
     state.sceneTheme = next;
     if (this.scene && this.env && typeof apply3DSceneTheme === "function") {
       apply3DSceneTheme(this.scene, this.env, next);
@@ -504,7 +511,7 @@ const stage3d = {
   },
 
   toggleSceneTheme: function () {
-    this.setSceneTheme(state.sceneTheme === "celestial" ? "linmei" : "celestial");
+    this.setSceneTheme(state.sceneTheme === "celestial" ? "academy" : "celestial");
   },
 
   raycastIdCard: function (clientX, clientY) {
@@ -524,7 +531,7 @@ const stage3d = {
     const p = getPlayerSeat();
     const pRoleDef = (typeof getSeatRoleDef === "function" ? getSeatRoleDef(p) : null) || (p && ROLE_DEFS[p.role]);
     const rName = (pRoleDef && !state.hidePlayerRole) ? pRoleDef.name : "已遮蔽";
-    showToast(state.cardPeek3D ? ("🃏 翻開 3D 底牌：你的身分是「" + rName + "」") : "🃏 已蓋回 3D 底牌", "emerald");
+    showToast(state.cardPeek3D ? ("翻開 3D 底牌：你的身分是「" + rName + "」") : "已蓋回 3D 底牌", "emerald");
   },
 
   cycleCameraPreset: function () {
@@ -743,14 +750,14 @@ const stage3d = {
     return this.raycaster.intersectObject(this.env.lotusHitMesh, false).length > 0;
   },
 
-  raycastGuishan: function (clientX, clientY) {
-    if (!this.isActive() || !this.raycaster || !this.env || !this.env.guishanHitMesh) return false;
+  raycastCloudIsle: function (clientX, clientY) {
+    if (!this.isActive() || !this.raycaster || !this.env || !this.env.cloudIsleHitMesh) return false;
     const ndc = this.getNdcFromClient(clientX, clientY);
     this.raycaster.setFromCamera(ndc, this.camera);
-    return this.raycaster.intersectObject(this.env.guishanHitMesh, false).length > 0;
+    return this.raycaster.intersectObject(this.env.cloudIsleHitMesh, false).length > 0;
   },
 
-  interactWithGuishan: function () {
+  interactWithCloudIsle: function () {
     if (!this.isActive()) return;
     sound.playBlessing();
     showToast("遠眺書院外的層疊雲海與遠山小島：在山城茶席品茗推理，心曠神怡。", "emerald");
@@ -782,6 +789,7 @@ const stage3d = {
     const panel = el("heroShowcaseOverlay");
     if (panel) panel.classList.toggle("hidden", !this.showcaseMode);
     if (this.showcaseMode) {
+      if (typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
       if (state.viewMode !== "3d") this.setViewMode("3d");
       this.closeUpSeatId = null;
       this.camPreset = "cinema";
@@ -881,7 +889,26 @@ const stage3d = {
       this.setHeroVisualMode("sculpt3d");
       showToast("已切回內建二次元 3D 角色「清茗」", "emerald");
     } else if (this.seats && this.seats.slots[tgt] && typeof setSeatVisualMode === "function") {
-      setSeatVisualMode(this.seats.slots[tgt], "sculpt3d");
+      const actor = this.seats.slots[tgt];
+      const wasCustom = Boolean(actor.boundModelSlug && actor.boundModelSlug.indexOf("custom:") === 0);
+      const prevAvatar = actor.vrmAvatar;
+      if (actor.vrmMountGroup) {
+        while (actor.vrmMountGroup.children.length > 0) {
+          const oldChild = actor.vrmMountGroup.children[0];
+          actor.vrmMountGroup.remove(oldChild);
+          this.disposeObject3D(oldChild, prevAvatar);
+        }
+      } else if (prevAvatar && prevAvatar.root) {
+        this.disposeObject3D(prevAvatar.root, prevAvatar);
+      }
+      actor.vrmAvatar = null;
+      actor.boundModelSlug = "";
+      actor.boundAvatarKey = "";
+      actor._vrmUpdatedOnce = false;
+      setSeatVisualMode(actor, "sculpt3d");
+      if (wasCustom && typeof getStageSeatListFor3D === "function") {
+        this.syncSeatAvatars(getStageSeatListFor3D());
+      }
       const s = typeof getSeat === "function" ? getSeat(tgt) : null;
       showToast("已切回 " + fmtSeatNum(tgt) + "號 " + (s ? s.name : "") + " 的內建動漫 3D 造型", "emerald");
     }
@@ -973,7 +1000,7 @@ const stage3d = {
         });
       }
     }
-    this.hero.vrmAvatar = (prep && prep.isVrm) ? prep : prep;
+    this.hero.vrmAvatar = (prep && prep.isVrm) ? prep : null;
     this.hero.customGlbBaseY = prep ? prep.baseY : (mdl.position.y || 0.18);
     this.hero.customGlbRoot = mdl;
     this.hero.root.add(mdl);
@@ -1095,6 +1122,29 @@ const stage3d = {
     try {
       const json = gltf.parser.json;
       const ext = json && json.extensions ? json.extensions : null;
+      const isResourceUsedInScene = function (targetTex, targetImg) {
+        let used = false;
+        if (gltf.scene && typeof gltf.scene.traverse === "function") {
+          gltf.scene.traverse(function (node) {
+            if (used || !node || !node.material) return;
+            const mats = Array.isArray(node.material) ? node.material : [node.material];
+            for (let mi = 0; mi < mats.length; mi++) {
+              const m = mats[mi];
+              if (!m) continue;
+              const maps = ["map", "normalMap", "bumpMap", "emissiveMap", "roughnessMap", "metalnessMap", "aoMap", "alphaMap"];
+              for (let ki = 0; ki < maps.length; ki++) {
+                const mt = m[maps[ki]];
+                if (!mt) continue;
+                if ((targetTex && mt === targetTex) || (targetImg && mt.image === targetImg)) {
+                  used = true;
+                  return;
+                }
+              }
+            }
+          });
+        }
+        return used;
+      };
       let texIdx = null;
       if (ext && ext.VRM && ext.VRM.meta && typeof ext.VRM.meta.texture === "number") {
         texIdx = ext.VRM.meta.texture;
@@ -1102,14 +1152,32 @@ const stage3d = {
         const imgIdx = ext.VRMC_vrm.meta.thumbnailImage;
         if (typeof gltf.parser.getDependency === "function") {
           gltf.parser.getDependency("image", imgIdx).then(function (img) {
-            if (img) stage3d._canvasEncodePortrait(personaKey, img);
+            if (!img) return;
+            try {
+              stage3d._canvasEncodePortrait(personaKey, img);
+            } finally {
+              if (!isResourceUsedInScene(null, img) && typeof ImageBitmap === "function" && img instanceof ImageBitmap && typeof img.close === "function") {
+                try { img.close(); } catch (e) { }
+              }
+            }
           }).catch(function () { });
         }
         return null;
       }
       if (typeof texIdx === "number" && typeof gltf.parser.getDependency === "function") {
         gltf.parser.getDependency("texture", texIdx).then(function (tex) {
-          if (tex && tex.image) stage3d._canvasEncodePortrait(personaKey, tex.image);
+          if (!tex) return;
+          try {
+            if (tex.image) stage3d._canvasEncodePortrait(personaKey, tex.image);
+          } finally {
+            if (!isResourceUsedInScene(tex, tex.image)) {
+              if (typeof stage3dVrm !== "undefined" && typeof stage3dVrm.disposeTextureResource === "function") {
+                stage3dVrm.disposeTextureResource(tex);
+              } else if (typeof tex.dispose === "function") {
+                try { tex.dispose(); } catch (e) { }
+              }
+            }
+          }
         }).catch(function () { });
       }
     } catch (e) { }
@@ -1151,7 +1219,7 @@ const stage3d = {
 
   pumpAvatarQueue: function () {
     const self = this;
-    if (typeof THREE.GLTFLoader !== "function") return;
+    if (this.failed || !this.ready || typeof THREE.GLTFLoader !== "function") return;
     if (this.avatarActiveLoads >= 1 || this.avatarQueue.length === 0) {
       this.updateVrmLoadIndicator();
       return;
@@ -1176,31 +1244,42 @@ const stage3d = {
       delete self.avatarQueuedKeys[job.key];
       self.avatarActiveLoads = Math.max(0, self.avatarActiveLoads - 1);
       self.avatarDoneCount += 1;
+      if (self.failed || !self.ready) {
+        if (gltf && gltf.scene) self.disposeObject3D(gltf.scene);
+        self.updateVrmLoadIndicator();
+        return;
+      }
       const latestSeat = typeof getStageSeatListFor3D === "function"
         ? getStageSeatListFor3D().find(function (x) { return x.id === job.seat.id; })
         : job.seat;
-      const latestSlug = latestSeat ? stage3dVrm.getSeatModelSlug(latestSeat) : job.slug;
+      const curActor = (self.seats && self.seats.slots) ? self.seats.slots[job.seat.id] : null;
+      const hasCustom = Boolean(curActor && curActor.boundModelSlug && curActor.boundModelSlug.indexOf("custom:") === 0);
+      const latestSlug = latestSeat ? stage3dVrm.getSeatModelSlug(latestSeat) : "";
       const latestAvatarKey = latestSlug + "|" + (latestSeat && latestSeat.name ? latestSeat.name : "");
-      if (latestSlug === job.slug && (!job.avatarKey || latestAvatarKey === job.avatarKey)) {
+      if (!hasCustom && latestSeat && latestSlug === job.slug && (!job.avatarKey || latestAvatarKey === job.avatarKey)) {
         self.attachSeatAvatar(job.seat.id, gltf, job.url.split("/").pop(), true, job.slug, latestSeat);
       } else if (gltf && gltf.scene) {
-        // Stale in-flight load after seat shuffle: dispose immediately so GPU textures & ImageBitmaps never leak!
+        // Stale in-flight load after seat shuffle or custom VRM upload: dispose immediately so GPU textures & ImageBitmaps never leak!
         self.disposeObject3D(gltf.scene);
       }
       self.updateVrmLoadIndicator();
-      setTimeout(function () { self.pumpAvatarQueue(); }, 50);
+      if (!self.failed && self.ready) {
+        setTimeout(function () { self.pumpAvatarQueue(); }, 50);
+      }
     }, undefined, function () {
       delete self.avatarLoadingKeys[job.key];
       delete self.avatarQueuedKeys[job.key];
       self.avatarActiveLoads = Math.max(0, self.avatarActiveLoads - 1);
       self.avatarDoneCount += 1;
       self.updateVrmLoadIndicator();
-      setTimeout(function () { self.pumpAvatarQueue(); }, 50);
+      if (!self.failed && self.ready) {
+        setTimeout(function () { self.pumpAvatarQueue(); }, 50);
+      }
     });
   },
 
   syncSeatAvatars: function (seatList) {
-    if (this.isSoftwareRenderer) return;
+    if (this.failed || !this.ready || this.isSoftwareRenderer) return;
     if (!this.seats || !seatList || typeof stage3dVrm === "undefined" || typeof THREE.GLTFLoader !== "function") return;
     if (!this.avatarManifest || !Object.keys(this.avatarManifest).length) return;
     const self = this;
@@ -1227,13 +1306,13 @@ const stage3d = {
       desiredBySeatId[s.id] = item;
     });
 
-    // Step 2: Drop stale queued jobs for seats whose persona changed across startNewGame() shuffles!
+    // Step 2: Drop stale queued jobs for seats dropped in smaller matches or whose persona changed across shuffles!
     if (this.avatarQueue && this.avatarQueue.length) {
       const kept = [];
       for (let qi = 0; qi < this.avatarQueue.length; qi++) {
         const qj = this.avatarQueue[qi];
         const want = qj && qj.seat ? desiredBySeatId[qj.seat.id] : null;
-        if (want && qj.avatarKey && qj.avatarKey !== want.avatarKey) {
+        if (!want || (qj.avatarKey && qj.avatarKey !== want.avatarKey)) {
           delete this.avatarQueuedKeys[qj.key];
           this.avatarTotalQueued = Math.max(0, (this.avatarTotalQueued || 0) - 1);
           continue;
@@ -1243,10 +1322,13 @@ const stage3d = {
       this.avatarQueue = kept;
     }
 
-    // Step 3: Harvest mounted VRMs from seats whose persona shuffled into reusable avatarPool (0ms swap, zero leaks!)
-    desiredList.forEach(function (item) {
-      const actor = item.actor;
-      if (actor.vrmAvatar && actor.boundAvatarKey && actor.boundAvatarKey !== item.avatarKey) {
+    // Step 3: Harvest mounted VRMs from all slots (including inactive higher seats after downsizing) into reusable avatarPool
+    Object.keys(self.seats.slots).forEach(function (slotKey) {
+      const actor = self.seats.slots[slotKey];
+      if (!actor || !actor.vrmAvatar || !actor.boundAvatarKey) return;
+      if (actor.boundModelSlug && actor.boundModelSlug.indexOf("custom:") === 0) return;
+      const want = desiredBySeatId[slotKey];
+      if (!want || actor.boundAvatarKey !== want.avatarKey) {
         self.stashSeatAvatarInPool(actor);
       }
     });
@@ -1429,6 +1511,10 @@ const stage3d = {
       const self = this;
       loader.load(url, function (gltf) {
         URL.revokeObjectURL(url);
+        if (self.failed || !self.ready) {
+          if (gltf && gltf.scene) self.disposeObject3D(gltf.scene);
+          return;
+        }
         if (tgt === "hero") {
           self.attachNormalizedHeroGlb(gltf, file.name, false, true);
         } else {
@@ -1489,7 +1575,7 @@ const stage3d = {
     if (hintEl && this.isActive()) {
       hintEl.textContent = this.camPreset === "firstperson"
         ? "坐席視角：拖曳自由轉頭｜滾輪微調焦距｜雙擊空地回正｜點擊左右箭頭快速看鄰座"
-        : "拖曳空地可 360° 環視山城｜點擊角色、桌心蓮花或遠方龜山島互動";
+        : "拖曳空地可 360° 環視山城｜點擊角色、桌心蓮花或遠方山海雲島互動";
     }
     const labelMap = {
       cinema: "電影自動運鏡",
@@ -1523,7 +1609,7 @@ const stage3d = {
     this.syncCameraPresetButtons();
     const hint = el("dragGestureHint");
     if (hint && active && !state.match.started) {
-      hint.textContent = "拖曳空地可 360° 環視山城｜點擊角色、桌心蓮花或遠方龜山島互動";
+      hint.textContent = "拖曳空地可 360° 環視山城｜點擊角色、桌心蓮花或遠方山海雲島互動";
     }
   },
 
@@ -1805,7 +1891,7 @@ const stage3d = {
           isLandscapeCam ? (2.35 + largeTableR * 0.68) : (1.35 + largeTableR * 0.35)
         );
       } else if (!state.match.started || p === "LOBBY") {
-        // Theatrical Indie Title Screen Framing: gentle sweep showing intimate table + Qingming + layered mountains & Guishan Island
+        // Theatrical Indie Title Screen Framing: gentle sweep showing intimate table + Qingming + layered mountains & Cloud Isle
         o.targetYaw = -0.18 + Math.sin(f.tSec * 0.14) * 0.24;
         o.targetPitch = 0.34;
         o.targetRadius = 10.6 + largeTableR;

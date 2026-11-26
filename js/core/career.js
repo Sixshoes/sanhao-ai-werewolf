@@ -81,10 +81,36 @@ function loadCareerStats() {
     const raw = window.localStorage.getItem(CAREER_STORAGE_KEY);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return fallback;
-    return Object.assign(fallback, parsed, {
-      unlockedBadges: Array.isArray(parsed.unlockedBadges) ? parsed.unlockedBadges : []
-    });
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return fallback;
+    const toNonNegInt = function (v) {
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    };
+    const validBadgeIds = {};
+    ACHIEVEMENT_DEFS.forEach(function (def) { validBadgeIds[def.id] = true; });
+    const seenBadges = {};
+    const cleanBadges = [];
+    if (Array.isArray(parsed.unlockedBadges)) {
+      parsed.unlockedBadges.forEach(function (id) {
+        if (typeof id === "string" && validBadgeIds[id] && !seenBadges[id]) {
+          seenBadges[id] = true;
+          cleanBadges.push(id);
+        }
+      });
+    }
+    return {
+      gamesPlayed: toNonNegInt(parsed.gamesPlayed),
+      wins: toNonNegInt(parsed.wins),
+      goodWins: toNonNegInt(parsed.goodWins),
+      wolfWins: toNonNegInt(parsed.wolfWins),
+      totalGoodWords: toNonNegInt(parsed.totalGoodWords),
+      totalRewrites: toNonNegInt(parsed.totalRewrites),
+      bestCombo: toNonNegInt(parsed.bestCombo),
+      zeroToxicWins: toNonNegInt(parsed.zeroToxicWins),
+      spiritBetScore: toNonNegInt(parsed.spiritBetScore),
+      bestSpiritStreak: toNonNegInt(parsed.bestSpiritStreak),
+      unlockedBadges: cleanBadges
+    };
   } catch (e) {
     return fallback;
   }
@@ -208,22 +234,23 @@ function openCareerModal() {
   const body = el("careerModalBody");
   if (!modal || !body) return;
   const c = loadCareerStats();
-  const winRate = c.gamesPlayed > 0 ? Math.round((c.wins / c.gamesPlayed) * 100) : 0;
-  const unlockPct = ACHIEVEMENT_DEFS.length > 0 ? Math.round((c.unlockedBadges.length / ACHIEVEMENT_DEFS.length) * 100) : 0;
+  const esc = typeof escapeHtml === "function" ? escapeHtml : function (s) { return String(s); };
+  const winRate = c.gamesPlayed > 0 ? Math.max(0, Math.min(100, Math.round((c.wins / c.gamesPlayed) * 100))) : 0;
+  const unlockPct = ACHIEVEMENT_DEFS.length > 0 ? Math.max(0, Math.min(100, Math.round((c.unlockedBadges.length / ACHIEVEMENT_DEFS.length) * 100))) : 0;
 
   let html =
     '<div class="career-kpi-grid">' +
-      '<div class="career-kpi-cell"><div class="career-kpi-label">總對局</div><div class="career-kpi-val is-gold tabular-nums">' + c.gamesPlayed + '</div></div>' +
-      '<div class="career-kpi-cell"><div class="career-kpi-label">勝率</div><div class="career-kpi-val is-jade tabular-nums">' + winRate + '%</div></div>' +
-      '<div class="career-kpi-cell"><div class="career-kpi-label">說好話</div><div class="career-kpi-val is-indigo tabular-nums">' + c.totalGoodWords + '</div></div>' +
-      '<div class="career-kpi-cell"><div class="career-kpi-label">最高連擊</div><div class="career-kpi-val is-cinnabar tabular-nums">' + c.bestCombo + '</div></div>' +
+      '<div class="career-kpi-cell"><div class="career-kpi-label">總對局</div><div class="career-kpi-val is-gold tabular-nums">' + esc(String(c.gamesPlayed)) + '</div></div>' +
+      '<div class="career-kpi-cell"><div class="career-kpi-label">勝率</div><div class="career-kpi-val is-jade tabular-nums">' + esc(String(winRate)) + '%</div></div>' +
+      '<div class="career-kpi-cell"><div class="career-kpi-label">說好話</div><div class="career-kpi-val is-indigo tabular-nums">' + esc(String(c.totalGoodWords)) + '</div></div>' +
+      '<div class="career-kpi-cell"><div class="career-kpi-label">最高連擊</div><div class="career-kpi-val is-cinnabar tabular-nums">' + esc(String(c.bestCombo)) + '</div></div>' +
     '</div>' +
     '<div class="career-progress-wrap">' +
       '<div class="career-progress-head">' +
         '<span class="font-serif-craft font-bold text-amber-300">三好書院印記</span>' +
-        '<span class="tabular-nums text-[13px] text-slate-300">已解鎖 ' + c.unlockedBadges.length + ' / ' + ACHIEVEMENT_DEFS.length + '</span>' +
+        '<span class="tabular-nums text-[13px] text-slate-300">已解鎖 ' + esc(String(c.unlockedBadges.length)) + ' / ' + esc(String(ACHIEVEMENT_DEFS.length)) + '</span>' +
       '</div>' +
-      '<div class="career-progress-track"><div class="career-progress-fill" style="width:' + unlockPct + '%"></div></div>' +
+      '<div class="career-progress-track"><div class="career-progress-fill" style="width:' + esc(String(unlockPct)) + '%"></div></div>' +
     '</div>' +
     '<div class="career-seal-grid">';
 

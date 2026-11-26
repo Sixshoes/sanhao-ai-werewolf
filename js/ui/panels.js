@@ -52,8 +52,8 @@ function syncFocalCardChrome(p) {
       dragHint.textContent = devMode === "phone"
         ? "單指環視山城 · 雙指縮放 · 輕觸茶友與桌心蓮花"
         : (devMode === "tablet"
-          ? "單指環視山城 · 雙指縮放 · 輕觸茶友、蓮花或龜山島"
-          : "拖曳環視山城 · 滾輪縮放 · 輕點茶友、蓮花或龜山島");
+          ? "單指環視山城 · 雙指縮放 · 輕觸茶友、蓮花或山海雲島"
+          : "拖曳環視山城 · 滾輪縮放 · 輕點茶友、蓮花或山海雲島");
     } else if (p === "SHERIFF_ELECTION") {
       dragHint.textContent = "上警競選 · 依席輪流陳詞，警下票型將入排坑";
     } else if (p === "DAY_VOTE") {

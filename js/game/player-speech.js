@@ -461,7 +461,7 @@ function composePlayerPitSpeechText() {
   }
 
   const m = state.match;
-  const nightOut = Array.isArray(m.lastNightDeaths) ? m.lastNightDeaths : [];
+  const nightOut = Array.isArray(m.lastNightCasualties) ? m.lastNightCasualties : [];
   if (parts.length === 0 && m.day >= 2) {
     if (nightOut.length === 0) {
       parts.push("昨晚是平安夜（大機率奉茶師護人或守衛守中），我幫大家對齊一下今天盤面：");
@@ -1104,7 +1104,7 @@ function buildPlayerSmartBoardContext(player, sampleTarget, slotView, dualWorlds
   }
 
   const rivalSeerSeat = aliveOthers.find(function (s) { return s.claimedRole === "seer"; }) || null;
-  const nightDeaths = Array.isArray(m.lastNightDeaths) ? m.lastNightDeaths.filter(Boolean) : [];
+  const nightDeaths = Array.isArray(m.lastNightCasualties) ? m.lastNightCasualties.filter(Boolean) : [];
   const nightNote = m.day >= 2
     ? (nightDeaths.length === 0
       ? "昨晚平安夜（奉茶師救人或守衛守中）"
@@ -1305,7 +1305,8 @@ function preparePlayerSpeechPanel() {
     const svSeat = getSeat(player.savedSeatId);
     const svLbl = fmtSeatNum(player.savedSeatId) + "號" + (svSeat ? svSeat.name : "");
     const pushSeat = smart.contraSeat || sampleTarget;
-    const poisonNote = player.poisonUsed ? "清心醒神茶已交出" : "手上仍握有清心醒神茶威懾";
+    const poisonUsed = Boolean((state.match && state.match.witchPotions && !state.match.witchPotions.purify) || player.purifiedSeatId);
+    const poisonNote = poisonUsed ? "清心醒神茶已交出" : "手上仍握有清心醒神茶威懾";
     cards.push({
       tgKind: "deeds",
       tgTag: "奉茶師報銀水",

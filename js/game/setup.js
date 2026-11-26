@@ -63,8 +63,37 @@ function startJudgeShowcaseMatch() {
   if (typeof stage3d !== "undefined" && stage3d.showcaseMode && typeof stage3d.setShowcaseMode === "function") {
     stage3d.setShowcaseMode(false);
   }
+  if (typeof state._preSpectatorAutoPlay === "boolean") {
+    state._preSpectatorAutoPlay = null;
+  }
+  if (typeof state._preSpectatorFxPacing === "string") {
+    state.fxPacing = state._preSpectatorFxPacing;
+    state._preSpectatorFxPacing = null;
+    if (typeof document !== "undefined" && document.body && document.body.classList) {
+      document.body.classList.toggle("fx-pacing-fast", state.fxPacing === "fast");
+    }
+  }
   state.spectatorFastForward = false;
   state.autoPlay = false;
+  state.speakingInFlight = false;
+  state.selectedSeatId = null;
+  state.intelSeatId = null;
+  state.seerReveal = null;
+  state.voteResultPayload = null;
+  state.activeSpeakerId = null;
+  state.activeClash = null;
+  state.lastWordsCtx = null;
+  state.voteFlight = null;
+  closeSeatIntel();
+  closeRadialMenu();
+  if (typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
+  if (typeof clearCutInQueue === "function") clearCutInQueue();
+  if (el("quickFreeInput")) el("quickFreeInput").value = "";
+  if (el("playerSpeechInput")) el("playerSpeechInput").value = "";
+  if (el("lastWordsFreeInput")) el("lastWordsFreeInput").value = "";
+  if (el("btnQuickFreeSend")) el("btnQuickFreeSend").textContent = "陳詞";
+  if (el("speechThreeGoodBadge")) el("speechThreeGoodBadge").classList.add("hidden");
+  if (el("btnQuickInlineRewrite")) el("btnQuickInlineRewrite").classList.add("hidden");
   state.aiDifficulty = "normal";
   state.ruleDepth = "full";
   state.sheriffMode = true;
@@ -854,6 +883,7 @@ function checkAndHandleGameOver() {
 function finishMatch(winnerTeam, reason) {
   clearStepTimer();
   clearTransientMatchTimers();
+  if (typeof commitPendingSpeechLog === "function") commitPendingSpeechLog();
   if (typeof orchestrator !== "undefined") orchestrator.clearAllTimers();
   state.match.phase = "GAME_OVER";
   state.match.winner = winnerTeam;
@@ -900,7 +930,8 @@ function finishMatch(winnerTeam, reason) {
     orchestrator.dispatchAgent("GodViewAnalystAgent", { winnerTeam: winnerTeam, reason: reason });
     orchestrator.emit("match:ended", { winner: winnerTeam, reason: reason });
   }
-  if (typeof recordMatchCareer === "function") {
+  if (!state.match.judgeShowcase && !state.match._careerRecorded && typeof recordMatchCareer === "function") {
+    state.match._careerRecorded = true;
     recordMatchCareer(winnerTeam);
   }
   updateAllUI();
@@ -909,6 +940,7 @@ function finishMatch(winnerTeam, reason) {
 function finishEarlyAsSpectator(reason) {
   clearStepTimer();
   clearTransientMatchTimers();
+  if (typeof commitPendingSpeechLog === "function") commitPendingSpeechLog();
   if (typeof orchestrator !== "undefined") orchestrator.clearAllTimers();
   voice.stop();
   state.voteResultPayload = null;

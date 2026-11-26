@@ -1,7 +1,7 @@
 /**
  * 3D 電影級山海實景古亭與茶席場景引擎（Three.js r128）
  * 升級包含：
- * - 連續多稜線地形山巒＋反光太平洋海面＋動態龜山島燈塔＋分層流動雲海
+ * - 連續多稜線地形山巒＋反光太平洋海面＋動態雲海山島燈塔＋分層流動雲海
  * - 紅瓦白牆望海古亭（八柱花崗岩柱礎＋後側飛簷翹角屋瓦＋木格欄杆＋四座庭院石燈籠＋山城五葉松）
  * - 胡桃木茶桌搭配手工紫砂茶壺組＋雙層三好蓮花琉璃核心＋柔和散景微粒光暈＋三點電影冷暖補光
  */
@@ -422,7 +422,7 @@ function createSculptedMountainRing(innerR, outerR, maxHeight, mat, seedShift, b
     const radProfile = Math.sin(rt * Math.PI);
     for (let ai = 0; ai <= angSeg; ai++) {
       const ang = (ai / angSeg) * Math.PI * 2;
-      // Carve wide coastal valley facing Guishan Island, Cloud Sea & Pacific Ocean around -1.18 rad (NNE)
+      // Carve wide coastal valley facing the distant Cloud Isle, Cloud Sea & Pacific Ocean around -1.18 rad (NNE)
       const seaDelta = Math.atan2(Math.sin(ang + 1.18), Math.cos(ang + 1.18));
       const seaNotch = 1.0 - 0.90 * Math.exp(-(seaDelta * seaDelta) / 0.56);
 
@@ -915,7 +915,7 @@ function buildMossyCliffBoulder(x, y, z, sx, sy, sz, rotY, stoneTex) {
       const vz = pos.getZ(i);
       const bump = 1.0 + 0.09 * Math.sin(vx * 3.4 + seed) * Math.cos(vz * 3.1 - seed) + 0.05 * Math.sin(vy * 5.2 + vx * 2.7);
       pos.setXYZ(i, vx * bump, vy * bump, vz * bump);
-      // Smoothly blend dark mountain granite on flanks -> velvety Linmei emerald moss on upper facets
+      // Smoothly blend dark mountain granite on flanks -> velvety mountain emerald moss on upper facets
       const mossMix = clamp((vy - 0.14) / 0.58, 0, 1);
       const sr = 0.34, sg = 0.40, sb = 0.45;
       const mr = 0.25, mg = 0.46, mb = 0.32;
@@ -1164,8 +1164,8 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   env.terraceMesh = terrace;
   stage3dTextures.upgradeStoneWithPolyHavenCC0(env.terraceMat);
 
-  // Far Horizon: Grounded Guishan Island (龜山島) anchored into the Pacific sea-mist + Coastal Beacon Light!
-  const guishanGroup = new THREE.Group();
+  // Far Horizon: Grounded Cloud Isle (山海雲島) anchored into the Pacific sea-mist + Coastal Beacon Light!
+  const cloudIsleGroup = new THREE.Group();
   const islandMat = new THREE.MeshStandardMaterial({ color: 0x264458, roughness: 0.92, metalness: 0.04, transparent: true, opacity: 0.86 });
   const shellMain = new THREE.Mesh(new THREE.SphereGeometry(4.4, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.5), islandMat);
   shellMain.scale.set(1.65, 0.58, 0.78);
@@ -1181,24 +1181,24 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   );
   waterlineMist.rotation.x = -Math.PI * 0.5;
   waterlineMist.position.y = 0.05;
-  const guishanBeacon = new THREE.Mesh(
+  const cloudIsleBeacon = new THREE.Mesh(
     new THREE.SphereGeometry(0.28, 10, 8),
     new THREE.MeshBasicMaterial({ color: 0xffe49e, fog: false })
   );
-  guishanBeacon.position.set(6.0, 2.0, 0.25);
-  const guishanHit = new THREE.Mesh(new THREE.BoxGeometry(16, 6.5, 6.5), new THREE.MeshBasicMaterial({ visible: false }));
-  guishanHit.position.set(0, 1.8, 0);
-  guishanGroup.add(shellMain, headHill, tailHill, waterlineMist, guishanBeacon, guishanHit);
-  guishanGroup.scale.set(0.58, 0.52, 0.58);
-  guishanGroup.position.set(14.8, -3.08, -38.5);
-  guishanGroup.rotation.y = -0.24;
-  scene.add(guishanGroup);
-  env.guishanGroup = guishanGroup;
-  env.guishanHitMesh = guishanHit;
-  env.guishanMat = islandMat;
-  env.guishanBeacon = guishanBeacon;
+  cloudIsleBeacon.position.set(6.0, 2.0, 0.25);
+  const cloudIsleHit = new THREE.Mesh(new THREE.BoxGeometry(16, 6.5, 6.5), new THREE.MeshBasicMaterial({ visible: false }));
+  cloudIsleHit.position.set(0, 1.8, 0);
+  cloudIsleGroup.add(shellMain, headHill, tailHill, waterlineMist, cloudIsleBeacon, cloudIsleHit);
+  cloudIsleGroup.scale.set(0.58, 0.52, 0.58);
+  cloudIsleGroup.position.set(14.8, -3.08, -38.5);
+  cloudIsleGroup.rotation.y = -0.24;
+  scene.add(cloudIsleGroup);
+  env.cloudIsleGroup = cloudIsleGroup;
+  env.cloudIsleHitMesh = cloudIsleHit;
+  env.cloudIsleMat = islandMat;
+  env.cloudIsleBeacon = cloudIsleBeacon;
 
-  // Shimmering Lanyang Plain Valley Night Lights (Soft glowing bokeh orbs!)
+  // Shimmering Coastal Valley Night Lights (Soft glowing bokeh orbs!)
   const cityCount = 135;
   const cityPos = new Float32Array(cityCount * 3);
   for (let ci = 0; ci < cityCount; ci++) {
@@ -1210,7 +1210,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   }
   const cityGeo = new THREE.BufferGeometry();
   cityGeo.setAttribute("position", new THREE.BufferAttribute(cityPos, 3));
-  env.lanyangLights = new THREE.Points(
+  env.valleyLights = new THREE.Points(
     cityGeo,
     new THREE.PointsMaterial({
       color: 0xfcd34d,
@@ -1222,7 +1222,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
       depthWrite: false
     })
   );
-  scene.add(env.lanyangLights);
+  scene.add(env.valleyLights);
 
   const terraceTrim = new THREE.Mesh(
     new THREE.TorusGeometry(8.46, 0.055, 8, 8),
@@ -1634,7 +1634,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
 
   // 6B. Dual Switchable Garden Themes!
   // Theme A: 青嵐雅致書院風 (Qinglan Academy — Swaying Jade Bamboo Groves + Osmanthus & Mountain Sakura + Mossy Cliff Boulders)
-  const linmeiGardenGroup = new THREE.Group();
+  const academyGardenGroup = new THREE.Group();
   const bambooLeafTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createBambooLeafTexture === "function")
     ? stage3dTextures.createBambooLeafTexture()
     : null;
@@ -1654,7 +1654,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     [6.2, -0.60, -9.6, 1.22]
   ].forEach(function (bg, idx) {
     const grove = buildBambooGrove(bg[0], bg[1], bg[2], bg[3], bambooLeafTex);
-    linmeiGardenGroup.add(grove.group);
+    academyGardenGroup.add(grove.group);
     env.bambooGroves.push({ group: grove.group, canopy: grove.canopy, phase: idx * 1.12 });
   });
 
@@ -1665,7 +1665,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     [-8.9, -0.42, 5.4, 1.02, "sakura", sakuraTex]
   ].forEach(function (bt, idx) {
     const tree = buildBlossomTree(bt[0], bt[1], bt[2], bt[3], bt[4], wood, bt[5]);
-    linmeiGardenGroup.add(tree.group);
+    academyGardenGroup.add(tree.group);
     env.blossomTrees.push({ group: tree.group, canopy: tree.canopy, kind: bt[4], phase: idx * 1.55 });
   });
 
@@ -1679,10 +1679,10 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     [-0.6, -0.65, -10.0, 1.62, 0.76, 1.08, 0.2],
     [2.4, -0.62, -9.8, 1.22, 0.64, 0.98, 0.85]
   ].forEach(function (br) {
-    linmeiGardenGroup.add(buildMossyCliffBoulder(br[0], br[1], br[2], br[3], br[4], br[5], br[6], stone));
+    academyGardenGroup.add(buildMossyCliffBoulder(br[0], br[1], br[2], br[3], br[4], br[5], br[6], stone));
   });
-  scene.add(linmeiGardenGroup);
-  env.linmeiGardenGroup = linmeiGardenGroup;
+  scene.add(academyGardenGroup);
+  env.academyGardenGroup = academyGardenGroup;
 
   // Theme B: 空靈青綠山水仙境風 (Celestial Qinglü Wonderland — Floating Karst Spires + Jade Stepping Stones + Cloud Ribbon + Spirit Wisps)
   const celestialGardenGroup = new THREE.Group();
@@ -2325,7 +2325,7 @@ function build3DEnvironment(scene, renderer) {
     teaSteamPoints: null,
     teaSteamMeta: [],
     proceduralPavilionGroup: null,
-    linmeiGardenGroup: null,
+    academyGardenGroup: null,
     celestialGardenGroup: null,
     bambooGroves: [],
     blossomTrees: [],
@@ -2368,10 +2368,10 @@ function build3DEnvironment(scene, renderer) {
     oceanMat: null,
     oceanUniforms: null,
     oceanBumpTex: null,
-    guishanGroup: null,
-    guishanHitMesh: null,
-    guishanMat: null,
-    guishanBeacon: null,
+    cloudIsleGroup: null,
+    cloudIsleHitMesh: null,
+    cloudIsleMat: null,
+    cloudIsleBeacon: null,
     hemiLight: null,
     dirLight: null,
     rimLight: null,
@@ -2396,16 +2396,16 @@ function build3DEnvironment(scene, renderer) {
   build3DPavilionAndTable(scene, env, wood, stone, feltTex);
   build3DLotusAndAtmosphere(scene, env);
   build3DEnvironmentMap(renderer, scene, env);
-  apply3DSceneTheme(scene, env, (typeof state !== "undefined" && state.sceneTheme === "celestial") ? "celestial" : "linmei");
+  apply3DSceneTheme(scene, env, (typeof state !== "undefined" && state.sceneTheme === "celestial") ? "celestial" : "academy");
   return env;
 }
 
 function apply3DSceneTheme(scene, env, themeKey) {
   if (!env) return;
-  const tk = themeKey === "celestial" ? "celestial" : "linmei";
+  const tk = themeKey === "celestial" ? "celestial" : "academy";
   env.sceneThemeKey = tk;
   const isCel = tk === "celestial";
-  if (env.linmeiGardenGroup) env.linmeiGardenGroup.visible = !isCel;
+  if (env.academyGardenGroup) env.academyGardenGroup.visible = !isCel;
   if (env.celestialGardenGroup) env.celestialGardenGroup.visible = isCel;
 
   if (env.petals && env.petals.length) {
@@ -2428,7 +2428,7 @@ function apply3DMoodPalette(scene, env, moodKey) {
   const grad = g.createLinearGradient(0, 0, 0, 256);
   const isCel = env.sceneThemeKey === "celestial";
   if (moodKey === "day") {
-    // Luminous Morning Sky — Linmei Yilan Teal-Gold vs Celestial Qinglü Jade-Mist
+    // Luminous Morning Sky — Qinglan Academy Teal-Gold vs Celestial Qinglü Jade-Mist
     grad.addColorStop(0, isCel ? "#0ea5c6" : "#1da1f2");
     grad.addColorStop(0.42, isCel ? "#67e8f9" : "#7dd3fc");
     grad.addColorStop(0.75, isCel ? "#d8fcf6" : "#e0f7fa");
@@ -2534,7 +2534,7 @@ function apply3DMoodPalette(scene, env, moodKey) {
     env.fireflyPoints.material.color.setHex(isCel ? 0x99f6e4 : 0xd8b4fe);
     if (env.iblNightTex) scene.environment = env.iblNightTex;
   } else {
-    // Breathtaking Golden Hour Twilight (Linmei Academy) vs Ethereal Qinglü Dawn-Mist Twilight (Celestial)
+    // Breathtaking Golden Hour Twilight (Qinglan Academy) vs Ethereal Qinglü Dawn-Mist Twilight (Celestial)
     grad.addColorStop(0, isCel ? "#16466b" : "#1c3566");
     grad.addColorStop(0.44, isCel ? "#38849e" : "#4b5f9e");
     grad.addColorStop(0.78, isCel ? "#98d4cc" : "#d9895b");
@@ -2638,11 +2638,11 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     if (env.groundDisk) env.groundDisk.scale.set(psNow, 1, psNow);
     if (env.proceduralPavilionGroup) env.proceduralPavilionGroup.scale.set(psNow, 1, psNow);
     if (env.courtyardPropsGroup) env.courtyardPropsGroup.scale.set(psNow, 1, psNow);
-    if (env.linmeiGardenGroup) env.linmeiGardenGroup.scale.set(psNow, 1, psNow);
+    if (env.academyGardenGroup) env.academyGardenGroup.scale.set(psNow, 1, psNow);
     if (env.celestialGardenGroup) env.celestialGardenGroup.scale.set(psNow, 1, psNow);
   }
 
-  const desiredTheme = (typeof state !== "undefined" && state.sceneTheme === "celestial") ? "celestial" : "linmei";
+  const desiredTheme = (typeof state !== "undefined" && state.sceneTheme === "celestial") ? "celestial" : "academy";
   if (env.sceneThemeKey !== desiredTheme) {
     apply3DSceneTheme(scene, env, desiredTheme);
   }
@@ -2761,17 +2761,17 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   }
   env.tableLight.intensity = ((f.night ? 1.05 : 0.72) + env.dawnSweep * 0.22) * hazeDim * mpFlicker + Math.sin(t * 5.2) * 0.08 + Math.sin(t * 11.7) * 0.03;
 
-  // Pacific Ocean Shimmer Shader + Gentle Wave Ripples + Guishan Lighthouse Beacon
+  // Pacific Ocean Shimmer Shader + Gentle Wave Ripples + Cloud Isle Lighthouse Beacon
   if (env.oceanUniforms && env.oceanUniforms.uTime) {
     env.oceanUniforms.uTime.value = t;
   } else if (env.oceanBumpTex && env.oceanBumpTex.offset) {
     env.oceanBumpTex.offset.x = (t * 0.008) % 1;
     env.oceanBumpTex.offset.y = (t * 0.005) % 1;
   }
-  if (env.guishanBeacon) {
-    env.guishanBeacon.visible = !f.daylight;
+  if (env.cloudIsleBeacon) {
+    env.cloudIsleBeacon.visible = !f.daylight;
     const pulseOn = Math.sin(t * 2.2) > -0.2;
-    env.guishanBeacon.scale.setScalar(pulseOn ? 1.1 : 0.45);
+    env.cloudIsleBeacon.scale.setScalar(pulseOn ? 1.1 : 0.45);
   }
 
   env.sunMesh.position.y += ((f.daylight ? 17.5 : -12) - env.sunMesh.position.y) * d04;
@@ -2781,13 +2781,13 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   env.starPoints.material.opacity += (((f.daylight ? 0.0 : (f.night ? 0.88 : 0.52))) - env.starPoints.material.opacity) * d05;
   env.starPoints.visible = env.starPoints.material.opacity > 0.008;
   if (env.starPoints.visible) env.starPoints.rotation.y = t * 0.008;
-  if (env.lanyangLights) {
+  if (env.valleyLights) {
     const targetCity = f.daylight ? 0.05 : (f.night ? 0.90 : 0.58);
-    env.lanyangLights.material.opacity += (targetCity - env.lanyangLights.material.opacity) * d05;
-    env.lanyangLights.visible = env.lanyangLights.material.opacity > 0.01;
+    env.valleyLights.material.opacity += (targetCity - env.valleyLights.material.opacity) * d05;
+    env.valleyLights.visible = env.valleyLights.material.opacity > 0.01;
   }
-  if (env.guishanMat) {
-    env.guishanMat.color.setHex(f.daylight ? 0x2f5a67 : (f.night ? 0x151e38 : 0x233852));
+  if (env.cloudIsleMat) {
+    env.cloudIsleMat.color.setHex(f.daylight ? 0x2f5a67 : (f.night ? 0x151e38 : 0x233852));
   }
 
   // Interactive Lotus Core + Live 3-Petal Three-Goodness Awakening!

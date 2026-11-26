@@ -19,7 +19,7 @@ const state = {
   hidePlayerRole: false,
   showRelationsOnCanvas: true,
   viewMode: "3d",
-  sceneTheme: "linmei", // "linmei" (青嵐雅致書院風) | "celestial" (空靈青綠山水仙境風)
+  sceneTheme: "academy", // "academy" (青嵐雅致書院風) | "celestial" (空靈青綠山水仙境風)
   quality3D: "high",
   qualityUserChosen: false,
   fxPacing: "cinematic", // "cinematic" (沉穩儀式感) | "fast" (快節奏)
@@ -189,7 +189,7 @@ function saveUserPrefs() {
       autoPlay: Boolean(state.autoPlay),
       showRelations: Boolean(state.showRelationsOnCanvas),
       viewMode: state.viewMode === "2d" ? "2d" : "3d",
-      sceneTheme: state.sceneTheme === "celestial" ? "celestial" : "linmei",
+      sceneTheme: state.sceneTheme === "celestial" ? "celestial" : "academy",
       quality3D: (state.quality3D === "eco" || state.quality3D === "balanced") ? state.quality3D : "high",
       qualityUserChosen: Boolean(state.qualityUserChosen),
       fxPacing: state.fxPacing === "fast" ? "fast" : "cinematic",
@@ -204,7 +204,7 @@ function saveUserPrefs() {
       geminiModel: state.geminiModel || "gemini-4-hydrogen",
       serverGeminiModel: state.serverGeminiModel || "gemini-4-hydrogen",
       serverGeminiModelUserChosen: Boolean(state.serverGeminiModelUserChosen),
-      localLlmModel: state.localLlmModel || "",
+      localLlmModel: String(state.localLlmModel || "").trim(),
       serverGeminiOptOut: Boolean(state.serverGeminiOptOut),
       subtitleLarge: Boolean(state.subtitleLarge)
     };
@@ -258,7 +258,8 @@ function loadUserPrefs() {
     if (typeof p.autoPlay === "boolean") state.autoPlay = p.autoPlay;
     if (typeof p.showRelations === "boolean") state.showRelationsOnCanvas = p.showRelations;
     if (p.viewMode === "2d" || p.viewMode === "3d") state.viewMode = p.viewMode;
-    if (p.sceneTheme === "linmei" || p.sceneTheme === "celestial") state.sceneTheme = p.sceneTheme;
+    if (p.sceneTheme === "celestial") state.sceneTheme = "celestial";
+    else if (typeof p.sceneTheme === "string" && p.sceneTheme) state.sceneTheme = "academy";
     if (p.quality3D === "high" || p.quality3D === "balanced" || p.quality3D === "eco") state.quality3D = p.quality3D;
     if (typeof p.qualityUserChosen === "boolean") state.qualityUserChosen = p.qualityUserChosen;
     if (p.fxPacing === "fast" || p.fxPacing === "cinematic") state.fxPacing = p.fxPacing;
@@ -290,7 +291,10 @@ function loadUserPrefs() {
     if (typeof p.serverGeminiModelUserChosen === "boolean") {
       state.serverGeminiModelUserChosen = p.serverGeminiModelUserChosen;
     }
-    if (typeof p.localLlmModel === "string") state.localLlmModel = p.localLlmModel;
+    if (typeof p.localLlmModel === "string") {
+      const trimmedLocal = p.localLlmModel.trim();
+      state.localLlmModel = (trimmedLocal && /^[A-Za-z0-9._:/-]{1,96}$/.test(trimmedLocal)) ? trimmedLocal : "";
+    }
     if (typeof p.serverGeminiOptOut === "boolean") state.serverGeminiOptOut = p.serverGeminiOptOut;
     if (typeof p.subtitleLarge === "boolean") state.subtitleLarge = p.subtitleLarge;
   } catch (e) {}
@@ -377,7 +381,7 @@ function syncPrefsToControls() {
   if (el("chkGuardMode")) el("chkGuardMode").checked = Boolean(state.guardMode);
   const selGm = el("selectGeminiModel");
   if (selGm) {
-    const desired = state.geminiModel || "gemini-2.5-flash";
+    const desired = state.geminiModel || "gemini-4-hydrogen";
     const hasOpt = Array.prototype.some.call(selGm.options || [], function (o) { return o.value === desired; });
     if (hasOpt) selGm.value = desired;
   }
@@ -403,7 +407,8 @@ function escapeHtml(str) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function addThreeGoodPoint(kind, reasonText) {
@@ -461,6 +466,7 @@ function addThreeGoodPoint(kind, reasonText) {
       triggerCutIn("蓮花覺醒・深水三好光環！", "你的禮貌言行讓全場放下戒心，懷疑度大幅下降！", "gold");
       addLog({
         kind: "blessing",
+        isPrivate: true,
         title: "三好蓮花覺醒（反派演技）：全場好人對你的懷疑度大幅下降，心虛值平息！",
         text: ""
       });
@@ -511,6 +517,7 @@ function addThreeGoodPoint(kind, reasonText) {
       triggerCutIn("三好蓮花三瓣覺醒！", "獲得「黃金善意票（公投 +1 票）」" + enlightenNote + "！", "emerald");
       addLog({
         kind: "blessing",
+        isPrivate: true,
         title: "三好蓮花覺醒！你獲得「黃金善意票（公投權重 +1）」" + enlightenNote + "！",
         text: ""
       });
@@ -533,6 +540,7 @@ function addLog(entry) {
     id: state.match.logs.length + 1,
     day: state.match.day,
     kind: entry.kind || "system",
+    isPrivate: Boolean(entry.isPrivate),
     speakerId: entry.speakerId || null,
     pendingReveal: Boolean(entry.pendingReveal),
     title: entry.title || "",
@@ -693,6 +701,10 @@ function getLobbySeatCount() {
 }
 
 function getInitialWolfCount(totalSeats) {
+  const varMode = (state.match && state.match.started)
+    ? state.match.variantMode
+    : ((state.match && state.match.variantMode && state.match.variantMode !== "standard") ? state.match.variantMode : state.activeVariant);
+  if (varMode === "lone_wolf_king") return 1;
   const n = parseInt(totalSeats, 10) || (state.match && state.match.started ? state.match.totalSeats : getLobbySeatCount());
   if (n >= 12) return 4;
   if (n >= 10) return 3;
