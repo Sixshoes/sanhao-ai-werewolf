@@ -15,13 +15,17 @@
 
 const ALLOWED_VOICES = new Set([
   "Leda", "Kore", "Puck", "Orus", "Aoede", "Charon", "Zephyr", "Callirrhoe", "Fenrir",
-  "Enceladus", "Achird", "Iapetus"
+  "Enceladus", "Achird", "Iapetus", "Autonoe", "Laomedeia", "Vindemiatrix", "Sulafat"
 ]);
 const CORE_FALLBACK_VOICE_MAP = {
-  Leda: "Kore",
+  Leda: "Zephyr",
   Orus: "Puck",
   Aoede: "Zephyr",
-  Callirrhoe: "Kore",
+  Callirrhoe: "Zephyr",
+  Autonoe: "Zephyr",
+  Laomedeia: "Zephyr",
+  Vindemiatrix: "Leda",
+  Sulafat: "Leda",
   Enceladus: "Puck",
   Achird: "Charon",
   Iapetus: "Puck"

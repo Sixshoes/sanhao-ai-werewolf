@@ -144,45 +144,45 @@ def prune_tts_cache(cache_dir=None, max_files=None, max_bytes=None):
 
 # 動漫角色適配自然配音（v13.0 擬真升級：12 位角色聲線差異最大化＋柔化播音腔＋墨白／晴嵐古風韻味）
 VOICE_PROFILES_ANIME = {
-    "主持":  {"voice": "zh-TW-HsiaoChenNeural",        "rate": "-3%", "pitch": "-1Hz"},
-    "你":    {"voice": "zh-TW-HsiaoYuNeural",          "rate": "+1%", "pitch": "+1Hz"},
+    "主持":  {"voice": "zh-TW-HsiaoChenNeural",        "rate": "+0%", "pitch": "+1Hz"},
+    "你":    {"voice": "zh-TW-HsiaoChenNeural",        "rate": "+2%", "pitch": "+2Hz"},
     "你_男": {"voice": "zh-CN-YunxiNeural",            "rate": "+0%", "pitch": "+0Hz"},
     "小澄":  {"voice": "zh-CN-YunxiNeural",            "rate": "+3%", "pitch": "+1Hz"},
-    "暖暖":  {"voice": "zh-TW-HsiaoChenNeural",        "rate": "-4%", "pitch": "+2Hz"},
+    "暖暖":  {"voice": "zh-TW-HsiaoChenNeural",        "rate": "-1%", "pitch": "+3Hz"},
     "阿松":  {"voice": "zh-TW-YunJheNeural",           "rate": "+0%", "pitch": "+0Hz"},
-    "星兒":  {"voice": "zh-CN-XiaoyiNeural",           "rate": "+5%", "pitch": "+2Hz"},
-    "小雲":  {"voice": "zh-TW-HsiaoYuNeural",          "rate": "+4%", "pitch": "-1Hz"},
+    "星兒":  {"voice": "zh-CN-XiaoyiNeural",           "rate": "+5%", "pitch": "+3Hz"},
+    "小雲":  {"voice": "zh-TW-HsiaoChenNeural",        "rate": "+4%", "pitch": "+1Hz"},
     "阿竹":  {"voice": "zh-CN-YunxiNeural",            "rate": "-3%", "pitch": "-1Hz"},
     "晨晨":  {"voice": "zh-CN-YunjianNeural",          "rate": "+4%", "pitch": "+1Hz"},
     "墨白":  {"voice": "zh-CN-YunjianNeural",          "rate": "-5%", "pitch": "-2Hz"},
-    "晴嵐":  {"voice": "zh-CN-XiaoxiaoNeural",         "rate": "-7%", "pitch": "-2Hz"},
+    "晴嵐":  {"voice": "zh-CN-XiaoxiaoNeural",         "rate": "-2%", "pitch": "+1Hz"},
     "阿朗":  {"voice": "zh-CN-YunjianNeural",          "rate": "+2%", "pitch": "-1Hz"},
-    "柚子":  {"voice": "zh-CN-XiaoxiaoNeural",         "rate": "+6%", "pitch": "+4Hz"},
+    "柚子":  {"voice": "zh-CN-XiaoyiNeural",           "rate": "+6%", "pitch": "+4Hz"},
 }
 
 # 純台灣腔（注意：zh-TW-YunJheNeural 在微軟端點僅支援預設語速音高 +0%/+0Hz，男聲差異由前端聲道共振峰與無損變速拉開）
 VOICE_PROFILES_TW = {
-    "主持":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-3%", "pitch": "-1Hz"},
-    "你":    {"voice": "zh-TW-HsiaoChenNeural", "rate": "+1%", "pitch": "+1Hz"},
+    "主持":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "+0%", "pitch": "+1Hz"},
+    "你":    {"voice": "zh-TW-HsiaoChenNeural", "rate": "+2%", "pitch": "+2Hz"},
     "你_男": {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
     "小澄":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
-    "暖暖":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-4%", "pitch": "+2Hz"},
+    "暖暖":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-1%", "pitch": "+3Hz"},
     "阿松":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
-    "星兒":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "+5%", "pitch": "+3Hz"},
-    "小雲":  {"voice": "zh-TW-HsiaoYuNeural",   "rate": "+3%", "pitch": "-2Hz"},
+    "星兒":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "+5%", "pitch": "+4Hz"},
+    "小雲":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "+4%", "pitch": "+1Hz"},
     "阿竹":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
     "晨晨":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
     "墨白":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
-    "晴嵐":  {"voice": "zh-TW-HsiaoYuNeural",   "rate": "-5%", "pitch": "-2Hz"},
+    "晴嵐":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "-2%", "pitch": "+2Hz"},
     "阿朗":  {"voice": "zh-TW-YunJheNeural",    "rate": "+0%", "pitch": "+0Hz"},
-    "柚子":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "+6%", "pitch": "+4Hz"},
+    "柚子":  {"voice": "zh-TW-HsiaoChenNeural", "rate": "+6%", "pitch": "+5Hz"},
 }
 VOICE_PROFILES = VOICE_PROFILES_ANIME
 
 ALLOWED_CLAUSE_ROLES = {"", "open", "pivot", "question", "climax", "close", "backchannel"}
 ALLOWED_GEMINI_VOICES = {
     "Leda", "Kore", "Puck", "Orus", "Aoede", "Charon", "Zephyr", "Callirrhoe", "Fenrir",
-    "Enceladus", "Achird", "Iapetus"
+    "Enceladus", "Achird", "Iapetus", "Autonoe", "Laomedeia", "Vindemiatrix", "Sulafat"
 }
 
 

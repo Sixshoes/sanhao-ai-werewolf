@@ -33,6 +33,11 @@ function renderTutorialSlide() {
   const devSwitchEl = el("tutorialDeviceSwitch");
   if (devSwitchEl && typeof DEVICE_TUTORIAL_META !== "undefined") {
     devSwitchEl.innerHTML = "";
+    const devIcons = {
+      phone: '<svg class="tut-device-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/></svg>',
+      tablet: '<svg class="tut-device-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M11 17.5h2"/></svg>',
+      desktop: '<svg class="tut-device-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12.5" rx="1.8"/><path d="M8.5 20h7M12 16.5V20"/></svg>'
+    };
     ["phone", "tablet", "desktop"].forEach(function (k) {
       const meta = DEVICE_TUTORIAL_META[k];
       if (!meta) return;
@@ -45,7 +50,7 @@ function renderTutorialSlide() {
       btn.className = "tut-device-btn" + (k === devKey ? " is-active" : "");
       const isDetected = (k === detectedDev);
       btn.innerHTML =
-        '<span>' + escapeHtml(meta.label) + '</span>' +
+        '<span class="tut-device-btn-main">' + (devIcons[k] || "") + '<span>' + escapeHtml(meta.label) + '</span></span>' +
         (isDetected ? '<span class="tut-device-current-tag">目前裝置</span>' : '');
       btn.addEventListener("click", function () {
         if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(560, 0.05, "triangle", 0.035, 0);

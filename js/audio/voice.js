@@ -5,37 +5,37 @@
 
 // ==================== MULTI-ACTOR STUDIO VOICE + NATURAL PROSODY ENGINE ====================
 const PERSONA_VOICE_PROFILES = {
-  "主持":  { gender: "f", slot: 0, seatHint: 0, studioVoice: "Leda",       pitch: 1.00, basicPitch: 1.00, rateMul: 0.96 },
-  "你":    { gender: "f", slot: 1, seatHint: 1, studioVoice: "Kore",       pitch: 1.04, basicPitch: 1.03, rateMul: 1.00 },
-  "你_男": { gender: "m", slot: 0, seatHint: 1, studioVoice: "Puck",       pitch: 0.94, basicPitch: 0.98, rateMul: 1.00 },
-  "小澄":  { gender: "m", slot: 1, seatHint: 2, studioVoice: "Orus",       pitch: 0.96, basicPitch: 1.00, rateMul: 1.04 },
-  "暖暖":  { gender: "f", slot: 2, seatHint: 3, studioVoice: "Aoede",      pitch: 1.08, basicPitch: 1.06, rateMul: 0.92 },
-  "阿松":  { gender: "m", slot: 2, seatHint: 4, studioVoice: "Charon",     pitch: 0.85, basicPitch: 0.94, rateMul: 0.94 },
-  "星兒":  { gender: "f", slot: 3, seatHint: 5, studioVoice: "Zephyr",     pitch: 1.18, basicPitch: 1.13, rateMul: 1.12 },
-  "小雲":  { gender: "f", slot: 4, seatHint: 6, studioVoice: "Callirrhoe", pitch: 0.97, basicPitch: 0.98, rateMul: 1.11 },
-  "阿竹":  { gender: "m", slot: 3, seatHint: 7,  studioVoice: "Enceladus",  pitch: 0.90, basicPitch: 0.96, rateMul: 0.95 },
-  "晨晨":  { gender: "m", slot: 4, seatHint: 8,  studioVoice: "Puck",       pitch: 1.04, basicPitch: 1.03, rateMul: 1.08 },
-  "墨白":  { gender: "m", slot: 5, seatHint: 9,  studioVoice: "Iapetus",    pitch: 0.80, basicPitch: 0.93, rateMul: 0.92 },
-  "晴嵐":  { gender: "f", slot: 5, seatHint: 10, studioVoice: "Leda",       pitch: 0.88, basicPitch: 0.90, rateMul: 0.86 },
-  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Orus",       pitch: 0.99, basicPitch: 1.01, rateMul: 1.06 },
-  "柚子":  { gender: "f", slot: 6, seatHint: 12, studioVoice: "Zephyr",     pitch: 1.26, basicPitch: 1.18, rateMul: 1.14 }
+  "主持":  { gender: "f", slot: 0, seatHint: 0, studioVoice: "Sulafat",      pitch: 1.05, basicPitch: 1.04, rateMul: 0.99 },
+  "你":    { gender: "f", slot: 1, seatHint: 1, studioVoice: "Leda",         pitch: 1.08, basicPitch: 1.05, rateMul: 1.02 },
+  "你_男": { gender: "m", slot: 0, seatHint: 1, studioVoice: "Puck",         pitch: 0.94, basicPitch: 0.98, rateMul: 1.00 },
+  "小澄":  { gender: "m", slot: 1, seatHint: 2, studioVoice: "Orus",         pitch: 0.96, basicPitch: 1.00, rateMul: 1.04 },
+  "暖暖":  { gender: "f", slot: 2, seatHint: 3, studioVoice: "Leda",         pitch: 1.12, basicPitch: 1.08, rateMul: 0.99 },
+  "阿松":  { gender: "m", slot: 2, seatHint: 4, studioVoice: "Charon",       pitch: 0.85, basicPitch: 0.94, rateMul: 0.94 },
+  "星兒":  { gender: "f", slot: 3, seatHint: 5, studioVoice: "Zephyr",       pitch: 1.18, basicPitch: 1.13, rateMul: 1.11 },
+  "小雲":  { gender: "f", slot: 4, seatHint: 6, studioVoice: "Autonoe",      pitch: 1.06, basicPitch: 1.04, rateMul: 1.07 },
+  "阿竹":  { gender: "m", slot: 3, seatHint: 7,  studioVoice: "Enceladus",   pitch: 0.90, basicPitch: 0.96, rateMul: 0.95 },
+  "晨晨":  { gender: "m", slot: 4, seatHint: 8,  studioVoice: "Puck",        pitch: 1.04, basicPitch: 1.03, rateMul: 1.08 },
+  "墨白":  { gender: "m", slot: 5, seatHint: 9,  studioVoice: "Iapetus",     pitch: 0.80, basicPitch: 0.93, rateMul: 0.92 },
+  "晴嵐":  { gender: "f", slot: 5, seatHint: 10, studioVoice: "Vindemiatrix", pitch: 1.04, basicPitch: 1.03, rateMul: 0.98 },
+  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Orus",        pitch: 0.99, basicPitch: 1.01, rateMul: 1.06 },
+  "柚子":  { gender: "f", slot: 6, seatHint: 12, studioVoice: "Laomedeia",   pitch: 1.26, basicPitch: 1.18, rateMul: 1.13 }
 };
 
 const PERSONA_TTS_DIRECTIONS = {
-  "主持":  "氣質端莊溫潤的二十多歲台灣女書院主持，吐字清朗從容，像茶席主人近距離溫和引導，絕不機械播音",
-  "你":    "自然親切的二十出頭台灣女大學生日常對話口吻，呼吸自然、不字正腔圓唸稿",
+  "主持":  "二十三歲氣質清朗的台灣年輕女主持人，聲線輕亮溫潤、自然親切，像茶席裡年輕的大姊姊從容引導，絕不老成播音",
+  "你":    "二十歲出頭自然開朗的台灣女大學生日常對話口吻，音色清脆有青春感、呼吸自然不唸稿",
   "你_男": "二十多歲自然放鬆的台灣男大學生日常口語，像坐在茶桌旁跟朋友輕鬆聊天，語調有起伏、不唸稿",
   "小澄":  "二十多歲冷靜斯文的台灣理科男大生，聲線清晰俐落、不急不躁，像戴眼鏡的理智學長在茶桌旁條理分析",
-  "暖暖":  "二十出頭溫柔愛笑的台灣女大生日常聊天聲線，語調柔和親切、帶點溫暖呼吸氣音",
+  "暖暖":  "二十歲出頭溫柔甜美、音色清亮的台灣女大生日常聊天聲線，笑意柔和自然、年輕有親和力，絕不顯老",
   "阿松":  "年約四十多歲、聲音低沉渾厚有磁性的台灣成熟大叔，像茶館裡見多識廣的老大哥親切泡茶聊天，語速沉穩帶點幽默人情味",
-  "星兒":  "十八九歲活潑機靈的台灣少女口語，聲線清亮輕快、帶點古靈精怪的直覺反應",
-  "小雲":  "二十多歲知性冷靜的台灣都會學姊聲線，口齒俐落、音色偏清冷沉穩，像翻筆記冷靜追問細節",
+  "星兒":  "十八九歲活潑機靈的台灣元氣少女口語，聲線清亮輕快、帶點古靈精怪的直覺反應",
+  "小雲":  "二十二歲俐落聰明的台灣校園新聞社女大生聲線，音色清亮明快、咬字爽朗有青春朝氣，像年輕學姊拿著筆記俐落追問，絕不低沉老氣",
   "阿竹":  "二十多歲溫潤斯文的台灣青年男聲，聲音輕柔誠懇、語速從容柔和，像愛泡茶的溫和文青學長自然交談",
   "晨晨":  "二十出頭陽光熱血的台灣運動系大男孩，聲音明亮爽朗、語速輕快有朝氣，像球社好友直接開心表態",
   "墨白":  "二十五六歲清冷克制的台灣青年低沉男聲，聲線沉靜乾淨、說話簡短篤定，帶點書卷氣但自然不朗誦",
-  "晴嵐":  "二十多歲溫婉優雅的台灣古典氣質學姊女聲，語氣柔美從容、輕聲細語但立場堅定",
+  "晴嵐":  "二十二歲清雅柔美的台灣國樂社年輕女大生聲線，音色輕柔清甜、語氣文雅從容但充滿少女清靈感，絕不低沉老成",
   "阿朗":  "二十多歲自信俐落的台灣男大生辯手聲線，吐字清脆有力、抑揚頓挫鮮明、節奏明快",
-  "柚子":  "十八九歲甜美可愛的台灣學妹口語，語調輕盈元氣、笑意自然，像點心社學妹分享直覺"
+  "柚子":  "十八九歲甜美可愛的台灣女大生學妹口語，語調輕盈清甜、笑意自然元氣滿滿"
 };
 
 // 圓桌聽眾臨場微插話台詞庫（純依公開發言點名／對跳／保人觸發，零底牌洩漏，固定短句 100% 命中快取）

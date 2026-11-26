@@ -2250,6 +2250,11 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
   const pid = getPlayerId();
   const others = getAliveSeats().filter(function (s) { return s.id !== pid; });
   const focus = others[0] ? (fmtSeatNum(others[0].id) + "號" + others[0].name) : "前置位";
+  const ctx = state.match ? state.match.sheriffElectionCtx : null;
+  const spokenPrior = (ctx && Array.isArray(ctx.spokenSpeeches)) ? ctx.spokenSpeeches : [];
+  const priorSeer = spokenPrior.find(function (sp) { return sp && sp.id !== pid && sp.claimsSeer; }) || null;
+  const priorSeerSeat = priorSeer ? getSeat(priorSeer.id) : null;
+  const priorSeerLbl = priorSeerSeat ? (fmtSeatNum(priorSeerSeat.id) + "號" + priorSeerSeat.name) : "";
   const chk = (player && player.role === "seer" && player.checkedHistory && player.checkedHistory.length > 0)
     ? player.checkedHistory[player.checkedHistory.length - 1]
     : null;
@@ -2272,27 +2277,32 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
     const chkStr = (chk && cs)
       ? ("昨晚查驗 " + fmtSeatNum(cs.id) + "號" + cs.name + " 是" + (chk.isWolf ? "酸民狼（查殺）" : "書院好夥伴（金水）"))
       : ("我手握昨晚查驗真相");
+    const counterClause = priorSeerLbl
+      ? ("前置位 " + priorSeerLbl + " 剛才悍跳直接標進定狼坑，他警徽流全是虛的！")
+      : "";
     return [
       {
-        title: "強拍明心＋雙警徽流",
-        tag: "明心直拍",
+        title: priorSeerLbl ? ("對跳打飛 " + priorSeerLbl + "＋雙警徽流") : "強拍明心＋雙警徽流",
+        tag: priorSeerLbl ? "正面對跳" : "明心直拍",
         claimsSeer: true,
         badgeFlow: flowObj,
-        text: "我是真正的明心觀察員！" + chkStr + "，今晚" + flowDualText + "，請警下好夥伴把警徽投給我帶隊！"
+        text: "我是真正的明心觀察員！" + counterClause + chkStr + "，今晚" + flowDualText + "，請警下好夥伴認清真視角把警徽投給我！"
       },
       {
-        title: "穩健報警徽流＋看票型",
+        title: "穩健報警徽流＋驗警下票型",
         tag: "警徽流",
         claimsSeer: true,
         badgeFlow: flowObj,
-        text: "我起跳明心觀察員拿警徽，" + chkStr + "；警徽流鎖定 " + f1Lbl + (f2Lbl ? (" 接續 " + f2Lbl) : "") + "。若警上有人對跳，待會看警下衝票就能排坑！"
+        text: "我起跳明心觀察員拿警徽，" + chkStr + "；警徽流鎖定 " + f1Lbl + (f2Lbl ? (" 接續 " + f2Lbl) : "") + "。" + (priorSeerLbl ? ("大家待會盯緊誰幫 " + priorSeerLbl + " 衝票就能直接排狼坑！") : "若後置位有人對跳，待會看警下衝票就能排坑！")
       },
       {
-        title: "先裝亂聊藏身分",
+        title: "先裝亂聊藏身分看後置位",
         tag: "隨性聽局",
         claimsSeer: false,
         badgeFlow: null,
-        text: "我先上警輕鬆聊兩句、看看後置位誰會急著悍跳，暫時不急著掀底牌，大家先別急著站邊！"
+        text: priorSeerLbl
+          ? ("先聽完 " + priorSeerLbl + " 的表水我心裡有數了，這輪先不急著掀底牌，等回台下配合票型再揭真假！")
+          : "我先上警輕鬆聊兩句、看看後置位誰會急著悍跳，暫時不急著掀底牌，大家先別急著站邊！"
       }
     ];
   }
@@ -2301,51 +2311,57 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
     const goodLbl = goodPick ? (fmtSeatNum(goodPick.id) + "號" + goodPick.name) : focus;
     return [
       {
-        title: "悍跳明心＋假警徽流",
+        title: priorSeerLbl ? ("對跳反拍 " + priorSeerLbl + "＋假警徽流") : "悍跳明心＋假警徽流",
         tag: "悍跳施壓",
         claimsSeer: true,
         badgeFlow: flowObj,
-        text: "全場聽好，我才是這局真正的明心觀察員！昨晚查了 " + goodLbl + " 偏金水，" + flowDualText + "，誰敢對跳直接標記狼坑！"
+        text: (priorSeerLbl ? ("前置位 " + priorSeerLbl + " 跳得漏洞百出，") : "全場聽好，") + "我才是這局真正的明心觀察員！昨晚查了 " + goodLbl + " 是金水，" + flowDualText + "，警下好人把票投給我帶隊出假牌！"
       },
       {
-        title: "隨性亂聊攪渾水",
+        title: priorSeerLbl ? ("點評 " + priorSeerLbl + "＋攪渾水") : "隨性亂聊攪渾水",
         tag: "隨性亂聊",
         claimsSeer: false,
         badgeFlow: null,
-        text: "我就愛上警搶麥亂聊！前面氣氛太緊繃了，我先佔個坑看看 " + goodLbl + " 反應如何，待會再決定要留還是退！"
+        text: priorSeerLbl
+          ? ("剛才 " + priorSeerLbl + " 的警徽流留得有點怪，我先上警幫大家把節奏問清楚，順便聽聽 " + goodLbl + " 怎麼回應再決定留不留！")
+          : ("我就愛上警搶麥亂聊！前面氣氛太緊繃了，我先佔個坑看看 " + goodLbl + " 反應如何，待會再決定要留還是退！")
       },
       {
-        title: "詐身分亂炸後退水",
+        title: "詐身分亂炸後退水回警下",
         tag: "詐身分退水",
         claimsSeer: false,
         withdrawAfter: true,
         badgeFlow: null,
-        text: "先盲炸一下 " + goodLbl + " 看你慌不慌～哈哈好啦我其實沒視角，純粹上警攪局聽反應，這就拱手退水回警下投票！"
+        text: "先盲炸一下 " + goodLbl + " 看你慌不慌～哈哈好啦我其實沒視角，純粹上警試探反應，這就拱手退水回警下投票！"
       }
     ];
   }
   return [
     {
-      title: "理性帶隊爭警徽",
+      title: priorSeerLbl ? ("點評 " + priorSeerLbl + "・理性爭警徽") : "理性帶隊爭警徽",
       tag: "邏輯控場",
       claimsSeer: false,
       badgeFlow: null,
-      text: "我是好人視角上警，警徽給我我會在末置位幫大家整理發言與票型；若不慎離席，警徽會優先託付給 " + f1Lbl + (f2Lbl ? (" 或 " + f2Lbl) : "") + "！"
+      text: priorSeerLbl
+        ? ("我站在純好人視角聽完 " + priorSeerLbl + " 的表水，覺得後置位還需要更多檢視；警徽給我我會在末置位整理正反狼坑，若離席優先交給 " + f1Lbl + "！")
+        : ("我是好人視角上警，警徽給我我會在末置位幫大家整理發言與票型；若不慎離席，警徽會優先託付給 " + f1Lbl + (f2Lbl ? (" 或 " + f2Lbl) : "") + "！")
     },
     {
-      title: "隨性亂聊搶麥暖場",
-      tag: "隨性亂聊",
-      claimsSeer: false,
-      badgeFlow: null,
-      text: "我上警純粹是手癢想早點拿麥克風暖個場！順便直覺盲點 " + focus + " 今天感覺很有戲，講完看大家表現再決定留不留警上～"
-    },
-    {
-      title: "詐身分炸人（講完退水）",
+      title: priorSeerLbl ? ("幫好人試探 " + priorSeerLbl + " 後退水") : "詐身分炸人（講完退水）",
       tag: "詐身分退水",
       claimsSeer: false,
       withdrawAfter: true,
       badgeFlow: null,
-      text: "咳咳，先假裝炸一下後置位——" + focus + " 你眼神怎麼有點飄？好啦開玩笑的，我只是上來詐身分試反應，這就拱手退水回警下把票投正！"
+      text: priorSeerLbl
+        ? ("我就是上警幫好人壓一下後置位、順便確認 " + priorSeerLbl + " 的警徽流穩不穩，現在把警上留給真預言家對決，我直接退水回警下把票投正！")
+        : ("咳咳，先假裝炸一下後置位——" + focus + " 你眼神怎麼有點飄？好啦開玩笑的，我只是上來詐身分試反應，這就拱手退水回警下把票投正！")
+    },
+    {
+      title: "隨性搶麥暖場聽後置位",
+      tag: "隨性亂聊",
+      claimsSeer: false,
+      badgeFlow: null,
+      text: "我上警純粹是手癢想早點拿麥克風暖個場！順便直覺點聽 " + focus + " 今天感覺很有戲，講完看大家表現再決定留不留警上～"
     }
   ];
 }
@@ -2590,7 +2606,11 @@ function startSheriffCampaignSpeeches() {
   ctx.spokenSpeeches = [];
   ctx.speeches = [];
   ctx.dramaEvents = (ctx.dramaEvents || []).filter(function (ev) {
-    return String(ev || "").indexOf("請先決定要「上警競選」") === -1;
+    const s = String(ev || "");
+    return s.indexOf("上警競選") === -1 &&
+      s.indexOf("舉手上警名單") === -1 &&
+      s.indexOf("單邊舉手上警") === -1 &&
+      s.indexOf("警上大混戰") === -1;
   });
   ctx.hasDoubleSeerClash = false;
   ctx.activeReelSeatId = null;

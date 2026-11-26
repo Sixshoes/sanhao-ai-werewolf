@@ -396,12 +396,46 @@ function bindCanvasEvents() {
     });
   }
 
-  window.addEventListener("resize", resizeCanvas);
+  let lastResizeW = (typeof window !== "undefined" && window.innerWidth) ? window.innerWidth : 0;
+  let lastResizeH = (typeof window !== "undefined" && window.innerHeight) ? window.innerHeight : 0;
+  let resizeTimer = 0;
+  const guardedResizeCanvas = function (force) {
+    const curW = (typeof window !== "undefined" && window.innerWidth) ? window.innerWidth : 0;
+    const curH = (typeof window !== "undefined" && window.innerHeight) ? window.innerHeight : 0;
+    // Ignore tiny vertical-only address-bar animation jitters on mobile (iOS Safari / LINE WebView)
+    if (!force && curW <= 767 && curW === lastResizeW && Math.abs(curH - lastResizeH) <= 28) {
+      return;
+    }
+    lastResizeW = curW;
+    lastResizeH = curH;
+    resizeCanvas();
+  };
+  window.addEventListener("resize", function () {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      resizeTimer = 0;
+      guardedResizeCanvas(false);
+    }, 80);
+  });
+  window.addEventListener("orientationchange", function () {
+    setTimeout(function () { guardedResizeCanvas(true); }, 180);
+  });
   if (typeof ResizeObserver === "function") {
     const wrapEl = el("canvasStageWrap") || el("canvasContainer");
     if (wrapEl) {
       let roRaf = 0;
-      const ro = new ResizeObserver(function () {
+      let lastWrapW = 0;
+      let lastWrapH = 0;
+      const ro = new ResizeObserver(function (entries) {
+        const cr = entries && entries[0] && entries[0].contentRect;
+        if (cr) {
+          const wNow = Math.round(cr.width);
+          const hNow = Math.round(cr.height);
+          const isPhone = typeof window !== "undefined" && window.innerWidth <= 767;
+          if (isPhone && wNow === lastWrapW && Math.abs(hNow - lastWrapH) <= 16) return;
+          lastWrapW = wNow;
+          lastWrapH = hNow;
+        }
         if (roRaf) return;
         roRaf = requestAnimationFrame(function () {
           roRaf = 0;

@@ -7128,7 +7128,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.11") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.2.12") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7521,7 +7521,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.11"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.2.12"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8519,7 +8519,85 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       throw new Error("v24.2.11 NATURAL MALE VOICE check failed for " + k + ": " + JSON.stringify(v24210Res));
     }
   }
+
+  // v24.2.12 Regression: Youthful female voices + smart consolidated player speech cards + stale sheriff signup cleanup + mobile zero-jump & 3-device layout polish
+  const ttsApiSrc2412 = fs.readFileSync(path.join(ROOT, "api/tts.js"), "utf8");
+  const serverPySrc2412 = fs.readFileSync(path.join(ROOT, "server.py"), "utf8");
+  const cssCompSrc2412 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const canvasEvSrc2412 = fs.readFileSync(path.join(ROOT, "js/events/canvas-events.js"), "utf8");
+  const hudSrc2412 = fs.readFileSync(path.join(ROOT, "js/ui/hud.js"), "utf8");
+
+  const v24212Res = vm.runInContext(`(() => {
+    // 1. Youthful female voice profiles & EQ (no mature/elderly pitch or sluggish rate)
+    const femaleNames = ["主持", "你", "暖暖", "星兒", "小雲", "晴嵐", "柚子"];
+    const femaleProfileYouthfulOk = femaleNames.every(n => {
+      const p = PERSONA_VOICE_PROFILES[n];
+      return Boolean(p && p.pitch >= 1.04 && p.basicPitch >= 1.03 && p.rateMul >= 0.98 && PERSONA_TTS_DIRECTIONS[n]);
+    }) && PERSONA_VOICE_PROFILES["晴嵐"].studioVoice === "Vindemiatrix" && PERSONA_VOICE_PROFILES["柚子"].studioVoice === "Laomedeia";
+
+    const femaleEqYouthfulOk = femaleNames.every(n => {
+      const eq = PERSONA_AUDIO_EQ[n];
+      return Boolean(eq && eq.detuneCents >= 0 && eq.twDetuneCents >= 0 && (!eq.animeRateMul || eq.animeRateMul >= 0.98));
+    });
+
+    // 2. Smart consolidated player speech cards (3 <button>s + 改詞 span loader + live board focus)
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    el("chkSheriffMode").checked = true;
+    state.autoPlay = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    const chipBtns = Array.from(el("quickSpeechChips") ? (el("quickSpeechChips")._children || []) : []);
+    const chipHtml = chipBtns.map(c => String(c.innerHTML || "")).join(" | ");
+    const windHtml = el("tableWindVaneSpeech") ? String(el("tableWindVaneSpeech").textContent || "") : "";
+    const smartSpeechCardsOk = chipBtns.length === 3 && chipHtml.includes('data-card-load="1"') && chipHtml.includes("play-card-preview") && windHtml.includes("盤面焦點");
+
+    // 3. Stale sheriff signup banner cleared when entering sheriff campaign speech
+    state.match.sheriffElectionPending = true;
+    startSheriffElection(function () {});
+    if (state.match.sheriffElectionCtx) {
+      state.match.sheriffElectionCtx.stage = "signup";
+      state.match.sheriffElectionCtx.candidateIds = [2, 3];
+      state.match.sheriffElectionCtx.dramaEvents = [
+        "舉手上警名單（共2人）：03號阿朗、09號阿竹！請決定「上警競選（可認真拉票或詐身分亂聊）」或「警下聽選」！",
+        "警上資訊觀察中。"
+      ];
+    }
+    if (typeof startSheriffCampaignSpeeches === "function") {
+      startSheriffCampaignSpeeches();
+    }
+    const staleSignupClearedOk = !((state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.dramaEvents) || []).some(d => String(d).includes("上警競選") || String(d).includes("舉手上警名單"));
+
+    clearStepTimer();
+    resetMatchToLobby();
+
+    return { femaleProfileYouthfulOk, femaleEqYouthfulOk, smartSpeechCardsOk, staleSignupClearedOk };
+  })()`, ctx);
+
+  v24212Res.ttsVoicesAllowedOk =
+    ["Autonoe", "Laomedeia", "Vindemiatrix", "Sulafat"].every(v => ttsApiSrc2412.includes('"' + v + '"') && serverPySrc2412.includes('"' + v + '"'));
+  const cssCompNoComments2412 = cssCompSrc2412.replace(/\/\*[\s\S]*?\*\//g, "");
+  v24212Res.mobileAndDeviceCssOk =
+    !/!important/.test(cssCompNoComments2412) &&
+    !/backdrop-filter\s*:\s*blur/i.test(cssCompNoComments2412) &&
+    cssCompSrc2412.includes("box-decoration-break: clone") &&
+    cssCompSrc2412.includes("clamp(192px, 31svh, 256px)") &&
+    cssCompSrc2412.includes("grid-template-columns: 248px minmax(0, 780px) 248px") &&
+    cssCompSrc2412.includes("@media (min-width: 768px) and (max-width: 1023px)") &&
+    cssCompSrc2412.includes("@media (min-width: 1024px) and (max-width: 1199px)") &&
+    canvasEvSrc2412.includes("orientationchange") &&
+    hudSrc2412.includes("tut-device-ico");
+
+  for (const [k, v] of Object.entries(v24212Res)) {
+    if (!v) {
+      throw new Error("v24.2.12 YOUTHFUL FEMALE VOICE / SMART SPEECH / MOBILE & 3-DEVICE POLISH check failed for " + k + ": " + JSON.stringify(v24212Res));
+    }
+  }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 Release-Freeze E2E smoke test PASSED!");
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 Release-Freeze E2E smoke test PASSED!");
 

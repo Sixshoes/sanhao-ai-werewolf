@@ -2632,16 +2632,18 @@ body.craft-ui.theme-day .lotus-petal-svg.is-lit {
 }
 
 .clue-token {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 5px;
+  display: inline;
+  padding: 1px 4px;
   margin: 0 1px;
-  border-radius: 3px;
+  border-radius: 4px;
   font-weight: 700;
+  line-height: 1.25;
   cursor: pointer;
-  transition: transform 0.14s ease, background-color 0.16s ease;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
   border: 1px solid transparent;
   vertical-align: baseline;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 .clue-seat {
@@ -14394,4 +14396,503 @@ body.craft-ui.theme-twilight #modalAiConfig .ai-test-result.is-error {
   border-color: rgba(164, 57, 44, 0.46);
   color: #8c2017;
 }
+
+/* ==================== v24.2.12 UNIFIED 3-DEVICE PANEL REDESIGN, SMART SPEECH CARDS & MOBILE ZERO-JUMP SHELL ==================== */
+/* Clean cascade · No glass blur · Cohesive Song-dynasty Xuan-paper & Candlelit-cedar proportions */
+
+/* 1. Smart Player Speech Cards: Integrated Quick-Edit Button & Crisp 2-Line Preview */
+.play-card-load-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #e6c483;
+  background: rgba(212, 166, 87, 0.14);
+  border: 1px solid rgba(212, 166, 87, 0.36);
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.play-card-load-btn:hover {
+  background: rgba(212, 166, 87, 0.28);
+  border-color: rgba(236, 198, 122, 0.72);
+  color: #fff6e2;
+}
+
+.play-card-title {
+  color: #f8f2e6;
+}
+
+.play-card-preview {
+  color: rgba(226, 216, 200, 0.78);
+}
+
+body.craft-ui.theme-daylight .play-card-load-btn,
+body.craft-ui.theme-twilight .play-card-load-btn {
+  color: #74480f;
+  background: rgba(154, 107, 39, 0.11);
+  border-color: rgba(154, 107, 39, 0.36);
+}
+
+body.craft-ui.theme-daylight .play-card-load-btn:hover,
+body.craft-ui.theme-twilight .play-card-load-btn:hover {
+  background: rgba(154, 107, 39, 0.22);
+  border-color: #9a6b27;
+  color: #4a2a04;
+}
+
+body.craft-ui.theme-daylight .play-card-title,
+body.craft-ui.theme-twilight .play-card-title {
+  color: #251d16;
+}
+
+body.craft-ui.theme-daylight .play-card-preview,
+body.craft-ui.theme-twilight .play-card-preview {
+  color: #5c4c3c;
+}
+
+/* 2. Refined 3-Device Switcher Panel (Phone / Tablet / Desktop) */
+.tut-device-switch {
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+.tut-device-btn {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  flex-direction: row;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tut-device-btn-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.tut-device-ico {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  opacity: 0.86;
+}
+
+.tut-device-btn.is-active .tut-device-ico {
+  opacity: 1;
+}
+
+.tut-device-current-tag {
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* 3. Spotlight Text Universal Anti-Overlap & Smooth Scroll Guarantee */
+#spotlightText {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  line-height: 1.88;
+  padding-top: 2px;
+  padding-bottom: 4px;
+}
+
+#spotlightText .clue-token {
+  display: inline;
+  padding: 1px 4px;
+  line-height: 1.25;
+  vertical-align: baseline;
+  border-radius: 4px;
+}
+
+/* 4. Desktop Panel Proportions (>= 1200px): Symmetrical Gallery-Grade 3-Column Cinema Dock */
+@media (min-width: 1200px) {
+  body.screen-ingame #controlDeck {
+    bottom: 12px;
+    padding: 0 20px;
+    gap: 6px;
+  }
+
+  body.screen-ingame #bottomUnifiedRow {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 780px) 248px;
+    justify-content: center;
+    align-items: end;
+    column-gap: 14px;
+    width: 100%;
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+
+  body.screen-ingame #cornerRoleTile {
+    grid-column: 1;
+    justify-self: stretch;
+    width: 248px;
+    max-width: 248px;
+    border-radius: 8px;
+    padding: 10px 13px;
+  }
+
+  body.screen-ingame #focalCenterCard {
+    grid-column: 2;
+    justify-self: center;
+    width: 100%;
+    max-width: 780px;
+    border-radius: 10px;
+    padding: 13px 22px 11px;
+  }
+
+  body.screen-ingame #cornerFourGDeck {
+    grid-column: 3;
+    justify-self: end;
+    width: 248px;
+    align-items: flex-end;
+  }
+
+  #quickSpeechChips {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #quickSpeechChips .play-card-btn {
+    min-height: 88px;
+    padding: 9px 11px;
+    border-radius: 8px;
+  }
+}
+
+/* 5. Tablet Portrait (768px ~ 1023px): Balanced 2-Row Theater Grid Dock */
+@media (min-width: 768px) and (max-width: 1023px) {
+  body.screen-ingame #controlDeck {
+    bottom: max(10px, env(safe-area-inset-bottom));
+    padding: 0 16px;
+    gap: 7px;
+  }
+
+  body.screen-ingame #bottomUnifiedRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    max-width: 740px;
+    margin: 0 auto;
+  }
+
+  body.screen-ingame #focalCenterCard,
+  body.screen-ingame.phase-pick-seat #focalCenterCard {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    order: 0;
+    width: 100%;
+    max-width: 740px;
+    margin: 0;
+    border-radius: 10px;
+    padding: 13px 18px 11px;
+  }
+
+  body.screen-ingame .corner-role-tile {
+    grid-column: 1;
+    grid-row: 2;
+    order: 0;
+    width: 100%;
+    max-width: none;
+    min-height: 52px;
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+
+  body.screen-ingame #cornerFourGDeck {
+    grid-column: 2;
+    grid-row: 2;
+    order: 0;
+    width: 100%;
+    max-width: none;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+
+  body.screen-ingame #cornerFourGDeck .fourg-deck-head {
+    min-height: 48px;
+    padding: 8px 15px;
+    border-radius: 8px;
+  }
+
+  #quickSpeechChips {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #quickSpeechChips .play-card-btn {
+    min-height: 86px;
+    padding: 9px 10px;
+    border-radius: 8px;
+  }
+}
+
+/* 6. Tablet Landscape (1024px ~ 1199px): Sleek 3-Column Cinema Grid with Wide 3D Headroom */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  body.screen-ingame #controlDeck {
+    bottom: max(10px, env(safe-area-inset-bottom));
+    padding: 0 14px;
+    gap: 6px;
+  }
+
+  body.screen-ingame #bottomUnifiedRow {
+    display: grid;
+    grid-template-columns: 224px minmax(0, 1fr) 168px;
+    align-items: end;
+    column-gap: 10px;
+    width: 100%;
+    max-width: 1160px;
+    margin: 0 auto;
+  }
+
+  body.screen-ingame .corner-role-tile {
+    grid-column: 1;
+    order: 0;
+    width: 224px;
+    max-width: 224px;
+    border-radius: 8px;
+    padding: 8px 11px;
+  }
+
+  body.screen-ingame #focalCenterCard {
+    grid-column: 2;
+    order: 0;
+    width: 100%;
+    max-width: 720px;
+    justify-self: center;
+    border-radius: 9px;
+    padding: 10px 16px 9px;
+  }
+
+  body.screen-ingame #cornerFourGDeck {
+    grid-column: 3;
+    order: 0;
+    width: 168px;
+    justify-self: end;
+    align-items: flex-end;
+  }
+
+  #quickSpeechChips {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  #quickSpeechChips .play-card-btn {
+    min-height: 84px;
+    padding: 8px 10px;
+    border-radius: 8px;
+  }
+}
+
+/* 7. Phone Zero-Jump Shell (<= 767px): Stable svh 3D Stage · Full-Height Grid Card · Zero Empty Void · Clean Header */
+@media (max-width: 767px) {
+  body.screen-ingame #canvasStageWrap {
+    height: clamp(192px, 31svh, 256px);
+    min-height: 192px;
+    max-height: 256px;
+    flex: 0 0 auto;
+  }
+
+  /* Compact Left Phase Capsule — never stretches into a giant empty bar or crowds right controls */
+  #inGameTopHud {
+    top: max(8px, env(safe-area-inset-top));
+    left: 10px;
+    right: 10px;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #inGameTopHud .hud-pill-shell {
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 44vw;
+    min-height: 36px;
+    padding: 4px 10px;
+    border-radius: 18px;
+  }
+
+  #inGameTopHud > div:last-child {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 2px 6px;
+    border-radius: 18px;
+    gap: 2px;
+  }
+
+  #inGameTopHud .hud-icon-btn {
+    min-height: 32px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  /* Lower Phone Dock: Rock-solid 2-row CSS Grid eliminates empty beige void & vertical jumping! */
+  body.screen-ingame #controlDeck {
+    padding: 6px 10px max(8px, env(safe-area-inset-bottom));
+    gap: 6px;
+  }
+
+  body.screen-ingame #bottomUnifiedRow {
+    flex: 1 1 0%;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: stretch;
+    align-content: stretch;
+    gap: 6px;
+    width: 100%;
+  }
+
+  body.screen-ingame #focalCenterCard,
+  body.screen-ingame.phase-pick-seat #focalCenterCard {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    order: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 12px 10px;
+    border-radius: 10px;
+  }
+
+  body.screen-ingame .corner-role-tile {
+    grid-column: 1;
+    grid-row: 2;
+    order: 0;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    min-height: 48px;
+    padding: 7px 10px;
+    border-radius: 9px;
+    align-self: stretch;
+  }
+
+  body.screen-ingame #cornerFourGDeck {
+    grid-column: 2;
+    grid-row: 2;
+    order: 0;
+    width: auto;
+    align-self: stretch;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+  }
+
+  body.screen-ingame #cornerFourGDeck .fourg-deck-head {
+    min-height: 48px;
+    height: 100%;
+    padding: 6px 11px;
+    border-radius: 9px;
+    font-size: 13px;
+  }
+
+  /* Clean Phone Speaker Header: Zero double ellipsis, crisp single-line name + Pause/Replay */
+  .vn-bust-wrap {
+    width: 54px;
+    flex-shrink: 0;
+  }
+
+  #speakerPortraitImg.vn-bust-img {
+    width: 54px;
+    height: 62px;
+    border-radius: 6px;
+  }
+
+  #speakerActiveBanner {
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+
+  #speakerSeatMedallion {
+    font-size: 16px;
+    padding-right: 7px;
+  }
+
+  #spotlightSpeakerBadge {
+    font-size: 16px;
+    letter-spacing: 0.03em;
+  }
+
+  #speakerVoiceWave {
+    display: none;
+  }
+
+  .spotlight-quiet-tools {
+    gap: 4px;
+  }
+
+  .spotlight-quiet-tools .cta-ink {
+    min-height: 30px;
+    padding: 2px 7px;
+    font-size: 13px;
+  }
+
+  /* Non-Clipping, Non-Overlapping Mobile Dialogue Prose */
+  #spotlightText {
+    font-size: 15.5px;
+    line-height: 1.84;
+    min-height: 3.2rem;
+    max-height: 168px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 2px 4px 6px 0;
+  }
+
+  #spotlightText .clue-token {
+    padding: 1px 4px;
+    font-size: 14.5px;
+    line-height: 1.25;
+  }
+
+  /* Mobile Smart Speech Cards */
+  #quickSpeechChips .play-card-btn {
+    flex: 0 0 84%;
+    min-height: 86px;
+    padding: 9px 11px;
+    border-radius: 9px;
+  }
+
+  /* Mobile Tutorial 3-Device Switcher */
+  .tut-device-switch {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .tut-device-btn {
+    flex-direction: column;
+    gap: 3px;
+    min-height: 48px;
+    padding: 6px 4px;
+    font-size: 13px;
+  }
+}
+
 

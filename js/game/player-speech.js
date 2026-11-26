@@ -460,13 +460,27 @@ function composePlayerPitSpeechText() {
     }
   }
 
+  const m = state.match;
+  const nightOut = Array.isArray(m.lastNightDeaths) ? m.lastNightDeaths : [];
+  if (parts.length === 0 && m.day >= 2) {
+    if (nightOut.length === 0) {
+      parts.push("昨晚是平安夜（大機率奉茶師護人或守衛守中），我幫大家對齊一下今天盤面：");
+    } else {
+      const deadLbl = nightOut.map(function (id) {
+        const ds = getSeat(id);
+        return fmtSeatNum(id) + "號" + (ds ? ds.name : "");
+      }).join("、");
+      parts.push("昨夜 " + deadLbl + " 倒牌，結合前面的發言與票型我直接點坑：");
+    }
+  }
+
   if (d.standSeerId) {
     const ss = getSeat(d.standSeerId);
     parts.push("雙觀察員對跳我站邊 " + fmtSeatNum(d.standSeerId) + "號" + (ss ? ss.name : "") + " 的視角！");
   }
 
   if (d.evidenceClueId) {
-    const clue = (state.match.pinnedClues || []).find(function (c) { return c && c.id === d.evidenceClueId; });
+    const clue = (m.pinnedClues || []).find(function (c) { return c && c.id === d.evidenceClueId; });
     if (clue && clue.summary) {
       parts.push(clue.summary + " ");
     } else if (clue && clue.seatId) {
@@ -474,32 +488,39 @@ function composePlayerPitSpeechText() {
     }
   }
 
+  const pubMatrix = (m.day >= 2 && typeof buildVoteSpeechMatrix === "function") ? buildVoteSpeechMatrix(null) : null;
   if (isWolfPlayer) {
     if (d.goodIds.length > 0) {
-      parts.push("聽下來我覺得 " + fmtList(d.goodIds) + " 發言挺誠懇的，這輪我先放進好人視角力挺；");
+      parts.push("聽下來我覺得 " + fmtList(d.goodIds) + " 發言挺誠懇、立場也乾淨，這輪我先放進好人視角力挺；");
     }
     if (d.wolfIds.length > 0) {
-      parts.push("反觀 " + fmtList(d.wolfIds) + " 的說法矛盾很多，我認為最值得懷疑，建議大家今天集中檢視並優先投票給 " + fmtSeatNum(d.wolfIds[0]) + "號！");
+      const w0 = d.wolfIds[0];
+      const hasDiv = Boolean(pubMatrix && pubMatrix.divergenceBySeat && pubMatrix.divergenceBySeat[w0]);
+      const extraTag = hasDiv ? "（前後發言跟昨天落票明顯對不上）" : "";
+      parts.push("反觀 " + fmtList(d.wolfIds) + extraTag + " 的邏輯漏洞最多，我認為最值得懷疑，建議大家今天集中檢視並優先投票給 " + fmtSeatNum(w0) + "號！");
     }
   } else {
     if (d.goodIds.length > 0) {
-      parts.push("好人坑我先放 " + fmtList(d.goodIds) + (d.goodIds.length >= 3 ? (" 等 " + d.goodIds.length + " 位（立場較真誠）；") : "（立場較真誠）；"));
+      parts.push("好人坑我先保 " + fmtList(d.goodIds) + (d.goodIds.length >= 3 ? (" 等 " + d.goodIds.length + " 位（視角乾淨、立場真誠）；") : "（視角乾淨、立場真誠）；"));
     }
     if (d.wolfIds.length > 0) {
-      let shReason = "";
-      const shRec = state.match.sheriffVoteRecord || null;
+      const reasons = [];
+      const w0 = d.wolfIds[0];
+      if (pubMatrix && pubMatrix.divergenceBySeat && pubMatrix.divergenceBySeat[w0]) {
+        reasons.push("昨天言票嚴重分裂");
+      }
+      const shRec = m.sheriffVoteRecord || null;
       if (shRec) {
-        const w0 = d.wolfIds[0];
-        const w0Seat = getSeat(w0);
         const w0Ballot = (shRec.ballots || []).find(function (b) { return b && b.voterId === w0 && b.targetId; });
-        if (w0Ballot && w0Seat) {
+        if (w0Ballot) {
           const bt = getSeat(w0Ballot.targetId);
-          shReason = "（且他在警長競選時警下投給 " + fmtSeatNum(w0Ballot.targetId) + "號" + (bt ? bt.name : "") + "，票型值得重點比對）";
+          reasons.push("警長競選時警下投給 " + fmtSeatNum(w0Ballot.targetId) + "號" + (bt ? bt.name : ""));
         } else if (Array.isArray(shRec.withdrawnIds) && shRec.withdrawnIds.indexOf(w0) !== -1) {
-          shReason = "（且他在警上突然退水，動機值得檢視）";
+          reasons.push("警上突然退水動機可疑");
         }
       }
-      parts.push("狼坑目前點進 " + fmtList(d.wolfIds) + shReason + "，邏輯最讓人起疑，建議今天集中檢視並優先公投 " + fmtSeatNum(d.wolfIds[0]) + "號！");
+      const shReason = reasons.length ? ("（" + reasons.join("，且") + "）") : "";
+      parts.push("狼坑目前鎖定 " + fmtList(d.wolfIds) + shReason + "，破綻最明顯，建議好人齊心歸票優先請 " + fmtSeatNum(w0) + "號 離席！");
     }
   }
 
@@ -1015,6 +1036,128 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   syncSpeechAdvancedToggleLabel(player);
 }
 
+function buildPlayerSmartBoardContext(player, sampleTarget, slotView, dualWorlds) {
+  const m = state.match || {};
+  const pid = getPlayerId();
+  const aliveOthers = getAliveSeats().filter(function (s) { return s.id !== pid; });
+  const dayEvs = Array.isArray(m.daySpeechEvents) ? m.daySpeechEvents : [];
+  const todayEvBySeat = {};
+  dayEvs.forEach(function (ev) {
+    if (ev && ev.speakerId && ev.speakerId !== pid) todayEvBySeat[ev.speakerId] = ev;
+  });
+
+  const pubMatrix = (m.day >= 2 && typeof buildVoteSpeechMatrix === "function") ? buildVoteSpeechMatrix(null) : null;
+  const divMap = (pubMatrix && pubMatrix.divergenceBySeat) ? pubMatrix.divergenceBySeat : {};
+  let contraSeat = null;
+  aliveOthers.forEach(function (s) {
+    if (player && player.role === "wolf" && s.role === "wolf") return;
+    if (divMap[s.id] && (!contraSeat || divMap[s.id] > (divMap[contraSeat.id] || 0))) {
+      contraSeat = s;
+    }
+  });
+
+  const shRec = m.sheriffVoteRecord || null;
+  const getSheriffClue = function (seatId) {
+    if (!shRec || !seatId) return "";
+    if (shRec.winnerId === seatId) return "身戴警徽";
+    const b = (shRec.ballots || []).find(function (x) { return x && x.voterId === seatId && x.targetId; });
+    if (b) {
+      const bt = getSeat(b.targetId);
+      const btName = bt ? (fmtSeatNum(bt.id) + "號" + bt.name) : (fmtSeatNum(b.targetId) + "號");
+      if (dualWorlds && dualWorlds.chosenWorld && dualWorlds.chosenWorld.fakeSeer && dualWorlds.chosenWorld.fakeSeer.id === b.targetId) {
+        return "警下衝票給假觀察員 " + btName;
+      }
+      return "警下投給 " + btName;
+    }
+    if (Array.isArray(shRec.withdrawnIds) && shRec.withdrawnIds.indexOf(seatId) !== -1) {
+      return "警上臨時退水";
+    }
+    return "";
+  };
+
+  const getTodayStanceDesc = function (seatId) {
+    const ev = todayEvBySeat[seatId];
+    if (!ev) return "";
+    if (ev.claimRole && ROLE_DEFS[ev.claimRole]) {
+      return "剛才起跳 " + ROLE_DEFS[ev.claimRole].name;
+    }
+    if (ev.accuseId) {
+      const ac = getSeat(ev.accuseId);
+      return "剛才點打 " + (ev.accuseId === pid ? "我" : (fmtSeatNum(ev.accuseId) + "號" + (ac ? ac.name : "")));
+    }
+    if (ev.vouchId) {
+      const vc = getSeat(ev.vouchId);
+      return "剛才力挺 " + (ev.vouchId === pid ? "我" : (fmtSeatNum(ev.vouchId) + "號" + (vc ? vc.name : "")));
+    }
+    return "";
+  };
+
+  let accuserOfMe = null;
+  for (let i = dayEvs.length - 1; i >= 0; i--) {
+    const ev = dayEvs[i];
+    if (!ev || ev.speakerId === pid) continue;
+    const hitMe = ev.accuseId === pid || (Array.isArray(ev.wolfPits) && ev.wolfPits.indexOf(pid) !== -1);
+    if (hitMe) {
+      const sp = getSeat(ev.speakerId);
+      if (sp && sp.alive) { accuserOfMe = { seat: sp, ev: ev }; break; }
+    }
+  }
+
+  const rivalSeerSeat = aliveOthers.find(function (s) { return s.claimedRole === "seer"; }) || null;
+  const nightDeaths = Array.isArray(m.lastNightDeaths) ? m.lastNightDeaths.filter(Boolean) : [];
+  const nightNote = m.day >= 2
+    ? (nightDeaths.length === 0
+      ? "昨晚平安夜（奉茶師救人或守衛守中）"
+      : ("昨夜 " + nightDeaths.map(function (id) { const s = getSeat(id); return fmtSeatNum(id) + "號" + (s ? s.name : ""); }).join("、") + " 倒牌"))
+    : (nightDeaths.length === 0
+      ? "首夜平安夜"
+      : ("首夜 " + nightDeaths.map(function (id) { const s = getSeat(id); return fmtSeatNum(id) + "號" + (s ? s.name : ""); }).join("、") + " 倒牌"));
+
+  const checkedIds = (player && Array.isArray(player.checkedHistory)) ? player.checkedHistory.map(function (c) { return c.targetId; }) : [];
+  const bfPool = aliveOthers.filter(function (s) {
+    return checkedIds.indexOf(s.id) === -1 && (!rivalSeerSeat || s.id !== rivalSeerSeat.id);
+  });
+  const bf1 = bfPool[0] || aliveOthers[0] || null;
+  const bf2 = bfPool[1] || aliveOthers.find(function (s) { return bf1 && s.id !== bf1.id; }) || null;
+  const bfText = bf1
+    ? (bf2
+      ? ("今晚警徽流先驗 " + fmtSeatNum(bf1.id) + "號" + bf1.name + "、再驗 " + fmtSeatNum(bf2.id) + "號" + bf2.name + "（飛徽即金水、撕徽即查殺）")
+      : ("今晚警徽流鎖定 " + fmtSeatNum(bf1.id) + "號" + bf1.name))
+    : "";
+
+  const totalWolves = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
+  const briefParts = [];
+  if (dualWorlds && dualWorlds.seerA && dualWorlds.seerB) {
+    briefParts.push("雙觀察員對跳（" + fmtSeatNum(dualWorlds.seerA.id) + "號 vs " + fmtSeatNum(dualWorlds.seerB.id) + "號）");
+  }
+  if (accuserOfMe) {
+    briefParts.push(fmtSeatNum(accuserOfMe.seat.id) + "號" + accuserOfMe.seat.name + " 剛把你點進狼坑");
+  }
+  if (contraSeat) {
+    briefParts.push(fmtSeatNum(contraSeat.id) + "號" + contraSeat.name + " 昨日言票分裂");
+  }
+  if (!briefParts.length && m.sheriffSeatId) {
+    const shS = getSeat(m.sheriffSeatId);
+    if (shS && shS.alive) briefParts.push("警長：" + fmtSeatNum(shS.id) + "號" + (shS.id === pid ? "你" : shS.name));
+  }
+  if (nightNote && m.day >= 2) briefParts.push(nightNote);
+
+  return {
+    aliveOthers: aliveOthers,
+    todayEvBySeat: todayEvBySeat,
+    contraSeat: contraSeat,
+    accuserOfMe: accuserOfMe,
+    rivalSeerSeat: rivalSeerSeat,
+    nightNote: nightNote,
+    nightDeaths: nightDeaths,
+    totalWolves: totalWolves,
+    bfText: bfText,
+    getSheriffClue: getSheriffClue,
+    getTodayStanceDesc: getTodayStanceDesc,
+    briefLine: briefParts.length ? ("盤面焦點：" + briefParts.slice(0, 3).join(" ｜ ")) : ""
+  };
+}
+
 function preparePlayerSpeechPanel() {
   const player = getPlayerSeat();
   const chipsBox = el("quickSpeechChips");
@@ -1054,6 +1197,7 @@ function preparePlayerSpeechPanel() {
   const cards = [];
   const slotView = (typeof buildTableSlotAndWorldAnalysis === "function") ? buildTableSlotAndWorldAnalysis(player) : null;
   const dualWorlds = (slotView && slotView.dualSeerWorlds) ? slotView.dualSeerWorlds : null;
+  const smart = buildPlayerSmartBoardContext(player, sampleTarget, slotView, dualWorlds);
 
   const prevTurnKey = state.match.playerDraftPits ? state.match.playerDraftPits.turnKey : "";
   const draftNow = ensurePlayerDraftPits(true);
@@ -1084,11 +1228,11 @@ function preparePlayerSpeechPanel() {
   const vaneEl = el("tableWindVaneSpeech");
   if (vaneEl) {
     const vw = typeof computeTableWindVane === "function" ? computeTableWindVane() : null;
-    const urgentCaller = (state.match.daySpeechEvents || []).some(function (ev) {
-      return ev && ev.speakerId !== pid && (ev.accuseId === pid || (Array.isArray(ev.wolfPits) && ev.wolfPits.indexOf(pid) !== -1));
-    });
-    if (vw && vw.summaryText && state.match.started && (dualWorlds || urgentCaller)) {
-      vaneEl.textContent = vw.summaryText;
+    const summaryShow = (dualWorlds && vw && vw.summaryText)
+      ? vw.summaryText
+      : (smart.briefLine || (vw && vw.summaryText && smart.accuserOfMe ? vw.summaryText : ""));
+    if (summaryShow && state.match.started) {
+      vaneEl.textContent = summaryShow;
       vaneEl.classList.remove("hidden");
     } else {
       vaneEl.classList.add("hidden");
@@ -1096,139 +1240,194 @@ function preparePlayerSpeechPanel() {
   }
 
   const todaySpokenIds = state.match.logs
-    .filter(function (l) { return l.day === state.match.day && l.kind === "speech" && l.speakerId && l.speakerId !== getPlayerId(); })
+    .filter(function (l) { return l.day === state.match.day && l.kind === "speech" && l.speakerId && l.speakerId !== pid; })
     .map(function (l) { return l.speakerId; });
   const targetAlreadySpoke = todaySpokenIds.indexOf(sampleTarget.id) !== -1;
+  const targetLabel = fmtSeatNum(sampleTarget.id) + "號" + sampleTarget.name;
+  const targetSheriffClue = smart.getSheriffClue(sampleTarget.id);
+  const targetStanceDesc = smart.getTodayStanceDesc(sampleTarget.id);
+  const targetReasonBits = [];
+  if (targetStanceDesc) targetReasonBits.push(targetStanceDesc);
+  if (targetSheriffClue) targetReasonBits.push(targetSheriffClue);
+  const targetEvidenceNote = targetReasonBits.length ? ("（" + targetReasonBits.join("，又") + "）") : "";
 
-  // Card 1: PK Rebuttal OR Dual-Seer World A vs B OR 存好心 (Truth & Evidence / Role Claim)
+  // Card 1: Role Core Intel / PK Defense / Sharpest Board-Aware Opening
   if (inPk && pkRivalSeat && pkRivalSeat.alive) {
+    const pkRivalClue = smart.getSheriffClue(pkRivalSeat.id);
+    const pkRivalStance = smart.getTodayStanceDesc(pkRivalSeat.id);
+    const pkRivalProof = (pkRivalStance || pkRivalClue)
+      ? ("反觀 " + fmtSeatNum(pkRivalSeat.id) + "號" + pkRivalSeat.name + " " + [pkRivalStance, pkRivalClue].filter(Boolean).join("、") + "，邏輯站不住腳，")
+      : ("對比之下，" + fmtSeatNum(pkRivalSeat.id) + "號" + pkRivalSeat.name + " 的立場破綻明顯大得多，");
     const pkRoleProof = (player.role === "seer" && player.checkedHistory.length > 0)
-      ? ("我是真正的明心觀察員，已查證 " + fmtSeatNum(player.checkedHistory[player.checkedHistory.length - 1].targetId) + "號，絕不能在 PK 斷了查驗線！")
+      ? ("我是真正的明心觀察員，手握 " + player.checkedHistory.map(function (c) { return fmtSeatNum(c.targetId) + "號" + (c.isWolf ? "查殺" : "金水"); }).join("、") + "，絕不能在 PK 斷了真預言線！")
       : (player.role === "witch" && player.savedSeatId
-        ? ("我是滴水奉茶師，曾用暖心回甘茶護回 " + fmtSeatNum(player.savedSeatId) + "號，留我在場好人更穩！")
-        : "我全程理性講話無任何邏輯矛盾，留我在場才能繼續幫好人對齊票型！");
+        ? ("我是滴水奉茶師，先前用暖心回甘茶護回 " + fmtSeatNum(player.savedSeatId) + "號 銀水，留我在場好人陣線才穩！")
+        : (player.role === "hunter"
+          ? "我是直心糾察長，若遭誤投出局必帶走頭號狼坑，請好人別浪費神職！"
+          : "我每一輪都盤清正反坑位、言票完全一致，留我在場才能繼續幫好人歸票！"));
     cards.push({
       tgKind: "heart",
       tgTag: "PK 拉票",
-      label: "【PK 搶救陳詞】平票 PK 自證清白，呼籲好人轉投 " + fmtSeatNum(pkRivalSeat.id) + "號 " + pkRivalSeat.name,
-      text: "平票 PK 我誠懇向全場搶救這一票！" + pkRoleProof + "對比之下，" + fmtSeatNum(pkRivalSeat.id) + "號" + pkRivalSeat.name + " 的立場破綻更大，拜託非平票的好人夥伴這輪集中投給 " + pkRivalSeat.id + "號！"
+      label: "PK 搶救自證・直指 " + fmtSeatNum(pkRivalSeat.id) + "號 破綻",
+      text: "平票 PK 我誠懇向全場搶救這一票！" + pkRoleProof + pkRivalProof + "拜託台下好夥伴集中把票投給 " + pkRivalSeat.id + "號！"
     });
   } else if (player.role === "seer" && player.checkedHistory.length > 0) {
+    const allHist = player.checkedHistory.map(function (c) {
+      const cs = getSeat(c.targetId);
+      return fmtSeatNum(c.targetId) + "號" + (cs ? cs.name : "") + (c.isWolf ? "查殺" : "金水");
+    }).join("、");
     const last = player.checkedHistory[player.checkedHistory.length - 1];
     const cSeat = getSeat(last.targetId);
     const cLabel = fmtSeatNum(last.targetId) + "號" + (cSeat ? cSeat.name : "");
+    const rivalCut = smart.rivalSeerSeat
+      ? ("前置位 " + fmtSeatNum(smart.rivalSeerSeat.id) + "號" + smart.rivalSeerSeat.name + " 跳假觀察員直接進定狼坑！")
+      : "";
+    const bfClause = smart.bfText ? (smart.bfText + "。") : "";
     if (last.isWolf) {
       cards.push({
         tgKind: "heart",
-        tgTag: "存好心",
-        label: "【存好心】亮明心觀察員底牌：公開查獲 " + cLabel + " 是酸民狼",
-        text: "各位好夥伴，我存好心向全場公開查證結果：我是真正的明心觀察員！昨晚我查驗了 " + cLabel + "，確定他就是躲在茶席裡的酸民狼，請大家團結集中選票請 " + last.targetId + "號 離席冷靜！"
+        tgTag: "真明心報查殺",
+        label: "亮底報查殺 " + cLabel + (smart.rivalSeerSeat ? "・打飛假觀察員" : "・留警徽流"),
+        text: "各位好夥伴，我是真正的明心觀察員！累計查驗：" + allHist + "，昨晚剛查出 " + cLabel + " 就是酸民狼！" + rivalCut + bfClause + "今天請全場好人團結歸票出 " + last.targetId + "號！"
       });
     } else {
+      const pushId = smart.rivalSeerSeat ? smart.rivalSeerSeat.id : (smart.contraSeat ? smart.contraSeat.id : sampleTarget.id);
+      const pushS = getSeat(pushId);
+      const pushLbl = pushS ? (fmtSeatNum(pushS.id) + "號" + pushS.name) : (fmtSeatNum(pushId) + "號");
       cards.push({
         tgKind: "heart",
-        tgTag: "存好心",
-        label: "【存好心】亮明心觀察員底牌：證實 " + cLabel + " 是好夥伴",
-        text: "我本著存好心原則公開明心觀察員查證：昨晚我查驗過 " + cLabel + "，確定他是善良的好夥伴！請大家放心相信 " + last.targetId + "號，把注意力集中在其他可疑對象身上。"
+        tgTag: "真明心報金水",
+        label: "亮底報金水 " + cLabel + "・歸票 " + pushLbl,
+        text: "我是真正的明心觀察員，報完整查驗線：" + allHist + "，" + cLabel + " 是鐵好人金水！" + rivalCut + bfClause + "今天好人坑先把 " + last.targetId + "號 保住，焦點集中檢視 " + pushLbl + "！"
       });
     }
   } else if (player.role === "witch" && player.savedSeatId) {
+    const svSeat = getSeat(player.savedSeatId);
+    const svLbl = fmtSeatNum(player.savedSeatId) + "號" + (svSeat ? svSeat.name : "");
+    const pushSeat = smart.contraSeat || sampleTarget;
+    const poisonNote = player.poisonUsed ? "清心醒神茶已交出" : "手上仍握有清心醒神茶威懾";
     cards.push({
       tgKind: "deeds",
-      tgTag: "做好事",
-      label: "【做好事】亮滴水奉茶師底牌：證明用回甘茶護回 " + fmtSeatNum(player.savedSeatId) + "號",
-      text: "我是這局的滴水奉茶師，想本著做好事的精神向大家報告：之前晚上被迷霧鎖定的人正是 " + player.savedSeatId + "號，是我用暖心回甘茶把他護回來的，所以他確定是好夥伴，千萬別投錯人！"
+      tgTag: "奉茶師報銀水",
+      label: "亮奉茶師保 " + svLbl + "・歸票 " + fmtSeatNum(pushSeat.id) + "號",
+      text: "我亮滴水奉茶師底牌穩住好人視角！先前是我用暖心回甘茶護回 " + svLbl + "，他是鐵銀水好夥伴，誰硬打 " + player.savedSeatId + "號 誰就進狼坑！" + poisonNote + "，今天請大家跟好人邏輯集中檢視 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + "！"
     });
   } else if (player.role === "guard") {
     const guarded = state.match.lastGuardTargetId ? getSeat(state.match.lastGuardTargetId) : null;
+    const pushSeat = smart.contraSeat || sampleTarget;
     cards.push({
       tgKind: "deeds",
-      tgTag: "守衛表態",
+      tgTag: "守衛控場",
       label: guarded
-        ? ("【做好事】公開護心結界：昨晚守護了 " + fmtSeatNum(guarded.id) + "號 " + guarded.name)
-        : ("【做好事】低調表態好人立場・點評 " + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name),
+        ? ("亮守衛報盾 " + fmtSeatNum(guarded.id) + "號・防同守同救")
+        : ("藏守衛理性盤坑・點檢視 " + fmtSeatNum(pushSeat.id) + "號"),
       text: guarded
-        ? ("我先穩住全場視角：我是這局的護心守衛！昨晚我的護心結界剛守過 " + fmtSeatNum(guarded.id) + "號" + guarded.name + "，希望滴水奉茶師留意別跟我撞車造成破盾，今晚請大家齊心檢視 " + sampleTarget.id + "號！")
-        : ("我是認真盤邏輯的好人，目前場上資訊有限，我先重點檢視 " + fmtSeatNum(sampleTarget.id) + "號" + sampleTarget.name + " 的立場與發言細節！")
+        ? ("我先報護心守衛路線防撞車：昨晚我的護心結界守的是 " + fmtSeatNum(guarded.id) + "號" + guarded.name + "（" + smart.nightNote + "），請奉茶師務必錯開別同守同救！今天狼坑我先點 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + targetEvidenceNote + "。")
+        : ("我是認真盤邏輯的好人，目前場上資訊漸明，結合" + smart.nightNote + "，我先重點檢視 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + targetEvidenceNote + "，看他後面怎麼自證！")
     });
   } else if (player.role === "hunter") {
+    const pushSeat = smart.contraSeat || sampleTarget;
     cards.push({
       tgKind: "heart",
-      tgTag: "糾察表態",
-      label: "【存好心】直心糾察穩局：點評 " + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name + "（必要時正氣威懾）",
-      text: "我先替全場穩住節奏，我手上握有正氣共鳴絕對是硬好人一張！聽完目前發言，我覺得 " + fmtSeatNum(sampleTarget.id) + "號" + sampleTarget.name + " 的邏輯需要大家重點檢視，若酸民狼想推我上台就得承擔被我帶走的代價！"
+      tgTag: "糾察威懾",
+      label: "直心糾察表態・鎖定 " + fmtSeatNum(pushSeat.id) + "號 狼坑",
+      text: "我先替好人陣營定調：我手握正氣共鳴絕對是鐵好人一張！結合" + smart.nightNote + "與發言對照，" + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + targetEvidenceNote + " 最像在帶風向，狼隊要是想推我上台，離席前我一定直接帶走頭號狼坑！"
     });
   } else if (player.isElder) {
+    const pushSeat = smart.contraSeat || sampleTarget;
     cards.push({
       tgKind: "heart",
-      tgTag: "長老穩局",
+      tgTag: "長老歸票",
       label: player.elderShieldUsed
-        ? ("【存好心】清心長老帶隊：點評 " + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name)
-        : ("【存好心】清心長老護航：替神職扛壓，重點檢視 " + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name),
+        ? ("清心長老定調・齊心檢視 " + fmtSeatNum(pushSeat.id) + "號")
+        : ("清心長老扛推・點破 " + fmtSeatNum(pushSeat.id) + "號 邏輯"),
       text: player.elderShieldUsed
-        ? ("我是已經亮牌的清心長老，雖然沒有投票權，但我的視野最純粹！這輪拜託所有好夥伴幫我集中檢視 " + fmtSeatNum(sampleTarget.id) + "號" + sampleTarget.name + "，別讓酸民狼帶偏節奏！")
-        : ("我是這局的清心長老，首次被誤投有豁免護盾可以替神職分擔壓力！我先理性點出 " + fmtSeatNum(sampleTarget.id) + "號" + sampleTarget.name + " 的破綻，好人夥伴們穩穩盤坑！")
+        ? ("我是已亮牌的清心長老，雖無投票權但視角最純粹！結合" + smart.nightNote + "，拜託好夥伴這輪集中檢視 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + targetEvidenceNote + "，別讓酸民狼分票得逞！")
+        : ("我是清心長老，身上有免離席護盾可替神職扛壓！我先點出 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + targetEvidenceNote + " 的破綻，好人陣營穩穩對齊票型！")
     });
   } else if (player.role === "wolf") {
     const wolfMateSeer = aliveOthers.find(function (s) { return s.role === "wolf" && s.claimedRole === "seer"; });
     const wolfGoodPicks = aliveOthers.filter(function (s) { return s.role !== "wolf"; });
     const wolfScapegoat = (sampleTarget.role !== "wolf" ? sampleTarget : wolfGoodPicks[0]) || sampleTarget;
+    const scClue = smart.getSheriffClue(wolfScapegoat.id) || smart.getTodayStanceDesc(wolfScapegoat.id);
+    const scNote = scClue ? ("（" + scClue + "，節奏很可疑）") : "（前後態度閃躲、沒給真邏輯）";
     if (wolfMateSeer) {
       cards.push({
         tgKind: "heart",
         tgTag: "狼隊配合",
-        label: "【狼隊配合・站邊同伴】聲援 " + fmtSeatNum(wolfMateSeer.id) + "號 觀察員，打擊 " + fmtSeatNum(wolfScapegoat.id) + "號",
-        text: "聽下來我覺得 " + fmtSeatNum(wolfMateSeer.id) + "號" + wolfMateSeer.name + " 的觀察員視野與時間線真實多了！反觀 " + fmtSeatNum(wolfScapegoat.id) + "號" + wolfScapegoat.name + " 一直躲在後面攪混水，我堅定站邊 " + fmtSeatNum(wolfMateSeer.id) + "號，這輪直接把票集中給 " + wolfScapegoat.id + "號！"
+        label: "力挺隊友 " + fmtSeatNum(wolfMateSeer.id) + "號 觀察員・推 " + fmtSeatNum(wolfScapegoat.id) + "號",
+        text: "盤完正反視角，我覺得 " + fmtSeatNum(wolfMateSeer.id) + "號" + wolfMateSeer.name + " 的觀察員查驗線與警徽流清楚多了！反觀 " + fmtSeatNum(wolfScapegoat.id) + "號" + wolfScapegoat.name + scNote + " 一直在攪渾水，我堅定站邊 " + fmtSeatNum(wolfMateSeer.id) + "號，這輪把票集中出 " + wolfScapegoat.id + "號！"
       });
     } else {
       cards.push({
         tgKind: "heart",
         tgTag: "悍跳查殺",
-        label: "【狼隊悍跳】冒充明心觀察員・查殺 " + fmtSeatNum(wolfScapegoat.id) + "號 " + wolfScapegoat.name,
-        text: "請全場注意我的視野！我才是這局真正的明心觀察員！昨晚我查驗了 " + fmtSeatNum(wolfScapegoat.id) + "號" + wolfScapegoat.name + "，確定他是躲在茶席裡的酸民狼！我警徽與公投票全部押在 " + wolfScapegoat.id + "號，請好人跟我一起出他！"
+        label: "悍跳觀察員查殺 " + fmtSeatNum(wolfScapegoat.id) + "號・佈假警徽流",
+        text: "全場冷靜聽真預言線！我才是這局真正的明心觀察員！昨晚我查驗了 " + fmtSeatNum(wolfScapegoat.id) + "號" + wolfScapegoat.name + " 確定是酸民狼！" + (smart.bfText ? (smart.bfText + "，") : "") + "今天所有好人跟我集中出 " + wolfScapegoat.id + "號，別被後置位假牌帶偏！"
       });
     }
   } else {
-    const pitBuddy = (slotView && slotView.goodPits && slotView.goodPits[0] && slotView.goodPits[0].id !== sampleTarget.id)
+    const focusTarget = (smart.contraSeat && sampleTarget.id !== smart.contraSeat.id && !pickedSeat)
+      ? smart.contraSeat
+      : sampleTarget;
+    const focusLbl = fmtSeatNum(focusTarget.id) + "號" + focusTarget.name;
+    const fSh = smart.getSheriffClue(focusTarget.id);
+    const fSt = smart.getTodayStanceDesc(focusTarget.id);
+    const fNote = [fSt, fSh].filter(Boolean).join("、");
+    const pitBuddy = (slotView && slotView.goodPits && slotView.goodPits[0] && slotView.goodPits[0].id !== focusTarget.id)
       ? slotView.goodPits[0]
       : null;
-    const buddyNote = (pitBuddy && todaySpokenIds.indexOf(pitBuddy.id) !== -1)
-      ? ("目前好人坑我先放 " + pitBuddy.id + "號" + pitBuddy.name + "；")
-      : "";
+    const buddyNote = pitBuddy ? ("好人坑我先保 " + fmtSeatNum(pitBuddy.id) + "號" + pitBuddy.name + "；") : "";
+    const focusSpoke = todaySpokenIds.indexOf(focusTarget.id) !== -1;
     cards.push({
       tgKind: "heart",
-      tgTag: "存好心",
-      label: "【存好心】盤好人坑與狼坑：重點檢視 " + fmtSeatNum(sampleTarget.id) + "號 " + sampleTarget.name,
-      text: targetAlreadySpoke
-        ? ("我存好心幫大家梳理一下坑位：" + buddyNote + "剛才講過的 " + sampleTarget.id + "號" + sampleTarget.name + " 立場比較模糊，暫時進我今天的檢視狼坑，請大家也聽完還沒發言的人表水再對齊！")
-        : ("目前好人坑與狼坑都還在成形中，因為 " + sampleTarget.id + "號" + sampleTarget.name + " 今天還沒發言，我先留著待聽他等一下怎麼盤坑！")
+      tgTag: "精準排坑",
+      label: "梳理" + smart.nightNote.slice(0, 6) + "・點檢視 " + focusLbl,
+      text: focusSpoke
+        ? ("結合" + smart.nightNote + "我幫大家精算一下坑位：" + buddyNote + focusLbl + (fNote ? ("（" + fNote + "）") : "") + " 的邏輯前後扣不太上，先放進今天的第一檢視狼坑，後置位也請表態對齊票型！")
+        : ("結合" + smart.nightNote + "，" + buddyNote + "目前 " + focusLbl + (fSh ? ("（" + fSh + "）") : "") + " 今天還沒發言，我先點他起來重點聽表水，如果講不出正反狼坑這輪就優先檢視他！")
     });
   }
 
-  // Card 2: 說好話 (Kindness & Persuasive De-escalation — or Wolf false-gold-water pull!)
+  // Card 2: High-IQ Relational Move (Dual-Seer World Split OR Direct Rebuttal OR Good-Pit Alliance / Wolf Pull)
   const friendTarget = (player.role === "wolf" ? aliveOthers.find(function (s) { return s.id !== sampleTarget.id && s.role !== "wolf"; }) : null)
+    || (slotView && slotView.goodPits && slotView.goodPits.find(function (s) { return s.id !== sampleTarget.id && s.id !== pid; }))
     || aliveOthers.find(function (s) { return s.id !== sampleTarget.id; })
     || sampleTarget;
+  const friendLbl = fmtSeatNum(friendTarget.id) + "號" + friendTarget.name;
   const friendSpoke = todaySpokenIds.indexOf(friendTarget.id) !== -1;
+  const friendClue = smart.getSheriffClue(friendTarget.id);
+
   if (player.role === "wolf") {
     cards.push({
       tgKind: "words",
-      tgTag: "拉攏票倉",
-      label: "【假發金水・拉攏好人】力挺 " + fmtSeatNum(friendTarget.id) + "號 " + friendTarget.name + " 帶動信任",
-      text: "這輪我特別想幫 " + fmtSeatNum(friendTarget.id) + "號" + friendTarget.name + " 說話！我覺得他的發言邏輯比全場很多人都誠懇真摯，明顯是站在好人視角替大家著想的好夥伴，大家可以放心先把 " + friendTarget.id + "號 放進好人坑跟我一起抓狼！"
+      tgTag: "假保拉票",
+      label: "精準拉攏好人票倉 " + friendLbl + "・建立共識",
+      text: "這輪我特別想把 " + friendLbl + " 放進鐵好人坑！" + (friendSpoke ? "剛才聽他盤邏輯非常客觀、沒有亂扣帽子，" : "從前面整體表態來看他態度一直很穩，") + (friendClue ? ("加上他" + friendClue + "的視角也合理，") : "") + "好人千萬別內耗誤投 " + friendTarget.id + "號，跟著我一起把焦點鎖去真正矛盾的位置！"
+    });
+  } else if (smart.accuserOfMe) {
+    const ac = smart.accuserOfMe.seat;
+    const acLbl = fmtSeatNum(ac.id) + "號" + ac.name;
+    const acClue = smart.getSheriffClue(ac.id);
+    const extraWp = (slotView && slotView.wolfPits || []).find(function (s) { return s.id !== ac.id && s.id !== pid; });
+    cards.push({
+      tgKind: "words",
+      tgTag: "硬氣反駁",
+      label: "反打點名你的 " + acLbl + "・點齊狼隊結構",
+      text: "前置位 " + acLbl + " 剛才硬把我點進狼坑我直接回應：我全程認真盤邏輯、沒跟誰搞小動作，絕對不在狼坑！" + (acClue ? ("反倒是你" + acClue + "還沒解釋清楚，") : "你急著往我頭上扣帽子更像找抗推位，") + "這輪我先把 " + ac.id + "號" + (extraWp ? (" 跟 " + fmtSeatNum(extraWp.id) + "號" + extraWp.name) : "") + " 一起畫進重點狼坑！"
     });
   } else {
     cards.push({
       tgKind: "words",
-      tgTag: "說好話",
-      label: "【說好話】放進好人坑：溫和力挺 " + fmtSeatNum(friendTarget.id) + "號 " + friendTarget.name,
+      tgTag: "好人聯防",
+      label: "力保好人坑 " + friendLbl + "・穩住好人票型",
       text: friendSpoke
-        ? ("我想把 " + friendTarget.id + "號" + friendTarget.name + " 放進好人坑！剛剛聽他發言態度溫和、邏輯真誠，只要好人彼此互信不亂踩，這輪一定能把真正狼坑抓出來！")
-        : ("目前 " + friendTarget.id + "號" + friendTarget.name + " 還沒發言，不過他" + ((state.match && state.match.day === 1) ? "開場至今的態度還算冷靜誠懇" : "前面幾輪的配合態度還算穩定") + "，我期待聽完他的表水，大家先別急著把他打進狼坑！")
+        ? ("我先幫好人把 " + friendLbl + " 認下來！剛剛聽他的發言條理分明、立場前後對得上" + (friendClue ? ("（且" + friendClue + "）") : "") + "，好人陣營先互保 " + friendTarget.id + "號，把票集中去檢視真正閃躲的位置！")
+        : ("目前 " + friendLbl + " 還沒發言，但看他" + (friendClue ? (friendClue + "的票型脈絡") : ((state.match && state.match.day === 1) ? "開場至今的態度" : "前幾輪的配合度")) + "都偏乾淨，我先暫保 " + friendTarget.id + "號，等聽完後置位表水再一起鎖狼坑！")
     });
   }
 
-  // Card 3: Evidence Card / Dual-Seer World Comparison / Wolf-Pit Rebuttal / Wolf Tactic / Standard Support
+  // Card 3: Killer Move — Pinned Evidence / Dual-Seer World Comparison / Vote-Speech Contradiction / Wolf Tactic / Endgame Math
   const pinnedList = (state.match && state.match.pinnedClues) || [];
   const evClue = pinnedList.find(function (c) {
     if (!c || !c.seatId || c.seatId === pid) return false;
@@ -1244,25 +1443,27 @@ function preparePlayerSpeechPanel() {
       isEvidenceCard: true,
       evidenceClueId: evClue.id,
       evidenceTargetId: evSeat.id,
-      label: "【呈堂證供・邏輯破防】對 " + fmtSeatNum(evSeat.id) + "號 " + evSeat.name + " 打出關鍵線索！",
+      label: "打證破防 " + fmtSeatNum(evSeat.id) + "號 " + evSeat.name + "（全場警覺 +24）",
       text: evClue.summary
     });
   } else if (player.role === "wolf") {
     const goodPushPool = aliveOthers.filter(function (s) { return s.role !== "wolf"; });
     const pushSeat = goodPushPool.find(function (s) { return s.id === sampleTarget.id; }) || goodPushPool[0] || sampleTarget;
+    const pushLbl = fmtSeatNum(pushSeat.id) + "號" + pushSeat.name;
+    const pushClue = smart.getSheriffClue(pushSeat.id) || smart.getTodayStanceDesc(pushSeat.id);
     if (state.match.wolfTactic === "deep_stealth") {
       cards.push({
         tgKind: "deeds",
         tgTag: "深水倒鉤",
-        label: "【狼隊偽裝・穿衣自保】保持理性和氣，點檢視 " + fmtSeatNum(pushSeat.id) + "號",
-        text: "大家先別急著火氣上來，我是個低調守規矩、有分寸的茶席好夥伴，這輪先把視角對準立場比較模糊的 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + "，我們理性聽清楚後面表水再定票！"
+        label: "深水隱身理性盤坑・順勢推 " + pushLbl,
+        text: "大家先深呼吸別被情緒帶走，我站純好人視角對一下票型：" + smart.nightNote + "，加上 " + pushLbl + (pushClue ? ("（" + pushClue + "）") : "") + " 的說詞最模糊，這輪我先記 " + pushSeat.id + "號 一格，聽完後置位再一起理性歸票！"
       });
     } else {
       cards.push({
         tgKind: "deeds",
         tgTag: "帶風推坑",
-        label: "【狼隊戰術・抗推抗辯】假穿護航・點進狼坑 " + fmtSeatNum(pushSeat.id) + "號 " + pushSeat.name,
-        text: "昨晚其實是我用關鍵職能幫忙穩住局勢，所以我自己絕對是鐵好人一張！反觀 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + " 的反應一直閃躲對立，我直接先把 " + pushSeat.id + "號 點進第一狼坑！"
+        label: "強勢抗辯穿衣・鎖定推 " + pushLbl,
+        text: "先把話講明，我一路替好人整理節奏、絕對不在狼坑裡！反觀 " + pushLbl + (pushClue ? ("（" + pushClue + "）") : "") + " 一直避重就輕不敢正面表態，我今天票就掛在 " + pushSeat.id + "號，好人跟我一起把這個破綻位出掉！"
       });
     }
   } else if (evToday.fakeSeerId && getSeat(evToday.fakeSeerId) && getSeat(evToday.fakeSeerId).alive) {
@@ -1270,44 +1471,48 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "deeds",
       tgTag: "拆穿假牌",
-      label: "【存好心・正面回應】拆穿 " + fmtSeatNum(fs.id) + "號 " + fs.name + " 剛剛假冒明心觀察員！",
-      text: "終於輪到我發言了！剛才前置位 " + fmtSeatNum(fs.id) + "號" + fs.name + " 竟然冒充明心觀察員誤導全場，我才是真正的明心觀察員，他鐵定佔一個狼坑，請好人今天務必先把 " + fs.id + "號 請離茶席！"
+      label: "正面打飛假觀察員 " + fmtSeatNum(fs.id) + "號 " + fs.name,
+      text: "終於輪到我發言了！剛才前置位 " + fmtSeatNum(fs.id) + "號" + fs.name + " 竟然冒充明心觀察員誤導全場，我才是真正的明心觀察員，他鐵定佔一個定狼坑！" + (smart.bfText ? (smart.bfText + "，") : "") + "請好人今天務必先把 " + fs.id + "號 請離茶席！"
     });
   } else if (dualWorlds && dualWorlds.chosenWorld && dualWorlds.rivalWorld) {
     const wA = dualWorlds.worldA;
     const wB = dualWorlds.worldB;
     const cw = dualWorlds.chosenWorld;
-    const wAPits = wA.wolfPits.map(function (s) { return s.id + "號" + s.name; }).join("＋");
-    const wBPits = wB.wolfPits.map(function (s) { return s.id + "號" + s.name; }).join("＋");
+    const wAPits = wA.wolfPits.map(function (s) { return fmtSeatNum(s.id) + "號" + s.name; }).join("＋");
+    const wBPits = wB.wolfPits.map(function (s) { return fmtSeatNum(s.id) + "號" + s.name; }).join("＋");
     cards.push({
       tgKind: "deeds",
       tgTag: "盤雙邊坑",
-      label: "【盤雙邊狼坑】對比站 " + dualWorlds.seerA.id + "號 vs 站 " + dualWorlds.seerB.id + "號 的兩邊狼坑！",
-      text: "場上有兩張明心觀察員對跳，我幫全場盤清兩邊狼坑：如果站 " + dualWorlds.seerA.id + "號，狼坑落在 " + wAPits + "；如果站 " + dualWorlds.seerB.id + "號，狼坑落在 " + wBPits + "！對比下來我目前站邊 " + cw.trustedSeer.id + "號，建議把 " + cw.fakeSeer.id + "號 放進首出狼坑！"
+      label: "對比兩邊狼坑：站 " + fmtSeatNum(dualWorlds.seerA.id) + "號 vs " + fmtSeatNum(dualWorlds.seerB.id) + "號",
+      text: "場上雙明心對跳，我直接盤清雙邊世界線：站 " + fmtSeatNum(dualWorlds.seerA.id) + "號 的狼坑在 " + wAPits + "；站 " + fmtSeatNum(dualWorlds.seerB.id) + "號 的狼坑在 " + wBPits + "！對比發言與票型我目前站邊 " + fmtSeatNum(cw.trustedSeer.id) + "號，建議今天先把假牌 " + cw.fakeSeer.id + "號 請離茶席！"
     });
-  } else if (evToday.accusedYouId && getSeat(evToday.accusedYouId) && getSeat(evToday.accusedYouId).alive) {
-    const ac = getSeat(evToday.accusedYouId);
-    const extraWp = (slotView && slotView.wolfPits || []).find(function (s) { return s.id !== ac.id; });
+  } else if (smart.contraSeat) {
+    const cs = smart.contraSeat;
+    const csSh = smart.getSheriffClue(cs.id);
     cards.push({
-      tgKind: "words",
-      tgTag: "回應狼坑",
-      label: "【正面回應】反駁前置位 " + fmtSeatNum(ac.id) + "號 " + ac.name + " 把你點進狼坑",
-      text: "前置位 " + fmtSeatNum(ac.id) + "號" + ac.name + " 剛才把我點進狼坑我必須回應：我全程認真找線索，絕對不在狼坑裡！你急著把我往狼坑推反而讓人懷疑，這輪我先把你跟 " + (extraWp ? (extraWp.id + "號") : "立場曖昧的位置") + " 畫進檢視狼坑！"
+      tgKind: "deeds",
+      tgTag: "抓言票矛盾",
+      label: "點破 " + fmtSeatNum(cs.id) + "號 " + cs.name + " 昨日言票分裂",
+      text: "大家把昨天票型調出來對照！" + fmtSeatNum(cs.id) + "號" + cs.name + " 嘴上說一套、開票又投另一邊，言票嚴重分裂" + (csSh ? ("，加上他先前" + csSh) : "") + "，這完全符合酸民狼偷分票的軌跡，我今天建議集中檢視並優先公投 " + cs.id + "號！"
     });
   } else if (evToday.toxicSlipId && getSeat(evToday.toxicSlipId) && getSeat(evToday.toxicSlipId).alive) {
     const tx = getSeat(evToday.toxicSlipId);
     cards.push({
       tgKind: "deeds",
-      tgTag: "做好事",
-      label: "【做好事・化解酸言】點出 " + fmtSeatNum(tx.id) + "號 " + tx.name + " 剛剛的挑撥語氣",
-      text: "輪到我發言想提醒大家，剛才前置位 " + fmtSeatNum(tx.id) + "號" + tx.name + " 的語氣帶著挑撥對立，很符合酸民狼的特徵，暫時先放一格狼坑；我們保持說好話風度，大家多檢視 " + tx.id + "號。"
+      tgTag: "化解挑撥",
+      label: "抓出 " + fmtSeatNum(tx.id) + "號 " + tx.name + " 帶情緒節奏",
+      text: "想溫和提醒全場，剛才 " + fmtSeatNum(tx.id) + "號" + tx.name + " 刻意用語氣製造對立、想帶偏好人焦點，這很符合酸民狼的打法；我們保持說好話風度、不被節奏牽走，這輪重點檢視 " + tx.id + "號！"
     });
   } else {
+    const aliveCnt = aliveOthers.length + 1;
+    const wpNames = (slotView && slotView.wolfPits && slotView.wolfPits.length > 0)
+      ? slotView.wolfPits.slice(0, 2).map(function (s) { return fmtSeatNum(s.id) + "號" + s.name; }).join("、")
+      : targetLabel;
     cards.push({
       tgKind: "deeds",
-      tgTag: "做好事",
-      label: "【做好事】點出完整坑位・守護好人坑 " + fmtSeatNum(friendTarget.id) + "號",
-      text: "我提醒大家按發言時序把坑位理清：目前好人坑先看 " + friendTarget.id + "號" + friendTarget.name + "，其餘未發言席位待聽表水後再從中點齊剩餘狼坑，避免好人被帶風向誤投！"
+      tgTag: "全盤歸票",
+      label: "盤點剩餘狼坑（" + aliveCnt + "人局）・鎖定 " + wpNames,
+      text: "目前場上還有 " + aliveCnt + " 位在席（" + smart.nightNote + "），好人坑我先認 " + friendLbl + "；其餘還沒自證清白的席位裡，我優先點 " + wpNames + " 進檢視狼坑，請大家聽完末置位後集中歸票、千萬別分票！"
     });
   }
 
@@ -1321,12 +1526,41 @@ function preparePlayerSpeechPanel() {
     btn.className = "play-card-btn is-compact-card card-deal-in w-full text-left flex flex-col justify-between gap-1 " + cardTone;
     if (btn.style) btn.style.animationDelay = (idx * 65) + "ms";
     btn.title = item.text;
+    const cleanTitle = item.label.replace(/^【[^】]+】/, "");
+    const previewSnippet = String(item.text || "").slice(0, 46) + (String(item.text || "").length > 46 ? "…" : "");
     btn.innerHTML =
       '<div class="flex items-center justify-between gap-1.5">' +
       '<span class="play-card-stamp ' + stampTone + '">' + escapeHtml(item.tgTag) + '</span>' +
-      '<span class="flex items-center gap-1"><kbd class="ui-kbd">' + cardKeys[idx] + '</kbd><span class="play-card-arrow text-[10px] opacity-60">→</span></span>' +
+      '<span class="flex items-center gap-1.5">' +
+      '<span role="button" tabindex="0" class="play-card-load-btn" data-card-load="1" title="帶入下方輸入欄微調後再送出">改詞</span>' +
+      '<kbd class="ui-kbd">' + cardKeys[idx] + '</kbd>' +
+      '</span>' +
       '</div>' +
-      '<div class="text-[11px] font-bold leading-snug line-clamp-2">' + escapeHtml(item.label.replace(/^【[^】]+】/, "")) + '</div>';
+      '<div class="play-card-title text-[13px] font-bold leading-snug line-clamp-1">' + escapeHtml(cleanTitle) + '</div>' +
+      '<div class="play-card-preview text-[12px] leading-snug line-clamp-2 opacity-80">' + escapeHtml(previewSnippet) + '</div>';
+    const loadEl = typeof btn.querySelector === "function" ? btn.querySelector("[data-card-load]") : null;
+    if (loadEl && typeof loadEl.addEventListener === "function") {
+      const loadDraftFn = function (ev) {
+        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+        if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+        sound.unlock();
+        if (el("quickFreeInput")) {
+          el("quickFreeInput").value = item.text;
+          if (typeof el("quickFreeInput").focus === "function") el("quickFreeInput").focus();
+        }
+        if (el("playerSpeechInput")) el("playerSpeechInput").value = item.text;
+        state.match.pendingEvidenceTargetId = item.isEvidenceCard ? item.evidenceTargetId : null;
+        state.match.pendingEvidenceClueId = item.isEvidenceCard ? item.evidenceClueId : null;
+        refreshQuickFreeInputHint();
+        refreshLiveNlpUI();
+        if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(540, 0.05, "triangle", 0.04, 0);
+        if (typeof showToast === "function") showToast("已將「" + item.tgTag + "」帶入下方陳詞欄，可自由微調後送出。", "emerald");
+      };
+      loadEl.addEventListener("click", loadDraftFn);
+      loadEl.addEventListener("keydown", function (ev) {
+        if (ev && (ev.key === "Enter" || ev.key === " ")) loadDraftFn(ev);
+      });
+    }
     btn.addEventListener("click", function () {
       if (chipsBox._cardCasting) return;
       chipsBox._cardCasting = true;
