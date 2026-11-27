@@ -133,20 +133,23 @@ function chooseAiVoteTarget(voter, opts) {
   const others = (pkPool && pkPool.length > 0) ? pkPool : alive.filter(function (t) { return t.id !== self.id; });
   const playerTargetId = o.playerTargetId || null;
   const pidVote = snap ? snap.playerSeatId : getPlayerId();
+  const diff = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
   let chosen = null;
 
   if (self.role === "wolf") {
     const nonWolves = others.filter(function (t) { return snap ? !t.isWolfMate : (t.role !== "wolf"); });
     const rawTac = snap ? snap.wolfTactic : null;
     const isDeepBus = (rawTac === "deep_stealth_bus" || rawTac === "deep_stealth");
-    // v17.0 阿竹狼破綻：隊友一旦公開熱度偏高，會比其他狼更果斷倒鉤賣隊友保自身金身！
+    // v17.0 阿竹狼破綻 + Pro 難度下隊友高熱瀕死時可適度倒鉤賣隊友做金身（絕不賣人類玩家同伴）
     const isAzhuBus = (self.name === "阿竹");
-    const busHeatThreshold = isAzhuBus ? 62 : 78;
-    const canBusVote = Boolean((isDeepBus || isAzhuBus) && others.length > 0 && nonWolves.length > 0 && snap);
+    const busHeatThreshold = isAzhuBus ? 62 : (diff === "pro" && !isDeepBus ? 84 : 78);
+    const allowBusRule = diff === "easy" ? isDeepBus : (isDeepBus || isAzhuBus || diff === "pro");
+    const canBusVote = Boolean(allowBusRule && others.length > 0 && nonWolves.length > 0 && snap);
     const isPlayerPush = (rawTac === "player_fake_seer_push" || rawTac === "pack_push");
     const pool = canBusVote
       ? others.filter(function (t) {
           if (!t.isWolfMate) return true;
+          if (diff === "pro" && !isDeepBus && !isAzhuBus && t.id === pidVote) return false;
           return snap.getObservableHeatOnSeat(t.id) >= busHeatThreshold;
         })
       : (nonWolves.length > 0 ? nonWolves : others);
@@ -161,12 +164,16 @@ function chooseAiVoteTarget(voter, opts) {
       return spIsPack && ev.accuseId && ev.accuseId !== self.id;
     });
     const teamTargetId = wolfPushEv ? wolfPushEv.accuseId : null;
+    const heatPileMul = diff === "pro" ? 0.48 : (diff === "normal" ? 0.30 : 0);
+    const scoreWolfVote = function (t) {
+      const seatHeat = snap ? snap.getObservableHeatOnSeat(t.id) : 40;
+      const busBonus = (canBusVote && t.isWolfMate && snap && seatHeat >= busHeatThreshold) ? (isDeepBus ? 26 : 24) : 0;
+      const heatPileBonus = (!t.isWolfMate && snap && heatPileMul > 0) ? Math.round(seatHeat * heatPileMul) : 0;
+      const elderPenalty = (diff !== "easy" && t.voteDisabled) ? -30 : 0;
+      return busBonus + heatPileBonus + elderPenalty + (t.id === teamTargetId ? (isPlayerPush ? 42 : 28) : 0) + (t.id === self.publicVoteIntent ? 30 : 0) + (t.id === self.publicVouchId ? -18 : 0) + (t.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[t.id]) || 50);
+    };
     pool.sort(function (a, b) {
-      const busBonusA = (canBusVote && a.isWolfMate && snap && snap.getObservableHeatOnSeat(a.id) >= busHeatThreshold) ? (isDeepBus ? 26 : 24) : 0;
-      const busBonusB = (canBusVote && b.isWolfMate && snap && snap.getObservableHeatOnSeat(b.id) >= busHeatThreshold) ? (isDeepBus ? 26 : 24) : 0;
-      const sA = busBonusA + (a.id === teamTargetId ? (isPlayerPush ? 42 : 28) : 0) + (a.id === self.publicVoteIntent ? 30 : 0) + (a.id === self.publicVouchId ? -18 : 0) + (a.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
-      const sB = busBonusB + (b.id === teamTargetId ? (isPlayerPush ? 42 : 28) : 0) + (b.id === self.publicVoteIntent ? 30 : 0) + (b.id === self.publicVouchId ? -18 : 0) + (b.claimedRole === "seer" ? 22 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
-      return sB - sA;
+      return scoreWolfVote(b) - scoreWolfVote(a);
     });
     chosen = pool[0] ? pool[0].id : null;
   } else {
@@ -236,12 +243,19 @@ function chooseAiVoteTarget(voter, opts) {
         }
       }
     } else {
-      const twoSeerFocus = (seerClaimants.length >= 2 && candidatePool.some(function (t) { return t.claimedRole === "seer"; }));
       const dayEvsVote = snap ? snap.daySpeechEvents : (state.match.daySpeechEvents || []);
       const voteProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
       const rallyWeight = voteProf ? Math.round(20 * (1 + voteProf.bandwagonBias * 0.45)) : 20;
       const vmVote = (snap && typeof buildVoteSpeechMatrix === "function") ? buildVoteSpeechMatrix(self, snap) : null;
       const ledgerVote = (snap && typeof buildCrossDayMemoryLedger === "function") ? buildCrossDayMemoryLedger(self, snap) : null;
+      const slotViewVote = (snap && typeof buildTableSlotAndWorldAnalysis === "function") ? buildTableSlotAndWorldAnalysis(self, snap) : null;
+      const chosenWorldVote = (slotViewVote && slotViewVote.dualSeerWorlds && slotViewVote.dualSeerWorlds.chosenWorld) ? slotViewVote.dualSeerWorlds.chosenWorld : null;
+      const deadNightSeerCount = (slotViewVote && Array.isArray(slotViewVote.deadNightSeers)) ? slotViewVote.deadNightSeers.length : 0;
+      const soleGodIdSet = {};
+      if (slotViewVote && Array.isArray(slotViewVote.soleGodIds)) {
+        slotViewVote.soleGodIds.forEach(function (gid) { soleGodIdSet[gid] = true; });
+      }
+      const selfEffRoleVote = (self && self.effectiveRoleKey) || (typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(self) : self.role);
       const sheriffVoteId = (snap && !snap.sheriffElectionPending) ? snap.sheriffSeatId : null;
       const votePersonaOpts = {
         snap: snap,
@@ -253,14 +267,32 @@ function chooseAiVoteTarget(voter, opts) {
         divergenceBySeat: vmVote ? vmVote.divergenceBySeat : null,
         flipIds: ledgerVote ? ledgerVote.flipIds : []
       };
+      const computeWorldAlignmentDelta = function (t) {
+        let wd = 0;
+        if (chosenWorldVote && chosenWorldVote.fakeSeer && chosenWorldVote.trustedSeer) {
+          if (t.id === chosenWorldVote.fakeSeer.id) {
+            wd += diff === "pro" ? 28 : (diff === "easy" ? 8 : 18);
+          } else if (t.id === chosenWorldVote.trustedSeer.id) {
+            wd -= diff === "pro" ? 24 : (diff === "easy" ? 6 : 16);
+          } else if (Array.isArray(chosenWorldVote.checkedWolfIds) && chosenWorldVote.checkedWolfIds.indexOf(t.id) !== -1) {
+            wd += diff === "pro" ? 18 : (diff === "easy" ? 5 : 12);
+          }
+        } else if (deadNightSeerCount >= 1 && seerClaimants.length === 1 && t.id === seerClaimants[0].id) {
+          wd += diff === "pro" ? 20 : (diff === "easy" ? 6 : 14);
+        }
+        if (soleGodIdSet[t.id] && t.claimedRole !== selfEffRoleVote && verifiedWolfIds.indexOf(t.id) === -1) {
+          wd -= diff === "pro" ? 24 : (diff === "easy" ? 8 : 16);
+        }
+        return wd;
+      };
       candidatePool.sort(function (a, b) {
         // Uniform low-harmony confusion jitter across ALL candidates (zero hidden team peeking!)
         const jA = hazeChaos ? Math.sin(self.id * 7 + a.id * 3) * hazeChaos : 0;
         const jB = hazeChaos ? Math.sin(self.id * 7 + b.id * 3) * hazeChaos : 0;
         const persA = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, a, votePersonaOpts) : 0;
         const persB = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, b, votePersonaOpts) : 0;
-        const pA = (self.publicVoteIntent === a.id ? 38 : 0) + (self.publicVouchId === a.id ? -26 : 0) + (rallyId === a.id ? rallyWeight : 0) + computeFourGClueDelta(a) + (twoSeerFocus && a.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50) + persA + jA;
-        const pB = (self.publicVoteIntent === b.id ? 38 : 0) + (self.publicVouchId === b.id ? -26 : 0) + (rallyId === b.id ? rallyWeight : 0) + computeFourGClueDelta(b) + (twoSeerFocus && b.claimedRole === "seer" ? 20 : 0) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50) + persB + jB;
+        const pA = (self.publicVoteIntent === a.id ? 38 : 0) + (self.publicVouchId === a.id ? -26 : 0) + (rallyId === a.id ? rallyWeight : 0) + computeFourGClueDelta(a) + computeWorldAlignmentDelta(a) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50) + persA + jA;
+        const pB = (self.publicVoteIntent === b.id ? 38 : 0) + (self.publicVouchId === b.id ? -26 : 0) + (rallyId === b.id ? rallyWeight : 0) + computeFourGClueDelta(b) + computeWorldAlignmentDelta(b) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50) + persB + jB;
         return pB - pA;
       });
       if (candidatePool[0] && ((self.publicVoteIntent === candidatePool[0].id) || (rallyId === candidatePool[0].id) || ((self.suspicionMap && self.suspicionMap[candidatePool[0].id]) || 50) >= 48)) {
@@ -3413,11 +3445,22 @@ function chooseAiSheriffElectionVote(voter, candidateIds, speeches, isAutoPass) 
     : null;
   const self = (snap && snap.self) ? snap.self : voter;
   const pid = snap ? snap.playerSeatId : getPlayerId();
+  const diff = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
   const claimedSeerOnStand = {};
   const playfulOnStand = {};
+  const hasFlowOnStand = {};
+  const goldCheckedMeByCand = {};
+  const wolfCheckedMeByCand = {};
   (speeches || []).forEach(function (sp) {
-    if (sp && (sp.tone === "seer" || sp.tone === "clash")) claimedSeerOnStand[sp.id] = true;
-    if (sp && (sp.tone === "playful" || sp.tone === "bluff")) playfulOnStand[sp.id] = true;
+    if (!sp) return;
+    if (sp.tone === "seer" || sp.tone === "clash") claimedSeerOnStand[sp.id] = true;
+    if (sp.tone === "playful" || sp.tone === "bluff") playfulOnStand[sp.id] = true;
+    if (sp.badgeFlow && sp.badgeFlow.firstTargetId) hasFlowOnStand[sp.id] = true;
+    const spTxt = String(sp.text || "");
+    if (sp.checkTargetId && sp.checkTargetId === self.id) {
+      if (/查殺|偏狼坑|酸民狼/.test(spTxt)) wolfCheckedMeByCand[sp.id] = true;
+      else if (/金水|偏金水|好人/.test(spTxt)) goldCheckedMeByCand[sp.id] = true;
+    }
   });
   const cands = (candidateIds || []).map(function (id) {
     return snap ? snap.getSeat(id) : getSeat(id);
@@ -3426,12 +3469,23 @@ function chooseAiSheriffElectionVote(voter, candidateIds, speeches, isAutoPass) 
 
   const scoreCand = function (cand) {
     // Zero-Leak Fair Play: Good AIs NEVER peek hidden roles/teams; Wolves legally know their Wolf mates via isWolfMate!
-    const wolfKnowsMate = (self.role === "wolf" && (snap ? cand.isWolfMate : cand.role === "wolf")) ? 20 : 0;
+    const wolfMateBonus = diff === "pro" ? 28 : (diff === "easy" ? 14 : 20);
+    const wolfKnowsMate = (self.role === "wolf" && (snap ? cand.isWolfMate : cand.role === "wolf")) ? wolfMateBonus : 0;
     const observableSeerClaim = claimedSeerOnStand[cand.id] ? 12 : 0;
+    const rivalSeerPenalty = (self.role === "seer" && claimedSeerOnStand[cand.id])
+      ? (diff === "easy" ? -35 : -65)
+      : 0;
+    const selfGoldBonus = (self.team === "good" && goldCheckedMeByCand[cand.id])
+      ? (diff === "easy" ? 8 : 14)
+      : 0;
+    const selfWolfPenalty = (self.team === "good" && wolfCheckedMeByCand[cand.id])
+      ? (diff === "easy" ? -25 : -45)
+      : 0;
+    const flowBonus = hasFlowOnStand[cand.id] ? (diff === "easy" ? 4 : 8) : 0;
     const playfulPenalty = playfulOnStand[cand.id] ? -5 : 0;
     const playerRunBonus = (isAutoPass && cand.id === pid) ? 14 : 0;
     const seatJitter = ((self.id * 11 + cand.id * 7) % 9) - 4;
-    return wolfKnowsMate + observableSeerClaim + playfulPenalty + playerRunBonus + seatJitter - ((self.suspicionMap && self.suspicionMap[cand.id]) || 50);
+    return wolfKnowsMate + observableSeerClaim + rivalSeerPenalty + selfGoldBonus + selfWolfPenalty + flowBonus + playfulPenalty + playerRunBonus + seatJitter - ((self.suspicionMap && self.suspicionMap[cand.id]) || 50);
   };
   const ranked = cands.slice().sort(function (a, b) { return scoreCand(b) - scoreCand(a); });
   const chosenId = ranked[0] ? ranked[0].id : null;

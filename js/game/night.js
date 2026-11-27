@@ -290,25 +290,36 @@ function chooseAiGuardTarget(guardSeat, rngVal) {
     ? createBlindMatchSnapshot(guardSeat, { module: "night_guard", phase: "NIGHT_GUARD" })
     : null;
   const self = (snap && snap.self) ? snap.self : guardSeat;
+  const diff = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
+  const dayNow = snap ? snap.day : state.match.day;
   const aliveAll = snap ? snap.aliveSeats : getAliveSeats();
   const bannedId = snap ? snap.lastGuardTargetId : (state.match.lastGuardTargetId || null);
   const validPool = aliveAll.filter(function (s) { return s.id !== bannedId; });
   const r = typeof rngVal === "number" ? rngVal : Math.random();
   const gProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
-  const emptyGuardChance = gProf ? clamp(0.10 + gProf.godHideBias * 0.16, 0.10, 0.28) : 0.18;
-  const skipFirstNightClash = (snap ? snap.day : state.match.day) === 1 && r < emptyGuardChance;
+  const emptyGuardChance = dayNow === 1
+    ? (diff === "pro" ? 0.84 : (diff === "normal" ? 0.68 : (gProf ? clamp(0.16 + gProf.godHideBias * 0.14, 0.16, 0.30) : 0.25)))
+    : 0;
+  const skipFirstNightClash = dayNow === 1 && r < emptyGuardChance;
   let pickId = null;
   if (!skipFirstNightClash && validPool.length > 0) {
-    const exposedSeer = validPool.find(function (s) { return s.claimedRole === "seer" && ((self.suspicionMap && self.suspicionMap[s.id]) || 50) < 62; });
+    const exposedSeer = validPool.find(function (s) { return s.claimedRole === "seer" && ((self.suspicionMap && self.suspicionMap[s.id]) || 50) < 60; });
+    const witchCount = aliveAll.filter(function (s) { return s.claimedRole === "witch"; }).length;
+    const exposedSoloWitch = (diff !== "easy" && witchCount === 1)
+      ? validPool.find(function (s) { return s.claimedRole === "witch" && ((self.suspicionMap && self.suspicionMap[s.id]) || 50) < 58; })
+      : null;
     const shPending = snap ? snap.sheriffElectionPending : state.match.sheriffElectionPending;
     const shId = snap ? snap.sheriffSeatId : state.match.sheriffSeatId;
     const sheriffTgt = !shPending
-      ? validPool.find(function (s) { return s.id === shId && ((self.suspicionMap && self.suspicionMap[s.id]) || 50) < 60; })
+      ? validPool.find(function (s) { return s.id === shId && ((self.suspicionMap && self.suspicionMap[s.id]) || 50) < 58; })
+      : null;
+    const selfGuardExposed = (diff !== "easy" && self.claimedRole === "guard")
+      ? validPool.find(function (s) { return s.id === self.id; })
       : null;
     const sortedTrusted = validPool.slice().sort(function (a, b) {
       return ((self.suspicionMap && self.suspicionMap[a.id]) || 50) - ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
     });
-    const pick = exposedSeer || sheriffTgt || sortedTrusted[0];
+    const pick = exposedSeer || exposedSoloWitch || sheriffTgt || selfGuardExposed || sortedTrusted[0];
     pickId = pick ? pick.id : null;
   }
   if (typeof antiCheatMonitor !== "undefined" && self) {
@@ -530,24 +541,41 @@ function chooseAiWolfTarget(goodTargets, opts) {
   const snap = o.snap || null;
   const rand = typeof o.rngVal === "number" ? function () { return o.rngVal; } : Math.random;
   const diff = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
-  const seerChance = diff === "pro" ? 0.96 : (diff === "easy" ? 0.48 : 0.85);
-  const witchChance = diff === "pro" ? 0.90 : (diff === "easy" ? 0.42 : 0.78);
-  const guardChance = diff === "pro" ? 0.88 : (diff === "easy" ? 0.40 : 0.72);
+  const dayNow = snap ? (snap.day || 1) : ((state.match && state.match.day) || 1);
+  const seerChance = diff === "pro" ? 0.96 : (diff === "easy" ? 0.45 : 0.85);
+  const witchChance = diff === "pro" ? 0.90 : (diff === "easy" ? 0.38 : 0.78);
+  const guardChance = diff === "pro" ? 0.88 : (diff === "easy" ? 0.35 : 0.72);
   const exposedSeer = goodTargets.find(function (s) { return s.claimedRole === "seer"; });
-  if (exposedSeer && rand() < seerChance) return exposedSeer;
   const exposedWitch = goodTargets.find(function (s) { return s.claimedRole === "witch"; });
-  if (exposedWitch && rand() < witchChance) return exposedWitch;
   const exposedGuard = goodTargets.find(function (s) { return s.claimedRole === "guard"; });
+  const allSeats = snap ? snap.seats : ((state.match && state.match.seats) || []);
+  const guardBoardOn = snap ? snap.hasGuardMode : Boolean(state.guardMode && state.match && state.match.totalSeats >= 8);
+  const deadClaimedGuard = !guardBoardOn || allSeats.some(function (s) { return !s.alive && s.claimedRole === "guard"; });
+
+  // Pro Day 2+ Guard Cross-Knife (穿刀): if Guard may still be alive protecting exposed Seer, occasionally pivot to secondary core Good seat!
+  if (diff === "pro" && dayNow >= 2 && snap && exposedSeer && !deadClaimedGuard) {
+    const shPendingCross = snap.sheriffElectionPending;
+    const shIdCross = shPendingCross ? null : snap.sheriffSeatId;
+    const shCross = shIdCross ? goodTargets.find(function (s) { return s.id === shIdCross && s.id !== exposedSeer.id && s.claimedRole !== "hunter"; }) : null;
+    const calmCross = goodTargets.filter(function (s) {
+      return s.id !== exposedSeer.id && s.claimedRole !== "hunter" && !s.voteDisabled;
+    }).sort(function (a, b) {
+      return snap.getObservableHeatOnSeat(a.id) - snap.getObservableHeatOnSeat(b.id);
+    })[0] || null;
+    const secondaryGood = (exposedWitch && exposedWitch.id !== exposedSeer.id ? exposedWitch : null) || shCross || calmCross;
+    if (secondaryGood && rand() < 0.35) return secondaryGood;
+  }
+
+  if (exposedSeer && rand() < seerChance) return exposedSeer;
+  if (exposedWitch && rand() < witchChance) return exposedWitch;
   if (exposedGuard && rand() < guardChance) return exposedGuard;
-  if (diff === "pro") {
+
+  if (diff === "pro" || diff === "normal") {
     // Strictly observable table state via Blind-View: if claimed Seer, Witch & Guard are all dead, exposed Hunter may be last God!
-    const allSeats = snap ? snap.seats : ((state.match && state.match.seats) || []);
     const deadClaimedSeer = allSeats.some(function (s) { return !s.alive && s.claimedRole === "seer"; });
     const deadClaimedWitch = allSeats.some(function (s) { return !s.alive && s.claimedRole === "witch"; });
-    const guardBoardOn = snap ? snap.hasGuardMode : Boolean(state.guardMode && state.match && state.match.totalSeats >= 8);
-    const deadClaimedGuard = !guardBoardOn || allSeats.some(function (s) { return !s.alive && s.claimedRole === "guard"; });
     const exposedHunter = goodTargets.find(function (s) { return s.claimedRole === "hunter"; });
-    if (deadClaimedSeer && deadClaimedWitch && deadClaimedGuard && exposedHunter && rand() < 0.92) {
+    if (deadClaimedSeer && deadClaimedWitch && deadClaimedGuard && exposedHunter && rand() < (diff === "pro" ? 0.92 : 0.78)) {
       return exposedHunter;
     }
     const nonHunters = goodTargets.filter(function (s) { return s.claimedRole !== "hunter"; });
@@ -555,15 +583,25 @@ function chooseAiWolfTarget(goodTargets, opts) {
     const shPending = snap ? snap.sheriffElectionPending : state.match.sheriffElectionPending;
     const shId = shPending ? null : (snap ? snap.sheriffSeatId : state.match.sheriffSeatId);
     const sheriffTarget = shId ? smartPool.find(function (s) { return s.id === shId; }) : null;
-    if (sheriffTarget && rand() < 0.75) return sheriffTarget;
+    if (sheriffTarget && rand() < (diff === "pro" ? 0.75 : 0.60)) return sheriffTarget;
     const shieldTarget = smartPool.find(function (s) { return s.trustShield; });
-    if (shieldTarget && rand() < 0.65) return shieldTarget;
+    if (shieldTarget && rand() < (diff === "pro" ? 0.65 : 0.55)) return shieldTarget;
+    if (snap && dayNow >= 2 && smartPool.length > 1) {
+      // Keep high-heat daytime mislynch baits alive; knife calm low-heat non-Elder Good seats!
+      const nonElderSmart = smartPool.filter(function (s) { return !s.voteDisabled; });
+      const calmBase = nonElderSmart.length > 0 ? nonElderSmart : smartPool;
+      const calmPool = calmBase.filter(function (s) { return snap.getObservableHeatOnSeat(s.id) < 58; });
+      const sortedPool = (calmPool.length > 0 ? calmPool : calmBase).slice().sort(function (a, b) {
+        return snap.getObservableHeatOnSeat(a.id) - snap.getObservableHeatOnSeat(b.id);
+      });
+      if (sortedPool[0] && rand() < (diff === "pro" ? 0.78 : 0.62)) return sortedPool[0];
+    }
     return smartPool[Math.floor(rand() * smartPool.length) % smartPool.length];
   }
   const observableShielded = goodTargets.find(function (s) { return s.trustShield; });
   if (observableShielded && rand() < 0.55) return observableShielded;
   // v17.0 阿松當狼習慣：夜間配刀精準鎖定低熱度安靜藏神位（僅依公開可觀測熱度與跳牌，100% 盲視合法）
-  if (o.wolfSeat && o.wolfSeat.name === "阿松" && snap && (snap.day || 1) >= 2 && goodTargets.length > 1) {
+  if (o.wolfSeat && o.wolfSeat.name === "阿松" && snap && dayNow >= 2 && goodTargets.length > 1) {
     const quietPool = goodTargets.filter(function (s) { return s.claimedRole !== "hunter"; });
     const src = quietPool.length > 0 ? quietPool : goodTargets;
     const sortedQuiet = src.slice().sort(function (a, b) {
@@ -579,10 +617,13 @@ function chooseAiSeerTarget(seerSeat) {
     ? createBlindMatchSnapshot(seerSeat, { module: "night_seer", phase: "NIGHT_SEER" })
     : null;
   const self = (snap && snap.self) ? snap.self : seerSeat;
+  const diff = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
   const checkedIds = (self.checkedHistory || []).map(function (c) { return c.targetId; });
   const aliveOthers = snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== seerSeat.id; });
   const pool = aliveOthers.filter(function (s) { return checkedIds.indexOf(s.id) === -1; });
-  const candidates = (pool.length > 0 ? pool : aliveOthers).slice();
+  const rawCandidates = (pool.length > 0 ? pool : aliveOthers).slice();
+  const nonRivalPool = rawCandidates.filter(function (s) { return s.claimedRole !== "seer"; });
+  const candidates = (nonRivalPool.length > 0 ? nonRivalPool : rawCandidates).slice();
   if (!candidates.length) return null;
 
   // Authentic Badge Flow Execution: True AI Seer prioritizes their own declared 1st -> 2nd Badge Flow target!
@@ -592,7 +633,7 @@ function chooseAiSeerTarget(seerSeat) {
   if (ownFlow) {
     const flowIds = [ownFlow.firstTargetId, ownFlow.secondTargetId].filter(Boolean);
     for (let fi = 0; fi < flowIds.length; fi++) {
-      const fHit = pool.find(function (s) { return s.id === flowIds[fi]; });
+      const fHit = pool.find(function (s) { return s.id === flowIds[fi] && s.claimedRole !== "seer"; });
       if (fHit) {
         if (typeof antiCheatMonitor !== "undefined" && self) {
           antiCheatMonitor.recordDecision("night_seer", self.id, "依警徽流查驗 " + fHit.id + "號");
@@ -603,8 +644,38 @@ function chooseAiSeerTarget(seerSeat) {
   }
   const sProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
   const pubEvsS = snap ? snap.allSpeechEvents : [];
+  const shRecSeer = snap ? snap.sheriffVoteRecord : null;
+  const voteHistSeer = snap ? (snap.voteHistory || []) : [];
+  const claimedCountByRole = {};
+  aliveOthers.forEach(function (s) {
+    if (s && s.claimedRole) claimedCountByRole[s.claimedRole] = (claimedCountByRole[s.claimedRole] || 0) + 1;
+  });
+  const rivalSeersOnStand = (shRecSeer && Array.isArray(shRecSeer.seerClaimIds))
+    ? shRecSeer.seerClaimIds.filter(function (cid) { return cid !== self.id; })
+    : [];
+  const scoreSeerCheck = function (s) {
+    let sc = (self.suspicionMap && self.suspicionMap[s.id]) || 50;
+    if (diff === "easy") return sc;
+    if (s.voteDisabled) sc -= 35;
+    if ((s.claimedRole === "witch" || s.claimedRole === "guard" || s.claimedRole === "hunter") && claimedCountByRole[s.claimedRole] === 1) {
+      sc -= 20;
+    }
+    if (shRecSeer && Array.isArray(shRecSeer.ballots) && rivalSeersOnStand.length > 0) {
+      const votedRival = shRecSeer.ballots.some(function (b) {
+        return b && b.voterId === s.id && rivalSeersOnStand.indexOf(b.targetId) !== -1;
+      });
+      if (votedRival) sc += (diff === "pro" ? 24 : 18);
+    }
+    const votedSelf = voteHistSeer.some(function (vh) {
+      return (vh.ballots || []).some(function (b) { return b && b.voterId === s.id && b.targetId === self.id; });
+    });
+    if (votedSelf) sc += (diff === "pro" ? 20 : 14);
+    const accusedSelf = pubEvsS.some(function (ev) { return ev && ev.speakerId === s.id && ev.accuseId === self.id; });
+    if (accusedSelf) sc += 12;
+    return sc;
+  };
   candidates.sort(function (a, b) {
-    const susDiff = ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+    const susDiff = scoreSeerCheck(b) - scoreSeerCheck(a);
     if (Math.abs(susDiff) >= 4) return susDiff;
     // Blind-View tie-breaker: analytical personas check outspoken/high-activity seats; intuitive personas check quieter seats
     const actA = pubEvsS.filter(function (ev) { return ev.speakerId === a.id && ev.accuseId; }).length;
@@ -674,6 +745,7 @@ function chooseAiWitchNightAction(witchSeat, rngVal) {
   const aiCanHeal = Boolean(pots && pots.heal && victimId && (victimId !== self.id || (day === 1 && canSelfHealN1)));
   if (aiCanHeal) {
     const susp = (self.suspicionMap && self.suspicionMap[victimId]) || 50;
+    const vicSeat = snap ? snap.getSeat(victimId) : (typeof getSeat === "function" ? getSeat(victimId) : null);
     if (day === 1) {
       // v16.0 Dynamic Night-1 Heal Probability (breaks 100% auto-save iron rule! normal ~70%, pro ~55%, easy ~85%)
       const baseProb = diff === "pro" ? 0.55 : (diff === "easy" ? 0.85 : 0.70);
@@ -687,22 +759,54 @@ function chooseAiWitchNightAction(witchSeat, rngVal) {
       if (roll < finalProb) {
         heal = true;
       }
-    } else if (susp < 62) {
-      heal = true;
+    } else {
+      const vicFakeWitch = Boolean(diff !== "easy" && vicSeat && vicSeat.claimedRole === "witch");
+      const vicIsSeer = Boolean(vicSeat && vicSeat.claimedRole === "seer");
+      if (!vicFakeWitch && ((vicIsSeer && susp < 66) || susp < (diff === "pro" ? 58 : 62))) {
+        heal = true;
+      }
     }
   }
   const canPurifyTonight = Boolean(!heal && pots && pots.purify && (day >= 2 || twinTea));
   if (canPurifyTonight) {
     const aliveOthers = snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== witchSeat.id; });
-    const purifyThreshold = (day === 1 && twinTea) ? 58 : 72;
-    const suspects = aliveOthers.filter(function (s) {
-      return s.id !== self.savedSeatId && ((self.suspicionMap && self.suspicionMap[s.id]) || 0) >= purifyThreshold;
-    });
-    if (suspects.length > 0) {
-      suspects.sort(function (a, b) {
-        return ((self.suspicionMap && self.suspicionMap[b.id]) || 0) - ((self.suspicionMap && self.suspicionMap[a.id]) || 0);
+    const fakeWitch = diff !== "easy"
+      ? aliveOthers.find(function (s) { return s.claimedRole === "witch"; })
+      : null;
+    if (fakeWitch) {
+      poisonTargetId = fakeWitch.id;
+    } else {
+      const purifyThreshold = diff === "easy"
+        ? ((day === 1 && twinTea) ? 62 : 78)
+        : (diff === "pro"
+          ? ((day === 1 && twinTea) ? 56 : (aliveOthers.length <= 4 ? 58 : 66))
+          : ((day === 1 && twinTea) ? 58 : 70));
+      const suspects = aliveOthers.filter(function (s) {
+        if (s.id === self.savedSeatId) return false;
+        if (diff !== "easy" && s.voteDisabled) return false;
+        return ((self.suspicionMap && self.suspicionMap[s.id]) || 0) >= purifyThreshold;
       });
-      poisonTargetId = suspects[0].id;
+      if (suspects.length > 0) {
+        const slotViewW = (diff !== "easy" && snap && typeof buildTableSlotAndWorldAnalysis === "function")
+          ? buildTableSlotAndWorldAnalysis(self, snap)
+          : null;
+        const fakeSeerIdW = (slotViewW && slotViewW.dualSeerWorlds && slotViewW.dualSeerWorlds.chosenWorld && slotViewW.dualSeerWorlds.chosenWorld.fakeSeer)
+          ? slotViewW.dualSeerWorlds.chosenWorld.fakeSeer.id
+          : null;
+        const hunterClaimCount = aliveOthers.filter(function (s) { return s.claimedRole === "hunter"; }).length;
+        const scorePurify = function (s) {
+          let sc = (self.suspicionMap && self.suspicionMap[s.id]) || 0;
+          if (diff !== "easy") {
+            if (fakeSeerIdW && s.id === fakeSeerIdW) sc += 14;
+            if (s.claimedRole === "hunter" && hunterClaimCount === 1) sc -= 15;
+          }
+          return sc;
+        };
+        suspects.sort(function (a, b) {
+          return scorePurify(b) - scorePurify(a);
+        });
+        poisonTargetId = suspects[0].id;
+      }
     }
   }
   if (typeof antiCheatMonitor !== "undefined" && self) {
@@ -1148,6 +1252,7 @@ function chooseAiHunterTarget(hunterSeat) {
     ? createBlindMatchSnapshot(hunterSeat, { module: "hunter_shot", phase: "HUNTER_TRIGGER" })
     : null;
   const self = (snap && snap.self) ? snap.self : hunterSeat;
+  const diff = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
   const isWK = Boolean(self && self.isWolfKing);
   const aliveOthers = (snap ? snap.aliveOthers : getAliveSeats().filter(function (s) { return s.id !== hunterSeat.id; }))
     .filter(function (s) { return !isWK || (snap ? !s.isWolfMate : s.team !== "wolf"); });
@@ -1160,15 +1265,43 @@ function chooseAiHunterTarget(hunterSeat) {
     const shPending = snap ? snap.sheriffElectionPending : Boolean(state.match && state.match.sheriffElectionPending);
     const shId = shPending ? null : (snap ? snap.sheriffSeatId : state.match.sheriffSeatId);
     const shPick = aliveOthers.find(function (s) { return s.id === shId; });
-    const wkTarget = godPick || shPick || aliveOthers[0];
+    let wkFallback = aliveOthers[0];
+    if (diff !== "easy" && snap) {
+      const nonElderGood = aliveOthers.filter(function (s) { return !s.voteDisabled; });
+      const wkPool = nonElderGood.length > 0 ? nonElderGood : aliveOthers;
+      wkFallback = wkPool.slice().sort(function (a, b) {
+        return snap.getObservableHeatOnSeat(a.id) - snap.getObservableHeatOnSeat(b.id);
+      })[0] || wkFallback;
+    }
+    const wkTarget = godPick || (diff !== "easy" ? shPick : null) || wkFallback;
     chosenId = wkTarget ? wkTarget.id : null;
   } else {
-    const sorted = aliveOthers.slice().sort(function (a, b) {
-      return ((self.suspicionMap && self.suspicionMap[b.id]) || 50) - ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
-    });
-    const best = sorted[0];
-    if (best && ((self.suspicionMap && self.suspicionMap[best.id]) || 50) >= 52) {
-      chosenId = best.id;
+    const fakeHunter = aliveOthers.find(function (s) { return s.claimedRole === "hunter"; });
+    if (fakeHunter) {
+      chosenId = fakeHunter.id;
+    } else {
+      const nonElderPool = aliveOthers.filter(function (s) { return !s.voteDisabled; });
+      const shootPool = (nonElderPool.length > 0 ? nonElderPool : aliveOthers).slice();
+      const slotViewH = (diff !== "easy" && snap && typeof buildTableSlotAndWorldAnalysis === "function")
+        ? buildTableSlotAndWorldAnalysis(self, snap)
+        : null;
+      const worldH = (slotViewH && slotViewH.dualSeerWorlds && slotViewH.dualSeerWorlds.chosenWorld) ? slotViewH.dualSeerWorlds.chosenWorld : null;
+      const scoreHunterShot = function (s) {
+        let sc = (self.suspicionMap && self.suspicionMap[s.id]) || 50;
+        if (worldH && worldH.fakeSeer && worldH.trustedSeer) {
+          if (s.id === worldH.fakeSeer.id) sc += 22;
+          else if (s.id === worldH.trustedSeer.id) sc -= 20;
+        }
+        return sc;
+      };
+      shootPool.sort(function (a, b) {
+        return scoreHunterShot(b) - scoreHunterShot(a);
+      });
+      const best = shootPool[0];
+      const shotMin = diff === "easy" ? 58 : (diff === "pro" ? 56 : 52);
+      if (best && scoreHunterShot(best) >= shotMin) {
+        chosenId = best.id;
+      }
     }
   }
   if (typeof antiCheatMonitor !== "undefined" && self) {

@@ -1191,6 +1191,13 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "- 今日尚未發言座位：" + (unspokenNums.length ? unspokenNums.join("、") : "無（你是最後一位）") + "（嚴禁評論未發言者「說過的話」，但可以提及公開的四給／笑僵／護盾線索）。\n" +
     (!hasVoteArchiveNow ? "- 目前全場尚未進行過任何投票，嚴禁提及「剛剛有人衝票、跟票、看票型」！\n" : "");
 
+  const diffPrompt = (snap && snap.aiDifficulty) || "normal";
+  const difficultyDirective = diffPrompt === "easy"
+    ? "【本局難度：新手友善局】語氣親切直白、把關鍵線索講清楚方便新手跟上；酸民狼切勿使用高難度自刀騙藥或倒鉤賣隊友，自然保留可被抓包的語氣破綻。\n"
+    : (diffPrompt === "pro"
+      ? "【本局難度：凹嗚高手局】全桌高階博弈！好人靈活運用死推夜刀觀察員、警徽流反推、排坑守恆、防自刀騙藥與同守同救；酸民狼靈活運用假發金水拉票、順推抗推位、末局控票集火與危急時適度倒鉤做金身。\n"
+      : "【本局難度：標準推理局】展現紮實面殺邏輯：交叉比對警長票型、昨夜刀口、言票矛盾與剩餘狼坑數；雙觀察員對跳時清楚拆解雙邊世界線；酸民狼主動順推高熱度好人抗推位。\n");
+
   const prompt =
     "你正在參與青嵐書院茶席推理遊戲《三好AI狼人殺》（融入存好心、說好話、做好事理念，以理性防制網路酸言與假訊息取代傳統陰暗衝突，所有「出局」改為請離席冷靜）。\n" +
     "你扮演：" + self.id + "號「" + self.name + "」。個性鮮明設定：" + flvBio + "。\n" +
@@ -1205,6 +1212,7 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     ledgerNote +
     voteMatrixNote +
     "【你的專屬身分玩法攻略（務必遵守）】：\n" + rolePlaybook + "\n" +
+    difficultyDirective +
     "【當前局勢情報】：第 " + day + " 天白天｜昨夜結果：" + (lastCas.length > 0 ? (lastCas.map(function (id) { return id + "號離席"; }).join("、")) : "平安夜無人離席") + "｜" + sheriffLine + (fgNotes.length ? ("公開茶席線索（" + fgNotes.join("、") + "）｜") : "") + "在場座位：" + aliveList + "\n" +
     aowuEndgameNote + "\n" +
     "【場上已宣稱身分】：" + claimsSummary + "\n" +

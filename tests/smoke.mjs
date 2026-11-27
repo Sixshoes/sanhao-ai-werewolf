@@ -10096,4 +10096,155 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
+// ==================== AI WEREWOLF TACTICS & DIFFICULTY SCALING REGRESSION ====================
+{
+  const aiTacticsRes = vm.runInContext(`(() => {
+    clearStepTimer();
+    const prevDiff = state.aiDifficulty;
+    state.activeVariant = "standard";
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    el("selectAiDifficulty").value = "pro";
+    el("chkSheriffMode").checked = true;
+    el("chkGuardMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+
+    const seats = state.match.seats;
+    const seerSeat = seats.find(s => s.role === "seer");
+    const guardSeat = seats.find(s => s.role === "guard");
+    const witchSeat = seats.find(s => s.role === "witch");
+    const wolfSeat = seats.find(s => s.role === "wolf");
+    const villagerSeat = seats.find(s => s.id !== 1 && s.team === "good" && s.role === "villager");
+
+    // 1. Seer never checks a rival counter-claiming Seer when unchecked seats exist
+    state.match.day = 2;
+    state.match.phase = "NIGHT_SEER";
+    seerSeat.checkedHistory = [];
+    seerSeat.suspicionMap = {};
+    wolfSeat.claimedRole = "seer";
+    seerSeat.suspicionMap[wolfSeat.id] = 98;
+    const seerPickId = chooseAiSeerTarget(seerSeat);
+    const seerSkipsRivalOk = Boolean(seerPickId && seerPickId !== wolfSeat.id);
+
+    // 2. Guard Night-1 empty-guard scaling (pro empty-guards at rng=0.5, easy guards at rng=0.5) + Night 2+ protects sole Witch
+    wolfSeat.claimedRole = null;
+    state.match.day = 1;
+    state.match.phase = "NIGHT_GUARD";
+    state.match.lastGuardTargetId = null;
+    state.aiDifficulty = "pro";
+    state.match.aiDifficulty = "pro";
+    const guardProN1 = chooseAiGuardTarget(guardSeat, 0.5);
+    state.aiDifficulty = "easy";
+    state.match.aiDifficulty = "easy";
+    const guardEasyN1 = chooseAiGuardTarget(guardSeat, 0.5);
+    state.aiDifficulty = "pro";
+    state.match.aiDifficulty = "pro";
+    state.match.day = 2;
+    witchSeat.claimedRole = "witch";
+    guardSeat.suspicionMap[witchSeat.id] = 40;
+    const guardProN2 = chooseAiGuardTarget(guardSeat, 0.5);
+    const guardScalingOk = Boolean(guardProN1 === null && guardEasyN1 !== null && guardProN2 === witchSeat.id);
+
+    // 3. Witch immediately purifies a counter-claiming fake Witch in pro/normal; gentle threshold in easy
+    state.match.day = 2;
+    state.match.phase = "NIGHT_WITCH";
+    state.match.witchPotions.heal = false;
+    state.match.witchPotions.purify = true;
+    const fakeWitchWolf = seats.find(s => s.role === "wolf" && s.id !== wolfSeat.id) || wolfSeat;
+    fakeWitchWolf.claimedRole = "witch";
+    witchSeat.suspicionMap[fakeWitchWolf.id] = 52;
+    state.aiDifficulty = "pro";
+    state.match.aiDifficulty = "pro";
+    const witchProPurify = chooseAiWitchNightAction(witchSeat, 0.5);
+    fakeWitchWolf.claimedRole = null;
+    witchSeat.suspicionMap[fakeWitchWolf.id] = 74;
+    state.aiDifficulty = "easy";
+    state.match.aiDifficulty = "easy";
+    const witchEasyHold = chooseAiWitchNightAction(witchSeat, 0.5);
+    const witchScalingOk = Boolean(witchProPurify.poisonTargetId === fakeWitchWolf.id && witchEasyHold.poisonTargetId === null);
+
+    // 4. Dead night-killed Seer strips surviving rival Fake-Seer of uncontested status & elevates clash penalty
+    state.aiDifficulty = "pro";
+    state.match.aiDifficulty = "pro";
+    state.match.day = 2;
+    state.match.voteHistory = [];
+    seerSeat.claimedRole = "seer";
+    seerSeat.alive = false;
+    seerSeat.outReason = "夜間離席";
+    wolfSeat.claimedRole = "seer";
+    wolfSeat.alive = true;
+    const deadSeerSlot = buildTableSlotAndWorldAnalysis(villagerSeat);
+    const deadSeerClashOk = Boolean(
+      deadSeerSlot &&
+      Array.isArray(deadSeerSlot.deadNightSeers) &&
+      deadSeerSlot.deadNightSeers.includes(seerSeat.id) &&
+      deadSeerSlot.wolfPits.some(w => w.id === wolfSeat.id)
+    );
+
+    // 5. Real Seer never votes for rival Fake-Seer in chooseAiSheriffElectionVote; Good voters align with chosenWorld & spare sole Witch
+    seerSeat.alive = true;
+    const shVoteBySeer = chooseAiSheriffElectionVote(seerSeat, [wolfSeat.id, villagerSeat.id], [
+      { id: wolfSeat.id, tone: "seer", badgeFlow: { firstTargetId: villagerSeat.id }, text: "我是明心" },
+      { id: villagerSeat.id, tone: "bold", text: "我是好人" }
+    ], false);
+    const seerSheriffNoRivalOk = shVoteBySeer === villagerSeat.id;
+
+    wolfSeat.claimedRole = "seer";
+    villagerSeat.claimedRole = "seer";
+    seerSeat.claimedRole = null;
+    state.match.daySpeechEvents = [
+      { day: 2, speakerId: villagerSeat.id, claimRole: "seer", checkedGoodId: guardSeat.id, hasToxicSlip: false },
+      { day: 2, speakerId: wolfSeat.id, claimRole: "seer", checkedWolfId: witchSeat.id, hasToxicSlip: true }
+    ];
+    state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+    const otherGoodVoter = seats.find(s => s.id !== 1 && s.team === "good" && s.id !== villagerSeat.id && s.id !== witchSeat.id && s.id !== seerSeat.id) || guardSeat;
+    otherGoodVoter.suspicionMap = {};
+    const voteWorldPick = chooseAiVoteTarget(otherGoodVoter, { pkActive: false });
+    const worldAlignedVoteOk = Boolean(voteWorldPick === wolfSeat.id);
+
+    // 6. Pro Fake-Seer avoids framing voteDisabled proven Elder & prompt contains difficulty directive
+    const elderGood = seats.find(s => s.team === "good" && s.id !== wolfSeat.id && s.id !== witchSeat.id);
+    if (elderGood) elderGood.voteDisabled = true;
+    state.match.day = 1;
+    wolfSeat.claimedRole = "seer";
+    wolfSeat.fakeCheckedIds = [];
+    wolfSeat.suspicionMap = {};
+    const ctxFakePro = buildSpeechContext(wolfSeat);
+    const fakeSpeechPro = tryRoleSpecificSpeech(wolfSeat, ctxFakePro);
+    const fakeSeerAvoidsElderOk = Boolean(fakeSpeechPro && fakeSpeechPro.claimSeer && (!elderGood || fakeSpeechPro.checkedWolfId !== elderGood.id));
+
+    state.aiDifficulty = "easy";
+    state.match.aiDifficulty = "easy";
+    const promptEasy = buildBlindGeminiSpeechPrompt(villagerSeat, {});
+    state.aiDifficulty = "pro";
+    state.match.aiDifficulty = "pro";
+    const promptPro = buildBlindGeminiSpeechPrompt(villagerSeat, {});
+    const diffPromptOk = Boolean(
+      promptEasy && promptEasy.prompt && promptEasy.prompt.includes("新手友善局") && promptEasy.audit && promptEasy.audit.ok &&
+      promptPro && promptPro.prompt && promptPro.prompt.includes("凹嗚高手局") && promptPro.audit && promptPro.audit.ok
+    );
+
+    state.aiDifficulty = prevDiff || "normal";
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      seerSkipsRivalOk,
+      guardScalingOk,
+      witchScalingOk,
+      deadSeerClashOk,
+      seerSheriffNoRivalOk,
+      worldAlignedVoteOk,
+      fakeSeerAvoidsElderOk,
+      diffPromptOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(aiTacticsRes)) {
+    if (!v) {
+      throw new Error("AI WEREWOLF TACTICS regression failed for " + k + ": " + JSON.stringify(aiTacticsRes));
+    }
+  }
+}
+
 console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 Release-Freeze E2E smoke test PASSED!");

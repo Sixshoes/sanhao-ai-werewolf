@@ -781,15 +781,82 @@ function tryRoleSpecificSpeech(speaker, ctx) {
 
     if (nonWolves.length > 0) {
       // Zero-Leak: Wolf only sees observable claimedRole === "seer" on non-wolves (NEVER peeks s.role === "seer"!)
+      const diffFake = (snap && snap.aiDifficulty) || (typeof state !== "undefined" ? state.aiDifficulty : "normal");
       const rivalSeerSpoke = spokenOthers.find(function (s) { return !s.isWolfMate && s.claimedRole === "seer"; });
-      const freshTarget = nonWolves.find(function (s) { return speaker.fakeCheckedIds.indexOf(s.id) === -1; });
-      const frameTarget = (rivalSeerSpoke && speaker.fakeCheckedIds.indexOf(rivalSeerSpoke.id) === -1)
-        ? rivalSeerSpoke
-        : (freshTarget || rivalSeerSpoke || nonWolves[0]);
+      const soleClaimsFake = {};
+      aliveOthers.forEach(function (s) {
+        if (s && s.claimedRole) soleClaimsFake[s.claimedRole] = (soleClaimsFake[s.claimedRole] || 0) + 1;
+      });
+      const safeFrameBase = diffFake !== "easy"
+        ? nonWolves.filter(function (s) {
+            if (s.voteDisabled) return false;
+            if ((s.claimedRole === "witch" || s.claimedRole === "hunter" || s.claimedRole === "guard") && soleClaimsFake[s.claimedRole] === 1) {
+              return false;
+            }
+            return true;
+          })
+        : nonWolves;
+      const safeFramePool = safeFrameBase.length > 0 ? safeFrameBase : nonWolves;
+
+      // Normal / Pro Day-1 Strategic Gold Water Pull (發好人金水拉票，不硬查殺無破綻好人)
+      if (diffFake !== "easy" && day === 1 && !rivalSeerSpoke && safeFramePool.length >= 2) {
+        const goldRoll = Math.abs(speaker.id * 23 + day * 13 + ((snap && snap.matchStyleSeed) || 0) * 7) % 100;
+        if (goldRoll < (diffFake === "pro" ? 50 : 38)) {
+          const goldGood = safeFramePool.slice().sort(function (a, b) {
+            const unA = spokeToday(a.id) ? 1 : 0;
+            const unB = spokeToday(b.id) ? 1 : 0;
+            if (unA !== unB) return unA - unB;
+            return (snap ? snap.getObservableHeatOnSeat(a.id) : 40) - (snap ? snap.getObservableHeatOnSeat(b.id) : 40);
+          })[0];
+          const pushPool = safeFramePool.filter(function (s) { return goldGood && s.id !== goldGood.id; });
+          const pushGood = (pushPool.length > 0 ? pushPool : safeFramePool).slice().sort(function (a, b) {
+            return (snap ? snap.getObservableHeatOnSeat(b.id) : 40) - (snap ? snap.getObservableHeatOnSeat(a.id) : 40);
+          })[0];
+          if (goldGood && speaker.fakeCheckedIds.indexOf(goldGood.id) === -1) {
+            speaker.fakeCheckedIds.push(goldGood.id);
+          }
+          const flowCandidate = aliveOthers.find(function (s) { return s.id !== goldGood.id && (!pushGood || s.id !== pushGood.id); }) || pushGood;
+          const isFakeWolfSheriffG = Boolean(snap && snap.sheriffSeatId === speaker.id);
+          let fakeFlowGold = "";
+          if (isFakeWolfSheriffG && flowCandidate && typeof setSheriffBadgeFlow === "function") {
+            setSheriffBadgeFlow(speaker.id, flowCandidate.id, null, "day_speech");
+            fakeFlowGold = "今晚警徽流先看 " + seatLabel(flowCandidate) + "！";
+          }
+          return {
+            targetId: goldGood.id,
+            relationType: "trust",
+            claimSeer: true,
+            claimRole: "seer",
+            accuseId: pushGood ? pushGood.id : null,
+            vouchId: goldGood.id,
+            standWithSeerId: speaker.id,
+            wolfPits: pushGood ? [pushGood.id] : [],
+            goodPits: [goldGood.id],
+            checkedWolfId: null,
+            checkedGoodId: goldGood.id,
+            hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 2),
+            text: "我先起跳明心觀察員交昨晚查驗：" + seatLabel(goldGood) + " 是我親手摸到的金水好人，這輪先保他進好人坑！" +
+              (pushGood ? ("目前 " + seatLabel(pushGood) + " 位置最可疑先列觀察，") : "") + fakeFlowGold
+          };
+        }
+      }
+
+      const freshPool = safeFramePool.filter(function (s) { return speaker.fakeCheckedIds.indexOf(s.id) === -1; });
+      let frameTarget = null;
+      if (rivalSeerSpoke && speaker.fakeCheckedIds.indexOf(rivalSeerSpoke.id) === -1) {
+        frameTarget = rivalSeerSpoke;
+      } else if (diffFake !== "easy" && snap) {
+        const rankSrc = freshPool.length > 0 ? freshPool : safeFramePool;
+        frameTarget = rankSrc.slice().sort(function (a, b) {
+          return snap.getObservableHeatOnSeat(b.id) - snap.getObservableHeatOnSeat(a.id);
+        })[0];
+      } else {
+        frameTarget = freshPool[0] || rivalSeerSpoke || nonWolves[0];
+      }
       if (speaker.fakeCheckedIds.indexOf(frameTarget.id) === -1) {
         speaker.fakeCheckedIds.push(frameTarget.id);
       }
-      const secondFrame = nonWolves.find(function (s) { return s.id !== frameTarget.id; });
+      const secondFrame = safeFramePool.find(function (s) { return s.id !== frameTarget.id; }) || nonWolves.find(function (s) { return s.id !== frameTarget.id; });
       const isFakeWolfSheriff = Boolean(snap && snap.sheriffSeatId === speaker.id);
       let fakeFlowTail = "";
       if (isFakeWolfSheriff && secondFrame && typeof setSheriffBadgeFlow === "function") {
@@ -1085,10 +1152,49 @@ function tryRoleSpecificSpeech(speaker, ctx) {
       };
     }
 
-    const scapegoat = goodSpoken[0] || goodAll[0] || aliveOthers[0];
+    const diffWolfSp = (snap && snap.aiDifficulty) || (typeof state !== "undefined" ? state.aiDifficulty : "normal");
+    const aliveMatesList = snap && Array.isArray(snap.knownWolfMates) ? snap.knownWolfMates.filter(function (mt) { return mt && mt.alive; }) : [];
+    if (diffWolfSp === "pro" && !isPlayerPushScript && !isDeepBusScript && aliveMatesList.length >= 1 && snap) {
+      const doomedMate = spokenOthers.find(function (s) {
+        return s.isWolfMate && s.id !== pidNow && snap.getObservableHeatOnSeat(s.id) >= 84;
+      });
+      if (doomedMate) {
+        return {
+          targetId: doomedMate.id,
+          relationType: "suspect",
+          accuseId: doomedMate.id,
+          vouchId: null,
+          wolfPits: [doomedMate.id],
+          goodPits: [],
+          hasToxicSlip: false,
+          text: wolfLead + "老實講這輪聽下來，" + seatLabel(doomedMate) + " 剛剛被抓到的漏洞確實解釋不太過去，我不會硬保，先記他觀察坑跟著全場票走！" + wolfSignoff
+        };
+      }
+    }
+
+    let scapegoat = goodSpoken[0] || goodAll[0] || aliveOthers[0];
+    if (diffWolfSp !== "easy") {
+      const nonElderSpoken = goodSpoken.filter(function (s) { return !s.voteDisabled; });
+      const nonElderAll = goodAll.filter(function (s) { return !s.voteDisabled; });
+      const pushPool = nonElderSpoken.length > 0 ? nonElderSpoken : (nonElderAll.length > 0 ? nonElderAll : (goodSpoken.length > 0 ? goodSpoken : goodAll));
+      const matePushEv = (snap ? snap.daySpeechEvents : []).find(function (ev) {
+        if (!ev || !ev.accuseId || ev.accuseId === speaker.id) return false;
+        const spSeat = readSeat(ev.speakerId);
+        const accTgt = readSeat(ev.accuseId);
+        const spokenPriorityOk = goodSpoken.length === 0 || spokeToday(ev.accuseId);
+        return Boolean(spokenPriorityOk && spSeat && spSeat.isWolfMate && accTgt && accTgt.alive && !accTgt.isWolfMate && !accTgt.voteDisabled);
+      });
+      if (matePushEv) {
+        scapegoat = readSeat(matePushEv.accuseId) || scapegoat;
+      } else if (pushPool.length > 0 && snap) {
+        scapegoat = pushPool.slice().sort(function (a, b) {
+          return snap.getObservableHeatOnSeat(b.id) - snap.getObservableHeatOnSeat(a.id);
+        })[0] || scapegoat;
+      }
+    }
     if (!scapegoat) return null;
     const scSpoke = spokenIdsToday.indexOf(scapegoat.id) !== -1;
-    const secScapegoat = goodSpoken.find(function (s) { return s.id !== scapegoat.id; }) || goodAll.find(function (s) { return s.id !== scapegoat.id; });
+    const secScapegoat = goodSpoken.find(function (s) { return s.id !== scapegoat.id && !s.voteDisabled; }) || goodAll.find(function (s) { return s.id !== scapegoat.id && !s.voteDisabled; }) || goodSpoken.find(function (s) { return s.id !== scapegoat.id; }) || goodAll.find(function (s) { return s.id !== scapegoat.id; });
     const wolfLengthTier = typeof determineSpeechLengthTier === "function" ? determineSpeechLengthTier(speaker, ctx) : "standard";
     if (
       scSpoke &&

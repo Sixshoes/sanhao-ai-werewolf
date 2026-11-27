@@ -246,10 +246,31 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
     if (c && c.speakerId) contraMap[c.speakerId] = true;
   });
 
+  const diffSlot = (snap && snap.aiDifficulty) || "normal";
+  const votedOutIdSet = {};
+  voteHist.forEach(function (vh) {
+    const outSeatId = vh && (vh.outId || vh.eliminatedId);
+    if (outSeatId) votedOutIdSet[outSeatId] = true;
+  });
+  (snap.seats || []).forEach(function (s) {
+    if (s && !s.alive && s.outReason === "投票出局") votedOutIdSet[s.id] = true;
+  });
+  const deadNightSeers = (snap.seats || []).filter(function (s) {
+    return Boolean(s && !s.alive && s.claimedRole === "seer" && !votedOutIdSet[s.id]);
+  });
+  const deadNightSeerIds = deadNightSeers.map(function (s) { return s.id; });
+
   const witchClaimants = aliveSeats.filter(function (s) { return s.claimedRole === "witch"; });
   const hunterClaimants = aliveSeats.filter(function (s) { return s.claimedRole === "hunter"; });
-  const soleWitch = witchClaimants.length === 1 ? witchClaimants[0] : null;
-  const soleHunter = hunterClaimants.length === 1 ? hunterClaimants[0] : null;
+  const guardClaimants = aliveSeats.filter(function (s) { return s.claimedRole === "guard"; });
+  const soleWitch = (witchClaimants.length === 1 && !contraMap[witchClaimants[0].id]) ? witchClaimants[0] : null;
+  const soleHunter = (hunterClaimants.length === 1 && !contraMap[hunterClaimants[0].id]) ? hunterClaimants[0] : null;
+  const soleGuard = (guardClaimants.length === 1 && !contraMap[guardClaimants[0].id]) ? guardClaimants[0] : null;
+  const soleGodMap = {};
+  const soleGodIds = [];
+  if (soleWitch) { soleGodMap[soleWitch.id] = true; soleGodIds.push(soleWitch.id); }
+  if (soleHunter) { soleGodMap[soleHunter.id] = true; soleGodIds.push(soleHunter.id); }
+  if (soleGuard) { soleGodMap[soleGuard.id] = true; soleGodIds.push(soleGuard.id); }
 
   const silverWaterIds = [];
   if (soleWitch) {
@@ -290,7 +311,26 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
 
   // Estimate remaining alive wolf slots fairly from public check losses & role clashes
   let confirmedDeadWolves = 0;
-  const uncontestedSeer = seerClaimants.length === 1 ? seerClaimants[0] : null;
+  const uncontestedSeer = (seerClaimants.length === 1 && deadNightSeerIds.length === 0) ? seerClaimants[0] : null;
+  const deadNightSeerGoodIds = [];
+  const deadNightSeerWolfBoost = {};
+  if (deadNightSeers.length >= 1 && seerClaimants.length === 1) {
+    deadNightSeers.forEach(function (ds) {
+      const dsSus = (self && self.suspicionMap && typeof self.suspicionMap[ds.id] === "number")
+        ? self.suspicionMap[ds.id]
+        : 50;
+      if (dsSus >= 68) return;
+      allEvs.forEach(function (ev) {
+        if (!ev || ev.speakerId !== ds.id) return;
+        if (ev.checkedGoodId && aliveIds.indexOf(ev.checkedGoodId) !== -1 && !legalKnownWolf[ev.checkedGoodId] && deadNightSeerGoodIds.indexOf(ev.checkedGoodId) === -1) {
+          deadNightSeerGoodIds.push(ev.checkedGoodId);
+        }
+        if (ev.checkedWolfId && aliveIds.indexOf(ev.checkedWolfId) !== -1) {
+          deadNightSeerWolfBoost[ev.checkedWolfId] = diffSlot === "pro" ? 22 : (diffSlot === "easy" ? 6 : 14);
+        }
+      });
+    });
+  }
   (snap.seats || []).forEach(function (s) {
     if (s.alive) return;
     const lostClash = Boolean(s.claimedRole && aliveSeats.some(function (a) { return a.claimedRole === s.claimedRole; }));
@@ -435,6 +475,21 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
       if (contraMap[trusted.id]) worldScore -= 22;
       if (toxicMap[fake.id]) worldScore += 14;
       if (contraMap[fake.id]) worldScore += 18;
+      if (snap.sheriffBadgeFlowsBySeat && snap.sheriffBadgeFlowsBySeat[trusted.id]) {
+        worldScore += (diffSlot === "pro" ? 10 : (diffSlot === "easy" ? 2 : 6));
+      }
+      const checkedSlipHit = checkedWolfIds.some(function (wid) { return Boolean(toxicMap[wid] || contraMap[wid]); });
+      if (checkedSlipHit) {
+        worldScore += (diffSlot === "pro" ? 18 : (diffSlot === "easy" ? 6 : 12));
+      }
+      const checkedProvenGoodConflict = checkedWolfIds.some(function (wid) {
+        const wSeat = snap.getSeat(wid);
+        return Boolean((wSeat && wSeat.voteDisabled) || (soleGodMap[wid] && !(self && self.id === wid)));
+      });
+      if (checkedProvenGoodConflict) {
+        worldScore -= (diffSlot === "pro" ? 50 : (diffSlot === "easy" ? 20 : 42));
+        if (!conflictReason) conflictReason = "他竟然把公開自證的關鍵好人打進狼坑";
+      }
 
       if (self && self.role === "seer") {
         if (trusted.id === self.id) {
@@ -510,6 +565,7 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
     dualSeerWorlds.chosenWorld.goodPits.forEach(function (s) { pushGenGood(s); });
   } else {
     Object.keys(legalKnownGood).forEach(function (k) { pushGenGood(snap.getSeat(parseInt(k, 10))); });
+    deadNightSeerGoodIds.forEach(function (id) { pushGenGood(snap.getSeat(id)); });
     silverWaterIds.forEach(function (id) { pushGenGood(snap.getSeat(id)); });
     if (soleWitch) pushGenGood(soleWitch);
     if (soleHunter) pushGenGood(soleHunter);
@@ -558,14 +614,20 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
       else if (bfGoodMap[seatId]) delta -= 16;
       return delta;
     };
+    const survivingSeerId = (deadNightSeerIds.length >= 1 && seerClaimants.length === 1 && self && self.team === "good" && self.id !== seerClaimants[0].id)
+      ? seerClaimants[0].id
+      : null;
+    const nightSurvivalClashBoost = diffSlot === "pro" ? 22 : (diffSlot === "easy" ? 6 : 15);
     const susCands = aliveSeats.filter(function (s) {
       if (self && s.id === self.id) return false;
       if (self && self.role === "wolf" && wolfTeamMap[s.id]) return false;
       if (legalKnownGood[s.id]) return false;
       return true;
     }).sort(function (a, b) {
-      const aBoost = (toxicMap[a.id] ? 14 : 0) + (contraMap[a.id] ? 18 : 0) + (spokenSet[a.id] ? 6 : 0) + sheriffPitDelta(a.id);
-      const bBoost = (toxicMap[b.id] ? 14 : 0) + (contraMap[b.id] ? 18 : 0) + (spokenSet[b.id] ? 6 : 0) + sheriffPitDelta(b.id);
+      const aDeadSeerBoost = (deadNightSeerWolfBoost[a.id] || 0) + (survivingSeerId === a.id ? nightSurvivalClashBoost : 0);
+      const bDeadSeerBoost = (deadNightSeerWolfBoost[b.id] || 0) + (survivingSeerId === b.id ? nightSurvivalClashBoost : 0);
+      const aBoost = (toxicMap[a.id] ? 14 : 0) + (contraMap[a.id] ? 18 : 0) + (spokenSet[a.id] ? 6 : 0) + sheriffPitDelta(a.id) + aDeadSeerBoost;
+      const bBoost = (toxicMap[b.id] ? 14 : 0) + (contraMap[b.id] ? 18 : 0) + (spokenSet[b.id] ? 6 : 0) + sheriffPitDelta(b.id) + bDeadSeerBoost;
       const aVal = (self && self.suspicionMap ? (self.suspicionMap[a.id] || 50) : 50) + aBoost;
       const bVal = (self && self.suspicionMap ? (self.suspicionMap[b.id] || 50) : 50) + bBoost;
       return bVal - aVal;
@@ -577,7 +639,9 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
     aliveWolfSlots: aliveWolfSlots,
     goodPits: goodPits.slice(0, 3),
     wolfPits: wolfPits.slice(0, aliveWolfSlots),
-    dualSeerWorlds: dualSeerWorlds
+    dualSeerWorlds: dualSeerWorlds,
+    deadNightSeers: deadNightSeerIds,
+    soleGodIds: soleGodIds
   };
 }
 
