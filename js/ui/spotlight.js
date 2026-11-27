@@ -725,6 +725,10 @@ function startSpotlightTypewriter(opts) {
   }
   const prog = el("spotlightProgressBar");
   if (prog) prog.style.width = "100%";
+  const spotBox = el("spotlightStageBox");
+  if (spotBox) {
+    spotBox.classList.toggle("is-last-words-spotlight", Boolean(state.match && state.match.phase === "LAST_WORDS_SPEECH"));
+  }
   syncSpeakerBannerVisuals(speaker, opts.badge, opts.trait, false);
 
   if (typeof opts.onDone === "function") {

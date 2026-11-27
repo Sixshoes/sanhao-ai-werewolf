@@ -230,7 +230,10 @@ function updateAllUI() {
     SHERIFF_ORDER: { pill: "警長指序", head: "請警長指定今日順逆時針輪流發言" },
     DAY_SPEECH: { pill: "第" + m.day + "天輪流發言", head: "依序輪流發言" + (m.speechOrderLabel ? (" · " + m.speechOrderLabel) : "") },
     LAST_WORDS_PLAYER: { pill: "發表遺言", head: "請發表你的離席遺言" },
-    LAST_WORDS_SPEECH: { pill: "遺言播報", head: "倒牌茶友發表遺言中…" },
+    LAST_WORDS_SPEECH: {
+      pill: (state.lastWordsCtx && state.lastWordsCtx.mode === "vote_out") ? "離席遺言" : "遺言播報",
+      head: (state.lastWordsCtx && state.lastWordsCtx.mode === "vote_out") ? "高票離席茶友發表遺言中…" : "倒牌茶友發表遺言中…"
+    },
     DAY_PLAYER_TURN: { pill: "換你出牌", head: (isPkVoteActive() ? "平票 PK · 輪到 " : "輪到 ") + playerNumTag() + " 你陳詞" },
     DAY_VOTE: { pill: isPkVoteActive() ? "平票 PK 決選" : (isWolfHead ? "投票帶節奏" : "投票抓狼"), head: isPkVoteActive() ? "平票 PK 決選落籌" : (isWolfHead ? "帶節奏歸票 · 避開同伴" : "公投落籌請離酸民狼") },
     DAY_VOTE_RESULT: { pill: "開票揭曉", head: "公投開票結果揭曉" },

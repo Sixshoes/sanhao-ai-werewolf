@@ -1193,6 +1193,37 @@ function resolveDawn() {
     if (state.match.pendingNight1LastWords.length > 0) {
       const lwIds = state.match.pendingNight1LastWords.slice();
       state.match.pendingNight1LastWords = [];
+      const ffDawnLw = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+      const firstSeatLw = getSeat(lwIds[0]);
+      const firstIsAi = Boolean(firstSeatLw && firstSeatLw.id !== getPlayerId());
+      if (!ffDawnLw && firstIsAi) {
+        clearStepTimer();
+        state.match.phase = "LAST_WORDS_SPEECH";
+        state.activeSpeakerId = firstSeatLw.id;
+        state.speakingInFlight = true;
+        updateAllUI();
+        state.speakingInFlight = true;
+        if (typeof syncSpeakerBannerVisuals === "function") {
+          syncSpeakerBannerVisuals(firstSeatLw, fmtSeatNum(firstSeatLw.id) + "號 " + firstSeatLw.name + "（遺言）", "首夜遺言", false);
+        }
+        if (typeof updateSpotlightBox === "function") {
+          updateSpotlightBox(fmtSeatNum(firstSeatLw.id) + "號 " + firstSeatLw.name + "（遺言）", "首夜遺言", "天亮公布倒牌，正在整理首夜遺言…");
+        }
+        if (dawnVoiceLine && typeof voice !== "undefined" && typeof voice.speakHost === "function") {
+          voice.speakHost(dawnVoiceLine, undefined, "host_dawn");
+        }
+        const epDawnLw = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+        state.stepTimer = setTimeout(function () {
+          state.stepTimer = null;
+          state.speakingInFlight = false;
+          if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
+          if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epDawnLw)) return;
+          startLastWordsSequence(lwIds, "first_night", function () {
+            enterDayDiscussionWithSheriffHooks("");
+          });
+        }, 900);
+        return;
+      }
       startLastWordsSequence(lwIds, "first_night", function () {
         enterDayDiscussionWithSheriffHooks("");
       });

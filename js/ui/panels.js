@@ -9,7 +9,9 @@ function syncFocalCardChrome(p) {
     shCtxSpot && shCtxSpot.stage === "speech" && shCtxSpot.activeReelSeatId && shCtxSpot.activeReelSeatId !== getPlayerId()
   );
   const showSpotlight = (p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH" || showSheriffSpotlight);
-  el("spotlightStageBox").classList.toggle("hidden", !showSpotlight);
+  const spotEl = el("spotlightStageBox");
+  spotEl.classList.toggle("hidden", !showSpotlight);
+  spotEl.classList.toggle("is-last-words-spotlight", p === "LAST_WORDS_SPEECH");
   const waitRow = el("stepperWaitRow");
   if (waitRow) waitRow.classList.toggle("hidden", showSpotlight);
 
@@ -623,7 +625,7 @@ function renderStepperPanel(p) {
         : (state.typewriter.active
           ? "顯示全文"
           : (isLwSpeech
-            ? "繼續"
+            ? ((state.lastWordsCtx && state.lastWordsCtx.mode === "vote_out") ? "查看票型" : "繼續")
             : (p === "DAY_VOTE" ? "直接開票" : (lastSp ? "進入公投" : "下一位"))));
       stepNextBtn.textContent = nextLabel;
     }

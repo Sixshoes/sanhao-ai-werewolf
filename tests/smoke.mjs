@@ -1710,7 +1710,7 @@ vm.runInContext(`
   }
   window.dispatchEvent({ type: "keydown", key: "Enter", target: document.body });
   if (state.voteFlight && state.voteFlight.finish) state.voteFlight.finish();
-  if (state.match.phase !== "DAY_VOTE_RESULT" && state.match.phase !== "GAME_OVER" && state.match.phase !== "HUNTER_TRIGGER") {
+  if (state.match.phase !== "DAY_VOTE_RESULT" && state.match.phase !== "LAST_WORDS_SPEECH" && state.match.phase !== "GAME_OVER" && state.match.phase !== "HUNTER_TRIGGER") {
     throw new Error("'Enter' shortcut failed to submit vote in DAY_VOTE! phase=" + state.match.phase);
   }
   resetMatchToLobby();
@@ -10776,6 +10776,189 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       throw new Error("v25.2 Stage-Opening & CSS Perf regression failed for " + k + ": " + JSON.stringify(v252Checks));
     }
   }
+
+  // v25.3 Round-2 Live-Audit UI/CSS Fixes + Vote-Flight Prefetch / Theatrical Reveal / AI Spotlight Last Words
+  const v253Start = css25.indexOf("v25.3 ROUND-2 LIVE-AUDIT FIXES");
+  const v253Css = v253Start >= 0 ? css25.slice(v253Start) : "";
+  const v253CssChecks = {
+    hasV253Block: v253Start >= 0,
+    titleControlDeckNoFog: v253Css.includes("body.craft-ui.theme-twilight.screen-title #controlDeck") && v253Css.includes("background: none;"),
+    titleTopBtnsTransparent: v253Css.includes("body.craft-ui.theme-twilight.screen-title .title-top-actions .title-scene-btn") && v253Css.includes("background: transparent;"),
+    titleCreedHighContrast: v253Css.includes(".tea-creed-good") && v253Css.includes("#a9e6cb") && v253Css.includes("#f4d699"),
+    topLeftGuideNoClash: v253Css.includes("left: 16px;") && v253Css.includes("transform: none;") && v253Css.includes(".judge-guide-step:not(.is-active)"),
+    seatRailNoHudOverlap: v253Css.includes("top: 42px;") && v253Css.includes("top: 40px;"),
+    voteFlightTopZNoAnim: v253Css.includes("body.craft-ui #voteFlightBanner") && v253Css.includes("z-index: 36;"),
+    directorChoiceRightDocked: v253Css.includes("#directorEventChoiceBar:not(.hidden)") && v253Css.includes("bottom: 44px;"),
+    spotlightTextUnclipped: v253Css.includes("max-height: 112px;") && v253Css.includes("max-height: 96px;"),
+    solemnLastWordsSpotlightCss: v253Css.includes("#spotlightStageBox.is-last-words-spotlight"),
+    fullSpecInfiniteAnimKill: v253Css.includes("#seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected)") && v253Css.includes("#judgeShowcaseGuideBanner .judge-guide-step.is-active::after"),
+    zeroImportantOrBlurV253: !v253Css.includes("!important") && !v253Css.includes("backdrop-filter: blur(") && !v253Css.includes("repeating-linear-gradient")
+  };
+  for (const [k, v] of Object.entries(v253CssChecks)) {
+    if (!v) {
+      throw new Error("v25.3 CSS Live-Audit regression failed for " + k + ": " + JSON.stringify(v253CssChecks));
+    }
+  }
+
+  const v253Runtime = vm.runInContext(`(() => {
+    clearStepTimer();
+    const pfCalls = [];
+    const origPrefetch = prefetchAiLastWords;
+    prefetchAiLastWords = function (ids, mode) {
+      pfCalls.push({ ids: (ids || []).slice(), mode: mode });
+      return origPrefetch.apply(this, arguments);
+    };
+    const origIsFf = isSpectatorFastForward;
+    let fakeFf = false;
+    isSpectatorFastForward = function () { return fakeFf; };
+
+    let aiVotePrefetchOk = false;
+    let stretchedFlightTimingsOk = false;
+    let aiVoteEntersSpotlightOk = false;
+    let spotlightSolemnClassOk = false;
+    let aiVoteThenVoteResultOk = false;
+    let gameOverVoteSkipsPrefetchAndLwOk = false;
+    let ffVoteSkipsSpotlightOk = false;
+    let dawnPrefetchOk = false;
+    let dawnStepTimerOk = false;
+    let dawnPhaseOk = false;
+    let dawnInFlightOk = false;
+    let dawnSpotlightClassOk = false;
+
+    try {
+      // 1. Normal AI vote-out (!ff, non-game-ending): prefetches before flight, stretched 360ms/1500ms, enters LAST_WORDS_SPEECH -> DAY_VOTE_RESULT
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      state.autoPlay = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual({ silent: true });
+      state.match.day = 1;
+      state.match.phase = "DAY_VOTE";
+      const targetVill = state.match.seats.find(s => s.alive && s.id !== getPlayerId() && s.role === "villager");
+      state.match.seats.forEach(s => {
+        s.trustShield = false;
+        if (s.suspicionMap) {
+          Object.keys(s.suspicionMap).forEach(k => { s.suspicionMap[k] = 5; });
+          s.suspicionMap[targetVill.id] = 99;
+        }
+      });
+      pfCalls.length = 0;
+      finalizeVoteRound(targetVill.id);
+      aiVotePrefetchOk = pfCalls.some(c => c.mode === "vote_out" && c.ids.includes(targetVill.id));
+      stretchedFlightTimingsOk = Boolean(state.voteFlight && state.voteFlight.stepMs === 360 && state.voteFlight.verdictHoldMs === 1500);
+      if (state.voteFlight && state.voteFlight.finish) state.voteFlight.finish();
+      aiVoteEntersSpotlightOk = Boolean(
+        state.match.phase === "LAST_WORDS_SPEECH" &&
+        state.activeSpeakerId === targetVill.id &&
+        state.lastWordsCtx &&
+        state.lastWordsCtx.mode === "vote_out"
+      );
+      spotlightSolemnClassOk = el("spotlightStageBox").classList.contains("is-last-words-spotlight");
+      // Advance out of LAST_WORDS_SPEECH -> DAY_VOTE_RESULT with lastWord populated
+      advanceLastWordsQueue();
+      aiVoteThenVoteResultOk = Boolean(
+        state.match.phase === "DAY_VOTE_RESULT" &&
+        state.voteResultPayload &&
+        state.voteResultPayload.outId === targetVill.id &&
+        String(state.voteResultPayload.lastWord || "").length > 4 &&
+        !el("spotlightStageBox").classList.contains("is-last-words-spotlight")
+      );
+      clearStepTimer();
+
+      // 2. Game-ending vote-out (last wolf voted out): MUST NOT prefetch & MUST go straight to GAME_OVER
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual({ silent: true });
+      const wolvesEnd = state.match.seats.filter(s => s.team === "wolf");
+      wolvesEnd.slice(1).forEach(w => { w.alive = false; });
+      const lastWolf = wolvesEnd[0];
+      lastWolf.isWolfKing = false;
+      state.match.phase = "DAY_VOTE";
+      state.match.seats.forEach(s => {
+        s.trustShield = false;
+        if (s.suspicionMap) {
+          Object.keys(s.suspicionMap).forEach(k => { s.suspicionMap[k] = 5; });
+          s.suspicionMap[lastWolf.id] = 99;
+        }
+      });
+      pfCalls.length = 0;
+      finalizeVoteRound(lastWolf.id);
+      const prefetchedOnGameEnd = pfCalls.length > 0;
+      if (state.voteFlight && state.voteFlight.finish) state.voteFlight.finish();
+      gameOverVoteSkipsPrefetchAndLwOk = Boolean(!prefetchedOnGameEnd && state.match.phase === "GAME_OVER");
+      clearStepTimer();
+
+      // 3. Spectator fast-forward (ff): fast 45ms vote flight, zero prefetch, direct DAY_VOTE_RESULT
+      fakeFf = true;
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual({ silent: true });
+      const targetFf = state.match.seats.find(s => s.alive && s.id !== getPlayerId() && s.role === "villager");
+      state.match.phase = "DAY_VOTE";
+      state.match.seats.forEach(s => {
+        s.trustShield = false;
+        if (s.suspicionMap) {
+          Object.keys(s.suspicionMap).forEach(k => { s.suspicionMap[k] = 5; });
+          s.suspicionMap[targetFf.id] = 99;
+        }
+      });
+      pfCalls.length = 0;
+      finalizeVoteRound(targetFf.id);
+      const ffStepFast = Boolean(state.voteFlight && state.voteFlight.stepMs === 45 && pfCalls.length === 0);
+      if (state.voteFlight && state.voteFlight.finish) state.voteFlight.finish();
+      ffVoteSkipsSpotlightOk = Boolean(ffStepFast && state.match.phase === "DAY_VOTE_RESULT");
+      clearStepTimer();
+
+      // 4. Day-1 dawn AI casualty (!ff): prefetches first_night & arms 900ms stepTimer lead-in before LAST_WORDS_SPEECH
+      fakeFf = false;
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual({ silent: true });
+      const n1Ai = state.match.seats.find(s => s.alive && s.id !== getPlayerId() && s.role === "villager");
+      state.match.day = 1;
+      state.match.nightState = { wolfTarget: n1Ai.id, guardTarget: null, seerTarget: null, witchSaved: false, witchPoisonTarget: null };
+      pfCalls.length = 0;
+      resolveDawn();
+      dawnPrefetchOk = pfCalls.some(c => c.mode === "first_night" && c.ids.includes(n1Ai.id));
+      dawnStepTimerOk = state.stepTimer !== null;
+      dawnPhaseOk = state.match.phase === "LAST_WORDS_SPEECH";
+      dawnInFlightOk = state.speakingInFlight === true;
+      dawnSpotlightClassOk = el("spotlightStageBox").classList.contains("is-last-words-spotlight");
+    } finally {
+      prefetchAiLastWords = origPrefetch;
+      isSpectatorFastForward = origIsFf;
+      state.speakingInFlight = false;
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+
+    return {
+      aiVotePrefetchOk,
+      stretchedFlightTimingsOk,
+      aiVoteEntersSpotlightOk,
+      spotlightSolemnClassOk,
+      aiVoteThenVoteResultOk,
+      gameOverVoteSkipsPrefetchAndLwOk,
+      ffVoteSkipsSpotlightOk,
+      dawnPrefetchOk,
+      dawnStepTimerOk,
+      dawnPhaseOk,
+      dawnInFlightOk,
+      dawnSpotlightClassOk
+    };
+  })()`, ctx);
+  for (const [k, v] of Object.entries(v253Runtime)) {
+    if (!v) {
+      throw new Error("v25.3 Vote-Flight & AI Last-Words runtime regression failed for " + k + ": " + JSON.stringify(v253Runtime));
+    }
+  }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 Release-Freeze E2E smoke test PASSED!");
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 Release-Freeze E2E smoke test PASSED!");

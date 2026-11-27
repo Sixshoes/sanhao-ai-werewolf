@@ -176,11 +176,25 @@ function positionSeatIntelPopover() {
     }
   }
   let safeBottomGap = 16;
-  if (dock && typeof dock.getBoundingClientRect === "function" && typeof window !== "undefined" && window.innerWidth < 1360) {
+  const viewW = typeof window !== "undefined" ? window.innerWidth : 1440;
+  if (viewW >= 960) {
+    ["virtueQuickDeck", "directorEventChoiceBar"].forEach(function (rightDockId) {
+      const rightEl = el(rightDockId);
+      if (!rightEl || rightEl.classList.contains("hidden") || typeof rightEl.getBoundingClientRect !== "function") return;
+      const rRect = rightEl.getBoundingClientRect();
+      if (rRect.height > 0 && rRect.top > baseTop + safeTop + 140) {
+        const rBottomOff = Math.ceil((baseTop + viewH) - rRect.top) + 10;
+        if (rBottomOff > safeBottomGap && rBottomOff < viewH * 0.55) {
+          safeBottomGap = rBottomOff;
+        }
+      }
+    });
+  }
+  if (dock && typeof dock.getBoundingClientRect === "function" && viewW < 1360) {
     const dockRect = dock.getBoundingClientRect();
     if (dockRect.height > 0 && dockRect.top > baseTop + safeTop + 140) {
       const dockBottomOffset = Math.ceil((baseTop + viewH) - dockRect.top) + 8;
-      if (dockBottomOffset > 16 && dockBottomOffset < viewH * 0.55) {
+      if (dockBottomOffset > safeBottomGap && dockBottomOffset < viewH * 0.55) {
         safeBottomGap = dockBottomOffset;
       }
     }

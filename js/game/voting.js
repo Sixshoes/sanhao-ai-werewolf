@@ -633,6 +633,35 @@ function finalizeVoteRound(playerTargetId) {
         return;
       }
 
+      const ffOut = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+      if (!ffOut && typeof startLastWordsSequence === "function") {
+        startLastWordsSequence([outSeat.id], "vote_out", function (recordedText) {
+          if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
+          const pCur = getPlayerSeat();
+          const playerDeadNow = Boolean(pCur && !pCur.alive);
+          state.voteResultPayload = {
+            headline: fmtSeatNum(outSeat.id) + "號 " + outSeat.name + " 最高票離席休息" + shieldNote,
+            lastWord: recordedText || "（已發表遺言並離席）",
+            tallies: tallies,
+            groupedVoters: groupedVoters,
+            outId: outSeat.id,
+            maxVotes: Math.max(1, maxVotes),
+            playerVotedOut: false,
+            onContinue: beginNightPhase
+          };
+          state.match.phase = "DAY_VOTE_RESULT";
+          updateAllUI();
+          if (typeof voice !== "undefined" && typeof voice.speakHost === "function") {
+            voice.speakHost(playerDeadNow ? "遺言完畢，請點擊繼續觀戰。" : "遺言完畢，請點擊進入夜晚。");
+          }
+          const ffAfterLw = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+          if (state.autoPlay || ffAfterLw) {
+            state.stepTimer = setTimeout(beginNightPhase, ffAfterLw ? 650 : 4200);
+          }
+        });
+        return;
+      }
+
       const aiLw = buildAiLastWords(outSeat, "vote_out");
       applyLastWordsInfluence(outSeat, aiLw.text, Object.assign({}, aiLw, { mode: "vote_out" }));
       addLog({
@@ -640,7 +669,6 @@ function finalizeVoteRound(playerTargetId) {
         title: "" + fmtSeatNum(outSeat.id) + "號 " + outSeat.name + "（公投遺言）",
         text: aiLw.text
       });
-      const voteLwLogRef = state.match.logs[state.match.logs.length - 1] || null;
       const lastWord = "「" + aiLw.text + "」";
 
       state.voteResultPayload = {
@@ -655,22 +683,6 @@ function finalizeVoteRound(playerTargetId) {
       };
       state.match.phase = "DAY_VOTE_RESULT";
       updateAllUI();
-      const ffOut = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-      if (!ffOut && typeof isExternalLlmActive === "function" && isExternalLlmActive() && typeof tryGenerateGeminiLastWords === "function") {
-        const epVoteLw = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
-        const payloadRef = state.voteResultPayload;
-        tryGenerateGeminiLastWords(outSeat, "vote_out", aiLw).then(function (liveLw) {
-          if (!liveLw) return;
-          if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epVoteLw)) return;
-          if (voteLwLogRef) voteLwLogRef.text = liveLw;
-          if (state.voteResultPayload === payloadRef && state.match && state.match.phase === "DAY_VOTE_RESULT") {
-            payloadRef.lastWord = "「" + liveLw + "」";
-            if (typeof renderTimeline === "function") renderTimeline({ deferIfHidden: true });
-            updateAllUI();
-          }
-        }).catch(function () { });
-      }
-      if (!ffOut) voice.speakHost("開票完成，" + outSeat.id + "號" + outSeat.name + "獲得最高票離席休息，請點擊進入夜晚。");
       if (state.autoPlay || ffOut) {
         state.stepTimer = setTimeout(beginNightPhase, ffOut ? 650 : 5000);
       }
@@ -689,15 +701,63 @@ function finalizeVoteRound(playerTargetId) {
     continueAfterVoteSheriff();
   }
 
+  function wouldRemovingSeatEndGame(candidateSeat) {
+    if (!candidateSeat || !state.match || !Array.isArray(state.match.seats)) return false;
+    const allSeats = state.match.seats;
+    const remAlive = allSeats.filter(function (s) { return s.alive && s.id !== candidateSeat.id; });
+    const remWolves = remAlive.filter(function (s) { return s.team === "wolf"; }).length;
+    const remGoods = remAlive.filter(function (s) { return s.team === "good"; }).length;
+    const hadGods = allSeats.some(function (s) { return typeof isGodRole === "function" && isGodRole(s.role); });
+    const hadVillagers = allSeats.some(function (s) { return s.role === "villager"; });
+    const remGods = remAlive.filter(function (s) { return typeof isGodRole === "function" && isGodRole(s.role); }).length;
+    const remVillagers = remAlive.filter(function (s) { return s.role === "villager"; }).length;
+    if (remWolves === 0) return true;
+    if (hadGods && remGods === 0) return true;
+    if (hadVillagers && remVillagers === 0) return true;
+    if (remGoods === 0 || remWolves > remGoods) return true;
+    return false;
+  }
+
+  const soleCandidate = (maxVotes > 0 && topIds.length === 1) ? getSeat(topIds[0]) : null;
+  const isElderExemptCandidate = Boolean(soleCandidate && soleCandidate.isElder && !soleCandidate.elderShieldUsed);
+  const remWolvesCandidate = soleCandidate
+    ? getAliveSeats().filter(function (s) { return s.id !== soleCandidate.id && s.team === "wolf"; }).length
+    : 0;
+  const canWkShotCandidate = Boolean(soleCandidate && soleCandidate.isWolfKing && (remWolvesCandidate > 0 || state.match.variantMode === "lone_wolf_king"));
+  const isHunterOrWkShotCandidate = Boolean(soleCandidate && (soleCandidate.role === "hunter" || canWkShotCandidate));
+  const willEndGameCandidate = Boolean(soleCandidate && !isElderExemptCandidate && !isHunterOrWkShotCandidate && wouldRemovingSeatEndGame(soleCandidate));
+  const ffPreFlight = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  if (
+    !ffPreFlight &&
+    soleCandidate &&
+    soleCandidate.id !== getPlayerId() &&
+    !isElderExemptCandidate &&
+    !isHunterOrWkShotCandidate &&
+    !willEndGameCandidate &&
+    typeof prefetchAiLastWords === "function"
+  ) {
+    prefetchAiLastWords([soleCandidate.id], "vote_out");
+  }
+
+  const flightMeta = {
+    maxVotes: maxVotes,
+    topIds: topIds.slice(),
+    soleCandidate: soleCandidate,
+    isElderExempt: isElderExemptCandidate,
+    isHunterOrWkShot: isHunterOrWkShotCandidate,
+    willEndGame: willEndGameCandidate,
+    isTie: maxVotes > 0 && topIds.length >= 2
+  };
+
   // Suspenseful Sequential Flying-Ballot Reveal (Skippable with 1 click!)
-  runVoteFlightSequence(ballots, commitVoteResolution);
+  runVoteFlightSequence(ballots, commitVoteResolution, flightMeta);
   } catch (err) {
     if (state.match) state.match._voteFinalizing = false;
     throw err;
   }
 }
 
-function runVoteFlightSequence(ballots, onDone) {
+function runVoteFlightSequence(ballots, onDone, meta) {
   if (state.voteFlight && state.voteFlight.timers) {
     state.voteFlight.timers.forEach(function (t) { clearTimeout(t); });
   }
@@ -711,8 +771,12 @@ function runVoteFlightSequence(ballots, onDone) {
   const fTxt = el("voteFlightText");
   if (el("panelVote")) el("panelVote").classList.add("hidden");
   if (banner) banner.classList.remove("hidden");
-  if (fTxt) fTxt.textContent = "開始逐票飛票開票…";
+  if (fTxt) fTxt.textContent = "各席落籌已定，逐票開票揭曉…";
 
+  const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const stepMs = ff ? 45 : 360;
+  const beamMs = ff ? 320 : 680;
+  const verdictHoldMs = ff ? 140 : 1500;
   const timers = [];
   const liveCounts = {};
   let bestCount = 0;
@@ -727,10 +791,12 @@ function runVoteFlightSequence(ballots, onDone) {
     if (!state.match.started) return;
     onDone();
   }
-  state.voteFlight = { active: true, timers: timers, finish: finishNow };
+  state.voteFlight = { active: true, timers: timers, finish: finishNow, stepMs: stepMs, verdictHoldMs: verdictHoldMs };
 
-  const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-  const stepMs = ff ? 45 : 195;
+  if (!ff && typeof voice !== "undefined" && typeof voice.speakHost === "function") {
+    voice.speakHost("各席落籌已定，逐票開票揭曉…");
+  }
+
   ballots.forEach(function (b, idx) {
     const tm = setTimeout(function () {
       if (finished || !state.match.started) return;
@@ -747,7 +813,7 @@ function runVoteFlightSequence(ballots, onDone) {
           state.voteLeaderId = b.targetId;
         }
         if (typeof renderPkDuelBanner === "function") renderPkDuelBanner(liveCounts);
-        spawnBeam(b.voterId, b.targetId, cnt >= 2 ? "#f43f5e" : "#fbbf24", "vote", 460);
+        spawnBeam(b.voterId, b.targetId, cnt >= 2 ? "#f43f5e" : "#fbbf24", "vote", beamMs);
         const labelPop = cnt >= 3 ? ("" + cnt + "票領先!") : (cnt >= 2 ? ("累計 " + cnt + "票!") : "+1 票!");
         spawnFx(b.targetId, labelPop, cnt >= 2 ? "#f43f5e" : "#fb7185", { scale: cnt >= 2 ? 1.18 : 1.0, durationMs: 1450 });
         sound.tone(440 + idx * 38 + Math.min(cnt, 4) * 32, 0.08, "triangle", 0.055, 0);
@@ -761,7 +827,35 @@ function runVoteFlightSequence(ballots, onDone) {
     timers.push(tm);
   });
 
-  timers.push(setTimeout(finishNow, ballots.length * stepMs + (ff ? 140 : 420)));
+  if (!ff) {
+    const verdictTimer = setTimeout(function () {
+      if (finished || !state.match.started) return;
+      let verdictLine = "開票完畢，即將公布公投結果…";
+      if (meta && meta.soleCandidate) {
+        const cSeat = meta.soleCandidate;
+        const cName = cSeat.id === getPlayerId() ? "你" : cSeat.name;
+        const cTag = fmtSeatNum(cSeat.id) + "號 " + cName;
+        if (meta.isElderExempt) {
+          verdictLine = "開票定案，" + cTag + " 獲得最高票，清心長老亮牌豁免…";
+        } else if (meta.willEndGame) {
+          verdictLine = "開票定案，" + cTag + " 獲得最高票，即將揭曉最終勝負…";
+        } else if (meta.isHunterOrWkShot) {
+          verdictLine = "開票定案，" + cTag + " 獲得最高票，臨場反制一觸即發…";
+        } else {
+          verdictLine = "開票定案，" + cTag + " 獲得最高票，請準備發表離席遺言…";
+        }
+      } else if (meta && meta.isTie) {
+        verdictLine = "開票完畢，票數持平，即將進入裁決…";
+      }
+      if (fTxt) fTxt.textContent = verdictLine;
+      if (typeof voice !== "undefined" && typeof voice.speakHost === "function") {
+        voice.speakHost(verdictLine);
+      }
+    }, ballots.length * stepMs);
+    timers.push(verdictTimer);
+  }
+
+  timers.push(setTimeout(finishNow, ballots.length * stepMs + verdictHoldMs));
 }
 
 // ==================== FOUR GIVINGS (4G) POWER CARDS & SYNERGIES ====================
