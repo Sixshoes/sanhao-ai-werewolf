@@ -4239,10 +4239,21 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       const manifest = stage3d.getDefaultStaticAvatarManifest().seatModels;
       return Boolean(st && st.baseSlug && manifest[rigSlug] && av && av.acc && idl && typeof idl.talkArmAmp === "number");
     });
-    // Xiaocheng gender fix: must resolve to male VRM rig ("azhu"), NEVER female chibi "xiaocheng", and VRM portrait map avoids old chibi JPG
-    const xiaochengFixed = stage3dVrm.resolveVrmRigSlug({ name: "小澄", id: 2 }) === "azhu" &&
+    // Original-lore VRM rig re-pairing & full 14-character unified portraits_vrm map
+    const expectedVrmPortraits14 = [
+      "主持", "你", "你_男", "小澄", "暖暖", "阿松", "星兒",
+      "小雲", "阿竹", "晨晨", "墨白", "晴嵐", "阿朗", "柚子"
+    ];
+    const all14VrmPortraitsOk = expectedVrmPortraits14.every(k => {
+      const pUrl = VRM_PORTRAIT_ART_MAP[k];
+      return typeof pUrl === "string" && pUrl.startsWith("assets/portraits_vrm/") && pUrl.endsWith(".jpg");
+    });
+    const xiaochengFixed = stage3dVrm.resolveVrmRigSlug({ name: "小澄", id: 2 }) === "chenchen" &&
+      stage3dVrm.resolveVrmRigSlug({ name: "晨晨", id: 8 }) === "player_male" &&
+      stage3dVrm.resolveVrmRigSlug({ name: "柚子", id: 12 }) === "xiaocheng" &&
       VRM_PERSONA_STYLING["小澄"].vrmAcc === "glasses" &&
-      VRM_PORTRAIT_ART_MAP["小澄"] === "assets/portraits/xiaocheng.jpg";
+      VRM_PORTRAIT_ART_MAP["小澄"] === "assets/portraits_vrm/xiaocheng.jpg" &&
+      all14VrmPortraitsOk;
     // Expanded 10/12p characters all have valid VRM base rigs + signature accessories
     const expandedVrmOk = ["墨白", "晴嵐", "阿朗", "柚子"].every(n => {
       const rig = stage3dVrm.resolveVrmRigSlug({ name: n, id: 9 });
@@ -6557,7 +6568,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     }) &&
       VRM_PERSONA_STYLING["阿松"].vrmAcc === "hiking_scarf" &&
       VRM_PERSONA_STYLING["小雲"].vrmAcc === "press_kit" &&
-      VRM_PERSONA_STYLING["晴嵐"].baseSlug === "xiaocheng";
+      VRM_PERSONA_STYLING["晴嵐"].baseSlug === "player";
 
     const idleArchetypes11Ok = AI_PERSONAS.every(function (p) {
       const ar = VRM_IDLE_ARCHETYPES[p.name];
@@ -10786,7 +10797,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     titleTopBtnsTransparent: v253Css.includes("body.craft-ui.theme-twilight.screen-title .title-top-actions .title-scene-btn") && v253Css.includes("background: transparent;"),
     titleCreedHighContrast: v253Css.includes(".tea-creed-good") && v253Css.includes("#a9e6cb") && v253Css.includes("#f4d699"),
     topLeftGuideNoClash: v253Css.includes("left: 16px;") && v253Css.includes("transform: none;") && v253Css.includes(".judge-guide-step:not(.is-active)"),
-    seatRailNoHudOverlap: v253Css.includes("top: 42px;") && v253Css.includes("top: 40px;"),
+    seatRailNoHudOverlap: v253Css.includes("top: 42px;") && v253Css.includes("top: 46px;"),
     voteFlightTopZNoAnim: v253Css.includes("body.craft-ui #voteFlightBanner") && v253Css.includes("z-index: 36;"),
     directorChoiceRightDocked: v253Css.includes("#directorEventChoiceBar:not(.hidden)") && v253Css.includes("bottom: 44px;"),
     spotlightTextUnclipped: v253Css.includes("max-height: 112px;") && v253Css.includes("max-height: 96px;"),

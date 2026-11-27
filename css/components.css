@@ -20280,25 +20280,25 @@ body.craft-ui #panelPlayerSpeech > div:first-child {
   }
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
-    top: 40px;
+    top: 46px;
     height: 24px;
     padding: 1px 6px;
   }
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
   body.craft-ui.screen-ingame:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
-    top: 42px;
+    top: 48px;
     left: 14px;
     padding: 1px 7px;
   }
 
   body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
   body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
-    top: 68px;
+    top: 74px;
   }
 
   body.craft-ui #voteFlightBanner {
-    top: 68px;
+    top: 74px;
   }
 
   body.craft-ui.screen-ingame #controlDeck {
