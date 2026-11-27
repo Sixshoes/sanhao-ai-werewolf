@@ -10209,9 +10209,12 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const worldAlignedVoteOk = Boolean(voteWorldPick === wolfSeat.id);
 
     // 6. Pro Fake-Seer avoids framing voteDisabled proven Elder & prompt contains difficulty directive
+    villagerSeat.claimedRole = null;
+    state.match.daySpeechEvents = [];
     const elderGood = seats.find(s => s.team === "good" && s.id !== wolfSeat.id && s.id !== witchSeat.id);
     if (elderGood) elderGood.voteDisabled = true;
     state.match.day = 1;
+    wolfSeat.fakeSeer = true;
     wolfSeat.claimedRole = "seer";
     wolfSeat.fakeCheckedIds = [];
     wolfSeat.suspicionMap = {};
@@ -10495,4 +10498,227 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 Release-Freeze E2E smoke test PASSED!");
+// ==================== v24.4.1 TRAFFIC ANALYTICS + SMART API ROUTING & 429 COOLDOWN ====================
+{
+  const swSrc2441 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const swSkipsVercelOk = swSrc2441.includes('"/_vercel/"') || swSrc2441.includes("'/_vercel/'");
+
+  // 1. Vercel Web Analytics safe guard & event queue
+  const analyticsRes = vm.runInContext(`(() => {
+    const prevLoc = window.location;
+    const prevVa = window.va;
+    const prevVaq = window.vaq;
+    let localSkipped = false;
+    let ghPagesSkipped = false;
+    let eventQueuedOk = false;
+    try {
+      delete window.va;
+      delete window.vaq;
+      window.location = { protocol: "http:", hostname: "localhost" };
+      localSkipped = (initVercelAnalytics() === false) && (typeof window.va === "function");
+
+      window.location = { protocol: "https:", hostname: "demo-user.github.io" };
+      ghPagesSkipped = (initVercelAnalytics() === false);
+
+      trackAnalyticsEvent("match_start", { seats: 8, difficulty: "normal", secretObj: { hidden: true } });
+      const q = Array.isArray(window.vaq) ? window.vaq : [];
+      const last = q[q.length - 1];
+      eventQueuedOk = Boolean(
+        last &&
+        last[0] === "event" &&
+        last[1] &&
+        last[1].name === "match_start" &&
+        last[1].data &&
+        last[1].data.seats === 8 &&
+        last[1].data.difficulty === "normal" &&
+        !("secretObj" in last[1].data)
+      );
+    } finally {
+      window.location = prevLoc;
+      window.va = prevVa;
+      window.vaq = prevVaq;
+    }
+    return { localSkipped, ghPagesSkipped, eventQueuedOk };
+  })()`, ctx);
+
+  // 2. Smart Lite vs Hydrogen Speech Routing (Blind-View Strict Zero Violations)
+  const smartTierRes = vm.runInContext(`(() => {
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectAiDifficulty").value = "normal";
+    state.aiDifficulty = "normal";
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+
+    const villager = state.match.seats.find(s => !s.isPlayer && s.role === "villager");
+    const wolf = state.match.seats.find(s => !s.isPlayer && s.role === "wolf");
+    const other = state.match.seats.find(s => s.id !== villager.id && s.id !== wolf.id);
+
+    antiCheatMonitor.resetMatch();
+    const prevStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+    let easyVillagerLite = false;
+    let normalVillagerBriefLite = false;
+    let normalVillagerAccuseFull = false;
+    let normalWolfBriefFull = false;
+    let seerClaimFull = false;
+    let pkTurnFull = false;
+    let endgameFull = false;
+    let tenSeatVillagerStandardLite = false;
+    let violations = -1;
+    try {
+      const vSnap = createBlindMatchSnapshot(villager, { module: "gemini_speech", phase: "DAY_SPEECH" });
+      const wSnap = createBlindMatchSnapshot(wolf, { module: "gemini_speech", phase: "DAY_SPEECH" });
+
+      normalVillagerBriefLite = shouldUseLiteSpeechTier(villager, { lengthTier: "brief" }, vSnap) === true;
+      normalVillagerAccuseFull = shouldUseLiteSpeechTier(villager, { lengthTier: "standard", accuseId: other.id }, vSnap) === false;
+      normalWolfBriefFull = shouldUseLiteSpeechTier(wolf, { lengthTier: "brief" }, wSnap) === false;
+
+      const easySnap = Object.assign({}, vSnap, { aiDifficulty: "easy" });
+      easyVillagerLite = shouldUseLiteSpeechTier(villager, { lengthTier: "standard", accuseId: other.id }, easySnap) === true;
+      seerClaimFull = shouldUseLiteSpeechTier(villager, { lengthTier: "brief", claimSeer: true }, easySnap) === false;
+
+      const pkSnap = Object.assign({}, easySnap, { pkActive: true });
+      pkTurnFull = shouldUseLiteSpeechTier(villager, { lengthTier: "brief" }, pkSnap) === false;
+
+      const endSnap = Object.assign({}, easySnap, { seats: vSnap.seats.slice(0, 5) });
+      endgameFull = shouldUseLiteSpeechTier(villager, { lengthTier: "brief" }, endSnap) === false;
+
+      const tenSnap = Object.assign({}, vSnap, { totalSeats: 10 });
+      tenSeatVillagerStandardLite = shouldUseLiteSpeechTier(villager, { lengthTier: "standard" }, tenSnap) === true;
+
+      violations = antiCheatMonitor.stats.violationsBlocked;
+    } finally {
+      antiCheatMonitor.strictThrow = prevStrict;
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+    return {
+      easyVillagerLite,
+      normalVillagerBriefLite,
+      normalVillagerAccuseFull,
+      normalWolfBriefFull,
+      seerClaimFull,
+      pkTurnFull,
+      endgameFull,
+      tenSeatVillagerStandardLite,
+      zeroAntiCheatViolations: violations === 0
+    };
+  })()`, ctx);
+
+  // 3. api/gemini.js expanded fallback order + 429 cooldown
+  const apiGem2441 = (await import("../api/gemini.js")).default;
+  const gemOrderOk = Array.isArray(apiGem2441._PUBLIC_FALLBACK_ORDER) &&
+    apiGem2441._PUBLIC_FALLBACK_ORDER.includes("gemini-3.8-flash") &&
+    apiGem2441._PUBLIC_FALLBACK_ORDER.includes("gemini-2.5-flash-lite");
+
+  let gem429CooldownOk = false;
+  const origFetchGem = globalThis.fetch;
+  const prevKeyGem = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "AIzaTestDummyKeyForSmokeCheckOnly00";
+  apiGem2441._resetRateLimit();
+  try {
+    globalThis.fetch = async function (url) {
+      if (String(url).includes("gemini-4-hydrogen")) {
+        return { ok: false, status: 429, json: async () => ({ error: { message: "quota exceeded" } }) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: '{"text":"這輪先聽大家說完再穩穩投票。"}' }] } }]
+        })
+      };
+    };
+    const gHeaders = {};
+    const gRes = {
+      statusCode: 0,
+      body: "",
+      setHeader(k, v) { gHeaders[k] = v; },
+      end(b) { gRes.body = String(b || ""); }
+    };
+    const gReq = {
+      method: "POST",
+      headers: { host: "sanhao.vercel.app", origin: "https://sanhao.vercel.app", "content-type": "application/json" },
+      socket: { remoteAddress: "198.51.100.88" },
+      body: { model: "gemini-4-hydrogen", prompt: "請簡短表態", jsonMode: true }
+    };
+    await apiGem2441(gReq, gRes);
+    const parsedG = gRes.body ? JSON.parse(gRes.body) : {};
+    gem429CooldownOk = Boolean(
+      gRes.statusCode === 200 &&
+      parsedG.ok === true &&
+      parsedG.model === "gemini-3.8-flash" &&
+      parsedG.fallbackFrom === "gemini-4-hydrogen" &&
+      apiGem2441._isModelCoolingDown("gemini-4-hydrogen", Date.now())
+    );
+  } finally {
+    globalThis.fetch = origFetchGem;
+    if (prevKeyGem === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = prevKeyGem;
+    apiGem2441._resetRateLimit();
+  }
+
+  // 4. api/tts.js 4-model 400 RPD expansion + 429 cooldown
+  const apiTts2441 = (await import("../api/tts.js")).default;
+  const tts4SlotOrderOk = Array.isArray(apiTts2441._TTS_FALLBACK_ORDER) &&
+    apiTts2441._TTS_FALLBACK_ORDER[3] === "gemini-3.1-flash-tts-preview";
+
+  let tts429CooldownOk = false;
+  const origFetchTts = globalThis.fetch;
+  const prevKeyTts = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "AIzaTestDummyKeyForSmokeCheckOnly00";
+  apiTts2441._resetRateLimit();
+  try {
+    const fakeWavB64 = Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(192, 2)]).toString("base64");
+    globalThis.fetch = async function (url) {
+      if (String(url).includes("gemini-3.8-flash-lite-tts")) {
+        return { ok: false, status: 429, json: async () => ({ error: "rate limit" }) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ inlineData: { mimeType: "audio/wav", data: fakeWavB64 } }] } }]
+        })
+      };
+    };
+    const tHeaders = {};
+    const tRes = {
+      statusCode: 0,
+      body: null,
+      setHeader(k, v) { tHeaders[k] = v; },
+      end(b) { tRes.body = b; }
+    };
+    const tReq = {
+      method: "POST",
+      headers: { host: "sanhao.vercel.app", origin: "https://sanhao.vercel.app", "content-type": "application/json" },
+      socket: { remoteAddress: "198.51.100.89" },
+      body: { voice: "Kore", style: "平穩", text: "這輪我們先聽完整局再投票。" }
+    };
+    await apiTts2441(tReq, tRes);
+    tts429CooldownOk = Boolean(
+      tRes.statusCode === 200 &&
+      tHeaders["X-TTS-Model"] === "gemini-3.8-flash-tts" &&
+      apiTts2441._isModelCoolingDown("gemini-3.8-flash-lite-tts", Date.now())
+    );
+  } finally {
+    globalThis.fetch = origFetchTts;
+    if (prevKeyTts === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = prevKeyTts;
+    apiTts2441._resetRateLimit();
+  }
+
+  const all2441 = Object.assign(
+    { swSkipsVercelOk, gemOrderOk, gem429CooldownOk, tts4SlotOrderOk, tts429CooldownOk },
+    analyticsRes,
+    smartTierRes
+  );
+  for (const [k, v] of Object.entries(all2441)) {
+    if (!v) {
+      throw new Error("v24.4.1 Analytics & Smart API Routing regression failed for " + k + ": " + JSON.stringify(all2441));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 Release-Freeze E2E smoke test PASSED!");

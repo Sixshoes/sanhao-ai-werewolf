@@ -21,18 +21,26 @@
 const ALLOWED_PUBLIC_MODELS = new Set([
   "gemini-2.5-pro",
   "gemini-4-hydrogen",
+  "gemini-3.8-flash",
   "gemini-3.1-flash-lite",
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite"
 ]);
 const PUBLIC_DEFAULT_MODEL = "gemini-4-hydrogen";
 const PUBLIC_LITE_MODEL = "gemini-3.1-flash-lite";
-const PUBLIC_FALLBACK_ORDER = ["gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
+const PUBLIC_FALLBACK_ORDER = [
+  "gemini-4-hydrogen",
+  "gemini-3.8-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite"
+];
 
 const MAX_PROMPT_CHARS = 14000;
 const RATE_WINDOW_MS = 60 * 1000;
 const DAY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const BAD_MODEL_COOLDOWN_MS = 10 * 60 * 1000;
+const RATE_LIMIT_COOLDOWN_MS = 3 * 60 * 1000;
 const SESSION_ID_RE = /^[a-zA-Z0-9_-]{8,48}$/;
 const _rateStore = new Map();
 const _badModelCooldown = new Map();
@@ -427,6 +435,8 @@ async function handler(req, res) {
   }
   if (first.status === 404 || (first.status === 400 && isModelConfigBad400(first.reason))) {
     _badModelCooldown.set(primaryModel, Date.now() + BAD_MODEL_COOLDOWN_MS);
+  } else if (first.status === 429) {
+    _badModelCooldown.set(primaryModel, Date.now() + RATE_LIMIT_COOLDOWN_MS);
   }
 
   const shouldFallback = (first.status !== 401 && first.status !== 403) && (first.status === 400 || first.status === 404 || first.status === 429 || first.status === 500 || first.status === 502 || first.status === 503 || first.status === 504 || !first.text);
@@ -435,8 +445,8 @@ async function handler(req, res) {
     const fbQueue = PUBLIC_FALLBACK_ORDER.filter(function (m) {
       return m !== primaryModel && !isModelCoolingDown(m, Date.now());
     });
-    if (!fbQueue.length && primaryModel !== "gemini-2.5-flash") {
-      fbQueue.push("gemini-2.5-flash");
+    if (!fbQueue.length && primaryModel !== "gemini-2.5-flash-lite") {
+      fbQueue.push("gemini-2.5-flash-lite");
     }
     for (let i = 0; i < fbQueue.length; i++) {
       const elapsed = Date.now() - startedAt;
@@ -450,6 +460,8 @@ async function handler(req, res) {
       }
       if (fb.status === 404 || (fb.status === 400 && isModelConfigBad400(fb.reason))) {
         _badModelCooldown.set(fbModel, Date.now() + BAD_MODEL_COOLDOWN_MS);
+      } else if (fb.status === 429) {
+        _badModelCooldown.set(fbModel, Date.now() + RATE_LIMIT_COOLDOWN_MS);
       }
       lastFail = fb;
       if (fb.status === 401 || fb.status === 403) break;
@@ -472,6 +484,8 @@ handler._extractSessionId = extractSessionId;
 handler._clampTemperature = clampTemperature;
 handler._buildGenerationConfig = buildGenerationConfig;
 handler._resolvePrimaryTimeoutMs = resolvePrimaryTimeoutMs;
+handler._PUBLIC_FALLBACK_ORDER = PUBLIC_FALLBACK_ORDER;
+handler._isModelCoolingDown = isModelCoolingDown;
 handler._markBadModel = function (modelId, nowMs) {
   _badModelCooldown.set(modelId, (typeof nowMs === "number" ? nowMs : Date.now()) + BAD_MODEL_COOLDOWN_MS);
 };

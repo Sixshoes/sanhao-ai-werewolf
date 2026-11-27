@@ -1753,7 +1753,7 @@ const voice = {
           const fallbackVoiceMap = { Orus: "Puck", Enceladus: "Puck", Achird: "Charon", Iapetus: "Puck", Fenrir: "Puck", Leda: "Zephyr", Aoede: "Zephyr", Callirrhoe: "Zephyr", Autonoe: "Zephyr", Laomedeia: "Zephyr", Vindemiatrix: "Zephyr", Sulafat: "Zephyr" };
           const fbVoice = fallbackVoiceMap[payload.voiceName] || "";
           const hasTagsDiff = strippedForFallback !== payload.taggedTranscript;
-          const directModels = ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts"];
+          const directModels = ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview"];
           for (let mi = 0; mi < directModels.length && !audioBytes; mi++) {
             const directModelId = directModels[mi];
             const is38Direct = directModelId.indexOf("gemini-3.8-") === 0;

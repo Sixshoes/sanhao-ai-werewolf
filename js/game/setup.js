@@ -391,6 +391,9 @@ function startJudgeShowcaseMatch() {
   };
 
   if (typeof evaluateMatchPointState === "function") evaluateMatchPointState();
+  if (typeof trackAnalyticsEvent === "function") {
+    trackAnalyticsEvent("judge_showcase_start", { seats: 8 });
+  }
   if (typeof orchestrator !== "undefined") {
     orchestrator.emit("match:started", { totalSeats: 8, playerRole: "seer", judgeShowcase: true });
     orchestrator.emit("phase:changed", { phase: "DAY_SPEECH", day: 2 });
@@ -792,6 +795,14 @@ function startNewGame() {
     title: "開局！你是【" + rDef.icon + rDef.name + "】",
     text: rDef.desc
   });
+  if (typeof trackAnalyticsEvent === "function") {
+    trackAnalyticsEvent("match_start", {
+      seats: (state.match && state.match.totalSeats) || seats.length,
+      difficulty: (state.match && state.match.aiDifficulty) || state.aiDifficulty || "normal",
+      mode: variantMode || "standard",
+      classic: Boolean(typeof isClassicSimpleMode === "function" && isClassicSimpleMode())
+    });
+  }
 
   if (playerRole === "wolf") {
     const mates = seats.filter(function (s) { return s.id !== playerSeatId && s.role === "wolf"; });
@@ -949,6 +960,14 @@ function finishMatch(winnerTeam, reason) {
     text: ""
   });
   if (typeof evaluateSpectatorGuess === "function") evaluateSpectatorGuess();
+  if (typeof trackAnalyticsEvent === "function") {
+    trackAnalyticsEvent("match_finish", {
+      seats: (state.match && state.match.totalSeats) || 8,
+      winner: String(winnerTeam || "unknown"),
+      days: (state.match && state.match.day) || 1,
+      showcase: Boolean(state.match && state.match.judgeShowcase)
+    });
+  }
   if (typeof orchestrator !== "undefined") {
     orchestrator.dispatchAgent("GodViewAnalystAgent", { winnerTeam: winnerTeam, reason: reason });
     orchestrator.emit("match:ended", { winner: winnerTeam, reason: reason });

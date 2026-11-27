@@ -34,16 +34,23 @@ const CORE_FALLBACK_VOICE_MAP = {
 const ALLOWED_TTS_MODELS = new Set([
   "gemini-3.8-flash-lite-tts",
   "gemini-3.8-flash-tts",
-  "gemini-2.5-flash-preview-tts"
+  "gemini-2.5-flash-preview-tts",
+  "gemini-3.1-flash-tts-preview"
 ]);
 const DEFAULT_TTS_MODEL = "gemini-3.8-flash-lite-tts";
-const TTS_FALLBACK_ORDER = ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts"];
+const TTS_FALLBACK_ORDER = [
+  "gemini-3.8-flash-lite-tts",
+  "gemini-3.8-flash-tts",
+  "gemini-2.5-flash-preview-tts",
+  "gemini-3.1-flash-tts-preview"
+];
 
 const MAX_TEXT_CHARS = 280;
 const MAX_STYLE_CHARS = 200;
 const RATE_WINDOW_MS = 60 * 1000;
 const DAY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const BAD_MODEL_COOLDOWN_MS = 10 * 60 * 1000;
+const RATE_LIMIT_COOLDOWN_MS = 3 * 60 * 1000;
 const SESSION_ID_RE = /^[a-zA-Z0-9_-]{8,48}$/;
 const MAX_TTS_CACHE = 48;
 
@@ -394,9 +401,15 @@ async function handler(req, res) {
   }
 
   const now = Date.now();
-  const queue = [primaryModel].concat(TTS_FALLBACK_ORDER.filter(function (m) { return m !== primaryModel; }))
-    .filter(function (m) { return !isModelCoolingDown(m, now); });
-  if (!queue.length) queue.push("gemini-3.8-flash-tts");
+  const fullOrder = [primaryModel].concat(TTS_FALLBACK_ORDER.filter(function (m) { return m !== primaryModel; }));
+  const queue = fullOrder.filter(function (m) { return !isModelCoolingDown(m, now); });
+  if (!queue.length) {
+    // All models cooling down: probe the model whose cooldown expires earliest
+    const earliest = fullOrder.slice().sort(function (a, b) {
+      return (_badModelCooldown.get(a) || 0) - (_badModelCooldown.get(b) || 0);
+    })[0];
+    queue.push(earliest || "gemini-3.8-flash-tts");
+  }
 
   let lastStatus = 502;
   const startedAt = Date.now();
@@ -436,6 +449,8 @@ async function handler(req, res) {
     lastStatus = out.status || 502;
     if (out.status === 404) {
       _badModelCooldown.set(modelId, Date.now() + BAD_MODEL_COOLDOWN_MS);
+    } else if (out.status === 429) {
+      _badModelCooldown.set(modelId, Date.now() + RATE_LIMIT_COOLDOWN_MS);
     }
     if (out.status === 401 || out.status === 403) break;
   }

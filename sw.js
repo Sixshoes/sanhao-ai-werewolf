@@ -88,7 +88,7 @@ self.addEventListener("fetch", function (event) {
   }
 
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.indexOf("/api/") === 0) return;
+  if (url.pathname.indexOf("/api/") === 0 || url.pathname.indexOf("/_vercel/") === 0) return;
 
   // Pool A: Large immutable static assets (VRM / voice_pack / portraits / sky / textures / vendor) -> Cache-First
   if (IMMUTABLE_RE.test(url.pathname)) {

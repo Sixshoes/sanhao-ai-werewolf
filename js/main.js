@@ -169,6 +169,50 @@ const bootPreloader = {
 };
 if (typeof window !== "undefined") window.bootPreloader = bootPreloader;
 
+function initVercelAnalytics() {
+  if (typeof window === "undefined" || typeof document === "undefined" || !window.location) return false;
+  window.va = window.va || function () {
+    (window.vaq = window.vaq || []).push(arguments);
+  };
+  const proto = String(window.location.protocol || "").toLowerCase();
+  const host = String(window.location.hostname || "").toLowerCase();
+  if (proto !== "https:" || !host || host === "localhost" || host === "127.0.0.1" || host === "::1" || host.endsWith(".github.io")) {
+    return false;
+  }
+  if (document.querySelector && document.querySelector('script[src="/_vercel/insights/script.js"]')) {
+    return true;
+  }
+  try {
+    const s = document.createElement("script");
+    s.defer = true;
+    s.src = "/_vercel/insights/script.js";
+    if (document.head && typeof document.head.appendChild === "function") {
+      document.head.appendChild(s);
+    } else if (document.body && typeof document.body.appendChild === "function") {
+      document.body.appendChild(s);
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function trackAnalyticsEvent(eventName, props) {
+  if (typeof window === "undefined" || typeof window.va !== "function" || !eventName) return;
+  try {
+    const cleanProps = {};
+    if (props && typeof props === "object") {
+      Object.keys(props).forEach(function (k) {
+        const v = props[k];
+        if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+          cleanProps[k] = v;
+        }
+      });
+    }
+    window.va("event", { name: String(eventName).slice(0, 48), data: cleanProps });
+  } catch (e) { }
+}
+
 function bindEvents() {
   bindCanvasEvents();
   bindAudioVoiceEvents();
@@ -186,6 +230,7 @@ function bindEvents() {
 window.addEventListener("beforeunload", function () { voice.stop(); });
 
 window.onload = function () {
+  initVercelAnalytics();
   loadUserPrefs();
   voice.refreshVoices();
   voice.probeLocalNeuralServer();

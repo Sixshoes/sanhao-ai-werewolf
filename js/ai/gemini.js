@@ -1252,6 +1252,43 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   return { prompt: prompt, secretIntel: secretIntel, snap: snap, audit: audit };
 }
 
+function shouldUseLiteSpeechTier(speaker, fallbackMeta, snap) {
+  const s = snap || null;
+  const self = (s && s.self) ? s.self : null;
+  const totalSNow = (s && s.totalSeats) || 8;
+  const diff = (s && s.aiDifficulty) || (typeof state !== "undefined" ? state.aiDifficulty : "normal") || "normal";
+  const lockedRoleNow = getAllowedGeminiClaimRole(speaker, fallbackMeta);
+  const isSheriffNow = Boolean(s && s.sheriffSeatId === speaker.id);
+  const isPkNow = Boolean(s && s.pkActive);
+  const aliveList = (s && Array.isArray(s.seats)) ? s.seats.filter(function (x) { return x && x.alive; }) : [];
+  const aliveSeerClaimCount = aliveList.filter(function (x) { return x.claimedRole === "seer"; }).length;
+  const isEndgame = Boolean(aliveList.length > 0 && aliveList.length <= 5);
+  const isDualSeerOrGod = Boolean(lockedRoleNow || aliveSeerClaimCount >= 2);
+  const hasSharpMove = Boolean(
+    fallbackMeta && (
+      fallbackMeta.checkedWolfId ||
+      fallbackMeta.claimSeer ||
+      fallbackMeta.lengthTier === "intense"
+    )
+  );
+  // Never downgrade high-stakes strategic moments (PK, Sheriff, Role Claims, Dual-Seer, Endgame, Seer Check-Wolf)
+  if (isPkNow || isSheriffNow || isDualSeerOrGod || isEndgame || hasSharpMove) {
+    return false;
+  }
+  // Easy mode: non-critical turns route to fast/economic Lite tier (~85% cost reduction while keeping beginner pacing crisp)
+  if (diff === "easy") {
+    return true;
+  }
+  const isBriefPass = Boolean(fallbackMeta && (fallbackMeta.lengthTier === "brief" || fallbackMeta.lengthTier === "concise"));
+  const isAccusing = Boolean(fallbackMeta && fallbackMeta.accuseId);
+  const selfRole = self ? self.role : null;
+  // Normal/Pro: Wolves & God roles ALWAYS stay on full Hydrogen; non-accusing Villager brief passes (or 10+ seat non-accusing Villagers) route to Lite
+  if (selfRole && selfRole !== "villager") {
+    return false;
+  }
+  return Boolean(selfRole === "villager" && !isAccusing && (isBriefPass || totalSNow >= 10));
+}
+
 async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
   tryGenerateGeminiAiSpeech._lastRejectReason = "";
   const built = buildBlindGeminiSpeechPrompt(speaker, fallbackMeta);
@@ -1259,7 +1296,6 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
     tryGenerateGeminiAiSpeech._lastRejectReason = "prompt_audit";
     return null;
   }
-  const totalSNow = (built.snap && built.snap.totalSeats) || 8;
   const lockedRoleNow = getAllowedGeminiClaimRole(speaker, fallbackMeta);
   const isSheriffNow = Boolean(built.snap && built.snap.sheriffSeatId === speaker.id);
   const isPkNow = Boolean(built.snap && built.snap.pkActive);
@@ -1274,8 +1310,7 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
     isDualSeerOrGod: isDualSeerOrGod,
     isCasualVariety: isCasualVarietyNow
   });
-  const isBriefPass = Boolean(fallbackMeta && (fallbackMeta.lengthTier === "brief" || fallbackMeta.lengthTier === "concise"));
-  const useLiteTier = Boolean(totalSNow >= 10 && isBriefPass && !lockedRoleNow && !isSheriffNow && !(fallbackMeta && (fallbackMeta.checkedWolfId || fallbackMeta.accuseId)));
+  const useLiteTier = shouldUseLiteSpeechTier(speaker, fallbackMeta, built.snap);
   const rawOut = await callGeminiText(built.prompt, { jsonMode: true, lite: useLiteTier, temperature: tempVal });
   const parsed = rawOut ? parseGeminiStructuredSpeech(rawOut) : null;
   if (!parsed) return null;
@@ -1577,7 +1612,8 @@ async function tryGenerateGeminiInterjectionReply(targetSeat, questionText, fall
   const pack = buildBlindGeminiInterjectionPrompt(targetSeat, questionText, fallbackReply);
   if (!pack || !pack.audit || !pack.audit.ok) return null;
   const tempVal = resolveGeminiSpeechTemperature("interject");
-  const raw = await callGeminiText(pack.prompt, { jsonMode: false, temperature: tempVal });
+  const isEasyInterject = Boolean(pack.snap && pack.snap.aiDifficulty === "easy");
+  const raw = await callGeminiText(pack.prompt, { jsonMode: false, lite: isEasyInterject, temperature: tempVal });
   if (!raw) return null;
   const clean = _validateMiniLiveText(raw, pack.snap ? pack.snap.self : targetSeat, {
     minLen: 10,

@@ -782,7 +782,9 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     if (nonWolves.length > 0) {
       // Zero-Leak: Wolf only sees observable claimedRole === "seer" on non-wolves (NEVER peeks s.role === "seer"!)
       const diffFake = (snap && snap.aiDifficulty) || (typeof state !== "undefined" ? state.aiDifficulty : "normal");
-      const rivalSeerSpoke = spokenOthers.find(function (s) { return !s.isWolfMate && s.claimedRole === "seer"; });
+      const rivalSeerSpoke = spokenOthers.find(function (s) {
+        return !s.isWolfMate && s.claimedRole === "seer" && !(diffFake !== "easy" && s.voteDisabled);
+      });
       const soleClaimsFake = {};
       aliveOthers.forEach(function (s) {
         if (s && s.claimedRole) soleClaimsFake[s.claimedRole] = (soleClaimsFake[s.claimedRole] || 0) + 1;
