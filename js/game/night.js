@@ -602,15 +602,17 @@ function proceedToNightWolf() {
       proceedToNightSeer();
     };
     const isFfNight = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+    const isPlayerSeer = Boolean(player && player.alive && player.role === "seer");
+    const isPlayerGuard = Boolean(player && player.alive && player.role === "guard");
     const waitHostNightVoice = Boolean(
       !isFfNight &&
-      !(player && player.alive && (player.role === "seer" || player.role === "guard")) &&
+      !isPlayerGuard &&
       typeof voice !== "undefined" && typeof voice.canSpeak === "function" && voice.canSpeak()
     );
-    if (player && player.alive && player.role === "seer") {
-      voice.speakHost("第" + state.match.day + "晚，天黑請靜心。明心觀察員請點擊外圍座位查證身分。", undefined, "host_night");
-      state.stepTimer = scheduleNightStep(finishAiWolfStep, 1250);
-    } else if (waitHostNightVoice) {
+    const nightWolfHostLine = isPlayerSeer
+      ? ("第" + state.match.day + "晚，天黑請靜心。明心觀察員請點擊外圍座位查證身分。")
+      : ("第" + state.match.day + "晚，天黑請靜心。");
+    if (waitHostNightVoice) {
       let wolfStepRan = false;
       const epNightWolf = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
       const runWolfOnce = function () {
@@ -621,15 +623,17 @@ function proceedToNightWolf() {
         if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epNightWolf)) return;
         finishAiWolfStep();
       };
-      voice.speakHost("第" + state.match.day + "晚，天黑請靜心。", function () {
+      clearStepTimer();
+      // Arm safety cap BEFORE speakHost so synchronous speakHost callbacks cancel it via clearStepTimer() (zero orphan timers)
+      state.stepTimer = scheduleNightStep(runWolfOnce, 5200, { preserveWait: true });
+      voice.speakHost(nightWolfHostLine, function () {
+        if (wolfStepRan) return;
         clearStepTimer();
         state.stepTimer = scheduleNightStep(runWolfOnce, 220, { preserveWait: true });
       }, "host_night");
-      // Safety cap so nightfall never stalls if audio is blocked/unavailable (preserveWait prevents 560ms clamp!)
-      state.stepTimer = scheduleNightStep(runWolfOnce, 5200, { preserveWait: true });
     } else {
-      if (!isFfNight && !(player && player.alive && player.role === "guard")) {
-        voice.speakHost("第" + state.match.day + "晚，天黑請靜心。", undefined, "host_night");
+      if (!isFfNight && !isPlayerGuard) {
+        voice.speakHost(nightWolfHostLine, undefined, "host_night");
       }
       state.stepTimer = scheduleNightStep(finishAiWolfStep, voice.canSpeak() ? 1250 : 820);
     }
@@ -1268,6 +1272,7 @@ function resolveDawn() {
         };
         state._dawnLwFlush = launchDawnLw;
         const armDawnLwSafety = function (msWait) {
+          if (dawnLwStarted) return;
           if (state.stepTimer) { clearTimeout(state.stepTimer); state.stepTimer = null; }
           state.stepTimer = setTimeout(function () {
             if (typeof voice !== "undefined" && voice.paused) {
@@ -1279,12 +1284,13 @@ function resolveDawn() {
         };
         const waitDawnLwVoice = Boolean(dawnVoiceLine && typeof voice !== "undefined" && typeof voice.speakHost === "function" && typeof voice.canSpeak === "function" && voice.canSpeak());
         if (waitDawnLwVoice) {
+          armDawnLwSafety(6500);
           voice.speakHost(dawnVoiceLine, function () {
             if (dawnLwStarted) return;
-            if (state.stepTimer) { clearTimeout(state.stepTimer); state.stepTimer = null; }
+            clearStepTimer();
+            state.speakingInFlight = true;
             state.stepTimer = setTimeout(launchDawnLw, 260);
           }, "host_dawn");
-          armDawnLwSafety(6500);
         } else {
           if (dawnVoiceLine && typeof voice !== "undefined" && typeof voice.speakHost === "function") {
             voice.speakHost(dawnVoiceLine, undefined, "host_dawn");
@@ -1839,8 +1845,17 @@ function confirmTargetAction() {
     const aliveWolvesNow = getAliveSeats().filter(function (s) { return s.role === "wolf" || s.isWolfKing; });
     const allowSelfKnifeN1 = Boolean(state.match.day === 1 && aliveWolvesNow.length >= 2);
     const targetIsWolf = Boolean(target && (target.role === "wolf" || target.isWolfKing));
-    if (!target || !target.alive || (targetIsWolf && !allowSelfKnifeN1)) {
+    if (!target || !target.alive) {
       showToast(allowSelfKnifeN1 ? "請點選 1 位在席目標（首夜可點己方執行自刀騙藥）" : "點選 1 位好人當目標！", "warn");
+      return;
+    }
+    if (targetIsWolf && !allowSelfKnifeN1) {
+      showToast(
+        target.id === getPlayerId()
+          ? "依當前局規本夜不可自刀，請選擇其他目標。"
+          : "他是你的酸民狼同伴，請改點選好人當目標！",
+        "warn"
+      );
       return;
     }
     clearWolfScreenTacticTimer();

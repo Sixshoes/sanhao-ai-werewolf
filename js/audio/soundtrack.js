@@ -54,6 +54,7 @@ const sound = {
   _bgmRevSend: null,
   _revReturn: null,
   _reverbInitTimer: null,
+  _unlockingPromise: null,
   muted: false,
   voiceDucking: false,
   bgmVol: 0.60,
@@ -232,13 +233,22 @@ const sound = {
       }
     };
     if (this.ctx && this.ctx.state === "suspended") {
-      const resumeRes = this.ctx.resume();
-      if (resumeRes && typeof resumeRes.then === "function") {
-        resumeRes.then(startWhenReady).catch(function () {
-          selfUnlock.updateEqIndicator();
-        });
-      } else {
-        startWhenReady();
+      if (!this._unlockingPromise) {
+        let resumeRes = null;
+        try {
+          resumeRes = this.ctx.resume();
+        } catch (e) {}
+        if (resumeRes && typeof resumeRes.then === "function") {
+          this._unlockingPromise = resumeRes.then(function () {
+            selfUnlock._unlockingPromise = null;
+            startWhenReady();
+          }).catch(function () {
+            selfUnlock._unlockingPromise = null;
+            selfUnlock.updateEqIndicator();
+          });
+        } else {
+          startWhenReady();
+        }
       }
     } else {
       startWhenReady();

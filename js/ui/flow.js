@@ -414,7 +414,8 @@ const indieFlow = {
     const isNightMode = !isTitle && (p === "NIGHT_GUARD" || p === "NIGHT_SEER" || p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "HUNTER_TRIGGER" || p === "HUNTER_RESOLVE");
     const isSheriffMode = !isTitle && (p === "SHERIFF_ELECTION" || p === "SHERIFF_ORDER" || p === "SHERIFF_TRANSFER");
     const fourGUsable = typeof canUseFourGNow === "function" ? canUseFourGNow() : false;
-    const showSeatBar = !isTitle && !isGameOver && p !== "DAY_PLAYER_TURN" && p !== "SHERIFF_TRANSFER" && p !== "SHERIFF_ELECTION" && p !== "SHERIFF_ORDER" && p !== "DAY_VOTE_RESULT" && p !== "LAST_WORDS_PLAYER" && p !== "LAST_WORDS_SPEECH";
+    const shVoteNow = Boolean(p === "SHERIFF_ELECTION" && state.match && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "vote" && typeof getPlayerSeat === "function" && getPlayerSeat() && getPlayerSeat().alive && !state.match.sheriffElectionCtx.playerRunning);
+    const showSeatBar = !isTitle && !isGameOver && p !== "DAY_PLAYER_TURN" && p !== "SHERIFF_ORDER" && p !== "DAY_VOTE_RESULT" && p !== "LAST_WORDS_PLAYER" && p !== "LAST_WORDS_SPEECH" && (p !== "SHERIFF_ELECTION" || shVoteNow);
 
     document.body.classList.toggle("screen-title", isTitle);
     document.body.classList.toggle("screen-ingame", !isTitle);
@@ -1066,7 +1067,7 @@ const indieFlow = {
           ? "我是書院推理夥伴，今晚一定細心傾聽每一句線索，帶領好人陣營獲勝！"
           : ((pProf && pProf.sampleQuote) || "這局我們一起說好話、理性抓出酸民狼！");
         if (typeof voice !== "undefined" && typeof voice.speak === "function") {
-          voice.speak(s.name, sample, "normal", undefined, { isAudition: true });
+          voice.speak(s.name, sample, "normal", undefined, { seatId: s.id, personaKey: s.name, isAudition: true });
         }
         if (typeof stage3d !== "undefined" && typeof stage3d.setHeroAction === "function") {
           stage3d.setHeroAction("speak_gesture", 3200);

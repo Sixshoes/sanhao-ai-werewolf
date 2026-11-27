@@ -281,6 +281,75 @@ function updateAllUI() {
   if (typeof indieFlow !== "undefined") indieFlow.syncBodyScreenState();
 }
 
+function getSeatTargetingState(seat) {
+  if (!state.match || !state.match.started || !seat) {
+    return { active: false, eligible: false, reason: "" };
+  }
+  const pid = getPlayerId();
+  const p = state.match.phase;
+  const pSelf = getPlayerSeat();
+  const shCtx = p === "SHERIFF_ELECTION" ? state.match.sheriffElectionCtx : null;
+
+  if (p === "DAY_VOTE" && typeof isPlayerEligibleToVote === "function" && isPlayerEligibleToVote() && !(state.voteFlight && state.voteFlight.active)) {
+    if (!seat.alive) return { active: true, eligible: false, reason: "dead" };
+    if (seat.id === pid) return { active: true, eligible: false, reason: "self" };
+    if (typeof isValidVoteTarget === "function" && !isValidVoteTarget(seat.id)) {
+      return { active: true, eligible: false, reason: "non_pk" };
+    }
+    return { active: true, eligible: true, reason: "" };
+  }
+
+  if (p === "SHERIFF_ELECTION" && shCtx && shCtx.stage === "vote" && pSelf && pSelf.alive && !shCtx.playerRunning) {
+    if (!seat.alive) return { active: true, eligible: false, reason: "dead" };
+    if (seat.id === pid) return { active: true, eligible: false, reason: "self" };
+    const isCand = Array.isArray(shCtx.candidateIds) && shCtx.candidateIds.indexOf(seat.id) !== -1;
+    return { active: true, eligible: isCand, reason: isCand ? "" : "not_sheriff_cand" };
+  }
+
+  if (p === "SHERIFF_TRANSFER") {
+    if (!seat.alive) return { active: true, eligible: false, reason: "dead" };
+    if (seat.id === pid) return { active: true, eligible: false, reason: "self" };
+    return { active: true, eligible: true, reason: "" };
+  }
+
+  if (p === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && typeof canSeatTriggerShot === "function" && canSeatTriggerShot(pSelf)) {
+    if (!seat.alive) return { active: true, eligible: false, reason: "dead" };
+    if (seat.id === pid) return { active: true, eligible: false, reason: "self" };
+    if (pSelf.isWolfKing && !state.hidePlayerRole && (seat.role === "wolf" || seat.isWolfKing)) {
+      return { active: true, eligible: false, reason: "wolf_mate" };
+    }
+    return { active: true, eligible: true, reason: "" };
+  }
+
+  if (p === "NIGHT_GUARD" && pSelf && pSelf.alive && pSelf.role === "guard") {
+    if (!seat.alive) return { active: true, eligible: false, reason: "dead" };
+    if (state.match.lastGuardTargetId === seat.id) return { active: true, eligible: false, reason: "last_guarded" };
+    return { active: true, eligible: true, reason: "" };
+  }
+
+  if (p === "NIGHT_SEER" && !state.seerReveal && pSelf && pSelf.alive && pSelf.role === "seer") {
+    if (!seat.alive) return { active: true, eligible: false, reason: "dead" };
+    if (seat.id === pid) return { active: true, eligible: false, reason: "self" };
+    return { active: true, eligible: true, reason: "" };
+  }
+
+  if (p === "NIGHT_WOLF" && pSelf && pSelf.alive && (pSelf.role === "wolf" || pSelf.isWolfKing)) {
+    if (!seat.alive) return { active: true, eligible: false, reason: "dead" };
+    const wolfCanTarget = typeof canPlayerWolfTargetSeat === "function"
+      ? canPlayerWolfTargetSeat(pSelf, seat)
+      : (seat.id !== pid && seat.role !== "wolf" && !seat.isWolfKing);
+    if (state.hidePlayerRole && seat.id !== pid) {
+      return { active: true, eligible: true, reason: "" };
+    }
+    if (!wolfCanTarget) {
+      return { active: true, eligible: false, reason: seat.id === pid ? "no_self_knife" : "wolf_mate" };
+    }
+    return { active: true, eligible: true, reason: "" };
+  }
+
+  return { active: false, eligible: false, reason: "" };
+}
+
 function renderSeatStrip() {
   const strip = el("seatButtonStrip");
   if (!strip) return;
@@ -304,12 +373,15 @@ function renderSeatStrip() {
   const pid = getPlayerId();
   const p = state.match.phase;
   const pSelf = state.match.started ? getPlayerSeat() : null;
+  const shCtx = (state.match.started && p === "SHERIFF_ELECTION") ? state.match.sheriffElectionCtx : null;
   const canDoubleClickConfirm = Boolean(
     state.match.started && (
       (p === "DAY_VOTE" && typeof isPlayerEligibleToVote === "function" && isPlayerEligibleToVote() && !(state.voteFlight && state.voteFlight.active)) ||
+      (p === "SHERIFF_ELECTION" && shCtx && shCtx.stage === "vote" && pSelf && pSelf.alive && !shCtx.playerRunning) ||
+      (p === "SHERIFF_TRANSFER") ||
       (p === "NIGHT_GUARD" && pSelf && pSelf.alive && pSelf.role === "guard") ||
       (p === "NIGHT_SEER" && !state.seerReveal && pSelf && pSelf.alive && pSelf.role === "seer") ||
-      (p === "NIGHT_WOLF" && pSelf && pSelf.alive && pSelf.role === "wolf") ||
+      (p === "NIGHT_WOLF" && pSelf && pSelf.alive && (pSelf.role === "wolf" || pSelf.isWolfKing)) ||
       (p === "HUNTER_TRIGGER" && pSelf && canSeatTriggerShot(pSelf) && !pSelf.alive)
     )
   );
@@ -338,6 +410,7 @@ function renderSeatStrip() {
       : "";
     const isLastGuardedDisabled = Boolean(state.match.started && p === "NIGHT_GUARD" && pSelf && pSelf.role === "guard" && state.match.lastGuardTargetId === s.id);
     const isPkOutDisabled = Boolean(state.match.started && p === "DAY_VOTE" && typeof isValidVoteTarget === "function" && !isValidVoteTarget(s.id));
+    const tgtState = getSeatTargetingState(s);
 
     const btn = document.createElement("button");
     btn.type = "button";
@@ -349,6 +422,9 @@ function renderSeatStrip() {
     else if (mark === "good") cls.push("is-mark-good");
     if (s.alive && (isWolfMateDisabled || isLastGuardedDisabled || isPkOutDisabled || (canDoubleClickConfirm && s.id === pid && p !== "DAY_PLAYER_TURN" && p !== "NIGHT_GUARD" && !wolfCanSelfKnifeN1))) {
       cls.push("is-disabled-target");
+    }
+    if (tgtState.active) {
+      cls.push(tgtState.eligible ? "is-vote-eligible" : "is-vote-disabled");
     }
     btn.className = cls.join(" ");
 
@@ -373,7 +449,7 @@ function renderSeatStrip() {
     nameSpan.textContent = (isSheriff ? "[警] " : "") + (s.id === pid ? "你" : s.name);
     btn.appendChild(nameSpan);
 
-    const canConfirmThisSeat = Boolean(canDoubleClickConfirm && isSelected && s.alive && (s.id !== pid || p === "NIGHT_GUARD" || wolfCanSelfKnifeN1) && !isWolfMateDisabled && !isLastGuardedDisabled && !isPkOutDisabled);
+    const canConfirmThisSeat = Boolean(canDoubleClickConfirm && isSelected && tgtState.active && tgtState.eligible);
     let badgeText = "";
     let badgeKind = "";
     const effRoleGod = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(s) : s.role;

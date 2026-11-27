@@ -231,7 +231,7 @@ function renderVoteNotesDeck(player, pkActive) {
   head.className = "vote-notes-head";
   const titleSpan = document.createElement("span");
   titleSpan.className = "vote-notes-title";
-  titleSpan.textContent = isWolfVoter ? "狼隊密箋" : "公投筆記";
+  titleSpan.textContent = isWolfVoter ? "狼隊密箋（輔助參考・請點上方角色條落籌）" : "公投筆記（輔助參考・請點上方角色條落籌）";
   head.appendChild(titleSpan);
 
   const linksWrap = document.createElement("div");
@@ -417,7 +417,7 @@ function renderVotePickPanel() {
   const validVote = Boolean(sel && isValidVoteTarget(sel.id));
   el("selectedVoteBadge").textContent = validVote
     ? ("鎖定 · " + fmtSeatNum(sel.id) + "號 " + sel.name)
-    : (pkActive ? ("限 " + pkListLabel) : "尚未鎖定");
+    : (pkActive ? ("限 " + pkListLabel + "（請點上方角色條）") : "請點上方角色條鎖定");
   const vIntel = el("voteTargetIntelLine");
   if (vIntel) {
     if (validVote) {
@@ -1473,21 +1473,37 @@ function renderGameOverMetrics() {
   }
 }
 
+function getSeatTargetRejectReasonMessage(reason, seat) {
+  if (reason === "non_pk") return "平票 PK 決選僅能投給 PK 台上的候選人（或棄票）！";
+  if (reason === "not_sheriff_cand") return "警下投票僅能投給警上候選席位！";
+  if (reason === "no_self_knife") return "依當前局規本夜不可自刀，請選擇其他目標。";
+  if (reason === "wolf_mate") return "他是你的酸民狼同伴，請改點選好人當目標！";
+  if (reason === "last_guarded") return "《凹嗚》規則：同一位夥伴不可連續兩晚守護！";
+  if (reason === "self") {
+    if (state.match && state.match.phase === "SHERIFF_TRANSFER") {
+      return "請點選 1 位存活夥伴移交警徽，或點擊撕毀警徽。";
+    }
+    return "不可選擇自己，請點選其他在席夥伴。";
+  }
+  if (reason === "dead") return "該席位已離席，請改選在席夥伴。";
+  return seat ? "目前無法鎖定該席位。" : "請選擇有效的目標席位。";
+}
+
 function selectSeat(seatId) {
   sound.unlock();
   const maxSeats = state.match.started ? state.match.totalSeats : (parseInt(el("selectModeCount").value, 10) || 6);
   if (seatId < 1 || seatId > maxSeats) return;
   const pid = getPlayerId();
   const alreadySelected = (state.selectedSeatId === seatId);
-  state.selectedSeatId = seatId;
-  nudgeSeat(seatId, { scale: 0.9, vScale: 0.2, vy: -3 });
-  sound.tone(460 + seatId * 30, 0.07, "sine", 0.04, 0);
 
   const p = state.match.phase;
   const target = getSeat(seatId);
   const player = getPlayerSeat();
 
   if (!state.match.started || p === "LOBBY") {
+    state.selectedSeatId = seatId;
+    nudgeSeat(seatId, { scale: 0.9, vScale: 0.2, vy: -3 });
+    sound.tone(460 + seatId * 30, 0.07, "sine", 0.04, 0);
     if (seatId !== pid) {
       state.intelSeatId = seatId;
       pokeSeatWithReaction(seatId);
@@ -1501,7 +1517,32 @@ function selectSeat(seatId) {
     return;
   }
 
-  if (alreadySelected && target && target.alive && (seatId !== pid || p === "NIGHT_GUARD")) {
+  const tgtState = (typeof getSeatTargetingState === "function")
+    ? getSeatTargetingState(target)
+    : { active: false, eligible: false, reason: "" };
+  if (tgtState.active) {
+    if (!tgtState.eligible) {
+      if (typeof showToast === "function") showToast(getSeatTargetRejectReasonMessage(tgtState.reason, target), "warn");
+      return;
+    }
+    // Enforce rule even when hidePlayerRole masks teammate styling on the seat strip
+    if (p === "NIGHT_WOLF" && player && player.alive && (player.role === "wolf" || player.isWolfKing) &&
+      typeof canPlayerWolfTargetSeat === "function" && !canPlayerWolfTargetSeat(player, target)) {
+      const hiddenReason = seatId === pid ? "no_self_knife" : (state.hidePlayerRole ? "" : "wolf_mate");
+      if (typeof showToast === "function") showToast(getSeatTargetRejectReasonMessage(hiddenReason, target), "warn");
+      return;
+    }
+    if (p === "HUNTER_TRIGGER" && player && player.isWolfKing && target && (target.role === "wolf" || target.isWolfKing)) {
+      if (typeof showToast === "function") showToast(getSeatTargetRejectReasonMessage(state.hidePlayerRole ? "" : "wolf_mate", target), "warn");
+      return;
+    }
+  }
+
+  state.selectedSeatId = seatId;
+  nudgeSeat(seatId, { scale: 0.9, vScale: 0.2, vy: -3 });
+  sound.tone(460 + seatId * 30, 0.07, "sine", 0.04, 0);
+
+  if (alreadySelected && tgtState.active && tgtState.eligible) {
     if (p === "DAY_VOTE" && seatId !== pid && isPlayerEligibleToVote() && !(state.voteFlight && state.voteFlight.active)) {
       if (!isValidVoteTarget(seatId)) {
         showToast("平票 PK 決選僅能投給 PK 台上的候選人（或棄票）！", "warn");
@@ -1510,10 +1551,18 @@ function selectSeat(seatId) {
       finalizeVoteRound(seatId);
       return;
     }
+    if (p === "SHERIFF_ELECTION" && typeof resolveSheriffElectionAction === "function") {
+      resolveSheriffElectionAction(seatId);
+      return;
+    }
+    if (p === "SHERIFF_TRANSFER" && typeof resolvePlayerSheriffTransfer === "function") {
+      resolvePlayerSheriffTransfer(seatId);
+      return;
+    }
     if ((p === "NIGHT_GUARD" && player && player.alive && player.role === "guard" && state.match.lastGuardTargetId !== seatId) ||
       (seatId !== pid && p === "NIGHT_SEER" && !state.seerReveal && player && player.alive && player.role === "seer") ||
       (p === "NIGHT_WOLF" && player && player.alive && (player.role === "wolf" || player.isWolfKing) && (typeof canPlayerWolfTargetSeat === "function" ? canPlayerWolfTargetSeat(player, target) : (seatId !== pid && target.role !== "wolf"))) ||
-      (seatId !== pid && p === "HUNTER_TRIGGER" && player && canSeatTriggerShot(player) && !player.alive && !(player.isWolfKing && target.role === "wolf"))) {
+      (seatId !== pid && p === "HUNTER_TRIGGER" && player && canSeatTriggerShot(player) && !player.alive && !(player.isWolfKing && (target.role === "wolf" || target.isWolfKing)))) {
       confirmTargetAction();
       return;
     }

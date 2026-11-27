@@ -251,6 +251,21 @@ function bindCanvasEvents() {
             state.selectedSeatId = targetId;
             finalizeVoteRound(targetId);
           }
+        } else if (p === "SHERIFF_ELECTION" && state.match && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "vote" && player && player.alive && !state.match.sheriffElectionCtx.playerRunning) {
+          const shTgt = typeof getSeatTargetingState === "function" ? getSeatTargetingState(getSeat(targetId)) : { active: true, eligible: state.match.sheriffElectionCtx.candidateIds.indexOf(targetId) !== -1, reason: "not_sheriff_cand" };
+          if (!shTgt.eligible) {
+            showToast("警下投票僅能投給警上候選席位！", "warn");
+          } else {
+            state.selectedSeatId = targetId;
+            if (typeof resolveSheriffElectionAction === "function") resolveSheriffElectionAction(targetId);
+          }
+        } else if (p === "SHERIFF_TRANSFER") {
+          if (targetId === pid || !getSeat(targetId) || !getSeat(targetId).alive) {
+            showToast("請點選 1 位存活夥伴移交警徽，或點擊撕毀警徽。", "warn");
+          } else {
+            state.selectedSeatId = targetId;
+            if (typeof resolvePlayerSheriffTransfer === "function") resolvePlayerSheriffTransfer(targetId);
+          }
         } else if (p === "NIGHT_GUARD" && targetId === state.match.lastGuardTargetId && player && player.alive && player.role === "guard") {
           showToast("《凹嗚》規則：同一位夥伴不可連續兩晚守護！", "warn");
         } else if (p === "NIGHT_WOLF" && player && player.alive && (player.role === "wolf" || player.isWolfKing) && getSeat(targetId) && (getSeat(targetId).role === "wolf" || getSeat(targetId).isWolfKing) && !(typeof canPlayerWolfTargetSeat === "function" && canPlayerWolfTargetSeat(player, getSeat(targetId)))) {
@@ -263,7 +278,7 @@ function bindCanvasEvents() {
         } else if (((p === "NIGHT_GUARD" && player && player.alive && player.role === "guard" && state.match.lastGuardTargetId !== targetId) ||
                     (p === "NIGHT_SEER" && !state.seerReveal && player && player.alive && player.role === "seer") ||
                     (p === "NIGHT_WOLF" && player && player.alive && (player.role === "wolf" || player.isWolfKing) && getSeat(targetId) && (typeof canPlayerWolfTargetSeat === "function" ? canPlayerWolfTargetSeat(player, getSeat(targetId)) : getSeat(targetId).role !== "wolf")) ||
-                    (p === "HUNTER_TRIGGER" && player && canSeatTriggerShot(player) && !player.alive && !(player.isWolfKing && getSeat(targetId) && getSeat(targetId).role === "wolf"))) && (p === "NIGHT_GUARD" || targetId !== pid || (p === "NIGHT_WOLF" && typeof canPlayerWolfTargetSeat === "function" && canPlayerWolfTargetSeat(player, getSeat(targetId))))) {
+                    (p === "HUNTER_TRIGGER" && player && canSeatTriggerShot(player) && !player.alive && !(player.isWolfKing && getSeat(targetId) && (getSeat(targetId).role === "wolf" || getSeat(targetId).isWolfKing)))) && (p === "NIGHT_GUARD" || targetId !== pid || (p === "NIGHT_WOLF" && typeof canPlayerWolfTargetSeat === "function" && canPlayerWolfTargetSeat(player, getSeat(targetId))))) {
           state.selectedSeatId = targetId;
           confirmTargetAction();
         } else if (p === "DAY_PLAYER_TURN" && targetId !== pid) {
@@ -294,6 +309,19 @@ function bindCanvasEvents() {
     const pt = getCanvasPoint(ev);
     const hitNode = hitTestSeat(pt.x, pt.y, 1.32, ev);
     if (hitNode) {
+      const hitSeat = typeof getSeat === "function" ? getSeat(hitNode.id) : null;
+      const tgt = (typeof getSeatTargetingState === "function" && hitSeat)
+        ? getSeatTargetingState(hitSeat)
+        : { active: false, eligible: false, reason: "" };
+      if (tgt.active && !tgt.eligible) {
+        if (typeof showToast === "function") {
+          const rejectMsg = typeof getSeatTargetRejectReasonMessage === "function"
+            ? getSeatTargetRejectReasonMessage(tgt.reason, hitSeat)
+            : "目前無法鎖定該席位。";
+          showToast(rejectMsg, "warn");
+        }
+        return;
+      }
       nudgeSeat(hitNode.id, { scale: 0.87, vScale: 0.24, vy: -4 });
       selectSeat(hitNode.id);
     } else if (typeof stage3d !== "undefined" && stage3d.isActive() && stage3d.raycastIdCard(ev.clientX, ev.clientY)) {

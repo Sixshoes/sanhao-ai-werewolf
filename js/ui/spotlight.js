@@ -139,7 +139,7 @@ function maybeScheduleAutoAdvanceAfterSpeech() {
     state.match.sheriffElectionCtx.activeReelSeatId !== getPlayerId()
   );
   if (pNow !== "DAY_SPEECH" && pNow !== "LAST_WORDS_SPEECH" && !isSheriffSpeechAuto) return;
-  if (state.speakingInFlight || state.typewriter.active || voice.speaking) return;
+  if (state.speakingInFlight || state.typewriter.active || (typeof voice !== "undefined" && !!voice.speaking)) return;
   if (state.stepTimer) clearTimeout(state.stepTimer);
   const speedMul = (typeof voice !== "undefined" && typeof voice.getSpeedMultiplier === "function")
     ? Math.max(1.0, voice.getSpeedMultiplier())
@@ -291,7 +291,7 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
   const nextBtn = el("btnStepNext");
   const banner = el("speakerActiveBanner");
   const stageBox = el("spotlightStageBox");
-  const stillTalking = Boolean(isTyping || voice.speaking);
+  const stillTalking = Boolean(isTyping || (typeof voice !== "undefined" && !!voice.speaking));
   if (stageBox) {
     const reg = (speaker && typeof getPersonaRegister === "function") ? getPersonaRegister(speaker) : "";
     const isClassical = (reg === "classical" || reg === "guzheng" || reg === "poetic");
@@ -358,12 +358,12 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
     wave.style.opacity = speaker ? "1" : "0.35";
   }
   if (pill) {
-    pill.textContent = (typeof voice !== "undefined" && voice.paused) ? "已暫停" : (isTyping ? "發言中" : (voice.speaking ? "語音中" : "已講畢"));
+    pill.textContent = (typeof voice !== "undefined" && voice.paused) ? "已暫停" : (isTyping ? "發言中" : ((typeof voice !== "undefined" && !!voice.speaking) ? "語音中" : "已講畢"));
   }
   if (hint) {
     hint.textContent = isTyping
       ? "點擊對話框看全文，或直接點擊亮色詞蒐證"
-      : (voice.speaking
+      : ((typeof voice !== "undefined" && !!voice.speaking)
         ? "點擊亮色詞可靜默筆記｜空白鍵或「下一位」推進"
         : "點擊亮色詞可筆記｜空白鍵／Enter 繼續");
   }
@@ -372,7 +372,7 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
     const isLastOfRound = isLw ? true : ((state.match.speechQueue || []).length === 0);
     const lbl = isTyping ? "顯示全文" : (isLw ? "繼續" : (isLastOfRound ? "進入公投" : "下一位"));
     nextBtn.textContent = lbl;
-    nextBtn.className = (!isTyping && !voice.speaking)
+    nextBtn.className = (!isTyping && !(typeof voice !== "undefined" && !!voice.speaking))
       ? "cta-cinnabar py-1.5 px-4 text-[15px] shrink-0 inline-flex items-center"
       : "cta-ink py-1.5 px-3 text-[15px] shrink-0 inline-flex items-center";
   }

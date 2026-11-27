@@ -279,7 +279,7 @@ window.onload = function () {
       const resolveDynamicSwVersion = function () {
         return new Promise(function (resolve) {
           const ctrl = navigator.serviceWorker.controller;
-          const fallbackVer = (ctrl && ctrl.scriptURL ? ctrl.scriptURL : "sw") + ":" + Math.floor(Date.now() / 60000);
+          const fallbackVer = (ctrl && ctrl.scriptURL ? ctrl.scriptURL : "sw") + ":static";
           if (!ctrl || typeof MessageChannel !== "function") {
             resolve(fallbackVer);
             return;
@@ -325,8 +325,7 @@ window.onload = function () {
           typeof state !== "undefined" &&
           state.match &&
           state.match.started &&
-          state.match.phase !== "LOBBY" &&
-          state.match.phase !== "GAME_OVER"
+          state.match.phase !== "LOBBY"
         );
         if (inActiveMatch) {
           state._pendingSwUpdateReload = true;

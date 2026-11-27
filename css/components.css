@@ -19367,23 +19367,24 @@ body.craft-ui.theme-twilight #inGameTopHud #roundTitle {
     gap: 2px;
   }
 
-  /* Move #seatButtonStrip cleanly to a 28px top rail directly beneath #inGameTopHud (never blocks speakers!) */
+  /* Return #seatButtonStrip to native bottom #controlDeck flow directly above #panelVote */
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
-    position: fixed;
-    top: 38px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 26;
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    z-index: auto;
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    width: auto;
-    max-width: calc(100vw - 24px);
-    height: 28px;
-    margin: 0;
-    padding: 2px 8px;
+    gap: 3px;
+    width: 100%;
+    max-width: min(880px, 100%);
+    min-height: 30px;
+    height: auto;
+    margin: 0 auto 2px;
+    padding: 3px 8px;
     overflow-x: auto;
     scrollbar-width: none;
     border-radius: 0;
@@ -19432,11 +19433,6 @@ body.craft-ui.theme-twilight #inGameTopHud #roundTitle {
     gap: 6px;
     border-radius: 0;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
-  }
-
-  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
-  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
-    top: 70px;
   }
 
   body.craft-ui.theme-daylight #judgeShowcaseGuideBanner,
@@ -19779,20 +19775,14 @@ body.craft-ui.theme-twilight .cta-cinnabar:disabled {
   }
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
-    top: 32px;
-    height: 25px;
-    padding: 1px 6px;
+    min-height: 28px;
+    padding: 2px 6px;
   }
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
   body.craft-ui.screen-ingame:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
-    top: 34px;
+    top: 40px;
     padding: 1px 8px;
-  }
-
-  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
-  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
-    top: 59px;
   }
 
   body.craft-ui.screen-ingame #controlDeck {
@@ -20027,12 +20017,11 @@ body.craft-ui.theme-daylight.screen-title .tea-creed-sep {
   }
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
-    top: 42px;
-    height: 26px;
-    padding: 1px 8px;
+    min-height: 28px;
+    padding: 2px 8px;
   }
 
-  /* Dock Judge/Beginner guide cleanly on TOP-LEFT (zero center nameplate overlap, zero right popover clash, zero voteFlight block!) */
+  /* Dock Judge/Beginner guide cleanly on TOP-LEFT directly below #inGameTopHud */
   body.craft-ui.screen-ingame:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
   body.craft-ui.screen-ingame:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
     position: fixed;
@@ -20048,17 +20037,12 @@ body.craft-ui.theme-daylight.screen-title .tea-creed-sep {
     gap: 6px;
   }
 
-  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
-  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
-    top: 72px;
-  }
-
   body.craft-ui #judgeShowcaseGuideBanner .judge-guide-step:not(.is-active) {
     display: none;
   }
 
   body.craft-ui #voteFlightBanner {
-    top: 72px;
+    top: 48px;
     left: 50%;
     transform: translateX(-50%);
     animation: none;
@@ -20291,25 +20275,19 @@ body.craft-ui #panelPlayerSpeech > div:first-child {
   }
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
-    top: 46px;
-    height: 24px;
-    padding: 1px 6px;
+    min-height: 26px;
+    padding: 2px 6px;
   }
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
   body.craft-ui.screen-ingame:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
-    top: 48px;
+    top: 42px;
     left: 14px;
     padding: 1px 7px;
   }
 
-  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
-  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
-    top: 74px;
-  }
-
   body.craft-ui #voteFlightBanner {
-    top: 74px;
+    top: 46px;
   }
 
   body.craft-ui.screen-ingame #controlDeck {
@@ -20469,4 +20447,153 @@ body.craft-ui.theme-daylight .spectator-guess-bar .text-rose-100,
 body.craft-ui.theme-day .spectator-guess-bar .text-rose-100,
 body.craft-ui.theme-twilight .spectator-guess-bar .text-rose-100 {
   color: #881337;
+}
+
+/* ==================== v25.6.0 BOTTOM SEAT STRIP, VOTE TARGET FOCUS & ANTI-OVERLAP ==================== */
+body.craft-ui #seatButtonStrip .seat-pill-btn.is-vote-eligible {
+  border-top: 1px solid rgba(232, 184, 96, 0.34);
+  border-bottom: 2px solid rgba(232, 184, 96, 0.86);
+  background: rgba(212, 166, 87, 0.16);
+  color: #fff6e4;
+  cursor: pointer;
+}
+
+body.craft-ui #seatButtonStrip .seat-pill-btn.is-vote-eligible .seat-pill-num-big {
+  color: #f6ce78;
+}
+
+body.craft-ui #seatButtonStrip .seat-pill-btn.is-vote-eligible:hover:not(:disabled):not(.seat-is-selected) {
+  background: rgba(232, 184, 96, 0.28);
+  border-top-color: rgba(245, 196, 81, 0.65);
+  border-bottom-color: #f5c451;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+body.craft-ui #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible,
+body.craft-ui #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible:hover {
+  background: rgba(190, 68, 56, 0.28);
+  border-top-color: rgba(232, 134, 114, 0.56);
+  border-bottom-color: #e46c5e;
+  color: #fff6f2;
+  transform: none;
+}
+
+body.craft-ui.theme-daylight #seatButtonStrip .seat-pill-btn.is-vote-eligible,
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-vote-eligible,
+body.craft-ui.theme-twilight #seatButtonStrip .seat-pill-btn.is-vote-eligible {
+  border-top: 1px solid rgba(154, 107, 39, 0.36);
+  border-bottom: 2px solid rgba(164, 98, 28, 0.85);
+  background: rgba(217, 179, 108, 0.24);
+  color: #2b1d0f;
+}
+
+body.craft-ui.theme-daylight #seatButtonStrip .seat-pill-btn.is-vote-eligible .seat-pill-num-big,
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-vote-eligible .seat-pill-num-big,
+body.craft-ui.theme-twilight #seatButtonStrip .seat-pill-btn.is-vote-eligible .seat-pill-num-big {
+  color: #7c480d;
+}
+
+body.craft-ui.theme-daylight #seatButtonStrip .seat-pill-btn.is-vote-eligible:hover:not(:disabled):not(.seat-is-selected),
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-vote-eligible:hover:not(:disabled):not(.seat-is-selected),
+body.craft-ui.theme-twilight #seatButtonStrip .seat-pill-btn.is-vote-eligible:hover:not(:disabled):not(.seat-is-selected) {
+  background: rgba(217, 179, 108, 0.40);
+  border-bottom-color: #9a5812;
+  color: #1c1208;
+}
+
+body.craft-ui.theme-daylight #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible,
+body.craft-ui.theme-daylight #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible:hover,
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible,
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible:hover,
+body.craft-ui.theme-twilight #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible,
+body.craft-ui.theme-twilight #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible:hover {
+  background: #a4392c;
+  border-top-color: #7d251b;
+  border-bottom-color: #7d251b;
+  color: #fdf9f0;
+}
+
+body.craft-ui.theme-daylight #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible .seat-pill-num-big,
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible .seat-pill-num-big,
+body.craft-ui.theme-twilight #seatButtonStrip .seat-pill-btn.seat-is-selected.is-vote-eligible .seat-pill-num-big {
+  color: #fdf9f0;
+}
+
+body.craft-ui #seatButtonStrip .seat-pill-btn.is-vote-disabled,
+body.craft-ui.theme-daylight #seatButtonStrip .seat-pill-btn.is-vote-disabled,
+body.craft-ui.theme-day #seatButtonStrip .seat-pill-btn.is-vote-disabled,
+body.craft-ui.theme-twilight #seatButtonStrip .seat-pill-btn.is-vote-disabled {
+  opacity: 0.36;
+  filter: grayscale(0.85);
+  pointer-events: none;
+  cursor: not-allowed;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  background: transparent;
+}
+
+/* Visual demotion of #voteNotesDeck into lightweight auxiliary summary bar below #seatButtonStrip */
+body.craft-ui #panelVote #voteNotesDeck {
+  padding: 3px 6px;
+  gap: 3px;
+  border-radius: 3px;
+  background: rgba(16, 14, 11, 0.34);
+  border: 1px dashed rgba(212, 166, 87, 0.20);
+  opacity: 0.88;
+}
+
+body.craft-ui.theme-daylight #panelVote #voteNotesDeck,
+body.craft-ui.theme-day #panelVote #voteNotesDeck,
+body.craft-ui.theme-twilight #panelVote #voteNotesDeck {
+  background: rgba(246, 240, 228, 0.56);
+  border: 1px dashed rgba(132, 102, 62, 0.26);
+}
+
+body.craft-ui #panelVote #voteNotesDeck .vote-notes-title {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.82;
+}
+
+body.craft-ui #panelVote #voteNotesDeck .vote-note-chip {
+  padding: 1px 6px;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  border-color: rgba(148, 163, 184, 0.22);
+  box-shadow: none;
+}
+
+body.craft-ui.theme-daylight #panelVote #voteNotesDeck .vote-note-chip,
+body.craft-ui.theme-day #panelVote #voteNotesDeck .vote-note-chip,
+body.craft-ui.theme-twilight #panelVote #voteNotesDeck .vote-note-chip {
+  background: rgba(255, 253, 248, 0.65);
+  border-color: rgba(132, 102, 62, 0.24);
+}
+
+@media (min-width: 1024px) {
+  body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
+    max-width: min(720px, calc(100vw - 488px));
+  }
+
+  body.craft-ui.screen-ingame:not(.screen-gameover) #virtueQuickDeck:not(.hidden) {
+    bottom: max(10px, env(safe-area-inset-bottom));
+    z-index: 27;
+  }
+
+  body.craft-ui.screen-ingame:not(.screen-gameover) #virtueQuickDeck:not(.hidden):not(.is-folded) {
+    z-index: 32;
+  }
+
+  body.craft-ui.screen-ingame:not(.screen-gameover) #directorEventChoiceBar:not(.hidden) {
+    bottom: 54px;
+    z-index: 26;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
+    max-width: min(620px, calc(100vw - 448px));
+  }
 }

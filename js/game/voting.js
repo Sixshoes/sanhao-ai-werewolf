@@ -436,17 +436,13 @@ function finalizeVoteRound(playerTargetId) {
   });
 
   function commitVoteResolution() {
-    let threwErr = false;
     try {
       _commitVoteResolutionInner();
     } catch (err) {
-      threwErr = true;
       if (state.match) state.match._voteFinalizing = false;
       throw err;
     } finally {
-      if (state.match && (threwErr || state.match.phase !== "DAY_VOTE")) {
-        state.match._voteFinalizing = false;
-      }
+      if (state.match) state.match._voteFinalizing = false;
     }
   }
 
@@ -860,6 +856,18 @@ function runVoteFlightSequence(ballots, onDone, meta) {
     timers.push(tm);
   });
 
+  function armFinishSafety(delayMs) {
+    const safeTimer = setTimeout(function () {
+      if (finished || !state.match || !state.match.started) return;
+      if (!ff && typeof voice !== "undefined" && voice.paused) {
+        armFinishSafety(1000);
+        return;
+      }
+      finishNow();
+    }, delayMs);
+    timers.push(safeTimer);
+  }
+
   if (!ff) {
     const verdictTimer = setTimeout(function () {
       if (finished || !state.match.started) return;
@@ -884,6 +892,10 @@ function runVoteFlightSequence(ballots, onDone, meta) {
       if (typeof voice !== "undefined" && typeof voice.speakHost === "function" && typeof voice.canSpeak === "function" && voice.canSpeak()) {
         voice.speakHost(verdictLine, function () {
           if (finished || !state.match.started) return;
+          if (typeof voice !== "undefined" && voice.paused) {
+            armFinishSafety(1000);
+            return;
+          }
           timers.push(setTimeout(finishNow, 260));
         });
       } else if (typeof voice !== "undefined" && typeof voice.speakHost === "function") {
@@ -896,7 +908,7 @@ function runVoteFlightSequence(ballots, onDone, meta) {
   const finalHoldMs = (!ff && typeof voice !== "undefined" && typeof voice.canSpeak === "function" && voice.canSpeak())
     ? Math.max(verdictHoldMs, 4600)
     : verdictHoldMs;
-  timers.push(setTimeout(finishNow, ballots.length * stepMs + finalHoldMs));
+  armFinishSafety(ballots.length * stepMs + finalHoldMs);
 }
 
 // ==================== FOUR GIVINGS (4G) POWER CARDS & SYNERGIES ====================

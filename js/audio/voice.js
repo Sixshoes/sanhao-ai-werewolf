@@ -1691,7 +1691,7 @@ const voice = {
     const self = this;
     const p = (async function () {
       const isMobileNet = self.isMobileTtsNetworkEnv();
-      const personalKeyTimeoutMs = isMobileNet ? 4200 : 5800;
+      const personalKeyTimeoutMs = isMobileNet ? 4400 : 5600;
       const controller = (hasPersonalKey && typeof AbortController === "function") ? new AbortController() : null;
       const timer = controller ? setTimeout(function () { controller.abort(); }, personalKeyTimeoutMs) : null;
       const callCloudTtsTrackA = async function () {
@@ -1701,8 +1701,9 @@ const voice = {
         }
         const strippedText = self.stripGeminiVocalTags(cleanText) || cleanText;
         const trackAStartedAt = Date.now();
-        const firstAttemptTimeoutMs = isMobileNet ? 3000 : 4200;
-        const trackATotalBudgetMs = isMobileNet ? 5200 : 6800;
+        // Keep frontend single-attempt timeout >= backend PRIMARY_TIMEOUT_MS (3600ms) + 800ms buffer
+        const firstAttemptTimeoutMs = isMobileNet ? 4400 : 4800;
+        const trackATotalBudgetMs = isMobileNet ? 6600 : 7600;
         const minRetryBudgetMs = isMobileNet ? 1800 : 2200;
         const postOnce = async function (txtToSend, attemptTimeoutMs) {
           const reqCtrl = typeof AbortController === "function" ? new AbortController() : null;
@@ -2053,6 +2054,7 @@ const voice = {
           return;
         }
         if (self.paused) {
+          self.pauseMeta = null;
           self._resumePendingChunk = function () { finishRemainingFallback(fromIdx); };
           return;
         }
@@ -2080,6 +2082,15 @@ const voice = {
 
       const playChunkAt = function (idx, buf) {
         if (seq !== self.utteranceSeq) return false;
+        if (self.paused) {
+          self.pauseMeta = null;
+          self._resumePendingChunk = function () {
+            if (seq !== self.utteranceSeq || self.paused) return;
+            const okResumed = playChunkAt(idx, buf);
+            if (!okResumed) finishRemainingFallback(idx);
+          };
+          return true;
+        }
         const isLast = idx === chunks.length - 1;
         const startC = chunkOffsets[idx] || 0;
         const endC = isLast ? cleanText.length : (chunkOffsets[idx + 1] || cleanText.length);
@@ -2111,6 +2122,7 @@ const voice = {
             await new Promise(function (resolve) { setTimeout(resolve, bridgeMs); });
             if (seq !== self.utteranceSeq) return;
             if (self.paused) {
+              self.pauseMeta = null;
               self._resumePendingChunk = function () {
                 if (seq !== self.utteranceSeq || self.paused) return;
                 const okResumed = playChunkAt(nextIdx, nextBuf);

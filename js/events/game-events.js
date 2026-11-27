@@ -30,6 +30,7 @@ function resetMatchToLobby() {
   state.match.judgeGuideDismissed = false;
   state.match.phase = "LOBBY";
   state.match.day = 0;
+  state.match._voteFinalizing = false;
   state.match.playerSeatId = 1;
   state.match.sheriffSeatId = null;
   state.match.sheriffElectionCtx = null;

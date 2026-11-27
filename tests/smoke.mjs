@@ -6702,7 +6702,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       el("showcaseProfileCard").innerHTML.includes("好人癖好");
     const showcaseCardOk = Boolean(cardHiddenHero && cardShownMobai);
     const diag17 = collectFeedbackDiagnostics();
-    const version17Ok = Boolean(diag17 && diag17.version === "v25.5.3");
+    const version17Ok = Boolean(diag17 && diag17.version === "v25.6.0");
 
     // 6. Standard Day-1 Werewolf Order: Sheriff Election FIRST, THEN Night-1 Death Reveal (+ Dead-Sheriff Transfer + Election Explode Settlement)
     el("selectModeCount").value = "8";
@@ -7181,7 +7181,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.5.3") && swSrcPerf.includes("sanhao-assets-v25.5.0") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.6.0") && swSrcPerf.includes("sanhao-assets-v25.6.0") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7584,8 +7584,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.5.3"') &&
-    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v25.5.0"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.6.0"') &&
+    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v25.6.0"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
 
@@ -8325,8 +8325,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     doubleVoteBlockedOk: v242Res.doubleVoteBlockedOk,
     sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
       && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
-    docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("sanhao-assets-v25.5.0") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
-    scriptV242Ok: docScript241.includes("v25.5.3") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
+    docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("sanhao-assets-v25.6.0") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
+    scriptV242Ok: docScript241.includes("v25.6.0") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
     voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
     apiTimeout8400AndLruOk: apiGem242.includes("resolvePrimaryTimeoutMs(primaryModel)") && apiGem242.includes("21500 - elapsed") && apiGem242.includes("if (++evicted >= 200) break;") && apiGem242.includes("if (timer) clearTimeout(timer);"),
     webglContextLostOk: eng242.includes('canvas3d.addEventListener("webglcontextlost"'),
@@ -8866,9 +8866,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       ttsBodyLedaFb.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === "Zephyr" &&
       !ttsApiSrc2412.includes("? voiceName\n    : voiceName"),
     ttsTimeoutBudgetHeadroomOk:
-      ttsApiSrc2412.includes("PRIMARY_TIMEOUT_MS = 5500") &&
-      ttsApiSrc2412.includes("RETRY_400_TIMEOUT_MS = 4000") &&
-      ttsApiSrc2412.includes("FALLBACK_MODEL_TIMEOUT_MS = 4200"),
+      ttsApiSrc2412.includes("PRIMARY_TIMEOUT_MS = 3600") &&
+      ttsApiSrc2412.includes("RETRY_400_TIMEOUT_MS = 2800") &&
+      ttsApiSrc2412.includes("FALLBACK_MODEL_TIMEOUT_MS = 3000"),
     ttsHandlerSecurityOk:
       ttsCrossRes.status === 403 &&
       ttsProdLocalRes.status === 403 &&
@@ -8878,10 +8878,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     specSyncedModelsAndCacheOk:
       docSpec2414.includes("gemini-4-hydrogen") &&
       docSpec2414.includes("api/tts.js") &&
-      docSpec2414.includes("sanhao-shell-v25.5.3") &&
+      docSpec2414.includes("sanhao-shell-v25.6.0") &&
       docSpec2414.length <= 5000,
     readmeSyncedOk:
-      readme2414.includes("sanhao-shell-v25.5.3") &&
+      readme2414.includes("sanhao-shell-v25.6.0") &&
       readme2414.includes("api/tts.js"),
     ...v24214Runtime
   };
@@ -9333,7 +9333,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   })()`, ctx);
   const docScriptV2431 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
   const demoScriptVirtueSyncOk = [
-    "v25.5.3",
+    "v25.6.0",
     "啟席預載遮罩",
     "三好四給主動茶禮列",
     "茶席風氣",
@@ -10792,7 +10792,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     noPingPulseInHtml: !html25.includes("animate-ping") && !html25.includes("animate-pulse"),
     noRepeatingGradInV25: !v25Css.includes("repeating-linear-gradient"),
     noClipPathOnBigVessels: v252Css.includes("body.craft-ui .craft-modal-box") && v252Css.includes("clip-path: none;"),
-    hasTopDockedSeatRail: v252Css.includes("#seatButtonStrip:not(.hidden)") && v252Css.includes("position: fixed;"),
+    hasBottomFlowSeatStrip: v252Css.includes("#seatButtonStrip:not(.hidden)") && v252Css.includes("position: relative;") && !/body\.craft-ui[^}]*#seatButtonStrip:not\(\.hidden\)\s*\{[^}]*position:\s*fixed/i.test(css25),
     hasStickyGameOverCtas: html25.includes("gameover-sticky-actions") && v252Css.includes("position: sticky;"),
     hasGameOverCutInSuppress: v252Css.includes("body.craft-ui.screen-gameover #dramaticCutIn"),
     hasRoleDealBodyLock: fs.readFileSync(path.join(ROOT, "js", "ui", "flow.js"), "utf8").includes("role-deal-open"),
@@ -10816,7 +10816,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     titleTopBtnsTransparent: v253Css.includes("body.craft-ui.theme-twilight.screen-title .title-top-actions .title-scene-btn") && v253Css.includes("background: transparent;"),
     titleCreedHighContrast: v253Css.includes(".tea-creed-good") && v253Css.includes("#a9e6cb") && v253Css.includes("#f4d699"),
     topLeftGuideNoClash: v253Css.includes("left: 16px;") && v253Css.includes("transform: none;") && v253Css.includes(".judge-guide-step:not(.is-active)"),
-    seatRailNoHudOverlap: v253Css.includes("top: 42px;") && v253Css.includes("top: 46px;"),
+    seatRailNoHudOverlap: v253Css.includes("#seatButtonStrip:not(.hidden)") && v253Css.includes("min-height: 26px;"),
     voteFlightTopZNoAnim: v253Css.includes("body.craft-ui #voteFlightBanner") && v253Css.includes("z-index: 36;"),
     directorChoiceRightDocked: v253Css.includes("#directorEventChoiceBar:not(.hidden)") && v253Css.includes("bottom: 44px;"),
     spotlightTextUnclipped: v253Css.includes("max-height: 112px;") && v253Css.includes("max-height: 96px;"),
@@ -11271,7 +11271,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   })()`, ctx);
 
   const docScriptV2552 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
-  const scriptHeaderSyncOk = docScriptV2552.split(/\r?\n/)[0].includes("v25.5.3") && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(docScriptV2552);
+  const scriptHeaderSyncOk = docScriptV2552.split(/\r?\n/)[0].includes("v25.6.0") && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(docScriptV2552);
 
   const v2552AudioRes = await vm.runInContext(`(async () => {
     const classicMovementsRestoredOk = Boolean(
@@ -11654,9 +11654,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       voice._cloudTtsCooldownIs429 = false;
       state._forceMobileTtsBudget = true;
       const mobRes = await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["暖暖"], "暖暖", "這句話這輪測試第一次逾時與第二次去標籤重試。", "panic");
-      const mobOk = Boolean(mobRes) && timeoutArgs[0] === 3000 && sentTexts.length === 2 &&
+      const mobOk = Boolean(mobRes) && timeoutArgs[0] === 4400 && sentTexts.length === 2 &&
         sentTexts[0].includes("<breath>") && !sentTexts[1].includes("<breath>") &&
-        timeoutArgs[1] >= 1800 && timeoutArgs[1] <= 5200;
+        timeoutArgs[1] >= 1800 && timeoutArgs[1] <= 6600;
 
       timeoutArgs.length = 0;
       sentTexts.length = 0;
@@ -11671,7 +11671,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       };
       state._forceMobileTtsBudget = false;
       await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["暖暖"], "暖暖", "桌機模式這輪也只在總預算內重試一次。", "panic");
-      const deskOk = timeoutArgs[0] === 4200 && sentTexts.length === 2 && timeoutArgs[1] >= 2200 && timeoutArgs[1] <= 6800;
+      const deskOk = timeoutArgs[0] === 4800 && sentTexts.length === 2 && timeoutArgs[1] >= 2200 && timeoutArgs[1] <= 7600;
       trackATimeoutAndRetryOk = Boolean(mobOk && deskOk);
     } finally {
       setTimeout = origSetTo;
@@ -11870,11 +11870,11 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     compCss2553.includes("body.craft-ui.theme-night #heroShowcaseOverlay #heroShowcaseSub") &&
     !compCssNoComments2553.includes("!important") &&
     !compCssNoComments2553.includes("backdrop-filter") &&
-    sw2553.includes('const SHELL_CACHE = "sanhao-shell-v25.5.3"') &&
-    fb2553.includes('version: "v25.5.3"') &&
-    spec2553.includes("v25.5.3") && spec2553.length <= 5000 &&
-    script2553.includes("v25.5.3") &&
-    readme2553.includes("v25.5.3") &&
+    sw2553.includes('const SHELL_CACHE = "sanhao-shell-v25.6.0"') &&
+    fb2553.includes('version: "v25.6.0"') &&
+    spec2553.includes("v25.6.0") && spec2553.length <= 5000 &&
+    script2553.includes("v25.6.0") &&
+    readme2553.includes("v25.6.0") &&
     lwSrc2553.includes("state._lwCueTimer") &&
     lwSrc2553.includes("orchestrator.isEpochValid(epLw)") &&
     zeroEmoji2553Ok
@@ -11888,4 +11888,431 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 + v25.5.3 Release-Freeze E2E smoke test PASSED!");
+// ==================== v25.6.0 RELEASE-FREEZE REGRESSION SUITE (FILE 01 - FILE 10) ====================
+{
+  const css256 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const css256NoCom = css256.replace(/\/\*[\s\S]*?\*\//g, "");
+  const html256 = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const canvasEv256 = fs.readFileSync(path.join(ROOT, "js/events/canvas-events.js"), "utf8");
+  const voting256 = fs.readFileSync(path.join(ROOT, "js/game/voting.js"), "utf8");
+  const night256 = fs.readFileSync(path.join(ROOT, "js/game/night.js"), "utf8");
+  const hud256 = fs.readFileSync(path.join(ROOT, "js/ui/hud.js"), "utf8");
+  const panels256 = fs.readFileSync(path.join(ROOT, "js/ui/panels.js"), "utf8");
+  const voice256 = fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8");
+  const tts256 = fs.readFileSync(path.join(ROOT, "api/tts.js"), "utf8");
+  const soundtrack256 = fs.readFileSync(path.join(ROOT, "js/audio/soundtrack.js"), "utf8");
+  const spotlight256 = fs.readFileSync(path.join(ROOT, "js/ui/spotlight.js"), "utf8");
+  const flow256 = fs.readFileSync(path.join(ROOT, "js/ui/flow.js"), "utf8");
+  const main256 = fs.readFileSync(path.join(ROOT, "js/main.js"), "utf8");
+  const sw256 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const fb256 = fs.readFileSync(path.join(ROOT, "js/ui/feedback.js"), "utf8");
+  const spec256 = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
+  const script256 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
+  const readme256 = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+
+  const idxDeck = html256.indexOf('id="controlDeck"');
+  const idxStrip = html256.indexOf('id="seatButtonStrip"');
+  const idxPanelVote = html256.indexOf('id="panelVote"');
+
+  const file01CssOk = Boolean(
+    idxDeck >= 0 && idxStrip > idxDeck && idxPanelVote > idxStrip &&
+    !/#seatButtonStrip[^}]*\{[^}]*position:\s*fixed/i.test(css256NoCom) &&
+    css256NoCom.includes(".seat-pill-btn.is-vote-eligible") &&
+    css256NoCom.includes(".seat-pill-btn.is-vote-disabled") &&
+    css256NoCom.includes("pointer-events: none") &&
+    css256NoCom.includes("#panelVote #voteNotesDeck") &&
+    css256NoCom.includes("#heroShowcaseSub") &&
+    css256NoCom.includes("bottom: 54px;") &&
+    !css256NoCom.includes("!important") &&
+    !css256NoCom.includes("backdrop-filter")
+  );
+
+  const file03CanvasClickOk = Boolean(
+    canvasEv256.includes("getSeatTargetingState") &&
+    canvasEv256.includes("getSeatTargetRejectReasonMessage") &&
+    canvasEv256.includes("依當前局規本夜不可自刀，請選擇其他目標")
+  );
+
+  const file08SpotlightSourceOk = Boolean(
+    !(/voice\.speaking\b/.test(spotlight256.replace(/typeof\s+voice\s*!==\s*"undefined"\s*&&\s*!!voice\.speaking/g, ""))) &&
+    flow256.includes("seatId: s.id") &&
+    flow256.includes("personaKey: s.name")
+  );
+
+  const file09MainSwProtectionsOk = Boolean(
+    main256.includes('state.match.phase !== "LOBBY"') &&
+    !main256.includes('state.match.phase !== "GAME_OVER"') &&
+    main256.includes('":static"') &&
+    !main256.includes("Date.now() / 60000")
+  );
+
+  const file10SwCacheAndZeroEmojiOk = Boolean(
+    sw256.includes('const SHELL_CACHE = "sanhao-shell-v25.6.0"') &&
+    sw256.includes('const ASSET_CACHE = "sanhao-assets-v25.6.0"') &&
+    fb256.includes('version: "v25.6.0"') &&
+    readme256.includes("v25.6.0") &&
+    readme256.includes("sanhao-assets-v25.6.0") &&
+    spec256.includes("v25.6.0") &&
+    spec256.includes("sanhao-shell-v25.6.0") &&
+    spec256.length <= 5000 &&
+    script256.includes("v25.6.0") &&
+    [css256, hud256, panels256, canvasEv256, voting256, night256, voice256, tts256, soundtrack256, spotlight256, flow256, main256, sw256, fb256, spec256, script256, readme256].every(
+      (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
+    )
+  );
+
+  const v256Runtime = await vm.runInContext(`(async () => {
+    // 1. FILE 02: Seat strip .is-vote-eligible / .is-vote-disabled & Sheriff vote/transfer double-click confirm
+    let file02HudAndDoubleClickOk = false;
+    try {
+      clearStepTimer();
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = true;
+      el("chkGuardMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      const pid = getPlayerId();
+      const others = getAliveSeats().filter((s) => s.id !== pid);
+      state.match.phase = "DAY_VOTE";
+      state.match.pkCandidates = [others[0].id, others[1].id];
+      state.match.pkUsedToday = true;
+      state.selectedSeatId = null;
+      updateAllUI();
+
+      const pkBtns = Array.from(el("seatButtonStrip").children || []);
+      const pkEligibleOk = pkBtns.length === 8 &&
+        pkBtns[others[0].id - 1].classList.contains("is-vote-eligible") &&
+        pkBtns[others[2].id - 1].classList.contains("is-vote-disabled") &&
+        pkBtns[pid - 1].classList.contains("is-vote-disabled");
+
+      selectSeat(others[2].id);
+      const pkRejectBlockedOk = state.selectedSeatId === null && state.match.phase === "DAY_VOTE";
+
+      state.match.phase = "SHERIFF_ELECTION";
+      state.match.pkCandidates = null;
+      state.match.sheriffElectionCtx = {
+        stage: "vote",
+        candidateIds: [others[0].id, others[1].id],
+        speechOrderIds: [others[0].id, others[1].id],
+        speechIndex: 1,
+        activeReelSeatId: null,
+        playerRunning: false,
+        withdrawnIds: [],
+        spokenSpeeches: [],
+        doneCb: () => {}
+      };
+      state.selectedSeatId = null;
+      updateAllUI();
+      const shBtns = Array.from(el("seatButtonStrip").children || []);
+      const shStripVisibleAndEligibleOk =
+        !el("seatButtonStrip").classList.contains("hidden") &&
+        shBtns[others[0].id - 1].classList.contains("is-vote-eligible") &&
+        shBtns[others[2].id - 1].classList.contains("is-vote-disabled");
+
+      const origResolveSh = resolveSheriffElectionAction;
+      let shVoteConfirmedId = null;
+      resolveSheriffElectionAction = function (arg) {
+        shVoteConfirmedId = arg;
+        return true;
+      };
+      try {
+        selectSeat(others[0].id);
+        const shFirstClickOk = state.selectedSeatId === others[0].id && shVoteConfirmedId === null;
+        selectSeat(others[0].id);
+        const shSecondClickOk = shVoteConfirmedId === others[0].id;
+
+        state.match.phase = "SHERIFF_TRANSFER";
+        state.match.pendingSheriffTransfer = { deadId: pid, onDone: () => {} };
+        state.selectedSeatId = null;
+        updateAllUI();
+        const tfBtns = Array.from(el("seatButtonStrip").children || []);
+        const tfEligibleOk = !el("seatButtonStrip").classList.contains("hidden") &&
+          tfBtns[others[1].id - 1].classList.contains("is-vote-eligible") &&
+          tfBtns[pid - 1].classList.contains("is-vote-disabled");
+
+        let transferredToId = null;
+        const origTransfer = resolvePlayerSheriffTransfer;
+        resolvePlayerSheriffTransfer = function (tid) { transferredToId = tid; };
+        try {
+          selectSeat(others[1].id);
+          selectSeat(others[1].id);
+        } finally {
+          resolvePlayerSheriffTransfer = origTransfer;
+        }
+        file02HudAndDoubleClickOk = Boolean(
+          pkEligibleOk && pkRejectBlockedOk && shStripVisibleAndEligibleOk &&
+          shFirstClickOk && shSecondClickOk && tfEligibleOk && transferredToId === others[1].id
+        );
+      } finally {
+        resolveSheriffElectionAction = origResolveSh;
+      }
+    } finally {
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+
+    // 2. FILE 04: _voteFinalizing catch reset & paused vote-flight deferral
+    let file04VotingLockAndPauseOk = false;
+    try {
+      el("selectModeCount").value = "6";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      const freshResetOk = state.match._voteFinalizing === false;
+      state.match.phase = "DAY_VOTE";
+      const origChooseVote = chooseAiVoteTarget;
+      let throwClearedOk = false;
+      try {
+        chooseAiVoteTarget = function () { throw new Error("injected_vote_boom"); };
+        try { finalizeVoteRound(null); } catch (e) {}
+        throwClearedOk = state.match.phase === "DAY_VOTE" && state.match._voteFinalizing === false;
+      } finally {
+        chooseAiVoteTarget = origChooseVote;
+      }
+
+      const origSetToV = setTimeout;
+      const prevPausedV = voice.paused;
+      const scheduledFns = [];
+      let flightDoneCount = 0;
+      try {
+        setTimeout = function (fn, ms) {
+          scheduledFns.push({ fn, ms });
+          return scheduledFns.length;
+        };
+        const othersV = getAliveSeats().filter((s) => s.id !== getPlayerId());
+        runVoteFlightSequence([{ voterId: getPlayerId(), targetId: othersV[0].id, weight: 1 }], () => { flightDoneCount += 1; }, { isTie: false });
+        voice.paused = true;
+        const safetyEntry = scheduledFns.filter((x) => x.ms >= 1500).pop();
+        const countBefore = scheduledFns.length;
+        if (safetyEntry && typeof safetyEntry.fn === "function") safetyEntry.fn();
+        const deferredWhilePausedOk = Boolean(safetyEntry) && flightDoneCount === 0 && scheduledFns.length > countBefore;
+        voice.paused = false;
+        const rearmedEntry = scheduledFns[scheduledFns.length - 1];
+        if (rearmedEntry && typeof rearmedEntry.fn === "function") rearmedEntry.fn();
+        const completedOnResumeOk = flightDoneCount === 1;
+        file04VotingLockAndPauseOk = Boolean(freshResetOk && throwClearedOk && deferredWhilePausedOk && completedOnResumeOk);
+      } finally {
+        setTimeout = origSetToV;
+        voice.paused = prevPausedV;
+      }
+    } finally {
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+
+    // 3. FILE 05: Seer night host voice sync + no orphan timer + self-knife toast
+    let file05NightSeerAndDawnTimersOk = false;
+    const origSpeakHost5 = voice.speakHost;
+    const origCanSpeak5 = voice.canSpeak;
+    const origSetTo5 = setTimeout;
+    const origClearTo5 = clearTimeout;
+    const origShowToast5 = showToast;
+    try {
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "seer";
+      el("chkSheriffMode").checked = false;
+      el("chkGuardMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      const scheduledMap = new Map();
+      let tidSeq = 1;
+      setTimeout = function (fn, ms) {
+        const id = tidSeq++;
+        scheduledMap.set(id, { fn, ms });
+        return id;
+      };
+      clearTimeout = function (id) {
+        scheduledMap.delete(id);
+      };
+      voice.canSpeak = () => true;
+      let seerHostSpoken = "";
+      voice.speakHost = function (txt, cb) {
+        seerHostSpoken = String(txt || "");
+        if (typeof cb === "function") cb();
+      };
+      state.match.phase = "LOBBY";
+      state.match.day = 1;
+      proceedToNightWolf();
+      const pendingSafety5200 = Array.from(scheduledMap.values()).filter((x) => x.ms >= 5000);
+      const stepEntry = state.stepTimer ? scheduledMap.get(state.stepTimer) : null;
+      const seerSyncNoOrphanOk = Boolean(
+        seerHostSpoken.includes("明心觀察員") &&
+        pendingSafety5200.length === 0 &&
+        Boolean(stepEntry && stepEntry.ms === 220)
+      );
+
+      scheduledMap.clear();
+      const capturedToasts = [];
+      showToast = function (msg) { capturedToasts.push(String(msg || "")); };
+      el("selectPreferredRole").value = "wolf";
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.match.day = 2;
+      state.match.phase = "NIGHT_WOLF";
+      state.selectedSeatId = getPlayerId();
+      confirmTargetAction();
+      const selfKnifeToastOk = capturedToasts.some((t) => t.includes("不可自刀"));
+
+      file05NightSeerAndDawnTimersOk = Boolean(seerSyncNoOrphanOk && selfKnifeToastOk);
+    } finally {
+      showToast = origShowToast5;
+      voice.speakHost = origSpeakHost5;
+      voice.canSpeak = origCanSpeak5;
+      setTimeout = origSetTo5;
+      clearTimeout = origClearTo5;
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+
+    // 4. FILE 06: playChunkAt pause sets _resumePendingChunk + keeps onDone (no browser TTS fallback)
+    let file06VoicePauseChunkAndTimeoutsOk = false;
+    const origSetTo6 = setTimeout;
+    const origFetch6 = voice._fetchGeminiStudioAudio;
+    const origPlayBuf6 = voice.playBufferedStudioAudio;
+    const origLocal6 = voice.speakLocalBrowserTts;
+    const origIsStatic6 = voice.isStaticCloudHost;
+    const prevCtx6 = sound.ctx;
+    const prevKey6 = state.geminiApiKey;
+    const prevOptOut6 = state.serverGeminiOptOut;
+    const prevLocalAvail6 = voice.localNeuralAvailable;
+    const prevCloudAvail6 = voice.cloudGeminiTtsAvailable;
+    const prevPaused6 = voice.paused;
+    const prevSpeaking6 = voice.speaking;
+    try {
+      setTimeout = (fn) => { if (typeof fn === "function") fn(); return 1; };
+      sound.ctx = { sampleRate: 24000, currentTime: 0 };
+      state.geminiApiKey = "";
+      state.serverGeminiOptOut = false;
+      voice.isStaticCloudHost = () => true;
+      voice.localNeuralAvailable = false;
+      voice.cloudGeminiTtsAvailable = true;
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      voice.pauseMeta = null;
+      voice._resumePendingChunk = null;
+      voice.paused = true;
+      voice.speaking = true;
+      let browserTtsCalled = 0;
+      let chunkPlayedAfterResume = 0;
+      let chunkOnDoneCalled = 0;
+      let doneResolve = null;
+      const donePromise = new Promise((res) => { doneResolve = res; });
+      voice._fetchGeminiStudioAudio = async () => ({ duration: 0.5 });
+      voice.speakLocalBrowserTts = () => { browserTtsCalled += 1; };
+      voice.playBufferedStudioAudio = (_seq, _buf, onChunkDone) => {
+        chunkPlayedAfterResume += 1;
+        Promise.resolve().then(() => (typeof onChunkDone === "function" ? onChunkDone() : null));
+        return true;
+      };
+      const longStr = "今天這輪討論先把警徽流和首夜查驗資訊攤開來比對，請還沒報身分的夥伴依序補充關鍵細節，不要遺漏任何公投票型矛盾。此外昨天投票給五號與六號的兩位同窗今天也請解釋立場轉折，核對完整時間線再安心落籌。";
+      const okQueued = await voice.playGeminiStudioTts(voice.utteranceSeq, PERSONA_VOICE_PROFILES["晴嵐"], longStr, "normal", () => {
+        chunkOnDoneCalled += 1;
+        if (typeof doneResolve === "function") doneResolve();
+      }, { personaKey: "晴嵐" });
+      const mountedResumeOk = Boolean(okQueued && browserTtsCalled === 0 && typeof voice._resumePendingChunk === "function" && voice.pauseMeta === null);
+      if (mountedResumeOk) {
+        voice.togglePause();
+        await Promise.race([donePromise, new Promise((res) => origSetTo6(res, 1500))]);
+      }
+      file06VoicePauseChunkAndTimeoutsOk = Boolean(mountedResumeOk && browserTtsCalled === 0 && chunkPlayedAfterResume >= 2 && chunkOnDoneCalled === 1);
+    } finally {
+      setTimeout = origSetTo6;
+      voice._fetchGeminiStudioAudio = origFetch6;
+      voice.playBufferedStudioAudio = origPlayBuf6;
+      voice.speakLocalBrowserTts = origLocal6;
+      voice.isStaticCloudHost = origIsStatic6;
+      sound.ctx = prevCtx6;
+      state.geminiApiKey = prevKey6;
+      state.serverGeminiOptOut = prevOptOut6;
+      voice.localNeuralAvailable = prevLocalAvail6;
+      voice.cloudGeminiTtsAvailable = prevCloudAvail6;
+      voice.paused = prevPaused6;
+      voice.speaking = prevSpeaking6;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      voice.stop();
+    }
+
+    // 5. FILE 07 & FILE 08: soundtrack _unlockingPromise dedup + showcase audition seatId/personaKey
+    let file07SoundtrackUnlockDedupOk = false;
+    let file08AuditionOptsOk = false;
+    const prevSndCtx = sound.ctx;
+    const prevUnlockPromise = sound._unlockingPromise;
+    const prevSeqTimer = sound.seqTimer;
+    const origApplyVol = sound.applyVolumes;
+    try {
+      let resumeCalls = 0;
+      let applyCalls = 0;
+      let resolveResume = null;
+      sound.ctx = {
+        state: "suspended",
+        currentTime: 0,
+        resume: () => {
+          resumeCalls += 1;
+          return new Promise((res) => { resolveResume = res; });
+        }
+      };
+      sound.applyVolumes = () => { applyCalls += 1; };
+      sound._unlockingPromise = null;
+      sound.seqTimer = 999;
+      sound.muted = false;
+      sound.unlock();
+      sound.unlock();
+      const singleCallWhilePending = resumeCalls === 1 && applyCalls === 0 && Boolean(sound._unlockingPromise);
+      if (typeof resolveResume === "function") resolveResume();
+      await Promise.resolve();
+      await Promise.resolve();
+      file07SoundtrackUnlockDedupOk = Boolean(singleCallWhilePending && applyCalls === 1 && sound._unlockingPromise === null);
+    } finally {
+      sound.applyVolumes = origApplyVol;
+      sound.ctx = prevSndCtx;
+      sound._unlockingPromise = prevUnlockPromise;
+      sound.seqTimer = prevSeqTimer;
+    }
+
+    const origSpeak8 = voice.speak;
+    const prevTarget3d = stage3d.showcaseTarget;
+    try {
+      let capturedAudOpts = null;
+      voice.speak = function (_p, _t, _m, _cb, opts) { capturedAudOpts = opts; };
+      stage3d.showcaseTarget = "2";
+      el("btnShowcaseAuditionVoice").click();
+      file08AuditionOptsOk = Boolean(capturedAudOpts && capturedAudOpts.seatId === 2 && typeof capturedAudOpts.personaKey === "string" && capturedAudOpts.isAudition === true);
+    } finally {
+      voice.speak = origSpeak8;
+      stage3d.showcaseTarget = prevTarget3d;
+    }
+
+    syncSpeakerBannerVisuals(null, "主持", "", false);
+
+    return {
+      file02HudAndDoubleClickOk,
+      file04VotingLockAndPauseOk,
+      file05NightSeerAndDawnTimersOk,
+      file06VoicePauseChunkAndTimeoutsOk,
+      file07SoundtrackUnlockDedupOk,
+      file08AuditionOptsOk
+    };
+  })()`, ctx);
+
+  const all256 = Object.assign({
+    file01CssOk,
+    file03CanvasClickOk,
+    file08SpotlightSourceOk,
+    file09MainSwProtectionsOk,
+    file10SwCacheAndZeroEmojiOk
+  }, v256Runtime);
+  for (const [k, v] of Object.entries(all256)) {
+    if (!v) {
+      throw new Error("v25.6.0 Release-Freeze regression failed for " + k + ": " + JSON.stringify(all256));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 + v25.5.3 + v25.6.0 Release-Freeze E2E smoke test PASSED!");
