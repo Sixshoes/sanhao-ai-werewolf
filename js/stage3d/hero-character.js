@@ -19,7 +19,7 @@ const HERO_PALETTES = {
     sash: 0xa63a2e,
     trousers: 0x2c2520,
     shoes: 0x5c4637,
-    hair: 0x33241d,
+    hair: 0x28242c,
     ribbon: 0x6ea690,
     skin: 0xf7dbc2,
     jade: 0x7bc2a6
@@ -714,15 +714,15 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
   const targetRim = isShowcase ? 1.45 : (act === "purify_cast" ? 1.2 : 0.36);
   hero.showcaseLight.intensity += (targetRim - hero.showcaseLight.intensity) * d10;
 
-  // Organic Gaze: track active speaking seat during debate, camera/pointer in showcase, gentle sanctuary scan in lobby!
-  let targetYaw = Math.sin(t * 0.55) * 0.16;
+  // Organic Gaze: track active speaking seat or voteLeaderId during debate, camera/pointer in showcase, calm sanctuary scan in lobby!
+  let targetYaw = Math.sin(t * 0.38) * 0.14;
   let targetPitch = -0.02;
   if (isShowcase && state.pointer.inside) {
     targetYaw = clamp((state.pointer.x / Math.max(1, f.w) - 0.5) * 0.85, -0.52, 0.52);
     targetPitch = clamp((state.pointer.y / Math.max(1, f.h) - 0.5) * 0.45, -0.22, 0.22);
   } else if (act === "gasp_react") {
-    targetYaw = Math.sin(t * 9) * 0.24;
-    targetPitch = -0.12;
+    targetYaw = Math.sin(t * 4.2) * 0.14;
+    targetPitch = -0.10;
   } else if (!isShowcase && state.match && state.match.started && typeof stage3d !== "undefined" && stage3d.seats && stage3d.seats.anchors) {
     const heroFocusId = state.activeSpeakerId || ((f.p === "DAY_VOTE" && state.voteFlight && state.voteFlight.active && state.voteLeaderId) ? state.voteLeaderId : null);
     if (heroFocusId && stage3d.seats.anchors[heroFocusId]) {
@@ -743,16 +743,16 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
   const sculptVisible = !(hero.rigRoot && !hero.rigRoot.visible);
 
   if (sculptVisible) {
-    // Breathing & gentle bounce
-    const bounce = act === "celebrate" ? Math.abs(Math.sin(t * 6.5)) * 0.12 : Math.sin(t * 2.1) * 0.022;
+    // Calm human breathing & poised bounce
+    const bounce = act === "celebrate" ? Math.abs(Math.sin(t * 3.6)) * 0.08 : Math.sin(t * 1.04) * 0.014;
     hero.bodyPivot.position.y = 0.58 + bounce;
-    const bowTilt = act === "welcome_bow" ? (0.07 + Math.sin(t * 1.6) * 0.04) : (act === "gasp_react" ? -0.10 : 0.0);
+    const bowTilt = act === "welcome_bow" ? (0.065 + Math.sin(t * 1.04) * 0.022) : (act === "gasp_react" ? -0.09 : 0.0);
     hero.bodyPivot.rotation.x += (bowTilt - hero.bodyPivot.rotation.x) * d12;
-    hero.headPivot.rotation.set(hero.headPitch, hero.headYaw, Math.sin(t * 1.2) * 0.025);
+    hero.headPivot.rotation.set(hero.headPitch, hero.headYaw, Math.sin(t * 0.72) * 0.018);
 
     // Signature-Cached Seamless Storybook Face Update (skips redundant 512x512 redraws & texture uploads when idle!)
-    const blinkCycle = (t + 0.8) % 3.5;
-    const isBlinking = act !== "gasp_react" && blinkCycle > 3.38;
+    const blinkCycle = (t + 0.8) % 3.8;
+    const isBlinking = act !== "gasp_react" && blinkCycle > 3.66;
     if (hero.heroFaceBundle) {
       hero.heroFaceFrame += 1;
       if (hero.heroFaceFrame % 2 === 0) {
@@ -775,38 +775,40 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
       }
     }
 
-    // Secondary Wind Physics on Ponytail, Side Locks & Vermilion Waist Sash!
-    hero.ponyPivot.rotation.z = Math.sin(t * 2.2) * 0.11;
-    hero.ponyPivot.rotation.x = 0.08 + Math.cos(t * 1.7) * 0.05;
-    hero.sideLockL.rotation.z = -0.04 + Math.sin(t * 2.4 + 0.5) * 0.04;
-    hero.sideLockR.rotation.z = 0.04 + Math.sin(t * 2.4 + 0.9) * 0.04;
-    hero.sashRibbonPivot.rotation.z = Math.sin(t * 2.0 + 0.3) * 0.09;
-    hero.sashRibbonPivot.rotation.x = Math.cos(t * 1.6) * 0.05;
+    // Gentle Secondary Wind Physics on Ponytail, Side Locks & Vermilion Waist Sash!
+    hero.ponyPivot.rotation.z = Math.sin(t * 1.25) * 0.075;
+    hero.ponyPivot.rotation.x = 0.07 + Math.cos(t * 1.05) * 0.035;
+    hero.sideLockL.rotation.z = -0.04 + Math.sin(t * 1.35 + 0.5) * 0.028;
+    hero.sideLockR.rotation.z = 0.04 + Math.sin(t * 1.35 + 0.9) * 0.028;
+    hero.sashRibbonPivot.rotation.z = Math.sin(t * 1.20 + 0.3) * 0.065;
+    hero.sashRibbonPivot.rotation.x = Math.cos(t * 0.95) * 0.035;
 
-    // Articulated Arm State Machine
+    // Poised Articulated Arm State Machine (replaces fast 5.0–5.5 rad/s waving with graceful tea-host gestures!)
     let lShX = -0.58, lShZ = 0.16, lElbX = -0.78;
     let rShX = -0.22, rShZ = -0.14, rElbX = -0.42;
     if (act === "welcome_bow") {
-      rShX = -1.24; rShZ = -0.42; rElbX = -0.70 + Math.sin(t * 5.0) * 0.28;
+      rShX = -0.94; rShZ = -0.32; rElbX = -0.74 + Math.sin(t * 1.35) * 0.06;
     } else if (act === "speak_gesture") {
-      rShX = -0.80 + Math.sin(t * 5.5) * 0.20; rShZ = -0.26; rElbX = -0.74 + Math.cos(t * 6.0) * 0.20;
+      rShX = -0.76 + Math.sin(t * 1.9) * 0.10; rShZ = -0.24; rElbX = -0.72 + Math.cos(t * 2.1) * 0.09;
     } else if (act === "purify_cast") {
-      rShX = -1.72 + Math.sin(t * 3.5) * 0.09; rShZ = -0.22; rElbX = -0.28;
+      rShX = -1.68 + Math.sin(t * 1.8) * 0.05; rShZ = -0.22; rElbX = -0.28;
       lShX = -0.72; lElbX = -0.92;
     } else if (act === "gasp_react") {
-      rShX = -0.92; rShZ = 0.24; rElbX = -1.22;
-      lShX = -0.76; lElbX = -1.02;
+      rShX = -0.90; rShZ = 0.22; rElbX = -1.18;
+      lShX = -0.74; lElbX = -1.00;
     } else if (act === "celebrate") {
-      rShX = -2.28 + Math.sin(t * 7) * 0.16; rShZ = -0.35; rElbX = -0.32;
-      lShX = -1.12 + Math.cos(t * 7) * 0.12; lShZ = 0.26; lElbX = -0.68;
+      rShX = -2.22 + Math.sin(t * 3.6) * 0.10; rShZ = -0.32; rElbX = -0.34;
+      lShX = -1.08 + Math.cos(t * 3.6) * 0.08; lShZ = 0.24; lElbX = -0.68;
     }
 
-    hero.leftArm.shoulder.rotation.x += (lShX - hero.leftArm.shoulder.rotation.x) * d14;
-    hero.leftArm.shoulder.rotation.z += (lShZ - hero.leftArm.shoulder.rotation.z) * d14;
-    hero.leftArm.elbow.rotation.x += (lElbX - hero.leftArm.elbow.rotation.x) * d14;
-    hero.rightArm.shoulder.rotation.x += (rShX - hero.rightArm.shoulder.rotation.x) * d14;
-    hero.rightArm.shoulder.rotation.z += (rShZ - hero.rightArm.shoulder.rotation.z) * d14;
-    hero.rightArm.elbow.rotation.x += (rElbX - hero.rightArm.elbow.rotation.x) * d14;
+    const dHeroSh = typeof dampFactor3D === "function" ? dampFactor3D(0.10, dt60) : 0.10;
+    const dHeroElb = typeof dampFactor3D === "function" ? dampFactor3D(0.085, dt60) : 0.085;
+    hero.leftArm.shoulder.rotation.x += (lShX - hero.leftArm.shoulder.rotation.x) * dHeroSh;
+    hero.leftArm.shoulder.rotation.z += (lShZ - hero.leftArm.shoulder.rotation.z) * dHeroSh;
+    hero.leftArm.elbow.rotation.x += (lElbX - hero.leftArm.elbow.rotation.x) * dHeroElb;
+    hero.rightArm.shoulder.rotation.x += (rShX - hero.rightArm.shoulder.rotation.x) * dHeroSh;
+    hero.rightArm.shoulder.rotation.z += (rShZ - hero.rightArm.shoulder.rotation.z) * dHeroSh;
+    hero.rightArm.elbow.rotation.x += (rElbX - hero.rightArm.elbow.rotation.x) * dHeroElb;
   }
 
   // Summoned Lotus Charm spin (only during purify_cast/celebrate — never a glaring orb in showcase!)
@@ -814,8 +816,8 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
   const glbActive = Boolean(hero.customGlbRoot && hero.customGlbRoot.visible);
   hero.lanternGroup.visible = showLantern && !glbActive;
   if (hero.lanternGroup.visible) {
-    hero.lanternGroup.rotation.y = t * 1.8;
-    hero.lanternGroup.position.y = -0.40 + Math.sin(t * 3.2) * 0.04;
+    hero.lanternGroup.rotation.y = t * 1.4;
+    hero.lanternGroup.position.y = -0.40 + Math.sin(t * 2.0) * 0.03;
   }
 
   if (glbActive) {
@@ -835,11 +837,12 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
           tSec: t,
           dt60: dt60 * heroStride,
           seed: 0.5,
+          personaName: "清茗",
           moodKey: heroMoodKey,
           alive: true,
           sleeping: false,
           talking: isTalking,
-          hasActiveSpeaker: Boolean(!isShowcase && state.match && state.match.started && state.activeSpeakerId),
+          hasActiveSpeaker: Boolean(!isShowcase && state.match && state.match.started && (state.activeSpeakerId || (f.p === "DAY_VOTE" && state.voteFlight && state.voteFlight.active && state.voteLeaderId))),
           mouthAmp: mouthAmp,
           vowels: heroVowels,
           emotion: act === "celebrate" ? "happy" : (act === "gasp_react" ? "shock" : (act === "welcome_bow" ? "happy" : "neutral")),
@@ -854,9 +857,9 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
         });
       }
     } else {
-      const glbHop = act === "celebrate" ? Math.abs(Math.sin(t * 6.5)) * 0.12 : Math.sin(t * 2.1) * 0.018;
+      const glbHop = act === "celebrate" ? Math.abs(Math.sin(t * 3.6)) * 0.08 : Math.sin(t * 1.04) * 0.012;
       hero.customGlbRoot.position.y = (hero.customGlbBaseY || 0.08) + glbHop;
-      hero.customGlbRoot.rotation.x = act === "welcome_bow" ? (0.05 + Math.sin(t * 1.6) * 0.035) : 0;
+      hero.customGlbRoot.rotation.x = act === "welcome_bow" ? (0.045 + Math.sin(t * 1.04) * 0.02) : 0;
     }
   }
   if (hero.glbLanternGroup) {

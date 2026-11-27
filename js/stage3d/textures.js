@@ -27,17 +27,17 @@ const VRM_PORTRAIT_ART_MAP = {
   "主持": "assets/portraits_vrm/qingming.jpg",
   "你": "assets/portraits_vrm/player.jpg",
   "你_男": "assets/portraits_vrm/player_male.jpg",
-  "小澄": "assets/portraits/xiaocheng.jpg",
+  "小澄": "assets/portraits_vrm/xiaocheng.jpg",
   "暖暖": "assets/portraits_vrm/nuannuan.jpg",
   "阿松": "assets/portraits_vrm/asong.jpg",
   "星兒": "assets/portraits_vrm/xinger.jpg",
   "小雲": "assets/portraits_vrm/xiaoyun.jpg",
   "阿竹": "assets/portraits_vrm/azhu.jpg",
   "晨晨": "assets/portraits_vrm/chenchen.jpg",
-  "墨白": "assets/portraits/mobai.jpg",
-  "晴嵐": "assets/portraits/qinglan.jpg",
-  "阿朗": "assets/portraits/alang.jpg",
-  "柚子": "assets/portraits/youzi.jpg"
+  "墨白": "assets/portraits_vrm/mobai.jpg",
+  "晴嵐": "assets/portraits_vrm/qinglan.jpg",
+  "阿朗": "assets/portraits_vrm/alang.jpg",
+  "柚子": "assets/portraits_vrm/youzi.jpg"
 };
 
 function getPortraitKey(seat) {

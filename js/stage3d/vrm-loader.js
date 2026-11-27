@@ -25,19 +25,21 @@ const SEAT_MODEL_SLUGS = {
 };
 
 const VRM_IDLE_ARCHETYPES = {
-  "你":   { gestureStyle: "balanced",   breathFreq: 1.95, breathAmp: 0.024, spineLean: 0.022,  shoulderSpread: 0.0,    headRollAmp: 0.036, headTiltBias: 0.0,    gazeSaccadeSpeed: 1.0,  idleHappy: 0.10, idleFun: 0.05, rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.13, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.036, talkArmAmp: 1.14, legTempo: 0.75, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] },
-  "小澄": { gestureStyle: "analytical", breathFreq: 1.85, breathAmp: 0.020, spineLean: 0.062,  shoulderSpread: -0.065, headRollAmp: 0.030, headTiltBias: 0.032,  gazeSaccadeSpeed: 1.35, idleHappy: 0.02, idleFun: 0.0,  rDrop: 1.08, rFwd: 0.31, rBend: 1.06, lDrop: 1.14, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.028, talkArmAmp: 1.12, legTempo: 0.55, idlePool: ["glasses_adjust", "count_fingers", "chin_rest", "table_tap"] },
-  "暖暖": { gestureStyle: "graceful",   breathFreq: 2.15, breathAmp: 0.028, spineLean: 0.032,  shoulderSpread: -0.050, headRollAmp: 0.058, headTiltBias: -0.038, gazeSaccadeSpeed: 0.92, idleHappy: 0.28, idleFun: 0.18, rDrop: 0.96, rFwd: 0.44, rBend: 1.24, lDrop: 0.96, lFwd: 0.44, lBend: 1.24, armSwayAmp: 0.038, talkArmAmp: 1.04, legTempo: 0.65, idlePool: ["cup_cradle", "sip_tea", "hands_clasp", "playful_sway"] },
-  "阿松": { gestureStyle: "steady",     breathFreq: 1.38, breathAmp: 0.024, spineLean: -0.062, shoulderSpread: 0.072,  headRollAmp: 0.022, headTiltBias: 0.0,    gazeSaccadeSpeed: 0.78, idleHappy: 0.09, idleFun: 0.0,  rDrop: 1.04, rFwd: 0.36, rBend: 1.16, lDrop: 1.04, lFwd: 0.36, lBend: 1.16, armSwayAmp: 0.024, talkArmAmp: 0.98, legTempo: 0.38, idlePool: ["arms_fold", "lean_back", "sip_tea", "stretch_roll"] },
-  "星兒": { gestureStyle: "expressive", breathFreq: 2.85, breathAmp: 0.032, spineLean: 0.028,  shoulderSpread: -0.020, headRollAmp: 0.074, headTiltBias: 0.088,  gazeSaccadeSpeed: 1.22, starGaze: true, idleHappy: 0.22, idleFun: 0.30, rDrop: 1.06, rFwd: 0.31, rBend: 1.08, lDrop: 1.12, lFwd: 0.25, lBend: 0.90, armSwayAmp: 0.052, talkArmAmp: 1.42, legTempo: 1.35, idlePool: ["star_gaze", "playful_sway", "chin_rest", "sip_tea"] },
-  "小雲": { gestureStyle: "analytical", breathFreq: 1.75, breathAmp: 0.022, spineLean: 0.055,  shoulderSpread: -0.035, headRollAmp: 0.040, headTiltBias: -0.042, gazeSaccadeSpeed: 1.85, idleHappy: 0.08, idleFun: 0.05, rDrop: 1.04, rFwd: 0.34, rBend: 1.12, lDrop: 1.12, lFwd: 0.26, lBend: 0.96, armSwayAmp: 0.034, talkArmAmp: 1.22, legTempo: 0.65, idlePool: ["note_jot", "chin_rest", "table_tap", "look_around"] },
-  "阿竹": { gestureStyle: "poetic",     breathFreq: 1.55, breathAmp: 0.020, spineLean: 0.012,  shoulderSpread: 0.010,  headRollAmp: 0.034, headTiltBias: 0.022,  gazeSaccadeSpeed: 0.85, idleHappy: 0.08, idleFun: 0.03, rDrop: 0.98, rFwd: 0.42, rBend: 1.14, lDrop: 1.08, lFwd: 0.32, lBend: 1.06, armSwayAmp: 0.028, talkArmAmp: 0.96, legTempo: 0.42, idlePool: ["tea_poise", "sip_tea", "sleeve_poise", "look_around"] },
-  "晨晨": { gestureStyle: "energetic",  breathFreq: 2.48, breathAmp: 0.030, spineLean: -0.075, shoulderSpread: 0.095,  headRollAmp: 0.054, headTiltBias: 0.0,    gazeSaccadeSpeed: 1.28, idleHappy: 0.20, idleFun: 0.16, rDrop: 1.02, rFwd: 0.30, rBend: 0.82, lDrop: 1.04, lFwd: 0.28, lBend: 0.80, armSwayAmp: 0.052, talkArmAmp: 1.52, legTempo: 1.48, idlePool: ["lean_back", "stretch_roll", "table_tap", "playful_sway"] },
-  "墨白": { gestureStyle: "classical",  breathFreq: 1.32, breathAmp: 0.018, spineLean: -0.016, shoulderSpread: 0.012,  headRollAmp: 0.020, headTiltBias: 0.008,  gazeSaccadeSpeed: 0.72, idleHappy: 0.0,  idleFun: 0.0,  rDrop: 1.04, rFwd: 0.36, rBend: 1.12, lDrop: 1.12, lFwd: 0.28, lBend: 1.02, armSwayAmp: 0.022, talkArmAmp: 0.88, legTempo: 0.30, idlePool: ["tea_poise", "sleeve_poise", "sip_tea", "arms_fold"] },
-  "晴嵐": { gestureStyle: "graceful",   breathFreq: 1.65, breathAmp: 0.023, spineLean: 0.016,  shoulderSpread: -0.022, headRollAmp: 0.044, headTiltBias: -0.034, gazeSaccadeSpeed: 0.95, idleHappy: 0.22, idleFun: 0.12, rDrop: 1.06, rFwd: 0.32, rBend: 1.06, lDrop: 1.10, lFwd: 0.28, lBend: 1.00, armSwayAmp: 0.034, talkArmAmp: 0.96, legTempo: 0.48, idlePool: ["sleeve_poise", "tea_poise", "sip_tea", "hands_clasp"] },
-  "阿朗": { gestureStyle: "energetic",  breathFreq: 2.15, breathAmp: 0.026, spineLean: 0.105,  shoulderSpread: -0.040, headRollAmp: 0.038, headTiltBias: 0.028,  gazeSaccadeSpeed: 1.45, idleHappy: 0.08, idleFun: 0.08, rDrop: 0.82, rFwd: 0.56, rBend: 1.34, lDrop: 1.02, lFwd: 0.38, lBend: 1.16, armSwayAmp: 0.042, talkArmAmp: 1.40, legTempo: 0.95, idlePool: ["chin_rest", "table_tap", "arms_fold", "stretch_roll"] },
-  "柚子": { gestureStyle: "expressive", breathFreq: 2.70, breathAmp: 0.031, spineLean: 0.042,  shoulderSpread: -0.042, headRollAmp: 0.068, headTiltBias: -0.045, gazeSaccadeSpeed: 1.18, idleHappy: 0.32, idleFun: 0.26, rDrop: 0.94, rFwd: 0.46, rBend: 1.28, lDrop: 0.94, lFwd: 0.46, lBend: 1.28, armSwayAmp: 0.050, talkArmAmp: 1.38, legTempo: 1.38, idlePool: ["cup_cradle", "playful_sway", "sip_tea", "hands_clasp"] },
-  default: { gestureStyle: "balanced",  breathFreq: 2.05, breathAmp: 0.024, spineLean: 0.020,  shoulderSpread: 0.0,    headRollAmp: 0.038, headTiltBias: 0.0,    gazeSaccadeSpeed: 1.0,  idleHappy: 0.06, idleFun: 0.0,  rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.12, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.035, talkArmAmp: 1.12, legTempo: 0.72, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] }
+  "清茗": { gestureStyle: "graceful",   breathFreq: 1.04, breathAmp: 0.017, spineLean: 0.014,  shoulderSpread: -0.015, headRollAmp: 0.022, headTiltBias: -0.014, gazeSaccadeSpeed: 0.90, idleHappy: 0.16, idleFun: 0.04, rDrop: 0.98, rFwd: 0.36, rBend: 1.08, lDrop: 0.98, lFwd: 0.38, lBend: 1.12, armSwayAmp: 0.018, talkArmAmp: 0.96, legTempo: 0.25, idlePool: ["tea_poise", "sleeve_poise", "hands_clasp", "look_around"] },
+  "主持": { gestureStyle: "graceful",   breathFreq: 1.04, breathAmp: 0.017, spineLean: 0.014,  shoulderSpread: -0.015, headRollAmp: 0.022, headTiltBias: -0.014, gazeSaccadeSpeed: 0.90, idleHappy: 0.16, idleFun: 0.04, rDrop: 0.98, rFwd: 0.36, rBend: 1.08, lDrop: 0.98, lFwd: 0.38, lBend: 1.12, armSwayAmp: 0.018, talkArmAmp: 0.96, legTempo: 0.25, idlePool: ["tea_poise", "sleeve_poise", "hands_clasp", "look_around"] },
+  "你":   { gestureStyle: "balanced",   breathFreq: 1.14, breathAmp: 0.019, spineLean: 0.022,  shoulderSpread: 0.0,    headRollAmp: 0.026, headTiltBias: 0.0,    gazeSaccadeSpeed: 1.0,  idleHappy: 0.10, idleFun: 0.05, rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.13, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.020, talkArmAmp: 1.08, legTempo: 0.44, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] },
+  "小澄": { gestureStyle: "analytical", breathFreq: 1.12, breathAmp: 0.017, spineLean: 0.056,  shoulderSpread: -0.058, headRollAmp: 0.022, headTiltBias: 0.026,  gazeSaccadeSpeed: 1.30, idleHappy: 0.02, idleFun: 0.0,  rDrop: 1.08, rFwd: 0.31, rBend: 1.06, lDrop: 1.14, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.017, talkArmAmp: 1.06, legTempo: 0.34, idlePool: ["glasses_adjust", "count_fingers", "chin_rest", "table_tap"] },
+  "暖暖": { gestureStyle: "graceful",   breathFreq: 1.20, breathAmp: 0.021, spineLean: 0.030,  shoulderSpread: -0.045, headRollAmp: 0.038, headTiltBias: -0.032, gazeSaccadeSpeed: 0.92, idleHappy: 0.28, idleFun: 0.18, rDrop: 0.96, rFwd: 0.44, rBend: 1.24, lDrop: 0.96, lFwd: 0.44, lBend: 1.24, armSwayAmp: 0.022, talkArmAmp: 1.02, legTempo: 0.38, idlePool: ["cup_cradle", "sip_tea", "hands_clasp", "playful_sway"] },
+  "阿松": { gestureStyle: "steady",     breathFreq: 0.96, breathAmp: 0.020, spineLean: -0.054, shoulderSpread: 0.068,  headRollAmp: 0.016, headTiltBias: 0.0,    gazeSaccadeSpeed: 0.78, idleHappy: 0.09, idleFun: 0.0,  rDrop: 1.04, rFwd: 0.36, rBend: 1.16, lDrop: 1.04, lFwd: 0.36, lBend: 1.16, armSwayAmp: 0.015, talkArmAmp: 0.96, legTempo: 0.24, idlePool: ["arms_fold", "lean_back", "sip_tea", "stretch_roll"] },
+  "星兒": { gestureStyle: "expressive", breathFreq: 1.36, breathAmp: 0.023, spineLean: 0.026,  shoulderSpread: -0.020, headRollAmp: 0.046, headTiltBias: 0.064,  gazeSaccadeSpeed: 1.20, starGaze: true, idleHappy: 0.22, idleFun: 0.30, rDrop: 1.06, rFwd: 0.31, rBend: 1.08, lDrop: 1.12, lFwd: 0.25, lBend: 0.90, armSwayAmp: 0.028, talkArmAmp: 1.28, legTempo: 0.60, idlePool: ["star_gaze", "playful_sway", "chin_rest", "sip_tea"] },
+  "小雲": { gestureStyle: "analytical", breathFreq: 1.10, breathAmp: 0.018, spineLean: 0.050,  shoulderSpread: -0.032, headRollAmp: 0.026, headTiltBias: -0.034, gazeSaccadeSpeed: 1.65, idleHappy: 0.08, idleFun: 0.05, rDrop: 1.04, rFwd: 0.34, rBend: 1.12, lDrop: 1.12, lFwd: 0.26, lBend: 0.96, armSwayAmp: 0.019, talkArmAmp: 1.14, legTempo: 0.36, idlePool: ["note_jot", "chin_rest", "table_tap", "look_around"] },
+  "阿竹": { gestureStyle: "poetic",     breathFreq: 1.02, breathAmp: 0.017, spineLean: 0.012,  shoulderSpread: 0.010,  headRollAmp: 0.022, headTiltBias: 0.018,  gazeSaccadeSpeed: 0.85, idleHappy: 0.08, idleFun: 0.03, rDrop: 0.98, rFwd: 0.42, rBend: 1.14, lDrop: 1.08, lFwd: 0.32, lBend: 1.06, armSwayAmp: 0.017, talkArmAmp: 0.94, legTempo: 0.26, idlePool: ["tea_poise", "sip_tea", "sleeve_poise", "look_around"] },
+  "晨晨": { gestureStyle: "energetic",  breathFreq: 1.32, breathAmp: 0.022, spineLean: -0.062, shoulderSpread: 0.082,  headRollAmp: 0.036, headTiltBias: 0.0,    gazeSaccadeSpeed: 1.24, idleHappy: 0.20, idleFun: 0.16, rDrop: 1.02, rFwd: 0.30, rBend: 0.82, lDrop: 1.04, lFwd: 0.28, lBend: 0.80, armSwayAmp: 0.028, talkArmAmp: 1.32, legTempo: 0.64, idlePool: ["lean_back", "stretch_roll", "table_tap", "playful_sway"] },
+  "墨白": { gestureStyle: "classical",  breathFreq: 0.95, breathAmp: 0.015, spineLean: -0.014, shoulderSpread: 0.012,  headRollAmp: 0.015, headTiltBias: 0.008,  gazeSaccadeSpeed: 0.72, idleHappy: 0.0,  idleFun: 0.0,  rDrop: 1.04, rFwd: 0.36, rBend: 1.12, lDrop: 1.12, lFwd: 0.28, lBend: 1.02, armSwayAmp: 0.014, talkArmAmp: 0.88, legTempo: 0.22, idlePool: ["tea_poise", "sleeve_poise", "sip_tea", "arms_fold"] },
+  "晴嵐": { gestureStyle: "graceful",   breathFreq: 1.08, breathAmp: 0.018, spineLean: 0.016,  shoulderSpread: -0.022, headRollAmp: 0.030, headTiltBias: -0.028, gazeSaccadeSpeed: 0.95, idleHappy: 0.22, idleFun: 0.12, rDrop: 1.06, rFwd: 0.32, rBend: 1.06, lDrop: 1.10, lFwd: 0.28, lBend: 1.00, armSwayAmp: 0.020, talkArmAmp: 0.96, legTempo: 0.30, idlePool: ["sleeve_poise", "tea_poise", "sip_tea", "hands_clasp"] },
+  "阿朗": { gestureStyle: "energetic",  breathFreq: 1.24, breathAmp: 0.020, spineLean: 0.088,  shoulderSpread: -0.036, headRollAmp: 0.026, headTiltBias: 0.022,  gazeSaccadeSpeed: 1.38, idleHappy: 0.08, idleFun: 0.08, rDrop: 0.82, rFwd: 0.56, rBend: 1.34, lDrop: 1.02, lFwd: 0.38, lBend: 1.16, armSwayAmp: 0.024, talkArmAmp: 1.26, legTempo: 0.48, idlePool: ["chin_rest", "table_tap", "arms_fold", "stretch_roll"] },
+  "柚子": { gestureStyle: "expressive", breathFreq: 1.34, breathAmp: 0.022, spineLean: 0.036,  shoulderSpread: -0.038, headRollAmp: 0.044, headTiltBias: -0.036, gazeSaccadeSpeed: 1.16, idleHappy: 0.32, idleFun: 0.26, rDrop: 0.94, rFwd: 0.46, rBend: 1.28, lDrop: 0.94, lFwd: 0.46, lBend: 1.28, armSwayAmp: 0.026, talkArmAmp: 1.24, legTempo: 0.58, idlePool: ["cup_cradle", "playful_sway", "sip_tea", "hands_clasp"] },
+  default: { gestureStyle: "balanced",  breathFreq: 1.15, breathAmp: 0.019, spineLean: 0.020,  shoulderSpread: 0.0,    headRollAmp: 0.026, headTiltBias: 0.0,    gazeSaccadeSpeed: 1.0,  idleHappy: 0.06, idleFun: 0.0,  rDrop: 1.11, rFwd: 0.26, rBend: 0.92, lDrop: 1.12, lFwd: 0.24, lBend: 0.88, armSwayAmp: 0.020, talkArmAmp: 1.06, legTempo: 0.40, idlePool: ["sip_tea", "chin_rest", "look_around", "hands_clasp"] }
 };
 
 /**
@@ -47,20 +49,20 @@ const VRM_IDLE_ARCHETYPES = {
  * - 補齊阿松（高領登山摺疊圍巾＋傘繩手環）與小雲（採訪證斜背掛繩＋胸袋速寫本＋髮夾）原本為 null 的 3D 配件
  */
 const VRM_PERSONA_STYLING = Object.freeze({
-  "清茗": Object.freeze({ baseSlug: "qingming", hairHex: "#31241d", hairStr: 0.56, topsHex: "#447364", topsStr: 0.90, neckHex: "#d6b066", neckStr: 0.92, bottomsHex: "#2e353b", bottomsStr: 0.90, eyeHex: "#5c432c", vrmAcc: "tea_host" }),
-  "主持": Object.freeze({ baseSlug: "qingming", hairHex: "#31241d", hairStr: 0.56, topsHex: "#447364", topsStr: 0.90, neckHex: "#d6b066", neckStr: 0.92, bottomsHex: "#2e353b", bottomsStr: 0.90, eyeHex: "#5c432c", vrmAcc: "tea_host" }),
+  "清茗": Object.freeze({ baseSlug: "qingming", hairHex: "#28242C", hairStr: 0.62, topsHex: "#447364", topsStr: 0.90, neckHex: "#D6B066", neckStr: 0.92, bottomsHex: "#2E353B", bottomsStr: 0.90, eyeHex: "#5C432C", vrmAcc: "tea_host" }),
+  "主持": Object.freeze({ baseSlug: "qingming", hairHex: "#28242C", hairStr: 0.62, topsHex: "#447364", topsStr: 0.90, neckHex: "#D6B066", neckStr: 0.92, bottomsHex: "#2E353B", bottomsStr: 0.90, eyeHex: "#5C432C", vrmAcc: "tea_host" }),
   "你": Object.freeze({ hairHex: "#2c221d", hairStr: 0.42, topsHex: "#466a61", topsStr: 0.84, neckHex: "#dbc292", neckStr: 0.88, bottomsHex: "#2b313a", bottomsStr: 0.88, eyeHex: "#443428", vrmAcc: null }),
-  "小澄": Object.freeze({ baseSlug: "azhu", hairHex: "#1c283d", hairStr: 0.88, topsHex: "#31587d", topsStr: 0.82, neckHex: "#e8decb", neckStr: 0.82, bottomsHex: "#232a36", bottomsStr: 0.84, eyeHex: "#24354d", vrmAcc: "glasses" }),
-  "暖暖": Object.freeze({ baseSlug: "nuannuan", hairHex: "#623d26", hairStr: 0.45, topsHex: "#c2893b", topsStr: 0.76, neckHex: "#f3e6cc", neckStr: 0.80, bottomsHex: "#382c24", bottomsStr: 0.84, eyeHex: "#523220", vrmAcc: "ribbon" }),
-  "阿松": Object.freeze({ baseSlug: "asong", hairHex: "#5f6872", hairStr: 0.72, topsHex: "#2a5c46", topsStr: 0.76, neckHex: "#82ab95", neckStr: 0.80, bottomsHex: "#262c28", bottomsStr: 0.84, eyeHex: "#30261d", vrmAcc: "hiking_scarf" }),
-  "星兒": Object.freeze({ baseSlug: "xinger", hairHex: "#54366e", hairStr: 0.90, topsHex: "#876094", topsStr: 0.84, neckHex: "#e0be72", neckStr: 0.84, bottomsHex: "#2b2533", bottomsStr: 0.86, eyeHex: "#553b75", vrmAcc: "star_clip" }),
-  "小雲": Object.freeze({ baseSlug: "xiaoyun", hairHex: "#3a1e2b", hairStr: 0.68, topsHex: "#2d303a", topsStr: 0.72, neckHex: "#943548", neckStr: 0.84, bottomsHex: "#24262e", bottomsStr: 0.88, eyeHex: "#422130", vrmAcc: "press_kit" }),
-  "阿竹": Object.freeze({ baseSlug: "azhu", hairHex: "#1f242b", hairStr: 0.88, topsHex: "#35615b", topsStr: 0.78, neckHex: "#232a30", neckStr: 0.82, bottomsHex: "#222929", bottomsStr: 0.86, eyeHex: "#283635", vrmAcc: "jade_pendant" }),
-  "晨晨": Object.freeze({ baseSlug: "chenchen", hairHex: "#573724", hairStr: 0.78, topsHex: "#b8552a", topsStr: 0.84, neckHex: "#e39c3e", neckStr: 0.84, bottomsHex: "#2b2623", bottomsStr: 0.84, eyeHex: "#42281a", vrmAcc: "headband" }),
-  "墨白": Object.freeze({ baseSlug: "chenchen", hairHex: "#151923", hairStr: 0.88, topsHex: "#31405c", topsStr: 0.86, neckHex: "#ece2d0", neckStr: 0.82, bottomsHex: "#1f2430", bottomsStr: 0.88, eyeHex: "#242c47", vrmAcc: "ink_scroll" }),
-  "晴嵐": Object.freeze({ baseSlug: "xiaocheng", hairHex: "#523325", hairStr: 0.74, topsHex: "#c98f96", topsStr: 0.84, neckHex: "#f2e8dc", neckStr: 0.82, bottomsHex: "#332a2e", bottomsStr: 0.86, eyeHex: "#593524", vrmAcc: "jade_hairpin" }),
-  "阿朗": Object.freeze({ baseSlug: "player_male", hairHex: "#3a251b", hairStr: 0.76, topsHex: "#a37944", topsStr: 0.84, neckHex: "#f0eee8", neckStr: 0.84, bottomsHex: "#292520", bottomsStr: 0.86, eyeHex: "#7a511e", vrmAcc: "gavel_brooch" }),
-  "柚子": Object.freeze({ baseSlug: "nuannuan", hairHex: "#a36c33", hairStr: 0.78, topsHex: "#829e5a", topsStr: 0.84, neckHex: "#f6efe0", neckStr: 0.82, bottomsHex: "#2e3326", bottomsStr: 0.86, eyeHex: "#4f642c", vrmAcc: "yuzu_clip" })
+  "小澄": Object.freeze({ baseSlug: "chenchen", hairHex: "#1E2738", hairStr: 0.88, topsHex: "#2E5378", topsStr: 0.84, neckHex: "#EDE6D8", neckStr: 0.82, bottomsHex: "#232A36", bottomsStr: 0.84, eyeHex: "#24354D", vrmAcc: "glasses" }),
+  "暖暖": Object.freeze({ baseSlug: "nuannuan", hairHex: "#623D26", hairStr: 0.48, topsHex: "#C78D42", topsStr: 0.78, neckHex: "#F3E6CC", neckStr: 0.80, bottomsHex: "#382C24", bottomsStr: 0.84, eyeHex: "#523220", vrmAcc: "ribbon" }),
+  "阿松": Object.freeze({ baseSlug: "asong", hairHex: "#5F6872", hairStr: 0.72, topsHex: "#2B5B45", topsStr: 0.78, neckHex: "#82AB95", neckStr: 0.80, bottomsHex: "#262C28", bottomsStr: 0.84, eyeHex: "#30261D", vrmAcc: "hiking_scarf" }),
+  "星兒": Object.freeze({ baseSlug: "xinger", hairHex: "#5E417A", hairStr: 0.90, topsHex: "#7B5894", topsStr: 0.86, neckHex: "#E0BE72", neckStr: 0.84, bottomsHex: "#2B2533", bottomsStr: 0.86, eyeHex: "#553B75", vrmAcc: "star_clip" }),
+  "小雲": Object.freeze({ baseSlug: "xiaoyun", hairHex: "#2F1D29", hairStr: 0.72, topsHex: "#2B2E36", topsStr: 0.76, neckHex: "#8F3245", neckStr: 0.84, bottomsHex: "#24262E", bottomsStr: 0.88, eyeHex: "#422130", vrmAcc: "press_kit" }),
+  "阿竹": Object.freeze({ baseSlug: "azhu", hairHex: "#23292B", hairStr: 0.86, topsHex: "#36635C", topsStr: 0.80, neckHex: "#232A30", neckStr: 0.82, bottomsHex: "#222929", bottomsStr: 0.86, eyeHex: "#283635", vrmAcc: "jade_pendant" }),
+  "晨晨": Object.freeze({ baseSlug: "player_male", hairHex: "#593824", hairStr: 0.78, topsHex: "#C95A2B", topsStr: 0.84, neckHex: "#F2ECE1", neckStr: 0.82, bottomsHex: "#2B2623", bottomsStr: 0.84, eyeHex: "#42281A", vrmAcc: "headband" }),
+  "墨白": Object.freeze({ baseSlug: "chenchen", hairHex: "#171B24", hairStr: 0.88, topsHex: "#2C3A54", topsStr: 0.86, neckHex: "#ECE2D0", neckStr: 0.82, bottomsHex: "#1F2430", bottomsStr: 0.88, eyeHex: "#242C47", vrmAcc: "ink_scroll" }),
+  "晴嵐": Object.freeze({ baseSlug: "player", hairHex: "#4D3124", hairStr: 0.76, topsHex: "#C98C94", topsStr: 0.84, neckHex: "#F4ECE4", neckStr: 0.82, bottomsHex: "#332A2E", bottomsStr: 0.86, eyeHex: "#593524", vrmAcc: "jade_hairpin" }),
+  "阿朗": Object.freeze({ baseSlug: "azhu", hairHex: "#3A261B", hairStr: 0.78, topsHex: "#A67B42", topsStr: 0.84, neckHex: "#F0EEE8", neckStr: 0.84, bottomsHex: "#292520", bottomsStr: 0.86, eyeHex: "#7A511E", vrmAcc: "gavel_brooch" }),
+  "柚子": Object.freeze({ baseSlug: "xiaocheng", hairHex: "#9C6630", hairStr: 0.78, topsHex: "#7E9B56", topsStr: 0.84, neckHex: "#F7F1E3", neckStr: 0.82, bottomsHex: "#2E3326", bottomsStr: 0.86, eyeHex: "#4F642C", vrmAcc: "yuzu_clip" })
 });
 
 const HERO_VRM_PALETTES = Object.freeze({
@@ -76,6 +78,14 @@ const VRM_FINGER_PRESETS = Object.freeze({
   fist_cheer: [1.02, 1.08, 1.12, 1.14, 0.65],
   tea_poise: [0.14, 0.26, 0.40, 0.20, 0.14]
 });
+
+// Zero-allocation conversational gesture phrases cross-faded with smoothstep during natural speech
+const VRM_TALK_PHRASES = Object.freeze([
+  Object.freeze({ rDrop: 0.64, rFwd: 0.68, rBend: 0.78, rTwist: 0.26, lDrop: 0.92, lFwd: 0.44, lBend: 1.02, lTwist: 0.16, shLiftR: 0.055, shFwdR: 0.045, shLiftL: 0.02, shFwdL: 0.01, rWX: -0.18, rWY: 0.16, rWZ: -0.08, lWX: -0.10, lWY: 0.06, lWZ: 0.0, rPose: "open_palm", lPose: "relaxed" }),
+  Object.freeze({ rDrop: 0.72, rFwd: 0.80, rBend: 1.10, rTwist: 0.14, lDrop: 0.86, lFwd: 0.52, lBend: 0.94, lTwist: 0.20, shLiftR: 0.065, shFwdR: 0.060, shLiftL: 0.03, shFwdL: 0.02, rWX: -0.14, rWY: 0.08, rWZ: -0.05, lWX: -0.12, lWY: 0.08, lWZ: -0.04, rPose: "point_index", lPose: "open_palm" }),
+  Object.freeze({ rDrop: 0.78, rFwd: 0.56, rBend: 1.40, rTwist: 0.30, lDrop: 0.70, lFwd: 0.66, lBend: 0.74, lTwist: 0.26, shLiftR: 0.040, shFwdR: 0.030, shLiftL: 0.055, shFwdL: 0.045, rWX: -0.12, rWY: 0.16, rWZ: 0.0, lWX: -0.18, lWY: 0.14, lWZ: -0.06, rPose: "tea_poise", lPose: "open_palm" }),
+  Object.freeze({ rDrop: 0.62, rFwd: 0.66, rBend: 0.82, rTwist: 0.28, lDrop: 0.74, lFwd: 0.60, lBend: 0.84, lTwist: 0.24, shLiftR: 0.060, shFwdR: 0.040, shLiftL: 0.050, shFwdL: 0.035, rWX: -0.20, rWY: 0.14, rWZ: -0.10, lWX: -0.16, lWY: 0.12, lWZ: -0.08, rPose: "open_palm", lPose: "open_palm" })
+]);
 
 const stage3dVrm = {
   _scratch: null,
@@ -1454,7 +1464,11 @@ const stage3dVrm = {
       sorrowAmt: 0,
       surprisedAmt: 0,
       prevHeadYaw: 0,
-      headInertia: 0
+      headInertia: 0,
+      speechEnergy: 0,
+      hoverStartedAt: -1,
+      accuseStartedAt: -1,
+      lastWordsStartedAt: -1
     };
   },
 
@@ -1665,11 +1679,38 @@ const stage3dVrm = {
     this.applyMorphWeight(inst.morphs.surprised, inst.surprisedAmt);
 
     // 2. Unified Living Full-Body Model-Space Quaternion Rig Animation
-    //    (Hips + Seated Legs + Spine -> Chest -> Neck -> Head -> Eyes + Clavicles + Multi-Beat Arms + Wrists + Fingers!)
+    //    (Asymmetric Human Breathing + Smooth Speech-Energy Phrase Choreography + Hierarchical Follow-Through Damping!)
     const bm = inst.boneMeta || {};
     const gStyle = arch.gestureStyle || "balanced";
     const isFloorHolder = Boolean(o.isFloorHolder) && !sleeping && o.alive !== false;
     const isActiveSpeaker = Boolean(talking || isFloorHolder);
+
+    // Track smoothed speech energy envelope (rises organically on speech, relaxes gracefully during punctuation pauses!)
+    const rawSpeechDrive = talking
+      ? clamp(0.34 + clamp(o.mouthAmp || 0.42, 0, 1) * 0.82, 0.28, 1.0)
+      : (isFloorHolder ? 0.18 : 0.0);
+    const speechRate = rawSpeechDrive > (inst.speechEnergy || 0) ? 0.14 : 0.055;
+    const speechEnvAlpha = typeof dampFactor3D === "function" ? dampFactor3D(speechRate, dt60) : speechRate;
+    inst.speechEnergy = (inst.speechEnergy || 0) + (rawSpeechDrive - (inst.speechEnergy || 0)) * speechEnvAlpha;
+    const speechEnv = clamp(inst.speechEnergy, 0, 1);
+
+    // Track one-shot gesture onset timestamps so hover wave & accusation thrust execute naturally instead of looping robotically
+    if (o.isHovered && !sleeping) {
+      if (typeof inst.hoverStartedAt !== "number" || inst.hoverStartedAt < 0) inst.hoverStartedAt = t;
+    } else {
+      inst.hoverStartedAt = -1;
+    }
+    if (o.isPointingAccuse && !sleeping) {
+      if (typeof inst.accuseStartedAt !== "number" || inst.accuseStartedAt < 0) inst.accuseStartedAt = t;
+    } else {
+      inst.accuseStartedAt = -1;
+    }
+    if (isLastWordsMode && !sleeping) {
+      if (typeof inst.lastWordsStartedAt !== "number" || inst.lastWordsStartedAt < 0) inst.lastWordsStartedAt = t;
+    } else {
+      inst.lastWordsStartedAt = -1;
+    }
+
     const useLivingIdle = Boolean(
       !sleeping && !isActiveSpeaker && !o.isHovered && !o.isVoting && !o.isAccusing &&
       !o.isPointingAccuse && !o.isBeingVouched && !sweating && !o.act && inst.mode === "seated"
@@ -1680,38 +1721,53 @@ const stage3dVrm = {
     const iw = idleAct.weight;
     const iname = idleAct.name;
 
+    // Smoothly cross-faded 3.8–5.2s conversational gesture phrases (zero 2s hard pose snapping, zero metronome!)
+    const tEnergy = arch.talkArmAmp !== undefined ? arch.talkArmAmp : 1.06;
+    const phraseDur = clamp(4.55 - (tEnergy - 1.0) * 1.1 + ((Math.abs(Math.sin(seed * 2.13)) - 0.5) * 0.65), 3.8, 5.2);
+    const phraseRaw = Math.max(0, (t + seed * 1.17) / phraseDur);
+    const phraseIdx = Math.floor(phraseRaw) % 4;
+    const nextPhraseIdx = (phraseIdx + 1) % 4;
+    const phraseU = phraseRaw - Math.floor(phraseRaw);
+    const xfadeK = phraseU > 0.62 ? ((phraseU - 0.62) / 0.38) : 0;
+    const phraseXfade = xfadeK * xfadeK * (3 - 2 * xfadeK);
+    const phraseAccent = Math.sin(clamp(phraseU / 0.72, 0, 1) * Math.PI) * speechEnv;
+    const talkAmp = clamp(o.mouthAmp || 0.42, 0.16, 1.0);
+
     const lookAroundYaw = (iname === "look_around" && iw > 0.01)
-      ? Math.sin(idleAct.phase * Math.PI * 2.2 + seed) * 0.42 * iw
+      ? Math.sin(idleAct.phase * Math.PI * 1.8 + seed) * 0.34 * iw
       : 0;
     const stretchYaw = (iname === "stretch_roll" && iw > 0.01)
-      ? Math.sin(idleAct.phase * Math.PI * 2.0) * 0.28 * iw
+      ? Math.sin(idleAct.phase * Math.PI * 1.6) * 0.22 * iw
       : 0;
-    const lwSweepYaw = (isLastWordsMode && talking && !o.isLastWordsEnd) ? Math.sin(t * 0.75 + seed) * 0.34 : 0;
-    const lwBowPitch = o.isLastWordsEnd ? 0.24 : 0;
-    const yawNow = clamp((o.headYaw || 0) + lookAroundYaw + stretchYaw + lwSweepYaw, -0.88, 0.88);
-    const sipPitch = (iname === "sip_tea" && iw > 0.01) ? (-0.09 * iw) : 0;
-    const glassesPitch = (iname === "glasses_adjust" && iw > 0.01) ? (-0.06 * iw) : 0;
-    const pitchNow = clamp((o.headPitch || 0) + sipPitch + glassesPitch + lwBowPitch, -0.44, 0.54);
+    const lwSweepYaw = (isLastWordsMode && !o.isLastWordsEnd) ? Math.sin(t * 0.42 + seed) * 0.28 : 0;
+    const lwPitch = isLastWordsMode ? (o.isLastWordsEnd ? 0.25 : 0.045) : 0;
+    const yawNow = clamp((o.headYaw || 0) + lookAroundYaw + stretchYaw + lwSweepYaw, -0.86, 0.86);
+    const sipPitch = (iname === "sip_tea" && iw > 0.01) ? (-0.08 * iw) : 0;
+    const glassesPitch = (iname === "glasses_adjust" && iw > 0.01) ? (-0.05 * iw) : 0;
+    const pitchNow = clamp((o.headPitch || 0) + sipPitch + glassesPitch + lwPitch, -0.42, 0.54);
 
+    // Organic speech-accented head motion (replaces metronome 5.6 rad/s bobblehead!)
     const listenNod = (!sleeping && !isActiveSpeaker && o.isListeningAgree)
-      ? Math.max(0, Math.sin(t * 3.1 + seed)) * 0.115
+      ? Math.max(0, Math.sin(t * 1.85 + seed)) * 0.075
       : 0;
-    const talkHeadBob = talking
-      ? (Math.sin(t * 5.6 + seed) * 0.062 + clamp(o.mouthAmp || 0.40, 0, 1) * 0.048)
-      : (isFloorHolder ? Math.sin(t * 2.2 + seed) * 0.028 : 0);
+    const talkHeadAccent = (talking && !isLastWordsMode)
+      ? (phraseAccent * 0.042 + Math.sin(t * 1.95 + seed) * 0.016 * speechEnv)
+      : (isLastWordsMode && !o.isLastWordsEnd
+        ? (Math.sin(t * 0.95 + seed) * 0.018 * speechEnv)
+        : (isFloorHolder ? Math.sin(t * 1.15 + seed) * 0.016 : 0));
     const nodOffset = (emotion === "happy" || o.isBeingVouched)
-      ? Math.sin(t * 6.8 + seed) * 0.115
-      : (listenNod + talkHeadBob);
-    const accusedShake = (!sleeping && o.isAccusing) ? Math.sin(t * 6.8 + seed) * 0.095 : 0;
-    const shakeOffset = accusedShake || ((emotion === "nervous" || sweating) ? Math.sin(t * 4.2 + seed) * 0.026 : 0);
-    const curiousRoll = (!sleeping && !isActiveSpeaker && o.isListeningCurious) ? ((seed % 2 > 1 ? 1 : -1) * 0.095) : 0;
+      ? Math.sin(t * 2.4 + seed) * 0.055
+      : (listenNod + talkHeadAccent);
+    const accusedShake = (!sleeping && o.isAccusing) ? Math.sin(t * 3.6 + seed) * 0.055 : 0;
+    const shakeOffset = accusedShake || ((emotion === "nervous" || sweating) ? Math.sin(t * 1.55 + seed) * 0.022 : 0);
+    const curiousRoll = (!sleeping && !isActiveSpeaker && o.isListeningCurious) ? ((seed % 2 > 1 ? 1 : -1) * 0.078) : 0;
     const idleActRoll = (iname === "chin_rest")
-      ? (((seed % 2 > 1 ? 1 : -1) * 0.11) * iw)
-      : (iname === "playful_sway" ? Math.sin(t * 3.8 + seed) * 0.11 * iw : (iname === "stretch_roll" ? Math.cos(idleAct.phase * Math.PI * 2) * 0.09 * iw : 0));
-    const talkRoll = isActiveSpeaker
-      ? Math.sin(t * 2.7 + seed * 1.3) * (gStyle === "expressive" ? 0.105 : (gStyle === "energetic" ? 0.082 : (gStyle === "classical" ? 0.036 : 0.064)))
-      : 0;
-    const idleRoll = sleeping ? 0 : (arch.headTiltBias + curiousRoll + idleActRoll + talkRoll + Math.sin(t * 1.35 + seed) * arch.headRollAmp);
+      ? (((seed % 2 > 1 ? 1 : -1) * 0.085) * iw)
+      : (iname === "playful_sway" ? Math.sin(t * 1.9 + seed) * 0.065 * iw : (iname === "stretch_roll" ? Math.cos(idleAct.phase * Math.PI * 2) * 0.065 * iw : 0));
+    const talkRoll = (isActiveSpeaker && !isLastWordsMode)
+      ? Math.sin(t * 1.15 + seed * 1.3) * (gStyle === "expressive" ? 0.062 : (gStyle === "energetic" ? 0.050 : (gStyle === "classical" ? 0.024 : 0.040))) * (0.35 + speechEnv * 0.65)
+      : (isLastWordsMode ? Math.sin(t * 0.55 + seed) * 0.022 : 0);
+    const idleRoll = sleeping ? 0 : (arch.headTiltBias + curiousRoll + idleActRoll + talkRoll + Math.sin(t * 0.72 + seed) * arch.headRollAmp);
 
     // Organic Gaze Chain: Eyes lead -> Head (52%) -> Neck (26%) -> Chest (14%) -> Spine (8%)
     const hasNeck = Boolean(bm.neck);
@@ -1723,74 +1779,87 @@ const stage3dVrm = {
     const headPitchFrac = hasNeck ? 0.68 : 1.0;
     const neckPitchFrac = hasNeck ? 0.32 : 0;
 
-    // Multi-Beat Speaking Cycle (4 rich conversational phrases smoothly blended so speaker never loops 1 dull wiggle!)
-    const talkAmp = clamp(o.mouthAmp || 0.45, 0.22, 1.0);
-    const tEnergy = arch.talkArmAmp !== undefined ? arch.talkArmAmp : 1.08;
-    const beatSpeed = 0.50 + (tEnergy - 1.0) * 0.14;
-    const beatRaw = (t * beatSpeed + seed * 1.13) % 4.0;
-    const beatIdx = Math.floor(beatRaw);
-    const beatFrac = beatRaw - beatIdx;
-    const beatPulse = Math.sin(beatFrac * Math.PI); // 0 -> 1 -> 0 accent curve within each conversational phrase
+    // Asymmetric natural human breathing (42% smooth inhale rise, 58% relaxed exhale settle!)
+    const twoPi = Math.PI * 2;
+    const bPhase = ((t * arch.breathFreq + seed) % twoPi + twoPi) % twoPi;
+    const bNorm = bPhase / twoPi;
+    const bCurve = bNorm < 0.42
+      ? (0.5 - 0.5 * Math.cos((bNorm / 0.42) * Math.PI))
+      : (0.5 + 0.5 * Math.cos(((bNorm - 0.42) / 0.58) * Math.PI));
+    const cPhase = ((t * arch.breathFreq + seed - 0.72) % twoPi + twoPi) % twoPi;
+    const cNorm = cPhase / twoPi;
+    const cCurve = cNorm < 0.42
+      ? (0.5 - 0.5 * Math.cos((cNorm / 0.42) * Math.PI))
+      : (0.5 + 0.5 * Math.cos(((cNorm - 0.42) / 0.58) * Math.PI));
 
     const idleLeanDelta = (iname === "sip_tea" || iname === "table_tap" || iname === "chin_rest" || iname === "note_jot" || iname === "cup_cradle")
-      ? (0.072 * iw)
-      : ((iname === "arms_fold" || iname === "stretch_roll" || iname === "lean_back") ? (-0.078 * iw) : 0);
-    const starLookPitch = (!sleeping && !isActiveSpeaker && (iname === "star_gaze" || (arch.starGaze && Math.sin(t * 0.42 + seed) > 0.72)))
-      ? (-0.18 * (iname === "star_gaze" ? iw : 0.65))
+      ? (0.058 * iw)
+      : ((iname === "arms_fold" || iname === "stretch_roll" || iname === "lean_back") ? (-0.062 * iw) : 0);
+    const starLookPitch = (!sleeping && !isActiveSpeaker && (iname === "star_gaze" || (arch.starGaze && Math.sin(t * 0.35 + seed) > 0.74)))
+      ? (-0.15 * (iname === "star_gaze" ? iw : 0.60))
       : 0;
-    const prepBreathLift = o.isPrepping ? 0.045 : 0;
-    const underFireLeanAdd = isUnderFire ? 0.088 : 0; // +5° forward lean when pressed / PK / accused
-    const talkTorsoLean = talking
-      ? ((gStyle === "energetic" ? 0.125 : (gStyle === "classical" ? 0.055 : 0.095)) + beatPulse * 0.045 * tEnergy + underFireLeanAdd)
-      : (isFloorHolder ? (0.075 + underFireLeanAdd * 0.6) : 0);
-    const baseLean = o.isPointingAccuse
-      ? (0.145 + underFireLeanAdd * 0.4)
-      : (o.isAccusing
-        ? -0.115
-        : (o.act === "welcome_bow"
-          ? 0.135
-          : (o.speechAct === "claim_role"
-            ? -0.020
-            : (isActiveSpeaker
-              ? talkTorsoLean
-              : (sleeping ? 0.065 : (arch.spineLean + idleLeanDelta + (o.isListeningAgree ? 0.045 : 0)))))));
-    const breathWave = Math.sin(t * arch.breathFreq + seed) * arch.breathAmp + prepBreathLift;
-    const talkTorsoYaw = talking ? Math.sin(t * 1.9 + seed) * 0.11 * tEnergy : 0;
+    const prepBreathLift = o.isPrepping ? 0.036 : 0;
+    const underFireLeanAdd = isUnderFire ? 0.072 : 0;
+    const talkTorsoLean = isLastWordsMode
+      ? (o.isLastWordsEnd ? 0.165 : (0.042 + speechEnv * 0.025))
+      : (talking
+        ? ((gStyle === "energetic" ? 0.098 : (gStyle === "classical" ? 0.045 : 0.076)) + phraseAccent * 0.032 * tEnergy + underFireLeanAdd)
+        : (isFloorHolder ? (0.056 + underFireLeanAdd * 0.5) : 0));
+    const baseLean = o.isLastWordsEnd
+      ? 0.165
+      : (o.isPointingAccuse
+        ? (0.118 + underFireLeanAdd * 0.35)
+        : (o.isAccusing
+          ? -0.088
+          : (o.act === "welcome_bow"
+            ? 0.125
+            : (o.speechAct === "claim_role"
+              ? -0.016
+              : (isActiveSpeaker
+                ? talkTorsoLean
+                : (sleeping ? 0.062 : (arch.spineLean + idleLeanDelta + (o.isListeningAgree ? 0.035 : 0))))))));
+    const breathWave = (bCurve * 2 - 1) * arch.breathAmp + prepBreathLift;
+    const chestBreath = (cCurve * 2 - 1) * (arch.breathAmp * 1.15);
+    // Eliminate rotating-fan talkTorsoYaw; keep only gentle conversational weight shift!
+    const talkTorsoYaw = (talking && !isLastWordsMode) ? Math.sin(t * 0.62 + seed) * 0.026 * speechEnv : 0;
     const weightShiftRoll = sleeping
       ? 0
-      : (Math.sin(t * 0.72 + seed * 1.9) * (inst.mode === "standing" ? 0.042 : 0.028) +
-        (iname === "playful_sway" ? Math.sin(t * 3.4 + seed) * 0.065 * iw : 0) +
-        (talking ? Math.cos(t * 2.3 + seed) * 0.042 * tEnergy : 0));
+      : (Math.sin(t * 0.44 + seed * 1.9) * (inst.mode === "standing" ? 0.026 : 0.016) +
+        (iname === "playful_sway" ? Math.sin(t * 1.85 + seed) * 0.042 * iw : 0) +
+        (talking && !isLastWordsMode ? Math.cos(t * 0.88 + seed) * 0.022 * speechEnv : 0));
 
+    // Hierarchical Anatomical Follow-Through Cascade (slerpBoneModelDelta applies dampFactor3D(k, dt60)!):
+    // Eyes (0.22) -> Head (0.14) -> Neck (0.11) -> Chest (0.08) -> Spine (0.065) -> Hips (0.06)
     if (bm.hips && !sleeping) {
       const hipRoll = inst.mode === "standing"
-        ? Math.sin(t * 0.72 + seed * 1.9) * 0.036
-        : (Math.sin(t * 0.65 + seed * 1.5) * 0.018 + (iname === "playful_sway" ? Math.sin(t * 3.4 + seed) * 0.026 * iw : 0));
+        ? Math.sin(t * 0.44 + seed * 1.9) * 0.024
+        : (Math.sin(t * 0.38 + seed * 1.5) * 0.010 + (iname === "playful_sway" ? Math.sin(t * 1.85 + seed) * 0.016 * iw : 0));
       const hipYaw = inst.mode === "standing"
-        ? clamp(yawNow * 0.10 + Math.sin(t * 0.55 + seed) * 0.04, -0.14, 0.14)
-        : clamp(yawNow * 0.05 + (talking ? Math.sin(t * 1.6 + seed) * 0.032 : 0), -0.09, 0.09);
-      this.slerpBoneModelDelta(bm.hips, 0, hipYaw, hipRoll, 0.12, "YXZ");
+        ? clamp(yawNow * 0.09 + Math.sin(t * 0.36 + seed) * 0.024, -0.11, 0.11)
+        : clamp(yawNow * 0.04 + talkTorsoYaw * 0.4, -0.07, 0.07);
+      this.slerpBoneModelDelta(bm.hips, 0, hipYaw, hipRoll, 0.06, "YXZ");
     }
 
     if (bm.spine) {
       this.slerpBoneModelDelta(
         bm.spine,
-        clamp(baseLean + breathWave, -0.14, 0.18),
-        sleeping ? 0 : clamp(yawNow * spineYawFrac + talkTorsoYaw * 0.55, -0.26, 0.26),
-        clamp(weightShiftRoll, -0.11, 0.11),
-        0.15,
+        clamp(baseLean + breathWave, -0.13, 0.18),
+        sleeping ? 0 : clamp(yawNow * spineYawFrac + talkTorsoYaw * 0.55, -0.22, 0.22),
+        clamp(weightShiftRoll, -0.09, 0.09),
+        0.065,
         "YXZ"
       );
     }
     if (bm.chest) {
-      const chestBreath = Math.sin(t * arch.breathFreq + seed - 0.55) * (arch.breathAmp * 1.1);
-      const chestPitch = (o.act === "welcome_bow" ? 0.075 : 0) + (talking ? (0.032 + beatPulse * 0.028) : 0) + (o.isAccusing ? -0.05 : 0) + chestBreath;
+      const chestPitch = (o.isLastWordsEnd ? 0.095 : (o.act === "welcome_bow" ? 0.072 : 0)) +
+        (talking && !isLastWordsMode ? (0.024 * speechEnv + phraseAccent * 0.022) : 0) +
+        (o.isAccusing ? -0.042 : 0) + chestBreath;
       this.slerpBoneModelDelta(
         bm.chest,
-        clamp(chestPitch, -0.09, 0.14),
-        sleeping ? 0 : clamp(yawNow * chestYawFrac + talkTorsoYaw * 0.75, -0.28, 0.28),
-        clamp(-weightShiftRoll * 0.42, -0.08, 0.08),
-        0.16,
+        clamp(chestPitch, -0.08, 0.15),
+        sleeping ? 0 : clamp(yawNow * chestYawFrac + talkTorsoYaw * 0.75, -0.24, 0.24),
+        clamp(-weightShiftRoll * 0.40, -0.07, 0.07),
+        0.08,
         "YXZ"
       );
     }
@@ -1800,7 +1869,7 @@ const stage3dVrm = {
         pitchNow * neckPitchFrac + nodOffset * 0.34,
         yawNow * neckYawFrac + shakeOffset * 0.28,
         idleRoll * 0.34,
-        0.18,
+        0.11,
         "YXZ"
       );
     }
@@ -1810,11 +1879,11 @@ const stage3dVrm = {
         pitchNow * headPitchFrac + nodOffset * 0.66 + starLookPitch,
         yawNow * headYawFrac + shakeOffset * 0.72,
         idleRoll * 0.66,
-        0.22,
+        0.14,
         "YXZ"
       );
     }
-    // Calm Stepped Eye-Bone Fixation (respects each VRM's anatomical lookAt socket limits; zero continuous sine-wave eye wobbling!)
+    // Calm Stepped Eye-Bone Fixation (leads head fastest at k=0.22 inside anatomical socket limits!)
     if (bm.leftEye || bm.rightEye) {
       const lim = inst.eyeLimits || { maxYaw: 0.095, maxPitchUp: 0.058, maxPitchDown: 0.072 };
       const sacSpd = clamp(arch.gazeSaccadeSpeed || 1.0, 0.7, 1.85);
@@ -1828,14 +1897,14 @@ const stage3dVrm = {
         fixPitch = Math.min(0.050, lim.maxPitchDown * 0.78);
       } else if (!sleeping && !o.isLastWordsEnd) {
         if (sweating || emotion === "nervous") {
-          // Realistic uneasy stepped glances (~1.45s hold) instead of high-frequency eye vibration
-          const nervBucket = Math.floor((t + seed * 1.13) / 1.45);
+          // Realistic uneasy stepped glances (~1.55s hold) instead of high-frequency eye vibration
+          const nervBucket = Math.floor((t + seed * 1.13) / 1.55);
           const nHash = Math.sin(nervBucket * 19.31 + seed * 5.71);
           fixYaw = (Math.abs(nHash) > 0.28) ? ((nHash > 0 ? 1 : -1) * Math.min(0.052, lim.maxYaw * 0.58)) : 0;
           fixPitch = Math.cos(nervBucket * 11.17 + seed * 3.19) * 0.014;
         } else {
-          // Steady human-like gaze fixation (3.2s–5.2s calm hold between subtle micro-shifts)
-          const fixPeriod = clamp(4.4 / Math.sqrt(sacSpd), 3.2, 5.2);
+          // Steady human-like gaze fixation (3.4s–5.4s calm hold between subtle micro-shifts)
+          const fixPeriod = clamp(4.6 / Math.sqrt(sacSpd), 3.4, 5.4);
           const fixBucket = Math.floor((t + seed * 1.37) / fixPeriod);
           const hYaw = Math.sin(fixBucket * 12.9898 + seed * 4.1414);
           const hPitch = Math.cos(fixBucket * 7.233 + seed * 2.71);
@@ -1844,50 +1913,44 @@ const stage3dVrm = {
         }
       }
 
-      // Spine+Chest+Neck+Head already deliver 100% of yawNow/pitchNow; eyes add only a subtle anatomical lead inside socket bounds
-      const eyeYaw = sleeping ? 0 : clamp(yawNow * 0.075 + fixYaw, -lim.maxYaw, lim.maxYaw);
+      const eyeYaw = sleeping ? 0 : clamp(yawNow * 0.085 + fixYaw, -lim.maxYaw, lim.maxYaw);
       const eyePitch = (sleeping || o.isLastWordsEnd)
         ? Math.min(0.068, lim.maxPitchDown)
-        : clamp(pitchNow * 0.055 + starLookPitch * 0.22 + fixPitch, -lim.maxPitchUp, lim.maxPitchDown);
-      const eyeAlpha = isWolfLieDart ? 0.28 : 0.14;
+        : clamp(pitchNow * 0.060 + starLookPitch * 0.22 + fixPitch, -lim.maxPitchUp, lim.maxPitchDown);
+      const eyeAlpha = isWolfLieDart ? 0.30 : 0.22;
       if (bm.leftEye) this.slerpBoneModelDelta(bm.leftEye, eyePitch, eyeYaw, 0, eyeAlpha, "YXZ");
       if (bm.rightEye) this.slerpBoneModelDelta(bm.rightEye, eyePitch, eyeYaw, 0, eyeAlpha, "YXZ");
     }
 
-    // Subtle Living Seated Lower-Body Micro-Rhythm (keeps thighWorld.z > 0.85; skirted avatars keep knees modestly together!)
+    // Calm Grounded Seated Lower-Body Poise (cuts restless shin/leg swinging by ~65%, keeps thighWorld.z > 0.85!)
     if (inst.mode === "seated" && !sleeping) {
-      const lTempo = arch.legTempo !== undefined ? arch.legTempo : 0.7;
+      const lTempo = arch.legTempo !== undefined ? arch.legTempo : 0.40;
       if (inst.hasSkirt) {
-        // Synchronized subtle poise with knees gracefully together (NEVER shears skirt open!)
-        const gentleSway = Math.sin(t * 0.55 + seed * 2.1) * 0.012 * lTempo;
-        const gentleBob = (talking ? Math.sin(t * 2.6 + seed) * 0.010 : 0);
-        const shinGentle = Math.sin(t * 1.15 + seed) * 0.028 + (o.isAccusing ? -0.06 : 0);
-        if (bm.leftUpperLeg) this.slerpBoneModelDelta(bm.leftUpperLeg, clamp(-1.42 + gentleBob, -1.45, -1.39), clamp(-0.02 + gentleSway, -0.04, 0.01), 0.026, 0.10, "YXZ");
-        if (bm.rightUpperLeg) this.slerpBoneModelDelta(bm.rightUpperLeg, clamp(-1.42 + gentleBob, -1.45, -1.39), clamp(0.02 + gentleSway, -0.01, 0.04), -0.026, 0.10, "YXZ");
-        if (bm.leftLowerLeg) this.slerpBoneModelDelta(bm.leftLowerLeg, clamp(1.44 + shinGentle, 1.32, 1.54), 0, 0, 0.12, "YXZ");
-        if (bm.rightLowerLeg) this.slerpBoneModelDelta(bm.rightLowerLeg, clamp(1.44 + shinGentle, 1.32, 1.54), 0, 0, 0.12, "YXZ");
+        const gentleSway = Math.sin(t * 0.36 + seed * 2.1) * 0.007 * lTempo;
+        const gentleBob = talking ? (Math.sin(t * 1.15 + seed) * 0.004 * speechEnv) : 0;
+        const shinGentle = Math.sin(t * 0.52 + seed) * 0.010 + (o.isAccusing ? -0.04 : 0);
+        if (bm.leftUpperLeg) this.slerpBoneModelDelta(bm.leftUpperLeg, clamp(-1.42 + gentleBob, -1.45, -1.39), clamp(-0.02 + gentleSway, -0.04, 0.01), 0.026, 0.065, "YXZ");
+        if (bm.rightUpperLeg) this.slerpBoneModelDelta(bm.rightUpperLeg, clamp(-1.42 + gentleBob, -1.45, -1.39), clamp(0.02 + gentleSway, -0.01, 0.04), -0.026, 0.065, "YXZ");
+        if (bm.leftLowerLeg) this.slerpBoneModelDelta(bm.leftLowerLeg, clamp(1.44 + shinGentle, 1.34, 1.52), 0, 0, 0.070, "YXZ");
+        if (bm.rightLowerLeg) this.slerpBoneModelDelta(bm.rightLowerLeg, clamp(1.44 + shinGentle, 1.34, 1.52), 0, 0, 0.070, "YXZ");
       } else {
-        const kneeShift = Math.sin(t * 0.55 + seed * 2.1) * 0.028 * lTempo;
-        const thighBob = (talking ? Math.sin(t * 3.2 + seed) * 0.020 : 0) + (iname === "playful_sway" ? Math.sin(t * 3.4 + seed) * 0.026 * iw : 0);
-        const shinSwingR = (o.isAccusing ? -0.14 : 0) +
-          (lTempo >= 1.1 ? Math.sin(t * (2.6 + lTempo * 0.6) + seed) * 0.095 : Math.sin(t * 1.25 + seed) * 0.035) +
-          (iname === "playful_sway" ? Math.sin(t * 4.4 + seed) * 0.12 * iw : 0);
-        const shinSwingL = (o.isAccusing ? -0.12 : 0) +
-          (lTempo >= 1.1 ? Math.cos(t * (2.4 + lTempo * 0.6) + seed) * 0.085 : Math.cos(t * 1.15 + seed) * 0.030) -
-          (iname === "playful_sway" ? Math.sin(t * 4.4 + seed) * 0.10 * iw : 0);
-        if (bm.leftUpperLeg) this.slerpBoneModelDelta(bm.leftUpperLeg, clamp(-1.40 + thighBob, -1.46, -1.33), clamp(0.06 + kneeShift, 0.02, 0.12), 0, 0.10, "YXZ");
-        if (bm.rightUpperLeg) this.slerpBoneModelDelta(bm.rightUpperLeg, clamp(-1.40 - thighBob, -1.46, -1.33), clamp(-0.06 + kneeShift, -0.12, -0.02), 0, 0.10, "YXZ");
-        if (bm.leftLowerLeg) this.slerpBoneModelDelta(bm.leftLowerLeg, clamp(1.42 + shinSwingL, 1.20, 1.60), 0, 0, 0.12, "YXZ");
-        if (bm.rightLowerLeg) this.slerpBoneModelDelta(bm.rightLowerLeg, clamp(1.42 + shinSwingR, 1.20, 1.60), 0, 0, 0.12, "YXZ");
+        const kneeShift = Math.sin(t * 0.34 + seed * 2.1) * 0.014 * lTempo;
+        const thighBob = (talking ? Math.sin(t * 1.1 + seed) * 0.006 * speechEnv : 0) + (iname === "playful_sway" ? Math.sin(t * 1.85 + seed) * 0.010 * iw : 0);
+        const shinSwingR = (o.isAccusing ? -0.07 : 0) + Math.sin(t * 0.62 + seed) * (0.014 + lTempo * 0.016) + (iname === "playful_sway" ? Math.sin(t * 1.85 + seed) * 0.028 * iw : 0);
+        const shinSwingL = (o.isAccusing ? -0.06 : 0) + Math.cos(t * 0.56 + seed) * (0.012 + lTempo * 0.014) - (iname === "playful_sway" ? Math.sin(t * 1.85 + seed) * 0.024 * iw : 0);
+        if (bm.leftUpperLeg) this.slerpBoneModelDelta(bm.leftUpperLeg, clamp(-1.40 + thighBob, -1.45, -1.34), clamp(0.06 + kneeShift, 0.02, 0.11), 0, 0.065, "YXZ");
+        if (bm.rightUpperLeg) this.slerpBoneModelDelta(bm.rightUpperLeg, clamp(-1.40 - thighBob, -1.45, -1.34), clamp(-0.06 + kneeShift, -0.11, -0.02), 0, 0.065, "YXZ");
+        if (bm.leftLowerLeg) this.slerpBoneModelDelta(bm.leftLowerLeg, clamp(1.42 + shinSwingL, 1.28, 1.56), 0, 0, 0.070, "YXZ");
+        if (bm.rightLowerLeg) this.slerpBoneModelDelta(bm.rightLowerLeg, clamp(1.42 + shinSwingR, 1.28, 1.56), 0, 0, 0.070, "YXZ");
       }
     }
 
-    // Anatomical Upper-Limb Choreography: Drop + Forward + Humeral Twist + Elbow Flex + Wrist + Clavicle + Fingers!
+    // Anatomical Upper-Limb Choreography: Clavicles (0.09) -> UpperArm (0.10) -> Forearm (0.085) -> Wrist/Fingers (0.075)
     let rDrop = arch.rDrop, rFwd = arch.rFwd, rBend = arch.rBend, rTwist = 0.14;
     let lDrop = arch.lDrop, lFwd = arch.lFwd, lBend = arch.lBend, lTwist = 0.12;
     let rWristX = -0.04, rWristY = 0.04, rWristZ = 0.0;
     let lWristX = -0.04, lWristY = 0.04, lWristZ = 0.0;
-    let shLiftR = breathWave * 1.5, shLiftL = breathWave * 1.5;
+    let shLiftR = breathWave * 1.4, shLiftL = breathWave * 1.4;
     let shFwdR = 0.0, shFwdL = 0.0;
     let rHandPose = "relaxed";
     let lHandPose = "relaxed";
@@ -1896,263 +1959,283 @@ const stage3dVrm = {
       rDrop = 1.14; rFwd = 0.18; rBend = 0.86; rTwist = 0.06;
       lDrop = 1.14; lFwd = 0.18; lBend = 0.86; lTwist = 0.06;
     } else if (o.act === "celebrate") {
-      rDrop = -0.34 + Math.sin(t * 6.0 + seed) * 0.18; rFwd = 0.42; rBend = 0.42 + Math.cos(t * 6.0 + seed) * 0.14; rTwist = -0.18;
-      lDrop = -0.34 + Math.cos(t * 6.0 + seed) * 0.18; lFwd = 0.42; lBend = 0.42 + Math.sin(t * 6.0 + seed) * 0.14; lTwist = -0.18;
-      shLiftR = 0.14; shLiftL = 0.14;
-      rWristZ = -0.22; lWristZ = -0.22;
+      rDrop = -0.30 + Math.sin(t * 3.6 + seed) * 0.12; rFwd = 0.42; rBend = 0.44 + Math.cos(t * 3.6 + seed) * 0.10; rTwist = -0.16;
+      lDrop = -0.30 + Math.cos(t * 3.6 + seed) * 0.12; lFwd = 0.42; lBend = 0.44 + Math.sin(t * 3.6 + seed) * 0.10; lTwist = -0.16;
+      shLiftR = 0.12; shLiftL = 0.12;
+      rWristZ = -0.18; lWristZ = -0.18;
       rHandPose = "fist_cheer"; lHandPose = "fist_cheer";
     } else if (o.act === "welcome_bow") {
-      // Expressive graceful Eastern tea-host greeting wave + welcoming palm!
-      rDrop = 0.66 + Math.sin(t * 2.8) * 0.08; rFwd = 0.62 + Math.sin(t * 2.8) * 0.08; rBend = 1.02 + Math.sin(t * 4.4) * 0.18; rTwist = 0.30;
+      // Poised, graceful Eastern tea-host welcoming open-palm gesture (zero repetitive waving!)
+      const welBreath = (bCurve * 2 - 1) * 0.032;
+      rDrop = 0.72 + welBreath; rFwd = 0.56 + welBreath * 0.9; rBend = 1.06 + (cCurve * 2 - 1) * 0.045; rTwist = 0.28;
       lDrop = 0.98; lFwd = 0.38; lBend = 1.14; lTwist = 0.22;
-      shLiftR = 0.06;
-      rWristX = -0.20 + Math.sin(t * 4.4) * 0.14; rWristY = 0.22; rWristZ = -0.16;
+      shLiftR = 0.04;
+      rWristX = -0.16; rWristY = 0.22; rWristZ = -0.10;
       lWristX = -0.10; lWristY = 0.16;
       rHandPose = "open_palm"; lHandPose = "tea_poise";
     } else if (o.isHovered) {
-      // Lively friendly wave & attentive lean when hovered or selected!
-      rDrop = 0.64 + Math.sin(t * 5.2 + seed) * 0.07; rFwd = 0.56; rBend = 1.08 + Math.sin(t * 6.4 + seed) * 0.24; rTwist = 0.26;
+      // Warm gentle single greeting wave that settles smoothly into attentive poise (zero frantic 6.4 rad/s waving!)
+      const hovElapsed = Math.max(0, t - (inst.hoverStartedAt >= 0 ? inst.hoverStartedAt : t));
+      const waveEnv = hovElapsed < 1.55 ? Math.sin((hovElapsed / 1.55) * Math.PI) : 0;
+      const waveArc = Math.sin(hovElapsed * 3.4) * waveEnv;
+      rDrop = 0.86 - waveEnv * 0.20;
+      rFwd = 0.46 + waveEnv * 0.12;
+      rBend = 1.04 + waveArc * 0.14;
+      rTwist = 0.24;
       lDrop = 1.02; lFwd = 0.30; lBend = 0.96; lTwist = 0.12;
-      shLiftR = 0.07;
-      rWristX = -0.18; rWristZ = -0.16 + Math.sin(t * 6.4 + seed) * 0.18;
-      rHandPose = "open_palm";
+      shLiftR = 0.035 + waveEnv * 0.03;
+      rWristX = -0.14; rWristZ = -0.10 + waveArc * 0.14;
+      rHandPose = waveEnv > 0.1 ? "open_palm" : "tea_poise";
     } else if (o.isVoting || o.act === "purify_cast") {
-      rDrop = 0.18 + Math.sin(t * 4.6 + seed) * 0.10; rFwd = 0.60; rBend = 0.36; rTwist = 0.16;
+      const voteFloat = Math.sin(t * 1.7 + seed) * 0.028;
+      rDrop = 0.22 + voteFloat; rFwd = 0.58; rBend = 0.38; rTwist = 0.16;
       lDrop = 1.04; lFwd = 0.32; lBend = 0.96;
-      shLiftR = 0.12; shFwdR = 0.06;
-      rWristX = -0.14;
+      shLiftR = 0.10; shFwdR = 0.05;
+      rWristX = -0.12;
       rHandPose = o.act === "purify_cast" ? "tea_poise" : "open_palm";
     } else if (o.isPrepping) {
-      // v18.0 220ms Pre-Speech Prep Beat: hand gently lifts off teacup, shoulders draw in breath before word 1!
-      rDrop = Math.max(0.54, arch.rDrop - 0.16);
-      rFwd = Math.min(0.86, arch.rFwd + 0.16);
-      rBend = Math.max(0.76, arch.rBend - 0.12);
+      rDrop = Math.max(0.58, arch.rDrop - 0.14);
+      rFwd = Math.min(0.84, arch.rFwd + 0.14);
+      rBend = Math.max(0.78, arch.rBend - 0.10);
       rTwist = 0.22;
-      shLiftR = 0.065; shLiftL = 0.05;
-      rWristX = -0.14;
+      shLiftR = 0.055; shLiftL = 0.04;
+      rWristX = -0.12;
       rHandPose = "tea_poise"; lHandPose = "relaxed";
-    } else if (o.speechAct === "claim_role" && (!talking || beatIdx === 0 || beatIdx === 2)) {
-      // Dramatic identity declaration on accent beats (alternates with open debate beats while speaking!)
-      const oathPulse = Math.sin(t * 4.2 + seed);
-      rDrop = 0.72; rFwd = 0.64 + oathPulse * 0.07; rBend = 1.46; rTwist = 0.34;
-      lDrop = 0.76 - Math.max(0, oathPulse) * 0.12; lFwd = 0.66 + Math.cos(t * 3.8 + seed) * 0.12; lBend = 0.76; lTwist = 0.22;
-      shLiftR = 0.08; shFwdR = 0.07; shLiftL = 0.05;
-      rWristX = -0.16; rWristY = 0.22;
-      lWristX = -0.18; lWristZ = -0.12;
-      rHandPose = "open_palm"; lHandPose = "open_palm";
-    } else if (o.isPointingAccuse && (!talking || beatIdx === 0 || beatIdx === 2)) {
-      // Unmistakable dramatic accusation thrust on accent beats (alternates fluidly with explanatory beats 1 & 3!)
-      const jab = Math.sin(t * 7.2 + seed);
-      rDrop = 0.72 + jab * 0.05; rFwd = 1.10 + jab * 0.08; rBend = 0.28; rTwist = clamp(yawNow * 0.45, -0.34, 0.34);
-      lDrop = 0.88; lFwd = 0.54 + Math.cos(t * 6.4 + seed) * 0.10; lBend = 1.06; lTwist = 0.18;
-      shLiftR = 0.08; shFwdR = 0.11; shLiftL = 0.04;
-      rWristX = -0.08 + jab * 0.08; rWristZ = -0.08;
-      lWristX = -0.14;
-      rHandPose = "point_index"; lHandPose = "open_palm";
-    } else if (o.speechAct === "vouch_warm" && (!talking || beatIdx === 0 || beatIdx === 2)) {
-      // Warm welcoming palm sweep toward trusted ally on accent beats (alternates with debate beats!)
-      const wWave = Math.sin(t * 4.4 + seed);
-      rDrop = 0.72; rFwd = 0.86 + wWave * 0.10; rBend = 0.52 + Math.cos(t * 4.4 + seed) * 0.10; rTwist = 0.30;
-      lDrop = 0.92; lFwd = 0.50; lBend = 1.06; lTwist = 0.20;
-      shLiftR = 0.06; shFwdR = 0.06;
-      rWristX = -0.22; rWristY = 0.22; rWristZ = -0.14;
-      rHandPose = "open_palm"; lHandPose = "open_palm";
+    } else if (isLastWordsMode) {
+      // Solemn Farewell Cadence: dignified hand-to-chest during monologue -> respectful closing bow!
+      if (o.isLastWordsEnd) {
+        rDrop = 0.96; rFwd = 0.46; rBend = 1.24; rTwist = 0.26;
+        lDrop = 0.96; lFwd = 0.46; lBend = 1.24; lTwist = 0.26;
+        shLiftR = 0.02; shLiftL = 0.02;
+        rWristX = -0.10; lWristX = -0.10;
+        rHandPose = "tea_poise"; lHandPose = "tea_poise";
+      } else {
+        const lwSweep = Math.sin(t * 0.85 + seed) * 0.07 * speechEnv;
+        rDrop = 0.78; rFwd = 0.58 + speechEnv * 0.04; rBend = 1.44; rTwist = 0.30;
+        lDrop = 0.90 - speechEnv * 0.14; lFwd = 0.46 + speechEnv * 0.16 + lwSweep; lBend = 1.08 - speechEnv * 0.14; lTwist = 0.22;
+        shLiftR = 0.04; shLiftL = 0.03 * speechEnv;
+        rWristX = -0.12; rWristY = 0.16;
+        lWristX = -0.14 * speechEnv; lWristY = 0.12 * speechEnv;
+        rHandPose = "tea_poise"; lHandPose = speechEnv > 0.35 ? "open_palm" : "tea_poise";
+      }
     } else if (o.isAccusing) {
-      // Startled defensive recoil: both hands thrown up protectively with tense shoulders!
-      const flinch = Math.sin(t * 8.5 + seed) * 0.06;
-      rDrop = 0.62 + flinch; rFwd = 0.68; rBend = 1.24; rTwist = -0.14;
-      lDrop = 0.62 - flinch; lFwd = 0.68; lBend = 1.24; lTwist = -0.14;
-      shLiftR = 0.13; shLiftL = 0.13; shFwdR = 0.09; shFwdL = 0.09;
-      rWristX = -0.30; lWristX = -0.30;
+      // Composed startled defensive recoil (replaces 8.5 rad/s vibrating flinch!)
+      const recoilBreath = Math.sin(t * 1.9 + seed) * 0.018;
+      rDrop = 0.66 + recoilBreath; rFwd = 0.64; rBend = 1.22; rTwist = -0.12;
+      lDrop = 0.66 - recoilBreath; lFwd = 0.64; lBend = 1.22; lTwist = -0.12;
+      shLiftR = 0.095; shLiftL = 0.095; shFwdR = 0.07; shFwdL = 0.07;
+      rWristX = -0.24; lWristX = -0.24;
       rHandPose = "open_palm"; lHandPose = "open_palm";
     } else if (o.isBeingVouched) {
-      // Grateful polite chest-clasp & warm nod when vouched for!
-      rDrop = 0.78; rFwd = 0.60; rBend = 1.42; rTwist = 0.28;
-      lDrop = 0.86; lFwd = 0.52; lBend = 1.32; lTwist = 0.24;
-      shLiftR = 0.04; shLiftL = 0.04;
-      rWristX = -0.14; lWristX = -0.12;
+      rDrop = 0.80; rFwd = 0.58; rBend = 1.40; rTwist = 0.28;
+      lDrop = 0.88; lFwd = 0.50; lBend = 1.30; lTwist = 0.24;
+      shLiftR = 0.035; shLiftL = 0.035;
+      rWristX = -0.12; lWristX = -0.10;
       rHandPose = "tea_poise"; lHandPose = "tea_poise";
-    } else if (talking) {
-      // 4-Beat Lively Multi-Phrase Debate Choreography scaled by 11-persona gestureStyle & live voice energy!
-      const cad = t * (4.6 + tEnergy * 1.15) + seed;
-      const ampLift = (0.14 + talkAmp * 0.16) * Math.min(1.35, tEnergy);
-      const swingA = Math.sin(cad) * (0.18 + talkAmp * 0.14) * Math.min(1.35, tEnergy);
-      const swingB = Math.cos(cad * 0.92) * (0.15 + talkAmp * 0.12) * Math.min(1.3, tEnergy);
+    } else if (talking || isFloorHolder) {
+      // Smoothly cross-faded 3.8–5.2s conversational phrases modulated by speechEnv (zero 2s snapping, zero metronome waving!)
+      const pA = VRM_TALK_PHRASES[phraseIdx];
+      const pB = VRM_TALK_PHRASES[nextPhraseIdx];
+      const invX = 1 - phraseXfade;
+      const microA = (Math.sin(t * 1.65 + seed) * 0.6 + Math.sin(t * 2.55 + seed * 1.7) * 0.4) * (0.045 + talkAmp * 0.045) * speechEnv * Math.min(1.25, tEnergy);
+      const microB = (Math.cos(t * 1.45 + seed) * 0.6 + Math.sin(t * 2.25 + seed * 1.3) * 0.4) * (0.038 + talkAmp * 0.035) * speechEnv * Math.min(1.25, tEnergy);
 
-      if (beatIdx === 0) {
-        // Beat 0: Open-Hand Explanation Sweep (clear raised right arm + counter-balancing left!)
-        rDrop = 0.62 - ampLift * 0.45;
-        rFwd = 0.70 + swingA * 0.65;
-        rBend = 0.82 - beatPulse * 0.18 + swingB * 0.45;
-        rTwist = 0.28 + Math.sin(cad * 0.7) * 0.12;
-        lDrop = 0.86 - ampLift * 0.22;
-        lFwd = 0.50 + swingB * 0.48;
-        lBend = 0.96 + swingA * 0.35;
-        lTwist = 0.18;
-        shLiftR = 0.07; shFwdR = 0.06;
-        rWristX = -0.22 + Math.sin(cad * 1.2) * 0.16; rWristY = 0.18; rWristZ = -0.10;
-        lWristX = -0.12;
-        rHandPose = (gStyle === "classical" || gStyle === "graceful" || gStyle === "poetic") ? "tea_poise" : "open_palm";
-        lHandPose = "open_palm";
-      } else if (beatIdx === 1) {
-        // Beat 1: Emphatic Point / Beat-Counting Deduction
-        rDrop = 0.64 - ampLift * 0.40;
-        rFwd = 0.80 + beatPulse * 0.16 + Math.sin(cad * 1.15) * 0.12;
-        rBend = 0.66 - beatPulse * 0.18 + Math.cos(cad * 1.15) * 0.16;
-        rTwist = 0.16;
-        lDrop = (gStyle === "energetic" || gStyle === "expressive") ? 0.76 : 0.96;
-        lFwd = (gStyle === "energetic" || gStyle === "expressive") ? (0.60 + swingB * 0.55) : 0.40;
-        lBend = 0.96 + swingA * 0.30;
-        lTwist = 0.14;
-        shLiftR = 0.08; shFwdR = 0.08;
-        rWristX = -0.16 + Math.sin(cad * 1.5) * 0.20; rWristZ = -0.06;
-        rHandPose = (gStyle === "analytical" || gStyle === "energetic") ? "point_index" : "open_palm";
-        lHandPose = "relaxed";
-      } else if (beatIdx === 2) {
-        // Beat 2: Sincere Hand-to-Chest Appeal + Left Open Gesture
-        rDrop = 0.74;
-        rFwd = 0.60 + beatPulse * 0.08;
-        rBend = 1.42 + Math.sin(cad * 0.8) * 0.08;
-        rTwist = 0.32;
-        lDrop = 0.72 - ampLift * 0.35;
-        lFwd = 0.68 + swingA * 0.55;
-        lBend = 0.74 - beatPulse * 0.14;
-        lTwist = 0.26;
-        shLiftR = 0.05; shLiftL = 0.07; shFwdL = 0.06;
-        rWristX = -0.14; rWristY = 0.18;
-        lWristX = -0.22 + Math.cos(cad) * 0.16; lWristY = 0.16;
-        rHandPose = (gStyle === "classical" || gStyle === "graceful" || gStyle === "poetic") ? "tea_poise" : "open_palm";
-        lHandPose = "open_palm";
-      } else {
-        // Beat 3: Expressive Two-Hand Open Question / Summary Sweep
-        rDrop = 0.60 - ampLift * 0.38;
-        rFwd = 0.68 + beatPulse * 0.14 + swingA * 0.42;
-        rBend = 0.76 + swingB * 0.38;
-        rTwist = 0.30;
-        lDrop = (gStyle === "classical" || gStyle === "analytical") ? 0.84 : (0.64 - ampLift * 0.32);
-        lFwd = (gStyle === "classical" || gStyle === "analytical") ? 0.46 : (0.64 + beatPulse * 0.12 - swingA * 0.36);
-        lBend = 0.80 - swingB * 0.32;
-        lTwist = 0.28;
-        shLiftR = 0.08; shLiftL = 0.07;
-        rWristX = -0.24 + Math.sin(cad * 1.2) * 0.14; rWristZ = -0.12;
-        lWristX = -0.20 + Math.cos(cad * 1.2) * 0.12; lWristZ = -0.10;
-        rHandPose = "open_palm"; lHandPose = "open_palm";
-      }
+      let tRD = pA.rDrop * invX + pB.rDrop * phraseXfade - phraseAccent * 0.045 * Math.min(1.25, tEnergy);
+      let tRF = pA.rFwd * invX + pB.rFwd * phraseXfade + microA;
+      let tRB = pA.rBend * invX + pB.rBend * phraseXfade + microB;
+      let tRT = pA.rTwist * invX + pB.rTwist * phraseXfade;
+      let tLD = pA.lDrop * invX + pB.lDrop * phraseXfade - phraseAccent * 0.025;
+      let tLF = pA.lFwd * invX + pB.lFwd * phraseXfade - microB * 0.65;
+      let tLB = pA.lBend * invX + pB.lBend * phraseXfade + microA * 0.5;
+      let tLT = pA.lTwist * invX + pB.lTwist * phraseXfade;
 
-      // Refine overall silhouette by character personality (graceful/classical softer, energetic/expressive bolder!)
-      if (gStyle === "classical" || gStyle === "poetic") {
-        rDrop += 0.10; lDrop += 0.10;
-        rFwd *= 0.88; lFwd *= 0.88;
+      let tShLR = pA.shLiftR * invX + pB.shLiftR * phraseXfade;
+      let tShFR = pA.shFwdR * invX + pB.shFwdR * phraseXfade;
+      let tShLL = pA.shLiftL * invX + pB.shLiftL * phraseXfade;
+      let tShFL = pA.shFwdL * invX + pB.shFwdL * phraseXfade;
+      let tRWX = pA.rWX * invX + pB.rWX * phraseXfade + microA * 0.55;
+      let tRWY = pA.rWY * invX + pB.rWY * phraseXfade;
+      let tRWZ = pA.rWZ * invX + pB.rWZ * phraseXfade;
+      let tLWX = pA.lWX * invX + pB.lWX * phraseXfade - microB * 0.4;
+      let tLWY = pA.lWY * invX + pB.lWY * phraseXfade;
+      let tLWZ = pA.lWZ * invX + pB.lWZ * phraseXfade;
+
+      const domPhrase = phraseXfade > 0.5 ? pB : pA;
+      rHandPose = domPhrase.rPose;
+      lHandPose = domPhrase.lPose;
+      if (gStyle === "classical" || gStyle === "graceful" || gStyle === "poetic") {
+        tRD += 0.09; tLD += 0.08;
+        tRF *= 0.90; tLF *= 0.90;
+        if (rHandPose === "point_index") rHandPose = "tea_poise";
       } else if (gStyle === "energetic" || gStyle === "expressive") {
-        rDrop -= 0.06; lDrop -= 0.06;
-        rFwd = Math.min(1.06, rFwd * 1.08);
+        tRD -= 0.04; tLD -= 0.04;
+        tRF = Math.min(1.02, tRF * 1.06);
       }
-    } else if (isFloorHolder) {
-      // Engaged "Holding the Floor" poise after voice stops while player reads the card (stays alive & attentive!)
-      const holdSway = Math.sin(t * 2.1 + seed) * 0.065;
-      rDrop = 0.78; rFwd = 0.58 + holdSway; rBend = 1.02 - holdSway * 0.5; rTwist = 0.24;
-      lDrop = 0.92; lFwd = 0.44 - holdSway * 0.5; lBend = 1.04; lTwist = 0.18;
-      shLiftR = 0.04;
-      rWristX = -0.14; rWristY = 0.12;
-      rHandPose = (gStyle === "classical" || gStyle === "graceful") ? "tea_poise" : "open_palm";
-      lHandPose = "relaxed";
+
+      // Smoothly overlay decisive speech-act gestures (accuse point / role oath / warm vouch) without abrupt beat snapping!
+      if (o.isPointingAccuse) {
+        // Decisive single point + firm steady hold (zero 7.2 rad/s jackhammer jab!)
+        const accElapsed = Math.max(0, t - (inst.accuseStartedAt >= 0 ? inst.accuseStartedAt : t));
+        const reachK = clamp(accElapsed / 0.32, 0, 1);
+        const reachW = reachK * reachK * (3 - 2 * reachK);
+        const holdBreath = Math.sin(t * 1.7 + seed) * 0.018;
+        const accW = talking ? clamp(0.45 + 0.55 * reachW * (0.45 + 0.55 * phraseAccent), 0.35, 1.0) : reachW;
+        const invA = 1 - accW;
+        tRD = tRD * invA + (0.72 + holdBreath) * accW;
+        tRF = tRF * invA + (1.06 + holdBreath * 0.8) * accW;
+        tRB = tRB * invA + 0.30 * accW;
+        tRT = tRT * invA + clamp(yawNow * 0.42, -0.32, 0.32) * accW;
+        tShLR = Math.max(tShLR, 0.075 * accW);
+        tShFR = Math.max(tShFR, 0.095 * accW);
+        tRWX = tRWX * invA + (-0.08) * accW;
+        tRWZ = tRWZ * invA + (-0.06) * accW;
+        if (accW > 0.45) rHandPose = "point_index";
+      } else if (o.speechAct === "claim_role") {
+        const oathW = talking ? clamp(0.42 + phraseAccent * 0.58, 0.35, 1.0) : 0.85;
+        const invO = 1 - oathW;
+        tRD = tRD * invO + 0.74 * oathW;
+        tRF = tRF * invO + (0.62 + Math.sin(t * 1.6 + seed) * 0.025) * oathW;
+        tRB = tRB * invO + 1.44 * oathW;
+        tRT = tRT * invO + 0.32 * oathW;
+        tShLR = Math.max(tShLR, 0.065 * oathW);
+        tShFR = Math.max(tShFR, 0.055 * oathW);
+        if (oathW > 0.45) rHandPose = "open_palm";
+      } else if (o.speechAct === "vouch_warm") {
+        const vw = talking ? clamp(0.42 + phraseAccent * 0.58, 0.35, 1.0) : 0.82;
+        const invV = 1 - vw;
+        tRD = tRD * invV + 0.74 * vw;
+        tRF = tRF * invV + (0.82 + Math.sin(t * 1.7 + seed) * 0.035) * vw;
+        tRB = tRB * invV + 0.56 * vw;
+        tRT = tRT * invV + 0.28 * vw;
+        tRWX = tRWX * invV + (-0.18) * vw;
+        tRWY = tRWY * invV + 0.20 * vw;
+        if (vw > 0.45) rHandPose = "open_palm";
+      }
+
+      // Blend speaking pose with resting tea-table posture via speechEnv so hands relax smoothly during pauses!
+      const poseW = clamp(0.32 + speechEnv * 0.68, 0.28, 1.0);
+      const invP = 1 - poseW;
+      rDrop = arch.rDrop * invP + tRD * poseW;
+      rFwd = arch.rFwd * invP + tRF * poseW;
+      rBend = arch.rBend * invP + tRB * poseW;
+      rTwist = 0.16 * invP + tRT * poseW;
+      lDrop = arch.lDrop * invP + tLD * poseW;
+      lFwd = arch.lFwd * invP + tLF * poseW;
+      lBend = arch.lBend * invP + tLB * poseW;
+      lTwist = 0.14 * invP + tLT * poseW;
+      shLiftR += tShLR * poseW;
+      shFwdR += tShFR * poseW;
+      shLiftL += tShLL * poseW;
+      shFwdL += tShFL * poseW;
+      rWristX = -0.04 * invP + tRWX * poseW;
+      rWristY = 0.04 * invP + tRWY * poseW;
+      rWristZ = tRWZ * poseW;
+      lWristX = -0.04 * invP + tLWX * poseW;
+      lWristY = 0.04 * invP + tLWY * poseW;
+      lWristZ = tLWZ * poseW;
     } else if (sweating) {
-      // Observable nervous fidget: visibly tense shoulders & restless fidgeting hands
-      rDrop = 0.82; rFwd = 0.52 + Math.sin(t * 9.5 + seed) * 0.06; rBend = 1.32; rTwist = -0.08;
-      lDrop = 0.84; lFwd = 0.48 + Math.cos(t * 8.5 + seed) * 0.06; lBend = 1.28; lTwist = -0.08;
-      shLiftR = 0.10; shLiftL = 0.10; shFwdR = 0.07; shFwdL = 0.07;
-      rWristX = 0.16; lWristX = 0.16;
+      // Subtle tense shoulder hunch + slow uneasy posture shift (replaces 9.5 rad/s vibrator jitter!)
+      const uneasyShift = Math.sin(t * 1.45 + seed) * 0.016;
+      rDrop = 0.84; rFwd = 0.50 + uneasyShift; rBend = 1.30; rTwist = -0.06;
+      lDrop = 0.86; lFwd = 0.46 - uneasyShift * 0.8; lBend = 1.26; lTwist = -0.06;
+      shLiftR = 0.085; shLiftL = 0.085; shFwdR = 0.06; shFwdL = 0.06;
+      rWristX = 0.12; lWristX = 0.12;
     } else if (o.isListeningCurious && inst.mode === "seated") {
-      // Thoughtful deduction posture: right hand raised cleanly near chin while tilting head intently
-      rDrop = 0.66; rFwd = 0.66 + Math.sin(t * 1.8 + seed) * 0.035; rBend = 1.48; rTwist = 0.24;
+      rDrop = 0.68; rFwd = 0.64 + Math.sin(t * 1.1 + seed) * 0.018; rBend = 1.46; rTwist = 0.24;
       lDrop = 0.96; lFwd = 0.40; lBend = 1.18; lTwist = 0.16;
-      shLiftR = 0.04;
+      shLiftR = 0.035;
       rWristX = -0.14;
       rHandPose = "tea_poise";
     } else if (inst.mode === "standing") {
-      // Living Tea-House Host Choreography for Qingming: guides active speaker OR cycles graceful tea-host poses!
-      const swaySt = Math.sin(t * 1.55 + seed) * 0.055;
-      const hostSlot = Math.floor(((t + 1.5) % 16.0) / 5.33);
-      const hostU = (((t + 1.5) % 16.0) % 5.33) / 5.33;
-      const hostEnv = (hostU > 0.12 && hostU < 0.86)
-        ? Math.sin(((hostU - 0.12) / 0.74) * Math.PI)
-        : 0;
+      // Poised Eastern Tea-House Host Choreography for Qingming (smoothstep envelopes, zero repetitive waving!)
+      const swaySt = (bCurve * 2 - 1) * 0.026;
+      const hostSlot = Math.floor(((t + 1.5) % 19.5) / 6.5);
+      const hostU = (((t + 1.5) % 19.5) % 6.5) / 6.5;
+      let hostEnv = 0;
+      if (hostU > 0.12 && hostU < 0.86) {
+        if (hostU < 0.30) {
+          const hk = (hostU - 0.12) / 0.18;
+          hostEnv = hk * hk * (3 - 2 * hk);
+        } else if (hostU > 0.68) {
+          const hk = (0.86 - hostU) / 0.18;
+          hostEnv = hk * hk * (3 - 2 * hk);
+        } else {
+          hostEnv = 1.0;
+        }
+      }
       if (o.hasActiveSpeaker) {
-        // Presiding over active debate: right palm gracefully invites toward the speaker while left hand rests poised!
-        const guideW = 0.45 + hostEnv * 0.55;
-        rDrop = 1.02 - guideW * 0.30;
-        rFwd = 0.34 + guideW * 0.34 + swaySt * 0.5;
-        rBend = 0.96 - guideW * 0.26;
+        const guideW = 0.38 + hostEnv * 0.48;
+        rDrop = 1.00 - guideW * 0.26;
+        rFwd = 0.34 + guideW * 0.28 + swaySt * 0.45;
+        rBend = 0.98 - guideW * 0.20;
         rTwist = 0.26;
-        lDrop = 0.98; lFwd = 0.38 - swaySt * 0.4; lBend = 1.14; lTwist = 0.22;
-        shLiftR = 0.04 * guideW;
-        rWristX = -0.18 * guideW; rWristY = 0.18; rWristZ = -0.10 * guideW;
+        lDrop = 0.98; lFwd = 0.38 - swaySt * 0.35; lBend = 1.14; lTwist = 0.22;
+        shLiftR = 0.032 * guideW;
+        rWristX = -0.15 * guideW; rWristY = 0.18 * guideW; rWristZ = -0.08 * guideW;
         lWristX = -0.08;
         rHandPose = "open_palm"; lHandPose = "tea_poise";
       } else if (hostSlot === 1) {
-        // Warm periodic welcome hand flourish
-        rDrop = 1.02 - hostEnv * 0.38;
-        rFwd = 0.34 + hostEnv * 0.32;
-        rBend = 0.94 + hostEnv * (0.20 + Math.sin(t * 4.6) * 0.14);
-        rTwist = 0.28;
+        // Gentle poised welcoming open-palm curve (replaces repetitive waving!)
+        rDrop = 1.00 - hostEnv * 0.28;
+        rFwd = 0.34 + hostEnv * 0.24 + swaySt * 0.35;
+        rBend = 1.02 + hostEnv * 0.10;
+        rTwist = 0.26;
         lDrop = 0.98; lFwd = 0.38; lBend = 1.12; lTwist = 0.20;
-        shLiftR = 0.05 * hostEnv;
-        rWristX = -0.18 * hostEnv; rWristZ = -0.14 * hostEnv;
+        shLiftR = 0.035 * hostEnv;
+        rWristX = -0.16 * hostEnv; rWristY = 0.18 * hostEnv; rWristZ = -0.08 * hostEnv;
         rHandPose = "open_palm"; lHandPose = "tea_poise";
       } else if (hostSlot === 2) {
-        // Presenting tea-aroma grace with left hand gently lifted
         rDrop = 0.98; rFwd = 0.38 + swaySt * 0.4; rBend = 1.12; rTwist = 0.22;
-        lDrop = 1.00 - hostEnv * 0.32;
-        lFwd = 0.36 + hostEnv * 0.34;
-        lBend = 1.06 + hostEnv * 0.16;
+        lDrop = 1.00 - hostEnv * 0.24;
+        lFwd = 0.36 + hostEnv * 0.26;
+        lBend = 1.08 + hostEnv * 0.10;
         lTwist = 0.26;
-        lWristX = -0.18 * hostEnv; lWristY = 0.16 * hostEnv;
+        lWristX = -0.15 * hostEnv; lWristY = 0.14 * hostEnv;
         rHandPose = "tea_poise"; lHandPose = "tea_poise";
       } else {
-        // Poised clasped-in-front academy host stance with organic breathing sway
-        rDrop = 0.96; rFwd = 0.36 + swaySt; rBend = 1.06 + swaySt * 0.5; rTwist = 0.20;
-        lDrop = 0.98; lFwd = 0.36 - swaySt * 0.7; lBend = 1.08; lTwist = 0.20;
+        rDrop = 0.96; rFwd = 0.36 + swaySt; rBend = 1.06 + swaySt * 0.45; rTwist = 0.20;
+        lDrop = 0.98; lFwd = 0.36 - swaySt * 0.6; lBend = 1.08; lTwist = 0.20;
         rWristX = -0.10; lWristX = -0.10;
         rHandPose = "tea_poise"; lHandPose = "tea_poise";
       }
     } else {
       // Base seated idle breathing + Smoothly Blended Autonomous Tea-Table Micro-Actions!
-      const sway = Math.sin(t * (arch.breathFreq * 0.78) + seed) * arch.armSwayAmp;
+      const sway = (bCurve * 2 - 1) * arch.armSwayAmp;
       rFwd += sway;
-      lFwd -= sway * 0.75;
-      rBend += Math.cos(t * (arch.breathFreq * 0.65) + seed) * (arch.armSwayAmp * 1.1);
-      lBend -= Math.sin(t * (arch.breathFreq * 0.65) + seed) * (arch.armSwayAmp * 0.9);
+      lFwd -= sway * 0.7;
+      rBend += (cCurve * 2 - 1) * (arch.armSwayAmp * 0.9);
+      lBend -= (bCurve * 2 - 1) * (arch.armSwayAmp * 0.75);
       rTwist = 0.16; lTwist = 0.14;
 
       if (iw > 0.005) {
         let tRD = rDrop, tRF = rFwd, tRB = rBend, tRT = rTwist;
         let tLD = lDrop, tLF = lFwd, tLB = lBend, tLT = lTwist;
         if (iname === "sip_tea") {
-          tRD = 0.62; tRF = 0.74; tRB = 1.48; tRT = 0.30;
+          tRD = 0.64; tRF = 0.72; tRB = 1.46; tRT = 0.30;
           tLD = 1.02; tLF = 0.36; tLB = 1.08; tLT = 0.16;
-          rWristX = -0.22 * iw; rWristY = 0.18 * iw;
+          rWristX = -0.20 * iw; rWristY = 0.16 * iw;
           rHandPose = "tea_poise";
         } else if (iname === "chin_rest") {
-          tRD = 0.64; tRF = 0.68; tRB = 1.52; tRT = 0.24;
+          tRD = 0.66; tRF = 0.66; tRB = 1.50; tRT = 0.24;
           tLD = 0.98; tLF = 0.42; tLB = 1.24; tLT = 0.22;
-          shLiftR = 0.05 * iw;
-          rWristX = -0.16 * iw;
+          shLiftR = 0.045 * iw;
+          rWristX = -0.15 * iw;
           rHandPose = "tea_poise";
         } else if (iname === "arms_fold") {
           tRD = 0.90; tRF = 0.56; tRB = 1.44; tRT = 0.34;
           tLD = 0.94; tLF = 0.52; tLB = 1.40; tLT = 0.32;
-          shFwdR = 0.05 * iw; shFwdL = 0.05 * iw;
+          shFwdR = 0.045 * iw; shFwdL = 0.045 * iw;
           rHandPose = "relaxed"; lHandPose = "relaxed";
         } else if (iname === "table_tap") {
-          const tap = Math.sin(t * 7.5 + seed) * 0.06;
-          tRD = 0.76; tRF = 0.78; tRB = 0.68 + tap; tRT = 0.04;
+          const tap = Math.sin(t * 3.2 + seed) * 0.028;
+          tRD = 0.78; tRF = 0.76; tRB = 0.72 + tap; tRT = 0.05;
           tLD = 1.04; tLF = 0.34; tLB = 1.04; tLT = 0.14;
-          rWristX = -0.12 * iw + tap * 1.8 * iw;
+          rWristX = -0.10 * iw + tap * 1.4 * iw;
           rHandPose = "point_index";
         } else if (iname === "glasses_adjust") {
-          tRD = 0.54; tRF = 0.68; tRB = 1.54; tRT = 0.26;
+          tRD = 0.56; tRF = 0.66; tRB = 1.52; tRT = 0.26;
           tLD = 1.04; tLF = 0.32; tLB = 1.02; tLT = 0.14;
-          shLiftR = 0.06 * iw;
+          shLiftR = 0.055 * iw;
           rWristX = -0.14 * iw;
           rHandPose = "point_index";
         } else if (iname === "hands_clasp") {
@@ -2162,53 +2245,47 @@ const stage3dVrm = {
         } else if (iname === "sleeve_poise") {
           tRD = 0.82; tRF = 0.58; tRB = 1.24; tRT = 0.28;
           tLD = 0.94; tLF = 0.50; tLB = 1.30; tLT = 0.26;
-          rWristX = -0.16 * iw; rWristY = 0.16 * iw;
+          rWristX = -0.15 * iw; rWristY = 0.14 * iw;
           rHandPose = "tea_poise"; lHandPose = "tea_poise";
         } else if (iname === "stretch_roll") {
-          tRD = 0.78; tRF = 0.28; tRB = 0.82; tRT = -0.12;
-          tLD = 0.78; tLF = 0.28; tLB = 0.82; tLT = -0.12;
-          shLiftR = 0.10 * iw; shLiftL = 0.10 * iw;
+          tRD = 0.80; tRF = 0.28; tRB = 0.84; tRT = -0.10;
+          tLD = 0.80; tLF = 0.28; tLB = 0.84; tLT = -0.10;
+          shLiftR = 0.085 * iw; shLiftL = 0.085 * iw;
           rHandPose = "open_palm"; lHandPose = "open_palm";
         } else if (iname === "cup_cradle") {
-          // 暖暖 / 柚子：雙手溫柔捧茶盞待機姿
           tRD = 0.86; tRF = 0.60; tRB = 1.40; tRT = 0.32;
           tLD = 0.86; tLF = 0.60; tLB = 1.40; tLT = 0.32;
-          rWristX = -0.18 * iw; lWristX = -0.18 * iw;
+          rWristX = -0.16 * iw; lWristX = -0.16 * iw;
           rHandPose = "tea_poise"; lHandPose = "tea_poise";
         } else if (iname === "tea_poise") {
-          // 墨白 / 阿竹 / 晴嵐：端坐輕扶茶杯／茶壺
           tRD = 0.78; tRF = 0.64; tRB = 1.28; tRT = 0.28;
           tLD = 1.02; tLF = 0.38; tLB = 1.16; tLT = 0.20;
-          rWristX = -0.20 * iw; rWristY = 0.14 * iw;
+          rWristX = -0.18 * iw; rWristY = 0.14 * iw;
           rHandPose = "tea_poise"; lHandPose = "tea_poise";
         } else if (iname === "lean_back") {
-          // 晨晨 / 阿松：雙肩敞開靠椅背鬆弛姿
-          tRD = 0.96; tRF = 0.20; tRB = 0.74; tRT = -0.16;
-          tLD = 0.98; tLF = 0.18; tLB = 0.72; tLT = -0.16;
-          shFwdR = -0.06 * iw; shFwdL = -0.06 * iw;
+          tRD = 0.96; tRF = 0.22; tRB = 0.76; tRT = -0.14;
+          tLD = 0.98; tLF = 0.20; tLB = 0.74; tLT = -0.14;
+          shFwdR = -0.05 * iw; shFwdL = -0.05 * iw;
           rHandPose = "relaxed"; lHandPose = "relaxed";
         } else if (iname === "note_jot") {
-          // 小雲：低頭在胸袋速寫本記時間線筆記
-          const jot = Math.sin(t * 9.0 + seed) * 0.04;
+          const jot = Math.sin(t * 3.6 + seed) * 0.022;
           tRD = 0.80; tRF = 0.62 + jot; tRB = 1.38; tRT = 0.28;
           tLD = 0.86; tLF = 0.58; tLB = 1.36; tLT = 0.32;
           rHandPose = "point_index"; lHandPose = "open_palm";
         } else if (iname === "count_fingers") {
-          // 小澄：比出食指算票數與刪去法
-          tRD = 0.70; tRF = 0.68; tRB = 1.34; tRT = 0.22;
+          tRD = 0.72; tRF = 0.66; tRB = 1.34; tRT = 0.22;
           tLD = 1.04; tLF = 0.32; tLB = 1.06; tLT = 0.16;
-          rWristX = -0.16 * iw;
+          rWristX = -0.15 * iw;
           rHandPose = "point_index";
         } else if (iname === "star_gaze") {
-          // 星兒：微托下巴抬眼望亭外星空
           tRD = 0.68; tRF = 0.62; tRB = 1.46; tRT = 0.22;
           tLD = 1.02; tLF = 0.36; tLB = 1.12; tLT = 0.16;
           rHandPose = "tea_poise";
         } else if (iname === "playful_sway") {
-          const bounceA = Math.sin(t * 3.8 + seed) * 0.09;
-          tRD = 0.80 + bounceA; tRF = 0.52; tRB = 1.26 - bounceA; tRT = 0.24;
-          tLD = 0.84 - bounceA; tLF = 0.48; tLB = 1.22 + bounceA; tLT = 0.24;
-          rWristZ = -0.12 * iw; lWristZ = -0.12 * iw;
+          const bounceA = Math.sin(t * 1.9 + seed) * 0.048;
+          tRD = 0.82 + bounceA; tRF = 0.50; tRB = 1.24 - bounceA; tRT = 0.22;
+          tLD = 0.86 - bounceA; tLF = 0.48; tLB = 1.20 + bounceA; tLT = 0.22;
+          rWristZ = -0.08 * iw; lWristZ = -0.08 * iw;
           rHandPose = "open_palm"; lHandPose = "open_palm";
         }
         rDrop = rDrop + (tRD - rDrop) * iw;
@@ -2238,14 +2315,15 @@ const stage3dVrm = {
     rTwist = clamp(rTwist, -0.45, 0.45);
     lTwist = clamp(lTwist, -0.45, 0.45);
 
-    if (bm.rightShoulder) this.slerpBoneModelDelta(bm.rightShoulder, 0, clamp(shFwdR, -0.12, 0.15), -clamp(shLiftR, -0.12, 0.17), 0.17, "YXZ");
-    if (bm.leftShoulder) this.slerpBoneModelDelta(bm.leftShoulder, 0, -clamp(shFwdL, -0.12, 0.15), clamp(shLiftL, -0.12, 0.17), 0.17, "YXZ");
-    if (bm.rightUpperArm) this.slerpBoneModelDelta(bm.rightUpperArm, -rFwd, rTwist, rDrop, 0.18, "YXZ");
-    if (bm.leftUpperArm) this.slerpBoneModelDelta(bm.leftUpperArm, -lFwd, -lTwist, -lDrop, 0.18, "YXZ");
-    if (bm.rightLowerArm) this.slerpBoneModelDelta(bm.rightLowerArm, 0, rBend, 0, 0.19, "YXZ");
-    if (bm.leftLowerArm) this.slerpBoneModelDelta(bm.leftLowerArm, 0, -lBend, 0, 0.19, "YXZ");
-    if (bm.rightHand) this.slerpBoneModelDelta(bm.rightHand, clamp(rWristX, -0.42, 0.42), clamp(rWristY, -0.38, 0.38), clamp(rWristZ, -0.36, 0.36), 0.22, "YXZ");
-    if (bm.leftHand) this.slerpBoneModelDelta(bm.leftHand, clamp(lWristX, -0.42, 0.42), -clamp(lWristY, -0.38, 0.38), -clamp(lWristZ, -0.36, 0.36), 0.22, "YXZ");
+    // Hierarchical arm follow-through: Clavicles (0.09) -> UpperArm (0.10) -> Forearm (0.085) -> Wrist/Fingers (0.075)
+    if (bm.rightShoulder) this.slerpBoneModelDelta(bm.rightShoulder, 0, clamp(shFwdR, -0.12, 0.15), -clamp(shLiftR, -0.12, 0.17), 0.09, "YXZ");
+    if (bm.leftShoulder) this.slerpBoneModelDelta(bm.leftShoulder, 0, -clamp(shFwdL, -0.12, 0.15), clamp(shLiftL, -0.12, 0.17), 0.09, "YXZ");
+    if (bm.rightUpperArm) this.slerpBoneModelDelta(bm.rightUpperArm, -rFwd, rTwist, rDrop, 0.10, "YXZ");
+    if (bm.leftUpperArm) this.slerpBoneModelDelta(bm.leftUpperArm, -lFwd, -lTwist, -lDrop, 0.10, "YXZ");
+    if (bm.rightLowerArm) this.slerpBoneModelDelta(bm.rightLowerArm, 0, rBend, 0, 0.085, "YXZ");
+    if (bm.leftLowerArm) this.slerpBoneModelDelta(bm.leftLowerArm, 0, -lBend, 0, 0.085, "YXZ");
+    if (bm.rightHand) this.slerpBoneModelDelta(bm.rightHand, clamp(rWristX, -0.42, 0.42), clamp(rWristY, -0.38, 0.38), clamp(rWristZ, -0.36, 0.36), 0.075, "YXZ");
+    if (bm.leftHand) this.slerpBoneModelDelta(bm.leftHand, clamp(lWristX, -0.42, 0.42), -clamp(lWristY, -0.38, 0.38), -clamp(lWristZ, -0.36, 0.36), 0.075, "YXZ");
 
     // Expressive Finger Pose Articulation (v23.3: run once for resting seats, animate every frame for active speakers/priority/acting seats!)
     const runFingerPose = Boolean(!inst._fingersInitialized || o.isPriority || talking || Boolean(o.act));
@@ -2253,16 +2331,16 @@ const stage3dVrm = {
       inst._fingersInitialized = true;
       const rCurls = VRM_FINGER_PRESETS[rHandPose] || VRM_FINGER_PRESETS.relaxed;
       const lCurls = VRM_FINGER_PRESETS[lHandPose] || VRM_FINGER_PRESETS.relaxed;
-      if (bm.rightIndexProximal) this.slerpBoneModelDelta(bm.rightIndexProximal, 0, 0, rCurls[0], 0.22, "YXZ");
-      if (bm.rightMiddleProximal) this.slerpBoneModelDelta(bm.rightMiddleProximal, 0, 0, rCurls[1], 0.22, "YXZ");
-      if (bm.rightRingProximal) this.slerpBoneModelDelta(bm.rightRingProximal, 0, 0, rCurls[2], 0.22, "YXZ");
-      if (bm.rightLittleProximal) this.slerpBoneModelDelta(bm.rightLittleProximal, 0, 0, rCurls[3], 0.22, "YXZ");
-      if (bm.rightThumbProximal) this.slerpBoneModelDelta(bm.rightThumbProximal, 0, rCurls[4] * 0.45, rCurls[4] * 0.32, 0.22, "YXZ");
-      if (bm.leftIndexProximal) this.slerpBoneModelDelta(bm.leftIndexProximal, 0, 0, -lCurls[0], 0.22, "YXZ");
-      if (bm.leftMiddleProximal) this.slerpBoneModelDelta(bm.leftMiddleProximal, 0, 0, -lCurls[1], 0.22, "YXZ");
-      if (bm.leftRingProximal) this.slerpBoneModelDelta(bm.leftRingProximal, 0, 0, -lCurls[2], 0.22, "YXZ");
-      if (bm.leftLittleProximal) this.slerpBoneModelDelta(bm.leftLittleProximal, 0, 0, -lCurls[3], 0.22, "YXZ");
-      if (bm.leftThumbProximal) this.slerpBoneModelDelta(bm.leftThumbProximal, 0, -lCurls[4] * 0.45, -lCurls[4] * 0.32, 0.22, "YXZ");
+      if (bm.rightIndexProximal) this.slerpBoneModelDelta(bm.rightIndexProximal, 0, 0, rCurls[0], 0.075, "YXZ");
+      if (bm.rightMiddleProximal) this.slerpBoneModelDelta(bm.rightMiddleProximal, 0, 0, rCurls[1], 0.075, "YXZ");
+      if (bm.rightRingProximal) this.slerpBoneModelDelta(bm.rightRingProximal, 0, 0, rCurls[2], 0.075, "YXZ");
+      if (bm.rightLittleProximal) this.slerpBoneModelDelta(bm.rightLittleProximal, 0, 0, rCurls[3], 0.075, "YXZ");
+      if (bm.rightThumbProximal) this.slerpBoneModelDelta(bm.rightThumbProximal, 0, rCurls[4] * 0.45, rCurls[4] * 0.32, 0.075, "YXZ");
+      if (bm.leftIndexProximal) this.slerpBoneModelDelta(bm.leftIndexProximal, 0, 0, -lCurls[0], 0.075, "YXZ");
+      if (bm.leftMiddleProximal) this.slerpBoneModelDelta(bm.leftMiddleProximal, 0, 0, -lCurls[1], 0.075, "YXZ");
+      if (bm.leftRingProximal) this.slerpBoneModelDelta(bm.leftRingProximal, 0, 0, -lCurls[2], 0.075, "YXZ");
+      if (bm.leftLittleProximal) this.slerpBoneModelDelta(bm.leftLittleProximal, 0, 0, -lCurls[3], 0.075, "YXZ");
+      if (bm.leftThumbProximal) this.slerpBoneModelDelta(bm.leftThumbProximal, 0, -lCurls[4] * 0.45, -lCurls[4] * 0.32, 0.075, "YXZ");
     }
 
     // 3. SpringBone Hair, Ribbons & Skirt Model-Space Physics (lively follow-through hair sway, flip-free seated skirt!)

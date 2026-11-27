@@ -562,7 +562,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     actor.headYaw += (targetHeadYaw - actor.headYaw) * d14;
     actor.headPitch += (targetHeadPitch - actor.headPitch) * d14;
     actor.headPivot.rotation.set(
-      actor.headPitch + (isTalkingNow ? (liveAmp * 0.08 + Math.sin(t * 9 + s.id) * 0.03) : 0),
+      actor.headPitch + (isTalkingNow ? (liveAmp * 0.045 + Math.sin(t * 2.4 + s.id) * 0.016) : 0),
       actor.headYaw,
       0
     );
@@ -575,35 +575,35 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         rShX = -0.10; lShX = -0.10; rElbX = -0.25; lElbX = -0.25;
       } else if (isCelebration && s.team === "good") {
         // Victory double-arm cheer!
-        rShX = -2.45 + Math.sin(t * 7 + s.id) * 0.2; rShZ = -0.35; rElbX = -0.35;
-        lShX = -2.45 + Math.cos(t * 7 + s.id) * 0.2; lShZ = 0.35; lElbX = -0.35;
+        rShX = -2.40 + Math.sin(t * 3.8 + s.id) * 0.14; rShZ = -0.35; rElbX = -0.35;
+        lShX = -2.40 + Math.cos(t * 3.8 + s.id) * 0.14; lShZ = 0.35; lElbX = -0.35;
       } else if (isSpeaking && activeAccuseTargetId && seatWorldMap[activeAccuseTargetId]) {
-        // Dramatic straight-arm pointing across the table + left hand table-slam!
-        rShX = -1.48 + Math.sin(t * 10) * 0.07;
+        // Decisive straight-arm pointing across the table + firm hold
+        rShX = -1.46 + Math.sin(t * 2.0) * 0.03;
         rShZ = clamp(-actor.headYaw * 0.65, -0.65, 0.65);
-        rElbX = -0.12;
-        lShX = -0.68 + Math.sin(t * 12) * (0.14 + liveAmp * 0.22);
+        rElbX = -0.14;
+        lShX = -0.64 + Math.sin(t * 2.4) * (0.06 + liveAmp * 0.10);
         lElbX = -0.78;
       } else if (isSpeaking && activeClaimRole) {
         // Solemn identity oath / declaration hand over chest
-        rShX = -1.25 + Math.sin(t * 4.5) * 0.06;
+        rShX = -1.25 + Math.sin(t * 2.0) * 0.03;
         rShZ = -0.18;
         rElbX = -1.45;
         lShX = -0.45; lShZ = 0.12; lElbX = -0.65;
       } else if (isSpeaking && activeVouchTargetId && seatWorldMap[activeVouchTargetId]) {
         // Open welcoming palm gesture toward vouched ally
-        rShX = -1.05 + Math.sin(t * 5) * 0.06;
+        rShX = -1.05 + Math.sin(t * 2.2) * 0.04;
         rShZ = clamp(-actor.headYaw * 0.55 - 0.15, -0.75, 0.45);
         rElbX = -0.52;
         lShX = -0.55; lShZ = 0.28; lElbX = -0.72;
       } else if (isTalkingNow) {
-        // Animated debate forearm gestures driven by voice amplitude!
-        rShX = -0.74 + Math.sin(t * 8.2 + s.id) * (0.20 + liveAmp * 0.24);
-        rShZ = -0.24 + Math.cos(t * 6.0) * 0.12;
-        rElbX = -0.75 - liveAmp * 0.35;
-        lShX = -0.62 + Math.cos(t * 7.2 + s.id) * (0.16 + liveAmp * 0.18);
+        // Organic debate forearm gestures driven by voice amplitude (calm conversational rhythm)
+        rShX = -0.72 + Math.sin(t * 2.4 + s.id) * (0.10 + liveAmp * 0.12);
+        rShZ = -0.24 + Math.cos(t * 1.8) * 0.08;
+        rElbX = -0.74 - liveAmp * 0.22;
+        lShX = -0.58 + Math.cos(t * 2.1 + s.id) * (0.08 + liveAmp * 0.10);
         lShZ = 0.22;
-        lElbX = -0.70 - liveAmp * 0.25;
+        lElbX = -0.68 - liveAmp * 0.16;
       } else if (isBeingAccusedNow) {
         // Defensive posture: both forearms raised near chest!
         rShX = -0.72; rShZ = 0.25; rElbX = -1.25;
@@ -613,21 +613,23 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         rShX = -0.48; rShZ = 0.22; rElbX = -1.18;
         lShX = -0.48; lShZ = -0.22; lElbX = -1.18;
       } else if (isVotingNow) {
-        // Raise glowing 3D Vote Card high!
-        rShX = -1.62 + Math.sin(t * 3.5 + s.id) * 0.06;
+        // Raise glowing 3D Vote Card steadily!
+        rShX = -1.62 + Math.sin(t * 1.8 + s.id) * 0.03;
         rShZ = -0.10;
         rElbX = -0.35;
       } else if (isHovered || isSelected) {
-        // Friendly attentive wave!
-        rShX = -1.15; rShZ = -0.32; rElbX = -0.85 + Math.sin(t * 9) * 0.28;
+        // Warm gentle greeting wave!
+        rShX = -1.08; rShZ = -0.28; rElbX = -0.82 + Math.sin(t * 3.4) * 0.16;
       }
 
-      actor.rightArmPivot.rotation.x += (rShX - actor.rightArmPivot.rotation.x) * d16;
-      actor.rightArmPivot.rotation.z += (rShZ - actor.rightArmPivot.rotation.z) * d16;
-      actor.rightElbowPivot.rotation.x += (rElbX - actor.rightElbowPivot.rotation.x) * d18;
-      actor.leftArmPivot.rotation.x += (lShX - actor.leftArmPivot.rotation.x) * d16;
-      actor.leftArmPivot.rotation.z += (lShZ - actor.leftArmPivot.rotation.z) * d16;
-      actor.leftElbowPivot.rotation.x += (lElbX - actor.leftElbowPivot.rotation.x) * d18;
+      const dArmSh = typeof dampFactor3D === "function" ? dampFactor3D(0.10, dt60) : 0.10;
+      const dArmElb = typeof dampFactor3D === "function" ? dampFactor3D(0.085, dt60) : 0.085;
+      actor.rightArmPivot.rotation.x += (rShX - actor.rightArmPivot.rotation.x) * dArmSh;
+      actor.rightArmPivot.rotation.z += (rShZ - actor.rightArmPivot.rotation.z) * dArmSh;
+      actor.rightElbowPivot.rotation.x += (rElbX - actor.rightElbowPivot.rotation.x) * dArmElb;
+      actor.leftArmPivot.rotation.x += (lShX - actor.leftArmPivot.rotation.x) * dArmSh;
+      actor.leftArmPivot.rotation.z += (lShZ - actor.leftArmPivot.rotation.z) * dArmSh;
+      actor.leftElbowPivot.rotation.x += (lElbX - actor.leftElbowPivot.rotation.x) * dArmElb;
     }
     actor.voteCard.visible = isVotingNow && !hideSelfBodyInFP;
 
