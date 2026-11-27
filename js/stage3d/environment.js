@@ -193,53 +193,58 @@ function mergeStaticBufferGeos(items, disposeSrc) {
 function build3DEnvironmentMap(renderer, scene, env) {
   if (!renderer || typeof THREE.PMREMGenerator !== "function") return;
   try {
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    pmrem.compileEquirectangularShader();
-    env.pmrem = pmrem;
+    const isIgpuSky = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
+    let pmrem = null;
+    let pmremDisposed = true;
+    // Skip heavy synchronous PMREM cubemap shader compile + 6-face convolution bakes on iGPU/software (cel/toon materials do not sample scene.environment!)
+    if (!isIgpuSky) {
+      pmrem = new THREE.PMREMGenerator(renderer);
+      pmrem.compileEquirectangularShader();
+      env.pmrem = pmrem;
+      pmremDisposed = false;
 
-    const envScene = new THREE.Scene();
-    envScene.background = new THREE.Color(0x162038);
-    const domeGeo = new THREE.SphereGeometry(18, 16, 12);
-    const domeMat = new THREE.MeshBasicMaterial({ color: 0x263455, side: THREE.BackSide });
-    envScene.add(new THREE.Mesh(domeGeo, domeMat));
-    const warmRingGeo = new THREE.TorusGeometry(6, 0.85, 8, 24);
-    const warmRingMat = new THREE.MeshBasicMaterial({ color: 0xffd27d });
-    const warmRing = new THREE.Mesh(warmRingGeo, warmRingMat);
-    warmRing.rotation.x = Math.PI * 0.5;
-    warmRing.position.y = 5.5;
-    envScene.add(warmRing);
-    const sunPatchGeo = new THREE.SphereGeometry(2.6, 12, 10);
-    const sunPatchMat = new THREE.MeshBasicMaterial({ color: 0xfff3c4 });
-    const sunPatch = new THREE.Mesh(sunPatchGeo, sunPatchMat);
-    sunPatch.position.set(8, 8, -9);
-    envScene.add(sunPatch);
-    const coolPatchGeo = new THREE.SphereGeometry(3.2, 12, 10);
-    const coolPatchMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
-    const coolPatch = new THREE.Mesh(coolPatchGeo, coolPatchMat);
-    coolPatch.position.set(-9, 6, 7);
-    envScene.add(coolPatch);
+      const envScene = new THREE.Scene();
+      envScene.background = new THREE.Color(0x162038);
+      const domeGeo = new THREE.SphereGeometry(18, 16, 12);
+      const domeMat = new THREE.MeshBasicMaterial({ color: 0x263455, side: THREE.BackSide });
+      envScene.add(new THREE.Mesh(domeGeo, domeMat));
+      const warmRingGeo = new THREE.TorusGeometry(6, 0.85, 8, 24);
+      const warmRingMat = new THREE.MeshBasicMaterial({ color: 0xffd27d });
+      const warmRing = new THREE.Mesh(warmRingGeo, warmRingMat);
+      warmRing.rotation.x = Math.PI * 0.5;
+      warmRing.position.y = 5.5;
+      envScene.add(warmRing);
+      const sunPatchGeo = new THREE.SphereGeometry(2.6, 12, 10);
+      const sunPatchMat = new THREE.MeshBasicMaterial({ color: 0xfff3c4 });
+      const sunPatch = new THREE.Mesh(sunPatchGeo, sunPatchMat);
+      sunPatch.position.set(8, 8, -9);
+      envScene.add(sunPatch);
+      const coolPatchGeo = new THREE.SphereGeometry(3.2, 12, 10);
+      const coolPatchMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
+      const coolPatch = new THREE.Mesh(coolPatchGeo, coolPatchMat);
+      coolPatch.position.set(-9, 6, 7);
+      envScene.add(coolPatch);
 
-    const procRT = pmrem.fromScene(envScene, 0.04);
-    env.iblDefaultTex = procRT.texture;
-    scene.environment = procRT.texture;
+      const procRT = pmrem.fromScene(envScene, 0.04);
+      env.iblDefaultTex = procRT.texture;
+      scene.environment = procRT.texture;
 
-    // Immediately release temporary procedural IBL baking geometries & materials
-    [domeGeo, warmRingGeo, sunPatchGeo, coolPatchGeo, domeMat, warmRingMat, sunPatchMat, coolPatchMat].forEach(function (res) {
-      try { if (res && typeof res.dispose === "function") res.dispose(); } catch (e) { }
-    });
+      // Immediately release temporary procedural IBL baking geometries & materials
+      [domeGeo, warmRingGeo, sunPatchGeo, coolPatchGeo, domeMat, warmRingMat, sunPatchMat, coolPatchMat].forEach(function (res) {
+        try { if (res && typeof res.dispose === "function") res.dispose(); } catch (e) { }
+      });
+    }
 
-    let pmremDisposed = false;
     const disposePmrem = function () {
       if (pmremDisposed) return;
       pmremDisposed = true;
-      try { if (typeof pmrem.dispose === "function") pmrem.dispose(); } catch (e) { }
+      try { if (pmrem && typeof pmrem.dispose === "function") pmrem.dispose(); } catch (e) { }
       if (env.pmrem === pmrem) env.pmrem = null;
     };
 
     const isFileProto = typeof window !== "undefined" && window.location && window.location.protocol === "file:";
     if (!isFileProto && typeof THREE.TextureLoader === "function") {
       const loader = new THREE.TextureLoader();
-      const isIgpuSky = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
       const startCelestial = Boolean(typeof state !== "undefined" && state.sceneTheme === "celestial");
       let pendingSkyCount = 4;
       let bootReported = false;
@@ -345,17 +350,21 @@ function build3DEnvironmentMap(renderer, scene, env) {
         loader.load(job.url, function (tex) {
           tex.encoding = THREE.sRGBEncoding;
           tex.mapping = THREE.EquirectangularReflectionMapping;
-          // On integrated GPUs, bake PMREM only for primary sky to eliminate 3x multi-second cubemap convolution stalls
-          const wantBake = !isIgpuSky || job.isPrimary;
+          // On integrated GPUs, skip PMREM cubemap convolution completely (only paint photographic sky dome!)
+          const wantBake = !isIgpuSky && !pmremDisposed;
           if (job.isPrimary) {
-            // Paint dome & unblock boot preloader immediately; yield PMREM bake off the hot startup frame
             job.apply(tex, false);
             reportBootSkyReady();
-            scheduleIdleBake(function () {
-              if (wantBake && !pmremDisposed) job.apply(tex, true);
+            if (wantBake) {
+              scheduleIdleBake(function () {
+                if (!pmremDisposed) job.apply(tex, true);
+                onSkySettled(true);
+                if (nextCb) nextCb();
+              }, 40);
+            } else {
               onSkySettled(true);
               if (nextCb) nextCb();
-            }, isIgpuSky ? 180 : 40);
+            }
           } else {
             job.apply(tex, wantBake);
             onSkySettled(false);
@@ -658,7 +667,7 @@ function buildMountainPineTree(x, y, z, scaleMul, woodTex, sharedMats) {
       ? new THREE.MeshStandardMaterial({
         map: needleTex,
         color: 0x3e6e54,
-        alphaTest: 0.26,
+        alphaTest: 0.25,
         transparent: true,
         roughness: 0.86,
         side: THREE.DoubleSide
@@ -668,7 +677,7 @@ function buildMountainPineTree(x, y, z, scaleMul, woodTex, sharedMats) {
       ? new THREE.MeshStandardMaterial({
         map: needleTex,
         color: 0x6ea67c,
-        alphaTest: 0.26,
+        alphaTest: 0.25,
         transparent: true,
         roughness: 0.80,
         side: THREE.DoubleSide
@@ -973,7 +982,7 @@ function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex, sharedMats) {
       ? new THREE.MeshStandardMaterial({
         map: bambooLeafTex,
         color: 0xdffce6,
-        alphaTest: 0.28,
+        alphaTest: 0.25,
         transparent: true,
         roughness: 0.72,
         side: THREE.DoubleSide
@@ -1094,7 +1103,7 @@ function buildBlossomTree(x, y, z, scaleMul, kind, woodTex, blossomTex, sharedCa
         color: isOsm ? 0xdec07a : 0xe2b8c7,
         emissive: isOsm ? 0x523106 : 0x451a2a,
         emissiveIntensity: 0.14,
-        alphaTest: 0.22,
+        alphaTest: 0.25,
         transparent: true,
         roughness: 0.78,
         side: THREE.DoubleSide
@@ -1106,7 +1115,7 @@ function buildBlossomTree(x, y, z, scaleMul, kind, woodTex, blossomTex, sharedCa
         color: isOsm ? 0xfff3cc : 0xfff5f8,
         emissive: isOsm ? 0x6b4308 : 0x5c2438,
         emissiveIntensity: 0.18,
-        alphaTest: 0.22,
+        alphaTest: 0.25,
         transparent: true,
         roughness: 0.70,
         side: THREE.DoubleSide
@@ -1949,9 +1958,10 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     }
   }
   const slopeLen = 2.05;
+  const isLiteShadowBal = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
   [
     buildInstancedOrGroup(new THREE.BoxGeometry(0.24, 0.28, octSpan - 0.35), stonePlinthMat, bLowWallSpecs, { receiveShadow: true }),
-    buildInstancedOrGroup(new THREE.BoxGeometry(0.14, 0.08, octSpan - 0.25), woodDarkMat, bTopRailSpecs, { castShadow: true }),
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.14, 0.08, octSpan - 0.25), woodDarkMat, bTopRailSpecs, { castShadow: !isLiteShadowBal }),
     buildInstancedOrGroup(new THREE.BoxGeometry(0.10, 0.05, octSpan - 0.36), woodDarkMat, bBotRailSpecs),
     balLatticeMat ? buildInstancedOrGroup(new THREE.PlaneGeometry(octSpan - 0.54, 0.60), balLatticeMat, bFretSpecs) : null,
     buildInstancedOrGroup(new THREE.CylinderGeometry(0.036, 0.036, 0.68, 6), woodDarkMat, bSpindleSpecs),
@@ -3176,6 +3186,8 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
 
   const isMatchPointNow = Boolean(typeof state !== "undefined" && state.match && state.match.started && state.match.isMatchPoint && state.match.phase !== "GAME_OVER");
   const mpFlicker = isMatchPointNow ? (0.86 + Math.sin(t * 14.3) * 0.08 + Math.sin(t * 23.7) * 0.05) : 1.0;
+  const isLastWordsNow = p === "LAST_WORDS_SPEECH";
+  const isVoteFlightNow = Boolean(typeof state !== "undefined" && p === "DAY_VOTE" && state.voteFlight && state.voteFlight.active && state.voteLeaderId);
   const dramaticFocusNow = isDramaticFocusActive(f.nowMs);
   const activeSpeakingNow = Boolean(
     typeof state !== "undefined" &&
@@ -3184,10 +3196,10 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     (state.match.phase === "DAY_SPEECH" || state.match.phase === "SHERIFF_ELECTION") &&
     state.activeSpeakerId
   );
-  const targetFocusDim = dramaticFocusNow ? 1.0 : (activeSpeakingNow ? 0.58 : 0.0);
+  const targetFocusDim = isLastWordsNow ? 1.18 : (dramaticFocusNow ? 1.0 : (isVoteFlightNow ? 0.78 : (activeSpeakingNow ? 0.58 : 0.0)));
   env.focusDimBlend = (env.focusDimBlend || 0) + (targetFocusDim - (env.focusDimBlend || 0)) * d08;
-  // v24.0 Focus Dimming: ~20% gentle ambient dip during daytime speeches, 35% cinematic dip during dramatic beats!
-  const focusDimMul = 1.0 - env.focusDimBlend * 0.35;
+  // v24.0 Focus Dimming: ~22% gentle ambient dip during daytime speeches, 38% cinematic dip during dramatic beats, 45% solemn theater contrast during farewell last words!
+  const focusDimMul = clamp(1.0 - env.focusDimBlend * 0.38, 0.48, 1.0);
   const blackoutNow = Boolean(env.lanternBlackoutUntil && f.nowMs < env.lanternBlackoutUntil);
   const blackoutMul = blackoutNow ? 0.14 : 1.0;
   const hazeDim = (isToxicHaze ? 0.82 : (isClearBreeze ? 1.06 : 1.0)) * (isMatchPointNow ? 0.86 : 1.0) * focusDimMul * blackoutMul;
@@ -3198,16 +3210,19 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   env.dirLight.intensity += (((f.daylight ? (0.95 + env.dawnSweep * 0.25) : (f.night ? 0.58 : 0.78)) * hazeDim) - env.dirLight.intensity) * lerpAmt;
   env.dirLight.position.x = 11 - env.dawnSweep * 9;
 
-  // Dim distant 360° sky dome subtly during dramatic focus so distant mountains recede behind the lit speaker!
+  // Dim distant 360° sky dome subtly during dramatic focus, farewell last words, or vote-flight tension (preserving crimson vote tint)!
   const skyBright = clamp(focusDimMul * (blackoutNow ? 0.25 : 1.0), 0.2, 1.0);
-  if (env.skyPhotoDayMat && env.skyPhotoDayMat.color && typeof env.skyPhotoDayMat.color.setRGB === "function" && moodKey === "day") {
-    env.skyPhotoDayMat.color.setRGB(skyBright, skyBright, skyBright);
+  if (env.skyPhotoDayMat && env.skyPhotoDayMat.color && typeof env.skyPhotoDayMat.color.setRGB === "function") {
+    if (moodKey === "day") env.skyPhotoDayMat.color.setRGB(skyBright, skyBright, skyBright);
+    else if (moodKey === "vote") env.skyPhotoDayMat.color.setRGB(skyBright, skyBright * 0.81, skyBright * 0.72);
   }
-  if (env.skyPhotoCelestialMat && env.skyPhotoCelestialMat.color && typeof env.skyPhotoCelestialMat.color.setRGB === "function" && moodKey === "day") {
-    env.skyPhotoCelestialMat.color.setRGB(skyBright, skyBright, skyBright);
+  if (env.skyPhotoCelestialMat && env.skyPhotoCelestialMat.color && typeof env.skyPhotoCelestialMat.color.setRGB === "function") {
+    if (moodKey === "day") env.skyPhotoCelestialMat.color.setRGB(skyBright, skyBright, skyBright);
+    else if (moodKey === "vote") env.skyPhotoCelestialMat.color.setRGB(skyBright, skyBright * 0.78, skyBright * 0.66);
   }
-  if (env.skyPhotoDuskMat && env.skyPhotoDuskMat.color && typeof env.skyPhotoDuskMat.color.setRGB === "function" && moodKey === "twilight") {
-    env.skyPhotoDuskMat.color.setRGB(skyBright, skyBright, skyBright);
+  if (env.skyPhotoDuskMat && env.skyPhotoDuskMat.color && typeof env.skyPhotoDuskMat.color.setRGB === "function") {
+    if (moodKey === "twilight") env.skyPhotoDuskMat.color.setRGB(skyBright, skyBright, skyBright);
+    else if (moodKey === "vote") env.skyPhotoDuskMat.color.setRGB(skyBright, skyBright * 0.72, skyBright * 0.63);
   }
 
   if (env.rimLight) {
@@ -3520,12 +3535,15 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     posAttr.needsUpdate = true;
   }
 
-  // Volumetric Spotlight tracking Active Speaker / Target
+  // Volumetric Spotlight tracking Active Speaker / Farewell Last Words / Vote-Flight Leader / Target
   let spotAnchor = null;
   let spotColorHex = 0xfde047;
-  if ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "LAST_WORDS_SPEECH" || p === "SHERIFF_ELECTION") && state.activeSpeakerId) {
+  if ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || isLastWordsNow || p === "SHERIFF_ELECTION") && state.activeSpeakerId) {
     spotAnchor = seatAnchors[state.activeSpeakerId] || null;
-    spotColorHex = 0xfde047;
+    spotColorHex = isLastWordsNow ? 0xffcf70 : 0xfde047;
+  } else if (isVoteFlightNow && seatAnchors[state.voteLeaderId]) {
+    spotAnchor = seatAnchors[state.voteLeaderId] || null;
+    spotColorHex = 0xfb7185;
   } else if (f.night && state.selectedSeatId) {
     spotAnchor = seatAnchors[state.selectedSeatId] || null;
     spotColorHex = 0xc4b5fd;
@@ -3538,13 +3556,18 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
     env.currentSpotPos.lerp(spotAnchor.worldPos, d14);
     env.spotTarget.position.set(env.currentSpotPos.x, 1.35, env.currentSpotPos.z);
     env.speakerSpot.position.set(env.currentSpotPos.x * 0.32, 10.8, env.currentSpotPos.z * 0.32);
-    env.speakerSpot.color.setHex(dramaticFocusNow ? 0xffdf9e : spotColorHex);
-    const targetSpotInt = (dramaticFocusNow ? 3.65 : 2.5) * blackoutMul;
+    const finalSpotHex = isLastWordsNow ? 0xffcf70 : (isVoteFlightNow ? 0xfb7185 : (dramaticFocusNow ? 0xffdf9e : spotColorHex));
+    env.speakerSpot.color.setHex(finalSpotHex);
+    const targetSpotInt = (isLastWordsNow ? 2.85 : (dramaticFocusNow ? 2.65 : (isVoteFlightNow ? 2.35 : 1.95))) * blackoutMul;
     env.speakerSpot.intensity += (targetSpotInt - env.speakerSpot.intensity) * d12;
 
     env.spotCone.position.set(env.currentSpotPos.x, 9.6, env.currentSpotPos.z);
-    env.spotCone.material.color.setHex(dramaticFocusNow ? 0xffdf9e : spotColorHex);
-    const coneTargetOp = (dramaticFocusNow ? (f.daylight ? 0.07 : 0.22) : (f.daylight ? 0.025 : 0.16)) * blackoutMul;
+    env.spotCone.material.color.setHex(finalSpotHex);
+    const coneTargetOp = (isLastWordsNow
+      ? (f.daylight ? 0.16 : 0.28)
+      : (isVoteFlightNow
+        ? (f.daylight ? 0.095 : 0.21)
+        : (dramaticFocusNow ? (f.daylight ? 0.075 : 0.22) : (f.daylight ? 0.03 : 0.16)))) * blackoutMul;
     env.spotCone.material.opacity += (coneTargetOp - env.spotCone.material.opacity) * d12;
     env.spotCone.visible = env.spotCone.material.opacity > 0.004;
   } else {

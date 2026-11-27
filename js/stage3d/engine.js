@@ -383,7 +383,7 @@ const stage3d = {
         renderer.toneMapping = THREE.NoToneMapping;
       } else if (THREE.ACESFilmicToneMapping !== undefined) {
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.04;
+        renderer.toneMappingExposure = 0.96;
       }
       this._vrmWarmupUntil = (typeof performance !== "undefined" ? performance.now() : Date.now()) + 3500;
       this._shadowBakedOnce = false;
@@ -1049,10 +1049,11 @@ const stage3d = {
       } else {
         mdl.position.y = 0.08;
       }
+      const allowCustomShadow = !this.isIntegratedGpu && !this.isSoftwareRenderer;
       if (typeof mdl.traverse === "function") {
         mdl.traverse(function (child) {
           if (child && child.isMesh) {
-            child.castShadow = true;
+            child.castShadow = allowCustomShadow;
             child.receiveShadow = true;
           }
         });
@@ -1452,10 +1453,11 @@ const stage3d = {
     }
     const wrap = new THREE.Group();
     const raw = gltf.scene;
+    const allowPavShadow = !this.isIntegratedGpu && !this.isSoftwareRenderer;
     if (typeof raw.traverse === "function") {
       raw.traverse(function (node) {
         if (!node || !node.isMesh) return;
-        node.castShadow = true;
+        node.castShadow = allowPavShadow;
         node.receiveShadow = true;
         const mats = Array.isArray(node.material) ? node.material : [node.material];
         mats.forEach(function (m) {
@@ -2000,13 +2002,13 @@ const stage3d = {
           isLandscapeCam ? (2.35 + largeTableR * 0.68) : (1.35 + largeTableR * 0.35)
         );
       } else if (!state.match.started || p === "LOBBY") {
-        // Track 1 Title Framing: shift table right ~10-14% on widescreen so seats 02/04 never sit behind the left Title column!
+        // Track 1 Title Framing: shift table right cleanly past the 368px left scrim while keeping seats 07/08 fully inside the right edge!
         const camAspectLobby = (this.camera && this.camera.aspect) ? this.camera.aspect : 1.6;
         const isWideLobby = camAspectLobby >= 1.15;
-        o.targetYaw = (isWideLobby ? -0.10 : -0.18) + Math.sin(f.tSec * 0.11) * (isWideLobby ? 0.14 : 0.20);
+        o.targetYaw = (isWideLobby ? -0.10 : -0.18) + Math.sin(f.tSec * 0.11) * (isWideLobby ? 0.12 : 0.18);
         o.targetPitch = 0.34;
-        o.targetRadius = (isWideLobby ? 11.4 : 10.6) + largeTableR;
-        o.targetLookAt.set(isWideLobby ? -2.15 : -0.92, 1.38, -0.88);
+        o.targetRadius = (isWideLobby ? 11.7 : 10.6) + largeTableR;
+        o.targetLookAt.set(isWideLobby ? -1.42 : -0.92, 1.38, -0.82);
       } else if (f.night) {
         const isLandscapePlay = (this.camera && this.camera.aspect ? this.camera.aspect : 1.6) >= 1.0;
         const nightFocusId = state.selectedSeatId || state.hoverSeatId;
@@ -2030,7 +2032,8 @@ const stage3d = {
         const isAccuseShot = Boolean(latestEv && latestEv.speakerId === state.activeSpeakerId && latestEv.accuseId);
         const isClaimShot = Boolean(latestEv && latestEv.speakerId === state.activeSpeakerId && latestEv.claimRole);
         const isPkSpeech = Boolean(typeof isPkVoteActive === "function" && isPkVoteActive());
-        const frSp = this.computeSeatFrontFraming(state.activeSpeakerId, (isClaimShot || isPkSpeech || isAccuseShot) ? "dramatic" : "speaker");
+        const isLastWordsShot = p === "LAST_WORDS_SPEECH";
+        const frSp = this.computeSeatFrontFraming(state.activeSpeakerId, (isClaimShot || isPkSpeech || isAccuseShot || isLastWordsShot) ? "dramatic" : "speaker");
         if (frSp) {
           o.targetYaw = frSp.yaw + Math.sin(f.tSec * 0.42) * 0.035;
           o.targetPitch = frSp.pitch;
@@ -2084,13 +2087,14 @@ const stage3d = {
             o.targetLookAt.set(0, dayLookY, dayLookZ);
           }
         } else if (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT") {
+          const isVoteFlightCam = Boolean(p === "DAY_VOTE" && state.voteFlight && state.voteFlight.active && state.voteLeaderId);
           const leaderAnchor = (state.voteLeaderId && this.seats.anchors[state.voteLeaderId]) ? this.seats.anchors[state.voteLeaderId] : null;
           if (leaderAnchor) {
             const lp = leaderAnchor.worldPos;
-            o.targetYaw = -Math.sin(Math.atan2(lp.x, lp.z)) * 0.32;
-            o.targetPitch = 0.54;
-            o.targetRadius = 11.5 + dayExtraR + largeTableR * 0.85;
-            o.targetLookAt.set(lp.x * 0.24, dayLookY + 0.05, lp.z * 0.24 + dayLookZ);
+            o.targetYaw = -Math.sin(Math.atan2(lp.x, lp.z)) * (isVoteFlightCam ? 0.38 : 0.32);
+            o.targetPitch = isVoteFlightCam ? 0.51 : 0.54;
+            o.targetRadius = (isVoteFlightCam ? 10.95 : 11.5) + dayExtraR + largeTableR * 0.85;
+            o.targetLookAt.set(lp.x * (isVoteFlightCam ? 0.30 : 0.24), dayLookY + (isVoteFlightCam ? 0.08 : 0.05), lp.z * (isVoteFlightCam ? 0.30 : 0.24) + dayLookZ);
           } else {
             o.targetYaw = Math.sin(f.tSec * 0.2) * 0.16;
             o.targetPitch = 0.62;
@@ -2198,6 +2202,7 @@ const stage3d = {
             }
           }
           const isLoadingWarmup = Boolean(
+            (typeof bootPreloader !== "undefined" && bootPreloader.active) ||
             this.avatarActiveLoads > 0 ||
             (this.avatarQueue && this.avatarQueue.length > 0) ||
             (this._vrmWarmupUntil && nowMs < this._vrmWarmupUntil)
@@ -2340,7 +2345,7 @@ const stage3d = {
       if (this.renderer && THREE.ACESFilmicToneMapping !== undefined) {
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         if (typeof this.renderer.toneMappingExposure === "number") {
-          const targetExposure = 1.02 + dynExpBoost;
+          const targetExposure = 0.96 + dynExpBoost;
           this.renderer.toneMappingExposure += (targetExposure - this.renderer.toneMappingExposure) * dampFactor3D(0.14, f.dt60);
         }
       }

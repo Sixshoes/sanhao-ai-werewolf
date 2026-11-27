@@ -233,7 +233,7 @@ const stage3dVrm = {
       const c = document.createElement("canvas");
       c.width = w;
       c.height = h;
-      const ctx = c.getContext("2d");
+      const ctx = c.getContext("2d", { willReadFrequently: true });
       ctx.drawImage(img, 0, 0, w, h);
       const outTex = new THREE.CanvasTexture(c);
       outTex.flipY = srcTex.flipY;
@@ -341,7 +341,8 @@ const stage3dVrm = {
     if (iw < 4 || ih < 4) return srcTex;
     const o = opts || {};
     const texCfg = this.getAdaptiveVrmTexSettings();
-    const maxDim = o.maxDim || texCfg.maxDim;
+    const isIgpuRecolor = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
+    const maxDim = Math.min(o.maxDim || texCfg.maxDim, isIgpuRecolor ? 512 : 1024);
     const aniso = o.anisotropy || texCfg.anisotropy;
     const isHair = Boolean(o.isHair);
     const cacheKey = (srcTex.uuid || "tex") + "|" + targetHex + "|" + (strength || 0.6) + "|" + maxDim + "|" + (isHair ? "h" : "c");
@@ -352,39 +353,31 @@ const stage3dVrm = {
       const tr = parseInt(hex.slice(0, 2), 16) || 0;
       const tg = parseInt(hex.slice(2, 4), 16) || 0;
       const tb = parseInt(hex.slice(4, 6), 16) || 0;
-      const tLum = Math.max(0.14, (0.299 * tr + 0.587 * tg + 0.114 * tb) / 255);
-      // Normalize target chroma so luminance modulation preserves hand-painted anime hair gradients & cloth folds!
-      const cr = tr / tLum;
-      const cg = tg / tLum;
-      const cb = tb / tLum;
       const sc = Math.min(1, maxDim / Math.max(iw, ih));
       const w = Math.max(16, Math.round(iw * sc));
       const h = Math.max(16, Math.round(ih * sc));
       const c = document.createElement("canvas");
       c.width = w;
       c.height = h;
-      const ctx = c.getContext("2d");
+      const ctx = c.getContext("2d", { willReadFrequently: true });
       ctx.drawImage(img, 0, 0, w, h);
       const idata = ctx.getImageData(0, 0, w, h);
       const d = idata.data;
       const rawBlend = Number(strength) || 0.72;
-      const blendCap = isHair ? 0.56 : 0.70;
-      const blend = clamp(rawBlend * (isHair ? 0.74 : 0.84), 0.14, blendCap);
-      const invBase = 1 - blend;
+      const blend = isHair ? clamp(rawBlend * 0.86, 0.34, 0.76) : clamp(rawBlend * 0.90, 0.38, 0.82);
       for (let i = 0; i < d.length; i += 4) {
         if (d[i + 3] < 8) continue;
         const r = d[i], g = d[i + 1], b = d[i + 2];
         const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        // Preserve bright anime highlights & dark ink lines while shifting midtone hue cleanly!
-        const hiGuard = lum > 0.74 ? clamp((lum - 0.74) / 0.26, 0, 1) : 0;
+        // Preserve dark ink lines & hand-painted fold/highlight contrast without blowing pale/white base textures to #FFFFFF!
         const darkGuard = lum < 0.14 ? clamp((0.14 - lum) / 0.14, 0, 1) : 0;
-        const effBlend = blend * (1 - hiGuard * 0.62) * (1 - darkGuard * 0.50);
+        const effBlend = blend * (1 - darkGuard * 0.55);
         const effInv = 1 - effBlend;
-        const shapedLum = isHair ? (lum * 0.72 + tLum * 0.28) : (lum * 0.58 + tLum * 0.42);
-        const specLift = hiGuard * 72;
-        const nr = Math.min(255, cr * shapedLum + specLift);
-        const ng = Math.min(255, cg * shapedLum + specLift);
-        const nb = Math.min(255, cb * shapedLum + specLift);
+        const shadeMul = lum > 0.86 ? (0.96 + (lum - 0.86) * 1.10) : (0.40 + lum * 0.66);
+        const specLift = lum > 0.90 ? ((lum - 0.90) * 135) : 0;
+        const nr = Math.min(255, tr * shadeMul + specLift);
+        const ng = Math.min(255, tg * shadeMul + specLift);
+        const nb = Math.min(255, tb * shadeMul + specLift);
         d[i] = Math.round(r * effInv + nr * effBlend);
         d[i + 1] = Math.round(g * effInv + ng * effBlend);
         d[i + 2] = Math.round(b * effInv + nb * effBlend);
@@ -484,7 +477,7 @@ const stage3dVrm = {
       const c = document.createElement("canvas");
       c.width = w;
       c.height = h;
-      const ctx = c.getContext("2d");
+      const ctx = c.getContext("2d", { willReadFrequently: true });
       ctx.drawImage(img, 0, 0, w, h);
 
       // Subtle matte woven fabric vertical gradient for realistic anime safety shorts (安全褲)
@@ -1561,7 +1554,7 @@ const stage3dVrm = {
         const shadowHexFace = o.moodKey === "night"
           ? 0xc8b4c4
           : (o.moodKey === "vote" ? 0xf4cec2 : (o.moodKey === "day" ? 0xf6d8cc : 0xf2d0c4));
-        const warmB = o.moodKey === "night" ? 0.16 : (o.moodKey === "day" ? 0.05 : 0.12);
+        const warmB = o.moodKey === "night" ? 0.11 : (o.moodKey === "day" ? 0.04 : 0.08);
         for (let ci = 0; ci < inst.celMats.length; ci++) {
           const cm = inst.celMats[ci];
           const u = cm.uniforms;
@@ -1574,9 +1567,9 @@ const stage3dVrm = {
             u.uVrmShadowTint.value.setHex(cm.isFace ? shadowHexFace : shadowHexBody);
             if (typeof u.uVrmShadowTint.value.convertSRGBToLinear === "function") u.uVrmShadowTint.value.convertSRGBToLinear();
           }
-          const baseRim = cm.isFace ? 0.12 : (cm.isHair ? 0.25 : 0.19);
-          u.uVrmRimStrength.value = aliveFlag ? (talkBoostFlag ? baseRim * 1.48 : baseRim) : 0.04;
-          u.uVrmShadowLift.value = aliveFlag ? (cm.isFace ? 0.58 : 0.48) : 0.34;
+          const baseRim = cm.isFace ? 0.08 : (cm.isHair ? 0.18 : 0.14);
+          u.uVrmRimStrength.value = aliveFlag ? (talkBoostFlag ? baseRim * 1.32 : baseRim) : 0.03;
+          u.uVrmShadowLift.value = aliveFlag ? (cm.isFace ? 0.44 : 0.40) : 0.28;
           u.uVrmWarmBounce.value = aliveFlag ? warmB : 0.02;
         }
       }

@@ -18,7 +18,7 @@ function initParticles() {
   }
 }
 
-function resizeCanvas() {
+function resizeCanvas(skipDraw) {
   const container = el("canvasStageWrap") || el("canvasContainer");
   const canvas = el("sanctuaryCanvas");
   if (!container || !canvas) return;
@@ -45,7 +45,7 @@ function resizeCanvas() {
   if (typeof stage3d !== "undefined" && stage3d.ready) {
     stage3d.resize();
   }
-  drawSanctuaryFrame(performance.now());
+  if (!skipDraw) drawSanctuaryFrame(performance.now());
 }
 
 function shouldCapFrameRate60() {
@@ -66,8 +66,23 @@ function compute3DOverlaySignature(f, coords) {
   if (!f || !Array.isArray(coords)) return null;
   const isLite3d = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer || (typeof state !== "undefined" && state.quality3D === "eco")));
   const hasPointerTrail = !isLite3d && Boolean(state.pointerTrail && state.pointerTrail.length > 0);
+  // Prune expired bubbles & ignore redundant active-speaker bubble during DAY_SPEECH so Listening doesn't redraw at 60Hz!
+  let hasActiveBubble = false;
+  if (state.seatBubbles) {
+    const bKeys = Object.keys(state.seatBubbles);
+    for (let bi = 0; bi < bKeys.length; bi++) {
+      const k = bKeys[bi];
+      const b = state.seatBubbles[k];
+      if (!b || (f.nowMs - b.born) > (b.ttl || 4200)) {
+        delete state.seatBubbles[k];
+        continue;
+      }
+      if (f.p === "DAY_SPEECH" && state.activeSpeakerId === b.seatId) continue;
+      hasActiveBubble = true;
+    }
+  }
   if (
-    (state.seatBubbles && Object.keys(state.seatBubbles).length > 0) ||
+    hasActiveBubble ||
     (state.dragAction && state.dragAction.active && state.dragAction.moved) ||
     hasPointerTrail ||
     (state.ripples && state.ripples.length > 0) ||
@@ -82,9 +97,10 @@ function compute3DOverlaySignature(f, coords) {
   const m = state.match || {};
   const dpr = Math.max(1, f.dpr || 1);
   const dragging = Boolean(typeof stage3d !== "undefined" && stage3d.orbit && stage3d.orbit.dragging);
-  // Quantize steady-state projected positions to ~2.5 CSS px so subtle character breathing never forces 4K 2D clearRect every frame,
-  // while active drag tracks smoothly at 1 CSS px!
-  const qStep = dragging ? dpr : (2.5 * dpr);
+  // Coarser steady-state quantization on iGPU (5.5px) and settled Game Over (16px) stops speaker head-bob & victory hops from forcing 60-88% 2D redraws!
+  const qStep = dragging
+    ? dpr
+    : (f.p === "GAME_OVER" ? (16 * dpr) : ((isLite3d ? 5.5 : 2.5) * dpr));
   const activelyVoicing = Boolean((state.typewriter && state.typewriter.active) || (typeof voice !== "undefined" && voice.speaking));
   const showTruth = f.p === "GAME_OVER" || (typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive());
   const camPreset = (typeof stage3d !== "undefined" && stage3d.camPreset) ? stage3d.camPreset : "cinema";
@@ -251,7 +267,7 @@ function drawStageOverlays(ctx, f, coords, skipBeams) {
       return;
     }
     // Skip redundant full-speech bubble on active speaker during DAY_SPEECH (already shown in center Spotlight!)
-    if (p === "DAY_SPEECH" && state.activeSpeakerId === b.seatId && state.activeBubble && state.activeBubble.born === b.born) {
+    if (p === "DAY_SPEECH" && state.activeSpeakerId === b.seatId) {
       return;
     }
     const node = coords.find(function (c) { return c.id === b.seatId; });
@@ -576,7 +592,7 @@ function drawSanctuaryFrame(nowMs) {
         stats.hits += 1;
         return;
       }
-      // Pace passive transient-only 2D redraws (e.g. 4.2s seat bubbles on iGPU/eco) to ~22Hz instead of 60Hz full-canvas clearRect!
+      // Pace passive transient-only 2D redraws (e.g. seat bubbles on iGPU/eco) to ~10.5Hz and Game Over sway to ~6.5Hz!
       const isSoftTransient = Boolean(
         sig === null &&
         drawSanctuaryFrame._hadTransientFx &&
@@ -587,7 +603,8 @@ function drawSanctuaryFrame(nowMs) {
         !(state.burstParticles && state.burstParticles.length > 0) &&
         !(state.fxPopups && state.fxPopups.length > 0)
       );
-      if (isSoftTransient && drawSanctuaryFrame._lastOverlayDrawMs && (nowMs - drawSanctuaryFrame._lastOverlayDrawMs) < 44) {
+      const minSoftMs = res3d.f.p === "GAME_OVER" ? 150 : 95;
+      if (isSoftTransient && drawSanctuaryFrame._lastOverlayDrawMs && (nowMs - drawSanctuaryFrame._lastOverlayDrawMs) < minSoftMs) {
         stats.hits += 1;
         return;
       }

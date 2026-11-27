@@ -54,18 +54,23 @@ const HERO_PALETTES = {
   }
 };
 
+function isLiteHeroGpu() {
+  return Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
+}
+
 function makeHeroHairStrand(points, radius, mat, aspect, outlineW) {
+  const liteHero = isLiteHeroGpu();
   if (typeof stage3dAnime !== "undefined" && typeof stage3dAnime.createTaperedHairLockGeo === "function") {
     const geo = stage3dAnime.createTaperedHairLockGeo(points, radius * 1.18, 0.005, aspect || 1.48, 12, 8);
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.castShadow = true;
-    if (outlineW && outlineW > 0) stage3dAnime.addAnimeOutline(mesh, outlineW, 0x3b241e);
+    mesh.castShadow = !liteHero;
+    if (!liteHero && outlineW && outlineW > 0) stage3dAnime.addAnimeOutline(mesh, outlineW, 0x3b241e);
     return mesh;
   }
   const curve = new THREE.QuadraticBezierCurve3(points[0], points[1], points[2]);
   const geo = new THREE.TubeGeometry(curve, 10, radius, 7, false);
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.castShadow = true;
+  mesh.castShadow = !liteHero;
   return mesh;
 }
 
@@ -247,13 +252,21 @@ function buildHeroCharacter(scene) {
   const CupMatCtor = THREE.MeshStandardMaterial;
 
   const hasAnime = typeof stage3dAnime !== "undefined";
+  const liteHero = isLiteHeroGpu();
+  const castHeroShadow = !liteHero;
   const makeHeroToon = function (col, opts) {
     if (hasAnime && typeof stage3dAnime.createAnimeMaterial === "function") {
-      return stage3dAnime.createAnimeMaterial(Object.assign({ color: col, rimStrength: 0.46, shadowTint: 0xd4c4e8, shadowLift: 0.28 }, opts || {}));
+      const cfg = Object.assign({ color: col, rimStrength: 0.46, shadowTint: 0xd4c4e8, shadowLift: 0.28 }, opts || {});
+      if (liteHero) {
+        delete cfg.bumpMap;
+        delete cfg.bumpScale;
+      }
+      return stage3dAnime.createAnimeMaterial(cfg);
     }
     return new THREE.MeshStandardMaterial({ color: col, roughness: 0.56, metalness: 0.06 });
   };
   const addHeroOutline = function (mesh, w, colHex) {
+    if (liteHero) return;
     if (hasAnime && typeof stage3dAnime.addAnimeOutline === "function") {
       stage3dAnime.addAnimeOutline(mesh, w || 0.009, colHex || 0x241512);
     }
@@ -285,7 +298,7 @@ function buildHeroCharacter(scene) {
   const dais = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.92, 0.08, 28), mats.daisWood);
   dais.position.y = 0.04;
   dais.receiveShadow = true;
-  dais.castShadow = true;
+  dais.castShadow = castHeroShadow;
   const daisRing = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.020, 8, 36), mats.gold);
   daisRing.rotation.x = Math.PI * 0.5;
   daisRing.position.y = 0.08;
@@ -306,11 +319,11 @@ function buildHeroCharacter(scene) {
   [-0.16, 0.16].forEach(function (lx) {
     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.108, 0.088, 0.56, 14), mats.trousers);
     leg.position.set(lx, 0.34, 0);
-    leg.castShadow = true;
+    leg.castShadow = castHeroShadow;
     const shoe = new THREE.Mesh(new THREE.SphereGeometry(0.112, 12, 10), mats.shoes);
     shoe.scale.set(0.92, 0.58, 1.42);
     shoe.position.set(lx, 0.064, 0.045);
-    shoe.castShadow = true;
+    shoe.castShadow = castHeroShadow;
     rigRoot.add(leg, shoe);
   });
 
@@ -331,7 +344,7 @@ function buildHeroCharacter(scene) {
     : new THREE.CylinderGeometry(0.32, 0.44, 0.62, 16);
   const robeLower = new THREE.Mesh(robeLowerGeo, mats.vest);
   robeLower.position.y = hasLathe ? -0.14 : 0.17;
-  robeLower.castShadow = true;
+  robeLower.castShadow = castHeroShadow;
   addHeroOutline(robeLower, 0.010, 0x241512);
   bodyPivot.add(robeLower);
 
@@ -352,7 +365,7 @@ function buildHeroCharacter(scene) {
     : new THREE.CylinderGeometry(0.28, 0.34, 0.84, 16);
   const torsoMesh = new THREE.Mesh(torsoGeo, mats.vest);
   torsoMesh.position.y = hasLathe ? 0.34 : 0.76;
-  torsoMesh.castShadow = true;
+  torsoMesh.castShadow = castHeroShadow;
   addHeroOutline(torsoMesh, 0.009, 0x241512);
   bodyPivot.add(torsoMesh);
 
@@ -389,10 +402,10 @@ function buildHeroCharacter(scene) {
     sh.position.set(sideSign * 0.37, 1.05, 0.02);
 
     const shCap = new THREE.Mesh(new THREE.SphereGeometry(0.106, 12, 10), mats.sleeves);
-    shCap.castShadow = true;
+    shCap.castShadow = castHeroShadow;
     const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.122, 0.32, 12), mats.sleeves);
     upper.position.y = -0.15;
-    upper.castShadow = true;
+    upper.castShadow = castHeroShadow;
     const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.120, 0.020, 8, 16), mats.trim);
     cuff.rotation.x = Math.PI * 0.5;
     cuff.position.y = -0.31;
@@ -402,7 +415,7 @@ function buildHeroCharacter(scene) {
     elb.position.y = -0.32;
     const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.070, 0.060, 0.25, 10), mats.tunic);
     fore.position.y = -0.12;
-    fore.castShadow = true;
+    fore.castShadow = castHeroShadow;
     const palm = new THREE.Mesh(new THREE.SphereGeometry(0.074, 10, 8), mats.skin);
     palm.scale.set(1.0, 0.85, 1.15);
     palm.position.y = -0.27;
@@ -477,7 +490,7 @@ function buildHeroCharacter(scene) {
     hasAnime ? stage3dAnime.createAnimeHeadGeometry(0.415) : new THREE.SphereGeometry(0.415, 28, 22),
     mats.skin
   );
-  headMesh.castShadow = true;
+  headMesh.castShadow = castHeroShadow;
   addHeroOutline(headMesh, 0.009, 0x3b211a);
   headOval.add(headMesh);
 
@@ -506,7 +519,7 @@ function buildHeroCharacter(scene) {
   const hairCrown = new THREE.Mesh(new THREE.SphereGeometry(0.445, 24, 18, 0, Math.PI * 2, 0, Math.PI * 0.56), mats.hair);
   hairCrown.position.set(0, 0.08, -0.02);
   hairCrown.rotation.x = -0.24;
-  hairCrown.castShadow = true;
+  hairCrown.castShadow = castHeroShadow;
   addHeroOutline(hairCrown, 0.008, 0x211412);
   const hairBack = new THREE.Mesh(new THREE.SphereGeometry(0.438, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.76), mats.hair);
   hairBack.position.set(0, -0.04, -0.10);
@@ -710,13 +723,16 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
   } else if (act === "gasp_react") {
     targetYaw = Math.sin(t * 9) * 0.24;
     targetPitch = -0.12;
-  } else if (!isShowcase && state.match && state.match.started && state.activeSpeakerId && typeof stage3d !== "undefined" && stage3d.seats && stage3d.seats.anchors && stage3d.seats.anchors[state.activeSpeakerId]) {
-    const spPos = stage3d.seats.anchors[state.activeSpeakerId].worldPos;
-    let diffH = Math.atan2(spPos.x - hero.root.position.x, spPos.z - hero.root.position.z) - hero.root.rotation.y;
-    while (diffH > Math.PI) diffH -= Math.PI * 2;
-    while (diffH < -Math.PI) diffH += Math.PI * 2;
-    targetYaw = clamp(diffH * 0.85, -0.72, 0.72);
-    targetPitch = 0.08;
+  } else if (!isShowcase && state.match && state.match.started && typeof stage3d !== "undefined" && stage3d.seats && stage3d.seats.anchors) {
+    const heroFocusId = state.activeSpeakerId || ((f.p === "DAY_VOTE" && state.voteFlight && state.voteFlight.active && state.voteLeaderId) ? state.voteLeaderId : null);
+    if (heroFocusId && stage3d.seats.anchors[heroFocusId]) {
+      const spPos = stage3d.seats.anchors[heroFocusId].worldPos;
+      let diffH = Math.atan2(spPos.x - hero.root.position.x, spPos.z - hero.root.position.z) - hero.root.rotation.y;
+      while (diffH > Math.PI) diffH -= Math.PI * 2;
+      while (diffH < -Math.PI) diffH += Math.PI * 2;
+      targetYaw = clamp(diffH * 0.85, -0.72, 0.72);
+      targetPitch = 0.08;
+    }
   }
   hero.headYaw += (targetYaw - hero.headYaw) * d10;
   hero.headPitch += (targetPitch - hero.headPitch) * d10;

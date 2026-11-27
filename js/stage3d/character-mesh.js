@@ -196,8 +196,13 @@ const stage3dCharGeos = {
   }
 };
 
+function isLiteCharGpu() {
+  return Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
+}
+
 function makeAnimeToon(colorHex, opts) {
   const o = opts || {};
+  const liteGpu = isLiteCharGpu();
   if (typeof stage3dAnime !== "undefined" && typeof stage3dAnime.createAnimeMaterial === "function") {
     return stage3dAnime.createAnimeMaterial({
       color: colorHex,
@@ -208,14 +213,15 @@ function makeAnimeToon(colorHex, opts) {
       rimStrength: o.rimStrength !== undefined ? o.rimStrength : 0.16,
       shadowTint: o.shadowTint || 0xd6c6e8,
       shadowLift: o.shadowLift !== undefined ? o.shadowLift : 0.12,
-      bumpMap: o.bumpMap,
-      bumpScale: o.bumpScale
+      bumpMap: liteGpu ? undefined : o.bumpMap,
+      bumpScale: liteGpu ? undefined : o.bumpScale
     });
   }
   return new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.54, metalness: 0.06 });
 }
 
 function addOutline(mesh, width, colHex) {
+  if (isLiteCharGpu()) return;
   if (typeof stage3dAnime !== "undefined" && typeof stage3dAnime.addAnimeOutline === "function") {
     stage3dAnime.addAnimeOutline(mesh, width || 0.006, colHex || 0x3b241e);
   }
@@ -226,7 +232,7 @@ function makeHairRibbonMesh(pts, rBase, rTip, aspect, mat, outlineW) {
     ? stage3dAnime.createTaperedHairLockGeo(pts, rBase, rTip, aspect || 1.48, 11, 8)
     : new THREE.ConeGeometry(rBase || 0.06, 0.28, 6);
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.castShadow = true;
+  mesh.castShadow = !isLiteCharGpu();
   if (outlineW && outlineW > 0) addOutline(mesh, outlineW, 0x3b241e);
   return mesh;
 }
@@ -349,10 +355,11 @@ function build3DHairAndAccessories(headGroup, st, G, seatId) {
   const swayHairParts = [];
 
   // 1. Sculpted base skull crown & nape
+  const castSculptShadow = !isLiteCharGpu();
   const cap = new THREE.Mesh(G.hairCap, hairMat);
   cap.position.set(0, 0.08, -0.02);
   cap.rotation.x = -0.22;
-  cap.castShadow = true;
+  cap.castShadow = castSculptShadow;
   addOutline(cap, 0.008, 0x211412);
   headGroup.add(cap);
 
@@ -365,7 +372,7 @@ function build3DHairAndAccessories(headGroup, st, G, seatId) {
   const backHair = new THREE.Mesh(G.backHair, hairMat);
   backHair.position.set(0, isLong ? -0.10 : (isBob ? -0.05 : -0.01), -0.09);
   backHair.scale.set(1.03, isLong ? 1.38 : (isBob ? 1.15 : 0.94), 0.92);
-  backHair.castShadow = true;
+  backHair.castShadow = castSculptShadow;
   headGroup.add(backHair);
 
   // 2. Layered Asymmetric Sweeping Bangs (strictly arching over upper brow so eyes shine clearly!)
@@ -615,10 +622,11 @@ function build3DCharacterOutfit(figureGroup, st, robeMat, accentMat, G) {
   figureGroup.add(belt, buckle);
 
   // Flared coat / skirt lap draping gently DOWN onto chair cushion & thighs
+  const castOutfitShadow = !isLiteCharGpu();
   const lapSkirt = new THREE.Mesh(G.lapSkirt, robeMat);
   lapSkirt.position.set(0, 0.04, 0.04);
   lapSkirt.rotation.x = 0.10;
-  lapSkirt.castShadow = true;
+  lapSkirt.castShadow = castOutfitShadow;
   addOutline(lapSkirt, 0.009, 0x241512);
   figureGroup.add(lapSkirt);
 
@@ -694,17 +702,17 @@ function build3DCharacterOutfit(figureGroup, st, robeMat, accentMat, G) {
     const thigh = new THREE.Mesh(G.seatedThigh, pantMat);
     thigh.rotation.x = Math.PI * 0.46;
     thigh.position.set(lx, 0.01, 0.22);
-    thigh.castShadow = true;
+    thigh.castShadow = castOutfitShadow;
 
     const shin = new THREE.Mesh(G.seatedShin, pantMat);
     shin.rotation.x = -0.08;
     shin.position.set(lx, -0.30, 0.44);
-    shin.castShadow = true;
+    shin.castShadow = castOutfitShadow;
 
     const shoe = new THREE.Mesh(G.shoe, bootMat);
     shoe.scale.set(0.90, 0.56, 1.48);
     shoe.position.set(lx, -0.59, 0.48);
-    shoe.castShadow = true;
+    shoe.castShadow = castOutfitShadow;
     addOutline(shoe, 0.007, 0x1a110e);
 
     legsGroup.add(thigh, shin, shoe);
@@ -713,19 +721,20 @@ function build3DCharacterOutfit(figureGroup, st, robeMat, accentMat, G) {
 }
 
 function buildArticulatedArm(sideSign, robeMat, accentMat, skinMat, G, withVoteCard) {
+  const castArmShadow = !isLiteCharGpu();
   const shoulderPivot = new THREE.Group();
   shoulderPivot.position.set(sideSign * 0.36, 0.78, 0.02);
 
   if (G.shoulderCap) {
     const cap = new THREE.Mesh(G.shoulderCap, robeMat);
-    cap.castShadow = true;
+    cap.castShadow = castArmShadow;
     addOutline(cap, 0.007, 0x241512);
     shoulderPivot.add(cap);
   }
 
   const upper = new THREE.Mesh(G.upperArm, robeMat);
   upper.position.y = -0.14;
-  upper.castShadow = true;
+  upper.castShadow = castArmShadow;
   addOutline(upper, 0.008, 0x241512);
   shoulderPivot.add(upper);
 
@@ -741,7 +750,7 @@ function buildArticulatedArm(sideSign, robeMat, accentMat, skinMat, G, withVoteC
 
   const fore = new THREE.Mesh(G.forearm, robeMat);
   fore.position.y = -0.13;
-  fore.castShadow = true;
+  fore.castShadow = castArmShadow;
   addOutline(fore, 0.007, 0x241512);
 
   const hand = new THREE.Mesh(G.hand, skinMat);
@@ -774,9 +783,12 @@ const stage3dCharMats = {
     const sealTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createFogSealStripTexture === "function")
       ? stage3dTextures.createFogSealStripTexture()
       : null;
+    const liteMats = isLiteCharGpu();
     this.chairWood = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x482616, roughness: 0.36, metalness: 0.16 });
     this.chairGold = new THREE.MeshStandardMaterial({ color: 0xd4a657, roughness: 0.28, metalness: 0.78 });
-    this.cushion = new THREE.MeshStandardMaterial({ color: 0x52231c, bumpMap: fabric.bump, bumpScale: 0.022, roughness: 0.86, metalness: 0.04 });
+    this.cushion = new THREE.MeshStandardMaterial(liteMats
+      ? { color: 0x52231c, roughness: 0.86, metalness: 0.04 }
+      : { color: 0x52231c, bumpMap: fabric.bump, bumpScale: 0.022, roughness: 0.86, metalness: 0.04 });
     this.shadowDisc = new THREE.MeshBasicMaterial({ map: stage3dTextures.createContactShadowTexture(), transparent: true, opacity: 0.65, depthWrite: false });
     this.crown = new THREE.MeshStandardMaterial({ color: 0xf6d379, emissive: 0xd4942a, emissiveIntensity: 0.65, roughness: 0.22, metalness: 0.86 });
     this.crownJade = new THREE.MeshStandardMaterial({ color: 0x6ee7b7, emissive: 0x10b981, emissiveIntensity: 0.55, roughness: 0.20, metalness: 0.22 });
@@ -893,9 +905,10 @@ function create3DSeatActor(seat) {
     shadowLift: 0.16
   });
 
+  const castBodyShadow = !isLiteCharGpu();
   const torso = new THREE.Mesh(G.torso, robeMat);
   torso.position.y = hasLatheHelper() ? 0.0 : 0.45;
-  torso.castShadow = true;
+  torso.castShadow = castBodyShadow;
   addOutline(torso, 0.009, 0x241512);
   sculptBodyRoot.add(torso);
 
@@ -925,7 +938,7 @@ function create3DSeatActor(seat) {
   headOvalGroup.scale.set(1.0, 1.03, 0.96);
 
   const headSphere = new THREE.Mesh(G.headSphere, skinMat);
-  headSphere.castShadow = true;
+  headSphere.castShadow = castBodyShadow;
   addOutline(headSphere, 0.009, 0x3b211a);
   headOvalGroup.add(headSphere);
 

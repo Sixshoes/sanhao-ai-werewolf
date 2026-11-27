@@ -375,8 +375,11 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
   const hopePairIds = (state.match && state.match.hopeConfrontation && state.match.hopeConfrontation.active && Array.isArray(state.match.hopeConfrontation.pair))
     ? state.match.hopeConfrontation.pair
     : null;
-  const activeFocusSeatId = activeAccuseTargetId || activeVouchTargetId || activeCheckedTargetId || (hopePairIds ? hopePairIds[1] : null) || null;
-  const effectiveSpeakerId = state.activeSpeakerId || (hopePairIds ? hopePairIds[0] : null) || null;
+  const voteFlightTargetId = (p === "DAY_VOTE" && state.voteFlight && state.voteFlight.active && state.voteLeaderId)
+    ? state.voteLeaderId
+    : null;
+  const activeFocusSeatId = activeAccuseTargetId || activeVouchTargetId || activeCheckedTargetId || voteFlightTargetId || (hopePairIds ? hopePairIds[1] : null) || null;
+  const effectiveSpeakerId = state.activeSpeakerId || voteFlightTargetId || (hopePairIds ? hopePairIds[0] : null) || null;
   if (pool._lastGazeSpeakerId !== effectiveSpeakerId) {
     pool._prevGazeSpeakerId = pool._lastGazeSpeakerId || null;
     pool._lastGazeSpeakerId = effectiveSpeakerId;
@@ -529,7 +532,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       while (diff < -Math.PI) diff += Math.PI * 2;
       targetHeadYaw = clamp(diff, -0.95, 0.95);
       if (activeVouchTargetId) targetHeadPitch = -0.04 + Math.sin(t * 2.8) * 0.03;
-    } else if (!isSpeaking && effectiveSpeakerId && seatWorldMap[effectiveSpeakerId]) {
+    } else if (!isSpeaking && effectiveSpeakerId && effectiveSpeakerId !== s.id && seatWorldMap[effectiveSpeakerId]) {
       // Collective Gaze (全席視線齊聚): staggered ~0.3s delay + ~50% of table turning to mentioned seat!
       const seatGazeDelayMs = ((s.id * 97) % 320);
       const speakerReady = (nowMs - (pool._gazeSpeakerChangedAt || 0)) >= seatGazeDelayMs;
@@ -540,7 +543,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         mentionReady ? activeFocusSeatId : null,
         state.match ? state.match.day : 1
       ) || effectiveSpeakerId;
-      const lookSeatId = seatWorldMap[rawLookId] ? rawLookId : effectiveSpeakerId;
+      const lookSeatId = (seatWorldMap[rawLookId] && rawLookId !== s.id) ? rawLookId : effectiveSpeakerId;
       const sp = seatWorldMap[lookSeatId];
       let diff = Math.atan2(sp.x - pos.x, sp.z - pos.z) - baseFacingY;
       while (diff > Math.PI) diff -= Math.PI * 2;

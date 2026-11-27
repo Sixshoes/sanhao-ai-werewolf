@@ -260,7 +260,7 @@ window.onload = function () {
   bindEvents();
   renderTimeline({ deferIfHidden: true });
   updateAllUI();
-  resizeCanvas();
+  resizeCanvas(true);
   startAnimationLoop();
   try {
     if (typeof window !== "undefined" && window.location && window.location.search && typeof startJudgeShowcaseMatch === "function") {
