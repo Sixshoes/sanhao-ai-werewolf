@@ -49,20 +49,20 @@ const VRM_IDLE_ARCHETYPES = {
  * - 補齊阿松（高領登山摺疊圍巾＋傘繩手環）與小雲（採訪證斜背掛繩＋胸袋速寫本＋髮夾）原本為 null 的 3D 配件
  */
 const VRM_PERSONA_STYLING = Object.freeze({
-  "清茗": Object.freeze({ baseSlug: "qingming", hairHex: "#28242C", hairStr: 0.62, topsHex: "#447364", topsStr: 0.90, neckHex: "#D6B066", neckStr: 0.92, bottomsHex: "#2E353B", bottomsStr: 0.90, eyeHex: "#5C432C", vrmAcc: "tea_host" }),
-  "主持": Object.freeze({ baseSlug: "qingming", hairHex: "#28242C", hairStr: 0.62, topsHex: "#447364", topsStr: 0.90, neckHex: "#D6B066", neckStr: 0.92, bottomsHex: "#2E353B", bottomsStr: 0.90, eyeHex: "#5C432C", vrmAcc: "tea_host" }),
-  "你": Object.freeze({ hairHex: "#2c221d", hairStr: 0.42, topsHex: "#466a61", topsStr: 0.84, neckHex: "#dbc292", neckStr: 0.88, bottomsHex: "#2b313a", bottomsStr: 0.88, eyeHex: "#443428", vrmAcc: null }),
-  "小澄": Object.freeze({ baseSlug: "chenchen", hairHex: "#1E2738", hairStr: 0.88, topsHex: "#2E5378", topsStr: 0.84, neckHex: "#EDE6D8", neckStr: 0.82, bottomsHex: "#232A36", bottomsStr: 0.84, eyeHex: "#24354D", vrmAcc: "glasses" }),
-  "暖暖": Object.freeze({ baseSlug: "nuannuan", hairHex: "#623D26", hairStr: 0.48, topsHex: "#C78D42", topsStr: 0.78, neckHex: "#F3E6CC", neckStr: 0.80, bottomsHex: "#382C24", bottomsStr: 0.84, eyeHex: "#523220", vrmAcc: "ribbon" }),
-  "阿松": Object.freeze({ baseSlug: "asong", hairHex: "#5F6872", hairStr: 0.72, topsHex: "#2B5B45", topsStr: 0.78, neckHex: "#82AB95", neckStr: 0.80, bottomsHex: "#262C28", bottomsStr: 0.84, eyeHex: "#30261D", vrmAcc: "hiking_scarf" }),
-  "星兒": Object.freeze({ baseSlug: "xinger", hairHex: "#5E417A", hairStr: 0.90, topsHex: "#7B5894", topsStr: 0.86, neckHex: "#E0BE72", neckStr: 0.84, bottomsHex: "#2B2533", bottomsStr: 0.86, eyeHex: "#553B75", vrmAcc: "star_clip" }),
-  "小雲": Object.freeze({ baseSlug: "xiaoyun", hairHex: "#2F1D29", hairStr: 0.72, topsHex: "#2B2E36", topsStr: 0.76, neckHex: "#8F3245", neckStr: 0.84, bottomsHex: "#24262E", bottomsStr: 0.88, eyeHex: "#422130", vrmAcc: "press_kit" }),
-  "阿竹": Object.freeze({ baseSlug: "azhu", hairHex: "#23292B", hairStr: 0.86, topsHex: "#36635C", topsStr: 0.80, neckHex: "#232A30", neckStr: 0.82, bottomsHex: "#222929", bottomsStr: 0.86, eyeHex: "#283635", vrmAcc: "jade_pendant" }),
-  "晨晨": Object.freeze({ baseSlug: "player_male", hairHex: "#593824", hairStr: 0.78, topsHex: "#C95A2B", topsStr: 0.84, neckHex: "#F2ECE1", neckStr: 0.82, bottomsHex: "#2B2623", bottomsStr: 0.84, eyeHex: "#42281A", vrmAcc: "headband" }),
-  "墨白": Object.freeze({ baseSlug: "chenchen", hairHex: "#171B24", hairStr: 0.88, topsHex: "#2C3A54", topsStr: 0.86, neckHex: "#ECE2D0", neckStr: 0.82, bottomsHex: "#1F2430", bottomsStr: 0.88, eyeHex: "#242C47", vrmAcc: "ink_scroll" }),
-  "晴嵐": Object.freeze({ baseSlug: "player", hairHex: "#4D3124", hairStr: 0.76, topsHex: "#C98C94", topsStr: 0.84, neckHex: "#F4ECE4", neckStr: 0.82, bottomsHex: "#332A2E", bottomsStr: 0.86, eyeHex: "#593524", vrmAcc: "jade_hairpin" }),
-  "阿朗": Object.freeze({ baseSlug: "azhu", hairHex: "#3A261B", hairStr: 0.78, topsHex: "#A67B42", topsStr: 0.84, neckHex: "#F0EEE8", neckStr: 0.84, bottomsHex: "#292520", bottomsStr: 0.86, eyeHex: "#7A511E", vrmAcc: "gavel_brooch" }),
-  "柚子": Object.freeze({ baseSlug: "xiaocheng", hairHex: "#9C6630", hairStr: 0.78, topsHex: "#7E9B56", topsStr: 0.84, neckHex: "#F7F1E3", neckStr: 0.82, bottomsHex: "#2E3326", bottomsStr: 0.86, eyeHex: "#4F642C", vrmAcc: "yuzu_clip" })
+  "清茗": Object.freeze({ baseSlug: "qingming", bakedNative: true, hairHex: "#28242C", hairStr: 0.62, topsHex: "#447364", topsStr: 0.90, neckHex: "#D6B066", neckStr: 0.92, bottomsHex: "#2E353B", bottomsStr: 0.90, eyeHex: "#7B5028", vrmAcc: "tea_host" }),
+  "主持": Object.freeze({ baseSlug: "qingming", bakedNative: true, hairHex: "#28242C", hairStr: 0.62, topsHex: "#447364", topsStr: 0.90, neckHex: "#D6B066", neckStr: 0.92, bottomsHex: "#2E353B", bottomsStr: 0.90, eyeHex: "#7B5028", vrmAcc: "tea_host" }),
+  "你": Object.freeze({ bakedNative: true, hairHex: "#4E3426", hairStr: 0.42, topsHex: "#3E5F56", topsStr: 0.84, neckHex: "#DBC292", neckStr: 0.88, bottomsHex: "#2B313A", bottomsStr: 0.88, eyeHex: "#8C6232", vrmAcc: null }),
+  "小澄": Object.freeze({ baseSlug: "xiaocheng", bakedNative: true, hairHex: "#1E2738", hairStr: 0.88, topsHex: "#2E5378", topsStr: 0.84, neckHex: "#F0EBE0", neckStr: 0.82, bottomsHex: "#232A36", bottomsStr: 0.84, eyeHex: "#3E638A", vrmAcc: "glasses" }),
+  "暖暖": Object.freeze({ baseSlug: "nuannuan", bakedNative: true, hairHex: "#6E4930", hairStr: 0.48, topsHex: "#C78D42", topsStr: 0.78, neckHex: "#F5EBD6", neckStr: 0.80, bottomsHex: "#382C24", bottomsStr: 0.84, eyeHex: "#4A7562", vrmAcc: "ribbon" }),
+  "阿松": Object.freeze({ baseSlug: "asong", bakedNative: true, hairHex: "#2C3136", hairStr: 0.72, topsHex: "#2B5B45", topsStr: 0.78, neckHex: "#6D8E78", neckStr: 0.80, bottomsHex: "#262C28", bottomsStr: 0.84, eyeHex: "#684528", vrmAcc: "hiking_scarf" }),
+  "星兒": Object.freeze({ baseSlug: "xinger", bakedNative: true, hairHex: "#6B4A8C", hairStr: 0.90, topsHex: "#7B5894", topsStr: 0.86, neckHex: "#E5C77B", neckStr: 0.84, bottomsHex: "#2B2533", bottomsStr: 0.86, eyeHex: "#6B5BA8", vrmAcc: "star_clip" }),
+  "小雲": Object.freeze({ baseSlug: "xiaoyun", bakedNative: true, hairHex: "#2F1D29", hairStr: 0.72, topsHex: "#2B2E36", topsStr: 0.76, neckHex: "#8F3245", neckStr: 0.84, bottomsHex: "#24262E", bottomsStr: 0.88, eyeHex: "#9A662E", vrmAcc: "press_kit" }),
+  "阿竹": Object.freeze({ baseSlug: "azhu", bakedNative: true, hairHex: "#23292B", hairStr: 0.86, topsHex: "#36635C", topsStr: 0.80, neckHex: "#20272C", neckStr: 0.82, bottomsHex: "#222929", bottomsStr: 0.86, eyeHex: "#3E665F", vrmAcc: "jade_pendant" }),
+  "晨晨": Object.freeze({ baseSlug: "chenchen", bakedNative: true, hairHex: "#5E3B24", hairStr: 0.78, topsHex: "#C95A2B", topsStr: 0.84, neckHex: "#F4EFE6", neckStr: 0.82, bottomsHex: "#2B2623", bottomsStr: 0.84, eyeHex: "#8A5424", vrmAcc: "headband" }),
+  "墨白": Object.freeze({ baseSlug: "mobai", bakedNative: true, hairHex: "#171B24", hairStr: 0.88, topsHex: "#2C3A54", topsStr: 0.86, neckHex: "#F0E8D9", neckStr: 0.82, bottomsHex: "#1F2430", bottomsStr: 0.88, eyeHex: "#344668", vrmAcc: "ink_scroll" }),
+  "晴嵐": Object.freeze({ baseSlug: "qinglan", bakedNative: true, hairHex: "#4D3124", hairStr: 0.76, topsHex: "#C98C94", topsStr: 0.84, neckHex: "#F4ECE4", neckStr: 0.82, bottomsHex: "#332A2E", bottomsStr: 0.86, eyeHex: "#6A422C", vrmAcc: "jade_hairpin" }),
+  "阿朗": Object.freeze({ baseSlug: "alang", bakedNative: true, hairHex: "#3A261B", hairStr: 0.78, topsHex: "#A67B42", topsStr: 0.84, neckHex: "#2D221B", neckStr: 0.84, bottomsHex: "#292520", bottomsStr: 0.86, eyeHex: "#9A6826", vrmAcc: "gavel_brooch" }),
+  "柚子": Object.freeze({ baseSlug: "youzi", bakedNative: true, hairHex: "#A46C32", hairStr: 0.78, topsHex: "#7E9B56", topsStr: 0.84, neckHex: "#F7F1E3", neckStr: 0.82, bottomsHex: "#2E3326", bottomsStr: 0.86, eyeHex: "#5E8A32", vrmAcc: "yuzu_clip" })
 });
 
 const HERO_VRM_PALETTES = Object.freeze({
@@ -577,12 +577,90 @@ const stage3dVrm = {
   },
 
   attachVrmPersonaAccessories: function (bones, personaName, isVrm0) {
-    // Track 2 Overhaul: Strip un-outlined plastic primitive geometry accessories
-    // so native VRM anime silhouettes render cleanly without extra materials or draw calls.
-    // VRM_PERSONA_STYLING metadata stays intact for persona palette styling & smoke checks.
-    void bones;
-    void personaName;
-    void isVrm0;
+    // Slim cel-shaded anime signature accents ONLY (sleek metallic silver glasses for 小澄,
+    // contoured sunset-orange cloth headband for 晨晨) — ZERO blobby spheres or plastic boxes!
+    if (!bones || !bones.head || !personaName || typeof THREE === "undefined" || typeof THREE.Group !== "function") {
+      return null;
+    }
+    const style = VRM_PERSONA_STYLING[personaName];
+    if (!style || !style.vrmAcc) return null;
+    const zSign = isVrm0 ? -1 : 1;
+    const gradMap = (typeof stage3dAnime !== "undefined" && typeof stage3dAnime.getToonGradientMap === "function")
+      ? stage3dAnime.getToonGradientMap()
+      : null;
+    const makeToon = function (hex, opts) {
+      const o = opts || {};
+      if (typeof THREE.MeshToonMaterial === "function") {
+        const m = new THREE.MeshToonMaterial({
+          color: hex,
+          gradientMap: gradMap,
+          transparent: Boolean(o.transparent),
+          opacity: o.opacity !== undefined ? o.opacity : 1.0,
+          side: o.doubleSide ? THREE.DoubleSide : THREE.FrontSide
+        });
+        return m;
+      }
+      return new THREE.MeshBasicMaterial({
+        color: hex,
+        transparent: Boolean(o.transparent),
+        opacity: o.opacity !== undefined ? o.opacity : 1.0
+      });
+    };
+
+    if (style.vrmAcc === "glasses") {
+      const g = new THREE.Group();
+      g.name = "vrm_acc_glasses";
+      const frameMat = makeToon(0x475569);
+      const lensMat = makeToon(0xdcebf7, { transparent: true, opacity: 0.18, doubleSide: true });
+      const ey = 0.092;
+      const ez = 0.118 * zSign;
+      const t = 0.0042;
+      const rw = 0.044;
+      const rh = 0.024;
+      const makeRectRim = function (cx) {
+        const rim = new THREE.Group();
+        const top = new THREE.Mesh(new THREE.BoxGeometry(rw, t, t), frameMat);
+        top.position.set(cx, ey + rh * 0.5, ez);
+        const bot = new THREE.Mesh(new THREE.BoxGeometry(rw, t, t), frameMat);
+        bot.position.set(cx, ey - rh * 0.5, ez);
+        const inn = new THREE.Mesh(new THREE.BoxGeometry(t, rh + t, t), frameMat);
+        inn.position.set(cx - (cx > 0 ? rw * 0.5 : -rw * 0.5), ey, ez);
+        const out = new THREE.Mesh(new THREE.BoxGeometry(t, rh + t, t), frameMat);
+        out.position.set(cx + (cx > 0 ? rw * 0.5 : -rw * 0.5), ey, ez);
+        const lens = new THREE.Mesh(new THREE.PlaneGeometry(rw - t, rh - t), lensMat);
+        lens.position.set(cx, ey, ez);
+        if (isVrm0) lens.rotation.y = Math.PI;
+        rim.add(top, bot, inn, out, lens);
+        return rim;
+      };
+      g.add(makeRectRim(-0.032), makeRectRim(0.032));
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.022, t, t), frameMat);
+      bridge.position.set(0, ey + 0.004, ez);
+      g.add(bridge);
+      // Slim temple arms tucking cleanly to the sides of the head
+      [-1, 1].forEach(function (side) {
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(t, t, 0.105), frameMat);
+        arm.position.set(side * 0.056, ey + 0.004, ez - 0.052 * zSign);
+        arm.rotation.y = side * 0.08 * zSign;
+        g.add(arm);
+      });
+      bones.head.add(g);
+      return { group: g, accMats: { frameMat: frameMat, lensMat: lensMat } };
+    }
+
+    if (style.vrmAcc === "headband") {
+      const g = new THREE.Group();
+      g.name = "vrm_acc_headband";
+      const bandMat = makeToon(0xe66a24, { doubleSide: true });
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.114, 0.112, 0.026, 28, 1, true), bandMat);
+      band.position.set(0, 0.142, 0.004 * zSign);
+      band.scale.set(0.96, 1.0, 1.04);
+      band.rotation.x = -0.18 * zSign;
+      g.add(band);
+      bones.head.add(g);
+      return { group: g, accMats: { bandMat: bandMat } };
+    }
+
     return null;
   },
 
@@ -1282,8 +1360,9 @@ const stage3dVrm = {
             mapRecolored = true;
           }
 
-          // Track 2 Gradient-Preserving Recolor (keeps hair strands & highlights alive; NEVER flattens iris/eye/face textures!)
-          if (personaStyling && !isOutline && m.map && !isIrisMat && !isFaceMat) {
+          // Baked native VRMs already carry custom-painted multi-tone UV textures (Face, Iris, Hair, Outfit);
+          // only run runtime pixel recolor for non-baked fallback models!
+          if (personaStyling && !personaStyling.bakedNative && !isOutline && m.map && !isIrisMat && !isFaceMat) {
             if (isHairMat && personaStyling.hairHex) {
               ensureClonedMat();
               m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.hairHex, personaStyling.hairStr || 0.72, avatarTexCache, { isHair: true, maxDim: texCfg.maxDim, anisotropy: texCfg.anisotropy });

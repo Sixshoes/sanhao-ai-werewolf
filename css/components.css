@@ -20373,3 +20373,15 @@ body.craft-ui #judgeShowcaseGuideBanner .judge-guide-step.is-active::after {
 
 
 
+
+/* v25.4 Showcase studio header & bottom dock legibility */
+body.craft-ui #heroShowcaseOverlay #showcasePersonaBio {
+  color: #f4ece0;
+}
+body.craft-ui #heroShowcaseOverlay #heroShowcaseSub {
+  color: #ded2be;
+}
+body.craft-ui #heroShowcaseOverlay #showcaseTargetCounter,
+body.craft-ui #heroShowcaseOverlay .showcase-more-drawer > summary {
+  color: #36281c;
+}

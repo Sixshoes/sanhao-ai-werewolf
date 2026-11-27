@@ -73,6 +73,10 @@ const requiredAssets = [
   "assets/portraits_vrm/xiaoyun.jpg",
   "assets/portraits_vrm/azhu.jpg",
   "assets/portraits_vrm/chenchen.jpg",
+  "assets/portraits_vrm/mobai.jpg",
+  "assets/portraits_vrm/qinglan.jpg",
+  "assets/portraits_vrm/alang.jpg",
+  "assets/portraits_vrm/youzi.jpg",
   "assets/models/qingming.vrm",
   "assets/models/player.vrm",
   "assets/models/player_male.vrm",
@@ -83,6 +87,10 @@ const requiredAssets = [
   "assets/models/xiaoyun.vrm",
   "assets/models/azhu.vrm",
   "assets/models/chenchen.vrm",
+  "assets/models/mobai.vrm",
+  "assets/models/qinglan.vrm",
+  "assets/models/alang.vrm",
+  "assets/models/youzi.vrm",
   "js/vendor/GLTFLoader.js",
   "js/vendor/postfx-r128.js",
 ];
@@ -98,10 +106,10 @@ for (const a of requiredAssets) {
   }
 }
 
-// 1b-2. Verify all 10 optimized .vrm models (primitive draw-call ceiling + Asong VRM 0.x identity) + real GLTFLoader.parse()
+// 1b-2. Verify all 14 optimized standalone .vrm models (primitive draw-call ceiling + Asong VRM 0.x identity) + real GLTFLoader.parse()
 {
   const vrmFiles = fs.readdirSync("assets/models").filter(f => f.endsWith(".vrm")).sort();
-  if (vrmFiles.length !== 10) throw new Error("Expected 10 .vrm models, found " + vrmFiles.length);
+  if (vrmFiles.length !== 14) throw new Error("Expected 14 .vrm models, found " + vrmFiles.length);
   let totalPrims = 0;
   for (const vf of vrmFiles) {
     const raw = fs.readFileSync(path.join("assets/models", vf));
@@ -127,7 +135,7 @@ for (const a of requiredAssets) {
       }
     }
   }
-  if (totalPrims >= 200) throw new Error("Total primitive count across 10 VRMs too high: " + totalPrims);
+  if (totalPrims >= 280) throw new Error("Total primitive count across 14 VRMs too high: " + totalPrims);
 
   const gltfCheckCtx = vm.createContext({
     window: {}, self: {}, navigator: { userAgent: "node" }, performance, TextDecoder, URL, Blob,
@@ -3604,7 +3612,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   if (!manifest.heroModel || !fs.existsSync(path.join(ROOT, manifest.heroModel))) {
     throw new Error("Static manifest heroModel missing on disk: " + manifest.heroModel);
   }
-  for (const slug of ["player", "player_male", "xiaocheng", "nuannuan", "asong", "xinger", "xiaoyun", "azhu", "chenchen"]) {
+  for (const slug of ["player", "player_male", "xiaocheng", "nuannuan", "asong", "xinger", "xiaoyun", "azhu", "chenchen", "mobai", "qinglan", "alang", "youzi"]) {
     const rel = manifest.seatModels && manifest.seatModels[slug];
     if (!rel || !fs.existsSync(path.join(ROOT, rel))) {
       throw new Error("Static manifest seat model missing on disk for " + slug + ": " + rel);
@@ -3620,7 +3628,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
   const staticManifestOk = vm.runInContext(`(() => {
     const m = stage3d.getDefaultStaticAvatarManifest();
-    return Boolean(m && m.ok && m.heroModel === "assets/models/qingming.vrm" && m.seatModels && Object.keys(m.seatModels).length === 9);
+    return Boolean(m && m.ok && m.heroModel === "assets/models/qingming.vrm" && m.seatModels && Object.keys(m.seatModels).length === 13);
   })()`, ctx);
   if (!staticManifestOk) {
     throw new Error("stage3d.getDefaultStaticAvatarManifest() failed validation");
@@ -4248,9 +4256,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       const pUrl = VRM_PORTRAIT_ART_MAP[k];
       return typeof pUrl === "string" && pUrl.startsWith("assets/portraits_vrm/") && pUrl.endsWith(".jpg");
     });
-    const xiaochengFixed = stage3dVrm.resolveVrmRigSlug({ name: "小澄", id: 2 }) === "chenchen" &&
-      stage3dVrm.resolveVrmRigSlug({ name: "晨晨", id: 8 }) === "player_male" &&
-      stage3dVrm.resolveVrmRigSlug({ name: "柚子", id: 12 }) === "xiaocheng" &&
+    const xiaochengFixed = stage3dVrm.resolveVrmRigSlug({ name: "小澄", id: 2 }) === "xiaocheng" &&
+      stage3dVrm.resolveVrmRigSlug({ name: "晨晨", id: 8 }) === "chenchen" &&
+      stage3dVrm.resolveVrmRigSlug({ name: "柚子", id: 12 }) === "youzi" &&
+      VRM_PERSONA_STYLING["小澄"].bakedNative === true &&
       VRM_PERSONA_STYLING["小澄"].vrmAcc === "glasses" &&
       VRM_PORTRAIT_ART_MAP["小澄"] === "assets/portraits_vrm/xiaocheng.jpg" &&
       all14VrmPortraitsOk;
@@ -6568,7 +6577,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     }) &&
       VRM_PERSONA_STYLING["阿松"].vrmAcc === "hiking_scarf" &&
       VRM_PERSONA_STYLING["小雲"].vrmAcc === "press_kit" &&
-      VRM_PERSONA_STYLING["晴嵐"].baseSlug === "player";
+      VRM_PERSONA_STYLING["晴嵐"].baseSlug === "qinglan";
 
     const idleArchetypes11Ok = AI_PERSONAS.every(function (p) {
       const ar = VRM_IDLE_ARCHETYPES[p.name];

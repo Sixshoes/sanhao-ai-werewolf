@@ -1522,7 +1522,11 @@ const stage3d = {
         xinger: "assets/models/xinger.vrm",
         xiaoyun: "assets/models/xiaoyun.vrm",
         azhu: "assets/models/azhu.vrm",
-        chenchen: "assets/models/chenchen.vrm"
+        chenchen: "assets/models/chenchen.vrm",
+        mobai: "assets/models/mobai.vrm",
+        qinglan: "assets/models/qinglan.vrm",
+        alang: "assets/models/alang.vrm",
+        youzi: "assets/models/youzi.vrm"
       }
     };
   },
