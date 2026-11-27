@@ -330,7 +330,7 @@ function drawStageOverlays(ctx, f, coords, skipBeams) {
       const th = 18 * dpr;
       let tx = clamp(hNode.x - tw * 0.5, 6 * dpr, w - tw - 6 * dpr);
       let ty;
-      if (is3dOverlay && hNode.r >= 42 * dpr) {
+      if (skipBeams && hNode.r >= 42 * dpr) {
         // Close-up 3D speaker/seat: place beside shoulder cleanly off the character's face!
         tx = clamp(hNode.x + hNode.r * 0.72, 8 * dpr, w - tw - 8 * dpr);
         ty = clamp(hNode.y + hNode.r * 0.35, 58 * dpr, h - th - 12 * dpr);
@@ -724,11 +724,15 @@ function startAnimationLoop() {
       return;
     }
     lastDrawMs = lastDrawMs ? (now - Math.min(capMs, elapsed % capMs)) : now;
-    drawSanctuaryFrame(now);
-    startAnimationLoop._firstFrameDrawn = true;
-    const spPortrait = typeof el === "function" ? el("speakerPortraitCanvas") : null;
-    if (!spPortrait || (!spPortrait.classList.contains("hidden") && spPortrait.offsetParent !== null)) {
-      drawSpotlightPortrait(now);
+    try {
+      drawSanctuaryFrame(now);
+      startAnimationLoop._firstFrameDrawn = true;
+      const spPortrait = typeof el === "function" ? el("speakerPortraitCanvas") : null;
+      if (!spPortrait || (!spPortrait.classList.contains("hidden") && spPortrait.offsetParent !== null)) {
+        drawSpotlightPortrait(now);
+      }
+    } catch (e) {
+      if (typeof console !== "undefined" && console.error) console.error("[SanctuaryFrame]", e);
     }
     state.animFrame = requestAnimationFrame(frame);
   }
