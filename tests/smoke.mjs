@@ -10017,11 +10017,13 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const trackKeys = ["twilight", "night", "day", "sheriff", "vote", "matchpoint", "finale"];
     const scoreRangeOk = trackKeys.every(k => {
       const mv = MOVEMENTS[k];
-      if (!mv || mv.bpm > 108) return false;
+      if (!mv || mv.bpm < 54 || mv.bpm > 145) return false;
       if (!Array.isArray(mv.pads) || mv.pads.length !== 4) return false;
-      if (!mv.pads.every(bar => Array.isArray(bar) && bar.every(m => m >= 38))) return false;
+      if (!mv.pads.every(bar => Array.isArray(bar) && bar.length === 4 && bar.every(m => m >= 24))) return false;
+      if (!Array.isArray(mv.arps) || mv.arps.length !== 4 || !mv.arps.every(bar => Array.isArray(bar) && bar.length === 8)) return false;
+      if (!Array.isArray(mv.bells) || mv.bells.length !== 4 || !mv.bells.every(bar => Array.isArray(bar) && bar.length === 8)) return false;
       if (!Array.isArray(mv.melody) || mv.melody.length !== 8) return false;
-      return mv.melody.every(bar => Array.isArray(bar) && bar.length === 8 && bar.every(m => m === null || (m >= 50 && m <= 78)));
+      return mv.melody.every(bar => Array.isArray(bar) && bar.length === 8);
     });
 
     const mkParam = (v) => ({ value: v || 0, setValueAtTime(){}, linearRampToValueAtTime(){}, exponentialRampToValueAtTime(){}, setTargetAtTime(){} });
@@ -11272,22 +11274,15 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const scriptHeaderSyncOk = docScriptV2552.split(/\r?\n/)[0].includes("v25.5.3") && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(docScriptV2552);
 
   const v2552AudioRes = await vm.runInContext(`(async () => {
-    const scoreKeys = ["twilight", "night", "day", "vote"];
-    const expectedBpms = { twilight: 72, night: 58, day: 82, vote: 96 };
-    const expectedStep0 = { twilight: 69, night: 78, day: 66, vote: 71 };
-    const movementsScoreOk = scoreKeys.every((k) => {
-      const mv = MOVEMENTS[k];
-      return mv && mv.bpm === expectedBpms[k]
-        && Array.isArray(mv.pads) && mv.pads.length === 4
-        && mv.pads.every((b) => Array.isArray(b) && b.length === 4 && b.every((m) => m >= 38))
-        && Array.isArray(mv.melody) && mv.melody.length === 8
-        && mv.melody[0][0] === expectedStep0[k]
-        && mv.melody.every((b) => Array.isArray(b) && b.length === 8 && b.every((m) => m === null || (m >= 50 && m <= 78)));
-    });
-    const noVoteOrNightClashOk = !["pads", "arps", "bells", "melody"].some((part) =>
-      MOVEMENTS.vote[part].some((bar) => Array.isArray(bar) && bar.some((n) => n === 58 || n === 70))
-    ) && !MOVEMENTS.night.bells.some((bar) => Array.isArray(bar) && bar.some((n) => n === 70))
-      && MOVEMENTS.night.bells[3][6] === 73;
+    const classicMovementsRestoredOk = Boolean(
+      MOVEMENTS.twilight && MOVEMENTS.twilight.bpm === 76 && MOVEMENTS.twilight.arps[0][0] === 62 && MOVEMENTS.twilight.bells[0][0] === 81 && MOVEMENTS.twilight.chordsLabel === "Dadd9 — Bm11 — Gmaj9 — Asus4" &&
+      MOVEMENTS.night && MOVEMENTS.night.bpm === 62 && MOVEMENTS.night.pads[0][0] === 35 && MOVEMENTS.night.bells[3][6] === 70 &&
+      MOVEMENTS.day && MOVEMENTS.day.bpm === 96 && MOVEMENTS.day.arps[0][0] === 55 &&
+      MOVEMENTS.sheriff && MOVEMENTS.sheriff.bpm === 104 && MOVEMENTS.sheriff.drums[0] === 1 && MOVEMENTS.sheriff.drums[2] === 3 &&
+      MOVEMENTS.vote && MOVEMENTS.vote.bpm === 116 && MOVEMENTS.vote.bells[3][3] === 70 &&
+      MOVEMENTS.matchpoint && MOVEMENTS.matchpoint.bpm === 138 && MOVEMENTS.matchpoint.drums[0] === 1 && MOVEMENTS.matchpoint.drums[1] === 3 &&
+      MOVEMENTS.finale && MOVEMENTS.finale.bpm === 80 && MOVEMENTS.finale.chordsLabel === "Dmaj9 — Gmaj9 — Em9 — Asus4"
+    );
 
     const origAudioCtx = window.AudioContext;
     const origWebkitCtx = window.webkitAudioContext;
@@ -11306,6 +11301,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       bgmVocalCarve: sound.bgmVocalCarve,
       bgmConsonantCarve: sound.bgmConsonantCarve,
       ambientGain: sound.ambientGain,
+      ambientEnabled: sound.ambientEnabled,
       sfxGain: sound.sfxGain,
       reverb: sound.reverb,
       _bgmRevSend: sound._bgmRevSend,
@@ -11341,13 +11337,13 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       _breathNoiseBuf: sound._breathNoiseBuf
     };
 
-    const origGuzhengLead = sound.voiceGuzhengLead;
     const origVoiceLead = sound.voiceLead;
     const origVoicePluck = sound.voicePluck;
+    const origVoicePad = sound.voicePad;
     const origVoiceBell = sound.voiceBell;
 
     let deferredUnlockOk = false;
-    let abSectionTimbreOk = false;
+    let classicFirstVerPlaybackOk = false;
 
     try {
       const timers = [];
@@ -11366,9 +11362,6 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       voice.unlock = function () {};
 
       const bgmRampSecs = [];
-      const createdOscs = [];
-      const createdFilters = [];
-      const createdBufSources = [];
       let resolveResume = null;
       const gainList = [];
 
@@ -11406,21 +11399,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
           gainList.push(g);
           return g;
         },
-        createBiquadFilter: () => {
-          const f = { type: "lowpass", frequency: mkAudioParam(1000), Q: mkAudioParam(1), gain: mkAudioParam(0), connect() {}, disconnect() {} };
-          createdFilters.push(f);
-          return f;
-        },
-        createOscillator: () => {
-          const o = { type: "sine", frequency: mkAudioParam(440), detune: mkAudioParam(0), connect() {}, disconnect() {}, start() {}, stop() {}, onended: null };
-          createdOscs.push(o);
-          return o;
-        },
-        createBufferSource: () => {
-          const s = { buffer: null, loop: false, startedAt: null, stoppedAt: null, connect() {}, disconnect() {}, start(t) { s.startedAt = t; }, stop(t) { s.stoppedAt = t; }, onended: null };
-          createdBufSources.push(s);
-          return s;
-        },
+        createBiquadFilter: () => ({ type: "lowpass", frequency: mkAudioParam(1000), Q: mkAudioParam(1), gain: mkAudioParam(0), connect() {}, disconnect() {} }),
+        createOscillator: () => ({ type: "sine", frequency: mkAudioParam(440), detune: mkAudioParam(0), connect() {}, disconnect() {}, start() {}, stop() {}, onended: null }),
+        createBufferSource: () => ({ buffer: null, loop: false, connect() {}, disconnect() {}, start() {}, stop() {}, onended: null }),
         createStereoPanner: () => ({ pan: mkAudioParam(0), connect() {}, disconnect() {} }),
         createConvolver: () => ({ buffer: null, connect() {}, disconnect() {} })
       };
@@ -11429,17 +11410,17 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       window.AudioContext = MockCtor;
       window.webkitAudioContext = MockCtor;
 
-      const guzCalls = [];
       const leadCalls = [];
+      const padCalls = [];
       const pluckCalls = [];
       const bellCalls = [];
-      sound.voiceGuzhengLead = function (melMidi, t, dur, vel, step, isBarZeroOpen) {
-        guzCalls.push({ melMidi, step, isBarZeroOpen });
-        return origGuzhengLead.apply(this, arguments);
-      };
-      sound.voiceLead = function (freq, nextFreq, t, dur, vel) {
-        leadCalls.push({ freq, nextFreq, dur, oscStart: createdOscs.length, filtStart: createdFilters.length, bufStart: createdBufSources.length });
+      sound.voiceLead = function () {
+        leadCalls.push(arguments);
         return origVoiceLead.apply(this, arguments);
+      };
+      sound.voicePad = function (midis, t, dur, vel) {
+        padCalls.push({ midis, t, dur, vel });
+        return origVoicePad.apply(this, arguments);
       };
       sound.voicePluck = function (freq, t, dur, vel, stepOpt, destNode) {
         pluckCalls.push({ freq, t, vel, stepOpt });
@@ -11467,9 +11448,11 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       sound.barIdx = 0;
       sound.stepIdx = 0;
 
+      const defaultAmbientOffOk = snap.ambientEnabled === false;
       sound.unlock();
       const waitedBeforeResume = sound.seqTimer === null;
       const deferredReverbInitiallyNull = sound.reverb === null && timers.some((t) => t.ms === 120);
+      const noMuffleFiltersOk = sound.bgmWarmLow === null && sound.bgmAirTame === null;
       const breathBufShortOk = Boolean(sound._breathNoiseBuf && sound._breathNoiseBuf.length === Math.max(256, Math.floor(44100 * 0.8)));
 
       resolveResume();
@@ -11477,34 +11460,41 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       await Promise.resolve();
 
       const resumedStartedSeqOk = sound.seqTimer !== null && bgmRampSecs.includes(0.06);
-      const aSectionBrushOk = guzCalls.length === 1 && guzCalls[0].melMidi === 69 && guzCalls[0].isBarZeroOpen === true
-        && pluckCalls.length >= 3 && bellCalls.some((b) => Math.abs(b.freq - 880) < 2);
 
-      // Flush deferred 120ms Hall Reverb initialization timer
+      // Flush deferred 120ms Hall Reverb initialization timer (original lush 2.1s hall)
       const revTimer = timers.find((t) => t.ms === 120);
       if (revTimer) revTimer.fn();
-      const reverbLoadedAfterDelayOk = Boolean(sound.reverb && sound.reverb.buffer);
+      const reverbLoadedAfterDelayOk = Boolean(
+        sound.reverb && sound.reverb.buffer && sound.reverb.buffer.length === Math.max(512, Math.floor(44100 * 2.1))
+      );
 
-      deferredUnlockOk = Boolean(waitedBeforeResume && deferredReverbInitiallyNull && breathBufShortOk && resumedStartedSeqOk && reverbLoadedAfterDelayOk);
+      deferredUnlockOk = Boolean(
+        defaultAmbientOffOk &&
+        waitedBeforeResume &&
+        deferredReverbInitiallyNull &&
+        noMuffleFiltersOk &&
+        breathBufShortOk &&
+        resumedStartedSeqOk &&
+        reverbLoadedAfterDelayOk
+      );
 
-      // Test B-section (barIdx = 4, stepIdx = 0) Bamboo Xiao/Dizi triangle woodwind + 45ms Breath Chiff onset
-      guzCalls.length = 0;
-      leadCalls.length = 0;
+      // Verify step 0 playback AND B-section barIdx = 4 both play original pad+pluck+bell with ZERO voiceLead solo
+      const bar0ClassicOk = padCalls.length === 1 &&
+        pluckCalls.some((p) => Math.abs(p.freq - 440 * Math.pow(2, (62 - 69) / 12)) < 0.5 && Math.abs(p.vel - 0.16) < 0.005) &&
+        bellCalls.some((b) => Math.abs(b.freq - 880) < 0.5 && Math.abs(b.vel - 0.065) < 0.005);
+
       sound.barIdx = 4;
       sound.stepIdx = 0;
-      sound.timbre = "zen";
       sound.tickStep(4.0);
-      const zenLeadCall = leadCalls[0];
-      const zenOsc1 = zenLeadCall ? createdOscs[zenLeadCall.oscStart] : null;
-      const zenFilt = zenLeadCall ? createdFilters[zenLeadCall.filtStart] : null;
-      const zenChiff = zenLeadCall ? createdBufSources[zenLeadCall.bufStart] : null;
-      const bSectionZenOk = Boolean(
-        guzCalls.length === 0 && leadCalls.length === 1
-        && zenOsc1 && zenOsc1.type === "triangle"
-        && zenFilt && zenFilt.type === "lowpass" && zenFilt.Q.value === 1.65
-        && zenChiff && zenChiff.loop === false && Math.abs((zenChiff.stoppedAt || 0) - 4.055) < 0.005
-      );
-      abSectionTimbreOk = Boolean(aSectionBrushOk && bSectionZenOk);
+      ["zen", "guqin", "folk", "cinema"].forEach((tMode) => {
+        sound.timbre = tMode;
+        sound.voicePad([50, 57, 64, 66], 4.0, 2.0, 0.09);
+        sound.voicePluck(293.66, 4.0, 0.9, 0.16, 0);
+        sound.voiceBell(880, 4.0, 1.4, 0.065);
+        sound.voiceDrum("deep", 4.0, 0.16);
+        sound.voiceDrum("wood", 4.0, 0.06);
+      });
+      classicFirstVerPlaybackOk = Boolean(bar0ClassicOk && padCalls.length >= 2 && leadCalls.length === 0);
     } finally {
       if (sound._reverbInitTimer) clearTimeout(sound._reverbInitTimer);
       if (sound.seqTimer) clearInterval(sound.seqTimer);
@@ -11515,14 +11505,14 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       setInterval = origSetInt;
       clearInterval = origClrInt;
       voice.unlock = origVoiceUnlock;
-      sound.voiceGuzhengLead = origGuzhengLead;
       sound.voiceLead = origVoiceLead;
       sound.voicePluck = origVoicePluck;
+      sound.voicePad = origVoicePad;
       sound.voiceBell = origVoiceBell;
       Object.assign(sound, snap);
     }
 
-    return { movementsScoreOk, noVoteOrNightClashOk, deferredUnlockOk, abSectionTimbreOk };
+    return { classicMovementsRestoredOk, deferredUnlockOk, classicFirstVerPlaybackOk };
   })()`, ctx);
 
   const all2552 = Object.assign(

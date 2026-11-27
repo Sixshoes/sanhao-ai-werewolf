@@ -33,7 +33,7 @@ const sound = {
   _breathNoiseBuf: null,
   _nextStepTime: 0,
   ambientGain: null,
-  ambientEnabled: true,
+  ambientEnabled: false,
   sfxGain: null,
   voiceBus: null,
   voiceHighPass: null,
@@ -83,18 +83,10 @@ const sound = {
 
         this.bgmGain = this.ctx.createGain();
         this.bgmGain.gain.value = 0.0001;
-        // Warm wood-body shelf + velvet high-cut to eliminate synthetic harshness
-        this.bgmWarmLow = this.ctx.createBiquadFilter();
-        this.bgmWarmLow.type = "lowshelf";
-        this.bgmWarmLow.frequency.value = 180;
-        this.bgmWarmLow.gain.value = 1.8;
+        this.bgmWarmLow = null;
+        this.bgmAirTame = null;
 
-        this.bgmAirTame = this.ctx.createBiquadFilter();
-        this.bgmAirTame.type = "lowpass";
-        this.bgmAirTame.frequency.value = 5200;
-        this.bgmAirTame.Q.value = 0.65;
-
-        // v18.0 + v24.4 Dual-Band Vocal-Carve Filters (1.25kHz body + 2.85kHz clarity dip replace flat muffling)
+        // v18.0 + v24.4 Dual-Band Vocal-Carve Filters (1.25kHz body + 2.85kHz clarity dip preserve clear music!)
         this.bgmVocalCarve = this.ctx.createBiquadFilter();
         this.bgmVocalCarve.type = "peaking";
         this.bgmVocalCarve.frequency.value = 1250;
@@ -112,24 +104,17 @@ const sound = {
 
         this.sfxGain = this.ctx.createGain();
         this.reverb = null;
-        const bgmRevHp = this.ctx.createBiquadFilter();
-        bgmRevHp.type = "highpass";
-        bgmRevHp.frequency.value = 260;
-        bgmRevHp.Q.value = 0.7;
         const bgmRevSend = this.ctx.createGain();
-        bgmRevSend.gain.value = 0.48;
+        bgmRevSend.gain.value = 0.85;
         const revReturn = this.ctx.createGain();
-        revReturn.gain.value = 0.42;
+        revReturn.gain.value = 0.38;
         this._bgmRevSend = bgmRevSend;
         this._revReturn = revReturn;
 
-        this.bgmGain.connect(this.bgmWarmLow);
-        this.bgmWarmLow.connect(this.bgmAirTame);
-        this.bgmAirTame.connect(this.bgmVocalCarve);
+        this.bgmGain.connect(this.bgmVocalCarve);
         this.bgmVocalCarve.connect(this.bgmConsonantCarve);
         this.bgmConsonantCarve.connect(this.comp);
-        this.bgmConsonantCarve.connect(bgmRevHp);
-        bgmRevHp.connect(bgmRevSend);
+        this.bgmConsonantCarve.connect(bgmRevSend);
         this.ambientGain.connect(this.comp);
         this.sfxGain.connect(this.comp);
         revReturn.connect(this.comp);
@@ -220,7 +205,7 @@ const sound = {
           selfReverb._reverbInitTimer = null;
           if (!selfReverb.ctx || selfReverb.ctx !== initCtx) return;
           try {
-            const hall = selfReverb.buildHallReverb(2.5);
+            const hall = selfReverb.buildHallReverb(2.1);
             selfReverb.reverb = hall;
             if (hall) {
               if (selfReverb._bgmRevSend) selfReverb._bgmRevSend.connect(hall);
@@ -542,37 +527,18 @@ const sound = {
   buildHallReverb: function (seconds) {
     const conv = this.ctx.createConvolver();
     const rate = this.ctx.sampleRate || 44100;
-    const dur = seconds || 2.5;
+    const dur = seconds || 2.1;
     const length = Math.max(512, Math.floor(rate * dur));
-    const preDelaySamples = Math.floor(rate * 0.022);
     const impulse = this.ctx.createBuffer(2, length, rate);
-    const woodTaps = [
-      [11, 0.24, 0.16],
-      [19, 0.15, 0.22],
-      [29, 0.18, 0.12],
-      [41, 0.10, 0.15],
-      [57, 0.08, 0.09]
-    ];
     for (let ch = 0; ch < 2; ch++) {
       const buf = impulse.getChannelData(ch);
       let lp = 0;
-      for (let i = preDelaySamples; i < length; i++) {
-        const t = (i - preDelaySamples) / Math.max(1, length - preDelaySamples);
-        const env = Math.pow(1 - t, 2.8) * Math.min(1, (i - preDelaySamples) / (rate * 0.018));
-        const white = (Math.random() * 2 - 1) * env * 0.36;
-        // Progressive high-frequency air absorption for warm mountain pavilion hall
-        const damp = 0.62 + 0.28 * t;
-        lp = lp * damp + white * (1 - damp);
+      for (let i = 0; i < length; i++) {
+        const t = i / length;
+        const env = Math.pow(1 - t, 2.6);
+        const white = (Math.random() * 2 - 1) * env * 0.45;
+        lp = lp * 0.72 + white * 0.28;
         buf[i] = lp;
-      }
-      for (let k = 0; k < woodTaps.length; k++) {
-        const idx = preDelaySamples + Math.floor((woodTaps[k][0] / 1000) * rate) + (ch * 7);
-        if (idx > 1 && idx + 2 < length) {
-          const tapAmp = woodTaps[k][ch + 1] * 0.28;
-          buf[idx - 1] += tapAmp * 0.25;
-          buf[idx] += tapAmp * 0.55;
-          buf[idx + 1] += tapAmp * 0.20;
-        }
       }
     }
     conv.buffer = impulse;
@@ -950,78 +916,44 @@ const sound = {
     const effBpm = this.getEffectiveBpm(this.currentTrack);
     const now = (typeof scheduledTime === "number" && scheduledTime > 0) ? scheduledTime : (this.ctx.currentTime + 0.02);
     const bar = this.barIdx % 4;
-    const melBar = this.barIdx % 8;
     const step = this.stepIdx % 8;
     const stepDur = (60 / effBpm) * 0.5;
     const deadTension = this.getCasualtyTensionCount();
-    const speechDuckScale = this.voiceDucking ? 0.28 : 1.0;
 
-    // 1. Warm sustained Pad Chord & procedural sanctuary soundscape on step 0 of every bar
+    // 1. Trigger warm extended Pad Chord on step 0 of every bar (+ deeper low bass layers per casualty)
     if (step === 0 && mv.pads[bar]) {
-      const padVol = this.currentTrack === "night" ? 0.078 : 0.068;
-      this.voicePad(mv.pads[bar], now, stepDur * 8.4, padVol);
+      this.voicePad(mv.pads[bar], now, stepDur * 7.8, this.currentTrack === "night" ? 0.11 : 0.09);
       if (deadTension >= 1 && this.currentTrack !== "twilight" && this.currentTrack !== "finale") {
-        let rootBass = mv.pads[bar][0] - 12;
-        if (rootBass < 36) rootBass += 12;
-        const bassVol = clamp(0.028 + Math.min(4, deadTension) * 0.011, 0.028, 0.072);
-        this.voicePad([rootBass], now, stepDur * 8.2, bassVol);
+        const rootBass = mv.pads[bar][0] - 12;
+        const bassVol = clamp(0.032 + Math.min(4, deadTension) * 0.014, 0.03, 0.095);
+        this.voicePad([rootBass], now, stepDur * 7.9, bassVol);
       }
       if (this.ambientEnabled) {
-        this.triggerAmbientPulse(this.currentTrack, now, stepDur * 8.0);
+        this.triggerAmbientPulse(this.currentTrack, now, stepDur * 7.8);
       }
     }
 
-    const isASection = melBar < 4;
-
-    // 2. Plucked Zither / Guqin / Nylon Guitar Arpeggio with human velocity phrasing & micro-timing
+    // 2. Plucked Zither / Acoustic Guitar Arpeggio
     const arpMidi = mv.arps[bar] ? mv.arps[bar][step] : null;
     if (arpMidi) {
-      const phraseCurve = step === 0 ? 1.0 : (step === 4 ? 0.88 : (step % 2 === 0 ? 0.78 : 0.68));
-      const humanize = 0.94 + Math.random() * 0.12;
-      const accent = (isASection ? 0.115 : 0.145) * phraseCurve * humanize;
-      const strumOffset = step === 0 ? 0 : Math.random() * 0.008;
-      this.voicePluck(midiToFreq(arpMidi), now + strumOffset, stepDur * 2.7, accent, step);
-      if (typeof state !== "undefined" && state.match && state.match.phase === "DAY_PLAYER_TURN" && step % 4 === 0) {
-        this.voiceBell(midiToFreq(arpMidi + 12), now + strumOffset, stepDur * 2.2, 0.028 * speechDuckScale);
+      const accent = (step === 0 || step === 4) ? 0.16 : 0.10;
+      this.voicePluck(midiToFreq(arpMidi), now, stepDur * 2.4, accent, step);
+      if (typeof state !== "undefined" && state.match && state.match.phase === "DAY_PLAYER_TURN" && step % 2 === 0) {
+        this.voiceBell(midiToFreq(arpMidi + 12), now, stepDur * 1.8, 0.035);
       }
     }
 
-    // 3. Lyrical A/B Section Lead Solo Melody (A: Guzheng Lead + Harmonic Bell / B: Warm Bamboo Xiao/Dizi)
-    const melRow = (mv.melody && mv.melody[melBar]) ? mv.melody[melBar] : null;
-    const melMidi = melRow ? melRow[step] : null;
-    if (melMidi) {
-      let holdSteps = 1;
-      let nextMelMidi = null;
-      for (let look = step + 1; look < 8; look++) {
-        if (melRow[look]) {
-          nextMelMidi = melRow[look];
-          break;
-        }
-        holdSteps += 1;
-      }
-      const melDur = Math.max(stepDur * 1.45, Math.min(stepDur * 4.2, stepDur * holdSteps * 0.94));
-      const baseMelVel = (this.currentTrack === "night" || this.currentTrack === "finale") ? 0.062 : 0.072;
-      if (isASection) {
-        this.voiceGuzhengLead(melMidi, now, melDur, baseMelVel * speechDuckScale, step, melBar === 0 && step === 0);
-      } else {
-        this.voiceLead(midiToFreq(melMidi), nextMelMidi ? midiToFreq(nextMelMidi) : null, now, melDur, baseMelVel * speechDuckScale);
-      }
-    }
-
-    // 4. Bronze Singing Bowl / Celesta Overtone Motif
+    // 3. Crystalline Bell / Singing Bowl Overtone Motif
     const bellMidi = mv.bells[bar] ? mv.bells[bar][step] : null;
     if (bellMidi) {
-      const bellVel = 0.048 * (this.voiceDucking ? 0.45 : 1.0);
-      this.voiceBell(midiToFreq(bellMidi), now, stepDur * 4.0, bellVel);
+      this.voiceBell(midiToFreq(bellMidi), now, stepDur * 3.5, 0.065);
     }
 
-    // 5. Tanggu / Muyu Woodblock / Bamboo Rim / Brush Percussion Groove
+    // 4. Subtle Taiko / Heartbeat / Woodblock Groove
     const drumCode = mv.drums ? mv.drums[step] : 0;
-    if (drumCode === 1) this.voiceDrum("deep", now, 0.14);
-    else if (drumCode === 2) this.voiceDrum("deep", now, 0.075);
-    else if (drumCode === 3) this.voiceDrum("wood", now, 0.055);
-    else if (drumCode === 4) this.voiceDrum("rim", now, 0.036);
-    else if (drumCode === 5) this.voiceDrum("brush", now, 0.032);
+    if (drumCode === 1) this.voiceDrum("deep", now, 0.16);
+    else if (drumCode === 2) this.voiceDrum("deep", now, 0.09);
+    else if (drumCode === 3) this.voiceDrum("wood", now, 0.06);
 
     this.stepIdx += 1;
     if (this.stepIdx >= 8) {
@@ -1270,126 +1202,83 @@ const sound = {
   voicePluck: function (freq, t, dur, vel, stepOpt, destNode) {
     if (this.muted || !this.ctx || !this.bgmGain) return;
     try {
-      this.ensureNoiseBuffers();
       const tMode = this.timbre || "zen";
       const outTarget = destNode || this.bgmGain;
-      const playFreq = (tMode === "guqin" && freq > 460) ? freq * 0.5 : freq;
-
       const osc1 = this.ctx.createOscillator();
       const osc2 = this.ctx.createOscillator();
-      const osc3 = this.ctx.createOscillator();
-      const osc2Mix = this.ctx.createGain();
-      const osc3Mix = this.ctx.createGain();
-      const woodBody = this.ctx.createBiquadFilter();
       const filt = this.ctx.createBiquadFilter();
       const gain = this.ctx.createGain();
+      const osc2Mix = this.ctx.createGain();
 
-      osc1.type = tMode === "cinema" ? "sawtooth" : "triangle";
-      osc2.type = "sine";
-      osc3.type = "sine";
-      osc1.frequency.setValueAtTime(playFreq, t);
-      osc2.frequency.setValueAtTime(playFreq * 2.0, t);
-      osc3.frequency.setValueAtTime(playFreq * 3.0, t);
-
-      if (tMode === "guqin" && osc1.detune && osc2.detune && osc3.detune) {
-        // Traditional guqin chuo upward finger scoop locked in cents
-        osc1.detune.setValueAtTime(-42, t);
-        osc1.detune.linearRampToValueAtTime(0, t + 0.055);
-        osc2.detune.setValueAtTime(-42, t);
-        osc2.detune.linearRampToValueAtTime(0, t + 0.055);
-        osc3.detune.setValueAtTime(-42, t);
-        osc3.detune.linearRampToValueAtTime(0, t + 0.055);
-      }
-
-      osc2Mix.gain.setValueAtTime(tMode === "guqin" ? 0.22 : (tMode === "zen" ? 0.26 : 0.16), t);
-      osc2Mix.gain.exponentialRampToValueAtTime(0.01, t + dur * 0.44);
-      osc3Mix.gain.setValueAtTime(tMode === "zen" ? 0.10 : 0.04, t);
-      osc3Mix.gain.exponentialRampToValueAtTime(0.005, t + dur * 0.22);
-
-      woodBody.type = "peaking";
-      woodBody.frequency.value = tMode === "guqin" ? 360 : 420;
-      woodBody.Q.value = 1.1;
-      woodBody.gain.value = tMode === "folk" ? 2.4 : 1.8;
-
-      filt.type = "lowpass";
-      filt.Q.value = tMode === "guqin" ? 1.5 : 1.1;
-      const startCut = tMode === "guqin"
-        ? Math.min(3200, playFreq * 4.2)
-        : (tMode === "cinema" ? Math.min(2600, playFreq * 2.8) : Math.min(5400, playFreq * 5.2));
-      const endCut = Math.max(210, playFreq * 1.15);
-      filt.frequency.setValueAtTime(startCut, t);
-      filt.frequency.exponentialRampToValueAtTime(endCut, t + Math.min(0.36, dur * 0.55));
-
-      const noteDur = tMode === "cinema" ? Math.min(dur * 0.55, 0.48) : dur;
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.linearRampToValueAtTime(vel, t + 0.009);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + noteDur);
-
-      osc1.connect(woodBody);
-      osc2.connect(osc2Mix);
-      osc2Mix.connect(woodBody);
-      osc3.connect(osc3Mix);
-      osc3Mix.connect(woodBody);
-      woodBody.connect(filt);
-      filt.connect(gain);
-
-      // Plectrum / fingertip string attack transient
-      let atkSrc = null, atkBp = null, atkG = null;
-      if (this._pluckNoiseBuf) {
-        atkSrc = this.ctx.createBufferSource();
-        atkSrc.buffer = this._pluckNoiseBuf;
-        atkBp = this.ctx.createBiquadFilter();
-        atkBp.type = "bandpass";
-        atkBp.frequency.value = clamp(playFreq * 3.0, 900, 3400);
-        atkBp.Q.value = 1.4;
-        atkG = this.ctx.createGain();
-        atkG.gain.value = vel * (tMode === "cinema" ? 0.55 : 0.36);
-        atkSrc.connect(atkBp);
-        atkBp.connect(atkG);
-        atkG.connect(woodBody);
-        atkSrc.start(t);
-      }
-
-      let panNode = null;
-      if (typeof stepOpt === "number" && typeof this.ctx.createStereoPanner === "function") {
-        panNode = this.ctx.createStereoPanner();
-        panNode.pan.value = clamp(((stepOpt % 4) - 1.5) * 0.14, -0.26, 0.26);
-        gain.connect(panNode);
-        panNode.connect(outTarget);
+      if (tMode === "zen") {
+        osc1.type = "triangle";
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(freq * 2, t);
+        filt.frequency.setValueAtTime(Math.min(7000, freq * 6.5), t);
+        filt.frequency.exponentialRampToValueAtTime(Math.max(220, freq * 1.5), t + 0.28);
+        osc2Mix.gain.value = 0.32;
+        filt.Q.value = 1.4;
+      } else if (tMode === "guqin") {
+        osc1.type = "triangle";
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(freq * 2, t);
+        filt.frequency.setValueAtTime(Math.min(5400, freq * 5.0), t);
+        filt.frequency.exponentialRampToValueAtTime(Math.max(200, freq * 1.35), t + 0.32);
+        osc2Mix.gain.value = 0.24;
+        filt.Q.value = 1.2;
+      } else if (tMode === "folk") {
+        osc1.type = "triangle";
+        osc2.type = "triangle";
+        if (osc2.detune) osc2.detune.value = 5;
+        osc2.frequency.setValueAtTime(freq, t);
+        filt.frequency.setValueAtTime(Math.min(4800, freq * 4.2), t);
+        filt.frequency.exponentialRampToValueAtTime(Math.max(200, freq * 1.2), t + 0.22);
+        osc2Mix.gain.value = 0.32;
+        filt.Q.value = 1.4;
       } else {
-        gain.connect(outTarget);
+        osc1.type = "sawtooth";
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(freq, t);
+        filt.frequency.setValueAtTime(Math.min(3200, freq * 3.0), t);
+        filt.frequency.exponentialRampToValueAtTime(Math.max(180, freq * 1.1), t + 0.35);
+        osc2Mix.gain.value = 0.32;
+        filt.Q.value = 1.4;
       }
+
+      osc1.frequency.setValueAtTime(freq, t);
+      filt.type = "lowpass";
+
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(vel, t + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+      osc1.connect(filt);
+      osc2.connect(osc2Mix);
+      osc2Mix.connect(filt);
+      filt.connect(gain);
+      gain.connect(outTarget);
 
       osc1.onended = function () {
         try {
           osc1.disconnect();
           osc2.disconnect();
-          osc3.disconnect();
           osc2Mix.disconnect();
-          osc3Mix.disconnect();
-          woodBody.disconnect();
           filt.disconnect();
           gain.disconnect();
-          if (atkSrc) { atkSrc.disconnect(); atkBp.disconnect(); atkG.disconnect(); }
-          if (panNode) panNode.disconnect();
         } catch (e) {}
       };
       osc1.start(t);
       osc2.start(t);
-      osc3.start(t);
-      osc1.stop(t + noteDur + 0.04);
-      osc2.stop(t + noteDur + 0.04);
-      osc3.stop(t + noteDur + 0.04);
+      osc1.stop(t + dur + 0.04);
+      osc2.stop(t + dur + 0.04);
     } catch (e) {}
   },
 
   voicePad: function (midis, t, dur, vel) {
     if (this.muted || !this.ctx || !this.bgmGain) return;
     const self = this;
-    const stereoMap = [-0.34, 0.34, -0.16, 0.16];
-    midis.forEach(function (rawM, idx) {
+    midis.forEach(function (m, idx) {
       try {
-        const m = rawM < 38 ? rawM + 12 : rawM;
         const freq = midiToFreq(m);
         const osc = self.ctx.createOscillator();
         const filt = self.ctx.createBiquadFilter();
@@ -1400,34 +1289,23 @@ const sound = {
         if (osc.detune) osc.detune.value = (idx % 2 === 0 ? 4 : -4);
 
         filt.type = "lowpass";
-        filt.Q.value = 0.65;
-        filt.frequency.setValueAtTime(self.currentTrack === "night" ? 500 : (self.timbre === "cinema" ? 760 : 880), t);
+        filt.frequency.setValueAtTime(self.currentTrack === "night" ? 680 : 1150, t);
 
         const noteVel = vel / Math.sqrt(Math.max(1, midis.length));
-        const extDur = dur * 1.15;
-        const atk = Math.min(0.48, dur * 0.22);
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(noteVel, t + atk);
-        gain.gain.setValueAtTime(noteVel * 0.85, t + dur * 0.72);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + extDur);
+        gain.gain.linearRampToValueAtTime(noteVel, t + Math.min(0.45, dur * 0.25));
+        gain.gain.setValueAtTime(noteVel * 0.85, t + dur * 0.65);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
         osc.connect(filt);
         filt.connect(gain);
-        let panNode = null;
-        if (typeof self.ctx.createStereoPanner === "function") {
-          panNode = self.ctx.createStereoPanner();
-          panNode.pan.value = stereoMap[idx % stereoMap.length];
-          gain.connect(panNode);
-          panNode.connect(self.bgmGain);
-        } else {
-          gain.connect(self.bgmGain);
-        }
+        gain.connect(self.bgmGain);
 
         osc.onended = function () {
-          try { osc.disconnect(); filt.disconnect(); gain.disconnect(); if (panNode) panNode.disconnect(); } catch (e) {}
+          try { osc.disconnect(); filt.disconnect(); gain.disconnect(); } catch (e) {}
         };
         osc.start(t);
-        osc.stop(t + extDur + 0.05);
+        osc.stop(t + dur + 0.05);
       } catch (e) {}
     });
   },
@@ -1435,166 +1313,79 @@ const sound = {
   voiceBell: function (freq, t, dur, vel, destNode) {
     if (this.muted || !this.ctx || !this.bgmGain) return;
     try {
-      const tMode = this.timbre || "zen";
       const outTarget = destNode || this.bgmGain;
-      const isBowl = tMode === "zen" || tMode === "guqin";
-      const baseFreq = (isBowl && freq > 1180) ? freq * 0.5 : freq;
-
-      const c1 = this.ctx.createOscillator();
-      const c2 = this.ctx.createOscillator();
-      const c2Gain = this.ctx.createGain();
-      const partial = this.ctx.createOscillator();
-      const partialGain = this.ctx.createGain();
+      const carrier = this.ctx.createOscillator();
+      const mod = this.ctx.createOscillator();
+      const modGain = this.ctx.createGain();
       const env = this.ctx.createGain();
 
-      c1.type = "sine";
-      c2.type = "sine";
-      partial.type = "sine";
-      c1.frequency.setValueAtTime(baseFreq, t);
+      carrier.type = "sine";
+      mod.type = "sine";
+      const ratio = (this.timbre === "zen" || this.timbre === "guqin") ? 2.756 : 2.0;
+      carrier.frequency.setValueAtTime(freq, t);
+      mod.frequency.setValueAtTime(freq * ratio, t);
 
-      if (isBowl) {
-        // Bronze Singing Bowl: warm 0.7Hz beating halo + decaying 2.756x partial + felt-mallet 24ms onset
-        c2.frequency.setValueAtTime(baseFreq + 0.7, t);
-        c2Gain.gain.value = 0.65;
-        partial.frequency.setValueAtTime(baseFreq * 2.756, t);
-        partialGain.gain.setValueAtTime(0.16, t);
-        partialGain.gain.exponentialRampToValueAtTime(0.005, t + Math.min(dur * 0.55, 1.1));
-      } else if (tMode === "folk") {
-        c2.frequency.setValueAtTime(baseFreq * 2.0, t);
-        c2Gain.gain.value = 0.08;
-        partial.frequency.setValueAtTime(baseFreq * 4.0, t);
-        partialGain.gain.setValueAtTime(0.08, t);
-        partialGain.gain.exponentialRampToValueAtTime(0.002, t + Math.min(dur * 0.25, 0.32));
-      } else {
-        c2.frequency.setValueAtTime(baseFreq * 2.0, t);
-        c2Gain.gain.value = 0.16;
-        partial.frequency.setValueAtTime(baseFreq * 3.0, t);
-        partialGain.gain.setValueAtTime(0.05, t);
-        partialGain.gain.exponentialRampToValueAtTime(0.002, t + Math.min(dur * 0.3, 0.4));
-      }
+      modGain.gain.setValueAtTime(freq * 0.85, t);
+      modGain.gain.exponentialRampToValueAtTime(1.0, t + 0.25);
 
-      const atk = isBowl ? 0.024 : 0.012;
       env.gain.setValueAtTime(0.0001, t);
-      env.gain.linearRampToValueAtTime(vel, t + atk);
+      env.gain.linearRampToValueAtTime(vel, t + 0.01);
       env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
-      c1.connect(env);
-      c2.connect(c2Gain);
-      c2Gain.connect(env);
-      partial.connect(partialGain);
-      partialGain.connect(env);
+      mod.connect(modGain);
+      modGain.connect(carrier.frequency);
+      carrier.connect(env);
       env.connect(outTarget);
 
-      c1.onended = function () {
+      carrier.onended = function () {
         try {
-          c1.disconnect(); c2.disconnect(); c2Gain.disconnect();
-          partial.disconnect(); partialGain.disconnect(); env.disconnect();
+          carrier.disconnect();
+          mod.disconnect();
+          modGain.disconnect();
+          env.disconnect();
         } catch (e) {}
       };
-      c1.start(t);
-      c2.start(t);
-      partial.start(t);
-      c1.stop(t + dur + 0.05);
-      c2.stop(t + dur + 0.05);
-      partial.stop(t + dur + 0.05);
+      carrier.start(t);
+      mod.start(t);
+      carrier.stop(t + dur + 0.04);
+      mod.stop(t + dur + 0.04);
     } catch (e) {}
   },
 
   voiceDrum: function (kind, t, vel, destNode) {
     if (this.muted || !this.ctx || !this.bgmGain) return;
     try {
-      this.ensureNoiseBuffers();
       const outTarget = destNode || this.bgmGain;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
       if (kind === "deep") {
-        // Warm Tanggu leather membrane + soft mallet thump
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
         osc.type = "sine";
-        osc.frequency.setValueAtTime(96, t);
-        osc.frequency.exponentialRampToValueAtTime(46, t + 0.14);
+        osc.frequency.setValueAtTime(108, t);
+        osc.frequency.exponentialRampToValueAtTime(38, t + 0.16);
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(vel, t + 0.012);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
+        gain.gain.linearRampToValueAtTime(vel, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
         osc.connect(gain);
         gain.connect(outTarget);
-
-        let nSrc = null, lp = null, nG = null;
-        if (this._pluckNoiseBuf) {
-          nSrc = this.ctx.createBufferSource();
-          nSrc.buffer = this._pluckNoiseBuf;
-          lp = this.ctx.createBiquadFilter();
-          lp.type = "lowpass";
-          lp.frequency.value = 280;
-          nG = this.ctx.createGain();
-          nG.gain.value = vel * 0.7;
-          nSrc.connect(lp);
-          lp.connect(nG);
-          nG.connect(outTarget);
-          nSrc.start(t);
-        }
         osc.onended = function () {
-          try { osc.disconnect(); gain.disconnect(); if (nSrc) { nSrc.disconnect(); lp.disconnect(); nG.disconnect(); } } catch (e) {}
+          try { osc.disconnect(); gain.disconnect(); } catch (e) {}
         };
         osc.start(t);
-        osc.stop(t + 0.38);
-      } else if (kind === "rim" || kind === "brush") {
-        // Subtle bamboo rim click or soft tea-whisk brush
-        if (!this._pluckNoiseBuf) return;
-        const src = this.ctx.createBufferSource();
-        src.buffer = this._pluckNoiseBuf;
-        const bp = this.ctx.createBiquadFilter();
-        bp.type = "bandpass";
-        bp.frequency.value = kind === "rim" ? 1680 : 2400;
-        bp.Q.value = kind === "rim" ? 7.0 : 1.6;
-        const gain = this.ctx.createGain();
-        const hitDur = kind === "rim" ? 0.045 : 0.055;
+        osc.stop(t + 0.28);
+      } else {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(760, t);
+        osc.frequency.exponentialRampToValueAtTime(420, t + 0.045);
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.linearRampToValueAtTime(vel, t + 0.004);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + hitDur);
-        src.connect(bp);
-        bp.connect(gain);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.055);
+        osc.connect(gain);
         gain.connect(outTarget);
-        src.onended = function () { try { src.disconnect(); bp.disconnect(); gain.disconnect(); } catch (e) {} };
-        src.start(t);
-      } else {
-        // Hollow Muyu woodblock: dual resonant wooden cavity bands + subtle click
-        const osc = this.ctx.createOscillator();
-        const g = this.ctx.createGain();
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(540, t);
-        osc.frequency.exponentialRampToValueAtTime(490, t + 0.036);
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.linearRampToValueAtTime(vel * 0.55, t + 0.004);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.048);
-        osc.connect(g);
-        g.connect(outTarget);
-
-        let nSrc = null, bp1 = null, bp2 = null, nG = null;
-        if (this._pluckNoiseBuf) {
-          nSrc = this.ctx.createBufferSource();
-          nSrc.buffer = this._pluckNoiseBuf;
-          bp1 = this.ctx.createBiquadFilter();
-          bp1.type = "bandpass";
-          bp1.frequency.value = 720;
-          bp1.Q.value = 8.5;
-          bp2 = this.ctx.createBiquadFilter();
-          bp2.type = "bandpass";
-          bp2.frequency.value = 1240;
-          bp2.Q.value = 10.0;
-          nG = this.ctx.createGain();
-          nG.gain.value = vel * 1.4;
-          nSrc.connect(bp1);
-          nSrc.connect(bp2);
-          bp1.connect(nG);
-          bp2.connect(nG);
-          nG.connect(outTarget);
-          nSrc.start(t);
-        }
         osc.onended = function () {
-          try { osc.disconnect(); g.disconnect(); if (nSrc) { nSrc.disconnect(); bp1.disconnect(); bp2.disconnect(); nG.disconnect(); } } catch (e) {}
+          try { osc.disconnect(); gain.disconnect(); } catch (e) {}
         };
         osc.start(t);
-        osc.stop(t + 0.055);
+        osc.stop(t + 0.065);
       }
     } catch (e) {}
   },
