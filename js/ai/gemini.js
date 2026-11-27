@@ -115,6 +115,7 @@ function getOrCreateProxySessionId() {
 const GEMINI_TEMP_TIERS = Object.freeze({
   sheriff_logic: 0.58,
   day_standard: 0.65,
+  day_casual: 0.75,
   interject_confront: 0.74,
   pk_last_words: 0.78
 });
@@ -136,6 +137,9 @@ function resolveGeminiSpeechTemperature(sceneKind, ctxOpts) {
   }
   if (sceneKind === "sheriff" || sceneKind === "sheriff_tally" || sceneKind === "dual_seer" || o.isSheriff || o.isDualSeerOrGod) {
     return GEMINI_TEMP_TIERS.sheriff_logic;
+  }
+  if (o.isCasualVariety) {
+    return GEMINI_TEMP_TIERS.day_casual;
   }
   return GEMINI_TEMP_TIERS.day_standard;
 }
@@ -253,7 +257,7 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
   const isPro = safeModel === "gemini-2.5-pro";
   const isGemini4 = /^gemini-4-/.test(safeModel);
   const genCfg = {
-    maxOutputTokens: isPro ? ((opts && opts.jsonMode) ? 2048 : 1152) : ((opts && opts.jsonMode) ? 1536 : 896)
+    maxOutputTokens: (isPro || isGemini4) ? ((opts && opts.jsonMode) ? 3072 : 2048) : ((opts && opts.jsonMode) ? 1536 : 1024)
   };
   if (isGemini4) {
     genCfg.thinkingConfig = { thinkingLevel: "LOW" };
@@ -418,6 +422,32 @@ function stripStageDirectionParens(raw) {
   });
 }
 
+function _looksTruncatedMidClause(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return false;
+  if (/[—\-、：；「『（(，,]$/.test(s)) return true;
+  if (/(?:卻改|卻投|卻保|卻在|卻把|口頭點[我他她]?|剛才說|因為他|所以這|把票投給|我覺|我認|請問你|第[一二三四1-4]天)$/.test(s)) {
+    return true;
+  }
+  return false;
+}
+
+function _trimToCompleteSentenceOrNull(raw, minCompleteLen) {
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  const minLen = typeof minCompleteLen === "number" ? minCompleteLen : 16;
+  const stops = ["。", "！", "？", "～", "~", "…"];
+  let lastIdx = -1;
+  for (let i = 0; i < stops.length; i++) {
+    const idx = s.lastIndexOf(stops[i]);
+    if (idx > lastIdx) lastIdx = idx;
+  }
+  if (lastIdx >= minLen) {
+    return s.slice(0, lastIdx + 1).trim();
+  }
+  return null;
+}
+
 function normalizeGeminiSpeechText(txt) {
   let s = stripStageDirectionParens(String(txt || ""))
     .replace(/\\n/g, " ")
@@ -447,6 +477,9 @@ function normalizeGeminiSpeechText(txt) {
       const lastComma = Math.max(windowStr.lastIndexOf("，"), windowStr.lastIndexOf("；"));
       s = (lastComma >= 95 ? windowStr.slice(0, lastComma) : windowStr.slice(0, 178)) + "。";
     }
+  }
+  if (s.length >= 6 && !_looksTruncatedMidClause(s) && !/[。！？…～~」』!?.]$/.test(s)) {
+    s += "。";
   }
   return s;
 }
@@ -485,7 +518,11 @@ function parseGeminiStructuredSpeech(rawText) {
     try {
       const obj = JSON.parse(candidate);
       if (obj && typeof obj.text === "string" && obj.text.trim()) {
-        const cleanText = normalizeGeminiSpeechText(obj.text);
+        let rawObjText = String(obj.text).trim();
+        if (_looksTruncatedMidClause(rawObjText)) {
+          rawObjText = _trimToCompleteSentenceOrNull(rawObjText, 16) || "";
+        }
+        const cleanText = rawObjText ? normalizeGeminiSpeechText(rawObjText) : "";
         if (!cleanText) return null;
         const cr = (obj.claimRole === "seer" || obj.claimRole === "witch" || obj.claimRole === "hunter" || obj.claimRole === "guard" || obj.claimRole === "elder") ? obj.claimRole : null;
         const emo = (typeof obj.emotion === "string" && emoAllow.indexOf(obj.emotion) !== -1) ? obj.emotion : null;
@@ -518,7 +555,10 @@ function parseGeminiStructuredSpeech(rawText) {
       if (wasTruncated) {
         salvaged = salvaged.replace(/\d+$/, "").replace(/[，、：；\s]+$/, "");
       }
-      salvaged = normalizeGeminiSpeechText(salvaged);
+      if (wasTruncated || _looksTruncatedMidClause(salvaged)) {
+        salvaged = _trimToCompleteSentenceOrNull(salvaged, 16) || "";
+      }
+      salvaged = salvaged ? normalizeGeminiSpeechText(salvaged) : "";
       if (salvaged.length >= 6) {
         const accM = raw.match(/"accuseId"\s*:\s*"?(\d+)/);
         const vchM = raw.match(/"vouchId"\s*:\s*"?(\d+)/);
@@ -547,7 +587,11 @@ function parseGeminiStructuredSpeech(rawText) {
     return null;
   }
 
-  const plainClean = normalizeGeminiSpeechText(raw);
+  let plainRaw = String(raw || "").trim();
+  if (_looksTruncatedMidClause(plainRaw)) {
+    plainRaw = _trimToCompleteSentenceOrNull(plainRaw, 16) || "";
+  }
+  const plainClean = plainRaw ? normalizeGeminiSpeechText(plainRaw) : "";
   if (!plainClean) return null;
   return {
     parsedJson: false,
@@ -598,6 +642,9 @@ function getAllowedGeminiClaimRole(speaker, fallbackMeta) {
 function validateGeminiSpeechReality(speaker, fallbackMeta, parsed, snap) {
   if (!parsed || !parsed.text || !speaker) return { ok: false, reason: "empty" };
   const txt = typeof normalizeSeatRefsInText === "function" ? normalizeSeatRefsInText(parsed.text) : String(parsed.text);
+  if (_looksTruncatedMidClause(txt)) {
+    return { ok: false, reason: "truncated_mid_clause" };
+  }
   const allowedClaim = getAllowedGeminiClaimRole(speaker, fallbackMeta);
 
   const roleClaimMap = {
@@ -833,15 +880,21 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
   const flvObj = PERSONA_FLAVORS[self.name] || {};
   const pProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
   const flvBio = flvObj.bio ? flvObj.bio : self.trait;
-  const vs = flvObj.voiceStyle || null;
-  const styleSamples = (pProf ? ("【你的專屬語風定位：" + pProf.registerBadge + "｜" + pProf.logicTags + "】\n【最高優先角色語風指令】：" + pProf.llmStyleRule + "\n【你的招牌示範句】：「" + pProf.sampleQuote + "」\n") : "") +
-    (vs
-      ? ("【你的專屬開場與收尾口癖】：開場「" + (vs.lead || []).slice(0, 2).join(" / ") + "」｜反駁「" + (vs.rebutLead || []).slice(0, 1).join("") + "」｜收尾「" + (vs.signoff || []).slice(0, 1).join("") + "」。\n")
-      : "");
+  const cadenceVal = typeof getPersonaTalkCadence === "function" ? getPersonaTalkCadence(self) : 1.0;
+  const cadenceHint = cadenceVal <= 0.90
+    ? "說話節奏：言簡意賅、直擊要害，不愛扯太長"
+    : (cadenceVal >= 1.15 ? "說話節奏：靈動愛吐槽接話，情緒鮮明有畫面" : "說話節奏：穩健自然、有條有理");
   const day = snap ? snap.day : state.match.day;
   const pidNow = snap ? snap.playerSeatId : getPlayerId();
   const publicLogs = snap ? snap.publicLogs : state.match.logs.filter(function (l) { return l.kind !== "secret"; });
   const todayLogs = publicLogs.filter(function (l) { return l.day === day && l.kind === "speech"; });
+  const usedOpeners = todayLogs.map(function (l) {
+    return String(l && l.text || "").trim().slice(0, 6);
+  }).filter(Boolean).slice(-4);
+  const styleSamples = (pProf ? ("【你的專屬語風定位：" + pProf.registerBadge + "｜" + pProf.logicTags + "｜" + cadenceHint + "】\n【最高優先角色語風指令】：" + pProf.llmStyleRule + "\n【你的招牌示範句】：「" + pProf.sampleQuote + "」\n") : "") +
+    (usedOpeners.length
+      ? ("【本輪開場避重規則】：禁止沿用前面已經出現過的起手句「" + usedOpeners.join(" / ") + "」，請直接切換全新自然起手或直接點名！\n")
+      : "");
   const spokenIds = todayLogs.map(function (l) { return l.speakerId; });
   const aliveList = (snap ? snap.aliveSeats : getAliveSeats()).map(function (s) {
     return s.id + "號" + (s.id === pidNow ? "玩家你" : s.name) + (spokenIds.indexOf(s.id) !== -1 ? "(今日已發言)" : (s.id === self.id ? "(正在發言)" : "(今日尚未發言)"));
@@ -1167,19 +1220,21 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
     "4. 【生動有趣、像真實大學社團好友圍桌玩面殺・嚴禁機器腔】請展現強烈個人幽默感與真實情緒起伏：直接抓前幾位剛講的某句話俏皮吐槽、挑眉反問、善意調侃或拍桌附和，依角色性格自然融入生活比喻、微自嘲、苦笑或驚訝（例如笑對方轉彎太急、調侃茶還沒喝完就搶著甩鍋、誇隊友剛抓到神細節），讓每段發言都有畫面感與對話火花，絕不要冷冰冰條列分析！每輪開頭與收尾自由變化，禁止重複套用制式開場白或「先這樣，過！」。提到任何座位請一律寫「阿拉伯數字＋號」（如 1號、3號、6號、11號），嚴禁寫前導零（01、06）、嚴禁省略「號」字（站3、抓6），也嚴禁寫中文數字（三號、六號）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或生硬古文代詞（「吾、汝、諸君、妾身、小生、夫、蓋」）。全桌以自然台灣現代白話為基底（墨白、晴嵐、阿竹保留溫和書卷氣質與適度四字成語），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感）。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
-    "6. 【依回合進度遞增的動態句長配額與純口語格式】本輪句長檔位為「" + ((snap && snap.speechCharCap > 0)
+    "6. 【真人面殺自然長短變化與純口語格式】本輪句長檔位為「" + ((snap && snap.speechCharCap > 0)
       ? ("閃電快棋短兵相接（嚴格 " + snap.speechCharCap + " 字以內，直指關鍵一針見血！）")
       : ((snap && snap.isMatchPoint)
-        ? "聽牌決勝深度盤坑（95～145 字，越到後期線索越齊，務必完整回顧前幾輪公投票型、離席刀口與剩餘狼坑並全力拉票歸票！）"
-        : ((fallbackMeta && fallbackMeta.lengthTier === "brief" && day <= 2)
-          ? "前期留白過水（嚴格 18～32 字，前期資訊尚淺，簡短自然表態即停）"
-          : (day >= 3
-            ? "後期深層複盤交鋒（85～135 字，結合跨日票型、前後發言矛盾與剩餘席位徹底拆解狼坑！）"
+        ? "聽牌決勝深度盤坑（75～130 字，回顧關鍵票型、離席刀口與剩餘狼坑並全力拉票歸票！）"
+        : ((fallbackMeta && fallbackMeta.lengthTier === "brief")
+          ? "簡短輕快表態／過水（16～34 字，一兩句直切重點或直接過麥，絕不冗長鋪陳）"
+          : ((fallbackMeta && (fallbackMeta.lengthTier === "concise" || (cadenceVal <= 0.90 && fallbackMeta.lengthTier !== "intense")))
+            ? "精簡犀利直出（26～54 字，挑最關鍵的一兩個對象直接點評或跟票，不必硬湊多段推演）"
             : ((fallbackMeta && fallbackMeta.lengthTier === "intense")
-              ? "焦點交鋒反詰（65～105 字，直面質疑拆解坑位）"
-              : (day >= 2
-                ? "中局邏輯展開（60～98 字，結合前輪投票與昨夜離席線索清楚盤坑）"
-                : (totalSeatsNow >= 10 ? "首日開局推演（42～75 字）" : "首日開局推演（45～82 字）"))))))) + "」（禁止空話水字、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
+              ? "焦點交鋒反詰（55～100 字，正面拆解衝突與坑位）"
+              : (day >= 3
+                ? "中後期對焦盤坑（45～88 字，結合票型與發言矛盾靈活伸縮，切忌為湊字數而車軲轆重複）"
+                : (day >= 2
+                  ? "中局自然展開（38～76 字，結合前輪投票或昨夜線索講重點即可）"
+                  : (totalSeatsNow >= 10 ? "首日開局推演（30～64 字）" : "首日開局推演（34～68 字）")))))))) + "」（禁止空話水字、禁止千篇一律結尾喊『過！』、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
     '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":' + (lockedClaim ? ('"' + lockedClaim + '"') : 'null') + ',"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員且你本人非觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
 
   const audit = typeof auditLlmPromptLeak === "function"
@@ -1204,12 +1259,14 @@ async function tryGenerateGeminiAiSpeech(speaker, fallbackMeta) {
     ? built.snap.seats.filter(function (s) { return s.alive && s.claimedRole === "seer"; }).length
     : 0;
   const isDualSeerOrGod = Boolean(lockedRoleNow || aliveSeerClaimCount >= 2);
+  const isCasualVarietyNow = Boolean(!isPkNow && !isSheriffNow && !isDualSeerOrGod && !(fallbackMeta && fallbackMeta.lengthTier === "intense"));
   const tempVal = resolveGeminiSpeechTemperature("day", {
     pkActive: isPkNow,
     isSheriff: isSheriffNow,
-    isDualSeerOrGod: isDualSeerOrGod
+    isDualSeerOrGod: isDualSeerOrGod,
+    isCasualVariety: isCasualVarietyNow
   });
-  const isBriefPass = Boolean(fallbackMeta && fallbackMeta.lengthTier === "brief");
+  const isBriefPass = Boolean(fallbackMeta && (fallbackMeta.lengthTier === "brief" || fallbackMeta.lengthTier === "concise"));
   const useLiteTier = Boolean(totalSNow >= 10 && isBriefPass && !lockedRoleNow && !isSheriffNow && !(fallbackMeta && (fallbackMeta.checkedWolfId || fallbackMeta.accuseId)));
   const rawOut = await callGeminiText(built.prompt, { jsonMode: true, lite: useLiteTier, temperature: tempVal });
   const parsed = rawOut ? parseGeminiStructuredSpeech(rawOut) : null;
@@ -1242,8 +1299,12 @@ function _buildMiniPersonaBlock(self) {
 function _validateMiniLiveText(raw, self, opts) {
   if (!raw || !self) return null;
   const o = opts || {};
-  let clean = normalizeGeminiSpeechText(raw);
-  if (!clean) return null;
+  let rawTrimmed = String(raw || "").trim().replace(/^["「『]+|["」』]+$/g, "").trim();
+  if (_looksTruncatedMidClause(rawTrimmed)) {
+    rawTrimmed = _trimToCompleteSentenceOrNull(rawTrimmed, 14) || "";
+  }
+  let clean = rawTrimmed ? normalizeGeminiSpeechText(rawTrimmed) : "";
+  if (!clean || _looksTruncatedMidClause(clean)) return null;
   if (typeof normalizeSeatRefsInText === "function") clean = normalizeSeatRefsInText(clean);
   clean = clean.replace(/^「|」$/g, "").trim();
   const minLen = o.minLen || 14;

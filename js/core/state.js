@@ -46,6 +46,7 @@ const state = {
   activeClash: null,
   lastWordsCtx: null,
   playerMarks: {},
+  listenPitCollapsed: false,
   speakingInFlight: false,
   currentTurnSpoken: false,
   stepTimer: null,
@@ -186,6 +187,7 @@ function saveUserPrefs() {
       voiceVolume: Number(voice.volume),
       voiceUri: voice.selectedVoiceUri || "auto",
       soundMuted: Boolean(sound.muted),
+      ambientEnabled: Boolean(sound.ambientEnabled),
       bgmVol: Number(sound.bgmVol),
       sfxVol: Number(sound.sfxVol),
       timbre: sound.timbre || "zen",
@@ -255,10 +257,11 @@ function loadUserPrefs() {
     if (typeof p.voiceVolume === "number" && p.voiceVolume >= 0 && p.voiceVolume <= 1) voice.volume = p.voiceVolume;
     if (typeof p.voiceUri === "string" && p.voiceUri) voice.selectedVoiceUri = p.voiceUri;
     if (typeof p.soundMuted === "boolean") sound.muted = p.soundMuted;
+    if (typeof p.ambientEnabled === "boolean") sound.ambientEnabled = p.ambientEnabled;
     if (typeof p.bgmVol === "number" && p.bgmVol >= 0 && p.bgmVol <= 1) sound.bgmVol = p.bgmVol;
     if (typeof p.sfxVol === "number" && p.sfxVol >= 0 && p.sfxVol <= 1) sound.sfxVol = p.sfxVol;
-    if (p.timbre === "zen" || p.timbre === "folk" || p.timbre === "cinema") sound.timbre = p.timbre;
-    if (["auto", "twilight", "night", "day", "vote", "matchpoint", "finale"].indexOf(p.trackMode) !== -1) sound.trackMode = p.trackMode;
+    if (p.timbre === "zen" || p.timbre === "guqin" || p.timbre === "folk" || p.timbre === "cinema") sound.timbre = p.timbre;
+    if (["auto", "twilight", "night", "day", "sheriff", "vote", "matchpoint", "finale"].indexOf(p.trackMode) !== -1) sound.trackMode = p.trackMode;
     if (typeof p.autoPlay === "boolean") state.autoPlay = p.autoPlay;
     if (typeof p.showRelations === "boolean") state.showRelationsOnCanvas = p.showRelations;
     if (p.viewMode === "2d" || p.viewMode === "3d") state.viewMode = p.viewMode;
@@ -323,11 +326,13 @@ function syncPrefsToControls() {
   if (el("sfxVolLabel")) el("sfxVolLabel").textContent = sfxPct + "%";
   if (el("sliderVoiceVol")) el("sliderVoiceVol").value = String(vPct);
   if (el("voiceVolLabel")) el("voiceVolLabel").textContent = vPct + "%";
-  ["btnTimbreZen", "btnTimbreFolk", "btnTimbreCinema"].forEach(function (id) {
-    if (el(id)) el(id).classList.toggle("is-active", el(id).getAttribute("data-timbre") === sound.timbre);
+  const timbreSyncMap = { btnTimbreZen: "zen", btnTimbreGuqin: "guqin", btnTimbreFolk: "folk", btnTimbreCinema: "cinema" };
+  ["btnTimbreZen", "btnTimbreGuqin", "btnTimbreFolk", "btnTimbreCinema"].forEach(function (id) {
+    if (el(id)) el(id).classList.toggle("is-active", (el(id).getAttribute("data-timbre") || timbreSyncMap[id]) === sound.timbre);
   });
-  ["btnTrackAuto", "btnTrackTwilight", "btnTrackNight", "btnTrackDay", "btnTrackVote", "btnTrackFinale"].forEach(function (id) {
-    if (el(id)) el(id).classList.toggle("is-active", el(id).getAttribute("data-track") === sound.trackMode);
+  const trackSyncMap = { btnTrackAuto: "auto", btnTrackTwilight: "twilight", btnTrackNight: "night", btnTrackDay: "day", btnTrackSheriff: "sheriff", btnTrackVote: "vote", btnTrackMatchpoint: "matchpoint", btnTrackFinale: "finale" };
+  ["btnTrackAuto", "btnTrackTwilight", "btnTrackNight", "btnTrackDay", "btnTrackSheriff", "btnTrackVote", "btnTrackMatchpoint", "btnTrackFinale"].forEach(function (id) {
+    if (el(id)) el(id).classList.toggle("is-active", (el(id).getAttribute("data-track") || trackSyncMap[id]) === sound.trackMode);
   });
   ["btnVoiceModeHybrid", "btnVoiceModeNatural", "btnVoiceModeCozy"].forEach(function (id) {
     if (el(id)) el(id).classList.toggle("is-active", el(id).getAttribute("data-vmode") === voice.mode);
@@ -352,6 +357,10 @@ function syncPrefsToControls() {
   if (el("btnToggleHumanBreath")) {
     el("btnToggleHumanBreath").classList.toggle("is-active", Boolean(voice.humanBreath));
     el("btnToggleHumanBreath").textContent = "真人換氣＋木亭音場：" + (voice.humanBreath ? "開" : "關");
+  }
+  if (el("btnToggleAmbience")) {
+    el("btnToggleAmbience").classList.toggle("is-active", Boolean(sound.ambientEnabled));
+    el("btnToggleAmbience").textContent = "山城茶席環境音景：" + (sound.ambientEnabled ? "開（松風・茶沸・清鈴）" : "關");
   }
   ["btnVoiceRateSlow", "btnVoiceRateDefault", "btnVoiceRateFast"].forEach(function (id) {
     if (el(id)) {

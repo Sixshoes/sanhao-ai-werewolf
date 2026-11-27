@@ -921,7 +921,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     const pVoiceRole = typeof ctx.pickVoice === "function" ? ctx.pickVoice : function () { return ""; };
     const wolfLead = pVoiceRole("lead", 4);
     const wolfDualLead = pVoiceRole("dualLead", 5);
-    const wolfSignoff = pVoiceRole("signoff", 6) || "先這樣，過！";
+    const wolfSignoff = pVoiceRole("signoff", 6) || "";
     const goodSpoken = spokenOthers.filter(function (s) { return !s.isWolfMate; });
     const goodAll = aliveOthers.filter(function (s) { return !s.isWolfMate; });
     const wolfPartnerSeer = spokenOthers.find(function (s) { return s.isWolfMate && s.claimedRole === "seer"; });
@@ -1089,6 +1089,38 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     if (!scapegoat) return null;
     const scSpoke = spokenIdsToday.indexOf(scapegoat.id) !== -1;
     const secScapegoat = goodSpoken.find(function (s) { return s.id !== scapegoat.id; }) || goodAll.find(function (s) { return s.id !== scapegoat.id; });
+    const wolfLengthTier = typeof determineSpeechLengthTier === "function" ? determineSpeechLengthTier(speaker, ctx) : "standard";
+    if (
+      scSpoke &&
+      !ctx.isLateSeat &&
+      (wolfLengthTier === "brief" || wolfLengthTier === "concise") &&
+      speaker.name !== "柚子" &&
+      speaker.name !== "小澄" &&
+      typeof buildPersonaConciseTurnText === "function"
+    ) {
+      const wSeed = (snap && typeof snap.matchStyleSeed === "number" ? snap.matchStyleSeed : 0) + speaker.id * 19 + day * 11 + spokenIdsToday.length * 7;
+      const wArch = secScapegoat && (wSeed % 3 === 1) ? "contrast" : ((wSeed % 3 === 2) ? "probe" : "snipe");
+      const conciseWolfText = buildPersonaConciseTurnText(speaker, {
+        archetype: wArch,
+        susLabel: seatLabel(scapegoat),
+        secLabel: secScapegoat ? seatLabel(secScapegoat) : "",
+        nextLabel: (ctx.unspokenOthers && ctx.unspokenOthers[0]) ? seatLabel(ctx.unspokenOthers[0]) : "",
+        seed: wSeed
+      });
+      if (conciseWolfText) {
+        return {
+          targetId: scapegoat.id,
+          relationType: "suspect",
+          accuseId: scapegoat.id,
+          vouchId: null,
+          wolfPits: (secScapegoat && spokeToday(secScapegoat.id)) ? [scapegoat.id, secScapegoat.id] : [scapegoat.id],
+          goodPits: [],
+          hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 8),
+          lengthTier: wolfLengthTier,
+          text: conciseWolfText
+        };
+      }
+    }
     const wolfClubPrefix = typeof buildPersonaClubAndHabitInsert === "function"
       ? buildPersonaClubAndHabitInsert(speaker, ctx, scapegoat, "wolf")
       : "";

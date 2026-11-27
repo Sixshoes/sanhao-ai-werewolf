@@ -400,6 +400,226 @@ function getPersonaRegister(seatOrName) {
   return getPersonaProfile(seatOrName).register;
 }
 
+function getPersonaTalkCadence(seatOrName) {
+  const p = getPersonaProfile(seatOrName);
+  return (p && typeof p.talkCadence === "number") ? p.talkCadence : 1.0;
+}
+
+function buildPersonaConciseTurnText(speaker, opts) {
+  if (!speaker || !opts) return "";
+  const reg = getPersonaRegister(speaker);
+  const arch = opts.archetype || "snipe";
+  const sus = opts.susLabel || "前位那席";
+  const sec = opts.secLabel || "";
+  const ally = opts.allyLabel || "";
+  const next = opts.nextLabel || "後位";
+  const pick = function (arr) {
+    if (!Array.isArray(arr) || !arr.length) return "";
+    const idx = Math.abs(Math.floor(opts.seed || 0)) % arr.length;
+    return arr[idx] || arr[0];
+  };
+
+  if (arch === "cosign" && ally) {
+    const bankCosign = {
+      data: [
+        "我也看 " + ally + " 這條線較順，" + (opts.susLabel ? ("反倒是 " + sus + " 兜不太攏。") : "這輪先跟這裡。"),
+        ally + " 剛把時間點對齊了，我站這邊，後面再看票型。"
+      ],
+      warm: [
+        ally + " 講話誠懇多了，暖暖站這邊，" + (opts.susLabel ? ("但稍留意 " + sus + " 喔。") : "先聽後面聊。"),
+        "嗯嗯，聽完覺得 " + ally + " 滿像好夥伴的，我先跟著信這席。"
+      ],
+      mountain: [
+        "老松也挺 " + ally + " 一票，講話實在不繞彎。",
+        ally + " 說在點上了，" + (opts.susLabel ? ("大家該盯緊 " + sus + " 才對。") : "就按這路走。")
+      ],
+      astro: [
+        "對！我也感應到 " + ally + " 很穩，" + (opts.susLabel ? ("怪的反而是 " + sus + "。") : "超贊同！"),
+        ally + " 剛一開口我就直覺站這側了，先聽 " + next + " 接話。"
+      ],
+      press: [
+        "核對過筆記，" + ally + " 這段站得住腳，我先認這席。",
+        "贊同 " + ally + " 的推論，" + (opts.susLabel ? ("焦點移回 " + sus + "。") : "等後位補實證。")
+      ],
+      poetic: [
+        "與 " + ally + " 所見相契，" + (next ? ("再品聽 " + next + " 怎麼說。") : "先放善位。"),
+        ally + " 這番話清冽在理，這席我先護下。"
+      ],
+      sport: [
+        "這波我直接挺 " + ally + " 到底，" + (opts.susLabel ? ("回頭緊盯 " + sus + "！") : "節奏很穩！"),
+        ally + " 講得夠乾脆，算我一票站這側！"
+      ],
+      classical: [
+        "所見略同，這輪我站 " + ally + (opts.susLabel ? ("，且觀 " + sus + " 後續說詞。") : "，餘者再議。"),
+        ally + " 持論公允、條理清楚，先列好人席。"
+      ],
+      guzheng: [
+        ally + " 語氣從容誠懇，晴嵐這輪先跟進保這席。",
+        "我同意 " + ally + " 理出的脈絡，" + (next ? ("接著聽 " + next + " 怎麼接吧。") : "心平氣和對看。")
+      ],
+      debate: [
+        "支持 " + ally + " 這條證據鏈，" + (opts.susLabel ? ("重點看 " + sus + " 怎麼回。") : "這席立場很明確。"),
+        ally + " 論點站得住腳，這輪我先不踩這裡。"
+      ],
+      pastry: [
+        "嗯嗯！柚子也超相信 " + ally + " 的，換聽 " + next + " 分享囉～",
+        ally + " 講話像剛出爐的麵包一樣實在，這輪先站這邊！"
+      ]
+    };
+    return pick(bankCosign[reg] || bankCosign.data);
+  }
+
+  if (arch === "contrast" && opts.susLabel && (sec || ally)) {
+    const other = ally || sec;
+    const bankContrast = {
+      data: [
+        "比對 " + other + " 跟 " + sus + "，我偏信 " + other + "，這輪票給 " + sus + "。",
+        sus + " 跟 " + other + " 相比明顯漏拍，照刪去法先出 " + sus + "。"
+      ],
+      warm: [
+        other + " 聽起來和氣實在多啦，相較之下我這票只好投 " + sus + " 囉。",
+        "兩邊對照來看，" + sus + " 還是太讓人毛毛的，這輪先選 " + sus + " 吧。"
+      ],
+      mountain: [
+        other + " 跟 " + sus + " 擺一起高下立判，老松信 " + other + "、投 " + sus + "。",
+        "一路對下來，" + other + " 踩得穩，" + sus + " 就露餡了，我出 " + sus + "！"
+      ],
+      astro: [
+        "哇對比超明顯！我挺 " + other + "，直覺鎖定投 " + sus + "！",
+        other + " 超自然、" + sus + " 一直飄，我這票絕對給 " + sus + "。"
+      ],
+      press: [
+        "交叉比對 " + other + " 與 " + sus + "：" + sus + " 漏洞較大，我鎖這席。",
+        other + " 說法前後一致，反觀 " + sus + " 一直閃點，這輪投 " + sus + "。"
+      ],
+      poetic: [
+        "清濁一比便知，我信 " + other + "，疑點則留在 " + sus + "。",
+        "品對 " + other + " 與 " + sus + "，後者茶韻雜亂，這票投 " + sus + "。"
+      ],
+      sport: [
+        "這對位太清楚了啦，我挺 " + other + "，直接對著 " + sus + " 出票！",
+        other + " 明顯是隊友，" + sus + " 漏洞被抓包就別躲了！"
+      ],
+      classical: [
+        "並觀 " + other + " 與 " + sus + "，前者誠篤、後者進退失據，我投 " + sus + "。",
+        "兩相權衡，" + sus + " 顯見心虛，這輪請這席先離。"
+      ],
+      guzheng: [
+        other + " 語調沉穩，" + sus + " 卻微有雜音，晴嵐這票先指 " + sus + "。",
+        "兩席相較，我比較認同 " + other + "，疑慮暫放在 " + sus + "。"
+      ],
+      debate: [
+        "對照正反兩方，" + other + " 立論較硬，" + sus + " 反駁不了核心，我投 " + sus + "。",
+        other + " 證據站得住，反倒是 " + sus + " 在繞圈，這輪出 " + sus + "。"
+      ],
+      pastry: [
+        "比一比發現 " + other + " 安心好多喔，這輪我還是先投 " + sus + " 喔。",
+        other + " 講話暖暖的好信，" + sus + " 就甜甜怪怪的，我投 " + sus + " 啦。"
+      ]
+    };
+    return pick(bankContrast[reg] || bankContrast.data);
+  }
+
+  if (arch === "probe") {
+    const bankProbe = {
+      data: [
+        sus + " 剛才這段跳太快了吧，我先畫個問號，後面誰來補一下？",
+        "我對 " + sus + " 保留半格懷疑，等聽完 " + next + " 再看票型。"
+      ],
+      warm: [
+        "咦…" + sus + " 剛剛那句好像有點急耶，暖暖先記一筆，後面怎麼看？",
+        "先不把話說死啦，但我會特別留意 " + sus + " 跟 " + next + " 的說法喔。"
+      ],
+      mountain: [
+        "老松耳朵尖，" + sus + " 剛才那句話頭有點漂喔，後面大家幫忙盯著點。",
+        "暫時先給 " + sus + " 畫條警戒線，等 " + next + " 講完再定奪。"
+      ],
+      astro: [
+        "等一下，" + sus + " 剛剛那句是不是怪怪的？我先存疑看後面怎麼說！",
+        "好奇怪，聽 " + sus + " 總覺得有話沒講清，後面 " + next + " 幫聽一下啦。"
+      ],
+      press: [
+        "先記一筆問號給 " + sus + "：剛剛關鍵問題沒正面回，看後位怎麼對。",
+        "我這邊暫對 " + sus + " 存疑，待 " + next + " 補完這輪邏輯再下定論。"
+      ],
+      poetic: [
+        sus + " 剛才那一手茶稍嫌急促，我且留半格觀察，先聽 " + next + "。",
+        "話中有幾分保留，我先把疑問記在 " + sus + " 這席。"
+      ],
+      sport: [
+        "慢著，" + sus + " 剛剛這球打太虛了吧？先畫一格問號再看後排怎麼接。",
+        "我先把視線鎖在 " + sus + " 身上，等後面補位完就準備抓！"
+      ],
+      classical: [
+        sus + " 言辭間頗多留白，是非未明之前，先記一席察看。",
+        "疑點暫留在 " + sus + "，且待 " + next + " 發言後再作定奪。"
+      ],
+      guzheng: [
+        "聽著 " + sus + " 總覺得尾音有些猶疑，我先輕記一筆觀察吧。",
+        "晴嵐暫不急著歸票，只對 " + sus + " 留一分留意，先聽 " + next + "。"
+      ],
+      debate: [
+        sus + " 剛才沒回應核心爭點，先列待查，後面看有沒有人幫補證據。",
+        "目前就 " + sus + " 邏輯最鬆散，我先質詢這一點，聽後續反應。"
+      ],
+      pastry: [
+        "唔…柚子覺得 " + sus + " 剛才講得有點小怪耶，先聽 " + next + " 怎麼想。",
+        "總覺得 " + sus + " 那段少了點什麼味道，先留個小問號好嗎。"
+      ]
+    };
+    return pick(bankProbe[reg] || bankProbe.data);
+  }
+
+  // Default: "snipe" — crisp single-target vote stance
+  const bankSnipe = {
+    data: [
+      "順了一遍還是 " + sus + " 前後兜不攏，這輪我投 " + sus + "。",
+      "不多繞了，照刪去法看這票直接給 " + sus + "。"
+    ],
+    warm: [
+      "不好意思啦，不過剛聽 " + sus + " 火氣有點大，暖暖這票投 " + sus + "。",
+      "大家別生氣，但我這輪還是想先把票投給 " + sus + " 冷靜一下喔。"
+    ],
+    mountain: [
+      "老松直話直說，" + sus + " 繞了半天最心虛，這輪直接投 " + sus + "！",
+      "看風向看破了，就屬 " + sus + " 在閃，這票老松投這席。"
+    ],
+    astro: [
+      "第六感直指 " + sus + "！剛剛語氣飄成這樣，這輪我投 " + sus + "！",
+      "不用猶豫了吧，" + sus + " 一講話我警鈴大響，出他出他！"
+    ],
+    press: [
+      "筆記對不上，只有 " + sus + " 在閃重點，這票我明確投 " + sus + "。",
+      "事實擺在這，" + sus + " 說法漏洞最多，這輪先出 " + sus + "。"
+    ],
+    poetic: [
+      "這杯茶我還是挑出 " + sus + "，詞鋒太虛，這票投這裡。",
+      "點到為止，" + sus + " 破綻最顯，這輪先投 " + sus + "。"
+    ],
+    sport: [
+      "直球打過去！最像在偷帶風向的就是 " + sus + "，這輪投他！",
+      "我看清了啦，這波不投 " + sus + " 說不過去，先鎖這席！"
+    ],
+    classical: [
+      "是非既明，進退失據莫過 " + sus + "，這輪我投此席。",
+      "權衡之後，疑點全集在 " + sus + " 身上，請這席先離。"
+    ],
+    guzheng: [
+      "聽話聽音，" + sus + " 這段雜音實在太重，晴嵐這輪先指 " + sus + "。",
+      "多說無益，" + sus + " 的說法前後不太連貫，我先投這席。"
+    ],
+    debate: [
+      "爭點全卡在 " + sus + " 身上，證據站不住腳，這輪我投 " + sus + "。",
+      "質詢不到實證就先請離，" + sus + " 這票跑不掉。"
+    ],
+    pastry: [
+      "唔…覺得 " + sus + " 講話像塌掉的舒芙蕾最可疑啦，我先投 " + sus + " 喔。",
+      "柚子左想右想還是覺得 " + sus + " 怪怪的，這票投 " + sus + "！"
+    ]
+  };
+  return pick(bankSnipe[reg] || bankSnipe.data);
+}
+
 // ==================== ZERO-LEAK COGNITIVE LOGIC MODIFIERS ====================
 // Strictly reads ONLY persona profile + BlindMatchSnapshot public/self fields!
 

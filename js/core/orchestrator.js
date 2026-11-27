@@ -91,6 +91,7 @@ const orchestrator = {
     if (typeof state !== "undefined" && state.match) {
       state.match.activeDirectorEvent = null;
       state.match.directorEventClearedDay = 0;
+      state.match._rolledDirectorEventDay = 0;
     }
     this.recordTrace({
       agent: "MatchDirector",
@@ -233,6 +234,10 @@ const orchestrator = {
 
   rollDailyTeaEvent: function (day) {
     if (typeof state === "undefined" || !state.match || !state.match.started) return null;
+    const targetDay = day || state.match.day || 1;
+    if (state.match._rolledDirectorEventDay === targetDay && state.match.activeDirectorEvent) {
+      return state.match.activeDirectorEvent;
+    }
     if (!Array.isArray(state.match.usedDirectorEventIds)) state.match.usedDirectorEventIds = [];
     const used = state.match.usedDirectorEventIds;
     let pool = TEA_DIRECTOR_EVENTS.filter(function (ev) { return used.indexOf(ev.id) === -1; });
@@ -251,6 +256,7 @@ const orchestrator = {
 
     state.match.activeDirectorEvent = picked;
     state.match.directorEventClearedDay = 0;
+    state.match._rolledDirectorEventDay = targetDay;
     state.match.usedDirectorEventIds.push(picked.id);
 
     if (picked.id === "anonymous_wall") {

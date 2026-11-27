@@ -246,6 +246,76 @@ function applyLastWordsInfluence(seat, rawText, meta) {
   }
 }
 
+function prefetchAiLastWords(seatIds, mode) {
+  const m = (typeof state !== "undefined") ? state.match : null;
+  if (!m || !m.started) return false;
+  if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
+  const normMode = mode || "first_night";
+  const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const useLiveLw = Boolean(
+    typeof isExternalLlmActive === "function" &&
+    isExternalLlmActive() &&
+    typeof tryGenerateGeminiLastWords === "function"
+  );
+  const wantNetTts = Boolean(
+    typeof voice !== "undefined" &&
+    typeof voice.canSpeak === "function" &&
+    voice.canSpeak() &&
+    ((typeof voice.isGeminiTtsPreferred === "function" && voice.isGeminiTtsPreferred()) || voice.localNeuralAvailable)
+  );
+  if (!useLiveLw && !wantNetTts) return false;
+  if (!m._prefetchedLastWords || m._prefetchedLastWordsEpoch !== ep) {
+    m._prefetchedLastWords = {};
+    m._prefetchedLastWordsEpoch = ep;
+  }
+  const list = (Array.isArray(seatIds) ? seatIds : []).filter(function (id) {
+    const s = getSeat(id);
+    return Boolean(s && s.id !== pid);
+  });
+  if (!list.length) return false;
+  list.forEach(function (sid) {
+    const seat = getSeat(sid);
+    if (!seat) return;
+    const pfKey = ep + ":" + normMode + ":" + seat.id;
+    if (m._prefetchedLastWords[pfKey]) return;
+    const lwObj = buildAiLastWords(seat, normMode);
+    const entry = {
+      epoch: ep,
+      key: pfKey,
+      lwObj: lwObj,
+      resolvedText: null,
+      promise: null
+    };
+    m._prefetchedLastWords[pfKey] = entry;
+    if (!useLiveLw) {
+      entry.resolvedText = lwObj.text;
+      if (wantNetTts && typeof voice.prefetchBestTts === "function") {
+        voice.prefetchBestTts(seat.name, lwObj.text, "last_words");
+      }
+      return;
+    }
+    entry.promise = tryGenerateGeminiLastWords(seat, normMode, lwObj)
+      .then(function (liveText) {
+        if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return null;
+        const resolved = liveText || lwObj.text;
+        entry.resolvedText = resolved;
+        if (wantNetTts && typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+          voice.prefetchBestTts(seat.name, resolved, "last_words");
+        }
+        return resolved;
+      })
+      .catch(function () {
+        entry.resolvedText = lwObj.text;
+        if (wantNetTts && typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+          voice.prefetchBestTts(seat.name, lwObj.text, "last_words");
+        }
+        return null;
+      });
+  });
+  return true;
+}
+
 function startLastWordsSequence(seatIds, mode, onDone) {
   const normMode = mode || "first_night";
   const curDay = (typeof state !== "undefined" && state.match) ? (state.match.day || 1) : 1;
@@ -308,7 +378,12 @@ function advanceLastWordsQueue() {
     return;
   }
 
-  const lwObj = buildAiLastWords(seat, ctx.mode);
+  const epLwNow = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const pfLwKey = epLwNow + ":" + ctx.mode + ":" + seat.id;
+  const pfLwMap = (state.match && state.match._prefetchedLastWordsEpoch === epLwNow) ? state.match._prefetchedLastWords : null;
+  const pfLw = pfLwMap ? pfLwMap[pfLwKey] : null;
+  if (pfLwMap && pfLw) delete pfLwMap[pfLwKey];
+  const lwObj = (pfLw && pfLw.lwObj) ? pfLw.lwObj : buildAiLastWords(seat, ctx.mode);
   const commitAiLastWords = function (liveTextOverride) {
     if (liveTextOverride) lwObj.text = liveTextOverride;
     applyLastWordsInfluence(seat, lwObj.text, lwObj);
@@ -336,6 +411,9 @@ function advanceLastWordsQueue() {
       charDelay: 32,
       holdMs: 2600
     });
+    if (ctx.queue && ctx.queue.length > 0) {
+      prefetchAiLastWords(ctx.queue, ctx.mode);
+    }
     if (ctx.queue && ctx.queue.length > 0 && typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
       if (ctx.queue[0] === getPlayerId()) {
         voice.prefetchBestTts(
@@ -350,21 +428,28 @@ function advanceLastWordsQueue() {
   };
 
   const ffLw = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  if (!ffLw && pfLw && pfLw.resolvedText) {
+    commitAiLastWords(pfLw.resolvedText);
+    return;
+  }
   const useLiveLw = Boolean(
     !ffLw &&
     typeof isExternalLlmActive === "function" && isExternalLlmActive() &&
     typeof tryGenerateGeminiLastWords === "function"
   );
-  if (!useLiveLw) {
+  if (!useLiveLw && !(pfLw && pfLw.promise)) {
     commitAiLastWords(null);
     return;
   }
 
   state.match.phase = "LAST_WORDS_SPEECH";
   state.speakingInFlight = true;
-  const epLw = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const epLw = epLwNow;
   const lwSeq = (state._lastWordsTurnSeq = (state._lastWordsTurnSeq || 0) + 1);
   updateAllUI();
+  if (ctx.queue && ctx.queue.length > 0) {
+    prefetchAiLastWords(ctx.queue, ctx.mode);
+  }
   let lwCueTimer = setTimeout(function () {
     if (state._lastWordsTurnSeq === lwSeq && state.lastWordsCtx === ctx && state.activeSpeakerId === seat.id && state.speakingInFlight) {
       if (typeof syncSpeakerBannerVisuals === "function") {
@@ -376,7 +461,8 @@ function advanceLastWordsQueue() {
     }
   }, 350);
 
-  tryGenerateGeminiLastWords(seat, ctx.mode, lwObj)
+  const lwPromise = (pfLw && pfLw.promise) ? pfLw.promise : tryGenerateGeminiLastWords(seat, ctx.mode, lwObj);
+  lwPromise
     .then(function (liveText) {
       if (lwCueTimer) clearTimeout(lwCueTimer);
       if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epLw)) return;

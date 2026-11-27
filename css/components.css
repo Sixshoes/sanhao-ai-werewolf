@@ -11463,7 +11463,7 @@ body.theme-daylight #seatButtonStrip .seat-pill-btn.is-dead {
 
 /* 4. Central Tea-Notebook Focal Card (#focalCenterCard — Handmade Xuan-Paper Sheet) */
 body.theme-daylight.screen-ingame #focalCenterCard {
-  background: linear-gradient(178deg, rgba(252, 248, 240, 0.97) 0%, rgba(245, 239, 226, 0.97) 100%);
+  background: linear-gradient(178deg, rgba(252, 248, 240, 0.994) 0%, rgba(245, 239, 226, 0.994) 100%);
   border: 1px solid rgba(116, 92, 62, 0.24);
   border-top: 2px solid #b58336;
   box-shadow: 0 16px 40px rgba(52, 36, 18, 0.16), inset 0 1px 0 rgba(255, 253, 248, 0.92);
@@ -11533,6 +11533,8 @@ body.theme-twilight #spotlightText .clue-seat {
   border-color: transparent;
   color: #7c4d10;
   border-bottom: 1.5px dotted rgba(154, 107, 39, 0.78);
+  padding: 0 1px;
+  margin: 0;
 }
 
 body.theme-daylight #spotlightText .clue-seat:hover,
@@ -13524,6 +13526,8 @@ body.craft-ui.theme-twilight #spotlightText .clue-seat {
   border: none;
   border-bottom: 1.5px dotted rgba(154, 107, 39, 0.78);
   color: #7c4d10;
+  padding: 0 1px;
+  margin: 0;
 }
 
 body.craft-ui.theme-daylight #spotlightText .clue-seat:hover,
@@ -16748,6 +16752,220 @@ body.craft-ui.theme-twilight .composer-pill-btn.is-muted:hover {
   border-color: rgba(164, 57, 44, 0.50);
   background: rgba(164, 57, 44, 0.10);
 }
+
+/* ==================== v24.4.0 SEVEN-MOVEMENT MIXER GRID & AUDIO POLISH ==================== */
+.track-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .track-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
+
+body.theme-twilight #modalMusic .timbre-btn,
+body.theme-daylight #modalMusic .timbre-btn,
+body.theme-day .timbre-btn,
+body.theme-twilight #modalMusic .track-btn,
+body.theme-daylight #modalMusic .track-btn,
+body.theme-day .track-btn,
+body.theme-twilight #modalMusic .voice-rate-btn,
+body.theme-daylight #modalMusic .voice-rate-btn,
+body.theme-day .voice-rate-btn {
+  background: rgba(250, 245, 234, 0.90);
+  border-color: rgba(116, 92, 62, 0.28);
+  color: #3e3123;
+}
+
+body.theme-twilight #modalMusic .timbre-btn.is-active,
+body.theme-daylight #modalMusic .timbre-btn.is-active,
+body.theme-day .timbre-btn.is-active,
+body.theme-twilight #modalMusic .track-btn.is-active,
+body.theme-daylight #modalMusic .track-btn.is-active,
+body.theme-day .track-btn.is-active,
+body.theme-twilight #modalMusic .voice-rate-btn.is-active,
+body.theme-daylight #modalMusic .voice-rate-btn.is-active,
+body.theme-day .voice-rate-btn.is-active {
+  background: rgba(180, 125, 42, 0.18);
+  border-color: #9a6b27;
+  color: #6f440b;
+}
+
+/* ==================== LISTEN-PHASE LIVE PIT BAR (邊聽邊排即時排坑列) ==================== */
+.listen-pit-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 6px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: rgba(16, 13, 10, 0.78);
+  border: 1px solid rgba(212, 166, 87, 0.34);
+  color: #f3eadb;
+}
+
+.listen-pit-bar.hidden {
+  display: none;
+}
+
+.listen-pit-bar.is-wolf-board {
+  border-color: rgba(225, 29, 72, 0.38);
+}
+
+.listen-pit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.listen-pit-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 220px;
+  flex-wrap: wrap;
+}
+
+.listen-pit-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fde68a;
+  letter-spacing: 0.02em;
+}
+
+.listen-pit-bar.is-wolf-board .listen-pit-title {
+  color: #fda4af;
+}
+
+.listen-pit-sub {
+  font-size: 13px;
+  color: rgba(226, 214, 194, 0.78);
+  min-width: 0;
+}
+
+.listen-pit-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.listen-pit-tool-btn,
+.listen-pit-toggle-btn {
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 5px;
+}
+
+.listen-pit-toggle-btn {
+  border: 1px solid rgba(212, 166, 87, 0.36);
+  background: rgba(212, 166, 87, 0.12);
+  color: #f5dfb2;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.listen-pit-toggle-btn:hover {
+  background: rgba(212, 166, 87, 0.22);
+  border-color: rgba(251, 191, 36, 0.68);
+}
+
+.listen-pit-bar .pit-seat-chip.is-speaking-now {
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.65);
+}
+
+.listen-pit-preview {
+  font-size: 13px;
+  color: #e6d7bd;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: rgba(30, 24, 18, 0.72);
+  border-left: 2px solid rgba(212, 166, 87, 0.52);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.phase-mode-sheriff.phase-mode-listen #sheriffElectionCandidates {
+  max-height: 88px;
+}
+
+body.craft-ui.theme-daylight .listen-pit-bar,
+body.craft-ui.theme-day .listen-pit-bar,
+body.craft-ui.theme-twilight .listen-pit-bar {
+  background: rgba(246, 239, 224, 0.95);
+  border-color: rgba(154, 107, 39, 0.38);
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .listen-pit-bar.is-wolf-board,
+body.craft-ui.theme-day .listen-pit-bar.is-wolf-board,
+body.craft-ui.theme-twilight .listen-pit-bar.is-wolf-board {
+  background: rgba(252, 238, 234, 0.94);
+  border-color: rgba(164, 57, 44, 0.42);
+}
+
+body.craft-ui.theme-daylight .listen-pit-title,
+body.craft-ui.theme-day .listen-pit-title,
+body.craft-ui.theme-twilight .listen-pit-title {
+  color: #6e420c;
+}
+
+body.craft-ui.theme-daylight .listen-pit-bar.is-wolf-board .listen-pit-title,
+body.craft-ui.theme-day .listen-pit-bar.is-wolf-board .listen-pit-title,
+body.craft-ui.theme-twilight .listen-pit-bar.is-wolf-board .listen-pit-title {
+  color: #8c2018;
+}
+
+body.craft-ui.theme-daylight .listen-pit-sub,
+body.craft-ui.theme-day .listen-pit-sub,
+body.craft-ui.theme-twilight .listen-pit-sub {
+  color: #5b4a36;
+}
+
+body.craft-ui.theme-daylight .listen-pit-toggle-btn,
+body.craft-ui.theme-day .listen-pit-toggle-btn,
+body.craft-ui.theme-twilight .listen-pit-toggle-btn {
+  background: rgba(217, 179, 108, 0.22);
+  border-color: rgba(154, 107, 39, 0.48);
+  color: #5c380c;
+}
+
+body.craft-ui.theme-daylight .listen-pit-toggle-btn:hover,
+body.craft-ui.theme-day .listen-pit-toggle-btn:hover,
+body.craft-ui.theme-twilight .listen-pit-toggle-btn:hover {
+  background: rgba(217, 179, 108, 0.36);
+  border-color: #9a6b27;
+}
+
+body.craft-ui.theme-daylight .listen-pit-bar .pit-seat-chip.is-speaking-now,
+body.craft-ui.theme-day .listen-pit-bar .pit-seat-chip.is-speaking-now,
+body.craft-ui.theme-twilight .listen-pit-bar .pit-seat-chip.is-speaking-now {
+  box-shadow: 0 0 0 1px rgba(180, 118, 38, 0.72);
+}
+
+body.craft-ui.theme-daylight .listen-pit-preview,
+body.craft-ui.theme-day .listen-pit-preview,
+body.craft-ui.theme-twilight .listen-pit-preview {
+  background: rgba(251, 247, 238, 0.94);
+  border-left-color: #9a6b27;
+  color: #3d2e20;
+}
+
+@media (max-width: 639px) {
+  .listen-pit-bar {
+    padding: 6px 8px;
+  }
+  .listen-pit-sub {
+    width: 100%;
+  }
+}
+
 
 
 

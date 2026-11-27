@@ -101,6 +101,7 @@ function executeRadialAction(actionKey) {
       return;
     }
     state.playerMarks[target.id] = state.playerMarks[target.id] === "good" ? null : "good";
+    if (typeof syncDraftPitFromPlayerMark === "function") syncDraftPitFromPlayerMark(target.id, state.playerMarks[target.id]);
     spawnBurst(target.id, ["#34d399", "#a7f3d0", "#fde68a"], 14, "petal");
     nudgeSeat(target.id, { scale: 0.92, vScale: 0.22, vy: -5 });
     spawnFx(target.id, state.playerMarks[target.id] ? (isWolfEx ? "標記假保" : "標記好人") : "清除標記", "#34d399");
@@ -112,6 +113,7 @@ function executeRadialAction(actionKey) {
       return;
     }
     state.playerMarks[target.id] = state.playerMarks[target.id] === "wolf" ? null : "wolf";
+    if (typeof syncDraftPitFromPlayerMark === "function") syncDraftPitFromPlayerMark(target.id, state.playerMarks[target.id]);
     spawnBurst(target.id, ["#fb7185", "#fda4af", "#ffffff"], 14, "spark");
     nudgeSeat(target.id, { scale: 0.88, vScale: 0.2, vTilt: 0.2 });
     spawnFx(target.id, state.playerMarks[target.id] ? (isWolfEx ? "標記甩鍋" : "標記懷疑") : "清除標記", "#fb7185");

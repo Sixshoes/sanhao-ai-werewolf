@@ -26,8 +26,12 @@ const sound = {
   analyser: null,
   bgmGain: null,
   bgmVocalCarve: null,
+  bgmConsonantCarve: null,
+  ambientGain: null,
+  ambientEnabled: true,
   sfxGain: null,
   voiceBus: null,
+  voiceHighPass: null,
   voiceLowShelf: null,
   voiceMidPeak: null,
   voicePresence: null,
@@ -69,12 +73,21 @@ const sound = {
         this.analyser.smoothingTimeConstant = 0.82;
 
         this.bgmGain = this.ctx.createGain();
-        // v18.0 Mid-Band Vocal-Carve Filter (1.25kHz peaking dip during speech replaces jarring volume drop!)
+        // v18.0 + v24.4 Dual-Band Vocal-Carve Filters (1.25kHz body + 2.85kHz clarity dip replace flat muffling)
         this.bgmVocalCarve = this.ctx.createBiquadFilter();
         this.bgmVocalCarve.type = "peaking";
         this.bgmVocalCarve.frequency.value = 1250;
         this.bgmVocalCarve.Q.value = 0.85;
         this.bgmVocalCarve.gain.value = 0;
+
+        this.bgmConsonantCarve = this.ctx.createBiquadFilter();
+        this.bgmConsonantCarve.type = "peaking";
+        this.bgmConsonantCarve.frequency.value = 2850;
+        this.bgmConsonantCarve.Q.value = 1.05;
+        this.bgmConsonantCarve.gain.value = 0;
+
+        this.ambientGain = this.ctx.createGain();
+        this.ambientGain.gain.value = 0.22;
 
         this.sfxGain = this.ctx.createGain();
         this.reverb = this.buildHallReverb(2.1);
@@ -84,15 +97,22 @@ const sound = {
         revReturn.gain.value = 0.38;
 
         this.bgmGain.connect(this.bgmVocalCarve);
-        this.bgmVocalCarve.connect(this.comp);
-        this.bgmVocalCarve.connect(bgmRevSend);
+        this.bgmVocalCarve.connect(this.bgmConsonantCarve);
+        this.bgmConsonantCarve.connect(this.comp);
+        this.bgmConsonantCarve.connect(bgmRevSend);
         bgmRevSend.connect(this.reverb);
+        this.ambientGain.connect(this.comp);
         this.sfxGain.connect(this.comp);
         this.reverb.connect(revReturn);
         revReturn.connect(this.comp);
 
-        // Broadcast Vocal Chain + Per-Persona Sculpting EQ + 3D Stereo Spatial Panner + Real-Time Multi-Vowel Lip-Sync Analyser!
+        // Broadcast Vocal Chain (85Hz Sub-Rumble HPF + Per-Persona Sculpting EQ + 3D Stereo Pan + Lip-Sync Analyser)
         this.voiceBus = this.ctx.createGain();
+        this.voiceHighPass = this.ctx.createBiquadFilter();
+        this.voiceHighPass.type = "highpass";
+        this.voiceHighPass.frequency.value = 85;
+        this.voiceHighPass.Q.value = 0.7;
+
         this.voiceLowShelf = this.ctx.createBiquadFilter();
         this.voiceLowShelf.type = "lowshelf";
         this.voiceLowShelf.frequency.value = 210;
@@ -138,7 +158,8 @@ const sound = {
         const voiceRoomReturn = this.ctx.createGain();
         voiceRoomReturn.gain.value = 0.52;
 
-        this.voiceBus.connect(this.voiceLowShelf);
+        this.voiceBus.connect(this.voiceHighPass);
+        this.voiceHighPass.connect(this.voiceLowShelf);
         this.voiceLowShelf.connect(this.voiceMidPeak);
         this.voiceMidPeak.connect(this.voicePresence);
         this.voicePresence.connect(this.voiceDeEss);
@@ -633,6 +654,17 @@ const sound = {
       const carveDb = this.voiceDucking ? -9.0 : 0.0;
       this.bgmVocalCarve.gain.setTargetAtTime(carveDb, now, this.voiceDucking ? 0.10 : 0.36);
     }
+    if (this.bgmConsonantCarve) {
+      const consDb = this.voiceDucking ? -4.5 : 0.0;
+      this.bgmConsonantCarve.gain.setTargetAtTime(consDb, now, this.voiceDucking ? 0.10 : 0.36);
+    }
+    if (this.ambientGain) {
+      const ambDuck = this.voiceDucking ? 0.55 : 1.0;
+      const ambLevel = (this.muted || !this.ambientEnabled || this.bgmVol <= 0.01)
+        ? 0.0001
+        : clamp(this.bgmVol * 0.28 * ambDuck, 0.0001, 0.36);
+      this.ambientGain.gain.setTargetAtTime(ambLevel, now, 0.28);
+    }
     this.sfxGain.gain.setTargetAtTime(this.muted ? 0.0001 : Math.max(0.0001, this.sfxVol * 0.82), now, 0.06);
     this.updateEqIndicator();
   },
@@ -675,6 +707,7 @@ const sound = {
     if (p === "GAME_OVER") return "finale";
     if (state.match.isMatchPoint) return "matchpoint";
     if (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT" || p === "HUNTER_TRIGGER") return "vote";
+    if (p === "SHERIFF_ELECTION" || p === "SHERIFF_ORDER" || p === "SHERIFF_TRANSFER") return "sheriff";
     return "day";
   },
 
@@ -763,38 +796,60 @@ const sound = {
     const effBpm = this.getEffectiveBpm(this.currentTrack);
     const now = this.ctx.currentTime + 0.02;
     const bar = this.barIdx % 4;
+    const melBar = this.barIdx % 8;
     const step = this.stepIdx % 8;
     const stepDur = (60 / effBpm) * 0.5;
     const deadTension = this.getCasualtyTensionCount();
 
-    // 1. Trigger warm extended Pad Chord on step 0 of every bar (+ deeper low bass string layers per casualty!)
+    // 1. Trigger warm extended Pad Chord & procedural sanctuary soundscape on step 0 of every bar
     if (step === 0 && mv.pads[bar]) {
-      this.voicePad(mv.pads[bar], now, stepDur * 7.8, this.currentTrack === "night" ? 0.11 : 0.09);
+      this.voicePad(mv.pads[bar], now, stepDur * 7.8, this.currentTrack === "night" ? 0.105 : 0.088);
       if (deadTension >= 1 && this.currentTrack !== "twilight" && this.currentTrack !== "finale") {
         const rootBass = mv.pads[bar][0] - 12;
         const bassVol = clamp(0.032 + Math.min(4, deadTension) * 0.014, 0.03, 0.095);
         this.voicePad([rootBass], now, stepDur * 7.9, bassVol);
       }
-    }
-
-    // 2. Plucked Zither / Acoustic Guitar Arpeggio
-    const arpMidi = mv.arps[bar] ? mv.arps[bar][step] : null;
-    if (arpMidi) {
-      const accent = (step === 0 || step === 4) ? 0.16 : 0.10;
-      this.voicePluck(midiToFreq(arpMidi), now, stepDur * 2.4, accent);
-      // Add extra octave shimmer when it is Player's turn to play a card!
-      if (state.match.phase === "DAY_PLAYER_TURN" && step % 2 === 0) {
-        this.voiceBell(midiToFreq(arpMidi + 12), now, stepDur * 1.8, 0.035);
+      if (this.ambientEnabled) {
+        this.triggerAmbientPulse(this.currentTrack, now, stepDur * 7.8);
       }
     }
 
-    // 3. Crystalline Bell / Singing Bowl Overtone Motif
-    const bellMidi = mv.bells[bar] ? mv.bells[bar][step] : null;
-    if (bellMidi) {
-      this.voiceBell(midiToFreq(bellMidi), now, stepDur * 3.5, 0.065);
+    // 2. Plucked Zither / Guqin / Acoustic Guitar Arpeggio with subtle stereo string pan
+    const arpMidi = mv.arps[bar] ? mv.arps[bar][step] : null;
+    if (arpMidi) {
+      const accent = (step === 0 || step === 4) ? 0.155 : 0.098;
+      this.voicePluck(midiToFreq(arpMidi), now, stepDur * 2.4, accent, step);
+      // Add extra octave shimmer when it is Player's turn to play a card!
+      if (state.match.phase === "DAY_PLAYER_TURN" && step % 2 === 0) {
+        this.voiceBell(midiToFreq(arpMidi + 12), now, stepDur * 1.8, 0.034);
+      }
     }
 
-    // 4. Subtle Taiko / Heartbeat / Woodblock Groove
+    // 3. Lyrical A/B Section Lead Solo Melody (Bamboo Xiao / Ocarina / Solo Cello)
+    const melRow = (mv.melody && mv.melody[melBar]) ? mv.melody[melBar] : null;
+    const melMidi = melRow ? melRow[step] : null;
+    if (melMidi) {
+      let holdSteps = 1;
+      let nextMelMidi = null;
+      for (let look = step + 1; look < 8; look++) {
+        if (melRow[look]) {
+          nextMelMidi = melRow[look];
+          break;
+        }
+        holdSteps += 1;
+      }
+      const melDur = Math.max(stepDur * 1.35, Math.min(stepDur * 3.8, stepDur * holdSteps * 0.92));
+      const melVel = (this.currentTrack === "night" || this.currentTrack === "finale") ? 0.068 : 0.078;
+      this.voiceLead(midiToFreq(melMidi), nextMelMidi ? midiToFreq(nextMelMidi) : null, now, melDur, melVel);
+    }
+
+    // 4. Crystalline Bell / Singing Bowl Overtone Motif
+    const bellMidi = mv.bells[bar] ? mv.bells[bar][step] : null;
+    if (bellMidi) {
+      this.voiceBell(midiToFreq(bellMidi), now, stepDur * 3.5, 0.062);
+    }
+
+    // 5. Subtle Taiko / Heartbeat / Woodblock Groove
     const drumCode = mv.drums ? mv.drums[step] : 0;
     if (drumCode === 1) this.voiceDrum("deep", now, 0.16);
     else if (drumCode === 2) this.voiceDrum("deep", now, 0.09);
@@ -803,20 +858,203 @@ const sound = {
     this.stepIdx += 1;
     if (this.stepIdx >= 8) {
       this.stepIdx = 0;
-      this.barIdx = (this.barIdx + 1) % 4;
+      this.barIdx = (this.barIdx + 1) % 8;
     }
   },
 
-  voicePluck: function (freq, t, dur, vel) {
+  triggerAmbientPulse: function (trackKey, t, barDur) {
+    if (this.muted || !this.ctx || !this.ambientGain || !this.ambientEnabled) return;
+    try {
+      const sr = this.ctx.sampleRate || 44100;
+      const windLen = Math.max(256, Math.floor(sr * Math.min(barDur * 0.96, 4.5)));
+      if (!this._windNoiseBuf || Math.abs(this._windNoiseBuf.length - windLen) > sr * 0.4) {
+        const wBuf = this.ctx.createBuffer(1, windLen, sr);
+        const ch = wBuf.getChannelData(0);
+        let lp = 0;
+        for (let i = 0; i < windLen; i++) {
+          const u = i / windLen;
+          const swell = Math.sin(Math.PI * u);
+          lp = lp * 0.94 + (Math.random() * 2 - 1) * 0.06;
+          ch[i] = lp * swell;
+        }
+        this._windNoiseBuf = wBuf;
+      }
+      const harmony = (typeof state !== "undefined" && state.match && typeof state.match.harmonyScore === "number")
+        ? state.match.harmonyScore
+        : 72;
+      const isNight = trackKey === "night";
+      const isTense = trackKey === "vote" || trackKey === "matchpoint" || harmony <= 45;
+      const nSrc = this.ctx.createBufferSource();
+      nSrc.buffer = this._windNoiseBuf;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.setValueAtTime(isNight ? 420 : (isTense ? 360 : 620), t);
+      bp.frequency.linearRampToValueAtTime(isNight ? 520 : (isTense ? 430 : 790), t + Math.min(barDur * 0.5, 2.2));
+      bp.Q.value = isNight ? 1.8 : 1.1;
+      const wGain = this.ctx.createGain();
+      wGain.gain.setValueAtTime(0.0001, t);
+      wGain.gain.linearRampToValueAtTime(isNight ? 0.16 : 0.12, t + Math.min(barDur * 0.35, 1.2));
+      wGain.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(barDur * 0.95, 4.2));
+      nSrc.connect(bp);
+      bp.connect(wGain);
+      wGain.connect(this.ambientGain);
+      nSrc.onended = function () {
+        try { nSrc.disconnect(); bp.disconnect(); wGain.disconnect(); } catch (e) {}
+      };
+      nSrc.start(t);
+
+      // Subtle atmospheric accents: night mountain cricket vs serene tea chime when harmony >= 78
+      if (isNight && (this.barIdx % 2 === 1)) {
+        for (let p = 0; p < 3; p++) {
+          const pt = t + 0.55 + p * 0.11;
+          const oscC = this.ctx.createOscillator();
+          const gC = this.ctx.createGain();
+          oscC.type = "sine";
+          oscC.frequency.setValueAtTime(4180 + p * 60, pt);
+          gC.gain.setValueAtTime(0.0001, pt);
+          gC.gain.linearRampToValueAtTime(0.012, pt + 0.015);
+          gC.gain.exponentialRampToValueAtTime(0.0001, pt + 0.075);
+          oscC.connect(gC);
+          gC.connect(this.ambientGain);
+          oscC.onended = function () { try { oscC.disconnect(); gC.disconnect(); } catch (e) {} };
+          oscC.start(pt);
+          oscC.stop(pt + 0.085);
+        }
+      } else if (!isTense && (trackKey === "twilight" || trackKey === "day" || trackKey === "finale") && harmony >= 78 && (this.barIdx % 4 === 2)) {
+        const chimeOsc = this.ctx.createOscillator();
+        const chimeG = this.ctx.createGain();
+        chimeOsc.type = "sine";
+        chimeOsc.frequency.setValueAtTime(midiToFreq(86), t + 0.35);
+        chimeG.gain.setValueAtTime(0.0001, t + 0.35);
+        chimeG.gain.linearRampToValueAtTime(0.028, t + 0.38);
+        chimeG.gain.exponentialRampToValueAtTime(0.0001, t + 1.9);
+        chimeOsc.connect(chimeG);
+        chimeG.connect(this.ambientGain);
+        chimeOsc.onended = function () { try { chimeOsc.disconnect(); chimeG.disconnect(); } catch (e) {} };
+        chimeOsc.start(t + 0.35);
+        chimeOsc.stop(t + 1.95);
+      }
+    } catch (e) {}
+  },
+
+  voiceLead: function (freq, nextFreq, t, dur, vel) {
+    if (this.muted || !this.ctx || !this.bgmGain) return;
+    try {
+      const isCinema = this.timbre === "cinema";
+      const isFolk = this.timbre === "folk";
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const mix2 = this.ctx.createGain();
+      const filt = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+
+      osc1.type = isCinema ? "sawtooth" : (isFolk ? "triangle" : "sine");
+      osc2.type = isCinema ? "triangle" : "sine";
+      osc1.frequency.setValueAtTime(freq, t);
+      osc2.frequency.setValueAtTime(isFolk ? freq * 2 : freq, t);
+      mix2.gain.value = isFolk ? 0.16 : 0.28;
+
+      if (this.timbre === "guqin") {
+        // Gentle bamboo xiao micro-scoop onset from a semitone below
+        osc1.frequency.setValueAtTime(freq * 0.96, t);
+        osc1.frequency.exponentialRampToValueAtTime(freq, t + Math.min(0.08, dur * 0.2));
+      }
+      if (nextFreq && dur >= 0.45) {
+        const glideStart = t + dur * 0.82;
+        osc1.frequency.setValueAtTime(freq, glideStart);
+        osc1.frequency.exponentialRampToValueAtTime(freq + (nextFreq - freq) * 0.35, t + dur);
+      }
+
+      // Expressive 5.2 Hz vibrato kicking in softly after attack
+      const lfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      lfo.type = "sine";
+      lfo.frequency.setValueAtTime(isCinema ? 5.6 : 5.1, t);
+      lfoGain.gain.setValueAtTime(0, t);
+      lfoGain.gain.linearRampToValueAtTime(isCinema ? freq * 0.008 : freq * 0.0055, t + Math.min(0.28, dur * 0.45));
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc1.frequency);
+
+      filt.type = "lowpass";
+      filt.Q.value = isCinema ? 1.6 : 0.9;
+      filt.frequency.setValueAtTime(isCinema ? 920 : Math.min(3400, freq * 3.2), t);
+      filt.frequency.linearRampToValueAtTime(isCinema ? 1650 : Math.min(4200, freq * 4.0), t + Math.min(0.35, dur * 0.4));
+
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(vel, t + Math.min(0.11, dur * 0.24));
+      gain.gain.setValueAtTime(vel * 0.82, t + dur * 0.65);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+      osc1.connect(filt);
+      osc2.connect(mix2);
+      mix2.connect(filt);
+      filt.connect(gain);
+      gain.connect(this.bgmGain);
+
+      // Soft airy bamboo breath transient on zen/guqin flute attack
+      if (!isCinema && !isFolk && this.ctx.sampleRate) {
+        const bFrames = Math.max(32, Math.floor(this.ctx.sampleRate * 0.032));
+        const bBuf = this.ctx.createBuffer(1, bFrames, this.ctx.sampleRate);
+        const ch = bBuf.getChannelData(0);
+        for (let i = 0; i < bFrames; i++) {
+          ch[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * (i / bFrames)) * 0.25;
+        }
+        const bSrc = this.ctx.createBufferSource();
+        bSrc.buffer = bBuf;
+        const bBp = this.ctx.createBiquadFilter();
+        bBp.type = "bandpass";
+        bBp.frequency.value = Math.min(3200, freq * 2.1);
+        bBp.Q.value = 2.0;
+        const bG = this.ctx.createGain();
+        bG.gain.value = vel * 0.38;
+        bSrc.connect(bBp);
+        bBp.connect(bG);
+        bG.connect(this.bgmGain);
+        bSrc.onended = function () { try { bSrc.disconnect(); bBp.disconnect(); bG.disconnect(); } catch (e) {} };
+        bSrc.start(t);
+      }
+
+      osc1.onended = function () {
+        try {
+          lfo.stop();
+          lfo.disconnect();
+          lfoGain.disconnect();
+          osc1.disconnect();
+          osc2.disconnect();
+          mix2.disconnect();
+          filt.disconnect();
+          gain.disconnect();
+        } catch (e) {}
+      };
+      osc1.start(t);
+      osc2.start(t);
+      lfo.start(t);
+      osc1.stop(t + dur + 0.05);
+      osc2.stop(t + dur + 0.05);
+      lfo.stop(t + dur + 0.05);
+    } catch (e) {}
+  },
+
+  voicePluck: function (freq, t, dur, vel, stepOpt) {
     try {
       const osc1 = this.ctx.createOscillator();
       const osc2 = this.ctx.createOscillator();
       const filt = this.ctx.createBiquadFilter();
       const gain = this.ctx.createGain();
 
-      if (this.timbre === "zen") {
+      if (this.timbre === "guqin") {
+        // Warm low silk-string fundamental + delicate octave harmonic + traditional yin-nao finger slide
         osc1.type = "triangle";
         osc2.type = "sine";
+        osc1.frequency.setValueAtTime(freq * 0.985, t);
+        osc1.frequency.exponentialRampToValueAtTime(freq, t + 0.048);
+        osc2.frequency.setValueAtTime(freq * 2.0, t);
+        filt.frequency.setValueAtTime(Math.min(4400, freq * 4.6), t);
+        filt.frequency.exponentialRampToValueAtTime(Math.max(200, freq * 1.15), t + 0.34);
+      } else if (this.timbre === "zen") {
+        osc1.type = "triangle";
+        osc2.type = "sine";
+        osc1.frequency.setValueAtTime(freq, t);
         osc2.frequency.setValueAtTime(freq * 2, t);
         filt.frequency.setValueAtTime(Math.min(7000, freq * 6.5), t);
         filt.frequency.exponentialRampToValueAtTime(Math.max(220, freq * 1.5), t + 0.28);
@@ -824,34 +1062,53 @@ const sound = {
         osc1.type = "triangle";
         osc2.type = "triangle";
         osc2.detune.value = 5;
+        osc1.frequency.setValueAtTime(freq, t);
         osc2.frequency.setValueAtTime(freq, t);
         filt.frequency.setValueAtTime(Math.min(4800, freq * 4.2), t);
         filt.frequency.exponentialRampToValueAtTime(Math.max(200, freq * 1.2), t + 0.22);
       } else {
         osc1.type = "sawtooth";
         osc2.type = "sine";
+        osc1.frequency.setValueAtTime(freq, t);
         osc2.frequency.setValueAtTime(freq, t);
         filt.frequency.setValueAtTime(Math.min(3200, freq * 3.0), t);
         filt.frequency.exponentialRampToValueAtTime(Math.max(180, freq * 1.1), t + 0.35);
       }
 
-      osc1.frequency.setValueAtTime(freq, t);
       filt.type = "lowpass";
-      filt.Q.value = 1.4;
+      filt.Q.value = this.timbre === "guqin" ? 1.8 : 1.4;
 
       gain.gain.setValueAtTime(0.0001, t);
       gain.gain.linearRampToValueAtTime(vel, t + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
       const osc2Mix = this.ctx.createGain();
-      osc2Mix.gain.value = 0.32;
+      osc2Mix.gain.value = this.timbre === "guqin" ? 0.24 : 0.32;
 
       osc1.connect(filt);
       osc2.connect(osc2Mix);
       osc2Mix.connect(filt);
       filt.connect(gain);
-      gain.connect(this.bgmGain);
+      let panNode = null;
+      if (typeof stepOpt === "number" && typeof this.ctx.createStereoPanner === "function") {
+        panNode = this.ctx.createStereoPanner();
+        panNode.pan.value = clamp(((stepOpt % 4) - 1.5) * 0.14, -0.26, 0.26);
+        gain.connect(panNode);
+        panNode.connect(this.bgmGain);
+      } else {
+        gain.connect(this.bgmGain);
+      }
 
+      osc1.onended = function () {
+        try {
+          osc1.disconnect();
+          osc2.disconnect();
+          osc2Mix.disconnect();
+          filt.disconnect();
+          gain.disconnect();
+          if (panNode) panNode.disconnect();
+        } catch (e) {}
+      };
       osc1.start(t);
       osc2.start(t);
       osc1.stop(t + dur + 0.04);
@@ -885,6 +1142,9 @@ const sound = {
         filt.connect(gain);
         gain.connect(self.bgmGain);
 
+        osc.onended = function () {
+          try { osc.disconnect(); filt.disconnect(); gain.disconnect(); } catch (e) {}
+        };
         osc.start(t);
         osc.stop(t + dur + 0.05);
       } catch (e) {}
@@ -900,7 +1160,7 @@ const sound = {
 
       carrier.type = "sine";
       mod.type = "sine";
-      const ratio = this.timbre === "zen" ? 2.756 : 2.0;
+      const ratio = (this.timbre === "zen" || this.timbre === "guqin") ? 2.756 : 2.0;
       carrier.frequency.setValueAtTime(freq, t);
       mod.frequency.setValueAtTime(freq * ratio, t);
 
@@ -916,6 +1176,9 @@ const sound = {
       carrier.connect(env);
       env.connect(this.bgmGain);
 
+      carrier.onended = function () {
+        try { mod.disconnect(); modGain.disconnect(); carrier.disconnect(); env.disconnect(); } catch (e) {}
+      };
       carrier.start(t);
       mod.start(t);
       carrier.stop(t + dur + 0.04);
@@ -928,6 +1191,7 @@ const sound = {
     try {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
+      const bgmRef = this.bgmGain;
       if (kind === "deep") {
         osc.type = "sine";
         osc.frequency.setValueAtTime(108, t);
@@ -936,7 +1200,8 @@ const sound = {
         gain.gain.linearRampToValueAtTime(vel, t + 0.01);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
         osc.connect(gain);
-        gain.connect(this.bgmGain);
+        gain.connect(bgmRef);
+        osc.onended = function () { try { osc.disconnect(); gain.disconnect(); } catch (e) {} };
         osc.start(t);
         osc.stop(t + 0.28);
       } else {
@@ -947,7 +1212,8 @@ const sound = {
         gain.gain.linearRampToValueAtTime(vel, t + 0.004);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.055);
         osc.connect(gain);
-        gain.connect(this.bgmGain);
+        gain.connect(bgmRef);
+        osc.onended = function () { try { osc.disconnect(); gain.disconnect(); } catch (e) {} };
         osc.start(t);
         osc.stop(t + 0.065);
       }
@@ -1055,17 +1321,18 @@ const sound = {
         filt.connect(gain);
         gain.connect(self.sfxGain);
         if (self.reverb) gain.connect(self.reverb);
+        osc.onended = function () { try { osc.disconnect(); filt.disconnect(); gain.disconnect(); } catch (e) {} };
         osc.start(t);
         osc.stop(t + 0.27);
       });
     } catch (e) {}
   },
-  // Studio-Velvet Acoustic Voice Synth (Zero harsh sawtooth! Pure dual-harmonic warm instruments + speech contour!)
+  // Studio-Velvet Acoustic Voice Synth (12 distinct velvety instruments across 12 seats + speech contour!)
   playCozySyllable: function (seatId, charCode, charText, nextChar) {
     if (this.muted || !this.ctx || !this.sfxGain) return;
     if (charText && /^[\s，。！？、；：「」『』（）()—…·・\-~]$/.test(charText)) return;
     try {
-      // 8 distinct velvety acoustic voices (Warm Harp / Wooden Kalimba / Bamboo Flute / Velvet Cello / Crystal Celesta / Music Box / Serene Guzheng / Warm Nylon)
+      // 12 distinct velvety acoustic voices across all 12 possible seats
       const instrs = [
         { root: 62, wave: "triangle", overtone: 2.0, oMix: 0.16, lp: 1850, dur: 0.135 }, // 1 你: Warm Harp
         { root: 57, wave: "sine",     overtone: 2.0, oMix: 0.20, lp: 1450, dur: 0.12  }, // 2 小澄: Wooden Kalimba
@@ -1073,10 +1340,14 @@ const sound = {
         { root: 50, wave: "triangle", overtone: 2.0, oMix: 0.18, lp: 1050, dur: 0.16  }, // 4 阿松: Velvet Cello
         { root: 72, wave: "sine",     overtone: 2.0, oMix: 0.14, lp: 2300, dur: 0.13  }, // 5 星兒: Crystal Celesta
         { root: 69, wave: "triangle", overtone: 2.0, oMix: 0.12, lp: 2100, dur: 0.125 }, // 6 小雲: Delicate Music Box
-        { root: 55, wave: "triangle", overtone: 1.5, oMix: 0.15, lp: 1650, dur: 0.165 }, // 7 阿竹: Serene Guzheng
-        { root: 60, wave: "triangle", overtone: 2.0, oMix: 0.17, lp: 1550, dur: 0.125 }  // 8 晨晨: Warm Nylon Guitar
+        { root: 55, wave: "triangle", overtone: 1.5, oMix: 0.15, lp: 1650, dur: 0.165 }, // 7 阿竹: Serene Bamboo Xiao
+        { root: 60, wave: "triangle", overtone: 2.0, oMix: 0.17, lp: 1550, dur: 0.125 }, // 8 晨晨: Warm Nylon Guitar
+        { root: 48, wave: "triangle", overtone: 2.0, oMix: 0.15, lp: 960,  dur: 0.175 }, // 9 墨白: Deep Guqin Bass
+        { root: 64, wave: "sine",     overtone: 2.0, oMix: 0.16, lp: 2050, dur: 0.15  }, // 10 晴嵐: Graceful Guzheng
+        { root: 59, wave: "triangle", overtone: 1.5, oMix: 0.18, lp: 1750, dur: 0.12  }, // 11 阿朗: Crisp Marimba
+        { root: 74, wave: "sine",     overtone: 2.0, oMix: 0.13, lp: 2450, dur: 0.13  }  // 12 柚子: Sweet Glockenspiel
       ];
-      const cfg = instrs[((seatId || 1) - 1) % instrs.length];
+      const cfg = instrs[((Math.max(1, seatId || 1)) - 1) % instrs.length];
       const scaleOffsets = [0, 2, 4, 7, 9, 12];
       let stepIdx = Math.abs((charCode || 0) + (seatId || 1) * 3) % scaleOffsets.length;
       let pitchBend = 1.0;
@@ -1120,8 +1391,9 @@ const sound = {
       osc2.connect(o2Gain);
       o2Gain.connect(filt);
       filt.connect(gain);
+      let pNode = null;
       if (this.voicePanner && typeof this.ctx.createStereoPanner === "function" && typeof stage3d !== "undefined" && stage3d.isActive()) {
-        const pNode = this.ctx.createStereoPanner();
+        pNode = this.ctx.createStereoPanner();
         pNode.pan.value = stage3d.computeSeatPan(seatId);
         gain.connect(pNode);
         pNode.connect(this.sfxGain);
@@ -1131,6 +1403,16 @@ const sound = {
       if (this.reverb) gain.connect(this.reverb);
       this.cozyMouthPulse = 0.88;
 
+      osc1.onended = function () {
+        try {
+          osc1.disconnect();
+          osc2.disconnect();
+          o2Gain.disconnect();
+          filt.disconnect();
+          gain.disconnect();
+          if (pNode) pNode.disconnect();
+        } catch (e) {}
+      };
       osc1.start(now);
       osc2.start(now);
       osc1.stop(now + cfg.dur + 0.02);

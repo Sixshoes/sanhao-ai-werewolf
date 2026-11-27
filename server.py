@@ -298,16 +298,26 @@ def get_tts_key_lock(key):
         return lk
 
 
+EDGE_VOICE_FALLBACK_MAP = {
+    "zh-TW-YunJheNeural": ("zh-CN-YunjianNeural", "-3%", "-2Hz"),
+    "zh-CN-YunxiNeural": ("zh-CN-YunjianNeural", "-2%", "-2Hz"),
+    "zh-CN-YunjianNeural": ("zh-CN-YunxiNeural", "+0%", "-1Hz"),
+    "zh-TW-HsiaoChenNeural": ("zh-TW-HsiaoYuNeural", "+0%", "+0Hz"),
+    "zh-CN-XiaoyiNeural": ("zh-CN-XiaoxiaoNeural", "+2%", "+1Hz"),
+    "zh-CN-XiaoxiaoNeural": ("zh-TW-HsiaoChenNeural", "+0%", "+0Hz"),
+    "zh-CN-liaoning-XiaobeiNeural": ("zh-CN-XiaoyiNeural", "+6%", "+3Hz"),
+}
+
+
 async def synthesize_edge_mp3(text, voice_name, rate_str, pitch_str, out_path):
     try:
         comm = edge_tts.Communicate(text=text, voice=voice_name, rate=rate_str, pitch=pitch_str)
         await comm.save(str(out_path))
     except Exception:
-        if voice_name == "zh-TW-YunJheNeural":
-            fallback_comm = edge_tts.Communicate(text=text, voice="zh-CN-YunjianNeural", rate="-3%", pitch="-2Hz")
-            await fallback_comm.save(str(out_path))
-        elif voice_name == "zh-CN-liaoning-XiaobeiNeural":
-            fallback_comm = edge_tts.Communicate(text=text, voice="zh-CN-XiaoyiNeural", rate="+6%", pitch="+3Hz")
+        fb = EDGE_VOICE_FALLBACK_MAP.get(voice_name)
+        if fb:
+            fb_voice, fb_rate, fb_pitch = fb
+            fallback_comm = edge_tts.Communicate(text=text, voice=fb_voice, rate=fb_rate, pitch=fb_pitch)
             await fallback_comm.save(str(out_path))
         else:
             raise
@@ -315,6 +325,7 @@ async def synthesize_edge_mp3(text, voice_name, rate_str, pitch_str, out_path):
 
 GEMINI_TTS_VOICE_FALLBACK = {
     "Orus": "Puck",
+    "Fenrir": "Puck",
     "Enceladus": "Puck",
     "Achird": "Charon",
     "Iapetus": "Puck",
@@ -361,23 +372,44 @@ def wrap_pcm_to_wav(raw_bytes, sample_rate=24000, channels=1, bits_per_sample=16
     return header + raw_bytes
 
 
+_VOCAL_TAG_RE = re.compile(
+    r"<\s*(?:breath|heavy breath|exhales|chuckle|chuckles|cough|gasp|sigh|sighs|throat-clearing|pff|phew|tsk|short pause|long pause|whispers|whispering)\s*>",
+    re.IGNORECASE,
+)
+
+
+def strip_gemini_vocal_tags(raw_text):
+    """Strip Gemini 3.8 inline angle-bracket vocal cue tags before legacy 2.5 TTS fallback."""
+    return re.sub(r"\s+", " ", _VOCAL_TAG_RE.sub(" ", str(raw_text or ""))).strip()
+
+
 def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=14):
-    """Call official Gemini TTS generateContent API (3.8 Flash Lite TTS -> 2.5 Flash Preview TTS); return RIFF WAV bytes."""
+    """Call official Gemini TTS generateContent API (3.8 Flash Lite -> 3.8 Flash -> 2.5 Flash Preview); return RIFF WAV bytes."""
     import base64
     v_name = voice_name if voice_name in ALLOWED_GEMINI_VOICES else "Kore"
-    voices_to_try = [v_name]
     fb_v = GEMINI_TTS_VOICE_FALLBACK.get(v_name)
-    if fb_v and fb_v != v_name:
-        voices_to_try.append(fb_v)
-    models_to_try = ("gemini-3.8-flash-lite-tts", "gemini-2.5-flash-preview-tts")
+    models_to_try = ("gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts")
     last_err = None
+    raw_text = str(text)
+    stripped_text = strip_gemini_vocal_tags(raw_text) or raw_text
+    has_vocal_tags = stripped_text != raw_text
     for model_id in models_to_try:
         is_38 = model_id.startswith("gemini-3.8-")
-        for cand_voice in voices_to_try:
+        attempts = []
+        if is_38:
+            attempts.append((v_name, False))
+            if (fb_v and fb_v != v_name) or has_vocal_tags:
+                attempts.append((fb_v or v_name, True))
+        else:
+            attempts.append((v_name, True))
+            if fb_v and fb_v != v_name:
+                attempts.append((fb_v, True))
+        for cand_voice, use_stripped in attempts:
             if is_38:
-                part = {"text": str(text), "speechMetadata": {"style": style_prompt}} if style_prompt else {"text": str(text)}
+                t_38 = stripped_text if use_stripped else raw_text
+                part = {"text": t_38, "speechMetadata": {"style": style_prompt}} if style_prompt else {"text": t_38}
             else:
-                prompt_line = f"請用以下口吻自然朗讀（不要唸出指示）：{style_prompt}\n{text}" if style_prompt else str(text)
+                prompt_line = f"請用以下口吻自然朗讀（不要唸出指示）：{style_prompt}\n{stripped_text}" if style_prompt else stripped_text
                 part = {"text": prompt_line}
             payload = {
                 "contents": [{
@@ -415,12 +447,20 @@ def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=14):
                     err_detail = redact_api_keys(hexc.read().decode("utf-8", "ignore"))[:220]
                 except Exception:
                     pass
+                finally:
+                    try:
+                        hexc.close()
+                    except Exception:
+                        pass
                 last_err = RuntimeError(f"Gemini TTS {model_id}/{cand_voice} HTTP {hexc.code}: {err_detail}")
                 if hexc.code in (401, 403):
                     raise hexc
                 if hexc.code in (400, 404, 429, 500, 502, 503):
                     continue
                 raise hexc
+            except (urllib.error.URLError, TimeoutError, OSError) as nexc:
+                last_err = RuntimeError(f"Gemini TTS {model_id}/{cand_voice} transient error: {redact_api_keys(nexc)}")
+                continue
             for cand in (data.get("candidates") or []):
                 parts = ((cand.get("content") or {}).get("parts") or [])
                 for pt in parts:
@@ -483,7 +523,7 @@ def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeo
     is_gemini4 = safe_model.startswith("gemini-4-")
     is_pro25 = safe_model == "gemini-2.5-pro"
     gen_cfg = {
-        "maxOutputTokens": (2048 if json_mode else 1152) if is_pro25 else (1536 if json_mode else 896),
+        "maxOutputTokens": (3072 if json_mode else 2048) if (is_pro25 or is_gemini4) else (1536 if json_mode else 1024),
     }
     if is_gemini4:
         t_lvl = str(os.environ.get("GEMINI_THINKING_LEVEL") or "LOW").strip().upper()

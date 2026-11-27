@@ -31,6 +31,16 @@ const MOVEMENTS = {
       [78, null, null, null, null, null, 76, null],
       [null, null, 76, null, 73, null, null, null]
     ],
+    melody: [
+      [74, null, 76, null, 78, null, null, null],
+      [74, null, 73, null, 69, null, null, null],
+      [71, null, 74, null, 76, null, 74, null],
+      [73, null, 71, null, 69, null, null, null],
+      [78, null, 81, null, 83, null, 81, null],
+      [78, null, 76, null, 74, null, null, null],
+      [74, null, 76, null, 78, null, 81, null],
+      [76, null, 74, null, 74, null, null, null]
+    ],
     drums: [0, 0, 0, 0, 0, 0, 0, 0]
   },
   night: {
@@ -54,6 +64,16 @@ const MOVEMENTS = {
       [79, null, 78, null, 73, 74, null, null],
       [76, null, 71, null, 67, 66, null, null],
       [78, null, 76, null, 73, null, 70, null]
+    ],
+    melody: [
+      [71, null, null, null, 74, null, null, null],
+      [73, null, null, null, 71, null, 69, null],
+      [67, null, null, null, 71, null, null, null],
+      [70, null, null, null, 66, null, null, null],
+      [74, null, 73, null, 71, null, null, null],
+      [76, null, 74, null, 73, null, null, null],
+      [71, null, 67, null, 66, null, 67, null],
+      [70, null, 71, null, 73, null, null, null]
     ],
     drums: [1, 0, 2, 0, 0, 0, 0, 0]
   },
@@ -79,10 +99,54 @@ const MOVEMENTS = {
       [78, null, null, null, 74, null, null, null],
       [null, null, 78, null, 81, null, null, null]
     ],
+    melody: [
+      [74, null, 76, null, 78, null, null, null],
+      [81, null, 78, null, 76, null, null, null],
+      [74, null, 71, null, 74, null, 76, null],
+      [78, null, 76, null, 74, null, null, null],
+      [81, null, 83, null, 86, null, 83, null],
+      [81, null, 78, null, 76, null, null, null],
+      [74, null, 76, null, 78, null, 81, null],
+      [78, null, 76, null, 74, null, null, null]
+    ],
     drums: [1, 0, 0, 3, 0, 0, 3, 0]
   },
+  sheriff: {
+    name: "04 上警爭鋒（警徽競選）",
+    chordsLabel: "Dmaj7 — F#m7 — Bm9 — Asus4",
+    bpm: 104,
+    pads: [
+      [50, 57, 61, 66],
+      [42, 49, 57, 61],
+      [47, 54, 61, 62],
+      [45, 52, 57, 62]
+    ],
+    arps: [
+      [62, 66, 69, 73, 69, 66, 74, 69],
+      [54, 61, 66, 69, 66, 61, 73, 69],
+      [59, 66, 71, 73, 71, 66, 74, 71],
+      [57, 64, 69, 74, 73, 69, 64, 57]
+    ],
+    bells: [
+      [86, null, null, null, 81, null, null, null],
+      [85, null, null, null, 81, null, null, null],
+      [83, null, null, 81, 78, null, null, null],
+      [81, null, 79, null, 78, null, null, null]
+    ],
+    melody: [
+      [74, null, 78, null, 81, null, null, null],
+      [85, null, 81, null, 78, null, null, null],
+      [74, null, 76, null, 78, null, 81, null],
+      [76, null, null, 74, 73, null, null, null],
+      [81, null, 85, null, 86, null, 85, null],
+      [81, null, 78, null, 76, null, null, null],
+      [74, null, 78, null, 81, null, 83, null],
+      [81, null, 78, null, 74, null, null, null]
+    ],
+    drums: [1, 0, 3, 0, 1, 0, 3, 3]
+  },
   vote: {
-    name: "04 公投對決（高張力表決）",
+    name: "05 公投對決（高張力表決）",
     chordsLabel: "Bm — A — Gmaj7 — F#7",
     bpm: 116,
     pads: [
@@ -102,6 +166,16 @@ const MOVEMENTS = {
       [69, null, null, 73, null, null, 71, null],
       [67, null, null, 71, null, null, 69, null],
       [66, null, null, 70, null, null, 73, null]
+    ],
+    melody: [
+      [71, null, 74, null, 73, null, 71, null],
+      [69, null, 73, null, 71, null, 69, null],
+      [67, null, 71, null, 69, null, 67, null],
+      [66, null, 70, null, 73, null, null, null],
+      [78, null, 74, null, 73, null, 71, null],
+      [76, null, 73, null, 71, null, 69, null],
+      [74, null, 71, null, 69, null, 67, null],
+      [73, null, 74, null, 70, null, null, null]
     ],
     drums: [1, 0, 3, 1, 0, 3, 1, 3]
   },
@@ -127,10 +201,20 @@ const MOVEMENTS = {
       [74, null, 73, null, 69, null, 73, null],
       [73, null, 71, null, 68, null, 73, 76]
     ],
+    melody: [
+      [78, null, 76, 73, 76, null, 78, null],
+      [76, null, 74, 71, 74, null, 76, null],
+      [74, null, 73, 69, 73, null, 74, null],
+      [73, null, 71, 68, 73, null, null, null],
+      [81, null, 78, 76, 78, null, 81, null],
+      [79, null, 76, 74, 76, null, 79, null],
+      [78, null, 74, 73, 74, null, 78, null],
+      [77, null, 73, 71, 73, null, 76, null]
+    ],
     drums: [1, 3, 1, 3, 1, 2, 1, 3]
   },
   finale: {
-    name: "05 雲開見月（終局謝幕）",
+    name: "07 雲開見月（終局謝幕）",
     chordsLabel: "Dmaj9 — Gmaj9 — Em9 — Asus4",
     bpm: 80,
     pads: [
@@ -150,6 +234,16 @@ const MOVEMENTS = {
       [83, null, null, null, 78, null, null, null],
       [79, null, null, null, 74, null, null, null],
       [81, null, 80, null, 81, null, null, null]
+    ],
+    melody: [
+      [74, null, 78, null, 81, null, null, null],
+      [83, null, 81, null, 78, null, null, null],
+      [76, null, 79, null, 78, null, 74, null],
+      [76, null, null, null, 73, null, null, null],
+      [78, null, 81, null, 86, null, null, null],
+      [83, null, 81, null, 78, null, 74, null],
+      [76, null, 74, null, 71, null, 74, null],
+      [76, null, 74, null, 74, null, null, null]
     ],
     drums: [1, 0, 0, 0, 2, 0, 0, 0]
   }

@@ -2469,7 +2469,12 @@ function startSheriffElection(onDone) {
     return false;
   }
   m.sheriffElectionPending = false;
-  m.sheriffElectionSeed = Math.floor(Math.random() * 100000);
+  const epShStart = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  if (m._sheriffPrewarm && m._sheriffPrewarm.epoch === epShStart && typeof m._sheriffPrewarm.seed === "number") {
+    m.sheriffElectionSeed = m._sheriffPrewarm.seed;
+  } else {
+    m.sheriffElectionSeed = Math.floor(Math.random() * 100000);
+  }
   const cands = buildSheriffElectionCandidates().sort(function (a, b) { return a.id - b.id; });
   const pSeat = getPlayerSeat();
   const ffSpec = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
@@ -2651,6 +2656,9 @@ function startSheriffElection(onDone) {
   if (typeof voice !== "undefined" && voice.canSpeak()) {
     voice.speakHost("第1天，天亮請睜眼！先進行警長競選，競選結束後再公布昨夜結果。目前共有" + cands.length + "位夥伴舉手上警，請決定是否上警！");
   }
+  if (typeof prewarmSheriffElectionPipeline === "function") {
+    prewarmSheriffElectionPipeline({ stage: "signup" });
+  }
   updateAllUI();
   return true;
 }
@@ -2729,6 +2737,183 @@ function _prepareSheriffCandidateDraft(cand, ctx, m) {
   };
 }
 
+function _buildSheriffCausalKey(candId, priorSpeeches, canWithdraw) {
+  const priors = Array.isArray(priorSpeeches) ? priorSpeeches : [];
+  const priorSig = priors.map(function (sp) {
+    return sp ? (sp.id + ":" + (sp.tone || "") + ":" + (sp.rivalId || 0) + ":" + (sp.withdrewAfterSpeech ? 1 : 0)) : "";
+  }).join("|");
+  const llmTag = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : "";
+  return candId + ":w" + (canWithdraw ? 1 : 0) + ":" + priorSig + ":" + llmTag;
+}
+
+function _ensureSheriffPrewarmState(m) {
+  if (!m) return null;
+  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  if (m._sheriffPrewarm && m._sheriffPrewarm.epoch === ep) {
+    return m._sheriffPrewarm;
+  }
+  if (typeof m.sheriffElectionSeed !== "number") {
+    m.sheriffElectionSeed = Math.floor(Math.random() * 100000);
+  }
+  const baseCands = buildSheriffElectionCandidates().sort(function (a, b) { return a.id - b.id; });
+  m._sheriffPrewarm = {
+    epoch: ep,
+    seed: m.sheriffElectionSeed,
+    baseCandidateIds: baseCands.map(function (c) { return c.id; }),
+    cacheByKey: {},
+    chainSeq: 0,
+    hostPrefetched: false
+  };
+  return m._sheriffPrewarm;
+}
+
+function prewarmSheriffElectionPipeline(opts) {
+  const o = opts || {};
+  const m = (typeof state !== "undefined") ? state.match : null;
+  if (!m || !m.started || !state.sheriffMode || m.day !== 1) return false;
+  if (!m.sheriffElectionPending && m.phase !== "SHERIFF_ELECTION") return false;
+  if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
+
+  const useLiveLlm = Boolean(
+    typeof isExternalLlmActive === "function" &&
+    isExternalLlmActive() &&
+    typeof tryGenerateGeminiSheriffSpeech === "function"
+  );
+  const wantNetTts = Boolean(
+    typeof voice !== "undefined" &&
+    typeof voice.canSpeak === "function" &&
+    voice.canSpeak() &&
+    ((typeof voice.isGeminiTtsPreferred === "function" && voice.isGeminiTtsPreferred()) || voice.localNeuralAvailable)
+  );
+  if (!o.forceLocalPrewarm && !useLiveLlm && !wantNetTts) return false;
+
+  const prew = _ensureSheriffPrewarmState(m);
+  if (!prew) return false;
+  const ep = prew.epoch;
+  const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+
+  if (!prew.hostPrefetched && wantNetTts && typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+    prew.hostPrefetched = true;
+    voice.prefetchBestTts(
+      "主持",
+      "第1天，天亮請睜眼！先進行警長競選，競選結束後再公布昨夜結果。目前共有" + prew.baseCandidateIds.length + "位夥伴舉手上警，請決定是否上警！",
+      "normal"
+    );
+  }
+
+  let simCandIds = [];
+  let simSpoken = [];
+  let startOrder = [];
+  if (m.phase === "SHERIFF_ELECTION" && m.sheriffElectionCtx) {
+    const shCtx = m.sheriffElectionCtx;
+    simCandIds = (shCtx.candidateIds || []).slice();
+    simSpoken = (shCtx.spokenSpeeches || []).slice();
+    if (shCtx.stage === "speech" && Array.isArray(shCtx.speechOrderIds) && shCtx.speechOrderIds.length) {
+      startOrder = shCtx.speechOrderIds.slice(Math.max(0, (typeof shCtx.speechIndex === "number" ? shCtx.speechIndex : -1) + 1));
+    } else {
+      startOrder = simCandIds.slice().sort(function (a, b) { return a - b; });
+    }
+  } else {
+    simCandIds = prew.baseCandidateIds.slice();
+    simSpoken = [];
+    startOrder = simCandIds.slice();
+  }
+  if (!startOrder.length) return false;
+
+  const myChainSeq = (prew.chainSeq = (prew.chainSeq || 0) + 1);
+  const runChain = async function () {
+    for (let i = 0; i < startOrder.length; i++) {
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return;
+      if (!state.match || state.match !== m || !m.started || prew.chainSeq !== myChainSeq) return;
+      const cid = startOrder[i];
+      if (simCandIds.indexOf(cid) === -1) continue;
+      const cand = getSeat(cid);
+      if (!cand || !cand.alive) continue;
+
+      if (cid === pid) {
+        if (wantNetTts && typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+          voice.prefetchBestTts("主持", "輪到" + pid + "號你進行警上發言，可選擇警徽流並發表競選宣言！", "normal");
+        }
+        // Stop before an unspoken running player turn so post-player AIs react cleanly to the player's actual speech!
+        break;
+      }
+      if (o.skipPendingWitch && cand.role === "witch" && m.phase !== "SHERIFF_ELECTION") {
+        break;
+      }
+
+      const canWithdraw = simCandIds.filter(function (id) { return id !== cand.id; }).length >= 1;
+      const causalKey = _buildSheriffCausalKey(cand.id, simSpoken, canWithdraw);
+      const simCtx = { candidateIds: simCandIds.slice(), spokenSpeeches: simSpoken.slice() };
+      const draft = _prepareSheriffCandidateDraft(cand, simCtx, m);
+
+      let entry = prew.cacheByKey[causalKey];
+      if (!entry) {
+        entry = {
+          epoch: ep,
+          seatId: cand.id,
+          key: causalKey,
+          draft: draft,
+          resolvedText: null,
+          promise: null,
+          ttsPrefetched: false
+        };
+        prew.cacheByKey[causalKey] = entry;
+        if (!useLiveLlm) {
+          entry.resolvedText = draft.fallbackFinalText;
+        } else {
+          entry.promise = tryGenerateGeminiSheriffSpeech(cand, simCtx.spokenSpeeches, draft.built, { aiBluffWithdraw: draft.aiBluffWithdraw })
+            .then(function (liveText) {
+              if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return null;
+              const resolved = liveText || draft.fallbackFinalText;
+              entry.resolvedText = resolved;
+              if (!entry.ttsPrefetched && wantNetTts && typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+                entry.ttsPrefetched = true;
+                voice.prefetchBestTts(cand.name, resolved, draft.voiceMood);
+              }
+              return resolved;
+            })
+            .catch(function () {
+              entry.resolvedText = draft.fallbackFinalText;
+              if (!entry.ttsPrefetched && wantNetTts && typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+                entry.ttsPrefetched = true;
+                voice.prefetchBestTts(cand.name, draft.fallbackFinalText, draft.voiceMood);
+              }
+              return draft.fallbackFinalText;
+            });
+        }
+      }
+
+      if (entry.promise && !entry.resolvedText) {
+        await entry.promise;
+        if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return;
+        if (!state.match || state.match !== m || !m.started || prew.chainSeq !== myChainSeq) return;
+      }
+
+      const finalTxt = entry.resolvedText || draft.fallbackFinalText;
+      if (!entry.ttsPrefetched && wantNetTts && typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
+        entry.ttsPrefetched = true;
+        voice.prefetchBestTts(cand.name, finalTxt, draft.voiceMood);
+      }
+
+      simSpoken.push({
+        id: cand.id,
+        name: cand.name,
+        tag: draft.finalTag,
+        tone: draft.built.tone,
+        rivalId: draft.built.rivalId,
+        badgeFlow: draft.built.badgeFlow || null,
+        withdrewAfterSpeech: draft.aiBluffWithdraw,
+        text: finalTxt
+      });
+      if (draft.aiBluffWithdraw) {
+        simCandIds = simCandIds.filter(function (id) { return id !== cand.id; });
+      }
+    }
+  };
+  runChain().catch(function () { });
+  return true;
+}
+
 function _buildSheriffPrefetchKey(candId, ctx) {
   const spLen = Array.isArray(ctx && ctx.spokenSpeeches) ? ctx.spokenSpeeches.length : 0;
   const cids = Array.isArray(ctx && ctx.candidateIds) ? ctx.candidateIds.join(",") : "";
@@ -2786,21 +2971,60 @@ function prefetchNextSheriffSpeech(ctx) {
     return true;
   }
 
+  const canWithdrawNext = (ctx.candidateIds || []).filter(function (id) { return id !== nextCand.id; }).length >= 1;
+  const causalNextKey = _buildSheriffCausalKey(nextCand.id, ctx.spokenSpeeches, canWithdrawNext);
+  const prewMap = (m._sheriffPrewarm && m._sheriffPrewarm.epoch === ep && m._sheriffPrewarm.cacheByKey)
+    ? m._sheriffPrewarm.cacheByKey
+    : null;
+  const prewHit = prewMap ? prewMap[causalNextKey] : null;
+  if (prewHit) {
+    const linked = {
+      epoch: ep,
+      seatId: nextCand.id,
+      key: shPrefKey,
+      causalKey: causalNextKey,
+      resolvedText: prewHit.resolvedText || null,
+      promise: prewHit.promise || null
+    };
+    ctx._prefetchedSheriff = linked;
+    if (linked.resolvedText && !prewHit.ttsPrefetched && canSpeakNow && typeof voice.prefetchBestTts === "function") {
+      prewHit.ttsPrefetched = true;
+      voice.prefetchBestTts(nextCand.name, linked.resolvedText, prewHit.draft ? prewHit.draft.voiceMood : "normal");
+    }
+    prewarmSheriffElectionPipeline({ stage: "speech" });
+    return true;
+  }
+
   const draft = _prepareSheriffCandidateDraft(nextCand, ctx, m);
   const entry = {
     epoch: ep,
     seatId: nextCand.id,
     key: shPrefKey,
+    causalKey: causalNextKey,
     resolvedText: null,
     promise: null
   };
   ctx._prefetchedSheriff = entry;
+  if (prewMap) {
+    prewMap[causalNextKey] = {
+      epoch: ep,
+      seatId: nextCand.id,
+      key: causalNextKey,
+      draft: draft,
+      resolvedText: null,
+      promise: null,
+      ttsPrefetched: false
+    };
+  }
 
   if (!useLiveSheriffLlm) {
     entry.resolvedText = draft.fallbackFinalText;
+    if (prewMap && prewMap[causalNextKey]) prewMap[causalNextKey].resolvedText = draft.fallbackFinalText;
     if (canSpeakNow && typeof voice.prefetchBestTts === "function") {
+      if (prewMap && prewMap[causalNextKey]) prewMap[causalNextKey].ttsPrefetched = true;
       voice.prefetchBestTts(nextCand.name, draft.fallbackFinalText, draft.voiceMood);
     }
+    prewarmSheriffElectionPipeline({ stage: "speech" });
     return true;
   }
 
@@ -2814,6 +3038,10 @@ function prefetchNextSheriffSpeech(ctx) {
           voice.prefetchBestTts(nextCand.name, resolved, draft.voiceMood);
         }
       }
+      if (prewMap && prewMap[causalNextKey]) {
+        prewMap[causalNextKey].resolvedText = resolved;
+        prewMap[causalNextKey].ttsPrefetched = true;
+      }
       return resolved;
     })
     .catch(function () {
@@ -2823,8 +3051,14 @@ function prefetchNextSheriffSpeech(ctx) {
           voice.prefetchBestTts(nextCand.name, draft.fallbackFinalText, draft.voiceMood);
         }
       }
+      if (prewMap && prewMap[causalNextKey]) {
+        prewMap[causalNextKey].resolvedText = draft.fallbackFinalText;
+        prewMap[causalNextKey].ttsPrefetched = true;
+      }
       return draft.fallbackFinalText;
     });
+  if (prewMap && prewMap[causalNextKey]) prewMap[causalNextKey].promise = entry.promise;
+  prewarmSheriffElectionPipeline({ stage: "speech" });
   return true;
 }
 
@@ -2990,16 +3224,24 @@ function advanceSheriffSpeechTurn() {
   const pfShMatch = !ffSh && Boolean(pfSh && pfSh.epoch === epShNow && pfSh.seatId === cand.id && pfSh.key === curShKey);
   if (pfShMatch) ctx._prefetchedSheriff = null;
 
+  const canWithdrawCur = (ctx.candidateIds || []).filter(function (id) { return id !== cand.id; }).length >= 1;
+  const curCausalKey = _buildSheriffCausalKey(cand.id, ctx.spokenSpeeches, canWithdrawCur);
+  const prewCur = (!ffSh && m._sheriffPrewarm && m._sheriffPrewarm.epoch === epShNow && m._sheriffPrewarm.cacheByKey)
+    ? m._sheriffPrewarm.cacheByKey[curCausalKey]
+    : null;
+  const resolvedHitText = (pfShMatch && pfSh.resolvedText) || (prewCur && prewCur.resolvedText) || null;
+  const hitPromise = (pfShMatch && pfSh.promise) || (prewCur && prewCur.promise) || null;
+
   const useLiveSheriffLlm = Boolean(
     !ffSh &&
     typeof isExternalLlmActive === "function" && isExternalLlmActive() &&
     typeof tryGenerateGeminiSheriffSpeech === "function"
   );
-  if (pfShMatch && pfSh.resolvedText) {
-    commitAiSheriffSpeech(pfSh.resolvedText);
+  if (resolvedHitText) {
+    commitAiSheriffSpeech(resolvedHitText);
     return true;
   }
-  if (!useLiveSheriffLlm) {
+  if (!useLiveSheriffLlm && !hitPromise) {
     commitAiSheriffSpeech(fallbackFinalText);
     return true;
   }
@@ -3020,8 +3262,8 @@ function advanceSheriffSpeechTurn() {
     }
   }, 350);
 
-  const sheriffSpeechPromise = (pfShMatch && pfSh.promise)
-    ? pfSh.promise
+  const sheriffSpeechPromise = hitPromise
+    ? hitPromise
     : tryGenerateGeminiSheriffSpeech(cand, ctx.spokenSpeeches, built, { aiBluffWithdraw: aiBluffWithdraw });
   sheriffSpeechPromise
     .then(function (liveText) {
@@ -3619,6 +3861,9 @@ function resolveSheriffElectionAction(actionOrVoteId) {
     if (wasPlayerTurn) {
       advanceSheriffSpeechTurn();
     } else {
+      if (typeof prewarmSheriffElectionPipeline === "function") {
+        prewarmSheriffElectionPipeline({ stage: "speech" });
+      }
       updateAllUI();
     }
     return true;
@@ -3662,6 +3907,9 @@ function startSheriffOrderPick(arg) {
   addLog({ kind: "system", title: "請你以警長身分指定今日發言順序：順時針或逆時針（你將壓軸末置位歸票）。", text: "" });
   if (typeof voice !== "undefined" && voice.canSpeak()) {
     voice.speakHost("請警長指定今日發言順序：順時針或逆時針！");
+  }
+  if (typeof prewarmSheriffOrderOpeningSpeakers === "function") {
+    prewarmSheriffOrderOpeningSpeakers(sh.id);
   }
   updateAllUI();
   return true;

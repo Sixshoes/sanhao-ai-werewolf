@@ -7149,7 +7149,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.3.2") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.4.0") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7552,7 +7552,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.3.2"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.4.0"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8294,7 +8294,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
       && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
     docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("v24.2") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
-    scriptV242Ok: docScript241.includes("v24.3.2") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
+    scriptV242Ok: docScript241.includes("v24.4.0") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
     voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
     apiTimeout8400AndLruOk: apiGem242.includes("resolvePrimaryTimeoutMs(primaryModel)") && apiGem242.includes("21500 - elapsed") && apiGem242.includes("if (++evicted >= 200) break;") && apiGem242.includes("if (timer) clearTimeout(timer);"),
     webglContextLostOk: eng242.includes('canvas3d.addEventListener("webglcontextlost"'),
@@ -8846,10 +8846,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     specSyncedModelsAndCacheOk:
       docSpec2414.includes("gemini-4-hydrogen") &&
       docSpec2414.includes("api/tts.js") &&
-      docSpec2414.includes("sanhao-shell-v24.3.2") &&
+      docSpec2414.includes("sanhao-shell-v24.4.0") &&
       docSpec2414.length <= 5000,
     readmeSyncedOk:
-      readme2414.includes("sanhao-shell-v24.3.2") &&
+      readme2414.includes("sanhao-shell-v24.4.0") &&
       readme2414.includes("api/tts.js"),
     ...v24214Runtime
   };
@@ -8902,8 +8902,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
 
   try {
     ctx.__sound.ctx = {
-      createBufferSource: () => ({ buffer: null, playbackRate: { value: 1 }, connect() {}, start() {}, stop() {}, onended: null }),
-      createGain: () => ({ gain: { value: 1 }, connect() {} }),
+      createBufferSource: () => ({ buffer: null, playbackRate: { value: 1 }, connect() { }, start() { }, stop() { }, onended: null }),
+      createGain: () => ({ gain: { value: 1 }, connect() { } }),
       destination: {},
       decodeAudioData: async () => ({ duration: 1.4, numberOfChannels: 1, length: 44100, sampleRate: 44100 })
     };
@@ -9301,7 +9301,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   })()`, ctx);
   const docScriptV2431 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
   const demoScriptVirtueSyncOk = [
-    "v24.3.2",
+    "v24.4.0",
     "啟席預載遮罩",
     "三好四給主動茶禮列",
     "茶席風氣",
@@ -9480,6 +9480,497 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 Release-Freeze E2E smoke test PASSED!");
+{
+  // v24.4.0 Regression: 7 movements w/ 8-bar melody + guqin timbre + mountain ambience + 14 unique TTS voices + vocal tag stripping
+  const apiTtsHandler244 = (await import("../api/tts.js")).default;
+  const apiGeminiHandler244 = (await import("../api/gemini.js")).default;
+  const gem4Cfg244 = apiGeminiHandler244._buildGenerationConfig("gemini-4-hydrogen", true, 0.65);
+  const geminiThinkingBudgetOk = Boolean(gem4Cfg244 && gem4Cfg244.maxOutputTokens >= 3072);
+  const aiHtml244 = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const cssComp244 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const htmlMusicModalOk =
+    aiHtml244.includes('id="btnTimbreGuqin"') &&
+    aiHtml244.includes('id="btnTrackSheriff"') &&
+    aiHtml244.includes('id="btnTrackMatchpoint"') &&
+    aiHtml244.includes('id="btnToggleAmbience"') &&
+    aiHtml244.includes("七段式場景樂章") &&
+    aiHtml244.includes("track-grid") &&
+    !aiHtml244.includes("sm:grid-cols-7") &&
+    cssComp244.includes(".track-grid");
 
+  const body38 = apiTtsHandler244._buildTtsRequestBody(
+    "gemini-3.8-flash-lite-tts",
+    "Aoede",
+    "溫婉從容",
+    "早安，<breath> 請喝茶。<short pause> 慢慢說。",
+    false
+  );
+  const body25 = apiTtsHandler244._buildTtsRequestBody(
+    "gemini-2.5-flash-preview-tts",
+    "Aoede",
+    "溫婉從容",
+    "早安，<breath> 請喝茶。<short pause> 慢慢說。",
+    false
+  );
+  const tts38KeepsTagsOk = Boolean(
+    body38 &&
+    body38.contents[0].parts[0].text.includes("<breath>") &&
+    body38.contents[0].parts[0].text.includes("<short pause>") &&
+    body38.contents[0].parts[0].speechMetadata &&
+    body38.contents[0].parts[0].speechMetadata.style === "溫婉從容"
+  );
+  const tts25StripsTagsOk = Boolean(
+    body25 &&
+    !body25.contents[0].parts[0].text.includes("<breath>") &&
+    !body25.contents[0].parts[0].text.includes("<short pause>") &&
+    body25.contents[0].parts[0].text.includes("早安") &&
+    !body25.contents[0].parts[0].speechMetadata
+  );
+  const bodyFallback38 = apiTtsHandler244._buildTtsRequestBody(
+    "gemini-3.8-flash-tts",
+    "Fenrir",
+    "堅定清晰",
+    "早安，<breath> 請投五號。",
+    true
+  );
+  const ttsFallbackOrderOk =
+    Array.isArray(apiTtsHandler244._TTS_FALLBACK_ORDER) &&
+    apiTtsHandler244._TTS_FALLBACK_ORDER[0] === "gemini-3.8-flash-lite-tts" &&
+    apiTtsHandler244._TTS_FALLBACK_ORDER[1] === "gemini-3.8-flash-tts" &&
+    apiTtsHandler244._TTS_FALLBACK_ORDER[2] === "gemini-2.5-flash-preview-tts" &&
+    bodyFallback38.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === "Puck" &&
+    !bodyFallback38.contents[0].parts[0].text.includes("<breath>");
 
+  let tts400NoCooldownOk = false;
+  const origFetch244 = globalThis.fetch;
+  const prevApiKey244 = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "AIzaTestDummyKeyForSmokeCheckOnly00";
+  apiTtsHandler244._resetRateLimit();
+  try {
+    const fakeWavB64 = Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(192, 1)]).toString("base64");
+    globalThis.fetch = async function (url) {
+      if (String(url).includes("gemini-3.8-flash-lite-tts")) {
+        return { ok: false, status: 400, json: async () => ({ error: "bad request" }) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ inlineData: { mimeType: "audio/wav", data: fakeWavB64 } }] } }]
+        })
+      };
+    };
+    const fakeHeaders = {};
+    const fakeRes = {
+      statusCode: 0,
+      headers: fakeHeaders,
+      body: null,
+      setHeader(k, v) { fakeHeaders[k] = v; },
+      end(b) { fakeRes.body = b; }
+    };
+    const fakeReq = {
+      method: "POST",
+      headers: { host: "sanhao.vercel.app", origin: "https://sanhao.vercel.app", "content-type": "application/json" },
+      socket: { remoteAddress: "198.51.100.77" },
+      body: { voice: "Fenrir", style: "冷靜", text: "<breath> 這輪投三號" }
+    };
+    await apiTtsHandler244(fakeReq, fakeRes);
+    tts400NoCooldownOk = Boolean(
+      fakeRes.statusCode === 200 &&
+      fakeHeaders["X-TTS-Model"] === "gemini-3.8-flash-tts" &&
+      !apiTtsHandler244._isModelCoolingDown("gemini-3.8-flash-lite-tts", Date.now())
+    );
+  } finally {
+    globalThis.fetch = origFetch244;
+    if (prevApiKey244 === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = prevApiKey244;
+    apiTtsHandler244._resetRateLimit();
+  }
+
+  const stripped244Sample = apiTtsHandler244._stripGeminiVocalTags("<sigh> 好吧，<gasp> 竟然這樣！");
+  const ttsStripFnOk = !stripped244Sample.includes("<sigh>") && !stripped244Sample.includes("<gasp>") && stripped244Sample.replace(/\s+/g, "") === "好吧，竟然這樣！";
+
+  const v244Runtime = vm.runInContext(`(() => {
+    clearStepTimer();
+    const profileValues = Object.values(PERSONA_VOICE_PROFILES);
+    const studioVoices = profileValues.map(p => p && p.studioVoice).filter(Boolean);
+
+    const trackKeys = ["twilight", "night", "day", "sheriff", "vote", "matchpoint", "finale"];
+    const movements7Ok = trackKeys.every(k =>
+      MOVEMENTS[k] &&
+      Array.isArray(MOVEMENTS[k].melody) &&
+      MOVEMENTS[k].melody.length === 8 &&
+      MOVEMENTS[k].melody.every(bar => Array.isArray(bar) && bar.length === 8)
+    );
+
+    el("selectModeCount").value = "8";
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    const seedNewOk = typeof state.match.matchStyleSeed === "number";
+    sound.trackMode = "auto";
+    state.match.started = true;
+    state.match.isMatchPoint = false;
+    state.match.phase = "SHERIFF_ELECTION";
+    const trackSheriffOk = sound.resolveTargetTrack() === "sheriff";
+    state.match.phase = "DAY_VOTE_RESULT";
+    const trackVoteOk = sound.resolveTargetTrack() === "vote";
+    state.match.phase = "DAY_SPEECH";
+    state.match.isMatchPoint = true;
+    const trackMatchPointOk = sound.resolveTargetTrack() === "matchpoint";
+
+    const prevTimbre = sound.timbre;
+    const prevMode = sound.trackMode;
+    const prevAmb = sound.ambientEnabled;
+    el("btnTimbreGuqin").click();
+    const guqinClickOk = sound.timbre === "guqin";
+    el("btnTrackSheriff").click();
+    const sheriffClickOk = sound.trackMode === "sheriff";
+    el("btnTrackMatchpoint").click();
+    const matchpointClickOk = sound.trackMode === "matchpoint";
+    el("btnToggleAmbience").click();
+    const ambienceToggleOk = sound.ambientEnabled === !prevAmb;
+    saveUserPrefs();
+
+    sound.timbre = "zen";
+    sound.trackMode = "auto";
+    sound.ambientEnabled = prevAmb;
+    loadUserPrefs();
+    const prefsRoundTripOk = sound.timbre === "guqin" && sound.trackMode === "matchpoint" && sound.ambientEnabled === !prevAmb;
+
+    sound.timbre = prevTimbre || "zen";
+    sound.trackMode = prevMode || "auto";
+    sound.ambientEnabled = prevAmb;
+    saveUserPrefs();
+    if (typeof syncPrefsToControls === "function") syncPrefsToControls();
+
+    const strippedVoice = typeof voice.stripGeminiVocalTags === "function"
+      ? voice.stripGeminiVocalTags("<breath> 測試 <short pause> 語音")
+      : "";
+    const tagAsong = voice.injectGeminiVocalTags("這輪投三號！", "阿松", "accuse");
+    const tagXiaocheng = voice.injectGeminiVocalTags("時間點兜不攏。", "小澄", "doubt");
+    const tagAlang = voice.injectGeminiVocalTags("拿出證據吧！", "阿朗", "accuse");
+    const noThroatClearingOk =
+      !tagAsong.includes("<throat-clearing>") &&
+      !tagXiaocheng.includes("<throat-clearing>") &&
+      !tagAlang.includes("<throat-clearing>");
+    const shortMidLine = "前面幾位講得都滿順的，我覺得今天這輪可以先從二號開始觀察。";
+    const longMultiLine = "第一段話先順完前面所有人的立場與時間線對照，我覺得三號前後說詞明顯兜不起來需要重點檢視！接下來第二段也要提醒還沒發言的幾位好夥伴務必把自己的站邊、投票對象與真實線索講清楚，並且回頭比對昨天公投誰跟著起鬨催票，這樣好人陣營才不會投錯人造成遺憾。";
+    const splitThresholdOk =
+      voice._splitFirstSentenceForFastStart(shortMidLine, 118) === null &&
+      Array.isArray(voice._splitFirstSentenceForFastStart(longMultiLine, 118));
+    const audioHelpersOk = Boolean(
+      typeof sound.voiceLead === "function" &&
+      typeof sound.triggerAmbientPulse === "function" &&
+      typeof voice.stripGeminiVocalTags === "function" &&
+      !strippedVoice.includes("<breath>") &&
+      !strippedVoice.includes("<short pause>") &&
+      strippedVoice.includes("測試") &&
+      strippedVoice.includes("語音") &&
+      noThroatClearingOk &&
+      splitThresholdOk
+    );
+
+    const tempCasualOk =
+      resolveGeminiSpeechTemperature("day", { isCasualVariety: true }) === 0.75 &&
+      resolveGeminiSpeechTemperature("day") === 0.65 &&
+      resolveGeminiSpeechTemperature("sheriff") === 0.58;
+
+    // Speech variety + matchStyleSeed determinism check
+    state.match.isMatchPoint = false;
+    state.match.phase = "DAY_SPEECH";
+    state.match.day = 1;
+    state.match.daySpeechEvents = [
+      { speakerId: 2, day: 1, accuseId: 4, text: "二號先報個身分，覺得四號有點急。" },
+      { speakerId: 3, day: 1, vouchId: 2, text: "我也站二號這邊，看四號後面怎麼說。" }
+    ];
+    state.match.matchStyleSeed = 111;
+    const seat5 = getSeat(5);
+    const outSeed1A = buildHeuristicAiSpeech(seat5);
+    const outSeed1B = buildHeuristicAiSpeech(seat5);
+    const deterministicSameSeedOk = Boolean(outSeed1A && outSeed1B && outSeed1A.text === outSeed1B.text);
+    const collectedTexts = [];
+    [11, 22, 33, 44, 55, 66, 77].forEach(sd => {
+      state.match.matchStyleSeed = sd;
+      const sp = buildHeuristicAiSpeech(seat5);
+      if (sp && sp.text) collectedTexts.push(sp.text);
+    });
+    const speechVarietyOk = Boolean(
+      seedNewOk &&
+      deterministicSameSeedOk &&
+      new Set(collectedTexts).size >= 2 &&
+      collectedTexts.every(t => !t.includes("先這樣，過")) &&
+      collectedTexts.some(t => t.length <= 60)
+    );
+
+    const midCutRejected = parseGeminiStructuredSpeech('{"text":"咦，怎麼話題突然轉到我身上了——5號星兒，妳第一天口頭點我，公投卻改') === null;
+    const midCutSalvaged = parseGeminiStructuredSpeech('{"text":"5號星兒昨天口頭點我卻改票，這點很可疑。至於後面8號阿松我覺得他剛');
+    const speechTruncationGuardOk = Boolean(
+      midCutRejected &&
+      midCutSalvaged &&
+      midCutSalvaged.text === "5號星兒昨天口頭點我卻改票，這點很可疑。"
+    );
+
+    const prevVoiceSpeaking244 = voice.speaking;
+    voice.speaking = false;
+    syncSpeakerBannerVisuals(seat5, "05號 · " + seat5.name, "直覺衝刺", false);
+    const waveEl244 = el("speakerVoiceWave");
+    const badgeEl244 = el("spotlightSpeakerBadge");
+    const speakerBannerPolishOk = Boolean(
+      waveEl244 && waveEl244.classList.contains("hidden") &&
+      badgeEl244 && badgeEl244.textContent === seat5.name
+    );
+    voice.speaking = prevVoiceSpeaking244;
+
+    el("selectModeCount").value = "8";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    state.match.day = 1;
+    state.match.sheriffElectionPending = true;
+    const prewarmOk = prewarmSheriffElectionPipeline({ forceLocalPrewarm: true });
+    const prewObj = state.match._sheriffPrewarm;
+    const sheriffPrewarmZeroLeakOk = Boolean(
+      prewarmOk &&
+      prewObj &&
+      Object.keys(prewObj.cacheByKey || {}).length >= 1 &&
+      Array.isArray(prewObj.baseCandidateIds) &&
+      prewObj.baseCandidateIds.every(cid => {
+        const s = getSeat(cid);
+        return s && s.claimedRole === null;
+      })
+    );
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      studioVoices,
+      movements7Ok,
+      resolveTrackOk: trackSheriffOk && trackVoteOk && trackMatchPointOk,
+      mixerUiOk: guqinClickOk && sheriffClickOk && matchpointClickOk && ambienceToggleOk,
+      prefsRoundTripOk,
+      audioHelpersOk,
+      tempCasualOk,
+      speechVarietyOk,
+      speechTruncationGuardOk,
+      speakerBannerPolishOk,
+      sheriffPrewarmZeroLeakOk
+    };
+  })()`, ctx);
+
+  const uniqueStudioVoicesOk =
+    Array.isArray(v244Runtime.studioVoices) &&
+    v244Runtime.studioVoices.length === 14 &&
+    new Set(v244Runtime.studioVoices).size === 14 &&
+    v244Runtime.studioVoices.every(v => apiTtsHandler244._ALLOWED_VOICES instanceof Set && apiTtsHandler244._ALLOWED_VOICES.has(v));
+
+  const v244Res = {
+    htmlMusicModalOk,
+    geminiThinkingBudgetOk,
+    tts38KeepsTagsOk,
+    tts25StripsTagsOk,
+    ttsFallbackOrderOk,
+    tts400NoCooldownOk,
+    ttsStripFnOk,
+    uniqueStudioVoicesOk,
+    movements7Ok: v244Runtime.movements7Ok,
+    resolveTrackOk: v244Runtime.resolveTrackOk,
+    mixerUiOk: v244Runtime.mixerUiOk,
+    prefsRoundTripOk: v244Runtime.prefsRoundTripOk,
+    audioHelpersOk: v244Runtime.audioHelpersOk,
+    tempCasualOk: v244Runtime.tempCasualOk,
+    speechVarietyOk: v244Runtime.speechVarietyOk,
+    speechTruncationGuardOk: v244Runtime.speechTruncationGuardOk,
+    speakerBannerPolishOk: v244Runtime.speakerBannerPolishOk,
+    sheriffPrewarmZeroLeakOk: v244Runtime.sheriffPrewarmZeroLeakOk
+  };
+  for (const [k, v] of Object.entries(v244Res)) {
+    if (!v) {
+      throw new Error("v24.4.0 REGRESSION check failed for " + k + ": " + JSON.stringify(v244Res));
+    }
+  }
+}
+
+// ==================== LISTEN-PHASE LIVE PIT BAR (邊聽邊排雙向同步 + 零洩漏 + 跨階段無縫銜接) ====================
+{
+  const listenPitRes = vm.runInContext(`(() => {
+    const findTree = (root, pred) => {
+      const out = [];
+      const visit = node => {
+        if (!node) return;
+        if (pred(node)) out.push(node);
+        if (Array.isArray(node._children)) node._children.forEach(visit);
+      };
+      visit(root);
+      return out;
+    };
+
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    el("chkSheriffMode").checked = true;
+    state.autoPlay = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+
+    const pid = getPlayerId();
+    const pSeat = getPlayerSeat();
+    const others = getAliveSeats().filter(s => s.id !== pid);
+    const shCand = others[0];
+    const shOther = others[1];
+    pSeat.checkedHistory = [{ day: 1, targetId: shCand.id, isWolf: true }];
+
+    // 1. Sheriff election speech listening: #listenPitBar visible, clicks sync draft + marks without tableReactions leak
+    const violBefore = antiCheatMonitor.stats.violationsBlocked;
+    state.match.sheriffElectionPending = true;
+    state.match.sheriffElectionCtx = {
+      stage: "speech",
+      candidateIds: [shCand.id, shOther.id],
+      speechOrderIds: [shCand.id, shOther.id],
+      speechIndex: 0,
+      activeReelSeatId: shCand.id,
+      withdrawnIds: [],
+      spokenSpeeches: [],
+      speeches: [],
+      playerRunning: false
+    };
+    state.match.phase = "SHERIFF_ELECTION";
+    state.activeSpeakerId = shCand.id;
+    updateAllUI();
+
+    const shBarShown = !el("listenPitBar").classList.contains("hidden");
+    const reactLenBefore = Array.isArray(state.match.tableReactions) ? state.match.tableReactions.length : 0;
+    const shCandBtn = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(shCand.id))[0];
+    if (shCandBtn) shCandBtn.click();
+    const shWolfSyncedOk = Boolean(
+      state.match.playerDraftPits.wolfIds.includes(shCand.id) &&
+      state.playerMarks[shCand.id] === "wolf" &&
+      (Array.isArray(state.match.tableReactions) ? state.match.tableReactions.length : 0) === reactLenBefore
+    );
+    const shOtherBtn1 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(shOther.id))[0];
+    if (shOtherBtn1) shOtherBtn1.click();
+    const shOtherBtn2 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(shOther.id))[0];
+    if (shOtherBtn2) shOtherBtn2.click();
+    const shGoodSyncedOk = Boolean(
+      state.match.playerDraftPits.goodIds.includes(shOther.id) &&
+      state.playerMarks[shOther.id] === "good"
+    );
+    const zeroLeakDuringSheriff = antiCheatMonitor.stats.violationsBlocked === violBefore;
+
+    // 2. Day speech listening -> toggle Seer claim + preview -> seamless handoff into DAY_PLAYER_TURN
+    state.match.sheriffElectionPending = false;
+    state.match.sheriffElectionCtx = null;
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = shCand.id;
+    updateAllUI();
+    const dayListenShown = !el("listenPitBar").classList.contains("hidden");
+    const seerRoleChip = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-role") === "seer")[0];
+    if (seerRoleChip) seerRoleChip.click();
+    const previewShownOk = findTree(el("listenPitBar"), n => n.classList && n.classList.contains("listen-pit-preview"))
+      .some(n => String(n.textContent || "").includes("待發陳詞預覽") && String(n.textContent || "").includes("觀察員"));
+
+    // Last words listening vs self-speaking hide guard
+    state.match.phase = "LAST_WORDS_SPEECH";
+    state.activeSpeakerId = shOther.id;
+    updateAllUI();
+    const lwListenShown = !el("listenPitBar").classList.contains("hidden");
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = pid;
+    updateAllUI();
+    const selfSpeakingHidden = el("listenPitBar").classList.contains("hidden");
+
+    // Reverse sync from #btnMarkWolf in DAY_SPEECH + collapse toggle
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = others[2].id;
+    updateAllUI();
+    el("btnMarkWolf").click();
+    const reverseSyncOk = Boolean(
+      state.playerMarks[others[2].id] === "wolf" &&
+      state.match.playerDraftPits.wolfIds.includes(others[2].id) &&
+      findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others[2].id))
+        .some(btn => btn.classList && btn.classList.contains("is-wolf"))
+    );
+    const tBtn1 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")[0];
+    if (tBtn1) tBtn1.click();
+    const collapsedOk = Boolean(
+      state.listenPitCollapsed === true &&
+      findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")
+        .some(b => b.getAttribute("aria-expanded") === "false")
+    );
+    const tBtn2 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")[0];
+    if (tBtn2) tBtn2.click();
+    const expandedOk = Boolean(
+      state.listenPitCollapsed === false &&
+      findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")
+        .some(b => b.getAttribute("aria-expanded") === "true")
+    );
+
+    // Transition to DAY_PLAYER_TURN: #listenPitBar hides, #speechAdvancedDrawer stays default-collapsed, composer auto-hydrates!
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    updateAllUI();
+    const turnHidesListenBar = el("listenPitBar").classList.contains("hidden");
+    const advStaysCollapsed = el("speechAdvancedDrawer").classList.contains("hidden");
+    const draftCarriedOverOk = Boolean(
+      state.match.playerDraftPits.claimRole === "seer" &&
+      state.match.playerDraftPits.wolfIds.includes(shCand.id) &&
+      state.match.playerDraftPits.goodIds.includes(shOther.id) &&
+      el("quickFreeInput").value.includes("觀察員") &&
+      el("quickFreeInput").value.includes(fmtSeatNum(others[2].id) + "號") &&
+      el("playerSpeechInput").value === el("quickFreeInput").value &&
+      el("btnToggleCustomSpeech").innerHTML.includes("好") &&
+      el("btnQuickFreeSend").textContent.includes("狼")
+    );
+
+    // 3. Wolf player listening: excludes wolf mate + God-Hunt notebook cycles cleanly
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "wolf";
+    el("chkSheriffMode").checked = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    const wPid = getPlayerId();
+    const wolfMate = getAliveSeats().find(s => s.id !== wPid && s.role === "wolf");
+    const goodVictim = getAliveSeats().find(s => s.id !== wPid && s.role !== "wolf");
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = goodVictim.id;
+    updateAllUI();
+    const wolfSeatChips = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat"));
+    const wolfExcludesMateOk = Boolean(
+      el("listenPitBar").classList.contains("is-wolf-board") &&
+      wolfMate &&
+      !wolfSeatChips.some(b => b.getAttribute("data-listen-pit-seat") === String(wolfMate.id))
+    );
+    const wolfGodBtn = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-wolf-god") === String(goodVictim.id))[0];
+    if (wolfGodBtn) wolfGodBtn.click();
+    const wolfGodNoteOk = state.match.wolfGodMarks[goodVictim.id] === "seer";
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      shBarShown,
+      shWolfSyncedOk,
+      shGoodSyncedOk,
+      zeroLeakDuringSheriff,
+      dayListenShown,
+      previewShownOk,
+      lwListenShown,
+      selfSpeakingHidden,
+      reverseSyncOk,
+      collapsedOk,
+      expandedOk,
+      turnHidesListenBar,
+      advStaysCollapsed,
+      draftCarriedOverOk,
+      wolfExcludesMateOk,
+      wolfGodNoteOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(listenPitRes)) {
+    if (!v) {
+      throw new Error("LISTEN-PIT-BAR check failed for " + k + ": " + JSON.stringify(listenPitRes));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 Release-Freeze E2E smoke test PASSED!");

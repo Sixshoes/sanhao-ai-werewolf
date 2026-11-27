@@ -238,7 +238,7 @@ function buildGenerationConfig(modelId, jsonMode, temperature) {
   const isGemini4 = /^gemini-4-/.test(String(modelId || ""));
   const isPro25 = modelId === "gemini-2.5-pro";
   const genCfg = {
-    maxOutputTokens: isPro25 ? (jsonMode ? 2048 : 1152) : (jsonMode ? 1536 : 896)
+    maxOutputTokens: (isPro25 || isGemini4) ? (jsonMode ? 3072 : 2048) : (jsonMode ? 1536 : 1024)
   };
   if (isGemini4) {
     genCfg.thinkingConfig = { thinkingLevel: resolveGemini4ThinkingLevel() };

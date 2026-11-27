@@ -629,6 +629,9 @@ function proceedToNightSeer() {
 
   const seer = state.match.seats.find(function (s) { return s.role === "seer"; });
   if (!seer || !seer.alive) {
+    if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof prewarmSheriffElectionPipeline === "function") {
+      prewarmSheriffElectionPipeline({ skipPendingWitch: true });
+    }
     state.stepTimer = scheduleNightStep(proceedToNightWitch, 550);
     return;
   }
@@ -644,6 +647,9 @@ function proceedToNightSeer() {
         seer.checkedHistory.push({ day: state.match.day, targetId: target.id, isWolf: isWolf });
         seer.suspicionMap[target.id] = isWolf ? 100 : 0;
         state.match.nightState.seerTarget = target.id;
+      }
+      if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof prewarmSheriffElectionPipeline === "function") {
+        prewarmSheriffElectionPipeline({ skipPendingWitch: true });
       }
       proceedToNightWitch();
     }, 650);
@@ -715,6 +721,9 @@ function proceedToNightWitch() {
 
   const witch = state.match.seats.find(function (s) { return s.role === "witch"; });
   if (!witch || !witch.alive || (!state.match.witchPotions.heal && !state.match.witchPotions.purify)) {
+    if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof prewarmSheriffElectionPipeline === "function") {
+      prewarmSheriffElectionPipeline({ skipPendingWitch: false });
+    }
     state.stepTimer = scheduleNightStep(resolveDawn, 580);
     return;
   }
@@ -745,6 +754,9 @@ function proceedToNightWitch() {
         state.match.nightState.witchPoisonTarget = act.poisonTargetId;
         state.match.witchPotions.purify = false;
         witch.purifiedSeatId = act.poisonTargetId;
+      }
+      if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof prewarmSheriffElectionPipeline === "function") {
+        prewarmSheriffElectionPipeline({ skipPendingWitch: false });
       }
       resolveDawn();
     }, 650);
@@ -938,6 +950,9 @@ function resolveDawn() {
 
   // Remember Day-1 fallen seats for official Spotlight First-Night Last Words!
   state.match.pendingNight1LastWords = (state.match.day === 1 && fallenIds.length > 0) ? fallenIds.slice() : [];
+  if (state.match.pendingNight1LastWords.length > 0 && typeof prefetchAiLastWords === "function") {
+    prefetchAiLastWords(state.match.pendingNight1LastWords, "first_night");
+  }
 
   function enterDayDiscussionWithSheriffHooks(voiceLineArg) {
     if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof startSheriffElection === "function") {
@@ -1514,6 +1529,9 @@ function confirmTargetAction() {
         : ("查驗結果，" + target.id + "號" + target.name + "是好人夥伴！"));
     }
     addThreeGoodPoint("heart", "存好心查證身分");
+    if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof prewarmSheriffElectionPipeline === "function") {
+      prewarmSheriffElectionPipeline({ skipPendingWitch: true });
+    }
     if (state.autoPlay) {
       state.stepTimer = setTimeout(function () {
         state.seerReveal = null;
@@ -1524,6 +1542,9 @@ function confirmTargetAction() {
   }
 
   if (phase === "NIGHT_WITCH") {
+    if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof prewarmSheriffElectionPipeline === "function") {
+      prewarmSheriffElectionPipeline({ skipPendingWitch: false });
+    }
     resolveDawn();
     return;
   }
@@ -1556,6 +1577,11 @@ function skipTargetAction() {
   }
   else if (p === "NIGHT_WOLF") proceedToNightSeer();
   else if (p === "NIGHT_SEER") proceedToNightWitch();
-  else if (p === "NIGHT_WITCH") resolveDawn();
+  else if (p === "NIGHT_WITCH") {
+    if (state.match && state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof prewarmSheriffElectionPipeline === "function") {
+      prewarmSheriffElectionPipeline({ skipPendingWitch: false });
+    }
+    resolveDawn();
+  }
   else if (p === "HUNTER_TRIGGER") resumeAfterHunter();
 }

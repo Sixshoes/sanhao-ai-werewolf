@@ -42,8 +42,24 @@ function bindAudioVoiceEvents() {
         const bh = Math.max(3 * dpr, (val / 255) * (h - 4 * dpr));
         const x = i * (bw + gap);
         const y = h - bh;
-        ctx.fillStyle = i < 8 ? "#f59e0b" : (i < 16 ? "#34d399" : "#38bdf8");
+        ctx.fillStyle = i < 8 ? "rgba(245, 158, 11, 0.88)" : (i < 16 ? "rgba(52, 211, 153, 0.88)" : "rgba(56, 189, 248, 0.88)");
         ctx.fillRect(x, y, bw, bh);
+      }
+      if (sound.voiceAnalyser && !sound.muted && typeof voice !== "undefined" && voice.speaking && typeof ctx.beginPath === "function" && typeof ctx.lineTo === "function") {
+        const waveData = sound.voiceAnalyserData || new Uint8Array(64);
+        sound.voiceAnalyser.getByteTimeDomainData(waveData);
+        ctx.beginPath();
+        ctx.lineWidth = Math.max(1.5, 1.5 * dpr);
+        ctx.strokeStyle = "rgba(167, 243, 208, 0.92)";
+        const stepLen = Math.max(1, waveData.length);
+        for (let wi = 0; wi < stepLen; wi++) {
+          const wx = (wi / Math.max(1, stepLen - 1)) * w;
+          const norm = ((waveData[wi] - 128) / 128);
+          const wy = clamp(h * 0.5 + norm * (h * 0.42), 2, h - 2);
+          if (wi === 0) ctx.moveTo(wx, wy);
+          else ctx.lineTo(wx, wy);
+        }
+        ctx.stroke();
       }
     }
     sound.spectrumRAF = requestAnimationFrame(drawMusicSpectrum);
@@ -63,28 +79,48 @@ function bindAudioVoiceEvents() {
     }
   });
 
-  ["btnTimbreZen", "btnTimbreFolk", "btnTimbreCinema"].forEach(function (id) {
+  const timbreFallbackMap = {
+    btnTimbreZen: "zen",
+    btnTimbreGuqin: "guqin",
+    btnTimbreFolk: "folk",
+    btnTimbreCinema: "cinema"
+  };
+  const timbreIds = ["btnTimbreZen", "btnTimbreGuqin", "btnTimbreFolk", "btnTimbreCinema"];
+  timbreIds.forEach(function (id) {
+    if (!el(id)) return;
     el(id).addEventListener("click", function () {
       sound.unlock();
-      sound.timbre = el(id).getAttribute("data-timbre") || "zen";
-      ["btnTimbreZen", "btnTimbreFolk", "btnTimbreCinema"].forEach(function (other) {
-        el(other).classList.toggle("is-active", other === id);
+      sound.timbre = el(id).getAttribute("data-timbre") || timbreFallbackMap[id] || "zen";
+      timbreIds.forEach(function (other) {
+        if (el(other)) el(other).classList.toggle("is-active", other === id);
       });
       saveUserPrefs();
     });
   });
 
-  ["btnTrackAuto", "btnTrackTwilight", "btnTrackNight", "btnTrackDay", "btnTrackVote", "btnTrackFinale"].forEach(function (id) {
+  const trackFallbackMap = {
+    btnTrackAuto: "auto",
+    btnTrackTwilight: "twilight",
+    btnTrackNight: "night",
+    btnTrackDay: "day",
+    btnTrackSheriff: "sheriff",
+    btnTrackVote: "vote",
+    btnTrackMatchpoint: "matchpoint",
+    btnTrackFinale: "finale"
+  };
+  const trackIds = ["btnTrackAuto", "btnTrackTwilight", "btnTrackNight", "btnTrackDay", "btnTrackSheriff", "btnTrackVote", "btnTrackMatchpoint", "btnTrackFinale"];
+  trackIds.forEach(function (id) {
+    if (!el(id)) return;
     el(id).addEventListener("click", function () {
       sound.unlock();
-      const mode = el(id).getAttribute("data-track") || "auto";
+      const mode = el(id).getAttribute("data-track") || trackFallbackMap[id] || "auto";
       sound.trackMode = mode;
       sound.currentTrack = sound.resolveTargetTrack();
       sound.stepIdx = 0;
       sound.barIdx = 0;
       sound.startSequencer();
-      ["btnTrackAuto", "btnTrackTwilight", "btnTrackNight", "btnTrackDay", "btnTrackVote", "btnTrackFinale"].forEach(function (other) {
-        el(other).classList.toggle("is-active", other === id);
+      trackIds.forEach(function (other) {
+        if (el(other)) el(other).classList.toggle("is-active", other === id);
       });
       saveUserPrefs();
     });
@@ -139,10 +175,14 @@ function bindAudioVoiceEvents() {
       });
       voice.updateEngineStatusUi();
       saveUserPrefs();
-      if (voice.enginePref === "gemini" && !(typeof state !== "undefined" && state.geminiApiKey)) {
+      const hasPersonal = Boolean(typeof state !== "undefined" && state.geminiApiKey);
+      const hasCloud = Boolean(typeof voice.isCloudGeminiTtsActive === "function" && voice.isCloudGeminiTtsActive());
+      if (voice.enginePref === "gemini" && !hasPersonal && !hasCloud) {
         if (typeof showToast === "function") {
           showToast("請先在 AI 設定填入 Gemini API Key，目前已自動使用免費本地神經語音兜底", "amber");
         }
+      } else if (voice.enginePref === "gemini" && hasCloud && !hasPersonal && typeof showToast === "function") {
+        showToast("已切換為雲端 Gemini 3.8 真人氣口語音", "emerald");
       }
       auditionPersonaVoice("暖暖");
     });
@@ -166,6 +206,17 @@ function bindAudioVoiceEvents() {
       el("btnToggleHumanBreath").textContent = "真人換氣＋木亭音場：" + (voice.humanBreath ? "開" : "關");
       saveUserPrefs();
       if (voice.humanBreath) auditionPersonaVoice("阿竹");
+    });
+  }
+
+  if (el("btnToggleAmbience")) {
+    el("btnToggleAmbience").addEventListener("click", function () {
+      sound.unlock();
+      sound.ambientEnabled = !sound.ambientEnabled;
+      el("btnToggleAmbience").classList.toggle("is-active", sound.ambientEnabled);
+      el("btnToggleAmbience").textContent = "山城茶席環境音景：" + (sound.ambientEnabled ? "開（松風・茶沸・清鈴）" : "關");
+      sound.applyVolumes();
+      saveUserPrefs();
     });
   }
 

@@ -6,8 +6,8 @@
 // ==================== MULTI-ACTOR STUDIO VOICE + NATURAL PROSODY ENGINE ====================
 const PERSONA_VOICE_PROFILES = {
   "主持":  { gender: "f", slot: 0, seatHint: 0, studioVoice: "Sulafat",      pitch: 1.05, basicPitch: 1.04, rateMul: 0.99 },
-  "你":    { gender: "f", slot: 1, seatHint: 1, studioVoice: "Leda",         pitch: 1.08, basicPitch: 1.05, rateMul: 1.02 },
-  "你_男": { gender: "m", slot: 0, seatHint: 1, studioVoice: "Puck",         pitch: 0.94, basicPitch: 0.98, rateMul: 1.00 },
+  "你":    { gender: "f", slot: 1, seatHint: 1, studioVoice: "Aoede",        pitch: 1.08, basicPitch: 1.05, rateMul: 1.02 },
+  "你_男": { gender: "m", slot: 0, seatHint: 1, studioVoice: "Achird",       pitch: 0.94, basicPitch: 0.98, rateMul: 1.00 },
   "小澄":  { gender: "m", slot: 1, seatHint: 2, studioVoice: "Orus",         pitch: 0.96, basicPitch: 1.00, rateMul: 1.04 },
   "暖暖":  { gender: "f", slot: 2, seatHint: 3, studioVoice: "Leda",         pitch: 1.12, basicPitch: 1.08, rateMul: 0.99 },
   "阿松":  { gender: "m", slot: 2, seatHint: 4, studioVoice: "Charon",       pitch: 0.85, basicPitch: 0.94, rateMul: 0.94 },
@@ -17,7 +17,7 @@ const PERSONA_VOICE_PROFILES = {
   "晨晨":  { gender: "m", slot: 4, seatHint: 8,  studioVoice: "Puck",        pitch: 1.04, basicPitch: 1.03, rateMul: 1.08 },
   "墨白":  { gender: "m", slot: 5, seatHint: 9,  studioVoice: "Iapetus",     pitch: 0.80, basicPitch: 0.93, rateMul: 0.92 },
   "晴嵐":  { gender: "f", slot: 5, seatHint: 10, studioVoice: "Vindemiatrix", pitch: 1.04, basicPitch: 1.03, rateMul: 0.98 },
-  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Orus",        pitch: 0.99, basicPitch: 1.01, rateMul: 1.06 },
+  "阿朗":  { gender: "m", slot: 6, seatHint: 11, studioVoice: "Fenrir",      pitch: 0.99, basicPitch: 1.01, rateMul: 1.06 },
   "柚子":  { gender: "f", slot: 6, seatHint: 12, studioVoice: "Laomedeia",   pitch: 1.26, basicPitch: 1.18, rateMul: 1.13 }
 };
 
@@ -114,6 +114,7 @@ const voice = {
   cloudGeminiTtsAvailable: false,
   cloudGeminiTtsChecked: false,
   cloudGeminiTtsCooldownUntil: 0,
+  _cloudTtsFailStreak: 0,
   volume: 0.86,
   rate: 0.96,
   zhVoices: [],
@@ -1568,8 +1569,15 @@ const voice = {
     return this.playBufferedStudioAudio(seq, audioBuf, onDone, playOpts);
   },
 
+  stripGeminiVocalTags: function (rawText) {
+    return String(rawText || "")
+      .replace(/<\s*(?:breath|heavy breath|exhales|chuckle|chuckles|cough|gasp|sigh|sighs|throat-clearing|pff|phew|tsk|short pause|long pause|whispers|whispering)\s*>/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  },
+
   injectGeminiVocalTags: function (cleanText, effKey, mood) {
-    // Official Gemini 3.8 TTS inline angle-bracket human vocal bursts (<breath>, <sigh>, <chuckle>, <gasp>, <short pause>)
+    // Official Gemini 3.8 TTS inline angle-bracket vocal cues (stripped cleanly before 2.5 or 400 retry)
     let s = String(cleanText || "").trim();
     if (!s) return s;
     if (mood === "panic") {
@@ -1578,14 +1586,15 @@ const voice = {
       s = "<gasp> " + s;
     } else if (mood === "last_words") {
       s = "<sigh> <short pause> " + s;
-    } else if ((mood === "happy" || mood === "trust") && (effKey === "暖暖" || effKey === "柚子")) {
+    } else if (mood === "claim_seer") {
+      s = "<breath> " + s;
+    } else if ((mood === "happy" || mood === "trust") && (effKey === "暖暖" || effKey === "星兒" || effKey === "柚子")) {
       s = "<chuckle> " + s;
-    } else if (effKey === "墨白" || effKey === "阿松") {
+    } else if (effKey === "墨白" || effKey === "晴嵐") {
       s = "<breath> " + s;
     }
-    // Insert a subtle <short pause> right before dramatic verdict / vote callout if long enough
-    if (s.length >= 28) {
-      s = s.replace(/(這輪|因此|所以|結論是|請諸君|請全場)/, "<short pause> $1");
+    if (s.length >= 26) {
+      s = s.replace(/(這輪|因此|所以|結論是|請諸君|請全場|建議大家|拜託大家)/, "<short pause> $1");
     }
     return s;
   },
@@ -1635,7 +1644,7 @@ const voice = {
 
   _fetchGeminiStudioAudio: function (profile, effKey, cleanText, mood) {
     const hasPersonalKey = Boolean(typeof state !== "undefined" && state.geminiApiKey);
-    const hasCloudProxy = !hasPersonalKey && this.isCloudGeminiTtsActive();
+    const hasCloudProxy = this.isCloudGeminiTtsActive();
     if ((!hasPersonalKey && !hasCloudProxy) || !sound || !sound.ctx) return Promise.resolve(null);
     const payload = this._buildGeminiTtsPayload(profile, effKey, cleanText, mood || "normal");
     const cacheKey = payload.cacheKey;
@@ -1647,33 +1656,73 @@ const voice = {
       const controller = typeof AbortController === "function" ? new AbortController() : null;
       const geminiTtsTimeoutMs = clamp(10000 + cleanText.length * 75, 11000, 22000);
       const timer = controller ? setTimeout(function () { controller.abort(); }, geminiTtsTimeoutMs) : null;
-      try {
-        let audioBytes = null;
-        // Track A: Vercel Serverless Cloud Proxy (/api/tts using server GEMINI_API_KEY)
-        if (hasCloudProxy) {
-          const hdrs = { "Content-Type": "application/json" };
-          if (typeof getOrCreateProxySessionId === "function") {
-            hdrs["X-Tea-Session"] = getOrCreateProxySessionId();
-          }
-          const cloudRes = await fetch("/api/tts", {
+      const callCloudTtsTrackA = async function () {
+        const hdrs = { "Content-Type": "application/json" };
+        if (typeof getOrCreateProxySessionId === "function") {
+          hdrs["X-Tea-Session"] = getOrCreateProxySessionId();
+        }
+        const strippedText = self.stripGeminiVocalTags(cleanText) || cleanText;
+        const postOnce = async function (txtToSend) {
+          return fetch("/api/tts", {
             method: "POST",
             headers: hdrs,
             signal: controller ? controller.signal : undefined,
             body: JSON.stringify({
               voice: payload.voiceName,
               style: payload.stylePrompt,
-              text: payload.taggedTranscript
+              text: txtToSend
             })
           });
-          if (cloudRes && cloudRes.ok) {
-            const arrBuf = await cloudRes.arrayBuffer();
-            if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
-          } else if (cloudRes && (cloudRes.status === 429 || cloudRes.status === 401 || cloudRes.status === 403 || cloudRes.status >= 500)) {
-            const backoffMs = (cloudRes.status === 401 || cloudRes.status === 403 || cloudRes.status === 503)
-              ? 180000
-              : (cloudRes.status === 429 ? 45000 : 25000);
-            self.cloudGeminiTtsCooldownUntil = Date.now() + backoffMs;
+        };
+        let cloudRes = null;
+        let cloudErr = null;
+        try {
+          cloudRes = await postOnce(payload.taggedTranscript);
+        } catch (err1) {
+          cloudErr = err1;
+        }
+        if (cloudErr && cloudErr.name === "AbortError") throw cloudErr;
+        const shouldRetry = !cloudRes || cloudRes.status === 400 || cloudRes.status === 500 || cloudRes.status === 502 || cloudRes.status === 504;
+        if (shouldRetry && !(controller && controller.signal && controller.signal.aborted)) {
+          await new Promise(function (resolve) { setTimeout(resolve, 280); });
+          if (!(controller && controller.signal && controller.signal.aborted)) {
+            try {
+              cloudRes = await postOnce(strippedText);
+              cloudErr = null;
+            } catch (err2) {
+              if (err2 && err2.name === "AbortError") throw err2;
+              cloudErr = err2;
+            }
           }
+        }
+        if (cloudRes && cloudRes.ok) {
+          self._cloudTtsFailStreak = 0;
+          const arrBuf = await cloudRes.arrayBuffer();
+          if (arrBuf && arrBuf.byteLength >= 128) return new Uint8Array(arrBuf);
+          return null;
+        }
+        const st = cloudRes ? cloudRes.status : 0;
+        if (st === 401 || st === 403 || st === 503) {
+          self.cloudGeminiTtsCooldownUntil = Date.now() + 180000;
+        } else if (st === 429) {
+          const raRaw = (cloudRes.headers && typeof cloudRes.headers.get === "function") ? cloudRes.headers.get("Retry-After") : "";
+          const raSec = parseInt(String(raRaw || ""), 10);
+          const backoffMs = clamp((isFinite(raSec) && raSec > 0) ? raSec * 1000 : 8000, 6000, 15000);
+          self.cloudGeminiTtsCooldownUntil = Date.now() + backoffMs;
+        } else if (cloudErr || st >= 500) {
+          self._cloudTtsFailStreak = (self._cloudTtsFailStreak || 0) + 1;
+          if (self._cloudTtsFailStreak >= 2) {
+            self.cloudGeminiTtsCooldownUntil = Date.now() + 10000;
+            self._cloudTtsFailStreak = 0;
+          }
+        }
+        return null;
+      };
+      try {
+        let audioBytes = null;
+        // Track A (primary when no personal key): Vercel Serverless Cloud Proxy (/api/tts)
+        if (!hasPersonalKey && hasCloudProxy) {
+          audioBytes = await callCloudTtsTrackA();
         }
         // Track B: Local server.py disk-caching proxy (/api/tts/gemini) when personal key + local server active
         if (!audioBytes && hasPersonalKey && self.localNeuralAvailable) {
@@ -1695,53 +1744,84 @@ const voice = {
             if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
           }
         }
-        // Track C: Direct browser Gemini TTS when user manually provided their own API key on static host
+        // Track C: Direct browser Gemini TTS (3.8 Flash Lite -> 3.8 Flash -> 2.5 Flash Preview with stripped tags)
         if (!audioBytes && hasPersonalKey) {
-          const ttsPromptText = payload.stylePrompt
-            ? ("請用以下口吻自然唸出（不要唸出指示）：" + payload.stylePrompt + "\n" + payload.taggedTranscript)
-            : payload.taggedTranscript;
-          const fallbackVoiceMap = { Enceladus: "Puck", Achird: "Charon", Iapetus: "Orus", Leda: "Kore", Aoede: "Zephyr", Callirrhoe: "Kore" };
-          const tryVoices = [payload.voiceName];
-          if (fallbackVoiceMap[payload.voiceName]) tryVoices.push(fallbackVoiceMap[payload.voiceName]);
-          for (let vi = 0; vi < tryVoices.length && !audioBytes; vi++) {
-            const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-goog-api-key": state.geminiApiKey
-              },
-              signal: controller ? controller.signal : undefined,
-              body: JSON.stringify({
-                contents: [{
-                  role: "user",
-                  parts: [{ text: ttsPromptText }]
-                }],
-                generationConfig: {
-                  responseModalities: ["AUDIO"],
-                  speechConfig: {
-                    voiceConfig: {
-                      prebuiltVoiceConfig: { voiceName: tryVoices[vi] }
+          const strippedForFallback = self.stripGeminiVocalTags(cleanText) || cleanText;
+          const ttsPrompt25 = payload.stylePrompt
+            ? ("請用以下口吻自然唸出（不要唸出指示）：" + payload.stylePrompt + "\n" + strippedForFallback)
+            : strippedForFallback;
+          const fallbackVoiceMap = { Orus: "Puck", Enceladus: "Puck", Achird: "Charon", Iapetus: "Puck", Fenrir: "Puck", Leda: "Zephyr", Aoede: "Zephyr", Callirrhoe: "Zephyr", Autonoe: "Zephyr", Laomedeia: "Zephyr", Vindemiatrix: "Zephyr", Sulafat: "Zephyr" };
+          const fbVoice = fallbackVoiceMap[payload.voiceName] || "";
+          const hasTagsDiff = strippedForFallback !== payload.taggedTranscript;
+          const directModels = ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts"];
+          for (let mi = 0; mi < directModels.length && !audioBytes; mi++) {
+            const directModelId = directModels[mi];
+            const is38Direct = directModelId.indexOf("gemini-3.8-") === 0;
+            const attempts = is38Direct
+              ? ((fbVoice || hasTagsDiff)
+                ? [{ voice: payload.voiceName, stripped: false }, { voice: fbVoice || payload.voiceName, stripped: true }]
+                : [{ voice: payload.voiceName, stripped: false }])
+              : (fbVoice
+                ? [{ voice: payload.voiceName, stripped: true }, { voice: fbVoice, stripped: true }]
+                : [{ voice: payload.voiceName, stripped: true }]);
+            for (let vi = 0; vi < attempts.length && !audioBytes; vi++) {
+              const att = attempts[vi];
+              const txt38 = att.stripped ? strippedForFallback : payload.taggedTranscript;
+              const partObj = is38Direct
+                ? (payload.stylePrompt ? { text: txt38, speechMetadata: { style: payload.stylePrompt } } : { text: txt38 })
+                : { text: ttsPrompt25 };
+              let res = null;
+              try {
+                res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(directModelId) + ":generateContent", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": state.geminiApiKey
+                  },
+                  signal: controller ? controller.signal : undefined,
+                  body: JSON.stringify({
+                    contents: [{
+                      role: "user",
+                      parts: [partObj]
+                    }],
+                    generationConfig: {
+                      responseModalities: ["AUDIO"],
+                      speechConfig: {
+                        voiceConfig: {
+                          prebuiltVoiceConfig: { voiceName: att.voice }
+                        }
+                      }
                     }
-                  }
+                  })
+                });
+              } catch (fe) {
+                if (fe && fe.name === "AbortError") throw fe;
+                break;
+              }
+              if (res && res.ok) {
+                const data = await res.json();
+                let b64 = null;
+                if (data && data.candidates && data.candidates[0] && data.candidates[0].content && Array.isArray(data.candidates[0].content.parts)) {
+                  const audioPart = data.candidates[0].content.parts.find(function (pt) { return pt && pt.inlineData && pt.inlineData.data; });
+                  if (audioPart) b64 = audioPart.inlineData.data;
                 }
-              })
-            });
-            if (res && res.ok) {
-              const data = await res.json();
-              let b64 = null;
-              if (data && data.candidates && data.candidates[0] && data.candidates[0].content && Array.isArray(data.candidates[0].content.parts)) {
-                const audioPart = data.candidates[0].content.parts.find(function (pt) { return pt && pt.inlineData && pt.inlineData.data; });
-                if (audioPart) b64 = audioPart.inlineData.data;
+                if (b64) {
+                  const rawBin = atob(b64);
+                  audioBytes = new Uint8Array(rawBin.length);
+                  for (let i = 0; i < rawBin.length; i++) audioBytes[i] = rawBin.charCodeAt(i);
+                }
+              } else if (res && (res.status === 401 || res.status === 403)) {
+                mi = directModels.length;
+                break;
+              } else if (!res || res.status !== 400) {
+                break;
               }
-              if (b64) {
-                const rawBin = atob(b64);
-                audioBytes = new Uint8Array(rawBin.length);
-                for (let i = 0; i < rawBin.length; i++) audioBytes[i] = rawBin.charCodeAt(i);
-              }
-            } else if (!res || res.status !== 400) {
-              break;
             }
           }
+        }
+        // Track A backup for personal-key users if Track B & Track C failed while cloud proxy is active
+        if (!audioBytes && hasPersonalKey && self.isCloudGeminiTtsActive()) {
+          audioBytes = await callCloudTtsTrackA();
         }
         if (timer) clearTimeout(timer);
         if (!audioBytes) return null;
@@ -1770,9 +1850,10 @@ const voice = {
     return Boolean(((typeof state !== "undefined" && state.geminiApiKey) || this.isCloudGeminiTtsActive()) && this.enginePref !== "local");
   },
 
-  _splitFirstSentenceForFastStart: function (cleanText) {
+  _splitFirstSentenceForFastStart: function (cleanText, minLen) {
     const s = String(cleanText || "").trim();
-    if (s.length < 46) return null;
+    const threshold = (typeof minLen === "number" && minLen > 0) ? minLen : 46;
+    if (s.length < threshold) return null;
     for (let i = 14; i <= Math.min(58, s.length - 13); i++) {
       const ch = s.charAt(i);
       if (ch === "。" || ch === "！" || ch === "？" || ch === "；") {
@@ -1805,6 +1886,12 @@ const voice = {
     const cleanText = this.formatMandarinText(rawText);
     if (!cleanText || this.lookupBundledVoicePackUrl(effKey, cleanText)) return;
     const profile = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["你"];
+    const fastParts = this._splitFirstSentenceForFastStart(cleanText, 118);
+    if (fastParts) {
+      this._fetchGeminiStudioAudio(profile, effKey, fastParts[0], mood || "normal");
+      this._fetchGeminiStudioAudio(profile, effKey, fastParts[1], mood || "normal");
+      return;
+    }
     this._fetchGeminiStudioAudio(profile, effKey, cleanText, mood || "normal");
   },
 
@@ -1835,13 +1922,13 @@ const voice = {
 
   playGeminiStudioTts: async function (seq, profile, cleanText, mood, onDone, opts) {
     const hasPersonalKey = Boolean(typeof state !== "undefined" && state.geminiApiKey);
-    const hasCloudProxy = !hasPersonalKey && this.isCloudGeminiTtsActive();
+    const hasCloudProxy = this.isCloudGeminiTtsActive();
     if ((!hasPersonalKey && !hasCloudProxy) || !sound.ctx) return false;
     const effKey = (opts && opts.personaKey) ? opts.personaKey : this.activePersonaName;
     const moodNow = mood || "normal";
     const fullPayload = this._buildGeminiTtsPayload(profile, effKey, cleanText, moodNow);
     const hasWarmFull = Boolean(this.studioCache[fullPayload.cacheKey] || this.studioPending[fullPayload.cacheKey]);
-    const parts = !hasWarmFull ? this._splitFirstSentenceForFastStart(cleanText) : null;
+    const parts = !hasWarmFull ? this._splitFirstSentenceForFastStart(cleanText, 118) : null;
     if (parts) {
       const headText = parts[0];
       const tailText = parts[1];
@@ -1855,10 +1942,30 @@ const voice = {
         if (seq !== self.utteranceSeq) return;
         const finishTailFallback = function () {
           if (seq !== self.utteranceSeq) return;
-          self.utteranceSeq += 1;
-          self.setVisualSpeaking(false);
-          self.syncPauseButtonUi();
-          if (typeof onDone === "function") onDone();
+          if (self.paused || !tailText) {
+            self.utteranceSeq += 1;
+            self.setVisualSpeaking(false);
+            self.syncPauseButtonUi();
+            if (typeof onDone === "function") onDone();
+            return;
+          }
+          const tailOpts = Object.assign({}, opts, {
+            charRangeStart: tailStartIdx,
+            charRangeEnd: cleanText.length
+          });
+          if (self.localNeuralAvailable && typeof self.playFreeLocalNeuralTts === "function") {
+            self.playFreeLocalNeuralTts(seq, profile, tailText, moodNow, onDone, tailOpts).then(function (okNeural) {
+              if (!okNeural && seq === self.utteranceSeq) {
+                self.speakLocalBrowserTts(seq, profile, tailText, moodNow, false, onDone, tailOpts);
+              }
+            }).catch(function () {
+              if (seq === self.utteranceSeq) {
+                self.speakLocalBrowserTts(seq, profile, tailText, moodNow, false, onDone, tailOpts);
+              }
+            });
+            return;
+          }
+          self.speakLocalBrowserTts(seq, profile, tailText, moodNow, false, onDone, tailOpts);
         };
         try {
           const tailBuf = await tailP;
@@ -1866,6 +1973,10 @@ const voice = {
             finishTailFallback();
             return;
           }
+          // Natural breath bridge pause between first sentence and continuation
+          const bridgeMs = /[。！？；]$/.test(headText.trim()) ? 80 : 42;
+          await new Promise(function (resolve) { setTimeout(resolve, bridgeMs); });
+          if (seq !== self.utteranceSeq || self.paused) return;
           const startedTail = self.playBufferedStudioAudio(seq, tailBuf, onDone, Object.assign({}, opts, {
             skipPreBreath: true,
             skipPrepBeat: true,
@@ -1905,7 +2016,8 @@ const voice = {
   triggerSeatBackchannel: function (seatId, kind, delayMs) {
     // Non-interrupting spatialized roundtable vocal interjection (100% public-event driven, zero hidden-role leak!)
     if (!this.enabled || !this.liveBackchannel || this.paused || this.mode === "cozy") return false;
-    if (!this.localNeuralAvailable || !sound || !sound.ctx || sound.muted || this.volume < 0.08) return false;
+    const canUseGeminiBc = Boolean((this.isCloudGeminiTtsActive() || (typeof state !== "undefined" && state.geminiApiKey)) && this.enginePref !== "local");
+    if ((!this.localNeuralAvailable && !canUseGeminiBc) || !sound || !sound.ctx || sound.muted || this.volume < 0.08) return false;
     if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
     if (typeof state === "undefined" || !state.match || !state.match.started) return false;
     const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
@@ -1932,7 +2044,10 @@ const voice = {
     // Fetch in background and bind strictly to active speaker + match phase + tracked timer (zero stale bleed-through!)
     const capturedSpeakerId = state.activeSpeakerId;
     const capturedDay = state.match.day || 0;
-    const audioPromise = this._fetchLocalNeuralAudio(ck, effKey, phrase, mood, null, "backchannel");
+    const profileBc = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["暖暖"];
+    const audioPromise = canUseGeminiBc
+      ? this._fetchGeminiStudioAudio(profileBc, effKey, phrase, mood)
+      : this._fetchLocalNeuralAudio(ck, effKey, phrase, mood, null, "backchannel");
     const waitMs = clamp(typeof delayMs === "number" ? delayMs : 980, 480, 1800);
     if (this.backchannelTimer) clearTimeout(this.backchannelTimer);
     this.backchannelTimer = setTimeout(function () {
@@ -2078,7 +2193,7 @@ const voice = {
       const pitchScale = (isMalePersona && isBasicVoice) ? 0.25 : (isMalePersona ? 0.34 : 0.46);
       const gentlePitch = 1.0 + (rawPitch - 1.0) * pitchScale;
       const basePitch = missingMaleFallback
-        ? clamp(gentlePitch - 0.04, 0.89, 0.95)
+        ? clamp(0.74 + (((profile && profile.pitch) || 0.90) - 0.80) * 0.42, 0.72, 0.84)
         : clamp(gentlePitch, (isMalePersona && isBasicVoice) ? 0.96 : (isMalePersona ? 0.91 : (isBasicVoice ? 0.90 : 0.88)), (isMalePersona && isBasicVoice) ? 1.03 : (isBasicVoice ? 1.08 : 1.11));
       const isLowPitchVoice = basePitch < 0.94 || missingMaleFallback;
       const genderVolMul = isMalePersona

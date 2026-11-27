@@ -219,6 +219,7 @@ function startJudgeShowcaseMatch() {
   state.lastWordsCtx = null;
   state.voteFlight = null;
   state.playerMarks = { 2: "good", 3: "good", 4: "wolf", 7: "wolf" };
+  state.listenPitCollapsed = false;
   state.activeBubble = null;
   state.seatBubbles = {};
   state.beamFx = [];
@@ -324,7 +325,10 @@ function startJudgeShowcaseMatch() {
     pendingEvidenceTargetId: null,
     pendingEvidenceTag: "",
     playerDraftPits: { wolfIds: [4], goodIds: [2, 3, 5], claimRole: "seer", standSeerId: null, evidenceClueId: null, turnKey: "" },
+    _preparedSpeechTurnKey: "",
     roleMission: typeof createRoleMission === "function" ? createRoleMission("seer") : null,
+    ruleDepth: "full",
+    matchStyleSeed: 2026,
     speechDirection: 1,
     speechOrderLabel: "五人聽牌",
     dayOrder: [2, 3, 5, 4, 1],
@@ -626,6 +630,7 @@ function startNewGame() {
   state.lastWordsCtx = null;
   state.voteFlight = null;
   state.playerMarks = {};
+  state.listenPitCollapsed = false;
   if (el("quickFreeInput")) el("quickFreeInput").value = "";
   if (el("playerSpeechInput")) el("playerSpeechInput").value = "";
   if (el("lastWordsFreeInput")) el("lastWordsFreeInput").value = "";
@@ -659,6 +664,7 @@ function startNewGame() {
     quickReactedMap: {},
     aiDifficulty: state.aiDifficulty,
     ruleDepth: state.ruleDepth || "full",
+    matchStyleSeed: Math.floor(Math.random() * 100000),
     startOffset: startOffset,
     spectatorPrompted: false,
     harmonyScore: 72,
@@ -709,6 +715,7 @@ function startNewGame() {
     pendingEvidenceTargetId: null,
     pendingEvidenceTag: "",
     playerDraftPits: { wolfIds: [], goodIds: [], claimRole: null, standSeerId: null, evidenceClueId: null, turnKey: "" },
+    _preparedSpeechTurnKey: "",
     roleMission: (!isClassicSimpleMode() && typeof createRoleMission === "function")
       ? createRoleMission(typeof getSeatEffectiveRoleKey === "function"
         ? getSeatEffectiveRoleKey(seats.find(function (s) { return s.id === playerSeatId; }))

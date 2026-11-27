@@ -400,6 +400,9 @@
                 <!-- SPECTATOR DUAL-FACTION DEDUCTION BAR (Good Hunts Wolves / Wolf Hunts God-Roles) -->
                 <div id="spectatorGuessBar" class="hidden spectator-guess-bar"></div>
 
+                <!-- ALIVE LISTENER LIVE PIT-MARKING BAR (邊聽邊排：Private Draft + Marks Sync, Zero AI Leak) -->
+                <div id="listenPitBar" class="hidden listen-pit-bar"></div>
+
                 <!-- 0. FULL-SCREEN INDIE TITLE SCREEN MENU (v19.0: 3 Clean Primary Buttons, Zero Subtitle Clutter) -->
                 <div id="panelLobby" class="space-y-6">
                   <div class="space-y-2.5">
@@ -1627,6 +1630,10 @@
             <button id="btnToggleHumanBreath" type="button"
               class="voice-rate-btn is-active py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition">真人換氣＋木亭音場：開</button>
           </div>
+          <div>
+            <button id="btnToggleAmbience" type="button"
+              class="voice-rate-btn is-active w-full py-1 px-2 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-200 transition">山城茶席環境音景：開（松風・茶沸・清鈴）</button>
+          </div>
           <div class="grid grid-cols-3 gap-1.5 text-center">
             <button id="btnVoiceRateSlow" type="button" data-vrate="0.96"
               class="voice-rate-btn is-active py-1.5 px-2 rounded border border-slate-700 bg-slate-900 text-[13px] text-slate-300 transition">溫柔舒緩
@@ -1707,27 +1714,31 @@
         </div>
         <div>
           <div class="text-[13px] text-slate-400 mb-1.5">器樂編曲風格</div>
-          <div class="grid grid-cols-3 gap-1.5">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
             <button id="btnTimbreZen" type="button" data-timbre="zen"
-              class="timbre-btn is-active py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-[15px] text-slate-300 transition">山城雅樂
+              class="timbre-btn is-active py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-[14px] text-slate-300 transition">山城雅樂
               <div class="text-[13px] opacity-70 font-normal">古箏 × 頌缽</div>
             </button>
+            <button id="btnTimbreGuqin" type="button" data-timbre="guqin"
+              class="timbre-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-[14px] text-slate-300 transition">書院絲竹
+              <div class="text-[13px] opacity-70 font-normal">古琴 × 洞簫</div>
+            </button>
             <button id="btnTimbreFolk" type="button" data-timbre="folk"
-              class="timbre-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-[15px] text-slate-300 transition">木質民謠
+              class="timbre-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-[14px] text-slate-300 transition">木質民謠
               <div class="text-[13px] opacity-70 font-normal">木吉他 × 鐵琴</div>
             </button>
             <button id="btnTimbreCinema" type="button" data-timbre="cinema"
-              class="timbre-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-[15px] text-slate-300 transition">懸疑劇場
+              class="timbre-btn py-1.5 px-2 rounded border border-slate-700 bg-slate-950 text-[14px] text-slate-300 transition">懸疑劇場
               <div class="text-[13px] opacity-70 font-normal">弦樂 × 鋼片琴</div>
             </button>
           </div>
         </div>
         <div>
           <div class="flex items-center justify-between mb-1.5"><span
-              class="text-[13px] text-slate-400">五段式場景樂章</span><button id="btnTrackAuto" type="button" data-track="auto"
+              class="text-[13px] text-slate-400">七段式場景樂章</span><button id="btnTrackAuto" type="button" data-track="auto"
               class="track-btn is-active text-[13px] px-2.5 py-0.5 rounded border border-slate-700 bg-slate-950 text-slate-300 transition">隨階段自動切換</button>
           </div>
-          <div class="grid grid-cols-5 gap-1.5 text-center">
+          <div class="track-grid grid grid-cols-4 gap-1.5 text-center">
             <button id="btnTrackTwilight" type="button" data-track="twilight"
               class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">壹
               暮色</button>
@@ -1737,11 +1748,17 @@
             <button id="btnTrackDay" type="button" data-track="day"
               class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">參
               晨光</button>
-            <button id="btnTrackVote" type="button" data-track="vote"
+            <button id="btnTrackSheriff" type="button" data-track="sheriff"
               class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">肆
-              對決</button>
-            <button id="btnTrackFinale" type="button" data-track="finale"
+              上警</button>
+            <button id="btnTrackVote" type="button" data-track="vote"
               class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">伍
+              對決</button>
+            <button id="btnTrackMatchpoint" type="button" data-track="matchpoint"
+              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">陸
+              聽牌</button>
+            <button id="btnTrackFinale" type="button" data-track="finale"
+              class="track-btn py-1.5 px-1 rounded border border-slate-700 bg-slate-950 text-[13px] text-slate-300 transition">柒
               終局</button>
           </div>
         </div>

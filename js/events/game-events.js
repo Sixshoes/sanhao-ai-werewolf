@@ -386,6 +386,7 @@ function bindIntelAndDetectiveEvents() {
       const targetS = getSeat(sid);
       if (pSelf && pSelf.role === "wolf" && targetS && targetS.role === "wolf") return;
       state.playerMarks[sid] = state.playerMarks[sid] === "good" ? null : "good";
+      if (typeof syncDraftPitFromPlayerMark === "function") syncDraftPitFromPlayerMark(sid, state.playerMarks[sid]);
       sound.tone(660, 0.08, "triangle", 0.05, 0);
       const isWolfM = Boolean(pSelf && pSelf.role === "wolf");
       spawnFx(sid, state.playerMarks[sid] ? (isWolfM ? "標記：假保" : "標記：信任") : "清除標記", "#34d399");
@@ -400,6 +401,7 @@ function bindIntelAndDetectiveEvents() {
       const targetS = getSeat(sid);
       if (pSelf && pSelf.role === "wolf" && targetS && targetS.role === "wolf") return;
       state.playerMarks[sid] = state.playerMarks[sid] === "wolf" ? null : "wolf";
+      if (typeof syncDraftPitFromPlayerMark === "function") syncDraftPitFromPlayerMark(sid, state.playerMarks[sid]);
       sound.tone(330, 0.09, "triangle", 0.05, 0);
       const isWolfM = Boolean(pSelf && pSelf.role === "wolf");
       spawnFx(sid, state.playerMarks[sid] ? (isWolfM ? "標記：甩鍋" : "標記：懷疑") : "清除標記", "#fb7185");
@@ -455,6 +457,7 @@ function bindIntelAndDetectiveEvents() {
     state.match.quickReactedMap[key] = kind;
     const isGoodReaction = (kind === "good");
     state.playerMarks[sp.id] = state.playerMarks[sp.id] === kind ? null : kind;
+    if (typeof syncDraftPitFromPlayerMark === "function") syncDraftPitFromPlayerMark(sp.id, state.playerMarks[sp.id]);
     if (typeof sound.playTableReactionSfx === "function") {
       sound.playTableReactionSfx(isGoodReaction ? "agree" : "doubt");
     } else {

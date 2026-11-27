@@ -413,6 +413,151 @@ class ServerTestCase(unittest.TestCase):
             _, kwargs = mock_call.call_args
             self.assertEqual(kwargs.get("temperature"), 0.85)
 
+    def test_v244_strip_vocal_tags_on_fallback(self):
+        import base64
+        import urllib.error
+
+        self.assertEqual(
+            server.strip_gemini_vocal_tags("哈囉，<breath> 大家好。<short pause> 開始吧！"),
+            "哈囉， 大家好。 開始吧！",
+        )
+        calls = []
+
+        class _FakeResp:
+            def __init__(self, payload_bytes):
+                self._payload = payload_bytes
+
+            def read(self):
+                return self._payload
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        def fake_urlopen(req, timeout=None):
+            body = json.loads(req.data.decode("utf-8"))
+            calls.append((req.full_url, body))
+            if "gemini-3.8-" in req.full_url:
+                raise urllib.error.HTTPError(
+                    req.full_url,
+                    400,
+                    "Bad Request",
+                    hdrs=None,
+                    fp=io.BytesIO(b'{"error":"bad tag"}'),
+                )
+            raw_pcm = b"\x00\x00" * 48
+            b64 = base64.b64encode(raw_pcm).decode("ascii")
+            return _FakeResp(
+                json.dumps(
+                    {
+                        "candidates": [
+                            {
+                                "content": {
+                                    "parts": [
+                                        {"inlineData": {"mimeType": "audio/L16;rate=24000", "data": b64}}
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ).encode("utf-8")
+            )
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            wav_bytes, mime_type = server.call_gemini_tts_wav(
+                api_key="test-key",
+                text="<breath> 第一句。<short pause> 第二句。",
+                voice_name="Charon",
+                style_prompt="冷靜沉穩",
+                timeout=5,
+            )
+
+        self.assertEqual(mime_type, "audio/wav")
+        self.assertTrue(wav_bytes.startswith(b"RIFF"))
+        self.assertGreaterEqual(len(calls), 2)
+        part_38 = calls[0][1]["contents"][0]["parts"][0]
+        part_25 = calls[-1][1]["contents"][0]["parts"][0]
+        self.assertIn("gemini-3.8-flash-lite-tts", calls[0][0])
+        self.assertIn("speechMetadata", part_38)
+        self.assertIn("<breath>", part_38["text"])
+        self.assertIn("gemini-2.5-flash-preview-tts", calls[-1][0])
+        self.assertNotIn("speechMetadata", part_25)
+        self.assertNotIn("<breath>", part_25["text"])
+        self.assertNotIn("<short pause>", part_25["text"])
+
+    def test_v244_edge_male_voice_fallback_retry(self):
+        import asyncio
+        import base64
+        import pathlib
+        import tempfile
+        import types
+        import urllib.error
+
+        self.assertIn("zh-CN-YunxiNeural", server.EDGE_VOICE_FALLBACK_MAP)
+        self.assertIn("zh-CN-YunjianNeural", server.EDGE_VOICE_FALLBACK_MAP)
+        self.assertIn("zh-TW-YunJheNeural", server.EDGE_VOICE_FALLBACK_MAP)
+        self.assertEqual(server.GEMINI_TTS_VOICE_FALLBACK.get("Fenrir"), "Puck")
+
+        edge_attempts = []
+
+        class _FakeEdgeComm:
+            def __init__(self, text=None, voice=None, rate=None, pitch=None):
+                self.voice = voice
+                self.text = text
+
+            async def save(self, out_path):
+                edge_attempts.append(self.voice)
+                if len(edge_attempts) == 1:
+                    raise RuntimeError("transient upstream male voice 503")
+                pathlib.Path(out_path).write_bytes(b"ID3fake-mp3-data")
+
+        fake_edge_mod = types.SimpleNamespace(Communicate=_FakeEdgeComm)
+        with patch.object(server, "edge_tts", fake_edge_mod):
+            with tempfile.TemporaryDirectory() as tmpd:
+                out_file = pathlib.Path(tmpd) / "yunxi_retry.mp3"
+                asyncio.run(server.synthesize_edge_mp3("大家好", "zh-CN-YunxiNeural", "+3%", "+1Hz", out_file))
+                self.assertEqual(edge_attempts, ["zh-CN-YunxiNeural", "zh-CN-YunjianNeural"])
+                self.assertTrue(out_file.exists())
+
+        calls_38_mid = []
+
+        class _FakeResp2:
+            def __init__(self, payload_bytes):
+                self._payload = payload_bytes
+
+            def read(self):
+                return self._payload
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        def fake_urlopen_mid(req, timeout=None):
+            calls_38_mid.append(req.full_url)
+            if "gemini-3.8-flash-lite-tts" in req.full_url:
+                raise urllib.error.HTTPError(req.full_url, 503, "Busy", hdrs=None, fp=io.BytesIO(b"{}"))
+            raw_pcm = b"\x01\x00" * 48
+            b64 = base64.b64encode(raw_pcm).decode("ascii")
+            return _FakeResp2(
+                json.dumps(
+                    {
+                        "candidates": [
+                            {"content": {"parts": [{"inlineData": {"mimeType": "audio/L16;rate=24000", "data": b64}}]}}
+                        ]
+                    }
+                ).encode("utf-8")
+            )
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen_mid):
+            wav_b, mime_t = server.call_gemini_tts_wav("test-key", "這輪先投三號", "Fenrir", "沉穩", timeout=5)
+        self.assertEqual(mime_t, "audio/wav")
+        self.assertTrue(wav_b.startswith(b"RIFF"))
+        self.assertTrue(any("gemini-3.8-flash-tts" in u for u in calls_38_mid))
+
 
 if __name__ == "__main__":
     unittest.main()

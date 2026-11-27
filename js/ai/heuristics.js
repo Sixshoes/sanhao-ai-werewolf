@@ -25,12 +25,17 @@ function determineSpeechLengthTier(speaker, ctx) {
     return "intense";
   }
   const dayNow = ctx.day || (ctx.snap && ctx.snap.day) || 1;
+  const mSeed = (ctx.snap && typeof ctx.snap.matchStyleSeed === "number") ? ctx.snap.matchStyleSeed : 0;
+  const cadence = typeof getPersonaTalkCadence === "function" ? getPersonaTalkCadence(speaker) : 1.0;
   const topSusScore = (ctx.spokenOthers || []).reduce(function (mx, s) {
     return Math.max(mx, (speaker.suspicionMap && speaker.suspicionMap[s.id]) || 50);
   }, 50);
-  // Late-game (Day 3+) has rich cross-day vote & death intel: never do brief throwaway passes
+  const h = Math.abs(speaker.id * 7 + dayNow * 13 + (ctx.spokenIdsToday ? ctx.spokenIdsToday.length : 0) * 5 + mSeed * 3) % 10;
+
   if (dayNow >= 3) {
-    return (ctx.prevVoteNote || ctx.isLateSeat || topSusScore >= 58) ? "intense" : "standard";
+    if ((ctx.isLateSeat && topSusScore >= 58) || topSusScore >= 64) return "intense";
+    if (!ctx.isFirstToday && ((h < 3 && cadence <= 1.02) || h === 0)) return "concise";
+    return (ctx.prevVoteNote || ctx.isLateSeat) ? "intense" : "standard";
   }
   const hasKeyRoleIntel = Boolean(
     (speaker.role === "seer" && Array.isArray(speaker.checkedHistory) && speaker.checkedHistory.length > 0) ||
@@ -40,14 +45,15 @@ function determineSpeechLengthTier(speaker, ctx) {
     ctx.isFirstToday
   );
   if (hasKeyRoleIntel) return "standard";
-  if (topSusScore >= 64) return "standard";
-  // Early rounds (Day 1-2): ~35-40% of calm plain seats speak concisely (15-28 chars) so early rhythm breathes naturally
-  const h = (speaker.id * 7 + dayNow * 13 + (ctx.spokenIdsToday ? ctx.spokenIdsToday.length : 0) * 5) % 10;
-  return h < 4 ? "brief" : "standard";
+  if (topSusScore >= 64) return (!ctx.isLateSeat && h < 3) ? "concise" : "standard";
+  // Early rounds (Day 1-2): talkCadence shifts concise vs brief probability without starving calm speakers
+  const briefCutoff = cadence <= 0.85 ? 5 : (cadence >= 1.2 ? 3 : 4);
+  if (h < briefCutoff) return "brief";
+  return (!ctx.isLateSeat && (h < 7 || cadence <= 0.90)) ? "concise" : "standard";
 }
 
 function buildBriefPassSpeech(speaker, ctx) {
-  const { spokenOthers, unspokenOthers, seatLabel, recentTableReactionNote, recentInterjectionNote } = ctx;
+  const { snap, day, spokenOthers, unspokenOthers, seatLabel, recentTableReactionNote, recentInterjectionNote } = ctx;
   const reg = typeof getPersonaRegister === "function" ? getPersonaRegister(speaker) : "balanced";
   const nextOne = unspokenOthers && unspokenOthers[0] ? seatLabel(unspokenOthers[0]) : "";
   const ally = (spokenOthers || []).slice().sort(function (a, b) {
@@ -67,21 +73,57 @@ function buildBriefPassSpeech(speaker, ctx) {
       text: recentTableReactionNote
     };
   }
+  const mSeed = (snap && typeof snap.matchStyleSeed === "number") ? snap.matchStyleSeed : 0;
+  const bIdx = Math.abs(speaker.id * 11 + (day || 1) * 7 + (spokenOthers ? spokenOthers.length : 0) * 5 + mSeed * 3);
+  const pickB = function (arr) { return arr[bIdx % arr.length]; };
+  const allyLbl = ally ? seatLabel(ally) : "";
   let text = "";
   if (reg === "classical") {
     text = nextOne
-      ? ("前面幾位還算言之成理，暫無確鑿破綻，先聽 " + nextOne + " 怎麼說。")
-      : "目前線索未明，點到為止，等下一輪再細看票型。";
+      ? pickB(["前面幾位言之成理，暫無破綻，先聽 " + nextOne + "。", "線索猶淺，點到為止，換 " + nextOne + " 續聊。"])
+      : pickB(["目前線索未明，點到為止，再看後續票型。", "席間尚稱清正，這輪暫且留白。"]);
   } else if (reg === "guzheng") {
     text = nextOne
-      ? ("剛才聽下來大致還算清正，晴嵐先聽 " + nextOne + " 開口再定。")
-      : "目前聽起來都還平和，我先記個印象，後面再對。";
+      ? pickB(["剛才聽下來都算清正，晴嵐先聽 " + nextOne + "。", "前排節奏平穩，再靜聽 " + nextOne + " 開口。"])
+      : pickB(["目前聽起來平和自然，我先記下再對。", "這段聽感還不錯，晴嵐先看後面票型。"]);
   } else if (reg === "poetic") {
     text = nextOne
-      ? ("前面幾位聊得都還算順，我先喝口茶聽 " + nextOne + " 怎麼接。")
-      : "這輪茶味還算清正，沒特別抓到毛病，先留白。";
+      ? pickB(["前面聊得頗順，我喝口茶先聽 " + nextOne + "。", "這幾杯茶尚稱清冽，看 " + nextOne + " 怎麼接。"])
+      : pickB(["這輪茶味清正，沒抓到明顯毛病，先留白。", "尚無顯著破綻，喝口茶看大家怎麼定。"]);
+  } else if (reg === "data") {
+    text = allyLbl
+      ? pickB(["目前時間點都對得上，" + allyLbl + " 還行，先聽後面。", "前面資訊太少，" + allyLbl + " 先放邊上，再看下位。"])
+      : (nextOne ? ("目前還沒顯著矛盾，先聽 " + nextOne + " 順看看。") : "資訊量還太少，我先記個底看投票。");
+  } else if (reg === "warm") {
+    text = allyLbl
+      ? pickB([allyLbl + " 聽起來好溫和喔，暖暖先聽大家聊。", "前面氣氛還不錯呀，先站 " + allyLbl + " 這邊看看。"])
+      : (nextOne ? ("先喝口茶不急喔，聽聽 " + nextOne + " 怎麼說～") : "大家都滿客氣的，我先跟著感受一下。");
+  } else if (reg === "mountain") {
+    text = allyLbl
+      ? pickB(["老松看 " + allyLbl + " 講得挺實在，其餘後位再聽。", "前面風還算靜，這輪先記 " + allyLbl + " 一個順眼。"])
+      : (nextOne ? ("目前還沒摸出鬼，先聽 " + nextOne + " 亮句話。") : "路況還看不清，老松先保留觀望。");
+  } else if (reg === "astro") {
+    text = allyLbl
+      ? pickB(["直覺 " + allyLbl + " 滿自然的，我先聽後面怎麼說喔！", "目前警鈴還沒響，" + allyLbl + " 先過關，換下一位。"])
+      : (nextOne ? ("還沒抓到怪感覺耶，快換 " + nextOne + " 講兩句。") : "暫時還感應不出狼氣，等投票看細節囉。");
+  } else if (reg === "press") {
+    text = allyLbl
+      ? pickB(["前面紀錄暫無矛盾，" + allyLbl + " 先排好，繼續聽。", "筆記還沒畫紅字，暫信 " + allyLbl + " 看後排。"])
+      : (nextOne ? ("前位細節還夠實在，先聽 " + nextOne + " 補資料。") : "這輪還沒抓到顯著漏拍，再對後續。");
+  } else if (reg === "sport") {
+    text = allyLbl
+      ? pickB([allyLbl + " 講話乾脆！我先站這側，後面繼續接。", "前面防守都算穩，" + allyLbl + " 先放好人位。"])
+      : (nextOne ? ("前排都沒失誤，快把球交給 " + nextOne + "！") : "這拍節奏還挺順，先等這輪全盤完。");
+  } else if (reg === "debate") {
+    text = allyLbl
+      ? pickB(["目前還沒有硬傷，" + allyLbl + " 立論可信，聽下位。", "前段暫未見明顯漏洞，" + allyLbl + " 先列安全區。"])
+      : (nextOne ? ("爭點還沒浮出來，先聽 " + nextOne + " 怎麼立論。") : "證據尚不足以定論，我先觀望票型。");
+  } else if (reg === "pastry") {
+    text = allyLbl
+      ? pickB(["覺得 " + allyLbl + " 好安心喔～柚子先記一筆聽後面。", "大家都講得好認真，" + allyLbl + " 聽起來最軟萌啦～"])
+      : (nextOne ? ("柚子還在等線索發酵中，換 " + nextOne + " 分享！") : "目前還沒聞到烤焦味耶，先乖乖聽大家說。");
   } else if (ally) {
-    text = "前面聊得滿乾淨的，" + seatLabel(ally) + " 聽著還行，我這輪先聽後位。";
+    text = "前面聊得滿乾淨的，" + allyLbl + " 聽著還行，我這輪先聽後位。";
   } else {
     text = nextOne
       ? ("前面這幾位還沒抓到明顯破綻，先聽 " + nextOne + " 怎麼說。")
@@ -110,16 +152,26 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
   const readSeat = typeof getBlindSeat === "function" ? getBlindSeat : (snap ? snap.getSeat : getSeat);
 
   const lengthTier = determineSpeechLengthTier(speaker, ctx);
-  if (lengthTier === "brief" && !prevVoteNote && (!priorGodClaims || !priorGodClaims.length)) {
+  if (
+    lengthTier === "brief" &&
+    !ctx.priorSeerWolfEv &&
+    (!dualSeerWorlds || !dualSeerWorlds.hasDualSeer) &&
+    !ctx.accuseOnMe &&
+    !ctx.wolfPitOnMe &&
+    !ctx.seerWolfOnMe
+  ) {
     return buildBriefPassSpeech(speaker, ctx);
   }
 
   const pVoice = typeof pickVoice === "function" ? pickVoice : function () { return ""; };
-  const leadPhrase = pVoice("lead", 1);
+  const mSeedSkip = (snap && typeof snap.matchStyleSeed === "number") ? snap.matchStyleSeed : 0;
+  const skipRoll = Math.abs(speaker.id * 31 + day * 17 + spokenIdsToday.length * 11 + mSeedSkip * 7);
+  const leadPhrase = (isFirstToday || (skipRoll % 5) >= 2) ? pVoice("lead", 1) : "";
   const dualLeadPhrase = pVoice("dualLead", 2);
   const signoffPhrase = pVoice("signoff", 3) || "";
   const liveTableBeat = recentInterjectionNote || recentTableReactionNote || "";
-  const cbNote = (!isFirstToday && (liveTableBeat || callbackPhrase)) ? (liveTableBeat || callbackPhrase) : "";
+  const useCallback = liveTableBeat || ((skipRoll % 5) >= 2 && callbackPhrase);
+  const cbNote = (!isFirstToday && useCallback) ? (liveTableBeat || callbackPhrase) : "";
 
   const baseGoodIds = (slotPlan && Array.isArray(slotPlan.goodPits)) ? slotPlan.goodPits.map(function (s) { return s.id; }) : [];
   const baseWolfIds = (slotPlan && Array.isArray(slotPlan.wolfPits)) ? slotPlan.wolfPits.map(function (s) { return s.id; }) : [];
@@ -497,6 +549,60 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     const openPrefix = isLateSeat
       ? (leadPhrase + (spReg === "classical" ? "我在末席幫大家總覽全場是非：" : (spReg === "guzheng" ? "晴嵐在末位收束一下前面的脈絡：" : "我在末置位幫大家總結前面坑位：")))
       : (leadPhrase + cbNote);
+
+    if (!isLateSeat && lengthTier === "concise" && typeof buildPersonaConciseTurnText === "function" && (!dualSeerWorlds || !dualSeerWorlds.hasDualSeer)) {
+      const mSeedC = (snap && typeof snap.matchStyleSeed === "number") ? snap.matchStyleSeed : 0;
+      const cSeed = Math.abs(speaker.id * 23 + day * 17 + spokenOthers.length * 11 + mSeedC * 7);
+      const nextLblC = unspokenOthers && unspokenOthers[0] ? seatLabel(unspokenOthers[0]) : "";
+      if (topSus && (speaker.suspicionMap[topSus.id] || 50) >= 54) {
+        const archPool = goodSlots[0] ? ["snipe", "contrast", "probe"] : ["snipe", "probe"];
+        const chosenArch = archPool[cSeed % archPool.length];
+        const conciseTxt = buildPersonaConciseTurnText(speaker, {
+          archetype: chosenArch,
+          susLabel: seatLabel(topSus),
+          secLabel: secSus ? seatLabel(secSus) : "",
+          allyLabel: goodSlots[0] ? seatLabel(goodSlots[0]) : "",
+          nextLabel: nextLblC,
+          seed: cSeed
+        });
+        if (conciseTxt) {
+          return {
+            targetId: topSus.id,
+            relationType: "suspect",
+            accuseId: topSus.id,
+            vouchId: (chosenArch === "contrast" && goodSlots[0]) ? goodSlots[0].id : null,
+            wolfPits: wolfSlots.map(function (s) { return s.id; }),
+            goodPits: goodSlots.map(function (s) { return s.id; }).slice(0, 2),
+            hasToxicSlip: false,
+            lengthTier: "concise",
+            text: conciseTxt
+          };
+        }
+      } else if (goodSlots.length > 0) {
+        const secondWatch = spokenSorted.find(function (s) { return s.id !== goodSlots[0].id; });
+        const archG = (cSeed % 3 === 0 && secondWatch) ? "probe" : "cosign";
+        const conciseG = buildPersonaConciseTurnText(speaker, {
+          archetype: archG,
+          susLabel: secondWatch ? seatLabel(secondWatch) : "",
+          allyLabel: seatLabel(goodSlots[0]),
+          nextLabel: nextLblC,
+          seed: cSeed
+        });
+        if (conciseG) {
+          return {
+            targetId: goodSlots[0].id,
+            relationType: "trust",
+            accuseId: null,
+            vouchId: goodSlots[0].id,
+            wolfPits: secondWatch ? [secondWatch.id] : [],
+            goodPits: [goodSlots[0].id],
+            hasToxicSlip: false,
+            lengthTier: "concise",
+            text: conciseG
+          };
+        }
+      }
+    }
 
     if (topSus && (speaker.suspicionMap[topSus.id] || 50) >= 54) {
       const focusTail = spReg === "classical"

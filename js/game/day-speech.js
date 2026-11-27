@@ -97,6 +97,107 @@ function clampSpeechToCharLimit(rawText, limit) {
   return out.slice(0, cap);
 }
 
+function prewarmSheriffOrderOpeningSpeakers(sheriffId) {
+  const m = (typeof state !== "undefined") ? state.match : null;
+  if (!m || !m.started || m.phase !== "SHERIFF_ORDER") return false;
+  if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
+  const extLlmOn = typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel);
+  const wantNetTts = Boolean(
+    typeof voice !== "undefined" &&
+    voice.canSpeak() &&
+    ((typeof voice.isGeminiTtsPreferred === "function" && voice.isGeminiTtsPreferred()) || voice.localNeuralAvailable)
+  );
+  if (!extLlmOn && !wantNetTts) return false;
+
+  if (typeof orchestrator !== "undefined") {
+    if (typeof isClassicSimpleMode === "function" && isClassicSimpleMode()) {
+      m.activeDirectorEvent = null;
+    } else if (typeof orchestrator.rollDailyTeaEvent === "function") {
+      orchestrator.rollDailyTeaEvent(m.day);
+    }
+  }
+
+  const total = m.totalSeats || (m.seats ? m.seats.length : 8);
+  const shSeat = getSeat(sheriffId);
+  if (!shSeat || !shSeat.alive) return false;
+  const pid = getPlayerId();
+  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+
+  const findFirstAlive = function (dir) {
+    const anchorNum = ((shSeat.id - 1 + dir + total) % total) + 1;
+    for (let step = 0; step < total; step++) {
+      const seatNum = ((anchorNum - 1 + step * dir + total * 4) % total) + 1;
+      const s = getSeat(seatNum);
+      if (s && s.alive) return s;
+    }
+    return null;
+  };
+
+  const candSeats = [];
+  [findFirstAlive(1), findFirstAlive(-1)].forEach(function (cs) {
+    if (cs && cs.id !== pid && candSeats.every(function (x) { return x.id !== cs.id; })) {
+      candSeats.push(cs);
+    }
+  });
+  if (!candSeats.length) return false;
+
+  m._prefetchedOrderSpeeches = {};
+  m._prefetchedOrderSpeechesEpoch = ep;
+  candSeats.forEach(function (nextSeat) {
+    const key = _buildSpeechPrefetchKey(nextSeat.id);
+    const fallbackMeta = _buildDryRunHeuristicSpeech(nextSeat);
+    const entry = {
+      key: key,
+      epoch: ep,
+      seatId: nextSeat.id,
+      resolvedMeta: null,
+      promise: null
+    };
+    m._prefetchedOrderSpeeches[nextSeat.id] = entry;
+
+    if (!extLlmOn) {
+      entry.resolvedMeta = fallbackMeta;
+      if (fallbackMeta && fallbackMeta.text && wantNetTts && typeof voice.prefetchBestTts === "function") {
+        voice.prefetchBestTts(nextSeat.name, fallbackMeta.text, _computeSpeechVoiceMood(nextSeat, fallbackMeta));
+      }
+      return;
+    }
+
+    const runDispatch = (typeof orchestrator !== "undefined" && typeof orchestrator.dispatchAgent === "function")
+      ? orchestrator.dispatchAgent("PersonaAgent", { speaker: nextSeat, fallbackMeta: fallbackMeta, deferSeatMutation: true }).then(function (dispatched) {
+        if (!dispatched || !dispatched.epochValid || !orchestrator.isEpochValid(ep)) return null;
+        return dispatched.generated || fallbackMeta;
+      })
+      : tryGenerateGeminiAiSpeech(nextSeat, fallbackMeta).then(function (liveRes) {
+        const liveTxt = typeof liveRes === "string" ? liveRes : (liveRes && liveRes.text);
+        if (liveTxt) {
+          if (typeof syncGeminiSpeechMeta === "function") syncGeminiSpeechMeta(nextSeat, fallbackMeta, liveRes, { deferSeatMutation: true });
+          else fallbackMeta.text = liveTxt;
+          fallbackMeta.text = (typeof normalizeGeminiSpeechText === "function")
+            ? normalizeGeminiSpeechText(fallbackMeta.text)
+            : String(fallbackMeta.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").trim();
+        }
+        return fallbackMeta;
+      });
+
+    entry.promise = runDispatch.then(function (resMeta) {
+      if (resMeta && m._prefetchedOrderSpeeches && m._prefetchedOrderSpeeches[nextSeat.id] === entry) {
+        entry.resolvedMeta = resMeta;
+        if (resMeta.text && wantNetTts && typeof voice.prefetchBestTts === "function") {
+          voice.prefetchBestTts(nextSeat.name, resMeta.text, _computeSpeechVoiceMood(nextSeat, resMeta));
+        }
+      }
+      return resMeta;
+    }).catch(function () {
+      if (m._prefetchedOrderSpeeches && m._prefetchedOrderSpeeches[nextSeat.id] === entry) {
+        delete m._prefetchedOrderSpeeches[nextSeat.id];
+      }
+      return null;
+    });
+  });
+  return true;
+}
+
 // ==================== DAY SPEECH (STRICT 凹嗚狼人殺 TURN ORDER) ====================
 function startDayDiscussion(dawnVoiceLine, opts) {
   clearStepTimer();
@@ -145,6 +246,11 @@ function startDayDiscussion(dawnVoiceLine, opts) {
   state.activeSpeakerId = null;
   state.activeClash = null;
   state.interjectOpen = false;
+  const epPreOrder = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const preOrderMap = (state.match._prefetchedOrderSpeechesEpoch === epPreOrder && state.match._prefetchedOrderSpeeches)
+    ? state.match._prefetchedOrderSpeeches
+    : null;
+  state.match._prefetchedOrderSpeeches = null;
   state.match._prefetchedSpeech = null;
   if (typeof orchestrator !== "undefined") {
     if (typeof isClassicSimpleMode === "function" && isClassicSimpleMode()) {
@@ -153,6 +259,12 @@ function startDayDiscussion(dawnVoiceLine, opts) {
       orchestrator.rollDailyTeaEvent(state.match.day);
     }
     orchestrator.emit("phase:changed", { phase: "DAY_SPEECH", day: state.match.day });
+  }
+  if (preOrderMap && ordered.length > 0 && typeof _buildSpeechPrefetchKey === "function") {
+    const firstPreOrder = preOrderMap[ordered[0]];
+    if (firstPreOrder && firstPreOrder.epoch === epPreOrder && firstPreOrder.key === _buildSpeechPrefetchKey(ordered[0])) {
+      state.match._prefetchedSpeech = firstPreOrder;
+    }
   }
   if (ordered.length > 0) {
     addLog({

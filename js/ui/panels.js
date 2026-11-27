@@ -1002,6 +1002,7 @@ function renderControlPanels() {
 
   syncFocalCardChrome(p);
   if (typeof renderSpectatorGuessPanel === "function") renderSpectatorGuessPanel();
+  if (typeof renderListenPitBar === "function") renderListenPitBar();
 
   if (p === "LOBBY") { el("panelLobby").classList.remove("hidden"); return; }
   if (p === "DAY_PLAYER_TURN") { el("panelPlayerSpeech").classList.remove("hidden"); return; }
@@ -1275,6 +1276,7 @@ function selectSeat(seatId) {
         const cur = state.playerMarks[seatId] || null;
         const next = cur === null ? "wolf" : (cur === "wolf" ? "good" : null);
         state.playerMarks[seatId] = next;
+        if (typeof syncDraftPitFromPlayerMark === "function") syncDraftPitFromPlayerMark(seatId, next);
         const wLabel = isWolfSelf ? "標記：甩鍋" : "標記：懷疑";
         const gLabel = isWolfSelf ? "標記：假保" : "標記：好人";
         spawnFx(seatId, next === "wolf" ? wLabel : (next === "good" ? gLabel : "清除標記"), next === "wolf" ? "#fb7185" : "#34d399");

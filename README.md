@@ -1,10 +1,10 @@
-# 三好 AI 狼人殺（青嵐書院・清茗茶席 3D 互動反霸凌推理系統 v24.3.2）
+# 三好 AI 狼人殺（青嵐書院・清茗茶席 3D 互動反霸凌推理系統 v24.4.0）
 
 一款將 **「三好（做好事、說好話、存好心）」** 與 **「四給（給信心、給歡喜、給希望、給方便）」** 融入社會推理規則的純網頁 3D 反霸凌桌遊。全站採免註冊、零外部 CDN 腳本依賴與 100% 盲審匿名架構，支援桌機、平板與手機跨裝置體驗，並內建五層自動化驗證流水線。
 
 ---
 
-## 核心特色與系統架構（v24.3.2）
+## 核心特色與系統架構（v24.4.0）
 
 - **零洩漏盲視防弊架構（`js/ai/blind-view.js`）**：透過 JavaScript `Proxy` 陷阱與凍結快照隔離 AI 視角，非狼人角色無法讀取任何他席真實底牌或隱藏欄位，並於送出大型語言模型前執行 `auditLlmPromptLeak()` 靜態字串稽核（通過 496/496 項防弊壓力檢測，0 次洩漏）。
 - **雙核四代理編排、雲端主力模型與配音代理**：集中編排器（`js/core/orchestrator.js`）統籌四大代理，雲端代理（`api/gemini.js`）以 `gemini-4-hydrogen` 為主力並支援 `gemini-3.1-flash-lite` 備援、`gemini-2.5-pro` 深度選配與本機 Ollama／本地引擎自動降級（溫度夾限 `[0.45, 0.85]`）；雲端配音代理（`api/tts.js`）整合 `gemini-3.8-flash-lite-tts` 主力與 `gemini-2.5-flash-preview-tts` 雙模備援（16 種角色音色與核心音色降級）。
@@ -20,7 +20,7 @@
 - **評審 150 秒全亮點導覽局與終局覆盤升級**：
   - 首頁「更多模式 → 評審導覽」一鍵切入第 2 日五人聽牌雙觀察員對跳高潮盤面，搭配不遮擋三步提示，於 150 秒內依序體驗舉杯追問、三選一潤飾籤與五人聽牌公投。
   - 終局面板自動生成 **「本局三大勝負轉折軸」** 與 **「全席底牌與言行對照表」**，並支援一鍵複製或下載文字覆盤戰報。
-- **PWA 雙池離線快取（`sw.js`）**：將核心程式碼（`sanhao-shell-v24.3.2`，Network-First）與不可變 3D／語音媒體（`sanhao-assets-v24.2.1`，Cache-First，上限 200 筆）分離管理，避免大型資產擠出核心腳本並確保版本即時更新。
+- **PWA 雙池離線快取（`sw.js`）**：將核心程式碼（`sanhao-shell-v24.4.0`，Network-First）與不可變 3D／語音媒體（`sanhao-assets-v24.2.1`，Cache-First，上限 200 筆）分離管理，避免大型資產擠出核心腳本並確保版本即時更新。
 
 ---
 
@@ -59,7 +59,7 @@ python server.py
 ├── index.html                  # 靜態部署導向入口
 ├── ai.html                     # 主畫面結構（離線打包、零 Emoji、100% 匿名）
 ├── manifest.webmanifest        # PWA 離線應用清單
-├── sw.js                       # 雙池 Service Worker（sanhao-shell-v24.3.2 + sanhao-assets-v24.2.1）
+├── sw.js                       # 雙池 Service Worker（sanhao-shell-v24.4.0 + sanhao-assets-v24.2.1）
 ├── api/gemini.js               # 雲端 Serverless Gemini 代理（gemini-4-hydrogen 主力／多模降級）
 ├── api/tts.js                  # 雲端 Serverless Gemini TTS 配音代理（3.8 Flash Lite -> 2.5 Flash 備援）
 ├── server.py                   # 本機伺服器＋免費 Edge-TTS 語音快取＋Gemini/Ollama 代理
@@ -72,7 +72,7 @@ python server.py
 ├── js/
 │   ├── data/                   # 角色職能、11 席人設與決策癖好、三好潤飾詞典
 │   ├── core/                   # 狀態管理、四代理編排器 orchestrator、生涯勳章與覆盤分析
-│   ├── audio/                  # 五樂章配樂、1.25kHz 挖槽混音與多角色語音
+│   ├── audio/                  # 七樂章配樂、山城音景、雙頻挖槽混音與十四角獨立語音
 │   ├── stage3d/                # Three.js WebGL2 3D 古亭茶席、VRM 角色與 FFT 對嘴
 │   ├── ai/                     # blind-view.js 零洩漏隔離層、分階段溫度 Gemini 與本地推理
 │   ├── game/                   # 開局、評審導覽局、夜晚、警長、白天追問、遺言與公投

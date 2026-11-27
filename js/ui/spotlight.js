@@ -354,6 +354,7 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
   }
   if (wave) {
     wave.classList.toggle("playing", stillTalking);
+    wave.classList.toggle("hidden", !stillTalking);
     wave.style.opacity = speaker ? "1" : "0.35";
   }
   if (pill) {
@@ -379,7 +380,10 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
   const enrichedTrait = (spProf && speaker && speaker.id !== getPlayerId() && spProf.shortTag)
     ? (spProf.shortTag + "・" + (spProf.registerBadge || trait || ""))
     : trait;
-  updateSpotlightBox(badge, enrichedTrait);
+  const cleanBadge = speaker
+    ? (String(badge || "").replace(/^\s*0?\d+號\s*[·・]?\s*/, "").trim() || speaker.name)
+    : badge;
+  updateSpotlightBox(cleanBadge, enrichedTrait);
   const tTagEl = el("spotlightTraitTag");
   if (tTagEl && spProf && speaker && speaker.id !== getPlayerId() && typeof shPrependIcon === "function" && spProf.iconKey) {
     shPrependIcon(tTagEl, spProf.iconKey, spProf.iconTone || "gold");
@@ -533,6 +537,7 @@ function handleSpotlightClueClick(targetEl) {
     const pSelfClue = getPlayerSeat();
     if (!(pSelfClue && pSelfClue.role === "wolf" && sp.role === "wolf")) {
       state.playerMarks[sp.id] = "wolf";
+      if (typeof syncDraftPitFromPlayerMark === "function") syncDraftPitFromPlayerMark(sp.id, "wolf");
     }
     spawnFx(sp.id, "抓破" + labelStr, "#fbbf24", { scale: 1.15, durationMs: 1800 });
     spawnBurst(sp.id, ["#fbbf24", "#fde68a", "#ffffff"], 22, "slash");
@@ -558,6 +563,7 @@ function handleSpotlightClueClick(targetEl) {
     const pSelfTox = getPlayerSeat();
     if (!(pSelfTox && pSelfTox.role === "wolf" && sp.role === "wolf")) {
       state.playerMarks[sp.id] = "wolf";
+      if (typeof syncDraftPitFromPlayerMark === "function") syncDraftPitFromPlayerMark(sp.id, "wolf");
     }
     spawnFx(sp.id, "淨化酸言 +6", "#fb7185");
     spawnBurst(sp.id, ["#fb7185", "#fbbf24", "#ffffff"], 14, "spark");

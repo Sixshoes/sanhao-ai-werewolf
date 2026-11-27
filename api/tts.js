@@ -20,6 +20,7 @@ const ALLOWED_VOICES = new Set([
 const CORE_FALLBACK_VOICE_MAP = {
   Leda: "Zephyr",
   Orus: "Puck",
+  Fenrir: "Puck",
   Aoede: "Zephyr",
   Callirrhoe: "Zephyr",
   Autonoe: "Zephyr",
@@ -36,7 +37,7 @@ const ALLOWED_TTS_MODELS = new Set([
   "gemini-2.5-flash-preview-tts"
 ]);
 const DEFAULT_TTS_MODEL = "gemini-3.8-flash-lite-tts";
-const TTS_FALLBACK_ORDER = ["gemini-3.8-flash-lite-tts", "gemini-2.5-flash-preview-tts"];
+const TTS_FALLBACK_ORDER = ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts"];
 
 const MAX_TEXT_CHARS = 280;
 const MAX_STYLE_CHARS = 200;
@@ -175,8 +176,8 @@ function checkRateLimit(ip, nowMs, sessionId) {
   }
   const hasSession = Boolean(sessionId && SESSION_ID_RE.test(sessionId));
   if (hasSession) {
-    const sessRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "36", 10) || 36);
-    const sessRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPD || "180", 10) || 180);
+    const sessRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "64", 10) || 64);
+    const sessRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPD || "600", 10) || 600);
     const natRpm = Math.max(sessRpm, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPM || "96", 10) || 96);
     const natRpd = Math.max(sessRpd, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPD || "1200", 10) || 1200);
     // Check IP bucket BEFORE allocating/checking session bucket to block random-sessionId floods
@@ -190,8 +191,8 @@ function checkRateLimit(ip, nowMs, sessionId) {
     ipRes.rec.dayCount += 1;
     return { allowed: true, retryAfterSec: 0, reason: "" };
   }
-  const maxRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "30", 10) || 30);
-  const maxRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPD || "160", 10) || 160);
+  const maxRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "48", 10) || 48);
+  const maxRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPD || "400", 10) || 400);
   const res = _checkSingleBucket("tts_ip:" + (ip || "unknown"), maxRpm, maxRpd, now, "ip");
   if (!res.allowed) return { allowed: false, retryAfterSec: res.retryAfterSec, reason: res.reason };
   res.rec.minStamps.push(now);
@@ -249,15 +250,24 @@ async function readJsonBody(req) {
   });
 }
 
+function stripGeminiVocalTags(rawText) {
+  return String(rawText || "")
+    .replace(/<\s*(?:breath|heavy breath|exhales|chuckle|chuckles|cough|gasp|sigh|sighs|throat-clearing|pff|phew|tsk|short pause|long pause|whispers|whispering)\s*>/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function buildTtsRequestBody(modelId, voiceName, style, text, useFallbackVoice) {
   const is38 = modelId.startsWith("gemini-3.8-");
   const mappedVoice = (useFallbackVoice && CORE_FALLBACK_VOICE_MAP[voiceName])
     ? CORE_FALLBACK_VOICE_MAP[voiceName]
     : voiceName;
   const safeVoice = ALLOWED_VOICES.has(mappedVoice) ? mappedVoice : "Kore";
+  const stripped = stripGeminiVocalTags(text) || text;
+  const textFor38 = useFallbackVoice ? stripped : text;
   const part = is38
-    ? (style ? { text: text, speechMetadata: { style: style } } : { text: text })
-    : { text: style ? ("請用以下口吻自然唸出（不要唸出指示）：" + style + "\n" + text) : text };
+    ? (style ? { text: textFor38, speechMetadata: { style: style } } : { text: textFor38 })
+    : { text: style ? ("請用以下口吻自然唸出（不要唸出指示）：" + style + "\n" + stripped) : stripped };
   return {
     contents: [{ role: "user", parts: [part] }],
     generationConfig: {
@@ -386,24 +396,25 @@ async function handler(req, res) {
   const now = Date.now();
   const queue = [primaryModel].concat(TTS_FALLBACK_ORDER.filter(function (m) { return m !== primaryModel; }))
     .filter(function (m) { return !isModelCoolingDown(m, now); });
-  if (!queue.length) queue.push("gemini-2.5-flash-preview-tts");
+  if (!queue.length) queue.push("gemini-3.8-flash-tts");
 
   let lastStatus = 502;
   const startedAt = Date.now();
-  const TOTAL_BUDGET_MS = 17500;
+  const TOTAL_BUDGET_MS = 19500;
   const PRIMARY_TIMEOUT_MS = 7500;
   const RETRY_400_TIMEOUT_MS = 4000;
   const FALLBACK_MODEL_TIMEOUT_MS = 6000;
+  const strippedForRetry = stripGeminiVocalTags(text) || text;
   for (let i = 0; i < queue.length; i++) {
     const modelId = queue[i];
     const remaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
     if (remaining < 2600) break;
     const timeoutMs = Math.min(i === 0 ? PRIMARY_TIMEOUT_MS : FALLBACK_MODEL_TIMEOUT_MS, remaining - 400);
     let out = await callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, timeoutMs, false);
-    if (!out.ok && out.status === 400 && CORE_FALLBACK_VOICE_MAP[voiceName]) {
+    if (!out.ok && out.status === 400 && (CORE_FALLBACK_VOICE_MAP[voiceName] || strippedForRetry !== text)) {
       const retryRemaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
       if (retryRemaining >= 2600) {
-        // Retry once with guaranteed core prebuilt voice while preserving >= 6s budget for fallback model
+        // Retry once with guaranteed core prebuilt voice & stripped inline tags while keeping >= 6s budget for fallback models
         const retryTimeoutMs = Math.min(RETRY_400_TIMEOUT_MS, retryRemaining - 400);
         out = await callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, retryTimeoutMs, true);
       }
@@ -423,7 +434,7 @@ async function handler(req, res) {
       return;
     }
     lastStatus = out.status || 502;
-    if (out.status === 400 || out.status === 404) {
+    if (out.status === 404) {
       _badModelCooldown.set(modelId, Date.now() + BAD_MODEL_COOLDOWN_MS);
     }
     if (out.status === 401 || out.status === 403) break;
@@ -439,6 +450,10 @@ async function handler(req, res) {
 handler._isAllowedOrigin = isAllowedOrigin;
 handler._checkRateLimit = checkRateLimit;
 handler._buildTtsRequestBody = buildTtsRequestBody;
+handler._stripGeminiVocalTags = stripGeminiVocalTags;
+handler._ALLOWED_VOICES = ALLOWED_VOICES;
+handler._TTS_FALLBACK_ORDER = TTS_FALLBACK_ORDER;
+handler._isModelCoolingDown = isModelCoolingDown;
 handler._resetRateLimit = function () { _rateStore.clear(); _badModelCooldown.clear(); _ttsCache.clear(); };
 
 module.exports = handler;

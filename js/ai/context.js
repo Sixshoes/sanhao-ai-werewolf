@@ -13,7 +13,8 @@ function pickPersonaVoice(speaker, slotKey, salt) {
   const m = (typeof state !== "undefined" && state.match) ? state.match : {};
   const ep = (typeof orchestrator !== "undefined" && orchestrator.matchEpoch) ? orchestrator.matchEpoch : 0;
   const spokenCnt = Array.isArray(m.daySpeechEvents) ? m.daySpeechEvents.length : 0;
-  const seed = ((speaker && speaker.id) || 1) * 19 + (m.day || 1) * 13 + ep * 7 + spokenCnt * 5 + (salt || 0) * 11;
+  const mSeed = (typeof m.matchStyleSeed === "number" ? m.matchStyleSeed : 0);
+  const seed = ((speaker && speaker.id) || 1) * 19 + (m.day || 1) * 13 + ep * 7 + spokenCnt * 5 + mSeed * 3 + (salt || 0) * 11;
   return list[((seed % list.length) + list.length) % list.length] || "";
 }
 
@@ -140,19 +141,41 @@ function buildPriorCallbackPhrase(speaker, dayEvents, seatLabel, snapArg) {
     return "剛才 " + nameOf(toxicEv.speakerId) + " 講話火氣稍微衝了點、語氣不太友善，";
   }
 
+  const mSeed = (snap && typeof snap.matchStyleSeed === "number") ? snap.matchStyleSeed : 0;
+  const cbSeed = (speaker.id || 1) * 31 + ((snap && snap.day) || 1) * 17 + prior.length * 11 + mSeed * 7;
+  const cbIdx = ((cbSeed % 3) + 3) % 3;
+
   const godEv = prior.slice().reverse().find(function (ev) { return ev.claimRole && typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[ev.claimRole]; });
   if (godEv) {
-    return "聽完前置位 " + nameOf(godEv.speakerId) + " 公開跳" + ROLE_DEFS[godEv.claimRole].name + "的說法，";
+    const gName = nameOf(godEv.speakerId);
+    const gRole = ROLE_DEFS[godEv.claimRole].name;
+    return [
+      "聽完前置位 " + gName + " 公開跳" + gRole + "的說法，",
+      gName + " 剛才亮出" + gRole + "身分，",
+      "關於 " + gName + " 剛剛起跳" + gRole + "這點，"
+    ][cbIdx];
   }
 
   const accEv = prior.slice().reverse().find(function (ev) { return ev.accuseId && ev.accuseId !== speaker.id; });
   if (accEv) {
+    const aName = nameOf(accEv.speakerId);
     const tName = nameOf(accEv.accuseId);
-    if (tName) return "剛才前置位 " + nameOf(accEv.speakerId) + " 直接把火往 " + tName + " 身上點，";
+    if (tName) {
+      return [
+        "剛才前置位 " + aName + " 直接把火往 " + tName + " 身上點，",
+        aName + " 剛才直接點出 " + tName + " 的問題，",
+        "聽 " + aName + " 把焦點落在 " + tName + " 身上，"
+      ][cbIdx];
+    }
   }
 
   const last = prior[prior.length - 1];
-  return "接續剛剛 " + nameOf(last.speakerId) + " 的發言來對照，";
+  const lName = nameOf(last.speakerId);
+  return [
+    "接續剛剛 " + lName + " 的發言來對照，",
+    "順著前面 " + lName + " 剛才講的脈絡來看，",
+    "剛聽完 " + lName + " 那段說法，"
+  ][cbIdx];
 }
 
 function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
@@ -613,7 +636,8 @@ function buildSpeechContext(speaker) {
     let out = tpl;
     if (Array.isArray(tpl)) {
       const ep = (typeof orchestrator !== "undefined" && orchestrator.matchEpoch) ? orchestrator.matchEpoch : 0;
-      const seed = speaker.id * 17 + day * 13 + ep * 7 + todaySpeeches.length * 3 + Object.keys(map || {}).length;
+      const mSeed = (snap && typeof snap.matchStyleSeed === "number") ? snap.matchStyleSeed : 0;
+      const seed = speaker.id * 17 + day * 13 + ep * 7 + todaySpeeches.length * 3 + mSeed * 5 + Object.keys(map || {}).length;
       out = tpl[((seed % tpl.length) + tpl.length) % tpl.length] || "";
     }
     out = String(out || "");

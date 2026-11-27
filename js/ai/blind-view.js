@@ -305,6 +305,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
   if (!m || !m.started) {
     return {
       started: false,
+      matchStyleSeed: 0,
       self: null,
       seats: [],
       aliveSeats: [],
@@ -566,6 +567,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     started: true,
     module: moduleTag,
     day: m.day || 1,
+    matchStyleSeed: typeof m.matchStyleSeed === "number" ? m.matchStyleSeed : 0,
     phase: phaseNow,
     totalSeats: m.totalSeats || seats.length,
     playerSeatId: pid,
