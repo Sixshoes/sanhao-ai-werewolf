@@ -278,7 +278,11 @@
                   <span id="vqSubConvenience" class="vq-card-sub">理線歸票</span>
                 </button>
               </div>
-              <button id="btnQuickTeaAtmosphere" type="button" class="vq-atm-btn" title="點擊查看茶席風氣對說服力與從眾之影響">茶席平瀾 72</button>
+              <span id="vqSynergyPill" class="hidden vq-synergy-pill">再奉 1 盞・連心共鳴</span>
+              <div class="vq-right-tools">
+                <button id="btnQuickTeaAtmosphere" type="button" class="vq-atm-btn" title="點擊查看茶席風氣對說服力與從眾之影響">茶席平瀾 72</button>
+                <button id="btnToggleVirtueDeck" type="button" class="vq-fold-btn" aria-expanded="true" title="收合或展開四給奉茶列">收合 ▴</button>
+              </div>
             </div>
 
             <div id="bottomUnifiedRow">
@@ -517,14 +521,14 @@
 
                   <!-- CANDLELIT NIGHT REVIEW CARD (Civilians / Non-Acting Night 2+ Watch Picker) -->
                   <div id="candlelitReviewCard" class="hidden candlelit-review-card msg-enter">
-                    <div class="flex items-center justify-between gap-2 mb-1.5">
-                      <div class="flex items-center gap-1.5 min-w-0">
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <div class="flex items-center gap-2 min-w-0">
                         <span class="candlelit-seal">燭下覆茶</span>
-                        <span class="text-[13px] text-amber-100/90 truncate">圈選明日盯防席位 · 最多兩席</span>
+                        <span class="text-[13px] text-amber-100/95 leading-snug">圈選明日盯防字卡（最多 2 席 · 明日發言亮標並贈免費看心虛 1 次）</span>
                       </div>
-                      <button id="btnCandlelitDone" type="button" class="cta-brass py-0.5 px-2.5 text-[13px] shrink-0">覆茶靜候天明</button>
+                      <button id="btnCandlelitDone" type="button" class="cta-brass py-1 px-3 text-[13px] shrink-0">覆茶靜候天明</button>
                     </div>
-                    <div id="candlelitSlipsList" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
+                    <div id="candlelitSlipsList" class="candlelit-cards-grid"></div>
                   </div>
 
                   <!-- TEA-CUP INTERJECTION POPOVER (Once Per Day Live Cross-Examination) -->
@@ -545,10 +549,10 @@
                     <div id="detectiveMarkRow" class="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
                       <button id="btnMarkGood" type="button"
                         class="cta-ink py-1 px-2.5 text-[13px] shrink-0"
-                        title="聆聽席點頭認同：表露欣賞神色並記為可信夥伴（後位茶友會察覺你的反應）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg>點頭認同</button>
+                        title="聆聽席點頭認同：記為好人夥伴並於投票筆記整理（後位茶友會察覺你的反應）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg>認同・標好人</button>
                       <button id="btnMarkWolf" type="button"
                         class="cta-ink py-1 px-2.5 text-[13px] shrink-0"
-                        title="聆聽席皺眉存疑：表露懷疑神色並記為可疑對象（後位茶友會察覺你的反應）"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9 9-9z"/><path d="M12 8.5v4.2"/><path d="M12 16h.01"/></svg>皺眉存疑</button>
+                        title="聆聽席皺眉存疑：記為可疑狼坑並於投票筆記整理（後位茶友會察覺你的反應）"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9 9-9z"/><path d="M12 8.5v4.2"/><path d="M12 16h.01"/></svg>存疑・標狼人</button>
                       <button id="btnTeaInterject" type="button"
                         class="cta-brass py-1 px-2.5 text-[13px] shrink-0"
                         title="每日限 1 次：趁對方發言露破綻時當場舉杯追問，逼出即時回防"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>舉杯追問</button>
@@ -673,7 +677,7 @@
 
                   <!-- Wide Two-Row Unified Speech Composer (Full-Width Textarea + Integrated Toolbar) -->
                   <div class="free-speech-bar speech-composer-box">
-                    <textarea id="quickFreeInput" rows="2" placeholder="自在起筆陳詞（Enter 送出 · Shift+Enter 換行），或點上方茶牌「帶入進階」載入立場後微調…"
+                    <textarea id="quickFreeInput" rows="2" placeholder="點上方詞卡自由組裝陳詞，或直接打字微調，看完再按右側送出（Enter 送出 · Shift+Enter 換行）…"
                       class="speech-composer-textarea w-full rounded px-3 py-2 text-[15px] border focus:outline-none focus:border-emerald-400"></textarea>
                     <div class="speech-composer-toolbar flex items-center justify-between gap-2 flex-wrap">
                       <div class="flex items-center gap-1.5 flex-wrap min-w-0">
@@ -681,9 +685,9 @@
                           class="cta-ink px-2.5 py-1 text-[13px] shrink-0"
                           title="開口說話輸入發言（瀏覽器原生繁中語音辨識，再按一次停止）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9v6M12 5v14M16 9v6M4 11v2M20 11v2"/></svg><span class="hidden sm:inline">語音</span></button>
                         <div id="quickStancePills" class="flex items-center gap-1 flex-wrap">
-                          <button type="button" data-stance="accuse" class="composer-pill-btn" title="插入理性點疑當前選中座位的起手句">點疑對象</button>
-                          <button type="button" data-stance="vouch" class="composer-pill-btn" title="插入誠懇力保好夥伴的起手句">保好夥伴</button>
-                          <button type="button" data-stance="peace" class="composer-pill-btn" title="插入呼籲三好理性歸票的起手句">溫言緩議</button>
+                          <button type="button" data-stance="accuse" class="composer-pill-btn" title="追加理性點疑當前選中座位的起手句">+ 點疑對象</button>
+                          <button type="button" data-stance="vouch" class="composer-pill-btn" title="追加誠懇力保好夥伴的起手句">+ 保好夥伴</button>
+                          <button type="button" data-stance="peace" class="composer-pill-btn" title="追加呼籲三好理性歸票的起手句">+ 溫言緩議</button>
                         </div>
                         <button id="btnClearSpeechDraft" type="button"
                           class="hidden composer-pill-btn is-muted"
@@ -715,12 +719,13 @@
                   </div>
                 </div>
 
-                <!-- 5. SLIM VOTING STRIP -->
-                <div id="panelVote" class="hidden space-y-1.5">
+                <!-- 5. VOTING STRIP WITH CONSOLIDATED NOTES -->
+                <div id="panelVote" class="hidden space-y-2">
                   <div id="voteGoodwillBadge" class="hidden vote-goodwill-badge"></div>
                   <div id="tableWindVaneVote"
                     class="hidden wind-vane-strip text-[13px] text-amber-200/90 bg-slate-950/60 border border-amber-400/30 rounded px-2 py-1 truncate">
                   </div>
+                  <div id="voteNotesDeck" class="hidden vote-notes-deck"></div>
                   <div class="flex items-center justify-between gap-3 flex-wrap gap-y-2">
                     <div class="min-w-0 text-left">
                       <div id="votePromptLabel" class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-rose-300">
@@ -772,10 +777,10 @@
                   <div id="lastWordsSubHint" class="hidden"></div>
                   <div id="lastWordsChips" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
                   <div class="speech-composer-box is-amber-composer">
-                    <textarea id="lastWordsFreeInput" rows="2" placeholder="留下你的關鍵線索與排坑叮嚀（Enter 送出 · Shift+Enter 換行，或點上方茶牌「帶入改詞」微調）…"
+                    <textarea id="lastWordsFreeInput" rows="2" placeholder="點上方詞卡自由組裝遺言，確認完整後再按「送出遺言」（Enter 送出 · Shift+Enter 換行）…"
                       class="speech-composer-textarea w-full rounded px-3 py-2 text-[15px] border focus:outline-none focus:border-amber-400"></textarea>
                     <div class="speech-composer-toolbar flex items-center justify-between gap-2 flex-wrap">
-                      <span class="text-[13px] opacity-80">點上方茶牌立即發表，或按「帶入改詞」編輯後送出</span>
+                      <span class="text-[13px] opacity-80">點上方詞卡自由組裝到輸入欄，看完再按「送出遺言」</span>
                       <button id="btnSendLastWords" type="button"
                         class="cta-brass px-4 py-1.5 text-[15px] shrink-0 ml-auto">送出遺言 ↵</button>
                     </div>
@@ -805,10 +810,10 @@
                     <div id="sheriffPlayerBadgeFlowBar" class="badge-flow-bar"></div>
                     <div id="sheriffPlayerQuickChips" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
                     <div class="speech-composer-box is-amber-composer">
-                      <textarea id="sheriffPlayerInput" rows="2" placeholder="寫下你的上警宣言與雙警徽流（Enter 送出 · Shift+Enter 換行，或點上方宣言卡「帶入改詞」微調）…"
+                      <textarea id="sheriffPlayerInput" rows="2" placeholder="點上方宣言卡自由組裝並同步雙警徽流，確認後再送出（Enter 送出 · Shift+Enter 換行）…"
                         class="speech-composer-textarea w-full rounded px-3 py-2 text-[15px] border focus:outline-none focus:border-amber-400"></textarea>
                       <div class="speech-composer-toolbar flex items-center justify-between gap-2 flex-wrap">
-                        <span class="text-[13px] opacity-80">點宣言卡一鍵發言，或按「帶入改詞」同步警徽流微調</span>
+                        <span class="text-[13px] opacity-80">點宣言卡組裝陳詞並同步警徽流，確認後再按「送出陳詞」</span>
                         <button id="btnSheriffPlayerSend" type="button" class="cta-brass px-4 py-1.5 text-[15px] shrink-0 ml-auto">送出陳詞 ↵</button>
                       </div>
                     </div>
@@ -864,8 +869,8 @@
 
               </div>
 
-              <!-- Bottom-Right: Sleek Collapsible Four-Givings Pouch (Opens on hover/click, zero clutter while reading!) -->
-              <div id="cornerFourGDeck" class="corner-hand-fan hidden">
+              <!-- Consolidated Four-Givings compatibility bridge (visual UI unified in #virtueQuickDeck) -->
+              <div id="cornerFourGDeck" class="corner-hand-fan is-consolidated-into-deck hidden">
                 <div id="fourGSynergyHint" class="hidden fourg-synergy-hint"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4c-2.2 3.8-2.6 7.5 0 12 2.6-4.5 2.2-8.2 0-12z"/><path d="M5 19.5h14"/></svg>再出 1 張觸發連心共鳴</div>
                 <div class="fourg-fan-tray">
                   <button id="btn4GConfidence" type="button" class="fourg-card card-confidence"

@@ -365,13 +365,21 @@ function renderSeatIntelPopover() {
       const rem = Math.max(0, mMax - mUsed);
       const dayKey = ((state.match && state.match.day) || 0) + ":" + s.id;
       const alreadyDone = Boolean(state.match && state.match.microInspectedSeats && state.match.microInspectedSeats[dayKey]);
+      const isWatchedFree = Boolean(
+        state.match &&
+        Array.isArray(state.match.candlelitWatchIds) &&
+        state.match.candlelitWatchIds.indexOf(s.id) !== -1 &&
+        state.match.candlelitFreeInspectUsedDay !== state.match.day
+      );
       const validPh = state.match.phase === "DAY_SPEECH" || state.match.phase === "DAY_PLAYER_TURN" || state.match.phase === "DAY_VOTE";
-      bMicro.disabled = !state.match.started || !s.alive || !(pSelf && pSelf.alive) || !validPh || rem <= 0 || alreadyDone;
+      bMicro.disabled = !state.match.started || !s.alive || !(pSelf && pSelf.alive) || !validPh || (rem <= 0 && !isWatchedFree) || alreadyDone;
       bMicro.textContent = alreadyDone
         ? "已看心虛"
-        : ("觀微 " + rem + "/" + mMax);
+        : (isWatchedFree ? "免費觀微 (燭防)" : ("觀微 " + rem + "/" + mMax));
       if (typeof shPrependIcon === "function") shPrependIcon(bMicro, "search", "gold");
-      bMicro.title = "偵測對方此刻心虛緊張度，判斷發言是否說謊（每日限用 " + mMax + " 次）";
+      bMicro.title = isWatchedFree
+        ? "昨夜燭下圈防對象：贈送 1 次免費「靜心觀微」（不扣今日額度）"
+        : ("偵測對方此刻心虛緊張度，判斷發言是否說謊（每日限用 " + mMax + " 次）");
     }
   }
   const bTea = el("btnIntelServeTea");
@@ -469,7 +477,12 @@ function inspectSeatMicroExpression(seatId) {
   }
   const maxToday = getMicroInspectMaxToday();
   const usedToday = state.match.microInspectCountToday || 0;
-  if (usedToday >= maxToday) {
+  const isCandlelitFreeTarget = Boolean(
+    Array.isArray(state.match.candlelitWatchIds) &&
+    state.match.candlelitWatchIds.indexOf(target.id) !== -1 &&
+    state.match.candlelitFreeInspectUsedDay !== state.match.day
+  );
+  if (usedToday >= maxToday && !isCandlelitFreeTarget) {
     showToast("今日「靜心觀微」次數已用完（" + usedToday + "/" + maxToday + "）！", "warn");
     return false;
   }
@@ -480,7 +493,12 @@ function inspectSeatMicroExpression(seatId) {
     return false;
   }
 
-  state.match.microInspectCountToday = usedToday + 1;
+  if (isCandlelitFreeTarget) {
+    state.match.candlelitFreeInspectUsedDay = state.match.day;
+    showToast("燭下盯防生效：免費觀微 " + fmtSeatNum(target.id) + "號（不扣今日額度）", "emerald");
+  } else {
+    state.match.microInspectCountToday = usedToday + 1;
+  }
   state.match.microInspectedSeats[dayKey] = true;
   state.match.stats.microInspectsUsed = (state.match.stats.microInspectsUsed || 0) + 1;
 

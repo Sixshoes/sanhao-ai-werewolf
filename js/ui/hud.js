@@ -569,7 +569,7 @@ function renderBeginnerCoachBanner() {
   } else if (p === "DAY_SPEECH") {
     guideText = "導引 2/4 · 細聽茶友陳詞，隨心認同或存疑後推進";
   } else if (p === "DAY_PLAYER_TURN") {
-    guideText = "導引 3/4 · 輪到你陳詞，擇一張微光茶牌即刻發聲";
+    guideText = "導引 3/4 · 點選上方詞卡自由組裝陳詞，確認後按「陳詞送出」";
   } else if (p === "DAY_VOTE") {
     guideText = "導引 4/4 · 眾論既畢，擇一可疑席位落籌定案";
   } else if (p === "DAY_VOTE_RESULT") {
@@ -931,6 +931,10 @@ function renderFourGBlessings() {
     const classicMode = typeof isClassicSimpleMode === "function" && isClassicSimpleMode();
     const showQuickDeck = Boolean(state.match && state.match.started && !classicMode && pAlive && allow);
     qDeck.classList.toggle("hidden", !showQuickDeck);
+    qDeck.classList.toggle("is-synergy-ready", Boolean(showQuickDeck && synReady));
+    if (el("vqSynergyPill")) {
+      el("vqSynergyPill").classList.toggle("hidden", !(showQuickDeck && synReady));
+    }
     if (showQuickDeck) {
       const tg = state.match.threeGood || { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
       const heartLit = (tg.heart || 0) >= 1;

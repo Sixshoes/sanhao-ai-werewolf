@@ -582,38 +582,58 @@ function preparePlayerLastWordsPanel(mode) {
     btn.innerHTML =
       '<div class="flex items-center justify-between gap-1.5 w-full">' +
       '<span class="play-card-stamp ' + stampCls + '">' + escapeHtml(item.tag) + '</span>' +
-      '<span role="button" tabindex="0" class="play-card-load-btn shrink-0" data-card-load="1" title="帶入下方遺言欄微調後再送出">帶入改詞</span>' +
+      '<span class="play-card-load-btn shrink-0" data-card-load="1" title="加入或移除此段到下方遺言欄，看完再按「送出遺言」">+ 加入組裝</span>' +
       '</div>' +
       '<div class="play-card-title text-[13px] font-bold leading-snug line-clamp-1">' + escapeHtml(item.label) + '</div>' +
       '<div class="play-card-preview text-[13px] leading-snug line-clamp-2 opacity-80">' + escapeHtml(item.text) + '</div>';
+    const syncLwCardsUi = function () {
+      const lwCur = el("lastWordsFreeInput") ? String(el("lastWordsFreeInput").value || "") : "";
+      Array.from(box.children || []).forEach(function (cardNode, cIdx) {
+        const ref = cards[cIdx];
+        if (!cardNode || !ref) return;
+        const active = Boolean(ref.text && lwCur.indexOf(ref.text) !== -1);
+        if (cardNode.classList) cardNode.classList.toggle("is-draft-loaded", active);
+        const badge = typeof cardNode.querySelector === "function" ? cardNode.querySelector("[data-card-load]") : null;
+        if (badge) badge.textContent = active ? "已加入" : "+ 加入組裝";
+      });
+    };
+    const toggleLwDraft = function (ev) {
+      if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+      if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+      sound.unlock();
+      const lwInp = el("lastWordsFreeInput");
+      if (lwInp) {
+        const snippet = String(item.text || "").trim();
+        const cur = lwInp.value.trim();
+        const isAlreadyIn = Boolean(snippet && cur.indexOf(snippet) !== -1);
+        if (isAlreadyIn) {
+          lwInp.value = (typeof removeSpeechClause === "function")
+            ? removeSpeechClause(lwInp.value, snippet)
+            : cur.replace(snippet, "").replace(/^[，、；：\s]+|[，、；：\s]+$/g, "");
+        } else {
+          lwInp.value = (typeof joinSpeechClauses === "function")
+            ? joinSpeechClauses(lwInp.value, snippet)
+            : (cur ? (cur + (/[。！？\n]$/.test(cur) ? " " : "，") + snippet) : snippet);
+        }
+        if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(lwInp);
+        if (typeof lwInp.focus === "function") lwInp.focus();
+        try {
+          if (typeof lwInp.setSelectionRange === "function") {
+            lwInp.setSelectionRange(lwInp.value.length, lwInp.value.length);
+          }
+        } catch (e) { }
+        syncLwCardsUi();
+        if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(isAlreadyIn ? 420 : 540, 0.05, "triangle", 0.04, 0);
+        if (typeof showToast === "function") {
+          showToast(isAlreadyIn ? "已從遺言欄移除該段模組。" : "已加入遺言模組，可繼續點其他詞卡或微調後再按「送出遺言」。", "emerald");
+        }
+      }
+    };
     const loadEl = typeof btn.querySelector === "function" ? btn.querySelector("[data-card-load]") : null;
     if (loadEl && typeof loadEl.addEventListener === "function") {
-      const loadLwDraft = function (ev) {
-        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
-        if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
-        sound.unlock();
-        const lwInp = el("lastWordsFreeInput");
-        if (lwInp) {
-          lwInp.value = item.text || "";
-          if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(lwInp);
-          if (typeof lwInp.focus === "function") lwInp.focus();
-          try {
-            if (typeof lwInp.setSelectionRange === "function") {
-              lwInp.setSelectionRange(lwInp.value.length, lwInp.value.length);
-            }
-          } catch (e) { }
-        }
-        if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(540, 0.05, "triangle", 0.04, 0);
-        if (typeof showToast === "function") showToast("已將遺言範本帶入下方輸入框，可自由編輯後送出。", "emerald");
-      };
-      loadEl.addEventListener("click", loadLwDraft);
-      loadEl.addEventListener("keydown", function (ev) {
-        if (ev && (ev.key === "Enter" || ev.key === " ")) loadLwDraft(ev);
-      });
+      loadEl.addEventListener("click", toggleLwDraft);
     }
-    btn.addEventListener("click", function () {
-      submitPlayerLastWords(item.text);
-    });
+    btn.addEventListener("click", toggleLwDraft);
     box.appendChild(btn);
   });
 }

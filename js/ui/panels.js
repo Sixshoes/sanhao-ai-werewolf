@@ -159,10 +159,201 @@ function renderVoteResultPanel() {
   });
 }
 
+function renderVoteNotesDeck(player, pkActive) {
+  const deck = el("voteNotesDeck");
+  if (!deck) return;
+  if (!state.match || !state.match.started) {
+    deck.classList.add("hidden");
+    deck.innerHTML = "";
+    return;
+  }
+
+  const pid = getPlayerId();
+  const isWolfVoter = Boolean(player && player.role === "wolf" && !state.hidePlayerRole);
+  const d = (state.match && state.match.playerDraftPits) || { wolfIds: [], goodIds: [] };
+  const marks = state.playerMarks || {};
+  const watchIds = Array.isArray(state.match.candlelitWatchIds) ? state.match.candlelitWatchIds : [];
+  const aliveOthers = getAliveSeats().filter(function (s) { return s.id !== pid; });
+  const pubMatrix = (state.match.day >= 2 && typeof buildVoteSpeechMatrix === "function") ? buildVoteSpeechMatrix(null) : null;
+  const divMap = (pubMatrix && pubMatrix.divergenceBySeat) ? pubMatrix.divergenceBySeat : {};
+  const validMap = {};
+  aliveOthers.forEach(function (s) {
+    validMap[s.id] = typeof isValidVoteTarget === "function" ? isValidVoteTarget(s.id) : true;
+  });
+
+  const seatHintBits = function (s) {
+    const bits = [];
+    if (s.claimedRole && typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[s.claimedRole]) {
+      bits.push("跳" + ROLE_DEFS[s.claimedRole].name);
+    }
+    if (divMap[s.id]) bits.push("言票差");
+    if (watchIds.indexOf(s.id) !== -1) bits.push("燭防");
+    if (state.match.microPulseRevealed || s.sweatExposed) bits.push("虛" + s.microPulse + "%");
+    return bits.slice(0, 2).join("·");
+  };
+
+  const makeNoteChip = function (s, kindCls, extraTag) {
+    const isSel = state.selectedSeatId === s.id;
+    const canVote = Boolean(validMap[s.id] && !(isWolfVoter && s.role === "wolf"));
+    const tagTxt = extraTag || seatHintBits(s);
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.setAttribute("data-vote-note-seat", String(s.id));
+    chip.className = "vote-note-chip " + kindCls + (isSel ? " is-selected" : "") + (!canVote ? " is-nonpk" : "");
+    chip.title = canVote
+      ? ("點此鎖定投給 " + fmtSeatNum(s.id) + "號 " + s.name + (tagTxt ? ("（" + tagTxt + "）") : ""))
+      : (pkActive ? "非本輪 PK 候選席位" : "同行同伴（不可誤投）");
+    chip.innerHTML =
+      '<span class="vn-seat">' + escapeHtml(fmtSeatNum(s.id) + "號 " + s.name) + '</span>' +
+      (tagTxt ? ('<span class="vn-meta">' + escapeHtml(tagTxt) + '</span>') : "");
+    if (canVote) {
+      chip.addEventListener("click", function () {
+        sound.unlock();
+        selectSeat(s.id);
+      });
+    } else {
+      chip.disabled = !pkActive ? (isWolfVoter && s.role === "wolf") : false;
+      chip.addEventListener("click", function () {
+        if (pkActive && typeof showToast === "function") {
+          showToast("平票 PK 決選僅能投給候選席位或棄票。", "warn");
+        }
+      });
+    }
+    return chip;
+  };
+
+  deck.innerHTML = "";
+  deck.classList.remove("hidden");
+
+  const head = document.createElement("div");
+  head.className = "vote-notes-head";
+  const titleSpan = document.createElement("span");
+  titleSpan.className = "vote-notes-title";
+  titleSpan.textContent = isWolfVoter ? "酸民狼密箋・公投帶票筆記" : "我的公投筆記（點席位即鎖定投票）";
+  head.appendChild(titleSpan);
+
+  const linksWrap = document.createElement("div");
+  linksWrap.className = "vote-notes-links";
+  const btnSheet = document.createElement("button");
+  btnSheet.type = "button";
+  btnSheet.id = "btnVoteNotesOpenSheet";
+  btnSheet.className = "vote-note-link-btn";
+  btnSheet.textContent = "歷輪票型 ↗";
+  btnSheet.addEventListener("click", function () {
+    sound.unlock();
+    if (typeof openVoteSheetModal === "function") openVoteSheetModal();
+  });
+  const btnMat = document.createElement("button");
+  btnMat.type = "button";
+  btnMat.id = "btnVoteNotesOpenMatrix";
+  btnMat.className = "vote-note-link-btn";
+  btnMat.textContent = "立場矩陣 ↗";
+  btnMat.addEventListener("click", function () {
+    sound.unlock();
+    if (typeof indieFlow !== "undefined" && typeof indieFlow.openJournal === "function") {
+      indieFlow.openJournal("matrix");
+    }
+  });
+  linksWrap.appendChild(btnSheet);
+  linksWrap.appendChild(btnMat);
+  head.appendChild(linksWrap);
+  deck.appendChild(head);
+
+  const wolfSet = {};
+  const goodSet = {};
+  (d.wolfIds || []).forEach(function (id) { wolfSet[id] = true; });
+  (d.goodIds || []).forEach(function (id) { goodSet[id] = true; });
+  Object.keys(marks).forEach(function (k) {
+    const sid = parseInt(k, 10);
+    if (!sid || sid === pid) return;
+    if (marks[k] === "wolf") wolfSet[sid] = true;
+    else if (marks[k] === "good" && !wolfSet[sid]) goodSet[sid] = true;
+  });
+
+  const wolfList = aliveOthers.filter(function (s) { return wolfSet[s.id] && !(isWolfVoter && s.role === "wolf"); });
+  const watchOnlyList = aliveOthers.filter(function (s) {
+    return watchIds.indexOf(s.id) !== -1 && !wolfSet[s.id] && !(isWolfVoter && s.role === "wolf");
+  });
+  const goodList = aliveOthers.filter(function (s) { return goodSet[s.id] && !wolfSet[s.id] && !(isWolfVoter && s.role === "wolf"); });
+  const mateList = isWolfVoter ? aliveOthers.filter(function (s) { return s.role === "wolf"; }) : [];
+  const godMap = (isWolfVoter && state.match.wolfGodMarks) ? state.match.wolfGodMarks : {};
+  const godList = isWolfVoter ? aliveOthers.filter(function (s) { return s.role !== "wolf" && godMap[s.id]; }) : [];
+
+  const groupsWrap = document.createElement("div");
+  groupsWrap.className = "vote-notes-groups";
+  let hasGroups = false;
+  const addGroup = function (label, cls, list, customTagFn) {
+    if (!list || list.length === 0) return;
+    hasGroups = true;
+    const g = document.createElement("div");
+    g.className = "vote-note-group";
+    const lbl = document.createElement("span");
+    lbl.className = "vote-note-group-label " + cls;
+    lbl.textContent = label;
+    g.appendChild(lbl);
+    list.forEach(function (s) {
+      g.appendChild(makeNoteChip(s, cls, customTagFn ? customTagFn(s) : ""));
+    });
+    groupsWrap.appendChild(g);
+  };
+
+  if (isWolfVoter) {
+    addGroup("甩鍋目標", "is-wolf", wolfList);
+    addGroup("獵神筆記", "is-watch", godList, function (s) {
+      const def = typeof getWolfGodMarkDef === "function" ? getWolfGodMarkDef(godMap[s.id]) : null;
+      return def ? ("疑" + def.label) : "疑神職";
+    });
+    addGroup("假保人脈", "is-good", goodList);
+    addGroup("狼同伴勿投", "is-mate", mateList, function () { return "同伴"; });
+  } else {
+    addGroup("狼坑／存疑", "is-wolf", wolfList);
+    addGroup("昨夜燭防", "is-watch", watchOnlyList, function () { return "燭防"; });
+    addGroup("好人／認同", "is-good", goodList);
+  }
+
+  if (hasGroups) {
+    deck.appendChild(groupsWrap);
+  }
+
+  const clues = (state.match.pinnedClues || []).filter(function (c) {
+    if (!c || !c.seatId || c.seatId === pid) return false;
+    const cs = getSeat(c.seatId);
+    return Boolean(cs && cs.alive);
+  }).slice(-3).reverse();
+
+  if (clues.length > 0) {
+    const clueBox = document.createElement("div");
+    clueBox.className = "vote-notes-clues";
+    clues.forEach(function (c) {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "vote-note-clue-item";
+      row.title = c.summary || c.tag || "";
+      row.innerHTML =
+        '<span class="vn-clue-tag">' + escapeHtml(c.tag || "筆記") + '</span>' +
+        '<span class="vn-clue-text">' + escapeHtml(c.summary || "") + '</span>';
+      row.addEventListener("click", function () {
+        sound.unlock();
+        if (c.seatId && validMap[c.seatId]) selectSeat(c.seatId);
+      });
+      clueBox.appendChild(row);
+    });
+    deck.appendChild(clueBox);
+  }
+
+  if (!hasGroups && clues.length === 0) {
+    const emptyEl = document.createElement("div");
+    emptyEl.className = "vote-notes-empty";
+    emptyEl.textContent = "尚未標記好壞人 · 可直接點上方座位落籌，或點右側「歷輪票型」對照";
+    deck.appendChild(emptyEl);
+  }
+}
+
 function renderVotePickPanel() {
   if (state.voteFlight && state.voteFlight.active) return;
   const player = getPlayerSeat();
   if (!isPlayerEligibleToVote()) {
+    if (el("voteNotesDeck")) el("voteNotesDeck").classList.add("hidden");
     el("panelStepper").classList.remove("hidden");
     if (el("turnWatchNotice")) el("turnWatchNotice").classList.add("hidden");
     el("stepperStatusText").textContent = (player && player.alive && isPkVoteActive())
@@ -209,6 +400,7 @@ function renderVotePickPanel() {
     rallyBtn.textContent = usedToday ? "本輪已歸票" : "警長歸票";
   }
   const pkActive = isPkVoteActive();
+  renderVoteNotesDeck(player, pkActive);
   const pkListLabel = pkActive
     ? state.match.pkCandidates.map(function (id) { return fmtSeatNum(id) + "號"; }).join("、")
     : "";
@@ -477,8 +669,8 @@ function renderStepperPanel(p) {
     } else {
       el("btnMarkGood").disabled = false;
       el("btnMarkWolf").disabled = false;
-      el("btnMarkGood").textContent = curMark === "good" ? "已點頭" : "點頭認同";
-      el("btnMarkWolf").textContent = curMark === "wolf" ? "已皺眉" : "皺眉存疑";
+      el("btnMarkGood").textContent = curMark === "good" ? "已標好人" : "認同・標好人";
+      el("btnMarkWolf").textContent = curMark === "wolf" ? "已標狼人" : "存疑・標狼人";
       el("btnMarkGood").className = "py-1 px-2 text-[13px] shrink-0 " + (
         curMark === "good" ? "cta-celadon font-bold" : "cta-ink"
       );
@@ -523,12 +715,22 @@ function renderStepperPanel(p) {
         const mRem = Math.max(0, mMax - ((state.match && state.match.microInspectCountToday) || 0));
         const dKey = ((state.match && state.match.day) || 0) + ":" + activeSpeaker.id;
         const doneAlready = Boolean(state.match && state.match.microInspectedSeats && state.match.microInspectedSeats[dKey]);
-        const canInspect = Boolean(pSelf && pSelf.alive && activeSpeaker.alive && mRem > 0 && !doneAlready);
+        const isWatchedFree = Boolean(
+          state.match &&
+          Array.isArray(state.match.candlelitWatchIds) &&
+          state.match.candlelitWatchIds.indexOf(activeSpeaker.id) !== -1 &&
+          state.match.candlelitFreeInspectUsedDay !== state.match.day
+        );
+        const canInspect = Boolean(pSelf && pSelf.alive && activeSpeaker.alive && (mRem > 0 || isWatchedFree) && !doneAlready);
         microBtn.disabled = !canInspect;
-        microBtn.textContent = doneAlready ? "已看心虛" : ("看心虛(" + mRem + ")");
+        microBtn.textContent = doneAlready
+          ? "已看心虛"
+          : (isWatchedFree ? "免費看心虛" : ("看心虛(" + mRem + ")"));
         microBtn.title = doneAlready
           ? "今天已查看過這位發言者的心虛緊張度"
-          : (mRem > 0 ? "查看這位發言者此刻的心虛緊張值（每日限用 " + mMax + " 次）" : "今日看心虛次數已用完，明天刷新");
+          : (isWatchedFree
+            ? "昨夜燭下圈防對象：贈免費看心虛 1 次（不扣今日額度）"
+            : (mRem > 0 ? "查看這位發言者此刻的心虛緊張值（每日限用 " + mMax + " 次）" : "今日看心虛次數已用完，明天刷新"));
       }
     }
   } else {
@@ -547,29 +749,50 @@ function renderStepperPanel(p) {
 
   const watchBox = el("turnWatchNotice");
   if (watchBox) {
-    const showWatch = Boolean(p === "DAY_SPEECH" && state.activeClash && !state.activeClash.resolved && pSeatLive && pSeatLive.alive);
+    const hasClashNotice = Boolean(p === "DAY_SPEECH" && state.activeClash && !state.activeClash.resolved && pSeatLive && pSeatLive.alive);
+    const isCandleWatchedSpeaker = Boolean(
+      p === "DAY_SPEECH" &&
+      activeSpeaker &&
+      activeSpeaker.alive &&
+      pSeatLive &&
+      pSeatLive.alive &&
+      state.match &&
+      Array.isArray(state.match.candlelitWatchIds) &&
+      state.match.candlelitWatchIds.indexOf(activeSpeaker.id) !== -1
+    );
+    const showWatch = hasClashNotice || isCandleWatchedSpeaker;
     watchBox.classList.toggle("hidden", !showWatch);
+    const pinWatchBtn = el("btnQuickPinWatch");
+    if (pinWatchBtn) pinWatchBtn.classList.toggle("hidden", !hasClashNotice);
     const warmBtn = el("btnWarmDeescalate");
     if (warmBtn) {
-      const canWarm = Boolean(showWatch && (state.activeClash.kind === "toxic_slip" || state.activeClash.kind === "accuse_you"));
+      const canWarm = Boolean(hasClashNotice && (state.activeClash.kind === "toxic_slip" || state.activeClash.kind === "accuse_you"));
       warmBtn.classList.toggle("hidden", !canWarm);
       if (canWarm) warmBtn.textContent = "溫言化解";
     }
     if (showWatch) {
-      const cSp = getSeat(state.activeClash.speakerId);
       const wTxt = el("turnWatchText");
-      if (wTxt && cSp) {
-        if (state.activeClash.kind === "fake_seer") {
-          wTxt.textContent = fmtSeatNum(cSp.id) + "號 " + cSp.name + " 冒充明心觀察員，已備好反駁牌，輪到你的順位即可拆穿。";
-        } else if (state.activeClash.kind === "contradiction" && state.activeClash.contradiction) {
-          wTxt.textContent = "抓到矛盾（" + state.activeClash.contradiction.label + "）：" + state.activeClash.contradiction.detail + "｜按「記進筆記」可於發言時直接引用。";
-        } else if (state.activeClash.kind === "toxic_slip") {
-          wTxt.textContent = fmtSeatNum(cSp.id) + "號 " + cSp.name + " 語氣帶刺，可先記進筆記，輪到你再點出破綻。";
-        } else {
-          wTxt.textContent = state.activeClash.inWolfPit
-            ? ("前置位 " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 把你點進狼坑，輪到你的順位即可正面回應。")
-            : (fmtSeatNum(cSp.id) + "號 " + cSp.name + " 點名懷疑你，輪到你的順位即可正面回應。");
+      const watchTagPrefix = isCandleWatchedSpeaker ? "【昨夜燭防】" : "";
+      if (wTxt && hasClashNotice) {
+        const cSp = getSeat(state.activeClash.speakerId);
+        if (cSp) {
+          if (state.activeClash.kind === "fake_seer") {
+            wTxt.textContent = watchTagPrefix + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 冒充明心觀察員，已備好反駁牌，輪到你的順位即可拆穿。";
+          } else if (state.activeClash.kind === "contradiction" && state.activeClash.contradiction) {
+            wTxt.textContent = watchTagPrefix + "抓到矛盾（" + state.activeClash.contradiction.label + "）：" + state.activeClash.contradiction.detail + "｜按「記進筆記」可於發言時直接引用。";
+          } else if (state.activeClash.kind === "toxic_slip") {
+            wTxt.textContent = watchTagPrefix + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 語氣帶刺，可先記進筆記，輪到你再點出破綻。";
+          } else {
+            wTxt.textContent = watchTagPrefix + (state.activeClash.inWolfPit
+              ? ("前置位 " + fmtSeatNum(cSp.id) + "號 " + cSp.name + " 把你點進狼坑，輪到你的順位即可正面回應。")
+              : (fmtSeatNum(cSp.id) + "號 " + cSp.name + " 點名懷疑你，輪到你的順位即可正面回應。"));
+          }
         }
+      } else if (wTxt && isCandleWatchedSpeaker && activeSpeaker) {
+        const freeLeft = state.match.candlelitFreeInspectUsedDay !== state.match.day;
+        wTxt.textContent = freeLeft
+          ? ("昨夜燭下圈防對象 " + fmtSeatNum(activeSpeaker.id) + "號 " + activeSpeaker.name + " 正在發言！點頭像或「免費看心虛」可觀微一次（不扣今日額度）。")
+          : ("昨夜燭下圈防對象 " + fmtSeatNum(activeSpeaker.id) + "號 " + activeSpeaker.name + " 正在發言，留意他前後立場與票型是否一致。");
       }
     }
   }
@@ -873,22 +1096,32 @@ function renderSheriffElectionPanel() {
       const qOpts = (Array.isArray(ctx.playerQuickOptions) && ctx.playerQuickOptions.length)
         ? ctx.playerQuickOptions
         : (typeof buildPlayerSheriffQuickOptions === "function" ? buildPlayerSheriffQuickOptions(pSeat, ctx.playerBadgeFlowDraft) : []);
+      const shCurVal = el("sheriffPlayerInput") ? String(el("sheriffPlayerInput").value || "") : "";
       qOpts.forEach(function (opt) {
+        const optSnippet = String(opt.text || "").trim();
+        const isLoaded = Boolean(optSnippet && shCurVal.indexOf(optSnippet) !== -1);
         const card = document.createElement("button");
         card.type = "button";
-        card.className = "play-card-btn is-compact-card text-left flex flex-col justify-between gap-1";
+        card.className = "play-card-btn is-compact-card text-left flex flex-col justify-between gap-1" + (isLoaded ? " is-draft-loaded" : "");
         card.innerHTML =
           '<div class="flex items-center justify-between gap-1.5 w-full">' +
           '<span class="text-[13px] font-bold text-amber-200 truncate">' + escapeHtml(opt.title) + '</span>' +
-          '<span role="button" tabindex="0" class="play-card-load-btn shrink-0" data-card-load="1" title="帶入下方陳詞欄並同步警徽流微調">帶入改詞</span>' +
+          '<span class="play-card-load-btn shrink-0" data-card-load="1" title="加入或移除此段到下方陳詞欄並同步警徽流">' + (isLoaded ? "已加入" : "+ 加入組裝") + '</span>' +
           '</div>' +
           '<div class="text-[13px] text-slate-300 line-clamp-2">' + escapeHtml(opt.text) + '</div>';
-        const loadEl = typeof card.querySelector === "function" ? card.querySelector("[data-card-load]") : null;
-        if (loadEl && typeof loadEl.addEventListener === "function") {
-          const loadShDraft = function (ev) {
-            if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
-            if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
-            sound.unlock();
+        const toggleShDraft = function (ev) {
+          if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+          if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+          sound.unlock();
+          const shInp = el("sheriffPlayerInput");
+          if (!shInp) return;
+          const curTxt = String(shInp.value || "").trim();
+          const alreadyIn = Boolean(optSnippet && curTxt.indexOf(optSnippet) !== -1);
+          if (alreadyIn) {
+            shInp.value = (typeof removeSpeechClause === "function")
+              ? removeSpeechClause(shInp.value, optSnippet)
+              : curTxt.replace(optSnippet, "").replace(/^[，、；：\s]+|[，、；：\s]+$/g, "");
+          } else {
             ctx._draftCardMeta = {
               claimsSeer: typeof opt.claimsSeer === "boolean" ? opt.claimsSeer : null,
               withdrawAfter: Boolean(opt.withdrawAfter)
@@ -902,35 +1135,50 @@ function renderSheriffElectionPanel() {
               if (typeof buildPlayerSheriffQuickOptions === "function") {
                 ctx.playerQuickOptions = buildPlayerSheriffQuickOptions(pSeat, ctx.playerBadgeFlowDraft);
               }
-              renderSheriffElectionPanel();
             }
-            const shInp = el("sheriffPlayerInput");
-            if (shInp) {
-              shInp.value = opt.text || "";
-              if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(shInp);
-              if (typeof shInp.focus === "function") shInp.focus();
-              try {
-                if (typeof shInp.setSelectionRange === "function") {
-                  shInp.setSelectionRange(shInp.value.length, shInp.value.length);
-                }
-              } catch (e) { }
-            }
-            if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(540, 0.05, "triangle", 0.04, 0);
-            if (typeof showToast === "function") showToast("已將上警宣言帶入下方輸入框" + (opt.badgeFlow ? "（同步警徽流）" : "") + "，可自由改詞後送出。", "emerald");
-          };
-          loadEl.addEventListener("click", loadShDraft);
-          loadEl.addEventListener("keydown", function (ev) {
-            if (ev && (ev.key === "Enter" || ev.key === " ")) loadShDraft(ev);
-          });
-        }
-        card.addEventListener("click", function () {
-          if (typeof submitPlayerSheriffSpeech === "function") {
-            submitPlayerSheriffSpeech(opt.text, opt.badgeFlow || null, {
-              claimsSeer: opt.claimsSeer,
-              withdrawAfter: Boolean(opt.withdrawAfter)
+            shInp.value = (typeof joinSpeechClauses === "function")
+              ? joinSpeechClauses(shInp.value, optSnippet)
+              : (curTxt ? (curTxt + (/[。！？\n]$/.test(curTxt) ? " " : "，") + optSnippet) : optSnippet);
+          }
+          const preservedText = shInp.value;
+          if (!alreadyIn && opt.badgeFlow && opt.badgeFlow.firstTargetId) {
+            renderSheriffElectionPanel();
+            if (el("sheriffPlayerInput")) el("sheriffPlayerInput").value = preservedText;
+          } else {
+            Array.from(chipsBox.children || []).forEach(function (cNode, cIdx) {
+              const refOpt = qOpts[cIdx];
+              if (!cNode || !refOpt) return;
+              const refIn = Boolean(refOpt.text && preservedText.indexOf(refOpt.text) !== -1);
+              if (cNode.classList) cNode.classList.toggle("is-draft-loaded", refIn);
+              const badgeEl = typeof cNode.querySelector === "function" ? cNode.querySelector("[data-card-load]") : null;
+              if (badgeEl) badgeEl.textContent = refIn ? "已加入" : "+ 加入組裝";
             });
           }
-        });
+          const finalInp = el("sheriffPlayerInput");
+          if (finalInp) {
+            if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(finalInp);
+            if (typeof finalInp.focus === "function") finalInp.focus();
+            try {
+              if (typeof finalInp.setSelectionRange === "function") {
+                finalInp.setSelectionRange(finalInp.value.length, finalInp.value.length);
+              }
+            } catch (e) { }
+          }
+          if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(alreadyIn ? 420 : 540, 0.05, "triangle", 0.04, 0);
+          if (typeof showToast === "function") {
+            showToast(
+              alreadyIn
+                ? "已從上警陳詞欄移除該段模組。"
+                : ("已加入上警宣言模組" + (opt.badgeFlow ? "（已同步警徽流）" : "") + "，可繼續疊加或按「送出陳詞」。"),
+              "emerald"
+            );
+          }
+        };
+        const loadEl = typeof card.querySelector === "function" ? card.querySelector("[data-card-load]") : null;
+        if (loadEl && typeof loadEl.addEventListener === "function") {
+          loadEl.addEventListener("click", toggleShDraft);
+        }
+        card.addEventListener("click", toggleShDraft);
         chipsBox.appendChild(card);
       });
     }

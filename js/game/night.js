@@ -13,6 +13,64 @@ function playerHasActiveNightSkillNow() {
   return false;
 }
 
+function extractCompleteSlipQuote(rawText, maxLen) {
+  const cap = Number(maxLen) || 96;
+  const cleaned = String(rawText || "")
+    .replace(/\s+/g, " ")
+    .replace(/^[「『]+|[」』]+$/g, "")
+    .trim();
+  if (!cleaned || cleaned.length <= cap) return cleaned;
+
+  const sentences = [];
+  const sentRe = /[^。！？]+[。！？]+|[^。！？]+$/g;
+  let m;
+  while ((m = sentRe.exec(cleaned)) !== null) {
+    sentences.push(m[0]);
+  }
+  let acc = "";
+  for (let i = 0; i < sentences.length; i++) {
+    if ((acc + sentences[i]).length <= cap) {
+      acc += sentences[i];
+    } else {
+      break;
+    }
+  }
+  if (acc.length >= 24) return acc;
+
+  const first = sentences[0] || cleaned;
+  const slice = first.slice(0, cap);
+  let cutIdx = -1;
+  for (let i = slice.length - 1; i >= Math.min(45, slice.length - 1); i--) {
+    if ("，、；：—".indexOf(slice[i]) !== -1) {
+      cutIdx = i;
+      break;
+    }
+  }
+  if (cutIdx > 0) {
+    return slice.slice(0, cutIdx).replace(/[，、；：—]+$/, "") + "…";
+  }
+  return slice.trim() + "…";
+}
+
+function syncCandlelitWatchCluePin(seat, slip, add) {
+  if (!state.match || !seat) return;
+  if (!Array.isArray(state.match.pinnedClues)) state.match.pinnedClues = [];
+  const watchPrefix = "燭下圈防 " + fmtSeatNum(seat.id) + "號";
+  state.match.pinnedClues = state.match.pinnedClues.filter(function (c) {
+    return !(c && c.kind === "watch" && c.seatId === seat.id && String(c.tag || "").indexOf(watchPrefix) !== -1);
+  });
+  if (add && typeof pinClue === "function") {
+    const tagTxt = slip ? slip.tag : "關鍵發言";
+    const quoteTxt = slip ? (slip.quote || slip.excerpt || "今日重點盯防") : "今日重點盯防";
+    pinClue(
+      seat.id,
+      watchPrefix,
+      "昨夜燭下覆茶鎖定 " + fmtSeatNum(seat.id) + "號" + seat.name + "（" + tagTxt + "）：「" + quoteTxt + "」",
+      "watch"
+    );
+  }
+}
+
 function buildCandlelitNightSlips() {
   if (!state.match || !state.match.started || state.match.day < 2) return [];
   const prevDay = state.match.day - 1;
@@ -25,15 +83,47 @@ function buildCandlelitNightSlips() {
   if (!evs.length) return [];
   const scored = evs.map(function (ev) {
     let pri = 10;
-    let tag = "昨日陳詞";
-    if (ev.contradiction) { pri += 45; tag = "語詞落差"; }
-    else if (ev.hasToxicSlip) { pri += 35; tag = "語氣偏急"; }
-    else if (ev.claimRole === "seer") { pri += 30; tag = "宣稱觀察員"; }
-    else if (ev.accuseId) { pri += 20; tag = "點名起疑"; }
+    let tag = "關鍵表態";
+    let stanceNote = "值得明日回看前後邏輯是否一致";
+    if (ev.hasToxicSlip) {
+      pri += 35;
+      tag = "語氣激進";
+      stanceNote = "措辭偏急，留意是否轉移焦點";
+    } else if (ev.contradiction && ev.contradiction.severity >= 2) {
+      pri += 45;
+      tag = "言票分裂";
+      stanceNote = "發言立場與票型出現落差";
+    } else if (ev.contradiction) {
+      pri += 32;
+      tag = "言詞落差";
+      stanceNote = "前後表態微幅擺盪，建議追蹤";
+    } else if (ev.claimRole && typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[ev.claimRole]) {
+      pri += 30;
+      tag = "起跳" + ROLE_DEFS[ev.claimRole].name;
+      stanceNote = "公開表態身分，明日核對行為";
+    } else if (ev.accuseId) {
+      pri += 22;
+      tag = "點打" + fmtSeatNum(ev.accuseId) + "號";
+      stanceNote = "今日主動帶節奏施壓他席";
+    } else if (ev.vouchId) {
+      pri += 16;
+      tag = "力保" + fmtSeatNum(ev.vouchId) + "號";
+      stanceNote = "今日主動替他席背書緩頰";
+    }
     const s = getSeat(ev.speakerId);
     const raw = String(ev.rawText || "").replace(/\s+/g, " ").trim();
-    const excerpt = raw.length > 30 ? (raw.slice(0, 29) + "…") : raw;
-    return { seatId: ev.speakerId, name: s ? s.name : (ev.speakerName || ""), tag: tag, excerpt: excerpt, pri: pri };
+    const quote = extractCompleteSlipQuote(raw, 96);
+    return {
+      seatId: ev.speakerId,
+      name: s ? s.name : (ev.speakerName || ""),
+      tag: tag,
+      stanceNote: stanceNote,
+      quote: quote,
+      fullQuote: raw,
+      excerpt: quote,
+      score: pri,
+      pri: pri
+    };
   });
   scored.sort(function (a, b) { return b.pri - a.pri; });
   const picked = [];
@@ -53,22 +143,21 @@ function toggleCandlelitWatchSeat(seatId) {
   if (!Array.isArray(rev.watchIds)) rev.watchIds = [];
   const idx = rev.watchIds.indexOf(seatId);
   const s = getSeat(seatId);
+  const slip = (rev.slips || []).find(function (it) { return it && it.seatId === seatId; }) || null;
   if (idx !== -1) {
     rev.watchIds.splice(idx, 1);
+    syncCandlelitWatchCluePin(s, slip, false);
   } else {
     if (rev.watchIds.length >= 2) {
-      rev.watchIds.shift();
+      const droppedId = rev.watchIds.shift();
+      const droppedSeat = getSeat(droppedId);
+      const droppedSlip = (rev.slips || []).find(function (it) { return it && it.seatId === droppedId; }) || null;
+      syncCandlelitWatchCluePin(droppedSeat, droppedSlip, false);
     }
     rev.watchIds.push(seatId);
-    if (s && typeof pinClue === "function") {
-      pinClue(
-        s.id,
-        "燭下圈防 " + fmtSeatNum(s.id) + "號",
-        "昨夜覆茶時已用朱筆圈記 " + fmtSeatNum(s.id) + "號" + s.name + "，今天會特別盯緊他的發言與票型。",
-        "watch"
-      );
-    }
+    syncCandlelitWatchCluePin(s, slip, true);
   }
+  state.match.candlelitWatchIds = rev.watchIds.slice();
   if (typeof sound !== "undefined" && typeof sound.tone === "function") {
     sound.tone(idx !== -1 ? 420 : 620, 0.06, "triangle", 0.04, 0);
   }
@@ -86,12 +175,23 @@ function renderCandlelitNightSlips() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "candlelit-slip-btn" + (circled ? " is-circled" : "");
+    btn.title = slip.fullQuote || slip.quote || "";
+    btn.setAttribute("data-candlelit-seat", String(slip.seatId));
+    const displayQuote = slip.quote || slip.excerpt || "";
     btn.innerHTML =
       '<div class="candlelit-slip-head">' +
-      '<span>' + escapeHtml(fmtSeatNum(slip.seatId) + "號 " + slip.name + " · " + slip.tag) + '</span>' +
-      '<span class="candlelit-slip-mark">' + (circled ? "朱筆已圈" : "圈記盯防") + '</span>' +
+      '<div class="candlelit-slip-who">' +
+      '<span class="candlelit-seat-num">' + escapeHtml(fmtSeatNum(slip.seatId) + "號") + '</span>' +
+      '<span class="candlelit-seat-name">' + escapeHtml(slip.name) + '</span>' +
+      '<span class="candlelit-slip-tag">' + escapeHtml(slip.tag) + '</span>' +
       '</div>' +
-      '<div class="candlelit-slip-quote">「' + escapeHtml(slip.excerpt) + '」</div>';
+      '<span class="candlelit-slip-mark">' + (circled ? "已圈盯防" : "點卡圈防") + '</span>' +
+      '</div>' +
+      '<div class="candlelit-slip-quote">「' + escapeHtml(displayQuote) + '」</div>' +
+      '<div class="candlelit-slip-foot">' +
+      '<span>' + escapeHtml(slip.stanceNote || "留意前後立場一致度") + '</span>' +
+      '<span class="candlelit-slip-perk">' + (circled ? "明日亮標 · 贈免費觀微" : "點擊加入明日盯防") + '</span>' +
+      '</div>';
     btn.addEventListener("click", function () {
       toggleCandlelitWatchSeat(slip.seatId);
     });
@@ -115,6 +215,7 @@ function openCandlelitNightReview(onProceed) {
   if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") {
     stage3d.clearCloseUp();
   }
+  state.match.candlelitWatchIds = [];
   state.match.candlelitReview = {
     active: true,
     slips: slips,
@@ -144,8 +245,9 @@ function finishCandlelitNightReview() {
   rev.finished = true;
   rev.active = false;
   const watchIds = Array.isArray(rev.watchIds) ? rev.watchIds.slice() : [];
+  state.match.candlelitWatchIds = watchIds.slice();
   if (watchIds.length > 0 && typeof showToast === "function") {
-    showToast("燭下覆茶完成，已圈記明日盯防：" + watchIds.map(function (id) { return fmtSeatNum(id) + "號"; }).join("、"), "gold");
+    showToast("燭下覆茶完成，明日盯防：" + watchIds.map(function (id) { return fmtSeatNum(id) + "號"; }).join("、") + "（明日發言將亮標並贈免費觀微 1 次）", "gold");
   }
   const cb = rev.onProceed;
   rev.onProceed = null;
@@ -205,6 +307,9 @@ function beginNightPhase() {
   state.match.directorEventClearedDay = 0;
   state.match.rewriteCritReady = false;
   state.match.microInspectCountToday = 0;
+  state.match.candlelitReview = null;
+  state.match.candlelitWatchIds = [];
+  state.match.candlelitFreeInspectUsedDay = 0;
   state.match.sheriffRallyUsedDay = 0;
   state.match.pendingEvidenceTargetId = null;
   state.match.pendingEvidenceClueId = null;
@@ -277,11 +382,7 @@ function beginNightPhase() {
       if (openedNightBet) return;
     }
   }
-  // v15.0 Civilians / Non-acting players on Night 2+ enter "燭下覆茶" quote review instead of staring at empty timers!
-  if (isBrowserUi && !ffNow && state.match.day >= 2 && !playerHasActiveNightSkillNow()) {
-    const opened = openCandlelitNightReview(runNightRoles);
-    if (opened) return;
-  }
+  // Post-vote -> next-day pacing: skip automatic Candlelit Night Review so non-acting roles proceed swiftly to dawn
   runNightRoles();
 }
 

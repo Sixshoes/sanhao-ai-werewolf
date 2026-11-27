@@ -1684,10 +1684,14 @@ vm.runInContext(`
   window.dispatchEvent({ type: "keydown", key: "Escape", target: document.body });
   if (!el("modalPauseMenu").classList.contains("hidden")) throw new Error("'Escape' failed to close modalPauseMenu!");
 
-  // 'q' plays first speech card during DAY_PLAYER_TURN
+  // 'q' composes first speech card into input without auto-sending; #btnQuickFreeSend sends it cleanly
   window.dispatchEvent({ type: "keydown", key: "q", target: document.body });
+  if (state.match.phase !== "DAY_PLAYER_TURN" || !el("quickFreeInput").value.trim()) {
+    throw new Error("'q' shortcut should compose speech card 1 into quickFreeInput without prematurely sending! phase=" + state.match.phase);
+  }
+  el("btnQuickFreeSend").click();
   if (state.match.phase === "DAY_PLAYER_TURN") {
-    throw new Error("'q' shortcut failed to play speech card 1 in DAY_PLAYER_TURN!");
+    throw new Error("btnQuickFreeSend failed to submit composed speech card 1 in DAY_PLAYER_TURN!");
   }
 
   // DAY_VOTE: PK disabled pills, re-click confirm badge, empty selection guard, Enter vote
@@ -3861,7 +3865,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     state.match.pkCandidates = [seerPkP.id, seerPkOthers[0].id];
     state.match.phase = "DAY_PLAYER_TURN";
     preparePlayerSpeechPanel();
-    const seerPkCardText = el("playerSpeechInput").value || "";
+    const seerPkCardNode = el("quickSpeechChips").querySelectorAll("button")[0];
+    const seerPkCardText = (seerPkCardNode && seerPkCardNode.title) || "";
     const seerPkNoCrashOk = seerPkCardText.includes(fmtSeatNum(seerPkOthers[3].id) + "號") && !seerPkCardText.includes("undefined");
 
     // Verify Elder claim recognition + dedicated Elder role mission
@@ -10243,6 +10248,249 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   for (const [k, v] of Object.entries(aiTacticsRes)) {
     if (!v) {
       throw new Error("AI WEREWOLF TACTICS regression failed for " + k + ": " + JSON.stringify(aiTacticsRes));
+    }
+  }
+}
+
+// --- v24.4 UX Consolidation: Single 4G Deck, Vote Notes Deck, Candlelit Word-Cards & Composable Speech Builder ---
+{
+  const cssCompSrc = fs.readFileSync("css/components.css", "utf8");
+  const cornerConsolidatedHtml = html.includes('id="cornerFourGDeck" class="corner-hand-fan is-consolidated-into-deck');
+  const uxRes = vm.runInContext(`(() => {
+    const findTree = function (root, pred) {
+      const out = [];
+      const visit = function (node) {
+        if (!node) return;
+        if (pred(node)) out.push(node);
+        if (Array.isArray(node._children)) node._children.forEach(visit);
+      };
+      visit(root);
+      return out;
+    };
+    const allTreeText = function (root) {
+      return findTree(root, n => Boolean(n)).map(n => String(n.textContent || "") + String(n.innerHTML || "")).join(" ");
+    };
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    el("chkSheriffMode").checked = false;
+    el("chkGuardMode").checked = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+
+    const pid = getPlayerId();
+    const others = getAliveSeats().filter(s => s.id !== pid);
+
+    // A. Consolidated Four-Givings deck (synergy pill + fold toggle inside #virtueQuickDeck)
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = others[0].id;
+    updateAllUI();
+    el("btnQuick4GJoy").click();
+    const synPillShown = !el("vqSynergyPill").classList.contains("hidden");
+    el("btnToggleVirtueDeck").click();
+    const foldedDeckOk = el("virtueQuickDeck").classList.contains("is-folded") && el("btnToggleVirtueDeck").getAttribute("aria-expanded") === "false";
+    el("btnToggleVirtueDeck").click();
+    const unfoldedDeckOk = !el("virtueQuickDeck").classList.contains("is-folded") && el("btnToggleVirtueDeck").getAttribute("aria-expanded") === "true";
+
+    // B. Listening Good/Wolf mark -> Vote Notes Deck display & 1-click lock
+    state.playerMarks = {};
+    if (state.match.playerDraftPits) state.match.playerDraftPits = createEmptyPlayerDraftPits();
+    state.match.daySpeechEvents = [
+      { day: 1, speakerId: others[0].id, accuseId: others[1].id, rawText: "前置位討論先聽完一輪，我覺得 " + fmtSeatNum(others[1].id) + "號 發言有點急著帶節奏。" },
+      { day: 1, speakerId: others[2].id, vouchId: others[3].id, rawText: "整體節奏還好，不過我暫時相信 " + fmtSeatNum(others[3].id) + "號。" }
+    ];
+    state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = others[0].id;
+    updateAllUI();
+    const listenMarkWolfChip = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others[0].id))[0];
+    if (listenMarkWolfChip) listenMarkWolfChip.click();
+    const listenMarkGoodChip1 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others[2].id))[0];
+    if (listenMarkGoodChip1) listenMarkGoodChip1.click();
+    const listenMarkGoodChip2 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others[2].id))[0];
+    if (listenMarkGoodChip2) listenMarkGoodChip2.click();
+
+    // C. Night 2+ pacing: non-acting villager skips auto Candlelit Night Review cleanly into night roles
+    const prevMatchMedia = window.matchMedia;
+    window.matchMedia = function () { return { matches: false }; };
+    el("selectPreferredRole").value = "villager";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pidVil = getPlayerId();
+    const othersVil = getAliveSeats().filter(s => s.id !== pidVil);
+    state.match.day = 1;
+    state.match.allSpeechEvents = [
+      { day: 1, speakerId: othersVil[0].id, accuseId: othersVil[1].id, rawText: "前置位發言先聽完再決定這輪公投方向。" },
+      { day: 1, speakerId: othersVil[1].id, vouchId: othersVil[2].id, rawText: "我覺得這輪節奏穩穩盤就好。" }
+    ];
+    beginNightPhase();
+    clearStepTimer();
+    const autoCandlelitSkippedOk = Boolean(
+      (!state.match.candlelitReview || !state.match.candlelitReview.active) &&
+      el("candlelitReviewCard").classList.contains("hidden") &&
+      isNightPhase(state.match.phase)
+    );
+    window.matchMedia = prevMatchMedia;
+
+    // Re-setup Seer match for manual helper + vote notes verification
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pid2 = getPlayerId();
+    const others2 = getAliveSeats().filter(s => s.id !== pid2);
+    state.playerMarks = {};
+    state.match.playerDraftPits = createEmptyPlayerDraftPits();
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = others2[0].id;
+    updateAllUI();
+    const lmW = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others2[0].id))[0];
+    if (lmW) lmW.click();
+    const lmG1 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others2[2].id))[0];
+    if (lmG1) lmG1.click();
+    const lmG2 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others2[2].id))[0];
+    if (lmG2) lmG2.click();
+
+    // Verify manual Candlelit helper preserves full quote & free watch inspect if invoked directly
+    state.match.day = 2;
+    const sampleLongQuote = "前置位討論先聽完一輪，我覺得 " + fmtSeatNum(others2[1].id) + "號 發言有點急著帶節奏，完全沒有比對昨天警下誰跟風分票。";
+    state.match.allSpeechEvents = [
+      { day: 1, speakerId: others2[0].id, accuseId: others2[1].id, rawText: sampleLongQuote },
+      { day: 1, speakerId: others2[2].id, vouchId: others2[3].id, rawText: "聽下來我暫時保 " + fmtSeatNum(others2[3].id) + "號，這輪先聽完大家結論再穩穩落票。" }
+    ];
+    const slipsNight = buildCandlelitNightSlips();
+    const fullQuoteKeptOk = Boolean(slipsNight[0] && slipsNight[0].quote === sampleLongQuote && slipsNight[0].quote.length > 35);
+    const openedCandle = openCandlelitNightReview(() => {});
+    toggleCandlelitWatchSeat(slipsNight[0].seatId);
+    finishCandlelitNightReview();
+    const watchedId = slipsNight[0].seatId;
+    const watchPersistedNight = Array.isArray(state.match.candlelitWatchIds) && state.match.candlelitWatchIds.includes(watchedId);
+
+    // Exhaust normal daily micro-inspect quota first, then confirm watched seat gets 1 free inspect without failing!
+    state.match.phase = "DAY_SPEECH";
+    state.match.microInspectCountToday = getMicroInspectMaxToday();
+    state.activeSpeakerId = watchedId;
+    updateAllUI();
+    const freeWatchNoticeShown = !el("turnWatchNotice").classList.contains("hidden") && el("turnWatchText").textContent.includes("燭下圈防");
+    const freeWatchBtnEnabled = !el("btnMicroInspect").disabled && el("btnMicroInspect").textContent.includes("免費看心虛");
+    const freeInspectRes = inspectSeatMicroExpression(watchedId);
+    const freeInspectDidNotConsumeDailyQuota = Boolean(
+      freeInspectRes &&
+      state.match.microInspectCountToday === getMicroInspectMaxToday() &&
+      state.match.candlelitFreeInspectUsedDay === state.match.day
+    );
+
+    // Verify Vote Notes Deck surfaces wolf, good, watch & locks vote target
+    state.match.phase = "DAY_VOTE";
+    state.selectedSeatId = null;
+    updateAllUI();
+    const voteDeckVisible = !el("voteNotesDeck").classList.contains("hidden");
+    const voteWolfNoteChip = findTree(el("voteNotesDeck"), n => n.getAttribute && n.getAttribute("data-vote-note-seat") === String(others2[0].id))[0];
+    if (voteWolfNoteChip) voteWolfNoteChip.click();
+    const voteDeckAllTxt = allTreeText(el("voteNotesDeck"));
+    const voteNoteLocksTargetOk = Boolean(
+      state.selectedSeatId === others2[0].id &&
+      !el("btnCastVote").disabled &&
+      voteDeckAllTxt.includes("狼坑") &&
+      voteDeckAllTxt.includes("好人")
+    );
+
+    // D. Composable Speech Builder: card click NEVER sends, 2 cards assemble instead of overwriting, re-click toggles OFF
+    clearStepTimer();
+    const pSelf = getPlayerSeat();
+    pSelf.checkedHistory = [{ day: 1, targetId: others2[0].id, isWolf: true }];
+    state.playerMarks = {};
+    state.match.playerDraftPits = createEmptyPlayerDraftPits();
+    state.match.phase = "DAY_PLAYER_TURN";
+    el("quickFreeInput").value = "";
+    el("playerSpeechInput").value = "";
+    preparePlayerSpeechPanel();
+    updateAllUI();
+
+    const qCards = el("quickSpeechChips").querySelectorAll("button");
+    if (qCards[0]) qCards[0].click();
+    const textAfterCard1 = el("quickFreeInput").value;
+    const stayOnTurnAfterCard1 = state.match.phase === "DAY_PLAYER_TURN" && qCards[0].classList.contains("is-draft-loaded") && textAfterCard1.length > 10;
+
+    if (qCards[1]) qCards[1].click();
+    const textAfterCard2 = el("quickFreeInput").value;
+    const composedBothCardsOk = Boolean(
+      state.match.phase === "DAY_PLAYER_TURN" &&
+      textAfterCard2.includes(textAfterCard1.trim()) &&
+      textAfterCard2.length > textAfterCard1.length + 10 &&
+      state.match.playerDraftPits.composedModules.length === 2
+    );
+
+    if (qCards[0]) qCards[0].click();
+    const textAfterUntoggle = el("quickFreeInput").value;
+    const untoggledCard1Cleanly = Boolean(
+      !qCards[0].classList.contains("is-draft-loaded") &&
+      qCards[1].classList.contains("is-draft-loaded") &&
+      !textAfterUntoggle.includes(textAfterCard1.trim()) &&
+      textAfterUntoggle.length > 10 &&
+      state.match.playerDraftPits.composedModules.length === 1
+    );
+
+    el("btnQuickFreeSend").click();
+    const sentAfterReviewOk = state.match.phase === "DAY_SPEECH";
+
+    // Also verify Last Words & Sheriff cards compose on card click without auto-sending
+    state.match.phase = "LAST_WORDS_PLAYER";
+    state.lastWordsCtx = { mode: "vote", queue: [pid2], idx: 0 };
+    el("lastWordsFreeInput").value = "";
+    preparePlayerLastWordsPanel("vote");
+    const lwBtn0 = el("lastWordsChips").querySelectorAll("button")[0];
+    if (lwBtn0) lwBtn0.click();
+    const lwSafeComposeOk = state.match.phase === "LAST_WORDS_PLAYER" && el("lastWordsFreeInput").value.trim().length > 10;
+
+    state.match.phase = "SHERIFF_ELECTION";
+    state.match.sheriffElectionCtx = {
+      stage: "speech",
+      candidateIds: [pid2, others2[0].id],
+      speechOrderIds: [pid2, others2[0].id],
+      speechIndex: 0,
+      activeReelSeatId: pid2,
+      spokenSpeeches: [],
+      withdrawnIds: [],
+      playerRunning: true,
+      playerBadgeFlowDraft: { firstTargetId: null, secondTargetId: null, explicit: false }
+    };
+    el("sheriffPlayerInput").value = "";
+    updateAllUI();
+    const shBtn0 = el("sheriffPlayerQuickChips").querySelectorAll("button")[0];
+    if (shBtn0) shBtn0.click();
+    const shSafeComposeOk = state.match.phase === "SHERIFF_ELECTION" && el("sheriffPlayerInput").value.trim().length > 10;
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      synPillShown,
+      foldedDeckOk,
+      unfoldedDeckOk,
+      autoCandlelitSkippedOk,
+      fullQuoteKeptOk,
+      openedCandle,
+      watchPersistedNight,
+      freeWatchNoticeShown,
+      freeWatchBtnEnabled,
+      freeInspectDidNotConsumeDailyQuota,
+      voteDeckVisible,
+      voteNoteLocksTargetOk,
+      stayOnTurnAfterCard1,
+      composedBothCardsOk,
+      untoggledCard1Cleanly,
+      sentAfterReviewOk,
+      lwSafeComposeOk,
+      shSafeComposeOk
+    };
+  })()`, ctx);
+
+  const cssNoComments = cssCompSrc.replace(/\/\*[\s\S]*?\*\//g, "");
+  if (!cornerConsolidatedHtml || !cssNoComments.includes("#cornerFourGDeck.corner-hand-fan.is-consolidated-into-deck") || cssNoComments.includes("!important")) {
+    throw new Error("CSS check failed: missing consolidated deck rule or forbidden !important detected!");
+  }
+  for (const [k, v] of Object.entries(uxRes)) {
+    if (!v) {
+      throw new Error("v24.4 UX Consolidation regression failed for " + k + ": " + JSON.stringify(uxRes));
     }
   }
 }

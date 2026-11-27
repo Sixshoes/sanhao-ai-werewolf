@@ -6836,25 +6836,25 @@ body.craft-ui.theme-day .interject-chip-btn:hover {
 }
 
 .candlelit-review-card {
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(212, 175, 55, 0.36);
-  background: rgba(18, 15, 13, 0.94);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.38);
+  background: rgba(18, 15, 13, 0.96);
 }
 
 body.craft-ui.theme-day .candlelit-review-card {
-  background: rgba(248, 241, 227, 0.96);
-  border-color: rgba(154, 114, 48, 0.42);
+  background: rgba(248, 241, 227, 0.98);
+  border-color: rgba(154, 114, 48, 0.44);
 }
 
 .candlelit-seal {
   font-size: 13px;
   font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
   border: 1px solid rgba(190, 56, 46, 0.65);
   color: #f4a49a;
-  background: rgba(127, 29, 29, 0.28);
+  background: rgba(127, 29, 29, 0.32);
   white-space: nowrap;
 }
 
@@ -6863,67 +6863,179 @@ body.craft-ui.theme-day .candlelit-seal {
   background: rgba(190, 56, 46, 0.12);
 }
 
+.candlelit-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
 .candlelit-slip-btn {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 6px 8px;
-  border-radius: 5px;
-  border: 1px solid rgba(212, 175, 55, 0.24);
-  background: rgba(31, 26, 21, 0.88);
+  justify-content: space-between;
+  gap: 6px;
+  padding: 9px 11px;
+  border-radius: 7px;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  background: rgba(31, 26, 21, 0.92);
   color: var(--text-main);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.18s ease, background 0.18s ease;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.16s ease;
+}
+
+.candlelit-slip-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245, 208, 135, 0.58);
 }
 
 .candlelit-slip-btn.is-circled {
-  border-color: rgba(220, 68, 55, 0.85);
-  background: rgba(127, 29, 29, 0.26);
+  border-color: rgba(220, 68, 55, 0.88);
+  background: rgba(127, 29, 29, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.24);
 }
 
 body.craft-ui.theme-day .candlelit-slip-btn {
-  background: rgba(255, 252, 244, 0.94);
-  border-color: rgba(154, 114, 48, 0.28);
+  background: rgba(255, 252, 244, 0.96);
+  border-color: rgba(154, 114, 48, 0.3);
   color: #2b2116;
 }
 
 body.craft-ui.theme-day .candlelit-slip-btn.is-circled {
   border-color: #b53228;
-  background: rgba(190, 56, 46, 0.12);
+  background: rgba(190, 56, 46, 0.11);
 }
 
 .candlelit-slip-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
+  gap: 8px;
   font-size: 13px;
   font-weight: 700;
   color: var(--accent-gold);
 }
 
+.candlelit-slip-who {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.candlelit-seat-num {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(212, 166, 87, 0.18);
+  border: 1px solid rgba(212, 166, 87, 0.38);
+  color: #fde68a;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.candlelit-seat-name {
+  color: #f8f1e4;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.candlelit-slip-tag {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.34);
+  color: #bae6fd;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .candlelit-slip-mark {
   font-size: 13px;
-  padding: 0 5px;
-  border-radius: 2px;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  color: var(--text-muted);
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(212, 175, 55, 0.36);
+  background: rgba(212, 175, 55, 0.1);
+  color: #e5d5b7;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .candlelit-slip-btn.is-circled .candlelit-slip-mark {
-  border-color: rgba(220, 68, 55, 0.8);
-  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.85);
+  background: rgba(190, 24, 36, 0.35);
+  color: #fecaca;
+}
+
+body.craft-ui.theme-day .candlelit-seat-num {
+  background: rgba(154, 107, 39, 0.14);
+  border-color: rgba(154, 107, 39, 0.38);
+  color: #6b420b;
+}
+
+body.craft-ui.theme-day .candlelit-seat-name {
+  color: #291e14;
+}
+
+body.craft-ui.theme-day .candlelit-slip-tag {
+  background: rgba(30, 96, 138, 0.1);
+  border-color: rgba(30, 96, 138, 0.28);
+  color: #164e73;
+}
+
+body.craft-ui.theme-day .candlelit-slip-mark {
+  color: #5c4932;
+  background: rgba(154, 107, 39, 0.08);
 }
 
 body.craft-ui.theme-day .candlelit-slip-btn.is-circled .candlelit-slip-mark {
   color: #8f231d;
+  background: rgba(190, 56, 46, 0.14);
 }
 
 .candlelit-slip-quote {
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.55;
   color: var(--text-main);
+  word-break: break-word;
+}
+
+.candlelit-slip-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 5px;
+  border-top: 1px dashed rgba(212, 166, 87, 0.22);
+  font-size: 13px;
+  color: rgba(214, 202, 184, 0.86);
+}
+
+.candlelit-slip-perk {
+  font-weight: 700;
+  color: #fde68a;
+  white-space: nowrap;
+}
+
+.candlelit-slip-btn.is-circled .candlelit-slip-perk {
+  color: #fca5a5;
+}
+
+body.craft-ui.theme-day .candlelit-slip-foot {
+  color: #624e38;
+  border-top-color: rgba(154, 107, 39, 0.24);
+}
+
+body.craft-ui.theme-day .candlelit-slip-perk {
+  color: #7c4d0d;
+}
+
+body.craft-ui.theme-day .candlelit-slip-btn.is-circled .candlelit-slip-perk {
+  color: #9e241b;
 }
 
 /* v15.2 Desktop Dual-GPU Diagnostic Notice inside Pause Modal */
@@ -14024,6 +14136,42 @@ body.craft-ui.theme-daylight .candlelit-slip-btn.is-circled .candlelit-slip-mark
   color: #8f261c;
 }
 
+body.craft-ui.theme-daylight .candlelit-seat-num,
+body.craft-ui.theme-twilight .candlelit-seat-num {
+  background: rgba(154, 107, 39, 0.14);
+  border-color: rgba(154, 107, 39, 0.38);
+  color: #6b420b;
+}
+
+body.craft-ui.theme-daylight .candlelit-seat-name,
+body.craft-ui.theme-twilight .candlelit-seat-name {
+  color: #291e14;
+}
+
+body.craft-ui.theme-daylight .candlelit-slip-tag,
+body.craft-ui.theme-twilight .candlelit-slip-tag {
+  background: rgba(30, 96, 138, 0.1);
+  border-color: rgba(30, 96, 138, 0.28);
+  color: #164e73;
+}
+
+body.craft-ui.theme-daylight .candlelit-slip-mark,
+body.craft-ui.theme-twilight .candlelit-slip-mark {
+  color: #5c4932;
+  background: rgba(154, 107, 39, 0.08);
+}
+
+body.craft-ui.theme-daylight .candlelit-slip-foot,
+body.craft-ui.theme-twilight .candlelit-slip-foot {
+  color: #5b4935;
+  border-top-color: rgba(154, 107, 39, 0.24);
+}
+
+body.craft-ui.theme-daylight .candlelit-slip-perk,
+body.craft-ui.theme-twilight .candlelit-slip-perk {
+  color: #7c4d0d;
+}
+
 body.craft-ui.theme-daylight .beginner-coach-banner,
 body.craft-ui.theme-twilight .beginner-coach-banner {
   background: rgba(235, 245, 239, 0.94);
@@ -16964,6 +17112,444 @@ body.craft-ui.theme-twilight .listen-pit-preview {
   .listen-pit-sub {
     width: 100%;
   }
+}
+
+/* ==================== UNIFIED FOUR-GIVINGS CONSOLIDATION, VOTING NOTES DECK & COMPOSABLE SPEECH CARDS ==================== */
+#cornerFourGDeck.corner-hand-fan.is-consolidated-into-deck {
+  display: none;
+}
+
+.vq-right-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.vq-synergy-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 211, 153, 0.56);
+  background: rgba(16, 185, 129, 0.18);
+  color: #a7f3d0;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.vq-synergy-pill.hidden {
+  display: none;
+}
+
+.vq-fold-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(30, 41, 59, 0.72);
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.vq-fold-btn:hover {
+  border-color: rgba(212, 166, 87, 0.65);
+  color: #fef3c7;
+}
+
+.virtue-quick-deck.is-folded .vq-cards-row,
+.virtue-quick-deck.is-folded .vq-synergy-pill {
+  display: none;
+}
+
+.virtue-quick-deck.is-synergy-ready,
+.virtue-quick-deck.is-guide-beckon {
+  border-color: rgba(52, 211, 153, 0.74);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.42), 0 0 16px rgba(52, 211, 153, 0.24);
+}
+
+.pit-chip-live-tag,
+.pit-chip-watch-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 5px;
+  margin-left: 4px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pit-chip-live-tag {
+  background: rgba(245, 158, 11, 0.22);
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  color: #fde68a;
+}
+
+.pit-chip-watch-tag {
+  background: rgba(225, 29, 72, 0.22);
+  border: 1px solid rgba(251, 113, 133, 0.55);
+  color: #fecdd3;
+}
+
+/* Active Composable Card State */
+.play-card-btn.is-draft-loaded {
+  border-color: rgba(52, 211, 153, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.35), 0 8px 20px rgba(0, 0, 0, 0.32);
+}
+
+.play-card-btn.is-draft-loaded .play-card-load-btn {
+  background: rgba(16, 185, 129, 0.24);
+  border-color: rgba(52, 211, 153, 0.75);
+  color: #a7f3d0;
+}
+
+/* Consolidated Voting Notes Deck (#voteNotesDeck) */
+.vote-notes-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(17, 23, 30, 0.9);
+  border: 1px solid rgba(212, 166, 87, 0.38);
+  text-align: left;
+}
+
+.vote-notes-deck.hidden {
+  display: none;
+}
+
+.vote-notes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vote-notes-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fde68a;
+}
+
+.vote-notes-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vote-note-link-btn {
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(212, 166, 87, 0.38);
+  background: rgba(212, 166, 87, 0.12);
+  color: #f6dfad;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.vote-note-link-btn:hover {
+  background: rgba(212, 166, 87, 0.24);
+  border-color: rgba(245, 208, 135, 0.74);
+}
+
+.vote-notes-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.vote-note-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.vote-note-group-label {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.vote-note-group-label.is-wolf {
+  color: #fecdd3;
+  background: rgba(225, 29, 72, 0.22);
+  border: 1px solid rgba(244, 63, 94, 0.45);
+}
+
+.vote-note-group-label.is-watch {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(251, 191, 36, 0.42);
+}
+
+.vote-note-group-label.is-good {
+  color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(52, 211, 153, 0.42);
+}
+
+.vote-note-group-label.is-mate {
+  color: #fda4af;
+  background: rgba(136, 19, 55, 0.35);
+  border: 1px solid rgba(225, 29, 72, 0.45);
+}
+
+.vote-note-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: rgba(30, 39, 50, 0.88);
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.vote-note-chip:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(251, 191, 36, 0.72);
+}
+
+.vote-note-chip.is-wolf {
+  border-color: rgba(244, 63, 94, 0.56);
+  background: rgba(127, 29, 29, 0.26);
+}
+
+.vote-note-chip.is-watch {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: rgba(120, 53, 15, 0.28);
+}
+
+.vote-note-chip.is-good {
+  border-color: rgba(52, 211, 153, 0.48);
+  background: rgba(6, 78, 59, 0.28);
+}
+
+.vote-note-chip.is-mate {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.vote-note-chip.is-selected {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.42);
+}
+
+.vote-note-chip.is-nonpk {
+  opacity: 0.52;
+}
+
+.vn-meta {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fcd34d;
+  opacity: 0.92;
+}
+
+.vote-notes-clues {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(212, 166, 87, 0.22);
+}
+
+.vote-note-clue-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  border: 1px solid rgba(212, 166, 87, 0.2);
+  background: rgba(28, 24, 19, 0.78);
+  color: #e6d8be;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vote-note-clue-item:hover {
+  border-color: rgba(245, 208, 135, 0.58);
+}
+
+.vn-clue-tag {
+  padding: 0 6px;
+  border-radius: 3px;
+  background: rgba(212, 166, 87, 0.16);
+  color: #fde68a;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.vn-clue-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.vote-notes-empty {
+  font-size: 13px;
+  color: rgba(214, 202, 184, 0.78);
+}
+
+/* Light Theme Overrides for Voting Notes Deck, Virtue Controls & Active Composable Cards */
+body.craft-ui.theme-daylight .virtue-quick-deck,
+body.craft-ui.theme-day .virtue-quick-deck,
+body.craft-ui.theme-twilight .virtue-quick-deck {
+  background: rgba(248, 242, 229, 0.96);
+  border-color: rgba(154, 107, 39, 0.36);
+}
+
+body.craft-ui.theme-daylight .vq-fold-btn,
+body.craft-ui.theme-day .vq-fold-btn,
+body.craft-ui.theme-twilight .vq-fold-btn {
+  background: rgba(217, 179, 108, 0.22);
+  border-color: rgba(154, 107, 39, 0.42);
+  color: #5c380c;
+}
+
+body.craft-ui.theme-daylight .vq-synergy-pill,
+body.craft-ui.theme-day .vq-synergy-pill,
+body.craft-ui.theme-twilight .vq-synergy-pill {
+  background: rgba(21, 128, 92, 0.14);
+  border-color: rgba(21, 128, 92, 0.44);
+  color: #14533e;
+}
+
+body.craft-ui.theme-daylight .play-card-btn.is-draft-loaded,
+body.craft-ui.theme-day .play-card-btn.is-draft-loaded,
+body.craft-ui.theme-twilight .play-card-btn.is-draft-loaded {
+  border-color: #1c7c5c;
+}
+
+body.craft-ui.theme-daylight .play-card-btn.is-draft-loaded .play-card-load-btn,
+body.craft-ui.theme-day .play-card-btn.is-draft-loaded .play-card-load-btn,
+body.craft-ui.theme-twilight .play-card-btn.is-draft-loaded .play-card-load-btn {
+  background: rgba(21, 128, 92, 0.16);
+  border-color: #1c7c5c;
+  color: #13523c;
+}
+
+body.craft-ui.theme-daylight .vote-notes-deck,
+body.craft-ui.theme-day .vote-notes-deck,
+body.craft-ui.theme-twilight .vote-notes-deck {
+  background: rgba(247, 241, 228, 0.96);
+  border-color: rgba(154, 107, 39, 0.4);
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .vote-notes-title,
+body.craft-ui.theme-day .vote-notes-title,
+body.craft-ui.theme-twilight .vote-notes-title {
+  color: #6e420c;
+}
+
+body.craft-ui.theme-daylight .vote-note-link-btn,
+body.craft-ui.theme-day .vote-note-link-btn,
+body.craft-ui.theme-twilight .vote-note-link-btn {
+  background: rgba(217, 179, 108, 0.24);
+  border-color: rgba(154, 107, 39, 0.45);
+  color: #5c380c;
+}
+
+body.craft-ui.theme-daylight .vote-note-chip,
+body.craft-ui.theme-day .vote-note-chip,
+body.craft-ui.theme-twilight .vote-note-chip {
+  background: #fffdf8;
+  border-color: rgba(132, 102, 62, 0.34);
+  color: #292018;
+}
+
+body.craft-ui.theme-daylight .vote-note-chip.is-wolf,
+body.craft-ui.theme-day .vote-note-chip.is-wolf,
+body.craft-ui.theme-twilight .vote-note-chip.is-wolf {
+  background: rgba(190, 56, 46, 0.11);
+  border-color: rgba(181, 50, 40, 0.56);
+  color: #7c1c15;
+}
+
+body.craft-ui.theme-daylight .vote-note-chip.is-watch,
+body.craft-ui.theme-day .vote-note-chip.is-watch,
+body.craft-ui.theme-twilight .vote-note-chip.is-watch {
+  background: rgba(180, 118, 38, 0.14);
+  border-color: rgba(180, 118, 38, 0.54);
+  color: #6d4109;
+}
+
+body.craft-ui.theme-daylight .vote-note-chip.is-good,
+body.craft-ui.theme-day .vote-note-chip.is-good,
+body.craft-ui.theme-twilight .vote-note-chip.is-good {
+  background: rgba(21, 128, 92, 0.11);
+  border-color: rgba(21, 128, 92, 0.48);
+  color: #13523c;
+}
+
+body.craft-ui.theme-daylight .vote-note-group-label.is-wolf,
+body.craft-ui.theme-day .vote-note-group-label.is-wolf,
+body.craft-ui.theme-twilight .vote-note-group-label.is-wolf {
+  color: #8c2017;
+  background: rgba(190, 56, 46, 0.12);
+}
+
+body.craft-ui.theme-daylight .vote-note-group-label.is-good,
+body.craft-ui.theme-day .vote-note-group-label.is-good,
+body.craft-ui.theme-twilight .vote-note-group-label.is-good {
+  color: #14533e;
+  background: rgba(21, 128, 92, 0.12);
+}
+
+body.craft-ui.theme-daylight .vote-note-group-label.is-watch,
+body.craft-ui.theme-day .vote-note-group-label.is-watch,
+body.craft-ui.theme-twilight .vote-note-group-label.is-watch {
+  color: #6e420c;
+  background: rgba(180, 118, 38, 0.14);
+}
+
+body.craft-ui.theme-daylight .vn-meta,
+body.craft-ui.theme-day .vn-meta,
+body.craft-ui.theme-twilight .vn-meta {
+  color: #7c4d0d;
+}
+
+body.craft-ui.theme-daylight .vote-note-clue-item,
+body.craft-ui.theme-day .vote-note-clue-item,
+body.craft-ui.theme-twilight .vote-note-clue-item {
+  background: rgba(255, 252, 245, 0.94);
+  border-color: rgba(154, 107, 39, 0.28);
+  color: #3a2d20;
+}
+
+body.craft-ui.theme-daylight .vn-clue-tag,
+body.craft-ui.theme-day .vn-clue-tag,
+body.craft-ui.theme-twilight .vn-clue-tag {
+  background: rgba(180, 118, 38, 0.14);
+  color: #6e420c;
+}
+
+body.craft-ui.theme-daylight .vote-notes-empty,
+body.craft-ui.theme-day .vote-notes-empty,
+body.craft-ui.theme-twilight .vote-notes-empty {
+  color: #5b4935;
 }
 
 

@@ -358,7 +358,7 @@ function advanceSpeechQueue() {
     state.match.phase = "DAY_PLAYER_TURN";
     preparePlayerSpeechPanel();
     updateAllUI();
-    voice.speakHost("輪到" + getPlayerId() + "號你發言了，請選擇卡牌表態。", undefined, "normal");
+    voice.speakHost("輪到" + getPlayerId() + "號你發言了，可點選詞卡組裝陳詞後送出。", undefined, "normal");
     return;
   }
 
@@ -731,7 +731,7 @@ function prefetchNextAiSpeech() {
   const nextId = q[0];
   if (nextId === getPlayerId()) {
     if (typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
-      voice.prefetchBestTts("主持", "輪到" + nextId + "號你發言了，請選擇卡牌表態。", "normal");
+      voice.prefetchBestTts("主持", "輪到" + nextId + "號你發言了，可點選詞卡組裝陳詞後送出。", "normal");
     }
     return false;
   }

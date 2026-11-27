@@ -376,9 +376,35 @@ function createEmptyPlayerDraftPits() {
     evidenceClueId: null,
     badgeFlowFirstId: null,
     badgeFlowSecondId: null,
+    composedModules: [],
+    _lastAutoPitText: "",
     turnKey: "",
     _stagedWhileListening: false
   };
+}
+
+function joinSpeechClauses(existingText, additionText) {
+  const cur = String(existingText || "").trim();
+  const add = String(additionText || "").trim();
+  if (!add) return cur;
+  if (!cur) return add;
+  if (cur.indexOf(add) !== -1) return cur;
+  const sep = /[。！？\n]$/.test(cur) ? " " : "，";
+  return cur + sep + add;
+}
+
+function removeSpeechClause(fullText, clauseText) {
+  const full = String(fullText || "");
+  const clause = String(clauseText || "").trim();
+  if (!full || !clause) return full.trim();
+  const idx = full.indexOf(clause);
+  if (idx === -1) return full.trim();
+  const before = full.slice(0, idx).replace(/[，、；：\s]+$/, "");
+  const after = full.slice(idx + clause.length).replace(/^[，、；：\s]+/, "");
+  if (!before) return after.trim();
+  if (!after) return before.trim();
+  const sep = /[。！？\n]$/.test(before) ? " " : "，";
+  return (before + sep + after).trim();
 }
 
 function syncPlayerMarksFromDraftPits(dArg) {
@@ -719,13 +745,39 @@ function updateQuickFreeSendLabel(dArg, playerArg) {
 }
 
 function syncDraftSpeechToInput() {
+  const d = (state.match && state.match.playerDraftPits) || createEmptyPlayerDraftPits();
   const composed = composePlayerPitSpeechText();
   const qIn = el("quickFreeInput");
   const pIn = el("playerSpeechInput");
-  if (qIn) qIn.value = composed;
-  if (pIn) pIn.value = composed;
+  const hasComposedMods = Boolean(Array.isArray(d.composedModules) && d.composedModules.length > 0);
+  const curVal = qIn ? String(qIn.value || "").trim() : "";
+  let nextText = composed;
+  if (hasComposedMods && curVal) {
+    let base = curVal;
+    if (d._lastAutoPitText && base.indexOf(d._lastAutoPitText) !== -1) {
+      base = removeSpeechClause(base, d._lastAutoPitText);
+    }
+    if (composed && base.indexOf(composed) === -1) {
+      // Only append pit delta if composed introduces new seat refs or role info not already in base
+      const missingPitNote = (d.wolfIds || []).some(function (id) { return base.indexOf(id + "號") === -1; })
+        || (d.goodIds || []).some(function (id) { return base.indexOf(id + "號") === -1; })
+        || (d.claimRole && typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[d.claimRole] && base.indexOf(ROLE_DEFS[d.claimRole].name) === -1);
+      if (missingPitNote) {
+        nextText = joinSpeechClauses(base, composed);
+        d._lastAutoPitText = composed;
+      } else {
+        nextText = base;
+        d._lastAutoPitText = "";
+      }
+    } else {
+      nextText = base;
+    }
+  } else {
+    d._lastAutoPitText = composed;
+  }
+  if (qIn) qIn.value = nextText;
+  if (pIn) pIn.value = nextText;
   state.match.rewriteCritReady = false;
-  const d = (state.match && state.match.playerDraftPits) || createEmptyPlayerDraftPits();
   const player = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
   updateQuickFreeSendLabel(d, player);
   autoResizeSpeechTextarea(qIn);
@@ -895,11 +947,7 @@ function clearPlayerDraftPits() {
   if (el("quickFreeInput")) el("quickFreeInput").value = "";
   if (el("playerSpeechInput")) el("playerSpeechInput").value = "";
   if (el("pitTemplateSyncBar")) el("pitTemplateSyncBar").classList.add("hidden");
-  if (el("quickSpeechChips") && typeof el("quickSpeechChips").querySelectorAll === "function") {
-    el("quickSpeechChips").querySelectorAll(".play-card-btn").forEach(function (c) {
-      if (c.classList) c.classList.remove("is-draft-loaded");
-    });
-  }
+  syncQuickSpeechCardLoadStates(fresh);
   updateQuickFreeSendLabel(fresh, getPlayerSeat());
   autoResizeSpeechTextarea(el("quickFreeInput"));
   if (typeof refreshQuickFreeInputHint === "function") refreshQuickFreeInputHint();
@@ -907,105 +955,193 @@ function clearPlayerDraftPits() {
   refreshPitAllSurfaces();
 }
 
+function syncQuickSpeechCardLoadStates(dArg) {
+  const chipsBox = el("quickSpeechChips");
+  if (!chipsBox) return;
+  const d = dArg || (state.match && state.match.playerDraftPits) || createEmptyPlayerDraftPits();
+  const mods = Array.isArray(d.composedModules) ? d.composedModules : [];
+  const modKeys = {};
+  mods.forEach(function (m) { if (m && m.key) modKeys[m.key] = true; });
+  const cardNodes = Array.from(chipsBox.children || chipsBox._children || []);
+  cardNodes.forEach(function (cardNode) {
+    const key = cardNode.getAttribute ? cardNode.getAttribute("data-card-key") : "";
+    const active = Boolean(key && modKeys[key]);
+    if (cardNode.classList) cardNode.classList.toggle("is-draft-loaded", active);
+    const loadBadge = typeof cardNode.querySelector === "function" ? cardNode.querySelector("[data-card-load]") : null;
+    if (loadBadge) loadBadge.textContent = active ? "已加入" : "+ 加入組裝";
+  });
+}
+
 function loadQuickCardIntoAdvancedEditor(item, cardBtn, slotView, dualWorlds) {
-  if (!state.match || !state.match.started || !item) return;
+  if (!state.match || !state.match.started || !item) return { added: false };
   const player = getPlayerSeat();
-  if (!player) return;
+  if (!player) return { added: false };
   const pid = getPlayerId();
   const isWolfPlayer = player.role === "wolf";
   const wolfCap = getPlayerWolfPitCap();
   const d = ensurePlayerDraftPits(false);
-
-  d.wolfIds = [];
-  d.goodIds = [];
-  d.claimRole = null;
-  d.standSeerId = null;
-  d.evidenceClueId = null;
-  d.badgeFlowFirstId = null;
-  d.badgeFlowSecondId = null;
+  if (!Array.isArray(d.composedModules)) d.composedModules = [];
 
   const isValidTarget = function (id) {
     if (!id || id === pid) return false;
     const s = getSeat(id);
     return Boolean(s && s.alive && !(isWolfPlayer && s.role === "wolf"));
   };
-  const patch = item.draftPatch || {};
-  const seenWolf = {};
-  (Array.isArray(patch.wolfIds) ? patch.wolfIds : []).forEach(function (id) {
-    if (isValidTarget(id) && !seenWolf[id] && d.wolfIds.length < wolfCap) {
-      seenWolf[id] = true;
-      d.wolfIds.push(id);
-    }
-  });
-  const seenGood = {};
-  (Array.isArray(patch.goodIds) ? patch.goodIds : []).forEach(function (id) {
-    if (isValidTarget(id) && !seenWolf[id] && !seenGood[id]) {
-      seenGood[id] = true;
-      d.goodIds.push(id);
-    }
-  });
+  const modKey = (item.tgTag || "") + "::" + (item.label || "");
+  const existingIdx = d.composedModules.findIndex(function (m) { return m && m.key === modKey; });
+  const qIn = el("quickFreeInput");
+  const curInputText = qIn ? String(qIn.value || "") : "";
+  const clause = String(item.text || "").trim();
 
-  // Fallback NLP extraction when a card has no explicit array entries
-  if (d.wolfIds.length === 0 && d.goodIds.length === 0 && item.text) {
-    const inferred = analyzeThreeGoodSpeech(item.text);
-    (inferred.accuseTargets || []).forEach(function (id) {
-      if (isValidTarget(id) && !seenWolf[id] && d.wolfIds.length < wolfCap) {
-        seenWolf[id] = true;
+  let added = true;
+  if (existingIdx !== -1 && (!clause || curInputText.indexOf(clause) !== -1)) {
+    // Untoggle this module cleanly while keeping all other assembled modules intact!
+    added = false;
+    const removedMod = d.composedModules.splice(existingIdx, 1)[0];
+    const nextText = removeSpeechClause(curInputText, clause);
+    if (qIn) qIn.value = nextText;
+    if (el("playerSpeechInput")) el("playerSpeechInput").value = nextText;
+
+    const stillNeedWolf = {};
+    const stillNeedGood = {};
+    let stillClaimRole = null;
+    let stillStandSeer = null;
+    let stillEvMod = null;
+    d.composedModules.forEach(function (m) {
+      (m.addedWolfIds || []).forEach(function (id) { stillNeedWolf[id] = true; });
+      (m.addedGoodIds || []).forEach(function (id) { stillNeedGood[id] = true; });
+      if (m.setClaimRole) stillClaimRole = m.setClaimRole;
+      if (m.setStandSeerId) stillStandSeer = m.setStandSeerId;
+      if (m.evidenceClueId) stillEvMod = m;
+    });
+    if (removedMod) {
+      d.wolfIds = (d.wolfIds || []).filter(function (id) {
+        return (removedMod.addedWolfIds || []).indexOf(id) === -1 || stillNeedWolf[id];
+      });
+      d.goodIds = (d.goodIds || []).filter(function (id) {
+        return (removedMod.addedGoodIds || []).indexOf(id) === -1 || stillNeedGood[id];
+      });
+      if (removedMod.setClaimRole && d.claimRole === removedMod.setClaimRole && !stillClaimRole) {
+        d.claimRole = null;
+      }
+      if (removedMod.setStandSeerId && d.standSeerId === removedMod.setStandSeerId && !stillStandSeer) {
+        d.standSeerId = null;
+      }
+      if (removedMod.evidenceClueId && d.evidenceClueId === removedMod.evidenceClueId) {
+        d.evidenceClueId = stillEvMod ? stillEvMod.evidenceClueId : null;
+      }
+    }
+    state.match.pendingEvidenceTargetId = stillEvMod ? (stillEvMod.evidenceTargetId || null) : null;
+    state.match.pendingEvidenceClueId = stillEvMod ? (stillEvMod.evidenceClueId || null) : null;
+  } else {
+    // Compose & merge this module onto the existing draft (never wipe prior cards!)
+    if (existingIdx !== -1) d.composedModules.splice(existingIdx, 1);
+    const patch = item.draftPatch || {};
+    const addedWolfIds = [];
+    const addedGoodIds = [];
+
+    (Array.isArray(patch.wolfIds) ? patch.wolfIds : []).forEach(function (id) {
+      if (!isValidTarget(id)) return;
+      d.goodIds = (d.goodIds || []).filter(function (g) { return g !== id; });
+      if (d.wolfIds.indexOf(id) === -1 && d.wolfIds.length < wolfCap) {
         d.wolfIds.push(id);
       }
+      if (addedWolfIds.indexOf(id) === -1) addedWolfIds.push(id);
     });
-    (inferred.vouchTargets || []).forEach(function (id) {
-      if (isValidTarget(id) && !seenWolf[id] && !seenGood[id]) {
-        seenGood[id] = true;
-        d.goodIds.push(id);
-      }
+    (Array.isArray(patch.goodIds) ? patch.goodIds : []).forEach(function (id) {
+      if (!isValidTarget(id) || d.wolfIds.indexOf(id) !== -1) return;
+      if (d.goodIds.indexOf(id) === -1) d.goodIds.push(id);
+      if (addedGoodIds.indexOf(id) === -1) addedGoodIds.push(id);
     });
-  }
 
-  if (patch.claimRole) d.claimRole = patch.claimRole;
-  if (patch.standSeerId && getSeat(patch.standSeerId) && getSeat(patch.standSeerId).alive) {
-    d.standSeerId = patch.standSeerId;
-  }
-  const evId = patch.evidenceClueId || (item.isEvidenceCard ? item.evidenceClueId : null);
-  if (evId) d.evidenceClueId = evId;
-
-  const bf1Id = parseInt(patch.badgeFlowFirstId, 10) || null;
-  const bf2Id = parseInt(patch.badgeFlowSecondId, 10) || null;
-  if (bf1Id && bf1Id !== pid && getSeat(bf1Id) && getSeat(bf1Id).alive) {
-    d.badgeFlowFirstId = bf1Id;
-    if (bf2Id && bf2Id !== pid && bf2Id !== bf1Id && getSeat(bf2Id) && getSeat(bf2Id).alive) {
-      d.badgeFlowSecondId = bf2Id;
+    if (addedWolfIds.length === 0 && addedGoodIds.length === 0 && clause) {
+      const inferred = analyzeThreeGoodSpeech(clause);
+      (inferred.accuseTargets || []).forEach(function (id) {
+        if (isValidTarget(id) && d.wolfIds.indexOf(id) === -1 && d.wolfIds.length < wolfCap) {
+          d.goodIds = (d.goodIds || []).filter(function (g) { return g !== id; });
+          d.wolfIds.push(id);
+          addedWolfIds.push(id);
+        }
+      });
+      (inferred.vouchTargets || []).forEach(function (id) {
+        if (isValidTarget(id) && d.wolfIds.indexOf(id) === -1 && d.goodIds.indexOf(id) === -1) {
+          d.goodIds.push(id);
+          addedGoodIds.push(id);
+        }
+      });
     }
+
+    let setClaimRole = null;
+    if (patch.claimRole) {
+      d.claimRole = patch.claimRole;
+      setClaimRole = patch.claimRole;
+    }
+    let setStandSeerId = null;
+    if (patch.standSeerId && getSeat(patch.standSeerId) && getSeat(patch.standSeerId).alive) {
+      d.standSeerId = patch.standSeerId;
+      setStandSeerId = patch.standSeerId;
+    }
+    const evId = patch.evidenceClueId || (item.isEvidenceCard ? item.evidenceClueId : null);
+    if (evId) d.evidenceClueId = evId;
+
+    const bf1Id = parseInt(patch.badgeFlowFirstId, 10) || null;
+    const bf2Id = parseInt(patch.badgeFlowSecondId, 10) || null;
+    if (bf1Id && bf1Id !== pid && getSeat(bf1Id) && getSeat(bf1Id).alive) {
+      d.badgeFlowFirstId = bf1Id;
+      if (bf2Id && bf2Id !== pid && bf2Id !== bf1Id && getSeat(bf2Id) && getSeat(bf2Id).alive) {
+        d.badgeFlowSecondId = bf2Id;
+      }
+    }
+
+    const evTgtId = item.isEvidenceCard ? item.evidenceTargetId : (evId ? (patch.evidenceTargetId || d.wolfIds[0] || null) : null);
+    d.composedModules.push({
+      key: modKey,
+      tgKind: item.tgKind || "words",
+      tgTag: item.tgTag || "模組",
+      text: clause,
+      isEvidenceCard: Boolean(item.isEvidenceCard),
+      evidenceClueId: evId || null,
+      evidenceTargetId: evTgtId,
+      addedWolfIds: addedWolfIds,
+      addedGoodIds: addedGoodIds,
+      setClaimRole: setClaimRole,
+      setStandSeerId: setStandSeerId
+    });
+    if (evId) {
+      state.match.pendingEvidenceTargetId = evTgtId;
+      state.match.pendingEvidenceClueId = evId;
+    }
+
+    // If user hasn't picked cards yet and textarea holds old raw auto-pit line, compose seamlessly
+    let baseForJoin = curInputText;
+    if (d._lastAutoPitText && baseForJoin.trim() === d._lastAutoPitText.trim() && d.composedModules.length === 1) {
+      d._lastAutoPitText = "";
+    }
+    const nextText = joinSpeechClauses(baseForJoin, clause);
+    if (qIn) qIn.value = nextText;
+    if (el("playerSpeechInput")) el("playerSpeechInput").value = nextText;
+
+    const adv = el("speechAdvancedDrawer");
+    if (adv) adv.classList.remove("hidden");
   }
-  d.loadedTag = item.tgTag || "套版";
+
+  d.loadedTag = d.composedModules.map(function (m) { return m.tgTag; }).join("＋") || "";
   syncPlayerMarksFromDraftPits(d);
-
   state.match.rewriteCritReady = false;
-  state.match.pendingEvidenceTargetId = item.isEvidenceCard ? item.evidenceTargetId : (evId ? (patch.evidenceTargetId || d.wolfIds[0] || null) : null);
-  state.match.pendingEvidenceClueId = evId || null;
 
-  const adv = el("speechAdvancedDrawer");
-  if (adv) adv.classList.remove("hidden");
   refreshPitAllSurfaces(slotView, dualWorlds);
   syncSpeechAdvancedToggleLabel(player);
 
   const syncBar = el("pitTemplateSyncBar");
   const syncTxt = el("pitTemplateSyncText");
-  if (syncBar) syncBar.classList.remove("hidden");
-  if (syncTxt) {
-    syncTxt.textContent = "已帶入「" + d.loadedTag + "」立場 · 點擊席位或身分鈕可疊加調整，或直接改下方文字";
+  if (syncBar) syncBar.classList.toggle("hidden", d.composedModules.length === 0);
+  if (syncTxt && d.composedModules.length > 0) {
+    syncTxt.textContent = "已組裝 " + d.composedModules.length + " 組（" + d.loadedTag + "）· 再點其他詞卡可疊加，點已選詞卡可移除，看完再按「陳詞送出」";
   }
 
-  const chipsBox = el("quickSpeechChips");
-  if (chipsBox && typeof chipsBox.querySelectorAll === "function") {
-    chipsBox.querySelectorAll(".play-card-btn").forEach(function (sib) {
-      if (sib.classList) sib.classList.toggle("is-draft-loaded", sib === cardBtn);
-    });
-  }
+  syncQuickSpeechCardLoadStates(d);
 
-  const qIn = el("quickFreeInput");
   if (qIn) {
-    qIn.value = item.text || "";
     autoResizeSpeechTextarea(qIn);
     if (typeof qIn.focus === "function") qIn.focus();
     try {
@@ -1014,10 +1150,10 @@ function loadQuickCardIntoAdvancedEditor(item, cardBtn, slotView, dualWorlds) {
       }
     } catch (e) { }
   }
-  if (el("playerSpeechInput")) el("playerSpeechInput").value = item.text || "";
   updateQuickFreeSendLabel(d, player);
   refreshQuickFreeInputHint();
   refreshLiveNlpUI();
+  return { added: added, count: d.composedModules.length };
 }
 
 function buildSeatSheriffBallotMap(shRec) {
@@ -1484,10 +1620,10 @@ function renderListenPitBar() {
   const titleEl = document.createElement("span");
   titleEl.className = "listen-pit-title";
   if (isWolfPlayer) {
-    titleEl.textContent = "邊聽邊排 · 甩鍋佈局（" + d.wolfIds.length + "甩 · " + d.goodIds.length + "保）";
+    titleEl.textContent = "邊聽邊佈局 · 甩鍋／假保（" + d.wolfIds.length + "甩 · " + d.goodIds.length + "保）";
   } else {
     const wolfTotal = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
-    titleEl.textContent = "邊聽邊排 · 好人排坑（" + d.goodIds.length + "好 · " + d.wolfIds.length + "/" + wolfTotal + "狼）";
+    titleEl.textContent = "邊聽邊記 · 好人／狼人（" + d.goodIds.length + "好 · " + d.wolfIds.length + "/" + wolfTotal + "狼）";
   }
   const subEl = document.createElement("span");
   subEl.className = "listen-pit-sub";
@@ -1495,10 +1631,10 @@ function renderListenPitBar() {
     subEl.textContent = formatListenDraftSummary(d, isWolfPlayer);
   } else if (spokenTodayCount === 0 && p !== "LAST_WORDS_SPEECH") {
     subEl.textContent = isWolfPlayer
-      ? "點1下甩鍋·2下假保（輪到你自動帶入陳詞）"
-      : "點1下狼·2下好·3下清除（輪到你自動帶入陳詞）";
+      ? "點 1 下甩鍋 · 2 下假保 · 3 下清除（投票時自動整理成筆記）"
+      : "點 1 下標狼 · 2 下標好 · 3 下清除（投票時自動整理成筆記）";
   } else {
-    subEl.textContent = "點選席位即時更新公投與筆記標記";
+    subEl.textContent = "點選席位即時更新公投筆記（投票時直接點選落籌）";
   }
   titleWrap.appendChild(titleEl);
   titleWrap.appendChild(subEl);
@@ -1507,23 +1643,12 @@ function renderListenPitBar() {
   const actions = document.createElement("div");
   actions.className = "listen-pit-actions";
 
-  const voteSheetBtn = document.createElement("button");
-  voteSheetBtn.type = "button";
-  voteSheetBtn.className = "cta-ink listen-pit-tool-btn shrink-0";
-  voteSheetBtn.textContent = "票型手札 ↗";
-  voteSheetBtn.title = "開啟警長與歷輪公投票型手札";
-  voteSheetBtn.addEventListener("click", function () {
-    sound.unlock();
-    if (typeof openVoteSheetModal === "function") openVoteSheetModal();
-  });
-  actions.appendChild(voteSheetBtn);
-
   if (hasAnyDraft) {
     const clrBtn = document.createElement("button");
     clrBtn.type = "button";
     clrBtn.className = "cta-link-quiet listen-pit-tool-btn shrink-0";
     clrBtn.textContent = "↺ 清空";
-    clrBtn.title = "清空目前排坑與立場草稿";
+    clrBtn.title = "清空目前好人／狼人標記與立場草稿";
     clrBtn.addEventListener("click", function () {
       sound.unlock();
       clearPlayerDraftPits();
@@ -1567,8 +1692,19 @@ function renderListenPitBar() {
       : "點1下標狼坑・點2下標好人坑（好人坑不限人數！）・點3下清除";
     chip.textContent = fmtSeatNum(s.id) + s.name;
 
+    const isWatchedNight = Boolean(Array.isArray(state.match.candlelitWatchIds) && state.match.candlelitWatchIds.indexOf(s.id) !== -1);
     const microTag = getPlayerKnownMicroTag(player, s.id, shRec, shVotedMap);
-    if (microTag) {
+    if (isSpeakingNow) {
+      const spTag = document.createElement("span");
+      spTag.className = "pit-chip-live-tag";
+      spTag.textContent = "發言中";
+      chip.appendChild(spTag);
+    } else if (isWatchedNight) {
+      const wtTag = document.createElement("span");
+      wtTag.className = "pit-chip-watch-tag";
+      wtTag.textContent = "燭防";
+      chip.appendChild(wtTag);
+    } else if (microTag) {
       const mTagEl = document.createElement("span");
       mTagEl.className = "pit-chip-sh-tag";
       mTagEl.textContent = microTag;
@@ -2195,12 +2331,18 @@ function preparePlayerSpeechPanel() {
 
   el("customSpeechDrawer").classList.add("hidden");
   const cardKeys = ["Q", "W", "E"];
+  const curMods = Array.isArray(draftNow.composedModules) ? draftNow.composedModules : [];
+  const activeModKeys = {};
+  curMods.forEach(function (m) { if (m && m.key) activeModKeys[m.key] = true; });
   cards.slice(0, 3).forEach(function (item, idx) {
     const btn = document.createElement("button");
     btn.type = "button";
+    const cardKey = (item.tgTag || "") + "::" + (item.label || "");
+    const isLoaded = Boolean(activeModKeys[cardKey]);
     const cardTone = item.tgKind === "evidence" ? "card-evidence" : (item.tgKind === "heart" ? "card-heart" : (item.tgKind === "words" ? "card-words" : "card-deeds"));
     const stampTone = item.tgKind === "evidence" ? "stamp-evidence" : (item.tgKind === "heart" ? "stamp-heart" : (item.tgKind === "words" ? "stamp-words" : "stamp-deeds"));
-    btn.className = "play-card-btn is-compact-card card-deal-in w-full text-left flex flex-col justify-between gap-1 " + cardTone;
+    btn.className = "play-card-btn is-compact-card card-deal-in w-full text-left flex flex-col justify-between gap-1 " + cardTone + (isLoaded ? " is-draft-loaded" : "");
+    btn.setAttribute("data-card-key", cardKey);
     if (btn.style) btn.style.animationDelay = (idx * 65) + "ms";
     btn.title = item.text;
     const cleanTitle = item.label.replace(/^【[^】]+】/, "");
@@ -2209,71 +2351,36 @@ function preparePlayerSpeechPanel() {
       '<div class="flex items-center justify-between gap-1.5">' +
       '<span class="play-card-stamp ' + stampTone + '">' + escapeHtml(item.tgTag) + '</span>' +
       '<span class="flex items-center gap-1.5">' +
-      '<span role="button" tabindex="0" class="play-card-load-btn" data-card-load="1" title="帶入上方進階排坑面板與下方輸入框自由修改">帶入進階</span>' +
+      '<span class="play-card-load-btn" data-card-load="1" title="加入或移除此段到下方陳詞欄，組裝完再按「陳詞送出」">' + (isLoaded ? "已加入" : "+ 加入組裝") + '</span>' +
       '<kbd class="ui-kbd">' + cardKeys[idx] + '</kbd>' +
       '</span>' +
       '</div>' +
       '<div class="play-card-title text-[13px] font-bold leading-snug line-clamp-1">' + escapeHtml(cleanTitle) + '</div>' +
       '<div class="play-card-preview text-[13px] leading-snug line-clamp-2 opacity-80">' + escapeHtml(previewSnippet) + '</div>';
+    const composeToggleFn = function (ev) {
+      if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+      if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+      sound.unlock();
+      const resToggle = loadQuickCardIntoAdvancedEditor(item, btn, slotView, dualWorlds);
+      if (typeof sound !== "undefined" && typeof sound.tone === "function") {
+        sound.tone(resToggle && resToggle.added ? 587 : 420, 0.06, "triangle", 0.045, 0);
+      }
+      if (typeof showToast === "function") {
+        if (resToggle && resToggle.added) {
+          showToast("已加入「" + item.tgTag + "」（目前組裝 " + resToggle.count + " 組）到下方陳詞欄，看完即可按「陳詞送出」。", "emerald");
+        } else {
+          showToast("已從陳詞欄移除「" + item.tgTag + "」模組。", "gold");
+        }
+      }
+    };
     const loadEl = typeof btn.querySelector === "function" ? btn.querySelector("[data-card-load]") : null;
     if (loadEl && typeof loadEl.addEventListener === "function") {
-      const loadDraftFn = function (ev) {
-        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
-        if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
-        sound.unlock();
-        loadQuickCardIntoAdvancedEditor(item, btn, slotView, dualWorlds);
-        if (typeof sound !== "undefined" && typeof sound.tone === "function") sound.tone(540, 0.05, "triangle", 0.04, 0);
-        if (typeof showToast === "function") showToast("已將「" + item.tgTag + "」帶入進階排坑面板與書寫台，可點席位增減或改詞！", "emerald");
-      };
-      loadEl.addEventListener("click", loadDraftFn);
-      loadEl.addEventListener("keydown", function (ev) {
-        if (ev && (ev.key === "Enter" || ev.key === " ")) loadDraftFn(ev);
-      });
+      loadEl.addEventListener("click", composeToggleFn);
     }
-    btn.addEventListener("click", function () {
-      if (chipsBox._cardCasting) return;
-      chipsBox._cardCasting = true;
-      state.match.rewriteCritReady = false;
-      state.match.pendingEvidenceTargetId = item.isEvidenceCard ? item.evidenceTargetId : null;
-      state.match.pendingEvidenceClueId = item.isEvidenceCard ? item.evidenceClueId : null;
-      if (typeof createEmptyPlayerDraftPits === "function") state.match.playerDraftPits = createEmptyPlayerDraftPits();
-      el("playerSpeechInput").value = item.text;
-      addThreeGoodPoint(item.isEvidenceCard ? "heart" : item.tgKind, item.tgTag);
-
-      // Ceremonial card-play anticipation beat so cards lift & shimmer before launching!
-      if (btn.classList) btn.classList.add("is-card-casting");
-      if (typeof chipsBox.querySelectorAll === "function") {
-        chipsBox.querySelectorAll(".play-card-btn").forEach(function (sib) {
-          if (sib !== btn && sib.classList) sib.classList.add("is-card-dimmed");
-        });
-      }
-      if (typeof sound !== "undefined" && typeof sound.tone === "function") {
-        sound.tone(587, 0.08, "triangle", 0.06, 0);
-        sound.tone(880, 0.14, "triangle", 0.05, 0.07);
-      }
-      if (typeof spawnBurst === "function") {
-        spawnBurst(getPlayerId(), ["#fbbf24", "#fde68a", "#ffffff"], 12, "star");
-      }
-      const isRealBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
-      const castDelay = !isRealBrowserUi ? 0 : ((typeof state !== "undefined" && (state.autoPlay || state.fxPacing === "fast")) ? 160 : 420);
-      if (castDelay <= 0) {
-        chipsBox._cardCasting = false;
-        submitPlayerSpeech();
-      } else {
-        setTimeout(function () {
-          chipsBox._cardCasting = false;
-          if (state.match && state.match.phase === "DAY_PLAYER_TURN") {
-            submitPlayerSpeech();
-          }
-        }, castDelay);
-      }
-    });
+    btn.addEventListener("click", composeToggleFn);
     chipsBox.appendChild(btn);
   });
 
-  if (!el("playerSpeechInput").value.trim()) {
-    el("playerSpeechInput").value = cards[0].text;
-  }
   refreshLiveNlpUI();
 }
 
@@ -2372,6 +2479,10 @@ function submitPlayerSpeech() {
 
   const pid = getPlayerId();
   const draft = (state.match && state.match.playerDraftPits) ? state.match.playerDraftPits : createEmptyPlayerDraftPits();
+  if (Array.isArray(draft.composedModules) && draft.composedModules.length > 0) {
+    const firstMod = draft.composedModules[0];
+    addThreeGoodPoint(firstMod.isEvidenceCard ? "heart" : firstMod.tgKind, firstMod.tgTag);
+  }
   const evForceId = state.match.pendingEvidenceTargetId || null;
 
   const plWolfCap = Math.max(4, getPlayerWolfPitCap());

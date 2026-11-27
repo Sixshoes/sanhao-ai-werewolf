@@ -461,7 +461,7 @@ const indieFlow = {
       "btnStartMatch", "seatButtonStrip", "btnConfirmTarget", "btnSeerRevealContinue",
       "witchSubPanel", "btnCastVote", "btnStepNext", "btnTeaInterject",
       "quickSpeechChips", "rephraseChoicesTray", "btnQuickInlineRewrite",
-      "cornerFourGDeck", "threeGoodMeters", "sheriffPlayerQuickChips",
+      "cornerFourGDeck", "virtueQuickDeck", "threeGoodMeters", "sheriffPlayerQuickChips",
       "btnSheriffNextSpeech", "panelSheriffOrder", "btnSheriffRun"
     ];
     GUIDE_IDS.forEach(function (id) {
@@ -571,6 +571,7 @@ const indieFlow = {
       const almostSynergy = Boolean(!m.fourGSynergyTriggered && usedCount === 1 && usedCount < 4);
       if (almostLotus || almostSynergy) {
         setCue("cornerFourGDeck", "is-guide-beckon");
+        setCue("virtueQuickDeck", "is-guide-beckon");
         if (almostLotus) setCue("threeGoodMeters", "is-guide-beckon");
       }
     }

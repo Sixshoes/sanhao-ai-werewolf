@@ -69,6 +69,8 @@ function resetMatchToLobby() {
   state.match.detectedContradictions = [];
   state.match.microInspectCountToday = 0;
   state.match.microInspectedSeats = {};
+  state.match.candlelitWatchIds = [];
+  state.match.candlelitFreeInspectUsedDay = 0;
   if (typeof state._preSpectatorFxPacing === "string") {
     state.fxPacing = state._preSpectatorFxPacing;
     state._preSpectatorFxPacing = null;
@@ -1267,6 +1269,20 @@ function bindNightVoteAndFourGEvents() {
   };
   if (el("btnQuickTeaAtmosphere")) el("btnQuickTeaAtmosphere").addEventListener("click", showAtmToast);
   if (el("teaAtmosphereBadge")) el("teaAtmosphereBadge").addEventListener("click", showAtmToast);
+  if (el("btnToggleVirtueDeck") && el("virtueQuickDeck")) {
+    el("btnToggleVirtueDeck").addEventListener("click", function () {
+      sound.unlock();
+      const deckEl = el("virtueQuickDeck");
+      const foldBtn = el("btnToggleVirtueDeck");
+      deckEl.classList.toggle("is-folded");
+      const folded = deckEl.classList.contains("is-folded");
+      foldBtn.setAttribute("aria-expanded", folded ? "false" : "true");
+      foldBtn.textContent = folded ? "四給 ▾" : "收合 ▴";
+      if (typeof sound !== "undefined" && typeof sound.tone === "function") {
+        sound.tone(folded ? 430 : 540, 0.05, "triangle", 0.035, 0);
+      }
+    });
+  }
 
   // v10.3 Collapsible Four-Givings Pouch: click header pill to toggle open/close cleanly on both touch and desktop
   if (el("fourGDeckHeader") && el("cornerFourGDeck")) {
