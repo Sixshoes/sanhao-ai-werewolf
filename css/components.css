@@ -19533,9 +19533,18 @@ body.craft-ui.screen-ingame #cornerRoleTile .role-mask-trigger {
   font-size: 13px;
 }
 
+body.craft-ui.screen-ingame #cornerRoleTile .role-tile-status-row {
+  align-items: flex-start;
+  gap: 6px;
+}
+
 body.craft-ui.screen-ingame #cornerRoleTile .role-tile-status {
   font-size: 13px;
-  white-space: nowrap;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.32;
+  word-break: break-word;
 }
 
 body.craft-ui.screen-ingame #focalCenterCard {
@@ -20374,7 +20383,7 @@ body.craft-ui #judgeShowcaseGuideBanner .judge-guide-step.is-active::after {
 
 
 
-/* v25.4 Showcase studio header & bottom dock legibility */
+/* v25.4 Showcase studio header & bottom dock legibility + daylight live-mark chip contrast */
 body.craft-ui #heroShowcaseOverlay #showcasePersonaBio {
   color: #f4ece0;
 }
@@ -20384,4 +20393,56 @@ body.craft-ui #heroShowcaseOverlay #heroShowcaseSub {
 body.craft-ui #heroShowcaseOverlay #showcaseTargetCounter,
 body.craft-ui #heroShowcaseOverlay .showcase-more-drawer > summary {
   color: #36281c;
+}
+body.craft-ui.theme-daylight .pit-chip-live-tag,
+body.craft-ui.theme-day .pit-chip-live-tag,
+body.craft-ui.theme-twilight .pit-chip-live-tag {
+  background: rgba(180, 112, 24, 0.18);
+  border-color: rgba(154, 92, 16, 0.62);
+  color: #6b3b06;
+}
+body.craft-ui.theme-daylight .pit-chip-watch-tag,
+body.craft-ui.theme-day .pit-chip-watch-tag,
+body.craft-ui.theme-twilight .pit-chip-watch-tag {
+  background: rgba(185, 28, 48, 0.14);
+  border-color: rgba(164, 34, 52, 0.55);
+  color: #881327;
+}
+body.craft-ui.theme-daylight .spectator-guess-bar .cta-brass,
+body.craft-ui.theme-day .spectator-guess-bar .cta-brass,
+body.craft-ui.theme-twilight .spectator-guess-bar .cta-brass,
+body.craft-ui.theme-daylight #btnLockSpectatorGuess,
+body.craft-ui.theme-day #btnLockSpectatorGuess,
+body.craft-ui.theme-twilight #btnLockSpectatorGuess {
+  background: linear-gradient(180deg, #b37927 0%, #8d5c18 100%);
+  border-color: #7c4e12;
+  color: #fffcf5;
+  font-weight: 700;
+}
+body.craft-ui.theme-daylight .spectator-guess-bar .cta-brass:hover,
+body.craft-ui.theme-day .spectator-guess-bar .cta-brass:hover,
+body.craft-ui.theme-twilight .spectator-guess-bar .cta-brass:hover,
+body.craft-ui.theme-daylight #btnLockSpectatorGuess:hover,
+body.craft-ui.theme-day #btnLockSpectatorGuess:hover,
+body.craft-ui.theme-twilight #btnLockSpectatorGuess:hover {
+  background: linear-gradient(180deg, #c2862f 0%, #9b661c 100%);
+  color: #ffffff;
+}
+body.craft-ui.theme-daylight .spectator-guess-bar .text-sky-200,
+body.craft-ui.theme-day .spectator-guess-bar .text-sky-200,
+body.craft-ui.theme-twilight .spectator-guess-bar .text-sky-200 {
+  color: #0c4a6e;
+}
+body.craft-ui.theme-daylight .spectator-guess-bar .text-emerald-300,
+body.craft-ui.theme-daylight .spectator-guess-bar .text-emerald-100,
+body.craft-ui.theme-day .spectator-guess-bar .text-emerald-300,
+body.craft-ui.theme-day .spectator-guess-bar .text-emerald-100,
+body.craft-ui.theme-twilight .spectator-guess-bar .text-emerald-300,
+body.craft-ui.theme-twilight .spectator-guess-bar .text-emerald-100 {
+  color: #065f46;
+}
+body.craft-ui.theme-daylight .spectator-guess-bar .text-rose-100,
+body.craft-ui.theme-day .spectator-guess-bar .text-rose-100,
+body.craft-ui.theme-twilight .spectator-guess-bar .text-rose-100 {
+  color: #881337;
 }

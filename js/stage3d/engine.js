@@ -1586,11 +1586,15 @@ const stage3d = {
       }
     };
     const loadStaticFallback = function () {
-      return fetch("assets/models/manifest.json")
+      return fetch("assets/models/manifest.json?v=25.4", { cache: "no-cache" })
         .then(function (r) { return r && r.ok ? r.json() : null; })
         .catch(function () { return null; })
         .then(function (staticInfo) {
-          return staticInfo || self.getDefaultStaticAvatarManifest();
+          const def = self.getDefaultStaticAvatarManifest();
+          if (!staticInfo) return def;
+          return Object.assign({}, def, staticInfo, {
+            seatModels: Object.assign({}, def.seatModels, staticInfo.seatModels || {})
+          });
         });
     };
     const host = (typeof window !== "undefined" && window.location && window.location.hostname)

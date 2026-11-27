@@ -580,19 +580,45 @@ function proceedToNightWolf() {
     startWolfScreenTacticTimer();
     updateAllUI();
   } else {
-    if (player && player.alive && player.role === "seer") {
-      voice.speakHost("第" + state.match.day + "晚，天黑請靜心。明心觀察員請點擊外圍座位查證身分。", undefined, "host_night");
-    } else if (!(typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) && !(player && player.alive && player.role === "guard")) {
-      voice.speakHost("第" + state.match.day + "晚，天黑請靜心。", undefined, "host_night");
-    }
-    state.stepTimer = scheduleNightStep(function () {
+    const finishAiWolfStep = function () {
       const wolves = getAliveSeats().filter(function (s) { return s.role === "wolf"; });
       if (wolves.length > 0) {
         const picked = chooseAiWolfTargetBlind(wolves[0]);
         if (picked) state.match.nightState.wolfTarget = picked.id;
       }
       proceedToNightSeer();
-    }, voice.canSpeak() ? 1250 : 820);
+    };
+    const isFfNight = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+    const waitHostNightVoice = Boolean(
+      !isFfNight &&
+      !(player && player.alive && (player.role === "seer" || player.role === "guard")) &&
+      typeof voice !== "undefined" && typeof voice.canSpeak === "function" && voice.canSpeak()
+    );
+    if (player && player.alive && player.role === "seer") {
+      voice.speakHost("第" + state.match.day + "晚，天黑請靜心。明心觀察員請點擊外圍座位查證身分。", undefined, "host_night");
+      state.stepTimer = scheduleNightStep(finishAiWolfStep, 1250);
+    } else if (waitHostNightVoice) {
+      let wolfStepRan = false;
+      const epNightWolf = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+      const runWolfOnce = function () {
+        if (wolfStepRan) return;
+        wolfStepRan = true;
+        clearStepTimer();
+        if (!state.match || !state.match.started || state.match.phase !== "NIGHT_WOLF") return;
+        if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epNightWolf)) return;
+        finishAiWolfStep();
+      };
+      voice.speakHost("第" + state.match.day + "晚，天黑請靜心。", function () {
+        state.stepTimer = scheduleNightStep(runWolfOnce, 220);
+      }, "host_night");
+      // Safety cap so nightfall never stalls if audio is blocked/unavailable
+      state.stepTimer = scheduleNightStep(runWolfOnce, 5200);
+    } else {
+      if (!isFfNight && !(player && player.alive && player.role === "guard")) {
+        voice.speakHost("第" + state.match.day + "晚，天黑請靜心。", undefined, "host_night");
+      }
+      state.stepTimer = scheduleNightStep(finishAiWolfStep, voice.canSpeak() ? 1250 : 820);
+    }
   }
 }
 
@@ -1209,19 +1235,31 @@ function resolveDawn() {
         if (typeof updateSpotlightBox === "function") {
           updateSpotlightBox(fmtSeatNum(firstSeatLw.id) + "號 " + firstSeatLw.name + "（遺言）", "首夜遺言", "天亮公布倒牌，正在整理首夜遺言…");
         }
-        if (dawnVoiceLine && typeof voice !== "undefined" && typeof voice.speakHost === "function") {
-          voice.speakHost(dawnVoiceLine, undefined, "host_dawn");
-        }
         const epDawnLw = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
-        state.stepTimer = setTimeout(function () {
-          state.stepTimer = null;
+        let dawnLwStarted = false;
+        const launchDawnLw = function () {
+          if (dawnLwStarted) return;
+          dawnLwStarted = true;
+          clearStepTimer();
           state.speakingInFlight = false;
           if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
           if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epDawnLw)) return;
           startLastWordsSequence(lwIds, "first_night", function () {
             enterDayDiscussionWithSheriffHooks("");
           });
-        }, 900);
+        };
+        const waitDawnLwVoice = Boolean(dawnVoiceLine && typeof voice !== "undefined" && typeof voice.speakHost === "function" && typeof voice.canSpeak === "function" && voice.canSpeak());
+        if (waitDawnLwVoice) {
+          voice.speakHost(dawnVoiceLine, function () {
+            state.stepTimer = setTimeout(launchDawnLw, 260);
+          }, "host_dawn");
+          state.stepTimer = setTimeout(launchDawnLw, 6500);
+        } else {
+          if (dawnVoiceLine && typeof voice !== "undefined" && typeof voice.speakHost === "function") {
+            voice.speakHost(dawnVoiceLine, undefined, "host_dawn");
+          }
+          state.stepTimer = setTimeout(launchDawnLw, 900);
+        }
         return;
       }
       startLastWordsSequence(lwIds, "first_night", function () {

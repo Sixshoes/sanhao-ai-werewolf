@@ -328,10 +328,17 @@ function drawStageOverlays(ctx, f, coords, skipBeams) {
       ctx.font = "800 " + Math.round(9.5 * dpr) + "px 'Noto Sans TC', sans-serif";
       const tw = ctx.measureText(tip).width + 14 * dpr;
       const th = 18 * dpr;
-      const tx = clamp(hNode.x - tw * 0.5, 6 * dpr, w - tw - 6 * dpr);
-      const ty = (hNode.y - hNode.r - th - 24 * dpr) > 6 * dpr
-        ? (hNode.y - hNode.r - th - 10 * dpr)
-        : (hNode.y + hNode.r + 14 * dpr);
+      let tx = clamp(hNode.x - tw * 0.5, 6 * dpr, w - tw - 6 * dpr);
+      let ty;
+      if (is3dOverlay && hNode.r >= 42 * dpr) {
+        // Close-up 3D speaker/seat: place beside shoulder cleanly off the character's face!
+        tx = clamp(hNode.x + hNode.r * 0.72, 8 * dpr, w - tw - 8 * dpr);
+        ty = clamp(hNode.y + hNode.r * 0.35, 58 * dpr, h - th - 12 * dpr);
+      } else {
+        ty = (hNode.y - hNode.r - th - 24 * dpr) > 6 * dpr
+          ? (hNode.y - hNode.r - th - 10 * dpr)
+          : (hNode.y + hNode.r + 14 * dpr);
+      }
       drawRoundedRect(ctx, tx, ty, tw, th, 7 * dpr);
       ctx.fillStyle = daylight ? "rgba(15, 23, 42, 0.88)" : "rgba(248, 250, 252, 0.92)";
       ctx.fill();

@@ -1,14 +1,14 @@
 /**
- * 三好AI狼人殺 — 離線快取 Service Worker（v24.4.0 雙快取池架構）
- * - SHELL_CACHE（sanhao-shell-v24.4.0）：核心 HTML / CSS / JS / manifest，採 Network-First 策略，確保回訪即得最新版
- * - ASSET_CACHE（sanhao-assets-v24.2.1）：大型 3D VRM / 靜態語音包 / 立繪 / 360 天穹 / PBR 貼圖 / Vendor 函式庫，
- *   採 Cache-First 策略（上限 200 筆），與程式外殼完全隔離、絕不互相擠出快取
+ * 三好AI狼人殺 — 離線快取 Service Worker（v25.4.0 雙快取池架構）
+ * - SHELL_CACHE（sanhao-shell-v25.4.0）：核心 HTML / CSS / JS / manifest，採 Network-First 策略，確保回訪即得最新版
+ * - ASSET_CACHE（sanhao-assets-v25.4.0）：大型 3D VRM / 靜態語音包 / 立繪 / 360 天穹 / PBR 貼圖 / Vendor 函式庫，
+ *   採 Cache-First 策略（上限 200 筆），快取未命中時以 no-cache 向伺服器校驗 ETag，與程式外殼完全隔離、絕不互相擠出快取
  * - /api/* 即時端點一律跳過快取
  */
 "use strict";
 
-const SHELL_CACHE = "sanhao-shell-v24.4.0";
-const ASSET_CACHE = "sanhao-assets-v24.2.1";
+const SHELL_CACHE = "sanhao-shell-v25.4.0";
+const ASSET_CACHE = "sanhao-assets-v25.4.0";
 const ACTIVE_CACHES = [SHELL_CACHE, ASSET_CACHE];
 const MAX_ASSET_ENTRIES = 200;
 const MAX_SHELL_ENTRIES = 90;
@@ -96,7 +96,7 @@ self.addEventListener("fetch", function (event) {
       caches.open(ASSET_CACHE).then(function (cache) {
         return cache.match(req, { ignoreSearch: true }).then(function (cached) {
           if (cached) return cached;
-          return fetch(req).then(function (resp) {
+          return fetch(req, { cache: "no-cache" }).then(function (resp) {
             if (resp && resp.status === 200 && resp.type === "basic") {
               cache.put(req, resp.clone()).then(function () {
                 return trimCacheIfNeeded(ASSET_CACHE, MAX_ASSET_ENTRIES);
@@ -116,7 +116,7 @@ self.addEventListener("fetch", function (event) {
 
   // Pool B: App shell HTML / CSS / JS / manifest -> Network-First (always fresh on return visits, offline fallback)
   event.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-cache" })
       .then(function (resp) {
         if (resp && resp.status === 200 && resp.type === "basic") {
           const clone = resp.clone();

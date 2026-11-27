@@ -7174,7 +7174,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v24.4.0") && swSrcPerf.includes("sanhao-assets-v24.2.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.4.0") && swSrcPerf.includes("sanhao-assets-v25.4.0") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7577,8 +7577,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v24.4.0"') &&
-    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v24.2.1"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.4.0"') &&
+    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v25.4.0"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
 
@@ -8318,7 +8318,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     doubleVoteBlockedOk: v242Res.doubleVoteBlockedOk,
     sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
       && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
-    docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("v24.2") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
+    docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("sanhao-assets-v25.4.0") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
     scriptV242Ok: docScript241.includes("v24.4.0") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
     voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
     apiTimeout8400AndLruOk: apiGem242.includes("resolvePrimaryTimeoutMs(primaryModel)") && apiGem242.includes("21500 - elapsed") && apiGem242.includes("if (++evicted >= 200) break;") && apiGem242.includes("if (timer) clearTimeout(timer);"),
@@ -8871,10 +8871,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     specSyncedModelsAndCacheOk:
       docSpec2414.includes("gemini-4-hydrogen") &&
       docSpec2414.includes("api/tts.js") &&
-      docSpec2414.includes("sanhao-shell-v24.4.0") &&
+      docSpec2414.includes("sanhao-shell-v25.4.0") &&
       docSpec2414.length <= 5000,
     readmeSyncedOk:
-      readme2414.includes("sanhao-shell-v24.4.0") &&
+      readme2414.includes("sanhao-shell-v25.4.0") &&
       readme2414.includes("api/tts.js"),
     ...v24214Runtime
   };

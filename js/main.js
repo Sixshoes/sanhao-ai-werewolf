@@ -273,6 +273,23 @@ window.onload = function () {
     }
   } catch (e) {}
   if (typeof navigator !== "undefined" && navigator.serviceWorker && typeof navigator.serviceWorker.register === "function" && window.location && (window.location.protocol === "https:" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
-    navigator.serviceWorker.register("./sw.js").catch(function () {});
+    const hadSwController = Boolean(navigator.serviceWorker.controller);
+    if (hadSwController && typeof navigator.serviceWorker.addEventListener === "function") {
+      let swReloading = false;
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (swReloading) return;
+        try {
+          if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("sanhao_sw_reloaded_v254") === "1") return;
+          if (typeof sessionStorage !== "undefined") sessionStorage.setItem("sanhao_sw_reloaded_v254", "1");
+        } catch (e) {}
+        swReloading = true;
+        if (window.location && typeof window.location.reload === "function") window.location.reload();
+      });
+    }
+    navigator.serviceWorker.register("./sw.js").then(function (reg) {
+      if (hadSwController && reg && typeof reg.update === "function") {
+        reg.update().catch(function () {});
+      }
+    }).catch(function () {});
   }
 };

@@ -1875,6 +1875,42 @@ const voice = {
     return null;
   },
 
+  _splitTextForCloudTts: function (cleanText, maxChunkLen) {
+    const s = String(cleanText || "").trim();
+    const maxLen = (typeof maxChunkLen === "number" && maxChunkLen >= 28) ? maxChunkLen : 64;
+    if (!s || s.length <= maxLen + 8) return s ? [s] : [];
+    const chunks = [];
+    let rest = s;
+    while (rest.length > maxLen + 8) {
+      let cut = -1;
+      const hi = Math.min(maxLen, rest.length - 12);
+      // Prefer terminal sentence punctuation within [16, hi]
+      for (let i = hi; i >= 16; i--) {
+        const ch = rest.charAt(i);
+        if (ch === "。" || ch === "！" || ch === "？" || ch === "；") {
+          cut = i + 1;
+          while (cut < rest.length && (rest.charAt(cut) === "」" || rest.charAt(cut) === "』" || rest.charAt(cut) === "）")) cut += 1;
+          break;
+        }
+      }
+      // Otherwise split cleanly on a comma/pause punctuation within [20, hi]
+      if (cut === -1) {
+        for (let i = hi; i >= 20; i--) {
+          const ch = rest.charAt(i);
+          if (ch === "，" || ch === "、") {
+            cut = i + 1;
+            break;
+          }
+        }
+      }
+      if (cut === -1 || rest.length - cut < 10) break;
+      chunks.push(rest.slice(0, cut).trim());
+      rest = rest.slice(cut).trim();
+    }
+    if (rest) chunks.push(rest);
+    return chunks.filter(Boolean);
+  },
+
   prefetchCloudGeminiTts: function (personaName, rawText, mood) {
     if (!this.canSpeak() || this.enginePref === "local") return;
     if (!(typeof state !== "undefined" && state.geminiApiKey) && !this.isCloudGeminiTtsActive()) return;
@@ -1886,10 +1922,11 @@ const voice = {
     const cleanText = this.formatMandarinText(rawText);
     if (!cleanText || this.lookupBundledVoicePackUrl(effKey, cleanText)) return;
     const profile = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["你"];
-    const fastParts = this._splitFirstSentenceForFastStart(cleanText, 118);
-    if (fastParts) {
-      this._fetchGeminiStudioAudio(profile, effKey, fastParts[0], mood || "normal");
-      this._fetchGeminiStudioAudio(profile, effKey, fastParts[1], mood || "normal");
+    const chunks = this._splitTextForCloudTts(cleanText, 64);
+    if (chunks.length > 1) {
+      // Prefetch first 2 compact chunks (<=64 chars each -> 1.5–3s synthesis, never times out at 7.5s!)
+      this._fetchGeminiStudioAudio(profile, effKey, chunks[0], mood || "normal");
+      this._fetchGeminiStudioAudio(profile, effKey, chunks[1], mood || "normal");
       return;
     }
     this._fetchGeminiStudioAudio(profile, effKey, cleanText, mood || "normal");
@@ -1928,80 +1965,109 @@ const voice = {
     const moodNow = mood || "normal";
     const fullPayload = this._buildGeminiTtsPayload(profile, effKey, cleanText, moodNow);
     const hasWarmFull = Boolean(this.studioCache[fullPayload.cacheKey] || this.studioPending[fullPayload.cacheKey]);
-    const parts = !hasWarmFull ? this._splitFirstSentenceForFastStart(cleanText, 118) : null;
-    if (parts) {
-      const headText = parts[0];
-      const tailText = parts[1];
-      const headP = this._fetchGeminiStudioAudio(profile, effKey, headText, moodNow);
-      const tailP = this._fetchGeminiStudioAudio(profile, effKey, tailText, moodNow);
+    const chunks = !hasWarmFull ? this._splitTextForCloudTts(cleanText, 64) : [cleanText];
+    if (chunks.length > 1) {
+      const self = this;
+      const chunkPromises = new Array(chunks.length);
+      const chunkOffsets = new Array(chunks.length);
+      let cursor = 0;
+      for (let ci = 0; ci < chunks.length; ci++) {
+        chunkOffsets[ci] = cursor;
+        cursor = Math.min(cleanText.length, cursor + chunks[ci].length);
+      }
+      const ensureChunkFetch = function (idx) {
+        if (idx < 0 || idx >= chunks.length) return null;
+        if (!chunkPromises[idx]) {
+          chunkPromises[idx] = self._fetchGeminiStudioAudio(profile, effKey, chunks[idx], moodNow);
+        }
+        return chunkPromises[idx];
+      };
+      // Fetch chunk 0 & chunk 1 in parallel; subsequent chunks prefetch rolling-window style so /api/tts never bursts or times out!
+      const headP = ensureChunkFetch(0);
+      ensureChunkFetch(1);
       const headBuf = await headP;
       if (!headBuf || seq !== this.utteranceSeq) return false;
-      const self = this;
-      const tailStartIdx = Math.min(cleanText.length, headText.length);
-      const onHeadDone = async function () {
+
+      const finishRemainingFallback = function (fromIdx) {
         if (seq !== self.utteranceSeq) return;
-        const finishTailFallback = function () {
-          if (seq !== self.utteranceSeq) return;
-          if (self.paused || !tailText) {
-            self.utteranceSeq += 1;
-            self.setVisualSpeaking(false);
-            self.syncPauseButtonUi();
-            if (typeof onDone === "function") onDone();
-            return;
-          }
-          const tailOpts = Object.assign({}, opts, {
-            charRangeStart: tailStartIdx,
-            charRangeEnd: cleanText.length
-          });
-          if (self.localNeuralAvailable && typeof self.playFreeLocalNeuralTts === "function") {
-            self.playFreeLocalNeuralTts(seq, profile, tailText, moodNow, onDone, tailOpts).then(function (okNeural) {
-              if (!okNeural && seq === self.utteranceSeq) {
-                self.speakLocalBrowserTts(seq, profile, tailText, moodNow, false, onDone, tailOpts);
-              }
-            }).catch(function () {
-              if (seq === self.utteranceSeq) {
-                self.speakLocalBrowserTts(seq, profile, tailText, moodNow, false, onDone, tailOpts);
-              }
-            });
-            return;
-          }
-          self.speakLocalBrowserTts(seq, profile, tailText, moodNow, false, onDone, tailOpts);
-        };
-        try {
-          const tailBuf = await tailP;
-          if (!tailBuf || seq !== self.utteranceSeq) {
-            finishTailFallback();
-            return;
-          }
-          // Natural breath bridge pause between first sentence and continuation
-          const bridgeMs = /[。！？；]$/.test(headText.trim()) ? 80 : 42;
-          await new Promise(function (resolve) { setTimeout(resolve, bridgeMs); });
-          if (seq !== self.utteranceSeq || self.paused) return;
-          const startedTail = self.playBufferedStudioAudio(seq, tailBuf, onDone, Object.assign({}, opts, {
-            skipPreBreath: true,
-            skipPrepBeat: true,
-            skipRateAdjust: true,
-            skipDetune: true,
-            onAudioReady: null,
-            charRangeStart: tailStartIdx,
-            charRangeEnd: cleanText.length,
-            totalDurationHintMs: Math.round(tailBuf.duration * 1000)
-          }));
-          if (!startedTail) finishTailFallback();
-        } catch (e) {
-          finishTailFallback();
+        const remainText = chunks.slice(fromIdx).join("");
+        if (self.paused || !remainText) {
+          self.utteranceSeq += 1;
+          self.setVisualSpeaking(false);
+          self.syncPauseButtonUi();
+          if (typeof onDone === "function") onDone();
+          return;
         }
+        const tailOpts = Object.assign({}, opts, {
+          charRangeStart: chunkOffsets[fromIdx] || 0,
+          charRangeEnd: cleanText.length
+        });
+        if (self.localNeuralAvailable && typeof self.playFreeLocalNeuralTts === "function") {
+          self.playFreeLocalNeuralTts(seq, profile, remainText, moodNow, onDone, tailOpts).then(function (okNeural) {
+            if (!okNeural && seq === self.utteranceSeq) {
+              self.speakLocalBrowserTts(seq, profile, remainText, moodNow, false, onDone, tailOpts);
+            }
+          }).catch(function () {
+            if (seq === self.utteranceSeq) {
+              self.speakLocalBrowserTts(seq, profile, remainText, moodNow, false, onDone, tailOpts);
+            }
+          });
+          return;
+        }
+        self.speakLocalBrowserTts(seq, profile, remainText, moodNow, false, onDone, tailOpts);
       };
-      return this.playBufferedStudioAudio(seq, headBuf, onHeadDone, Object.assign({}, opts, {
-        keepSeqOpen: true,
-        skipPreBreath: true,
-        skipRateAdjust: true,
-        skipDetune: true,
-        skipTypewriterSync: true,
-        charRangeStart: 0,
-        charRangeEnd: tailStartIdx,
-        totalDurationHintMs: Math.round(headBuf.duration * 1000)
-      }));
+
+      const playChunkAt = function (idx, buf) {
+        if (seq !== self.utteranceSeq || self.paused) return false;
+        const isLast = idx === chunks.length - 1;
+        const startC = chunkOffsets[idx] || 0;
+        const endC = isLast ? cleanText.length : (chunkOffsets[idx + 1] || cleanText.length);
+        // Rolling prefetch: kick off chunk idx+1 right as chunk idx begins playing
+        if (!isLast) ensureChunkFetch(idx + 1);
+        const onChunkDone = isLast ? onDone : async function () {
+          if (seq !== self.utteranceSeq) return;
+          const nextIdx = idx + 1;
+          try {
+            let nextBuf = await ensureChunkFetch(nextIdx);
+            // Anti-robotic-fallback retry: if a transient 502/504/429 blip hit chunk nextIdx, retry Gemini TTS ONCE before ever switching voice engines mid-speech!
+            if (!nextBuf && seq === self.utteranceSeq && !self.paused) {
+              const cdRemain = (self.cloudGeminiTtsCooldownUntil || 0) - Date.now();
+              if (cdRemain < 25000) {
+                self.cloudGeminiTtsCooldownUntil = 0;
+                await new Promise(function (resolve) { setTimeout(resolve, 340); });
+                if (seq === self.utteranceSeq && !self.paused) {
+                  nextBuf = await self._fetchGeminiStudioAudio(profile, effKey, chunks[nextIdx], moodNow);
+                }
+              }
+            }
+            if (!nextBuf || seq !== self.utteranceSeq) {
+              finishRemainingFallback(nextIdx);
+              return;
+            }
+            const prevTxt = chunks[idx].trim();
+            const bridgeMs = /[。！？；]$/.test(prevTxt) ? 75 : 38;
+            await new Promise(function (resolve) { setTimeout(resolve, bridgeMs); });
+            if (seq !== self.utteranceSeq || self.paused) return;
+            const okStarted = playChunkAt(nextIdx, nextBuf);
+            if (!okStarted) finishRemainingFallback(nextIdx);
+          } catch (e) {
+            finishRemainingFallback(nextIdx);
+          }
+        };
+        return self.playBufferedStudioAudio(seq, buf, onChunkDone, Object.assign({}, opts, {
+          keepSeqOpen: !isLast,
+          skipPreBreath: true,
+          skipPrepBeat: idx > 0,
+          skipRateAdjust: true,
+          skipDetune: true,
+          skipTypewriterSync: idx === 0,
+          onAudioReady: idx === 0 ? (opts && opts.onAudioReady) : null,
+          charRangeStart: startC,
+          charRangeEnd: endC,
+          totalDurationHintMs: Math.round(buf.duration * 1000)
+        }));
+      };
+      return playChunkAt(0, headBuf);
     }
     const audioBuf = await this._fetchGeminiStudioAudio(profile, effKey, cleanText, moodNow);
     if (!audioBuf || seq !== this.utteranceSeq) return false;

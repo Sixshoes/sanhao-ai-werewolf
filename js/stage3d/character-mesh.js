@@ -164,8 +164,8 @@ const stage3dCharGeos = {
     this.sheriffRing = new THREE.TorusGeometry(0.125, 0.018, 8, 22);
     this.sheriffPearl = new THREE.SphereGeometry(0.032, 10, 8);
     this.markCrystal = new THREE.OctahedronGeometry(0.052, 0);
-    this.idCard = new THREE.BoxGeometry(0.58, 0.032, 0.80);
-    this.idCardHit = new THREE.BoxGeometry(0.76, 0.28, 0.96);
+    this.idCard = new THREE.BoxGeometry(0.40, 0.024, 0.52);
+    this.idCardHit = new THREE.BoxGeometry(0.56, 0.24, 0.68);
 
     // Pre-merged static seat prop geometries (cuts ~100+ draw calls across 8–12 seats with zero visual change!)
     if (typeof mergeStaticBufferGeos === "function") {
@@ -1100,9 +1100,9 @@ function create3DSeatActor(seat) {
   markCrystal.visible = false;
   tablePropGroup.add(markCrystal);
 
-  // Lazy ID Card CanvasTextures (only allocated when showIdCard activates on the player's seat -> saves 22 CanvasTextures on 12p!)
+  // Lazy ID Card CanvasTextures (placed cleanly behind desk plaque toward player's side so it NEVER overlaps the nameplate!)
   const idCardPivot = new THREE.Group();
-  idCardPivot.position.set(0, 0.035, -0.18);
+  idCardPivot.position.set(0, 0.025, -0.42);
   const cardEdgeMat = M.cardEdge;
   const idCardMesh = new THREE.Mesh(G.idCard, [
     cardEdgeMat, cardEdgeMat,
