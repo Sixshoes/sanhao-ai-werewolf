@@ -102,6 +102,94 @@ function buildInstancedOrGroup(geo, mat, specs, opts) {
   return grp.children.length > 0 ? grp : null;
 }
 
+function mergeStaticBufferGeos(items, disposeSrc) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  if (
+    typeof THREE === "undefined" ||
+    typeof THREE.BufferGeometry !== "function" ||
+    typeof THREE.BufferAttribute !== "function" ||
+    typeof THREE.Matrix4 !== "function" ||
+    typeof THREE.Object3D !== "function"
+  ) {
+    return null;
+  }
+  const baked = [];
+  const dummy = new THREE.Object3D();
+  let totalVerts = 0;
+  let allHaveNormal = true;
+  let allHaveUv = true;
+  let failed = false;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    const raw = it && it.geo;
+    if (!raw || typeof raw.clone !== "function" || !raw.attributes || !raw.attributes.position || !raw.attributes.position.array) {
+      failed = true;
+      break;
+    }
+    const g = (raw.index && typeof raw.toNonIndexed === "function") ? raw.toNonIndexed() : raw.clone();
+    if (!g || !g.attributes || !g.attributes.position || !g.attributes.position.array || typeof g.applyMatrix4 !== "function") {
+      if (g && typeof g.dispose === "function") g.dispose();
+      failed = true;
+      break;
+    }
+    dummy.position.set(it.px || 0, it.py || 0, it.pz || 0);
+    dummy.rotation.set(it.rx || 0, it.ry || 0, it.rz || 0);
+    dummy.scale.set(it.sx === undefined ? 1 : it.sx, it.sy === undefined ? 1 : it.sy, it.sz === undefined ? 1 : it.sz);
+    dummy.updateMatrix();
+    g.applyMatrix4(dummy.matrix);
+    const count = g.attributes.position.count || 0;
+    if (count <= 0) {
+      if (typeof g.dispose === "function") g.dispose();
+      continue;
+    }
+    if (!g.attributes.normal || !g.attributes.normal.array) allHaveNormal = false;
+    if (!g.attributes.uv || !g.attributes.uv.array) allHaveUv = false;
+    totalVerts += count;
+    baked.push(g);
+  }
+  if (failed || totalVerts <= 0 || baked.length === 0) {
+    for (let i = 0; i < baked.length; i++) {
+      if (baked[i] && typeof baked[i].dispose === "function") baked[i].dispose();
+    }
+    return null;
+  }
+  const posOut = new Float32Array(totalVerts * 3);
+  const normOut = allHaveNormal ? new Float32Array(totalVerts * 3) : null;
+  const uvOut = allHaveUv ? new Float32Array(totalVerts * 2) : null;
+  let vOff = 0;
+  for (let i = 0; i < baked.length; i++) {
+    const g = baked[i];
+    const cnt = g.attributes.position.count;
+    const pArr = g.attributes.position.array;
+    posOut.set(pArr.subarray ? pArr.subarray(0, cnt * 3) : pArr, vOff * 3);
+    if (normOut) {
+      const nArr = g.attributes.normal.array;
+      normOut.set(nArr.subarray ? nArr.subarray(0, cnt * 3) : nArr, vOff * 3);
+    }
+    if (uvOut) {
+      const uArr = g.attributes.uv.array;
+      uvOut.set(uArr.subarray ? uArr.subarray(0, cnt * 2) : uArr, vOff * 2);
+    }
+    vOff += cnt;
+    if (typeof g.dispose === "function") g.dispose();
+  }
+  if (disposeSrc) {
+    const seenSrc = new Set();
+    for (let i = 0; i < items.length; i++) {
+      const sg = items[i] && items[i].geo;
+      if (sg && !seenSrc.has(sg) && typeof sg.dispose === "function") {
+        seenSrc.add(sg);
+        sg.dispose();
+      }
+    }
+  }
+  const merged = new THREE.BufferGeometry();
+  merged.setAttribute("position", new THREE.BufferAttribute(posOut, 3));
+  if (normOut) merged.setAttribute("normal", new THREE.BufferAttribute(normOut, 3));
+  if (uvOut) merged.setAttribute("uv", new THREE.BufferAttribute(uvOut, 2));
+  return merged;
+}
+
 function build3DEnvironmentMap(renderer, scene, env) {
   if (!renderer || typeof THREE.PMREMGenerator !== "function") return;
   try {
@@ -151,68 +239,144 @@ function build3DEnvironmentMap(renderer, scene, env) {
     const isFileProto = typeof window !== "undefined" && window.location && window.location.protocol === "file:";
     if (!isFileProto && typeof THREE.TextureLoader === "function") {
       const loader = new THREE.TextureLoader();
+      const isIgpuSky = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
+      const startCelestial = Boolean(typeof state !== "undefined" && state.sceneTheme === "celestial");
       let pendingSkyCount = 4;
-      let settledSkyCount = 0;
-      const onSkySettled = function () {
-        pendingSkyCount -= 1;
-        settledSkyCount += 1;
+      let bootReported = false;
+      const reportBootSkyReady = function () {
+        if (bootReported) return;
+        bootReported = true;
         if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
-          bootPreloader.reportBucket("sky", settledSkyCount, 4);
+          bootPreloader.reportBucket("sky", 4, 4);
         }
+      };
+      const onSkySettled = function (isPrimary) {
+        pendingSkyCount -= 1;
+        if (isPrimary || pendingSkyCount <= 0) reportBootSkyReady();
         if (pendingSkyCount <= 0) disposePmrem();
       };
-      loader.load("assets/sky/sanctuary_day.jpg?v=12", function (tex) {
-        tex.encoding = THREE.sRGBEncoding;
-        tex.mapping = THREE.EquirectangularReflectionMapping;
-        env.skyPhotoDayMat.map = tex;
-        env.skyPhotoDayMat.needsUpdate = true;
-        env.hasPhotoDay = true;
-        try {
-          if (!pmremDisposed) env.iblDayTex = pmrem.fromEquirectangular(tex).texture;
-          apply3DEnvironmentIBL(scene, env);
-        } catch (e) { }
-        onSkySettled();
-      }, undefined, onSkySettled);
-      loader.load("assets/sky/sanctuary_celestial_day.jpg?v=12", function (tex) {
-        tex.encoding = THREE.sRGBEncoding;
-        tex.mapping = THREE.EquirectangularReflectionMapping;
-        if (env.skyPhotoCelestialMat) {
-          env.skyPhotoCelestialMat.map = tex;
-          env.skyPhotoCelestialMat.needsUpdate = true;
+      const scheduleIdleBake = function (fn, delayMs) {
+        if (typeof setTimeout === "function") {
+          setTimeout(function () {
+            if (typeof requestIdleCallback === "function") {
+              requestIdleCallback(function () { fn(); }, { timeout: 600 });
+            } else {
+              fn();
+            }
+          }, delayMs);
+        } else {
+          fn();
         }
-        env.hasPhotoCelestial = true;
-        try {
-          if (!pmremDisposed) env.iblCelestialTex = pmrem.fromEquirectangular(tex).texture;
-          apply3DEnvironmentIBL(scene, env);
-        } catch (e) { }
-        onSkySettled();
-      }, undefined, onSkySettled);
-      loader.load("assets/sky/sanctuary_night.jpg?v=12", function (tex) {
-        tex.encoding = THREE.sRGBEncoding;
-        tex.mapping = THREE.EquirectangularReflectionMapping;
-        env.skyPhotoNightMat.map = tex;
-        env.skyPhotoNightMat.needsUpdate = true;
-        env.hasPhotoNight = true;
-        try {
-          if (!pmremDisposed) env.iblNightTex = pmrem.fromEquirectangular(tex).texture;
-          apply3DEnvironmentIBL(scene, env);
-        } catch (e) { }
-        onSkySettled();
-      }, undefined, onSkySettled);
-      loader.load("assets/sky/sanctuary_dusk.jpg?v=12", function (tex) {
-        tex.encoding = THREE.sRGBEncoding;
-        tex.mapping = THREE.EquirectangularReflectionMapping;
-        if (env.skyPhotoDuskMat) {
-          env.skyPhotoDuskMat.map = tex;
-          env.skyPhotoDuskMat.needsUpdate = true;
+      };
+      const skyJobs = [
+        {
+          key: "dusk",
+          url: "assets/sky/sanctuary_dusk.jpg?v=12",
+          isPrimary: !startCelestial,
+          apply: function (tex, bakeIbl) {
+            if (env.skyPhotoDuskMat) {
+              env.skyPhotoDuskMat.map = tex;
+              env.skyPhotoDuskMat.needsUpdate = true;
+            }
+            env.hasPhotoDusk = true;
+            if (bakeIbl && !pmremDisposed) {
+              try {
+                env.iblDuskTex = pmrem.fromEquirectangular(tex).texture;
+                apply3DEnvironmentIBL(scene, env);
+              } catch (e) { }
+            }
+          }
+        },
+        {
+          key: "celestial",
+          url: "assets/sky/sanctuary_celestial_day.jpg?v=12",
+          isPrimary: startCelestial,
+          apply: function (tex, bakeIbl) {
+            if (env.skyPhotoCelestialMat) {
+              env.skyPhotoCelestialMat.map = tex;
+              env.skyPhotoCelestialMat.needsUpdate = true;
+            }
+            env.hasPhotoCelestial = true;
+            if (bakeIbl && !pmremDisposed) {
+              try {
+                env.iblCelestialTex = pmrem.fromEquirectangular(tex).texture;
+                apply3DEnvironmentIBL(scene, env);
+              } catch (e) { }
+            }
+          }
+        },
+        {
+          key: "day",
+          url: "assets/sky/sanctuary_day.jpg?v=12",
+          isPrimary: false,
+          apply: function (tex, bakeIbl) {
+            env.skyPhotoDayMat.map = tex;
+            env.skyPhotoDayMat.needsUpdate = true;
+            env.hasPhotoDay = true;
+            if (bakeIbl && !pmremDisposed) {
+              try {
+                env.iblDayTex = pmrem.fromEquirectangular(tex).texture;
+                apply3DEnvironmentIBL(scene, env);
+              } catch (e) { }
+            }
+          }
+        },
+        {
+          key: "night",
+          url: "assets/sky/sanctuary_night.jpg?v=12",
+          isPrimary: false,
+          apply: function (tex, bakeIbl) {
+            env.skyPhotoNightMat.map = tex;
+            env.skyPhotoNightMat.needsUpdate = true;
+            env.hasPhotoNight = true;
+            if (bakeIbl && !pmremDisposed) {
+              try {
+                env.iblNightTex = pmrem.fromEquirectangular(tex).texture;
+                apply3DEnvironmentIBL(scene, env);
+              } catch (e) { }
+            }
+          }
         }
-        env.hasPhotoDusk = true;
-        try {
-          if (!pmremDisposed) env.iblDuskTex = pmrem.fromEquirectangular(tex).texture;
-          apply3DEnvironmentIBL(scene, env);
-        } catch (e) { }
-        onSkySettled();
-      }, undefined, onSkySettled);
+      ];
+      // Load ONLY the initially visible skybox immediately; stagger the other 3 sequentially after boot so 4x PMREM bakes never freeze startup!
+      const primaryJob = skyJobs.find(function (j) { return j.isPrimary; }) || skyJobs[0];
+      const deferredJobs = skyJobs.filter(function (j) { return j !== primaryJob; });
+      const runSkyJob = function (job, nextCb) {
+        loader.load(job.url, function (tex) {
+          tex.encoding = THREE.sRGBEncoding;
+          tex.mapping = THREE.EquirectangularReflectionMapping;
+          // On integrated GPUs, bake PMREM only for primary sky to eliminate 3x multi-second cubemap convolution stalls
+          const wantBake = !isIgpuSky || job.isPrimary;
+          if (job.isPrimary) {
+            // Paint dome & unblock boot preloader immediately; yield PMREM bake off the hot startup frame
+            job.apply(tex, false);
+            reportBootSkyReady();
+            scheduleIdleBake(function () {
+              if (wantBake && !pmremDisposed) job.apply(tex, true);
+              onSkySettled(true);
+              if (nextCb) nextCb();
+            }, isIgpuSky ? 180 : 40);
+          } else {
+            job.apply(tex, wantBake);
+            onSkySettled(false);
+            if (nextCb) nextCb();
+          }
+        }, undefined, function () {
+          onSkySettled(job.isPrimary);
+          if (nextCb) nextCb();
+        });
+      };
+      const pumpDeferredSkies = function (idx) {
+        if (idx >= deferredJobs.length) return;
+        scheduleIdleBake(function () {
+          runSkyJob(deferredJobs[idx], function () {
+            pumpDeferredSkies(idx + 1);
+          });
+        }, isIgpuSky ? 750 : 320);
+      };
+      runSkyJob(primaryJob, function () {
+        pumpDeferredSkies(0);
+      });
     } else {
       disposePmrem();
       if (typeof bootPreloader !== "undefined" && typeof bootPreloader.reportBucket === "function") {
@@ -468,74 +632,106 @@ function createSculptedMountainRing(innerR, outerR, maxHeight, mat, seedShift, b
   return new THREE.Mesh(geo, mat);
 }
 
-function buildMountainPineTree(x, y, z, scaleMul, woodTex) {
+function buildMountainPineTree(x, y, z, scaleMul, woodTex, sharedMats) {
   const g = new THREE.Group();
-  const trunkMat = new THREE.MeshStandardMaterial({
-    map: woodTex ? woodTex.map : null,
-    bumpMap: woodTex ? woodTex.bump : null,
-    bumpScale: 0.085,
-    color: 0x332116,
-    roughness: 0.94,
-    metalness: 0.02
-  });
-  const deepLeafMat = new THREE.MeshStandardMaterial({ color: 0x183528, roughness: 0.90, metalness: 0.02 });
-  const needleTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createPineNeedleTexture === "function")
-    ? stage3dTextures.createPineNeedleTexture()
-    : null;
-  const fanMatShade = needleTex
-    ? new THREE.MeshStandardMaterial({
-      map: needleTex,
-      color: 0x3e6e54,
-      alphaTest: 0.26,
-      transparent: true,
-      roughness: 0.86,
-      side: THREE.DoubleSide
-    })
-    : deepLeafMat;
-  const fanMatSun = needleTex
-    ? new THREE.MeshStandardMaterial({
-      map: needleTex,
-      color: 0x6ea67c,
-      alphaTest: 0.26,
-      transparent: true,
-      roughness: 0.80,
-      side: THREE.DoubleSide
-    })
-    : deepLeafMat;
+  let trunkMat, deepLeafMat, fanMatShade, fanMatSun, needleTex;
+  if (sharedMats && sharedMats.trunkMat) {
+    trunkMat = sharedMats.trunkMat;
+    deepLeafMat = sharedMats.deepLeafMat;
+    fanMatShade = sharedMats.fanMatShade;
+    fanMatSun = sharedMats.fanMatSun;
+    needleTex = sharedMats.needleTex;
+  } else {
+    trunkMat = new THREE.MeshStandardMaterial({
+      map: woodTex ? woodTex.map : null,
+      bumpMap: woodTex ? woodTex.bump : null,
+      bumpScale: 0.085,
+      color: 0x332116,
+      roughness: 0.94,
+      metalness: 0.02
+    });
+    deepLeafMat = new THREE.MeshStandardMaterial({ color: 0x183528, roughness: 0.90, metalness: 0.02 });
+    needleTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createPineNeedleTexture === "function")
+      ? stage3dTextures.createPineNeedleTexture()
+      : null;
+    fanMatShade = needleTex
+      ? new THREE.MeshStandardMaterial({
+        map: needleTex,
+        color: 0x3e6e54,
+        alphaTest: 0.26,
+        transparent: true,
+        roughness: 0.86,
+        side: THREE.DoubleSide
+      })
+      : deepLeafMat;
+    fanMatSun = needleTex
+      ? new THREE.MeshStandardMaterial({
+        map: needleTex,
+        color: 0x6ea67c,
+        alphaTest: 0.26,
+        transparent: true,
+        roughness: 0.80,
+        side: THREE.DoubleSide
+      })
+      : deepLeafMat;
+    if (sharedMats) {
+      sharedMats.trunkMat = trunkMat;
+      sharedMats.deepLeafMat = deepLeafMat;
+      sharedMats.fanMatShade = fanMatShade;
+      sharedMats.fanMatSun = fanMatSun;
+      sharedMats.needleTex = needleTex;
+    }
+  }
 
-  // Tapered gnarled Taiwanese black-pine trunk (3 organic bark segments from thick flared root to slender crest)
+  // Tapered gnarled Taiwanese black-pine trunk + sweeping lateral limbs merged into 1 single draw call!
   const segs = [
     { x0: 0, y0: 0, z0: 0, x1: 0.26, y1: 1.55, z1: 0.11, rBot: 0.25, rTop: 0.19 },
     { x0: 0.26, y0: 1.50, z0: 0.11, x1: 0.16, y1: 3.15, z1: 0.04, rBot: 0.19, rTop: 0.135 },
     { x0: 0.16, y0: 3.10, z0: 0.04, x1: -0.18, y1: 4.65, z1: -0.10, rBot: 0.135, rTop: 0.075 }
   ];
+  const trunkParts = [];
   segs.forEach(function (s) {
     const dx = s.x1 - s.x0, dy = s.y1 - s.y0, dz = s.z1 - s.z0;
     const len = Math.hypot(dx, dy, dz);
-    const segMesh = new THREE.Mesh(new THREE.CylinderGeometry(s.rTop, s.rBot, len, 9), trunkMat);
-    segMesh.position.set((s.x0 + s.x1) * 0.5, (s.y0 + s.y1) * 0.5, (s.z0 + s.z1) * 0.5);
-    segMesh.rotation.z = -Math.atan2(dx, dy);
-    segMesh.rotation.x = Math.atan2(dz, dy);
-    segMesh.castShadow = true;
-    g.add(segMesh);
+    trunkParts.push({
+      geo: new THREE.CylinderGeometry(s.rTop, s.rBot, len, 9),
+      px: (s.x0 + s.x1) * 0.5,
+      py: (s.y0 + s.y1) * 0.5,
+      pz: (s.z0 + s.z1) * 0.5,
+      rx: Math.atan2(dz, dy),
+      rz: -Math.atan2(dx, dy)
+    });
   });
-
   if (typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function") {
-    // Sweeping Taiwanese cliffside black-pine lateral limbs rising gracefully past pavilion eaves
     [
       { pts: [new THREE.Vector3(0.22, 2.38, 0.09), new THREE.Vector3(0.86, 2.74, 0.30), new THREE.Vector3(1.38, 2.92, 0.44)], r: 0.068 },
       { pts: [new THREE.Vector3(0.14, 3.25, 0.04), new THREE.Vector3(-0.56, 3.55, -0.24), new THREE.Vector3(-1.12, 3.72, -0.38)], r: 0.060 },
       { pts: [new THREE.Vector3(-0.04, 3.92, -0.02), new THREE.Vector3(0.42, 4.22, -0.24), new THREE.Vector3(0.84, 4.34, -0.34)], r: 0.048 }
     ].forEach(function (br) {
       const bCurve = new THREE.QuadraticBezierCurve3(br.pts[0], br.pts[1], br.pts[2]);
-      const limb = new THREE.Mesh(new THREE.TubeGeometry(bCurve, 7, br.r, 6, false), trunkMat);
-      g.add(limb);
+      trunkParts.push({ geo: new THREE.TubeGeometry(bCurve, 7, br.r, 6, false) });
+    });
+  }
+  const mergedTrunkGeo = (sharedMats && sharedMats.mergedTrunkGeo) || mergeStaticBufferGeos(trunkParts, true);
+  if (mergedTrunkGeo) {
+    if (sharedMats && !sharedMats.mergedTrunkGeo) sharedMats.mergedTrunkGeo = mergedTrunkGeo;
+    g.add(new THREE.Mesh(mergedTrunkGeo, trunkMat));
+  } else {
+    trunkParts.forEach(function (tp) {
+      const m = new THREE.Mesh(tp.geo, trunkMat);
+      m.position.set(tp.px || 0, tp.py || 0, tp.pz || 0);
+      m.rotation.set(tp.rx || 0, tp.ry || 0, tp.rz || 0);
+      g.add(m);
     });
   }
 
   const canopy = new THREE.Group();
-  const coreGeo = new THREE.ConeGeometry(0.46, 0.24, 7);
-  const fanGeo = new THREE.PlaneGeometry(1.92, 1.32);
+  const coreGeo = (sharedMats && sharedMats.coreGeo) || new THREE.ConeGeometry(0.46, 0.24, 7);
+  const fanGeo = (sharedMats && sharedMats.fanGeo) || new THREE.PlaneGeometry(1.92, 1.32);
+  if (sharedMats) {
+    sharedMats.coreGeo = coreGeo;
+    sharedMats.fanGeo = fanGeo;
+  }
   const coreSpecs = [];
   const shadeFanSpecs = [];
   const sunFanSpecs = [];
@@ -546,14 +742,12 @@ function buildMountainPineTree(x, y, z, scaleMul, woodTex) {
     [-0.18, 4.72, -0.06, 1.38],
     [-0.22, 4.18, 0.58, 1.00]
   ].forEach(function (c, ti) {
-    // Subtle dark-emerald inner shadow core tucked cleanly inside lush needle cloud sprays
     coreSpecs.push({
       px: c[0], py: c[1] + 0.02, pz: c[2],
       ry: ti * 0.95,
       sx: 1.22 * c[3], sy: 0.72 * c[3], sz: 1.04 * c[3]
     });
     if (needleTex) {
-      // Richer painterly pine bough sprays: 6 lower shaded fronds + 5 upper sunlit crown fronds (batched via InstancedMesh!)
       for (let fi = 0; fi < 6; fi++) {
         const fa = (fi / 6) * Math.PI * 2 + ti * 0.65;
         const scF = c[3] * 0.90;
@@ -578,7 +772,7 @@ function buildMountainPineTree(x, y, z, scaleMul, woodTex) {
       }
     }
   });
-  const coreBatch = buildInstancedOrGroup(coreGeo, deepLeafMat, coreSpecs, { castShadow: true });
+  const coreBatch = buildInstancedOrGroup(coreGeo, deepLeafMat, coreSpecs);
   if (coreBatch) canopy.add(coreBatch);
   const shadeFanBatch = buildInstancedOrGroup(fanGeo, fanMatShade, shadeFanSpecs);
   if (shadeFanBatch) canopy.add(shadeFanBatch);
@@ -646,25 +840,50 @@ function buildCourtyardStoneLanternsInstanced(positions, stoneTex) {
     finialSpecs.push({ py: 1.75, parentMat: parentMat, parentGrp: parentGrp });
   });
 
+  const isLiteShadowStone = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
   const parts = [
-    buildInstancedOrGroup(new THREE.BoxGeometry(0.50, 0.20, 0.50), stoneMat, plinthSpecs, { castShadow: true }),
-    buildInstancedOrGroup(new THREE.CylinderGeometry(0.105, 0.14, 0.88, 8), stoneMat, postSpecs, { castShadow: true }),
+    buildInstancedOrGroup(new THREE.BoxGeometry(0.50, 0.20, 0.50), stoneMat, plinthSpecs, { castShadow: !isLiteShadowStone }),
+    buildInstancedOrGroup(new THREE.CylinderGeometry(0.105, 0.14, 0.88, 8), stoneMat, postSpecs, { castShadow: !isLiteShadowStone }),
     buildInstancedOrGroup(new THREE.BoxGeometry(0.44, 0.09, 0.44), stoneMat, traySpecs),
     buildInstancedOrGroup(new THREE.CylinderGeometry(0.155, 0.155, 0.29, 6), coreMat, fireboxSpecs),
     buildInstancedOrGroup(new THREE.CylinderGeometry(0.016, 0.016, 0.32, 5), mullionMat, mullionSpecs),
-    buildInstancedOrGroup(new THREE.ConeGeometry(0.42, 0.25, 6), stoneMat, roofSpecs, { castShadow: true }),
+    buildInstancedOrGroup(new THREE.ConeGeometry(0.42, 0.25, 6), stoneMat, roofSpecs, { castShadow: !isLiteShadowStone }),
     buildInstancedOrGroup(new THREE.SphereGeometry(0.07, 8, 6), stoneMat, finialSpecs)
   ];
   parts.forEach(function (part) { if (part) g.add(part); });
   return { group: g, coreMat: coreMat };
 }
 
+function makeStylizedCelEnvMat(opts) {
+  const o = opts || {};
+  const gradMap = (typeof stage3dAnime !== "undefined" && typeof stage3dAnime.getToonGradientMap === "function")
+    ? stage3dAnime.getToonGradientMap()
+    : null;
+  if (typeof THREE !== "undefined" && typeof THREE.MeshToonMaterial === "function" && gradMap) {
+    const tOpts = { color: o.color !== undefined ? o.color : 0xffffff, gradientMap: gradMap };
+    if (o.map) tOpts.map = o.map;
+    if (o.bumpMap) { tOpts.bumpMap = o.bumpMap; tOpts.bumpScale = o.bumpScale !== undefined ? o.bumpScale : 0.03; }
+    if (o.side !== undefined) tOpts.side = o.side;
+    return new THREE.MeshToonMaterial(tOpts);
+  }
+  return new THREE.MeshStandardMaterial({
+    map: o.map || null,
+    bumpMap: o.bumpMap || null,
+    bumpScale: o.bumpScale || 0.03,
+    color: o.color !== undefined ? o.color : 0xffffff,
+    roughness: o.roughness !== undefined ? o.roughness : 0.62,
+    metalness: o.metalness !== undefined ? o.metalness : 0.06,
+    side: o.side !== undefined ? o.side : THREE.FrontSide
+  });
+}
+
 function buildTabletopTeaSet(woodMat) {
   const teaSet = new THREE.Group();
   const hasLathe = typeof THREE.LatheGeometry === "function" && typeof THREE.Vector2 === "function";
-  const clayMat = new THREE.MeshStandardMaterial({ color: 0x7c3b28, roughness: 0.42, metalness: 0.08 });
-  const cupPorcelain = new THREE.MeshStandardMaterial({ color: 0xdff5eb, roughness: 0.12, metalness: 0.14 });
-  const brassMat = new THREE.MeshStandardMaterial({ color: 0xd4a657, roughness: 0.28, metalness: 0.72 });
+  const isLiteShadowTea = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
+  const clayMat = makeStylizedCelEnvMat({ color: 0x994e36, roughness: 0.48, metalness: 0.06 });
+  const cupPorcelain = makeStylizedCelEnvMat({ color: 0xe4f7ef, roughness: 0.22, metalness: 0.08 });
+  const brassMat = new THREE.MeshStandardMaterial({ color: 0xdcb264, roughness: 0.30, metalness: 0.68 });
 
   // Walnut coaster tea tray
   const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.46, 0.036, 20), woodMat);
@@ -672,7 +891,7 @@ function buildTabletopTeaSet(woodMat) {
   tray.receiveShadow = true;
   teaSet.add(tray);
 
-  // Sculpted Artisan Yixing Clay Teapot
+  // Sculpted Artisan Yixing Clay Teapot (merged pot + spout + handle -> 1 draw call!)
   const potGeo = hasLathe
     ? new THREE.LatheGeometry([
       new THREE.Vector2(0.01, 0.0),
@@ -684,65 +903,99 @@ function buildTabletopTeaSet(woodMat) {
       new THREE.Vector2(0.01, 0.25)
     ], 18)
     : new THREE.SphereGeometry(0.16, 14, 12);
-  const pot = new THREE.Mesh(potGeo, clayMat);
-  pot.position.set(-0.04, 0.036, 0.0);
-  pot.castShadow = true;
-  teaSet.add(pot);
-
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 8), brassMat);
-  knob.position.set(-0.04, 0.305, 0);
-  teaSet.add(knob);
-
+  const clayParts = [{ geo: potGeo, px: -0.04, py: 0.036, pz: 0.0 }];
   if (typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function") {
     const spoutCurve = new THREE.QuadraticBezierCurve3(
       new THREE.Vector3(-0.18, 0.14, 0),
       new THREE.Vector3(-0.27, 0.19, 0),
       new THREE.Vector3(-0.30, 0.25, 0)
     );
-    const spout = new THREE.Mesh(new THREE.TubeGeometry(spoutCurve, 8, 0.024, 7, false), clayMat);
+    clayParts.push({ geo: new THREE.TubeGeometry(spoutCurve, 8, 0.024, 7, false) });
     const handleCurve = new THREE.QuadraticBezierCurve3(
       new THREE.Vector3(0.09, 0.21, 0),
       new THREE.Vector3(0.24, 0.19, 0),
       new THREE.Vector3(0.10, 0.09, 0)
     );
-    const handle = new THREE.Mesh(new THREE.TubeGeometry(handleCurve, 8, 0.020, 7, false), clayMat);
-    teaSet.add(spout, handle);
+    clayParts.push({ geo: new THREE.TubeGeometry(handleCurve, 8, 0.020, 7, false) });
+  }
+  const mergedPotGeo = mergeStaticBufferGeos(clayParts, true);
+  if (mergedPotGeo) {
+    const pot = new THREE.Mesh(mergedPotGeo, clayMat);
+    pot.castShadow = !isLiteShadowTea;
+    teaSet.add(pot);
+  } else {
+    clayParts.forEach(function (cp, idx) {
+      const m = new THREE.Mesh(cp.geo, clayMat);
+      m.position.set(cp.px || 0, cp.py || 0, cp.pz || 0);
+      if (idx === 0) m.castShadow = !isLiteShadowTea;
+      teaSet.add(m);
+    });
   }
 
-  // Twin Celadon Aroma Cups beside Teapot
-  [
-    [0.20, 0.16],
-    [0.24, -0.10]
-  ].forEach(function (cp) {
-    const aromaCup = new THREE.Mesh(new THREE.CylinderGeometry(0.056, 0.042, 0.072, 12), cupPorcelain);
-    aromaCup.position.set(cp[0], 0.072, cp[1]);
-    teaSet.add(aromaCup);
-  });
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 8), brassMat);
+  knob.position.set(-0.04, 0.305, 0);
+  teaSet.add(knob);
+
+  // Twin Celadon Aroma Cups beside Teapot (merged into 1 draw call!)
+  const cupGeo = new THREE.CylinderGeometry(0.056, 0.042, 0.072, 12);
+  const mergedCupsGeo = mergeStaticBufferGeos([
+    { geo: cupGeo, px: 0.20, py: 0.072, pz: 0.16 },
+    { geo: cupGeo, px: 0.24, py: 0.072, pz: -0.10 }
+  ], true);
+  if (mergedCupsGeo) {
+    teaSet.add(new THREE.Mesh(mergedCupsGeo, cupPorcelain));
+  } else {
+    [
+      [0.20, 0.16],
+      [0.24, -0.10]
+    ].forEach(function (cp) {
+      const aromaCup = new THREE.Mesh(cupGeo, cupPorcelain);
+      aromaCup.position.set(cp[0], 0.072, cp[1]);
+      teaSet.add(aromaCup);
+    });
+  }
 
   teaSet.position.set(-1.18, 1.085, -0.42);
   return teaSet;
 }
 
-function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex) {
+function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex, sharedMats) {
   const g = new THREE.Group();
-  const culmMat = new THREE.MeshStandardMaterial({ color: 0x3b7a4f, roughness: 0.42, metalness: 0.06 });
-  const nodeMat = new THREE.MeshStandardMaterial({ color: 0xc2d8a4, roughness: 0.52, metalness: 0.04 });
-  const leafMat = bambooLeafTex
-    ? new THREE.MeshStandardMaterial({
-      map: bambooLeafTex,
-      color: 0xdffce6,
-      alphaTest: 0.28,
-      transparent: true,
-      roughness: 0.72,
-      side: THREE.DoubleSide
-    })
-    : new THREE.MeshStandardMaterial({ color: 0x4ca66a, roughness: 0.78, side: THREE.DoubleSide });
+  let culmMat, nodeMat, leafMat;
+  if (sharedMats && sharedMats.culmMat) {
+    culmMat = sharedMats.culmMat;
+    nodeMat = sharedMats.nodeMat;
+    leafMat = sharedMats.leafMat;
+  } else {
+    culmMat = new THREE.MeshStandardMaterial({ color: 0x3b7a4f, roughness: 0.42, metalness: 0.06 });
+    nodeMat = new THREE.MeshStandardMaterial({ color: 0xc2d8a4, roughness: 0.52, metalness: 0.04 });
+    leafMat = bambooLeafTex
+      ? new THREE.MeshStandardMaterial({
+        map: bambooLeafTex,
+        color: 0xdffce6,
+        alphaTest: 0.28,
+        transparent: true,
+        roughness: 0.72,
+        side: THREE.DoubleSide
+      })
+      : new THREE.MeshStandardMaterial({ color: 0x4ca66a, roughness: 0.78, side: THREE.DoubleSide });
+    if (sharedMats) {
+      sharedMats.culmMat = culmMat;
+      sharedMats.nodeMat = nodeMat;
+      sharedMats.leafMat = leafMat;
+    }
+  }
 
   const canopy = new THREE.Group();
-  const leafGeo = new THREE.PlaneGeometry(1.55, 1.55);
-  const nodeRingGeo = new THREE.TorusGeometry(0.05, 0.010, 5, 10);
+  const leafGeo = (sharedMats && sharedMats.leafGeo) || new THREE.PlaneGeometry(1.55, 1.55);
+  const nodeRingGeo = (sharedMats && sharedMats.nodeRingGeo) || new THREE.TorusGeometry(0.05, 0.010, 5, 10);
+  if (sharedMats) {
+    sharedMats.leafGeo = leafGeo;
+    sharedMats.nodeRingGeo = nodeRingGeo;
+  }
   const nodeRingSpecs = [];
   const sprigSpecs = [];
+  const culmParts = [];
   const stalks = [
     { ox: 0.0, oz: 0.0, h: 5.8, r: 0.056, leanX: 0.05, leanZ: 0.04 },
     { ox: 0.34, oz: 0.18, h: 4.9, r: 0.046, leanX: 0.09, leanZ: -0.05 },
@@ -751,11 +1004,16 @@ function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex) {
     { ox: -0.24, oz: -0.22, h: 6.1, r: 0.054, leanX: -0.05, leanZ: -0.06 }
   ];
   stalks.forEach(function (st, si) {
-    const culm = new THREE.Mesh(new THREE.CylinderGeometry(st.r * 0.72, st.r, st.h, 7), culmMat);
-    culm.position.set(st.ox + st.leanX * st.h * 0.4, st.h * 0.5, st.oz + st.leanZ * st.h * 0.4);
-    culm.rotation.z = -st.leanX;
-    culm.rotation.x = st.leanZ;
-    g.add(culm);
+    if (!(sharedMats && sharedMats.mergedCulmGeo)) {
+      culmParts.push({
+        geo: new THREE.CylinderGeometry(st.r * 0.72, st.r, st.h, 7),
+        px: st.ox + st.leanX * st.h * 0.4,
+        py: st.h * 0.5,
+        pz: st.oz + st.leanZ * st.h * 0.4,
+        rx: st.leanZ,
+        rz: -st.leanX
+      });
+    }
 
     for (let ni = 1; ni <= 4; ni++) {
       const ny = st.h * (ni / 5);
@@ -767,7 +1025,6 @@ function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex) {
       });
     }
 
-    // Layered crossed bamboo foliage sprays crowning upper culms (batched via InstancedMesh!)
     for (let li = 0; li < 2; li++) {
       const ly = st.h * (0.72 + li * 0.22);
       const lx = st.ox + st.leanX * ly * 0.82;
@@ -784,6 +1041,18 @@ function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex) {
       }
     }
   });
+  const mergedCulmGeo = (sharedMats && sharedMats.mergedCulmGeo) || mergeStaticBufferGeos(culmParts, true);
+  if (mergedCulmGeo) {
+    if (sharedMats && !sharedMats.mergedCulmGeo) sharedMats.mergedCulmGeo = mergedCulmGeo;
+    g.add(new THREE.Mesh(mergedCulmGeo, culmMat));
+  } else {
+    culmParts.forEach(function (cp) {
+      const culm = new THREE.Mesh(cp.geo, culmMat);
+      culm.position.set(cp.px, cp.py, cp.pz);
+      culm.rotation.set(cp.rx, 0, cp.rz);
+      g.add(culm);
+    });
+  }
   const nodeBatch = buildInstancedOrGroup(nodeRingGeo, nodeMat, nodeRingSpecs);
   if (nodeBatch) g.add(nodeBatch);
   const sprigBatch = buildInstancedOrGroup(leafGeo, leafMat, sprigSpecs);
@@ -795,74 +1064,110 @@ function buildBambooGrove(x, y, z, scaleMul, bambooLeafTex) {
   return { group: g, canopy: canopy };
 }
 
-function buildBlossomTree(x, y, z, scaleMul, kind, woodTex, blossomTex) {
+function buildBlossomTree(x, y, z, scaleMul, kind, woodTex, blossomTex, sharedCache) {
   const g = new THREE.Group();
   const isOsm = kind === "osmanthus";
-  const barkMat = new THREE.MeshStandardMaterial({
-    map: woodTex ? woodTex.map : null,
-    bumpMap: woodTex ? woodTex.bump : null,
-    bumpScale: 0.07,
-    color: isOsm ? 0x452d1d : 0x3b2320,
-    roughness: 0.90,
-    metalness: 0.02
-  });
-  const coreMat = new THREE.MeshStandardMaterial({
-    color: isOsm ? 0xb47b1e : 0xc47b93,
-    roughness: 0.82,
-    metalness: 0.02
-  });
-  const sprigMatShade = blossomTex
-    ? new THREE.MeshStandardMaterial({
-      map: blossomTex,
-      color: isOsm ? 0xdec07a : 0xe2b8c7,
-      emissive: isOsm ? 0x523106 : 0x451a2a,
-      emissiveIntensity: 0.14,
-      alphaTest: 0.22,
-      transparent: true,
-      roughness: 0.78,
-      side: THREE.DoubleSide
-    })
-    : coreMat;
-  const sprigMat = blossomTex
-    ? new THREE.MeshStandardMaterial({
-      map: blossomTex,
-      color: isOsm ? 0xfff3cc : 0xfff5f8,
-      emissive: isOsm ? 0x6b4308 : 0x5c2438,
-      emissiveIntensity: 0.18,
-      alphaTest: 0.22,
-      transparent: true,
-      roughness: 0.70,
-      side: THREE.DoubleSide
-    })
-    : coreMat;
-
-  const trunkSegs = [
-    { x0: 0, y0: 0, z0: 0, x1: 0.18, y1: 1.45, z1: 0.10, rBot: 0.20, rTop: 0.14 },
-    { x0: 0.18, y0: 1.40, z0: 0.10, x1: -0.06, y1: 2.95, z1: -0.04, rBot: 0.14, rTop: 0.095 }
-  ];
-  trunkSegs.forEach(function (s) {
-    const dx = s.x1 - s.x0, dy = s.y1 - s.y0, dz = s.z1 - s.z0;
-    const len = Math.hypot(dx, dy, dz);
-    const seg = new THREE.Mesh(new THREE.CylinderGeometry(s.rTop, s.rBot, len, 8), barkMat);
-    seg.position.set((s.x0 + s.x1) * 0.5, (s.y0 + s.y1) * 0.5, (s.z0 + s.z1) * 0.5);
-    seg.rotation.z = -Math.atan2(dx, dy);
-    seg.rotation.x = Math.atan2(dz, dy);
-    g.add(seg);
-  });
-
-  if (typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function") {
-    [
-      [new THREE.Vector3(0.14, 1.95, 0.08), new THREE.Vector3(0.75, 2.45, 0.36), new THREE.Vector3(1.22, 2.75, 0.52)],
-      [new THREE.Vector3(0.06, 2.35, 0.02), new THREE.Vector3(-0.62, 2.80, -0.28), new THREE.Vector3(-1.12, 3.12, -0.44)],
-      [new THREE.Vector3(-0.04, 2.80, -0.02), new THREE.Vector3(0.32, 3.35, -0.34), new THREE.Vector3(0.72, 3.65, -0.48)]
-    ].forEach(function (pts) {
-      const curve = new THREE.QuadraticBezierCurve3(pts[0], pts[1], pts[2]);
-      g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 6, 0.048, 5, false), barkMat));
+  const cacheBucket = sharedCache ? (sharedCache[kind] || (sharedCache[kind] = {})) : null;
+  let barkMat, coreMat, sprigMatShade, sprigMat;
+  if (cacheBucket && cacheBucket.barkMat) {
+    barkMat = cacheBucket.barkMat;
+    coreMat = cacheBucket.coreMat;
+    sprigMatShade = cacheBucket.sprigMatShade;
+    sprigMat = cacheBucket.sprigMat;
+  } else {
+    barkMat = new THREE.MeshStandardMaterial({
+      map: woodTex ? woodTex.map : null,
+      bumpMap: woodTex ? woodTex.bump : null,
+      bumpScale: 0.07,
+      color: isOsm ? 0x452d1d : 0x3b2320,
+      roughness: 0.90,
+      metalness: 0.02
     });
+    coreMat = new THREE.MeshStandardMaterial({
+      color: isOsm ? 0xb47b1e : 0xc47b93,
+      roughness: 0.82,
+      metalness: 0.02
+    });
+    sprigMatShade = blossomTex
+      ? new THREE.MeshStandardMaterial({
+        map: blossomTex,
+        color: isOsm ? 0xdec07a : 0xe2b8c7,
+        emissive: isOsm ? 0x523106 : 0x451a2a,
+        emissiveIntensity: 0.14,
+        alphaTest: 0.22,
+        transparent: true,
+        roughness: 0.78,
+        side: THREE.DoubleSide
+      })
+      : coreMat;
+    sprigMat = blossomTex
+      ? new THREE.MeshStandardMaterial({
+        map: blossomTex,
+        color: isOsm ? 0xfff3cc : 0xfff5f8,
+        emissive: isOsm ? 0x6b4308 : 0x5c2438,
+        emissiveIntensity: 0.18,
+        alphaTest: 0.22,
+        transparent: true,
+        roughness: 0.70,
+        side: THREE.DoubleSide
+      })
+      : coreMat;
+    if (cacheBucket) {
+      cacheBucket.barkMat = barkMat;
+      cacheBucket.coreMat = coreMat;
+      cacheBucket.sprigMatShade = sprigMatShade;
+      cacheBucket.sprigMat = sprigMat;
+    }
+  }
+
+  let mergedBarkGeo = (sharedCache && sharedCache.mergedBarkGeo) || null;
+  if (!mergedBarkGeo) {
+    const barkParts = [];
+    const trunkSegs = [
+      { x0: 0, y0: 0, z0: 0, x1: 0.18, y1: 1.45, z1: 0.10, rBot: 0.20, rTop: 0.14 },
+      { x0: 0.18, y0: 1.40, z0: 0.10, x1: -0.06, y1: 2.95, z1: -0.04, rBot: 0.14, rTop: 0.095 }
+    ];
+    trunkSegs.forEach(function (s) {
+      const dx = s.x1 - s.x0, dy = s.y1 - s.y0, dz = s.z1 - s.z0;
+      const len = Math.hypot(dx, dy, dz);
+      barkParts.push({
+        geo: new THREE.CylinderGeometry(s.rTop, s.rBot, len, 8),
+        px: (s.x0 + s.x1) * 0.5,
+        py: (s.y0 + s.y1) * 0.5,
+        pz: (s.z0 + s.z1) * 0.5,
+        rx: Math.atan2(dz, dy),
+        rz: -Math.atan2(dx, dy)
+      });
+    });
+    if (typeof THREE.TubeGeometry === "function" && typeof THREE.QuadraticBezierCurve3 === "function") {
+      [
+        [new THREE.Vector3(0.14, 1.95, 0.08), new THREE.Vector3(0.75, 2.45, 0.36), new THREE.Vector3(1.22, 2.75, 0.52)],
+        [new THREE.Vector3(0.06, 2.35, 0.02), new THREE.Vector3(-0.62, 2.80, -0.28), new THREE.Vector3(-1.12, 3.12, -0.44)],
+        [new THREE.Vector3(-0.04, 2.80, -0.02), new THREE.Vector3(0.32, 3.35, -0.34), new THREE.Vector3(0.72, 3.65, -0.48)]
+      ].forEach(function (pts) {
+        const curve = new THREE.QuadraticBezierCurve3(pts[0], pts[1], pts[2]);
+        barkParts.push({ geo: new THREE.TubeGeometry(curve, 6, 0.048, 5, false) });
+      });
+    }
+    mergedBarkGeo = mergeStaticBufferGeos(barkParts, true);
+    if (mergedBarkGeo) {
+      if (sharedCache) sharedCache.mergedBarkGeo = mergedBarkGeo;
+      g.add(new THREE.Mesh(mergedBarkGeo, barkMat));
+    } else {
+      barkParts.forEach(function (bp) {
+        const m = new THREE.Mesh(bp.geo, barkMat);
+        m.position.set(bp.px || 0, bp.py || 0, bp.pz || 0);
+        m.rotation.set(bp.rx || 0, bp.ry || 0, bp.rz || 0);
+        g.add(m);
+      });
+    }
+  } else {
+    g.add(new THREE.Mesh(mergedBarkGeo, barkMat));
   }
 
   const canopy = new THREE.Group();
-  const sprigGeo = new THREE.PlaneGeometry(1.85, 1.58);
+  const sprigGeo = (sharedCache && sharedCache.sprigGeo) || new THREE.PlaneGeometry(1.85, 1.58);
+  if (sharedCache && !sharedCache.sprigGeo) sharedCache.sprigGeo = sprigGeo;
   const shadeSprigSpecs = [];
   const sunSprigSpecs = [];
   [
@@ -907,7 +1212,7 @@ function buildBlossomTree(x, y, z, scaleMul, kind, woodTex, blossomTex) {
   return { group: g, canopy: canopy, kind: kind };
 }
 
-function buildMossyCliffBoulder(x, y, z, sx, sy, sz, rotY, stoneTex) {
+function buildMossyCliffBoulder(x, y, z, sx, sy, sz, rotY, stoneTex, sharedRockMat) {
   const g = new THREE.Group();
   // Single unified organic vertex-colored granite-to-moss rock (zero intersecting shell Z-fighting from overhead views!)
   const rockGeo = typeof THREE.DodecahedronGeometry === "function"
@@ -935,7 +1240,7 @@ function buildMossyCliffBoulder(x, y, z, sx, sy, sz, rotY, stoneTex) {
     rockGeo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
     if (typeof rockGeo.computeVertexNormals === "function") rockGeo.computeVertexNormals();
   }
-  const rockMat = new THREE.MeshStandardMaterial({
+  const rockMat = sharedRockMat || new THREE.MeshStandardMaterial({
     map: stoneTex ? stoneTex.map : null,
     bumpMap: stoneTex ? stoneTex.bump : null,
     bumpScale: 0.05,
@@ -1010,7 +1315,7 @@ function createCelestialSpireMaterial(env) {
   });
 }
 
-function buildCelestialKarstSpire(x, y, z, rTop, rBot, height, spireMat, woodTex, hasBonsai, seedIdx) {
+function buildCelestialKarstSpire(x, y, z, rTop, rBot, height, spireMat, woodTex, hasBonsai, seedIdx, sharedPineMats) {
   const g = new THREE.Group();
   // Unit-height geometry (-0.5..+0.5) scaled by height so ShaderMaterial mist-fade works cleanly for any tallness!
   const spireGeo = new THREE.CylinderGeometry(rTop, rBot, 1.0, 7, 5);
@@ -1033,7 +1338,7 @@ function buildCelestialKarstSpire(x, y, z, rTop, rBot, height, spireMat, woodTex
   g.add(rockMesh);
 
   if (hasBonsai) {
-    const bonsai = buildMountainPineTree(0, height * 0.48, 0, 0.44, woodTex);
+    const bonsai = buildMountainPineTree(0, height * 0.48, 0, 0.44, woodTex, sharedPineMats);
     g.add(bonsai);
   }
   g.position.set(x, y, z);
@@ -1116,7 +1421,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
         "  vec3 V = normalize(cameraPosition - vWorldPos);",
         "  float fresnel = pow(clamp(1.0 - max(dot(n, V), 0.0), 0.0, 1.0), 3.0);",
         "  vec3 baseCol = mix(uDeepColor, uShallowColor, clamp(0.28 + fresnel * 0.72 + w1 * 0.06, 0.0, 1.0));",
-        "  vec3 H = normalize(normalize(uSunDir) + V);",
+        "  vec3 H = normalize(uSunDir + V);",
         "  float spec = pow(max(dot(n, H), 0.0), 68.0) * 0.52;",
         "  float glitter = pow(max(dot(n, H), 0.0), 18.0) * 0.12 * (0.6 + 0.4 * w3);",
         "  vec3 col = baseCol + uSunColor * (spec + glitter);",
@@ -1281,35 +1586,88 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     env.godRaysGroup = raysGrp;
   }
 
-  // Stylized Liyue Drifting Bamboo Leaves & Osmanthus Blossom Petals
+  // Stylized Liyue Drifting Bamboo Leaves & Osmanthus Blossom Petals (batched into 3 InstancedMeshes instead of 36 draw calls!)
   const petalTex = typeof stage3dTextures.createPetalTexture === "function" ? stage3dTextures.createPetalTexture() : null;
   if (petalTex) {
     const petalGrp = new THREE.Group();
     const petalGeo = new THREE.PlaneGeometry(0.18, 0.26);
-    for (let pi = 0; pi < 36; pi++) {
-      const isBamboo = (pi % 3) !== 0;
-      const pMat = new THREE.MeshBasicMaterial({
+    const bucketColors = [0x6ee7b7, 0xfde68a, 0xfecdd3];
+    const bucketOpacities = [0.78, 0.85, 0.85];
+    const bucketMats = bucketColors.map(function (colHex, bi) {
+      return new THREE.MeshBasicMaterial({
         map: petalTex,
-        color: isBamboo ? 0x6ee7b7 : (pi % 2 === 0 ? 0xfde68a : 0xfecdd3),
+        color: colHex,
         transparent: true,
-        opacity: isBamboo ? 0.78 : 0.85,
+        opacity: bucketOpacities[bi],
         side: THREE.DoubleSide,
         depthWrite: false
       });
-      const pm = new THREE.Mesh(petalGeo, pMat);
-      const startX = ((pi * 37) % 18) - 9;
-      const startY = 0.8 + ((pi * 13) % 60) * 0.1;
-      const startZ = ((pi * 29) % 18) - 9;
-      pm.position.set(startX, startY, startZ);
-      petalGrp.add(pm);
-      env.petals.push({
-        mesh: pm,
-        x0: startX,
-        y0: startY,
-        z0: startZ,
+    });
+    const bucketCounts = [0, 0, 0];
+    const petalSpecs = [];
+    for (let pi = 0; pi < 36; pi++) {
+      const isBamboo = (pi % 3) !== 0;
+      const bucket = isBamboo ? 0 : (pi % 2 === 0 ? 1 : 2);
+      const instIdx = bucketCounts[bucket];
+      bucketCounts[bucket] += 1;
+      petalSpecs.push({
+        bucket: bucket,
+        instIdx: instIdx,
+        x0: ((pi * 37) % 18) - 9,
+        y0: 0.8 + ((pi * 13) % 60) * 0.1,
+        z0: ((pi * 29) % 18) - 9,
         speed: 0.45 + (pi % 5) * 0.12,
         phase: pi * 0.65
       });
+    }
+    const canInstPetals = typeof THREE.InstancedMesh === "function" && typeof THREE.Matrix4 === "function";
+    env.petalBucketMats = bucketMats;
+    if (canInstPetals) {
+      const dummyP = new THREE.Object3D();
+      const batches = bucketCounts.map(function (cnt, bi) {
+        const im = new THREE.InstancedMesh(petalGeo, bucketMats[bi], Math.max(1, cnt));
+        im.frustumCulled = false;
+        petalGrp.add(im);
+        return im;
+      });
+      for (let pi = 0; pi < petalSpecs.length; pi++) {
+        const ps = petalSpecs[pi];
+        dummyP.position.set(ps.x0, ps.y0, ps.z0);
+        dummyP.rotation.set(0, 0, 0);
+        dummyP.scale.set(1, 1, 1);
+        dummyP.updateMatrix();
+        batches[ps.bucket].setMatrixAt(ps.instIdx, dummyP.matrix);
+        env.petals.push({
+          bucket: ps.bucket,
+          instIdx: ps.instIdx,
+          mesh: null,
+          x0: ps.x0,
+          y0: ps.y0,
+          z0: ps.z0,
+          speed: ps.speed,
+          phase: ps.phase
+        });
+      }
+      batches.forEach(function (im) { if (im.instanceMatrix) im.instanceMatrix.needsUpdate = true; });
+      env.petalBatches = batches;
+      env._petalDummy = dummyP;
+    } else {
+      for (let pi = 0; pi < petalSpecs.length; pi++) {
+        const ps = petalSpecs[pi];
+        const pm = new THREE.Mesh(petalGeo, bucketMats[ps.bucket]);
+        pm.position.set(ps.x0, ps.y0, ps.z0);
+        petalGrp.add(pm);
+        env.petals.push({
+          bucket: ps.bucket,
+          instIdx: ps.instIdx,
+          mesh: pm,
+          x0: ps.x0,
+          y0: ps.y0,
+          z0: ps.z0,
+          speed: ps.speed,
+          phase: ps.phase
+        });
+      }
     }
     scene.add(petalGrp);
     env.petalGroup = petalGrp;
@@ -1332,19 +1690,20 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   const roofTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createRoofTileTextures === "function")
     ? stage3dTextures.createRoofTileTextures()
     : null;
-  const pillarMat = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x8f2920, roughness: 0.34, metalness: 0.14 });
-  const woodDarkMat = new THREE.MeshStandardMaterial({ map: wood.map, color: 0x52301d, roughness: 0.50, metalness: 0.12 });
-  const stonePlinthMat = new THREE.MeshStandardMaterial({ color: 0xd6cfc2, roughness: 0.74, metalness: 0.05 });
-  const roofTileMat = new THREE.MeshStandardMaterial({
+  // Track 2 Stylized Cel/Watercolor Pavilion Materials (clean 3-step anime ramp, zero extra outline meshes, faster than PBR on iGPU!)
+  const pillarMat = makeStylizedCelEnvMat({ map: wood.map, color: 0xa6382d, roughness: 0.44, metalness: 0.08 });
+  const woodDarkMat = makeStylizedCelEnvMat({ map: wood.map, color: 0x69422a, roughness: 0.58, metalness: 0.06 });
+  const stonePlinthMat = makeStylizedCelEnvMat({ color: 0xe3ddd0, roughness: 0.78, metalness: 0.03 });
+  const roofTileMat = makeStylizedCelEnvMat({
     map: roofTex ? roofTex.map : null,
     bumpMap: roofTex ? roofTex.bump : null,
-    bumpScale: 0.048,
-    color: roofTex ? 0xf2d9d4 : 0x7c2318,
-    roughness: 0.44,
-    metalness: 0.18,
+    bumpScale: 0.036,
+    color: roofTex ? 0xf7e3de : 0x943225,
+    roughness: 0.54,
+    metalness: 0.10,
     side: THREE.DoubleSide
   });
-  const goldAccentMat = new THREE.MeshStandardMaterial({ color: 0xd4a657, roughness: 0.26, metalness: 0.78 });
+  const goldAccentMat = new THREE.MeshStandardMaterial({ color: 0xdfb462, roughness: 0.28, metalness: 0.72 });
 
   const hasLathePav = typeof THREE.LatheGeometry === "function" && typeof THREE.Vector2 === "function";
   const lanternSilkTex = (typeof stage3dTextures !== "undefined" && typeof stage3dTextures.createLanternSilkTexture === "function")
@@ -1409,6 +1768,15 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   const pArmSpecs = [];
   const cordGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.52, 4);
   const tasselGeo = new THREE.CylinderGeometry(0.018, 0.044, 0.32, 6);
+  const lanternCapMergedGeo = mergeStaticBufferGeos([
+    { geo: cordGeo, py: 0.52 },
+    { geo: lanternCapGeo, py: 0.31 },
+    { geo: lanternCapGeo, py: -0.31 }
+  ], false);
+  const lanternTrimMergedGeo = mergeStaticBufferGeos([
+    { geo: lanternTrimRingGeo, py: 0.27, rx: Math.PI * 0.5 },
+    { geo: lanternTrimRingGeo, py: -0.27, rx: Math.PI * 0.5 }
+  ], false);
 
   for (let li = 0; li < 8; li++) {
     const la = (li / 8) * Math.PI * 2 + Math.PI / 8;
@@ -1439,25 +1807,29 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     });
     pArmSpecs.push({ py: 4.25, pz: -0.4, parentMat: lgMat, parentGrp: lgMat ? null : lg });
 
-    // Animated swaying silk lantern stays inside lg so wind sway & tassel secondary motion stay intact
+    // Animated swaying silk lantern stays inside lg so wind sway & tassel secondary motion stay intact (merged static caps/trims!)
     const orb = new THREE.Group();
-    const cord = new THREE.Mesh(cordGeo, lanternCapMat);
-    cord.position.y = 0.52;
     const body = new THREE.Mesh(lanternBodyGeo, env.lanternBodyMat);
     const halo = new THREE.Mesh(lanternHaloGeo, env.lanternHaloMat);
-    const topCap = new THREE.Mesh(lanternCapGeo, lanternCapMat);
-    topCap.position.y = 0.31;
-    const topTrim = new THREE.Mesh(lanternTrimRingGeo, goldAccentMat);
-    topTrim.rotation.x = Math.PI * 0.5;
-    topTrim.position.y = 0.27;
-    const botCap = new THREE.Mesh(lanternCapGeo, lanternCapMat);
-    botCap.position.y = -0.31;
-    const botTrim = new THREE.Mesh(lanternTrimRingGeo, goldAccentMat);
-    botTrim.rotation.x = Math.PI * 0.5;
-    botTrim.position.y = -0.27;
     const tassel = new THREE.Mesh(tasselGeo, tasselMat);
     tassel.position.y = -0.49;
-    orb.add(cord, body, halo, topCap, topTrim, botCap, botTrim, tassel);
+    if (lanternCapMergedGeo && lanternTrimMergedGeo) {
+      orb.add(new THREE.Mesh(lanternCapMergedGeo, lanternCapMat), body, halo, new THREE.Mesh(lanternTrimMergedGeo, goldAccentMat), tassel);
+    } else {
+      const cord = new THREE.Mesh(cordGeo, lanternCapMat);
+      cord.position.y = 0.52;
+      const topCap = new THREE.Mesh(lanternCapGeo, lanternCapMat);
+      topCap.position.y = 0.31;
+      const topTrim = new THREE.Mesh(lanternTrimRingGeo, goldAccentMat);
+      topTrim.rotation.x = Math.PI * 0.5;
+      topTrim.position.y = 0.27;
+      const botCap = new THREE.Mesh(lanternCapGeo, lanternCapMat);
+      botCap.position.y = -0.31;
+      const botTrim = new THREE.Mesh(lanternTrimRingGeo, goldAccentMat);
+      botTrim.rotation.x = Math.PI * 0.5;
+      botTrim.position.y = -0.27;
+      orb.add(cord, body, halo, topCap, topTrim, botCap, botTrim, tassel);
+    }
     orb.position.set(0, 3.45, -0.78);
     lg.add(orb);
 
@@ -1626,6 +1998,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   courtyardPropsGroup.add(stoneLanternPack.group);
   env.stoneLanternCores.push(stoneLanternPack.coreMat);
 
+  const sharedPineMats = {};
   [
     [-10.4, -0.55, -3.2, 1.28],
     [-7.8, -0.65, -8.8, 1.48],
@@ -1633,7 +2006,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     [9.8, -0.55, -4.4, 1.32],
     [11.2, -0.75, -8.6, 1.44]
   ].forEach(function (pt, idx) {
-    const pine = buildMountainPineTree(pt[0], pt[1], pt[2], pt[3], wood);
+    const pine = buildMountainPineTree(pt[0], pt[1], pt[2], pt[3], wood, sharedPineMats);
     courtyardPropsGroup.add(pine);
     env.pineTrees.push({ group: pine, canopy: pine.userData ? pine.userData.canopy : null, phase: idx * 1.45 });
   });
@@ -1653,6 +2026,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     ? stage3dTextures.createBlossomClusterTexture("sakura")
     : null;
 
+  const sharedBambooMats = {};
   [
     [-9.8, -0.42, 3.6, 1.08],
     [9.9, -0.42, 3.2, 1.06],
@@ -1661,22 +2035,31 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     [-5.8, -0.60, -9.8, 1.25],
     [6.2, -0.60, -9.6, 1.22]
   ].forEach(function (bg, idx) {
-    const grove = buildBambooGrove(bg[0], bg[1], bg[2], bg[3], bambooLeafTex);
+    const grove = buildBambooGrove(bg[0], bg[1], bg[2], bg[3], bambooLeafTex, sharedBambooMats);
     academyGardenGroup.add(grove.group);
     env.bambooGroves.push({ group: grove.group, canopy: grove.canopy, phase: idx * 1.12 });
   });
 
+  const sharedBlossomCache = {};
   [
     [-9.2, -0.45, -6.2, 1.18, "osmanthus", osmanthusTex],
     [9.4, -0.45, -6.4, 1.22, "sakura", sakuraTex],
     [8.8, -0.42, 5.2, 1.04, "osmanthus", osmanthusTex],
     [-8.9, -0.42, 5.4, 1.02, "sakura", sakuraTex]
   ].forEach(function (bt, idx) {
-    const tree = buildBlossomTree(bt[0], bt[1], bt[2], bt[3], bt[4], wood, bt[5]);
+    const tree = buildBlossomTree(bt[0], bt[1], bt[2], bt[3], bt[4], wood, bt[5], sharedBlossomCache);
     academyGardenGroup.add(tree.group);
     env.blossomTrees.push({ group: tree.group, canopy: tree.canopy, kind: bt[4], phase: idx * 1.55 });
   });
 
+  const sharedBoulderMat = new THREE.MeshStandardMaterial({
+    map: stone ? stone.map : null,
+    bumpMap: stone ? stone.bump : null,
+    bumpScale: 0.05,
+    vertexColors: true,
+    roughness: 0.92,
+    metalness: 0.03
+  });
   [
     [-9.4, -0.55, 2.2, 1.35, 0.72, 1.05, 0.4],
     [9.3, -0.55, 1.9, 1.25, 0.68, 1.12, -0.6],
@@ -1687,7 +2070,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     [-0.6, -0.65, -10.0, 1.62, 0.76, 1.08, 0.2],
     [2.4, -0.62, -9.8, 1.22, 0.64, 0.98, 0.85]
   ].forEach(function (br) {
-    academyGardenGroup.add(buildMossyCliffBoulder(br[0], br[1], br[2], br[3], br[4], br[5], br[6], stone));
+    academyGardenGroup.add(buildMossyCliffBoulder(br[0], br[1], br[2], br[3], br[4], br[5], br[6], stone, sharedBoulderMat));
   });
   scene.add(academyGardenGroup);
   env.academyGardenGroup = academyGardenGroup;
@@ -1708,7 +2091,7 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
     [21.8, -0.2, 12.2, 1.40, 2.5, 13.4, false],
     [-6.5, 4.2, -33.0, 2.35, 4.2, 26.0, false]
   ].forEach(function (sp, idx) {
-    const spire = buildCelestialKarstSpire(sp[0], sp[1], sp[2], sp[3], sp[4], sp[5], spireMat, wood, sp[6], idx);
+    const spire = buildCelestialKarstSpire(sp[0], sp[1], sp[2], sp[3], sp[4], sp[5], spireMat, wood, sp[6], idx, sharedPineMats);
     celestialGardenGroup.add(spire);
     env.celestialSpires.push({ group: spire, baseY: sp[1], phase: idx * 0.88, amp: 0.24 + (idx % 3) * 0.11 });
   });
@@ -1781,10 +2164,11 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
   const tableWoodMat = new THREE.MeshStandardMaterial({
     map: wood.map,
     bumpMap: wood.bump,
-    bumpScale: 0.025,
+    bumpScale: 0.020,
     roughnessMap: wood.roughness || null,
-    roughness: 0.24,
-    metalness: 0.18
+    color: 0xd8c4b0,
+    roughness: 0.42,
+    metalness: 0.08
   });
   stage3dTextures.upgradeWoodWithPolyHavenCC0(tableWoodMat);
 
@@ -1845,11 +2229,12 @@ function build3DPavilionAndTable(scene, env, wood, stone, feltTex) {
 function buildTabletopAcademyProps(woodMat, env) {
   const propsGroup = new THREE.Group();
   const hasLathe = typeof THREE.LatheGeometry === "function" && typeof THREE.Vector2 === "function";
-  const celadonMat = new THREE.MeshStandardMaterial({ color: 0x7cb9a8, roughness: 0.22, metalness: 0.1 });
-  const brassMat = new THREE.MeshStandardMaterial({ color: 0xd4a657, roughness: 0.28, metalness: 0.78 });
-  const scrollMat = new THREE.MeshStandardMaterial({ color: 0xf6edd9, roughness: 0.78 });
-  const slateMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.42, metalness: 0.12 });
-  const pastryMat = new THREE.MeshStandardMaterial({ color: 0xf5b942, roughness: 0.62 });
+  const isLiteShadowProp = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
+  const celadonMat = makeStylizedCelEnvMat({ color: 0x89c7b6, roughness: 0.28, metalness: 0.06 });
+  const brassMat = new THREE.MeshStandardMaterial({ color: 0xdfb462, roughness: 0.30, metalness: 0.70 });
+  const scrollMat = makeStylizedCelEnvMat({ color: 0xfaf2e0, roughness: 0.78 });
+  const slateMat = makeStylizedCelEnvMat({ color: 0x2a384f, roughness: 0.48, metalness: 0.08 });
+  const pastryMat = makeStylizedCelEnvMat({ color: 0xf7c250, roughness: 0.62 });
 
   // 1. Tripod Celadon Sandalwood Incense Burner (opposite Yixing teapot)
   const censer = new THREE.Group();
@@ -1864,13 +2249,23 @@ function buildTabletopAcademyProps(woodMat, env) {
     ], 16)
     : new THREE.CylinderGeometry(0.14, 0.10, 0.18, 14);
   const censerBowl = new THREE.Mesh(bowlGeo, celadonMat);
-  censerBowl.castShadow = true;
+  censerBowl.castShadow = !isLiteShadowProp;
   censer.add(censerBowl);
+  const footGeo = new THREE.CylinderGeometry(0.022, 0.016, 0.06, 6);
+  const footParts = [];
   for (let fi = 0; fi < 3; fi++) {
     const fa = (fi / 3) * Math.PI * 2;
-    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.016, 0.06, 6), brassMat);
-    foot.position.set(Math.cos(fa) * 0.095, 0.03, Math.sin(fa) * 0.095);
-    censer.add(foot);
+    footParts.push({ geo: footGeo, px: Math.cos(fa) * 0.095, py: 0.03, pz: Math.sin(fa) * 0.095 });
+  }
+  const mergedFeetGeo = mergeStaticBufferGeos(footParts, true);
+  if (mergedFeetGeo) {
+    censer.add(new THREE.Mesh(mergedFeetGeo, brassMat));
+  } else {
+    footParts.forEach(function (fp) {
+      const foot = new THREE.Mesh(footGeo, brassMat);
+      foot.position.set(fp.px, fp.py, fp.pz);
+      censer.add(foot);
+    });
   }
   const emberMat = new THREE.MeshStandardMaterial({ color: 0xff8c42, emissive: 0xff5a1f, emissiveIntensity: 0.9, roughness: 0.4 });
   const ember = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.016, 12), emberMat);
@@ -2011,35 +2406,75 @@ function build3DLotusAndAtmosphere(scene, env) {
   scene.add(mistRing);
   env.mistRing = mistRing;
 
-  // Subtle Distant Valley Cloud Wisps below terrace elevation (zero white wall!)
+  // Subtle Distant Valley Cloud Wisps below terrace elevation (batched into 1 InstancedMesh + 1 shared material!)
   const cloudCount = 22;
-  for (let ci = 0; ci < cloudCount; ci++) {
-    const ang = (ci / cloudCount) * Math.PI * 2 + (ci % 3) * 0.18;
-    const rad = 22.0 + (ci % 4) * 4.5;
-    const cW = 9.5 + (ci % 3) * 2.8;
-    const cH = 3.4 + (ci % 2) * 1.2;
-    const cMat = new THREE.MeshBasicMaterial({
-      map: cloudTex,
-      color: 0xdbeafe,
-      transparent: true,
-      opacity: 0.18,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    const cMesh = new THREE.Mesh(new THREE.PlaneGeometry(cW, cH), cMat);
-    const cy = -2.85 + (ci % 3) * 0.55;
-    cMesh.position.set(Math.cos(ang) * rad, cy, Math.sin(ang) * rad);
-    cMesh.lookAt(0, cy + 1.8, 0);
-    scene.add(cMesh);
-    env.cloudPlanes.push({
-      mesh: cMesh,
-      mat: cMat,
-      ang: ang,
-      rad: rad,
-      y: cy,
-      speed: 0.012 + (ci % 4) * 0.004,
-      phase: ci * 0.7
-    });
+  const cloudSharedMat = new THREE.MeshBasicMaterial({
+    map: cloudTex,
+    color: 0xdbeafe,
+    transparent: true,
+    opacity: 0.18,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  env.cloudSharedMat = cloudSharedMat;
+  const canInstCloud = typeof THREE.InstancedMesh === "function" && typeof THREE.Matrix4 === "function";
+  if (canInstCloud) {
+    const cloudUnitGeo = new THREE.PlaneGeometry(1, 1);
+    const cloudIm = new THREE.InstancedMesh(cloudUnitGeo, cloudSharedMat, cloudCount);
+    cloudIm.frustumCulled = false;
+    const dummyC = new THREE.Object3D();
+    for (let ci = 0; ci < cloudCount; ci++) {
+      const ang = (ci / cloudCount) * Math.PI * 2 + (ci % 3) * 0.18;
+      const rad = 22.0 + (ci % 4) * 4.5;
+      const cW = 9.5 + (ci % 3) * 2.8;
+      const cH = 3.4 + (ci % 2) * 1.2;
+      const cy = -2.85 + (ci % 3) * 0.55;
+      const cx = Math.cos(ang) * rad;
+      const cz = Math.sin(ang) * rad;
+      dummyC.position.set(cx, cy, cz);
+      dummyC.rotation.set(-0.08, Math.atan2(-cx, -cz), 0);
+      dummyC.scale.set(cW, cH, 1);
+      dummyC.updateMatrix();
+      cloudIm.setMatrixAt(ci, dummyC.matrix);
+      env.cloudPlanes.push({
+        mesh: null,
+        mat: cloudSharedMat,
+        ang: ang,
+        rad: rad,
+        y: cy,
+        w: cW,
+        h: cH,
+        speed: 0.012 + (ci % 4) * 0.004,
+        phase: ci * 0.7
+      });
+    }
+    if (cloudIm.instanceMatrix) cloudIm.instanceMatrix.needsUpdate = true;
+    scene.add(cloudIm);
+    env.cloudInstancedMesh = cloudIm;
+    env._cloudDummy = dummyC;
+  } else {
+    for (let ci = 0; ci < cloudCount; ci++) {
+      const ang = (ci / cloudCount) * Math.PI * 2 + (ci % 3) * 0.18;
+      const rad = 22.0 + (ci % 4) * 4.5;
+      const cW = 9.5 + (ci % 3) * 2.8;
+      const cH = 3.4 + (ci % 2) * 1.2;
+      const cMesh = new THREE.Mesh(new THREE.PlaneGeometry(cW, cH), cloudSharedMat);
+      const cy = -2.85 + (ci % 3) * 0.55;
+      cMesh.position.set(Math.cos(ang) * rad, cy, Math.sin(ang) * rad);
+      cMesh.lookAt(0, cy + 1.8, 0);
+      scene.add(cMesh);
+      env.cloudPlanes.push({
+        mesh: cMesh,
+        mat: cloudSharedMat,
+        ang: ang,
+        rad: rad,
+        y: cy,
+        w: cW,
+        h: cH,
+        speed: 0.012 + (ci % 4) * 0.004,
+        phase: ci * 0.7
+      });
+    }
   }
 
   const pillarGeo = new THREE.CylinderGeometry(0.55, 1.35, 14, 18, 1, true);
@@ -2125,7 +2560,7 @@ function build3DLotusAndAtmosphere(scene, env) {
   );
   lotusGroup.add(coreAura);
 
-  // Delicate Crown of 8 Luminous Golden Stamen Pearls around the lotus heart
+  // Delicate Crown of 8 Luminous Golden Stamen Pearls around the lotus heart (batched 8 -> 1 draw call!)
   const stamenGeo = new THREE.SphereGeometry(0.036, 8, 6);
   const stamenMat = new THREE.MeshStandardMaterial({
     color: 0xfff8dc,
@@ -2133,12 +2568,13 @@ function build3DLotusAndAtmosphere(scene, env) {
     emissiveIntensity: 1.25,
     roughness: 0.18
   });
+  const stamenSpecs = [];
   for (let si = 0; si < 8; si++) {
     const sa = (si / 8) * Math.PI * 2;
-    const stPearl = new THREE.Mesh(stamenGeo, stamenMat);
-    stPearl.position.set(Math.cos(sa) * 0.34, 0.12 + (si % 2) * 0.04, Math.sin(sa) * 0.34);
-    lotusGroup.add(stPearl);
+    stamenSpecs.push({ px: Math.cos(sa) * 0.34, py: 0.12 + (si % 2) * 0.04, pz: Math.sin(sa) * 0.34 });
   }
+  const stamenBatch = buildInstancedOrGroup(stamenGeo, stamenMat, stamenSpecs);
+  if (stamenBatch) lotusGroup.add(stamenBatch);
 
   env.lotusHitMesh = new THREE.Mesh(
     new THREE.SphereGeometry(0.86, 12, 10),
@@ -2161,7 +2597,7 @@ function build3DLotusAndAtmosphere(scene, env) {
   env.lotusRingInner.rotation.x = -Math.PI * 0.34;
   lotusGroup.add(env.lotusRingInner);
 
-  // Outer Tier: 8 Sculpted Translucent Celadon-Ivory Jade Curved Lotus Petals
+  // Outer Tier: 8 Sculpted Translucent Celadon-Ivory Jade Curved Lotus Petals (batched 8 -> 1 draw call!)
   const outerPetalGeo = createCurvedLotusPetalGeo(0.42, 0.68, 0.10);
   const outerPetalMat = new CoreMatCtor({
     color: 0xe8efe4,
@@ -2174,15 +2610,28 @@ function build3DLotusAndAtmosphere(scene, env) {
     side: THREE.DoubleSide
   });
   env.lotusOuterPetalMat = outerPetalMat;
+  const outerPetalSpecs = [];
+  const canOuterMat = typeof THREE.Matrix4 === "function";
   for (let oi = 0; oi < 8; oi++) {
     const oa = (oi / 8) * Math.PI * 2 + Math.PI / 8;
-    const opWrap = new THREE.Group();
-    opWrap.rotation.y = oa;
-    const op = new THREE.Mesh(outerPetalGeo, outerPetalMat);
-    op.position.set(0, -0.32, 0.32);
-    op.rotation.x = 0.62;
-    opWrap.add(op);
-    lotusGroup.add(opWrap);
+    if (canOuterMat) {
+      const pRef = new THREE.Object3D();
+      pRef.rotation.y = oa;
+      pRef.updateMatrix();
+      outerPetalSpecs.push({ py: -0.32, pz: 0.32, rx: 0.62, parentMat: pRef.matrix.clone() });
+    } else {
+      const opWrap = new THREE.Group();
+      opWrap.rotation.y = oa;
+      const op = new THREE.Mesh(outerPetalGeo, outerPetalMat);
+      op.position.set(0, -0.32, 0.32);
+      op.rotation.x = 0.62;
+      opWrap.add(op);
+      lotusGroup.add(opWrap);
+    }
+  }
+  if (outerPetalSpecs.length) {
+    const outerPetalBatch = buildInstancedOrGroup(outerPetalGeo, outerPetalMat, outerPetalSpecs);
+    if (outerPetalBatch) lotusGroup.add(outerPetalBatch);
   }
 
   // Inner Tier: 6 Sculpted Three-Goodness Translucent Jade/Gold/Azure Petals
@@ -2416,7 +2865,17 @@ function apply3DSceneTheme(scene, env, themeKey) {
   if (env.academyGardenGroup) env.academyGardenGroup.visible = !isCel;
   if (env.celestialGardenGroup) env.celestialGardenGroup.visible = isCel;
 
-  if (env.petals && env.petals.length) {
+  if (env.petalBucketMats && env.petalBucketMats.length >= 3) {
+    if (isCel) {
+      env.petalBucketMats[0].color.setHex(0x99f6e4);
+      env.petalBucketMats[1].color.setHex(0xfef08a);
+      env.petalBucketMats[2].color.setHex(0xe0f2fe);
+    } else {
+      env.petalBucketMats[0].color.setHex(0x6ee7b7);
+      env.petalBucketMats[1].color.setHex(0xfde68a);
+      env.petalBucketMats[2].color.setHex(0xfecdd3);
+    }
+  } else if (env.petals && env.petals.length) {
     for (let pi = 0; pi < env.petals.length; pi++) {
       const pt = env.petals[pi];
       if (!pt || !pt.mesh || !pt.mesh.material || !pt.mesh.material.color) continue;
@@ -2778,14 +3237,20 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   }
   if (env.cloudIsleBeacon) {
     env.cloudIsleBeacon.visible = !f.daylight;
-    const pulseOn = Math.sin(t * 2.2) > -0.2;
-    env.cloudIsleBeacon.scale.setScalar(pulseOn ? 1.1 : 0.45);
+    if (env.cloudIsleBeacon.visible) {
+      const pulseOn = Math.sin(t * 2.2) > -0.2;
+      env.cloudIsleBeacon.scale.setScalar(pulseOn ? 1.1 : 0.45);
+    }
   }
 
   env.sunMesh.position.y += ((f.daylight ? 17.5 : -12) - env.sunMesh.position.y) * d04;
-  env.sunHalo.rotation.z = t * 0.25;
-  env.sunHalo.scale.setScalar(1 + env.dawnSweep * 0.45);
+  env.sunMesh.visible = env.sunMesh.position.y > -8.0;
+  if (env.sunMesh.visible) {
+    env.sunHalo.rotation.z = t * 0.25;
+    env.sunHalo.scale.setScalar(1 + env.dawnSweep * 0.45);
+  }
   env.moonGroup.position.y += ((f.daylight ? -12 : 16.5) - env.moonGroup.position.y) * d04;
+  env.moonGroup.visible = env.moonGroup.position.y > -8.0;
   env.starPoints.material.opacity += (((f.daylight ? 0.0 : (f.night ? 0.88 : 0.52))) - env.starPoints.material.opacity) * d05;
   env.starPoints.visible = env.starPoints.material.opacity > 0.008;
   if (env.starPoints.visible) env.starPoints.rotation.y = t * 0.008;
@@ -2865,6 +3330,10 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
       }
     }
   }
+  env._envFrame = (env._envFrame || 0) + 1;
+  const isLiteEnv = Boolean((typeof stage3d !== "undefined" && stage3d.isIntegratedGpu) || (typeof state !== "undefined" && state.quality3D !== "high"));
+  const runParticleTick = !isLiteEnv || (env._envFrame % 2 === 0);
+
   if (!isCelestialTheme) {
     if (env.bambooGroves && env.bambooGroves.length) {
       for (let bi = 0; bi < env.bambooGroves.length; bi++) {
@@ -2904,7 +3373,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
       env.celestialCloudRibbon.rotation.y = -t * 0.016;
       env.celestialCloudRibbon.material.opacity = f.night ? 0.14 : 0.24;
     }
-    if (env.celestialWisps && env.celestialWisps.visible && env.celestialWispMeta && env.celestialWispMeta.length) {
+    if (env.celestialWisps && env.celestialWisps.visible && env.celestialWispMeta && env.celestialWispMeta.length && runParticleTick) {
       const wAttr = env.celestialWisps.geometry.attributes.position;
       for (let wi = 0; wi < env.celestialWispMeta.length; wi++) {
         const wm = env.celestialWispMeta[wi];
@@ -2918,7 +3387,7 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
   if (env.incenseEmberMat) {
     env.incenseEmberMat.emissiveIntensity = 0.85 + Math.sin(t * 3.4) * 0.25;
   }
-  if (env.teaSteamPoints && env.teaSteamPoints.visible && env.teaSteamMeta && env.teaSteamMeta.length > 0) {
+  if (env.teaSteamPoints && env.teaSteamPoints.visible && env.teaSteamMeta && env.teaSteamMeta.length > 0 && runParticleTick) {
     const sPosAttr = env.teaSteamPoints.geometry.attributes.position;
     const breezeBias = isClearBreeze ? 1.35 : 1.0;
     for (let si = 0; si < env.teaSteamMeta.length; si++) {
@@ -2941,17 +3410,38 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
 
   if (env.cloudPlanes && env.cloudPlanes.length > 0) {
     const cloudTargetOp = (f.daylight ? 0.18 : (f.night ? 0.12 : 0.16)) + (isToxicHaze ? 0.08 : (isClearBreeze ? -0.03 : 0));
-    for (let ci = 0; ci < env.cloudPlanes.length; ci++) {
-      const cl = env.cloudPlanes[ci];
-      const ang = cl.ang + t * cl.speed;
-      cl.mesh.position.set(
-        Math.cos(ang) * cl.rad,
-        cl.y + Math.sin(t * 0.45 + cl.phase) * 0.18,
-        Math.sin(ang) * cl.rad
-      );
-      cl.mesh.lookAt(0, cl.y + 1.8, 0);
-      cl.mat.color.lerp(env.targetColors.cloud, lerpAmt);
-      cl.mat.opacity += (cloudTargetOp - cl.mat.opacity) * d05;
+    if (env.cloudSharedMat) {
+      env.cloudSharedMat.color.lerp(env.targetColors.cloud, lerpAmt);
+      env.cloudSharedMat.opacity += (cloudTargetOp - env.cloudSharedMat.opacity) * d05;
+    }
+    const cloudStride = isLiteEnv ? 3 : 2;
+    if (env._envFrame % cloudStride === 0) {
+      if (env.cloudInstancedMesh && env._cloudDummy) {
+        const dc = env._cloudDummy;
+        for (let ci = 0; ci < env.cloudPlanes.length; ci++) {
+          const cl = env.cloudPlanes[ci];
+          const ang = cl.ang + t * cl.speed;
+          const cx = Math.cos(ang) * cl.rad;
+          const cy = cl.y + Math.sin(t * 0.45 + cl.phase) * 0.18;
+          const cz = Math.sin(ang) * cl.rad;
+          dc.position.set(cx, cy, cz);
+          dc.rotation.set(-0.08, Math.atan2(-cx, -cz), 0);
+          dc.scale.set(cl.w || 10, cl.h || 4, 1);
+          dc.updateMatrix();
+          env.cloudInstancedMesh.setMatrixAt(ci, dc.matrix);
+        }
+        if (env.cloudInstancedMesh.instanceMatrix) env.cloudInstancedMesh.instanceMatrix.needsUpdate = true;
+      } else {
+        for (let ci = 0; ci < env.cloudPlanes.length; ci++) {
+          const cl = env.cloudPlanes[ci];
+          const ang = cl.ang + t * cl.speed;
+          const cx = Math.cos(ang) * cl.rad;
+          const cy = cl.y + Math.sin(t * 0.45 + cl.phase) * 0.18;
+          const cz = Math.sin(ang) * cl.rad;
+          cl.mesh.position.set(cx, cy, cz);
+          cl.mesh.rotation.set(-0.08, Math.atan2(-cx, -cz), 0);
+        }
+      }
     }
   }
 
@@ -2984,21 +3474,40 @@ function update3DEnvironment(scene, env, f, seatAnchors) {
       );
     }
   }
-  if (env.petals && env.petals.length && (!env.petalGroup || env.petalGroup.visible)) {
+  if (env.petals && env.petals.length && (!env.petalGroup || env.petalGroup.visible) && runParticleTick) {
     const pSpeedMul = isToxicHaze ? 1.75 : (isClearBreeze ? 1.45 : 1.0);
-    for (let pi = 0; pi < env.petals.length; pi++) {
-      const pt = env.petals[pi];
-      const fall = (t * pt.speed * pSpeedMul + pt.phase) % 6.2;
-      const py = 6.8 - fall;
-      const px = pt.x0 + Math.sin(t * 0.9 * pSpeedMul + pt.phase) * 1.15 + fall * (isToxicHaze ? 0.62 : 0.35);
-      const pz = pt.z0 + Math.cos(t * 0.8 + pt.phase) * 0.95;
-      pt.mesh.position.set(px, py < 0.25 ? 6.8 : py, pz);
-      pt.mesh.rotation.set(t * 1.4 * pSpeedMul + pt.phase, t * 0.9 + pt.phase, Math.sin(t * 2.1 + pt.phase) * 0.7);
+    if (env.petalBatches && env._petalDummy) {
+      const dp = env._petalDummy;
+      for (let pi = 0; pi < env.petals.length; pi++) {
+        const pt = env.petals[pi];
+        const fall = (t * pt.speed * pSpeedMul + pt.phase) % 6.2;
+        const py = 6.8 - fall;
+        const px = pt.x0 + Math.sin(t * 0.9 * pSpeedMul + pt.phase) * 1.15 + fall * (isToxicHaze ? 0.62 : 0.35);
+        const pz = pt.z0 + Math.cos(t * 0.8 + pt.phase) * 0.95;
+        dp.position.set(px, py < 0.25 ? 6.8 : py, pz);
+        dp.rotation.set(t * 1.4 * pSpeedMul + pt.phase, t * 0.9 + pt.phase, Math.sin(t * 2.1 + pt.phase) * 0.7);
+        dp.scale.set(1, 1, 1);
+        dp.updateMatrix();
+        env.petalBatches[pt.bucket].setMatrixAt(pt.instIdx, dp.matrix);
+      }
+      for (let bi = 0; bi < env.petalBatches.length; bi++) {
+        if (env.petalBatches[bi].instanceMatrix) env.petalBatches[bi].instanceMatrix.needsUpdate = true;
+      }
+    } else {
+      for (let pi = 0; pi < env.petals.length; pi++) {
+        const pt = env.petals[pi];
+        const fall = (t * pt.speed * pSpeedMul + pt.phase) % 6.2;
+        const py = 6.8 - fall;
+        const px = pt.x0 + Math.sin(t * 0.9 * pSpeedMul + pt.phase) * 1.15 + fall * (isToxicHaze ? 0.62 : 0.35);
+        const pz = pt.z0 + Math.cos(t * 0.8 + pt.phase) * 0.95;
+        pt.mesh.position.set(px, py < 0.25 ? 6.8 : py, pz);
+        pt.mesh.rotation.set(t * 1.4 * pSpeedMul + pt.phase, t * 0.9 + pt.phase, Math.sin(t * 2.1 + pt.phase) * 0.7);
+      }
     }
   }
 
   // Drifting fireflies / golden dawn petals
-  if (env.fireflyPoints && env.fireflyPoints.visible) {
+  if (env.fireflyPoints && env.fireflyPoints.visible && runParticleTick) {
     const posAttr = env.fireflyPoints.geometry.attributes.position;
     const speedMul = 1 + env.dawnSweep * 2.2 + (isClearBreeze ? 0.45 : 0);
     for (let fi = 0; fi < env.fireflyMeta.length; fi++) {

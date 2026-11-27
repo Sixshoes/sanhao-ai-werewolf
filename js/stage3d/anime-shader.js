@@ -25,12 +25,12 @@ const stage3dAnime = {
     const w = 16;
     const data = new Uint8Array(w * 4);
     for (let i = 0; i < w; i++) {
-      let lum = 250;
-      if (i <= 4) lum = 36;        // Clean cel shadow band (prevents multi-light 4x white blowout!)
-      else if (i === 5) lum = 108; // Soft anti-aliased cel terminator
-      else if (i <= 10) lum = 186; // Luminous rich midtone
-      else if (i === 11) lum = 226;
-      else lum = 250;              // Crisp sunlit highlight
+      let lum = 252;
+      if (i <= 4) lum = 114;       // Clean luminous anime cel shadow band (~0.45 floor, never crushed black)
+      else if (i === 5) lum = 154; // Soft anti-aliased cel terminator
+      else if (i <= 10) lum = 214; // Bright, clear midtone
+      else if (i === 11) lum = 238;
+      else lum = 252;              // Crisp sunlit highlight
       data[i * 4] = lum;
       data[i * 4 + 1] = lum;
       data[i * 4 + 2] = lum;
@@ -85,20 +85,20 @@ const stage3dAnime = {
     }
 
     const mat = new THREE.MeshToonMaterial(matOpts);
-    const rimCol = new THREE.Color(o.rimColor !== undefined ? o.rimColor : 0xfff3cf);
-    const shadowTint = new THREE.Color(o.shadowTint !== undefined ? o.shadowTint : 0xdcc8e8);
-    const hairRingCol = new THREE.Color(o.hairRingColor !== undefined ? o.hairRingColor : 0xffe6b3);
+    const rimCol = new THREE.Color(o.rimColor !== undefined ? o.rimColor : 0xfff5db);
+    const shadowTint = new THREE.Color(o.shadowTint !== undefined ? o.shadowTint : 0xc6c8ea);
+    const hairRingCol = new THREE.Color(o.hairRingColor !== undefined ? o.hairRingColor : 0xffe9bf);
     if (typeof rimCol.convertSRGBToLinear === "function") rimCol.convertSRGBToLinear();
     if (typeof shadowTint.convertSRGBToLinear === "function") shadowTint.convertSRGBToLinear();
     if (typeof hairRingCol.convertSRGBToLinear === "function") hairRingCol.convertSRGBToLinear();
 
-    const rimStrength = o.rimStrength !== undefined ? o.rimStrength : 0.18;
+    const rimStrength = o.rimStrength !== undefined ? o.rimStrength : 0.16;
     const rimPower = o.rimPower !== undefined ? o.rimPower : 3.4;
-    const shadowLift = o.shadowLift !== undefined ? o.shadowLift : 0.12;
+    const shadowLift = o.shadowLift !== undefined ? Math.max(0.36, o.shadowLift) : 0.42;
     const hairRingStrength = (o.isHair ? (o.hairRingStrength !== undefined ? o.hairRingStrength : 0.16) : 0.0);
 
     mat.customProgramCacheKey = function () {
-      return "sanhao_anime_toon_v2";
+      return "sanhao_anime_toon_v3";
     };
     mat.onBeforeCompile = function (shader) {
       if (!shader || !shader.fragmentShader) return;
@@ -133,12 +133,12 @@ const stage3dAnime = {
           "float animeRimBias = smoothstep( -0.20, 0.75, animeN.y );",
           "vec3 animeRim = uAnimeRimColor * animeFresnel * uAnimeRimStrength * ( 0.40 + 0.60 * animeRimBias );",
           "vec3 animeMinTint = diffuseColor.rgb * uAnimeShadowTint * uAnimeShadowLift;",
-          "outgoingLight = min( max( outgoingLight * 0.68, animeMinTint ) + animeRim, vec3( 1.02 ) );",
+          "outgoingLight = min( max( outgoingLight * 0.94, animeMinTint ) + animeRim, vec3( 1.05 ) );",
           "if ( uAnimeHairRingStrength > 0.001 ) {",
           "  float ringY = abs( animeN.y - 0.38 );",
           "  float ringMask = smoothstep( 0.18, 0.03, ringY ) * pow( max( animeN.z, 0.0 ), 1.4 );",
           "  float ringPulse = sin( animeN.x * 9.0 ) * 0.16 + 0.84;",
-          "  outgoingLight = min( outgoingLight + uAnimeHairRingColor * ( ringMask * ringPulse * uAnimeHairRingStrength ), vec3( 1.05 ) );",
+          "  outgoingLight = min( outgoingLight + uAnimeHairRingColor * ( ringMask * ringPulse * uAnimeHairRingStrength ), vec3( 1.08 ) );",
           "}",
           "gl_FragColor = vec4( outgoingLight, diffuseColor.a );"
         ].join("\n")
@@ -188,22 +188,22 @@ const stage3dAnime = {
     const celMat = new THREE.MeshToonMaterial(matOpts);
     celMat.name = srcMat.name || "";
 
-    const rimCol = new THREE.Color(isHair ? 0xffe4b0 : 0xffeec8);
-    const shadowTint = new THREE.Color(isFace ? 0xf0cfc0 : 0xd2c8dc);
+    const rimCol = new THREE.Color(isHair ? 0xffe8bc : 0xfff2d4);
+    const shadowTint = new THREE.Color(isFace ? 0xf6d5c8 : 0xbcc0e4);
     if (typeof rimCol.convertSRGBToLinear === "function") rimCol.convertSRGBToLinear();
     if (typeof shadowTint.convertSRGBToLinear === "function") shadowTint.convertSRGBToLinear();
 
     const uniforms = {
       uVrmRimColor: { value: rimCol },
-      uVrmRimStrength: { value: isFace ? 0.12 : (isHair ? 0.25 : 0.20) },
+      uVrmRimStrength: { value: isFace ? 0.11 : (isHair ? 0.24 : 0.18) },
       uVrmShadowTint: { value: shadowTint },
-      uVrmShadowLift: { value: isFace ? 0.48 : 0.40 },
-      uVrmWarmBounce: { value: isFace ? 0.12 : 0.13 },
-      uVrmClothHarm: { value: (isFace || isHair) ? 0.0 : 1.0 }
+      uVrmShadowLift: { value: isFace ? 0.56 : 0.46 },
+      uVrmWarmBounce: { value: isFace ? 0.10 : 0.11 },
+      uVrmClothHarm: { value: 0.0 }
     };
 
     celMat.customProgramCacheKey = function () {
-      return "sanhao_vrm_cel_v2";
+      return "sanhao_vrm_cel_v3";
     };
     celMat.onBeforeCompile = function (shader) {
       if (!shader || !shader.fragmentShader) return;
@@ -212,7 +212,6 @@ const stage3dAnime = {
       shader.uniforms.uVrmShadowTint = uniforms.uVrmShadowTint;
       shader.uniforms.uVrmShadowLift = uniforms.uVrmShadowLift;
       shader.uniforms.uVrmWarmBounce = uniforms.uVrmWarmBounce;
-      shader.uniforms.uVrmClothHarm = uniforms.uVrmClothHarm;
 
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <common>",
@@ -222,8 +221,7 @@ const stage3dAnime = {
           "uniform float uVrmRimStrength;",
           "uniform vec3 uVrmShadowTint;",
           "uniform float uVrmShadowLift;",
-          "uniform float uVrmWarmBounce;",
-          "uniform float uVrmClothHarm;"
+          "uniform float uVrmWarmBounce;"
         ].join("\n")
       );
       shader.fragmentShader = shader.fragmentShader.replace(
@@ -235,15 +233,9 @@ const stage3dAnime = {
           "float vrmRimMask = smoothstep( -0.22, 0.74, vrmN.y );",
           "vec3 vrmRim = uVrmRimColor * vrmFresnel * uVrmRimStrength * ( 0.42 + 0.58 * vrmRimMask );",
           "float vrmUnder = clamp( -vrmN.y * 0.55 + 0.45, 0.0, 1.0 );",
-          "vec3 vrmCandleBounce = diffuseColor.rgb * vec3( 1.0, 0.78, 0.48 ) * uVrmWarmBounce * vrmUnder;",
+          "vec3 vrmCandleBounce = diffuseColor.rgb * vec3( 1.0, 0.82, 0.56 ) * uVrmWarmBounce * vrmUnder;",
           "vec3 vrmMinFloor = diffuseColor.rgb * uVrmShadowTint * uVrmShadowLift;",
-          "vec3 vrmOut = min( max( outgoingLight * 0.78, vrmMinFloor ) + vrmRim + vrmCandleBounce, vec3( 1.04 ) );",
-          "if ( uVrmClothHarm > 0.5 ) {",
-          "  float vrmLum = dot( vrmOut, vec3( 0.299, 0.587, 0.114 ) );",
-          "  vrmOut = mix( vrmOut, vec3( vrmLum ), 0.11 );",
-          "  vrmOut = mix( vrmOut, vrmOut * vec3( 1.04, 0.99, 0.92 ), 0.35 );",
-          "}",
-          "outgoingLight = vrmOut;",
+          "outgoingLight = min( max( outgoingLight, vrmMinFloor ) + vrmRim + vrmCandleBounce, vec3( 1.06 ) );",
           "gl_FragColor = vec4( outgoingLight, diffuseColor.a );"
         ].join("\n")
       );

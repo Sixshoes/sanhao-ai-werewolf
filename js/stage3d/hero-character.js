@@ -734,21 +734,28 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
     hero.bodyPivot.rotation.x += (bowTilt - hero.bodyPivot.rotation.x) * d12;
     hero.headPivot.rotation.set(hero.headPitch, hero.headYaw, Math.sin(t * 1.2) * 0.025);
 
-    // Throttled Seamless Storybook Face Update (blinking, pupil gaze & voice lip-sync!)
+    // Signature-Cached Seamless Storybook Face Update (skips redundant 512x512 redraws & texture uploads when idle!)
     const blinkCycle = (t + 0.8) % 3.5;
     const isBlinking = act !== "gasp_react" && blinkCycle > 3.38;
     if (hero.heroFaceBundle) {
       hero.heroFaceFrame += 1;
       if (hero.heroFaceFrame % 2 === 0) {
-        drawHeroStorybookFace(hero.heroFaceBundle.ctx, {
-          act: act,
-          isBlinking: isBlinking,
-          mouthOpenNow: mouthOpenNow,
-          mouthAmp: mouthAmp,
-          gazeX: clamp(hero.headYaw * 0.85, -1, 1),
-          gazeY: clamp(hero.headPitch * 0.85, -1, 1)
-        });
-        hero.heroFaceBundle.tex.needsUpdate = true;
+        const gxH = clamp(hero.headYaw * 0.85, -1, 1);
+        const gyH = clamp(hero.headPitch * 0.85, -1, 1);
+        const mBucket = mouthOpenNow ? Math.round(mouthAmp * 10) : 0;
+        const hFaceSig = act + "|" + (isBlinking ? 1 : 0) + "|" + (mouthOpenNow ? 1 : 0) + "|" + mBucket + "|" + Math.round(gxH * 10) + "|" + Math.round(gyH * 10);
+        if (hero._lastHeroFaceSig !== hFaceSig) {
+          hero._lastHeroFaceSig = hFaceSig;
+          drawHeroStorybookFace(hero.heroFaceBundle.ctx, {
+            act: act,
+            isBlinking: isBlinking,
+            mouthOpenNow: mouthOpenNow,
+            mouthAmp: mouthAmp,
+            gazeX: gxH,
+            gazeY: gyH
+          });
+          hero.heroFaceBundle.tex.needsUpdate = true;
+        }
       }
     }
 
@@ -797,27 +804,39 @@ function updateHeroCharacter(hero, camera, f, fx3d, isShowcase) {
 
   if (glbActive) {
     if (hero.vrmAvatar && typeof stage3dVrm !== "undefined") {
-      const heroMoodKey = f.daylight ? ((f.p === "DAY_VOTE" || f.p === "DAY_VOTE_RESULT") ? "vote" : "day") : (f.night ? "night" : "twilight");
-      const heroVowels = (isTalking && typeof sound !== "undefined" && typeof sound.getVoiceVowelWeights === "function")
-        ? sound.getVoiceVowelWeights(0, nowMs)
-        : null;
-      stage3dVrm.updateVrmAvatar(hero.vrmAvatar, {
-        tSec: t,
-        dt60: dt60,
-        seed: 0.5,
-        moodKey: heroMoodKey,
-        alive: true,
-        sleeping: false,
-        talking: isTalking,
-        hasActiveSpeaker: Boolean(!isShowcase && state.match && state.match.started && state.activeSpeakerId),
-        mouthAmp: mouthAmp,
-        vowels: heroVowels,
-        emotion: act === "celebrate" ? "happy" : (act === "gasp_react" ? "shock" : (act === "welcome_bow" ? "happy" : "neutral")),
-        headYaw: hero.headYaw,
-        headPitch: hero.headPitch,
-        act: act,
-        isHovered: false
-      });
+      hero._vrmFrame = (hero._vrmFrame || 0) + 1;
+      const isHeroPriority = Boolean(isShowcase || isTalking || act !== "idle_breathe");
+      const qHero = (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high";
+      const isIgpuHero = Boolean(typeof stage3d !== "undefined" && stage3d.isIntegratedGpu);
+      const heroStride = isHeroPriority ? 1 : ((qHero === "eco" || isIgpuHero) ? 3 : (qHero === "balanced" ? 2 : 1));
+      if (!hero._vrmUpdatedOnce || heroStride <= 1 || (hero._vrmFrame % heroStride === 0)) {
+        hero._vrmUpdatedOnce = true;
+        const heroMoodKey = f.daylight ? ((f.p === "DAY_VOTE" || f.p === "DAY_VOTE_RESULT") ? "vote" : "day") : (f.night ? "night" : "twilight");
+        const heroVowels = (isTalking && typeof sound !== "undefined" && typeof sound.getVoiceVowelWeights === "function")
+          ? sound.getVoiceVowelWeights(0, nowMs)
+          : null;
+        stage3dVrm.updateVrmAvatar(hero.vrmAvatar, {
+          tSec: t,
+          dt60: dt60 * heroStride,
+          seed: 0.5,
+          moodKey: heroMoodKey,
+          alive: true,
+          sleeping: false,
+          talking: isTalking,
+          hasActiveSpeaker: Boolean(!isShowcase && state.match && state.match.started && state.activeSpeakerId),
+          mouthAmp: mouthAmp,
+          vowels: heroVowels,
+          emotion: act === "celebrate" ? "happy" : (act === "gasp_react" ? "shock" : (act === "welcome_bow" ? "happy" : "neutral")),
+          headYaw: hero.headYaw,
+          headPitch: hero.headPitch,
+          act: act,
+          isHovered: false,
+          isPriority: isHeroPriority,
+          frameCounter: hero._vrmFrame,
+          seatId: 0,
+          seatCount: typeof getActive3DSeatCount === "function" ? getActive3DSeatCount() : 8
+        });
+      }
     } else {
       const glbHop = act === "celebrate" ? Math.abs(Math.sin(t * 6.5)) * 0.12 : Math.sin(t * 2.1) * 0.018;
       hero.customGlbRoot.position.y = (hero.customGlbBaseY || 0.08) + glbHop;

@@ -276,25 +276,29 @@ function draw3DFaceCanvas(ctx, seat, st, opts) {
   }
 }
 
+let _lobbySeatCache = null;
+let _lobbySeatCacheN = 0;
 function getStageSeatListFor3D() {
+  if (state.match && state.match.started) return state.match.seats;
   const inLobbyShowcase = Boolean(typeof stage3d !== "undefined" && stage3d.showcaseMode && !(state.match && state.match.started));
   const lobbySeatsN = inLobbyShowcase
     ? 12
     : (typeof getLobbySeatCount === "function" ? getLobbySeatCount() : ((el("selectModeCount") && parseInt(el("selectModeCount").value, 10)) || 8));
-  return state.match.started
-    ? state.match.seats
-    : Array.from({ length: lobbySeatsN }, function (_, idx) {
-      const n = idx + 1;
-      const pInfo = n === 1 ? null : (AI_PERSONAS[n - 2] || AI_PERSONAS[0]);
-      return {
-        id: n,
-        name: n === 1 ? "你" : pInfo.name,
-        color: n === 1 ? "#f5b942" : pInfo.avatarColor,
-        alive: true,
-        role: "villager",
-        microPulse: 22
-      };
-    });
+  if (_lobbySeatCache && _lobbySeatCacheN === lobbySeatsN) return _lobbySeatCache;
+  _lobbySeatCacheN = lobbySeatsN;
+  _lobbySeatCache = Array.from({ length: lobbySeatsN }, function (_, idx) {
+    const n = idx + 1;
+    const pInfo = n === 1 ? null : (AI_PERSONAS[n - 2] || AI_PERSONAS[0]);
+    return {
+      id: n,
+      name: n === 1 ? "你" : pInfo.name,
+      color: n === 1 ? "#f5b942" : pInfo.avatarColor,
+      alive: true,
+      role: "villager",
+      microPulse: 22
+    };
+  });
+  return _lobbySeatCache;
 }
 
 function reset3DSeatGazeState(pool) {
@@ -397,14 +401,22 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     seatSig += "|" + s.id + ":" + s.name;
   }
 
-  const coords = [];
-  const nextAnchors = {};
-  const hitMeshes = [];
-  const candleHitMeshes = [];
+  const coords = pool._coordsBuf || (pool._coordsBuf = []);
+  coords.length = 0;
+  const nextAnchors = pool._anchorsBuf || (pool._anchorsBuf = {});
+  for (const ak in nextAnchors) delete nextAnchors[ak];
+  const hitMeshes = pool._hitMeshesBuf || (pool._hitMeshesBuf = []);
+  hitMeshes.length = 0;
+  const candleHitMeshes = pool._candleHitMeshesBuf || (pool._candleHitMeshesBuf = []);
+  candleHitMeshes.length = 0;
   let playerCardHit = null;
   const projVec = sc ? sc.projVec : new THREE.Vector3();
   const projEdgeVec = sc ? sc.projEdgeVec : new THREE.Vector3();
   const camRight = (sc ? sc.camRight.set(1, 0, 0) : new THREE.Vector3(1, 0, 0)).applyQuaternion(camera.quaternion);
+  const needWorldProps = Boolean(
+    (state.dragAction && state.dragAction.active) ||
+    (state.beamFx && state.beamFx.length > 0)
+  );
 
   const isVoteMood = (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT");
   const curMoodKey = f.daylight ? (isVoteMood ? "vote" : "day") : (f.night ? "night" : "twilight");
@@ -637,10 +649,13 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
 
     const showHalo = s.alive && (isSpeaking || isSelected || isDragSnap || Boolean(s.claimedRole));
     actor.haloMat.opacity += ((showHalo ? (isSpeaking ? (0.94 + liveAmp * 0.06) : 0.55) : 0.0) - actor.haloMat.opacity) * d16;
-    actor.haloMat.color.set(isSpeaking ? "#f5c451" : (isSelected ? "#f59e0b" : (s.claimedRole === "seer" ? "#a78bfa" : "#38bdf8")));
-    actor.haloRing.position.y = actor.useVrm ? 0.24 : 0.68;
-    actor.haloRing.rotation.z = t * (isSpeaking ? 2.2 : 1.4);
-    actor.haloRing.scale.setScalar(isSpeaking ? (1.18 + liveAmp * 0.18 + Math.sin(t * 5.0) * 0.04) : (isSelected ? 1.08 : 0.96));
+    actor.haloRing.visible = actor.haloMat.opacity > 0.008;
+    if (actor.haloRing.visible) {
+      actor.haloMat.color.set(isSpeaking ? "#f5c451" : (isSelected ? "#f59e0b" : (s.claimedRole === "seer" ? "#a78bfa" : "#38bdf8")));
+      actor.haloRing.position.y = actor.useVrm ? 0.24 : 0.68;
+      actor.haloRing.rotation.z = t * (isSpeaking ? 2.2 : 1.4);
+      actor.haloRing.scale.setScalar(isSpeaking ? (1.18 + liveAmp * 0.18 + Math.sin(t * 5.0) * 0.04) : (isSelected ? 1.08 : 0.96));
+    }
 
     // 3D Floating Golden Sheriff Crown
     if (actor.sheriffCrownGroup) {
@@ -775,16 +790,20 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
 
     // Drive optional VRoid .VRM / rigged .GLB avatar attached to this AI seat
     const isPrioritySeat = Boolean(isSpeaking || isHovered || isSelected || isDragSnap || isBeingAccusedNow || isVotingNow);
+    const isDeadSettled = Boolean(!s.alive && !isSpeaking && actor.outFade > 0.96 && actor._vrmUpdatedOnce);
     const isOffScreenPrev = Boolean(actor._wasOffScreen && actor._vrmUpdatedOnce);
+    const isIgpuSeats = Boolean(typeof stage3d !== "undefined" && stage3d.isIntegratedGpu);
     const vrmStride = isPrioritySeat
       ? 1
-      : (isOffScreenPrev
-        ? 6
-        : (state.quality3D === "eco"
-          ? (nSeats >= 10 ? 4 : 3)
-          : ((nSeats >= 10 && state.quality3D === "balanced")
-            ? 3
-            : ((nSeats >= 10 || (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu && state.quality3D === "balanced")) ? 2 : 1))));
+      : (isDeadSettled
+        ? 12
+        : (isOffScreenPrev
+          ? 8
+          : (state.quality3D === "eco"
+            ? (nSeats >= 10 ? 5 : 4)
+            : ((nSeats >= 10 && state.quality3D === "balanced")
+              ? 3
+              : ((nSeats >= 10 || isIgpuSeats || state.quality3D === "balanced") ? 2 : 1)))));
     const runVrmFrame = vrmStride <= 1 || !actor._vrmUpdatedOnce || ((pool.frameCounter + s.id) % vrmStride === 0);
     if (actor.useVrm && actor.vrmAvatar && typeof stage3dVrm !== "undefined" && runVrmFrame) {
       actor._vrmUpdatedOnce = true;
@@ -918,8 +937,10 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     } else {
       actor.headPivot.getWorldPosition(actor.headWorldPos);
     }
-    actor.rightHand.getWorldPosition(actor.handWorldPos);
-    if (actor.teaGroup) actor.teaGroup.getWorldPosition(actor.teaWorldPos);
+    if (!actor._anchorObj || needWorldProps || isSpeaking || isSelected) {
+      actor.rightHand.getWorldPosition(actor.handWorldPos);
+      if (actor.teaGroup) actor.teaGroup.getWorldPosition(actor.teaWorldPos);
+    }
 
     if (!hideSelfBodyInFP) hitMeshes.push(actor.hitMesh);
     if (actor.candleHit) candleHitMeshes.push(actor.candleHit);
@@ -965,18 +986,19 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     const edgeX = (projEdgeVec.x * 0.5 + 0.5) * canvasW;
     const projR = clamp(Math.abs(edgeX - sx), 20 * f.dpr, 56 * f.dpr);
 
-    coords.push({
-      id: s.id,
-      angle: Math.PI * 0.5 + (i * Math.PI * 2) / nSeats,
-      deg: Math.round((((Math.PI * 0.5 + (i * Math.PI * 2) / nSeats) * 180) / Math.PI) % 360),
-      x: onScreen ? sx : -999,
-      y: onScreen ? sy : -999,
-      r: projR,
-      seat: s,
-      zDepth: projVec.z,
-      offScreenDir: offScreenDir,
-      visibleInView: onScreen && !hideSelfBodyInFP
-    });
+    const angSeat = Math.PI * 0.5 + (i * Math.PI * 2) / nSeats;
+    const coordObj = actor._coordObj || (actor._coordObj = {});
+    coordObj.id = s.id;
+    coordObj.angle = angSeat;
+    coordObj.deg = Math.round(((angSeat * 180) / Math.PI) % 360);
+    coordObj.x = onScreen ? sx : -999;
+    coordObj.y = onScreen ? sy : -999;
+    coordObj.r = projR;
+    coordObj.seat = s;
+    coordObj.zDepth = projVec.z;
+    coordObj.offScreenDir = offScreenDir;
+    coordObj.visibleInView = onScreen && !hideSelfBodyInFP;
+    coords.push(coordObj);
   }
 
   pool.anchors = nextAnchors;

@@ -112,8 +112,7 @@ function build3DPostFx(renderer, scene, camera, opts) {
         "uniform float uTime;",
         "varying vec2 vUv;",
         "float lumaOf(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }",
-        "vec3 sampleSmooth(vec2 uv) {",
-        "  vec3 cM = texture2D(tDiffuse, uv).rgb;",
+        "vec3 sampleSmooth(vec2 uv, vec3 cM) {",
         "  if (uUseFxaa < 0.5) return cM;",
         "  vec3 cNW = texture2D(tDiffuse, uv + vec2(-uTexelSize.x, -uTexelSize.y)).rgb;",
         "  vec3 cNE = texture2D(tDiffuse, uv + vec2( uTexelSize.x, -uTexelSize.y)).rgb;",
@@ -131,7 +130,7 @@ function build3DPostFx(renderer, scene, camera, opts) {
         "}",
         "void main() {",
         "  vec4 texel = texture2D(tDiffuse, vUv);",
-        "  vec3 baseCol = sampleSmooth(vUv);",
+        "  vec3 baseCol = sampleSmooth(vUv, texel.rgb);",
         "  vec3 col = max(baseCol * (uExposure + uExposureBoost), vec3(0.0));",
         "  col += uShadowLift * (1.0 - smoothstep(0.0, 0.35, dot(col, vec3(0.333))));",
         "  col = acesFilmic(col);",
@@ -171,6 +170,11 @@ function build3DPostFx(renderer, scene, camera, opts) {
         }
         if (gradePass.uniforms && gradePass.uniforms.uTexelSize && gradePass.uniforms.uTexelSize.value) {
           gradePass.uniforms.uTexelSize.value.set(1 / Math.max(1, width * effDpr), 1 / Math.max(1, height * effDpr));
+        }
+      },
+      setFxaaEnabled: function (enabled) {
+        if (gradePass && gradePass.uniforms && gradePass.uniforms.uUseFxaa) {
+          gradePass.uniforms.uUseFxaa.value = (!isMsaa && enabled) ? 1.0 : 0.0;
         }
       },
       setDynamicExposure: function (boost, dt60) {

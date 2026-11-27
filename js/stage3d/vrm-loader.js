@@ -69,8 +69,18 @@ const HERO_VRM_PALETTES = Object.freeze({
   inknight: Object.freeze({ topsHex: "#31415c", topsStr: 0.90, neckHex: "#d4b478", neckStr: 0.92, bottomsHex: "#1d222c", bottomsStr: 0.90, shawlHex: 0x293750, jadeHex: 0x89aed4 })
 });
 
+const VRM_FINGER_PRESETS = Object.freeze({
+  relaxed: [0.24, 0.32, 0.40, 0.48, 0.18],
+  open_palm: [0.06, 0.08, 0.12, 0.16, 0.06],
+  point_index: [0.04, 0.96, 1.04, 1.08, 0.56],
+  fist_cheer: [1.02, 1.08, 1.12, 1.14, 0.65],
+  tea_poise: [0.14, 0.26, 0.40, 0.20, 0.14]
+});
+
 const stage3dVrm = {
   _scratch: null,
+  _idleActScratch: { name: "", weight: 0, phase: 0 },
+  _skirtAngScratch: { rx: 0, ry: 0, rz: 0 },
   ensureScratch: function () {
     if (!this._scratch && typeof THREE !== "undefined" && typeof THREE.Quaternion === "function" && typeof THREE.Euler === "function") {
       this._scratch = {
@@ -170,7 +180,32 @@ const stage3dVrm = {
     } catch (e) { }
   },
 
-  downscaleVrmTextureIfNeeded: function (srcTex, maxDim, localCache) {
+  getAdaptiveVrmTexSettings: function () {
+    const isSoft = Boolean(typeof stage3d !== "undefined" && stage3d.isSoftwareRenderer);
+    const isIgpu = Boolean(typeof stage3d !== "undefined" && stage3d.isIntegratedGpu);
+    const q = (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high";
+    const isMobile = typeof navigator !== "undefined" && /android|iphone|ipad|ipod|mobile/i.test(String(navigator.userAgent || ""));
+    let maxDim = 2048;
+    let anisotropy = 6;
+    if (isSoft || isMobile || q === "eco") {
+      maxDim = 512;
+      anisotropy = 1;
+    } else if (isIgpu || q === "balanced") {
+      maxDim = 1024;
+      anisotropy = 3;
+    }
+    if (
+      typeof stage3d !== "undefined" &&
+      stage3d.renderer &&
+      stage3d.renderer.capabilities &&
+      typeof stage3d.renderer.capabilities.getMaxAnisotropy === "function"
+    ) {
+      anisotropy = Math.min(anisotropy, Math.max(1, stage3d.renderer.capabilities.getMaxAnisotropy() || 1));
+    }
+    return { maxDim: maxDim, anisotropy: anisotropy };
+  },
+
+  downscaleVrmTextureIfNeeded: function (srcTex, maxDim, localCache, anisotropy) {
     if (!srcTex || !srcTex.image) return srcTex;
     const img = srcTex.image;
     const iw = img.naturalWidth || img.width || 0;
@@ -182,7 +217,10 @@ const stage3dVrm = {
       if (typeof THREE !== "undefined" && THREE.LinearFilter !== undefined) srcTex.minFilter = THREE.LinearFilter;
       return srcTex;
     }
-    const lim = maxDim || 512;
+    if (anisotropy && anisotropy > 1 && typeof srcTex.anisotropy === "number") {
+      srcTex.anisotropy = anisotropy;
+    }
+    const lim = maxDim || 1024;
     if (Math.max(iw, ih) <= lim || typeof document === "undefined" || typeof THREE === "undefined" || typeof THREE.CanvasTexture !== "function") {
       return srcTex;
     }
@@ -201,6 +239,7 @@ const stage3dVrm = {
       outTex.flipY = srcTex.flipY;
       outTex.wrapS = srcTex.wrapS;
       outTex.wrapT = srcTex.wrapT;
+      if (anisotropy && anisotropy > 1) outTex.anisotropy = anisotropy;
       if (THREE.sRGBEncoding !== undefined) outTex.encoding = srcTex.encoding || THREE.sRGBEncoding;
       outTex.needsUpdate = true;
       if (localCache) localCache[cacheKey] = outTex;
@@ -292,7 +331,7 @@ const stage3dVrm = {
     this._recolorCacheKeys = [];
   },
 
-  recolorVrmTextureMap: function (srcTex, targetHex, strength, localCache) {
+  recolorVrmTextureMap: function (srcTex, targetHex, strength, localCache, opts) {
     if (!srcTex || !srcTex.image || !targetHex || typeof document === "undefined" || typeof THREE.CanvasTexture !== "function") {
       return srcTex;
     }
@@ -300,7 +339,12 @@ const stage3dVrm = {
     const iw = img.naturalWidth || img.width || 0;
     const ih = img.naturalHeight || img.height || 0;
     if (iw < 4 || ih < 4) return srcTex;
-    const cacheKey = (srcTex.uuid || "tex") + "|" + targetHex + "|" + (strength || 0.8);
+    const o = opts || {};
+    const texCfg = this.getAdaptiveVrmTexSettings();
+    const maxDim = o.maxDim || texCfg.maxDim;
+    const aniso = o.anisotropy || texCfg.anisotropy;
+    const isHair = Boolean(o.isHair);
+    const cacheKey = (srcTex.uuid || "tex") + "|" + targetHex + "|" + (strength || 0.6) + "|" + maxDim + "|" + (isHair ? "h" : "c");
     if (localCache && localCache[cacheKey]) return localCache[cacheKey];
     if (!localCache && this._recolorCache[cacheKey]) return this._recolorCache[cacheKey];
     try {
@@ -308,7 +352,11 @@ const stage3dVrm = {
       const tr = parseInt(hex.slice(0, 2), 16) || 0;
       const tg = parseInt(hex.slice(2, 4), 16) || 0;
       const tb = parseInt(hex.slice(4, 6), 16) || 0;
-      const maxDim = 512;
+      const tLum = Math.max(0.14, (0.299 * tr + 0.587 * tg + 0.114 * tb) / 255);
+      // Normalize target chroma so luminance modulation preserves hand-painted anime hair gradients & cloth folds!
+      const cr = tr / tLum;
+      const cg = tg / tLum;
+      const cb = tb / tLum;
       const sc = Math.min(1, maxDim / Math.max(iw, ih));
       const w = Math.max(16, Math.round(iw * sc));
       const h = Math.max(16, Math.round(ih * sc));
@@ -319,26 +367,34 @@ const stage3dVrm = {
       ctx.drawImage(img, 0, 0, w, h);
       const idata = ctx.getImageData(0, 0, w, h);
       const d = idata.data;
-      const blend = clamp(Number(strength) || 0.8, 0.15, 0.96);
+      const rawBlend = Number(strength) || 0.72;
+      const blendCap = isHair ? 0.56 : 0.70;
+      const blend = clamp(rawBlend * (isHair ? 0.74 : 0.84), 0.14, blendCap);
+      const invBase = 1 - blend;
       for (let i = 0; i < d.length; i += 4) {
         if (d[i + 3] < 8) continue;
         const r = d[i], g = d[i + 1], b = d[i + 2];
         const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        // Preserve anime highlights & strand shading while shifting hue cleanly into targetHex!
-        const lift = lum > 0.78 ? (0.85 + (lum - 0.78) * 2.1) : (0.36 + lum * 1.18);
-        const specBoost = lum > 0.84 ? ((lum - 0.84) * 260) : 0;
-        const nr = Math.min(255, tr * lift + specBoost);
-        const ng = Math.min(255, tg * lift + specBoost);
-        const nb = Math.min(255, tb * lift + specBoost);
-        d[i] = Math.round(r * (1 - blend) + nr * blend);
-        d[i + 1] = Math.round(g * (1 - blend) + ng * blend);
-        d[i + 2] = Math.round(b * (1 - blend) + nb * blend);
+        // Preserve bright anime highlights & dark ink lines while shifting midtone hue cleanly!
+        const hiGuard = lum > 0.74 ? clamp((lum - 0.74) / 0.26, 0, 1) : 0;
+        const darkGuard = lum < 0.14 ? clamp((0.14 - lum) / 0.14, 0, 1) : 0;
+        const effBlend = blend * (1 - hiGuard * 0.62) * (1 - darkGuard * 0.50);
+        const effInv = 1 - effBlend;
+        const shapedLum = isHair ? (lum * 0.72 + tLum * 0.28) : (lum * 0.58 + tLum * 0.42);
+        const specLift = hiGuard * 72;
+        const nr = Math.min(255, cr * shapedLum + specLift);
+        const ng = Math.min(255, cg * shapedLum + specLift);
+        const nb = Math.min(255, cb * shapedLum + specLift);
+        d[i] = Math.round(r * effInv + nr * effBlend);
+        d[i + 1] = Math.round(g * effInv + ng * effBlend);
+        d[i + 2] = Math.round(b * effInv + nb * effBlend);
       }
       ctx.putImageData(idata, 0, 0);
       const outTex = new THREE.CanvasTexture(c);
       outTex.flipY = srcTex.flipY;
       outTex.wrapS = srcTex.wrapS;
       outTex.wrapT = srcTex.wrapT;
+      if (aniso && aniso > 1) outTex.anisotropy = aniso;
       if (THREE.sRGBEncoding !== undefined) outTex.encoding = THREE.sRGBEncoding;
       outTex.needsUpdate = true;
       if (localCache) {
@@ -518,386 +574,13 @@ const stage3dVrm = {
   },
 
   attachVrmPersonaAccessories: function (bones, personaName, isVrm0) {
-    const styling = this.getPersonaStyling(personaName);
-    if (!styling || !styling.vrmAcc || !bones || typeof THREE === "undefined") return null;
-    const acc = styling.vrmAcc;
-    const headBone = bones.head;
-    const chestBone = bones.upperChest || bones.chest || bones.spine;
-    const mounted = [];
-
-    // Auto-calibrate exact face/eye plane in headBone local space (millimeter-accurate on every VRM!)
-    let eyeY = 0.068;
-    let eyeZ = isVrm0 ? -0.048 : 0.048;
-    let fwdSign = isVrm0 ? -1 : 1;
-    let eyeHalf = 0.028;
-    if (headBone && bones.leftEye && bones.rightEye && typeof headBone.worldToLocal === "function" && typeof bones.leftEye.getWorldPosition === "function") {
-      const wL = new THREE.Vector3();
-      const wR = new THREE.Vector3();
-      bones.leftEye.getWorldPosition(wL);
-      bones.rightEye.getWorldPosition(wR);
-      const lLoc = headBone.worldToLocal(wL.clone());
-      const rLoc = headBone.worldToLocal(wR.clone());
-      eyeY = (lLoc.y + rLoc.y) * 0.5;
-      eyeZ = (lLoc.z + rLoc.z) * 0.5;
-      const dx = Math.abs(lLoc.x - rLoc.x);
-      if (dx > 0.012 && dx < 0.14) eyeHalf = dx * 0.5;
-      if (Math.abs(eyeZ) > 0.005) fwdSign = eyeZ < 0 ? -1 : 1;
-    }
-
-    const goldMat = new THREE.MeshStandardMaterial({ color: 0xebc167, roughness: 0.24, metalness: 0.82 });
-    const jadeMat = new THREE.MeshStandardMaterial({ color: 0x6ec7a5, roughness: 0.28, metalness: 0.18 });
-    const darkMetal = new THREE.MeshStandardMaterial({ color: 0x1c2536, roughness: 0.26, metalness: 0.78 });
-
-    if (acc === "glasses" && headBone) {
-      // 小澄：細框眼鏡（頭骨）＋立領連帽外套翻領與拉鍊頭（胸骨，徹底區隔阿竹青衫！）
-      const gGrp = new THREE.Group();
-      const lensZ = eyeZ + fwdSign * 0.056;
-      const lensR = Math.max(0.019, eyeHalf * 0.76);
-      const rimGeo = new THREE.TorusGeometry(lensR, 0.0024, 8, 20);
-      const lensGeo = new THREE.CircleGeometry(lensR * 0.92, 16);
-      const lensMat = new THREE.MeshBasicMaterial({ color: 0xdcf7ff, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
-      [-1, 1].forEach(function (side) {
-        const rim = new THREE.Mesh(rimGeo, darkMetal);
-        rim.position.set(side * (eyeHalf * 1.10), eyeY, lensZ);
-        const lens = new THREE.Mesh(lensGeo, lensMat);
-        lens.position.set(side * (eyeHalf * 1.10), eyeY, lensZ);
-        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.0028, 0.0028, 0.095), darkMetal);
-        arm.position.set(side * (eyeHalf * 1.10 + lensR * 0.96), eyeY + 0.002, lensZ - fwdSign * 0.048);
-        gGrp.add(rim, lens, arm);
-      });
-      const bridge = new THREE.Mesh(new THREE.BoxGeometry(eyeHalf * 0.72, 0.0032, 0.0032), darkMetal);
-      bridge.position.set(0, eyeY + 0.003, lensZ + fwdSign * 0.002);
-      gGrp.add(bridge);
-      headBone.add(gGrp);
-      mounted.push(gGrp);
-      if (chestBone) {
-        const hoodGrp = new THREE.Group();
-        const trimMat = new THREE.MeshStandardMaterial({ color: 0xe6dec8, roughness: 0.52 });
-        const zipLine = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.145, 0.006), darkMetal);
-        zipLine.position.set(0, 0.048, fwdSign * 0.096);
-        [-1, 1].forEach(function (sd) {
-          const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.0032, 0.0032, 0.074, 6), trimMat);
-          cord.position.set(sd * 0.025, 0.086, fwdSign * 0.098);
-          cord.rotation.z = sd * 0.10;
-          hoodGrp.add(cord);
-        });
-        hoodGrp.add(zipLine);
-        chestBone.add(hoodGrp);
-        mounted.push(hoodGrp);
-      }
-    } else if (acc === "headband" && headBone) {
-      const bGrp = new THREE.Group();
-      const bandMat = new THREE.MeshStandardMaterial({ color: 0xe6912e, roughness: 0.55, metalness: 0.05 });
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.106, 0.013, 8, 28), bandMat);
-      band.rotation.x = Math.PI * 0.5;
-      band.position.set(0, eyeY + 0.048, eyeZ * 0.12);
-      band.scale.set(0.96, 1.06, 1.0);
-      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 6), bandMat);
-      knot.position.set(0, eyeY + 0.045, -fwdSign * 0.112);
-      bGrp.add(band, knot);
-      headBone.add(bGrp);
-      mounted.push(bGrp);
-    } else if (acc === "star_clip" && headBone) {
-      // 星兒：放大 1.3x 並加微光材質的占星金星髮夾
-      const sGrp = new THREE.Group();
-      const starGlowMat = new THREE.MeshStandardMaterial({
-        color: 0xf7d26a, emissive: 0xd49c2a, emissiveIntensity: 0.45, roughness: 0.22, metalness: 0.85
-      });
-      sGrp.position.set(0.074, eyeY + 0.058, eyeZ + fwdSign * 0.036);
-      sGrp.rotation.set(0.15, fwdSign < 0 ? 0.5 : -0.5, -0.35);
-      sGrp.scale.setScalar(1.3);
-      for (let k = 0; k < 5; k++) {
-        const ang = (k / 5) * Math.PI * 2;
-        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.0075, 0.024, 4), starGlowMat);
-        spike.position.set(Math.cos(ang) * 0.0095, Math.sin(ang) * 0.0095, 0);
-        spike.rotation.z = ang - Math.PI * 0.5;
-        sGrp.add(spike);
-      }
-      const coreStar = new THREE.Mesh(new THREE.SphereGeometry(0.0075, 8, 6), starGlowMat);
-      sGrp.add(coreStar);
-      headBone.add(sGrp);
-      mounted.push(sGrp);
-    } else if (acc === "ribbon" && headBone) {
-      const rGrp = new THREE.Group();
-      const ribMat = new THREE.MeshStandardMaterial({ color: 0xe8c468, roughness: 0.45, metalness: 0.08 });
-      rGrp.position.set(0.082, eyeY + 0.048, eyeZ + fwdSign * 0.022);
-      rGrp.rotation.set(0.1, fwdSign < 0 ? 0.65 : -0.65, -0.3);
-      const wL = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.038, 6), ribMat);
-      wL.position.x = -0.016; wL.rotation.z = -Math.PI * 0.5;
-      const wR = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.038, 6), ribMat);
-      wR.position.x = 0.016; wR.rotation.z = Math.PI * 0.5;
-      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.010, 8, 6), goldMat);
-      rGrp.add(wL, wR, knot);
-      headBone.add(rGrp);
-      mounted.push(rGrp);
-    } else if (acc === "hiking_scarf" && chestBone) {
-      // 阿松：貼身登山徽章掛繩＋手腕編織傘繩（零浮空穿模圈環）
-      const scGrp = new THREE.Group();
-      const scarfMat = new THREE.MeshStandardMaterial({ color: 0x3b6a52, roughness: 0.72, metalness: 0.04 });
-      const stripeMat = new THREE.MeshStandardMaterial({ color: 0xd9c7a0, roughness: 0.65 });
-      const badge = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.042, 0.008), scarfMat);
-      badge.position.set(0.056 * fwdSign, 0.072, fwdSign * 0.096);
-      const clasp = new THREE.Mesh(new THREE.BoxGeometry(0.020, 0.008, 0.010), goldMat);
-      clasp.position.set(0.056 * fwdSign, 0.094, fwdSign * 0.098);
-      scGrp.add(badge, clasp);
-      chestBone.add(scGrp);
-      mounted.push(scGrp);
-      const wristBone = bones.rightHand || bones.rightLowerArm;
-      if (wristBone) {
-        const paracord = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.007, 6, 14), stripeMat);
-        paracord.rotation.x = Math.PI * 0.5;
-        paracord.position.set(0, -0.01, 0);
-        wristBone.add(paracord);
-        mounted.push(paracord);
-      }
-    } else if (acc === "press_kit" && chestBone) {
-      // 小雲（補齊原本 null）：斜背採訪證掛繩＋胸袋速寫本（胸骨）＋單邊俐落髮夾（頭骨）
-      const pkGrp = new THREE.Group();
-      const strapMat = new THREE.MeshStandardMaterial({ color: 0x9e2f44, roughness: 0.52 });
-      const cardMat = new THREE.MeshStandardMaterial({ color: 0xf7f2e7, roughness: 0.35 });
-      const bookMat = new THREE.MeshStandardMaterial({ color: 0x222938, roughness: 0.62 });
-      [-1, 1].forEach(function (sd) {
-        const strap = new THREE.Mesh(new THREE.BoxGeometry(0.011, 0.155, 0.005), strapMat);
-        strap.position.set(sd * 0.040, 0.082, fwdSign * 0.095);
-        strap.rotation.z = sd * 0.24;
-        pkGrp.add(strap);
-      });
-      const badgeHolder = new THREE.Mesh(new THREE.BoxGeometry(0.054, 0.072, 0.008), cardMat);
-      badgeHolder.position.set(0, -0.006, fwdSign * 0.105);
-      const badgeBand = new THREE.Mesh(new THREE.BoxGeometry(0.056, 0.016, 0.010), strapMat);
-      badgeBand.position.set(0, 0.020, fwdSign * 0.106);
-      const notebook = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.068, 0.014), bookMat);
-      notebook.position.set(-0.078 * fwdSign, 0.028, fwdSign * 0.092);
-      notebook.rotation.z = 0.08 * fwdSign;
-      const pen = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.075, 6), goldMat);
-      pen.position.set(-0.064 * fwdSign, 0.036, fwdSign * 0.100);
-      pkGrp.add(badgeHolder, badgeBand, notebook, pen);
-      chestBone.add(pkGrp);
-      mounted.push(pkGrp);
-      if (headBone) {
-        const clip = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.009, 0.008), strapMat);
-        clip.position.set(-0.072, eyeY + 0.042, eyeZ + fwdSign * 0.036);
-        clip.rotation.set(0.08, fwdSign < 0 ? -0.45 : 0.45, 0.22);
-        headBone.add(clip);
-        mounted.push(clip);
-      }
-    } else if (acc === "jade_hairpin" && headBone) {
-      // 晴嵐：青玉流蘇古風髮簪＋單側垂胸長髮辮＋溫雅披帛（獨立女模 xiaocheng.vrm）
-      const pGrp = new THREE.Group();
-      pGrp.position.set(0.082, eyeY + 0.056, eyeZ + fwdSign * 0.015);
-      pGrp.rotation.set(0.08, 0.25, -0.55);
-      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.0030, 0.0024, 0.125, 8), goldMat);
-      const bead = new THREE.Mesh(new THREE.SphereGeometry(0.015, 10, 8), jadeMat);
-      bead.position.y = 0.056;
-      const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.0095, 0.062, 8), jadeMat);
-      tassel.position.set(0.016, 0.008, 0);
-      tassel.rotation.z = 0.55;
-      pGrp.add(stem, bead, tassel);
-      headBone.add(pGrp);
-      mounted.push(pGrp);
-      // 單側垂肩長髮辮（顯著區隔輪廓！）
-      const braidMat = new THREE.MeshStandardMaterial({ color: 0x4b2e21, roughness: 0.58 });
-      const braidGrp = new THREE.Group();
-      for (let bi = 0; bi < 6; bi++) {
-        const seg = new THREE.Mesh(new THREE.SphereGeometry(0.021 - bi * 0.0018, 8, 6), braidMat);
-        seg.scale.set(0.88, 1.32, 0.88);
-        seg.position.set(-0.082 - bi * 0.002, eyeY - 0.036 - bi * 0.035, eyeZ + fwdSign * (0.028 + bi * 0.015));
-        braidGrp.add(seg);
-      }
-      const braidTie = new THREE.Mesh(new THREE.TorusGeometry(0.013, 0.0045, 6, 12), jadeMat);
-      braidTie.rotation.x = Math.PI * 0.5;
-      braidTie.position.set(-0.094, eyeY - 0.242, eyeZ + fwdSign * 0.112);
-      braidGrp.add(braidTie);
-      headBone.add(braidGrp);
-      mounted.push(braidGrp);
-      if (chestBone) {
-        const claspMat = new THREE.MeshStandardMaterial({ color: 0xf4e8de, roughness: 0.48 });
-        const chestBrooch = new THREE.Mesh(new THREE.OctahedronGeometry(0.015, 0), claspMat);
-        chestBrooch.scale.set(1.2, 0.85, 0.45);
-        chestBrooch.position.set(0, 0.068, fwdSign * 0.098);
-        chestBone.add(chestBrooch);
-        mounted.push(chestBrooch);
-      }
-    } else if (acc === "yuzu_clip" && headBone) {
-      // 柚子：點心社抹茶軟呢貝雷帽＋雙側蓬鬆耳髮＋金柚果實胸／帽徽（徹底拉開與暖暖剪影差距！）
-      const beretGrp = new THREE.Group();
-      const beretMat = new THREE.MeshStandardMaterial({ color: 0x6b8747, roughness: 0.72, metalness: 0.04 });
-      const rimMat = new THREE.MeshStandardMaterial({ color: 0x4b6132, roughness: 0.68 });
-      const capCrown = new THREE.Mesh(new THREE.SphereGeometry(0.128, 16, 12), beretMat);
-      capCrown.scale.set(1.12, 0.44, 1.08);
-      capCrown.position.set(0.018, eyeY + 0.118, -fwdSign * 0.018);
-      capCrown.rotation.z = -0.18;
-      const capRim = new THREE.Mesh(new THREE.TorusGeometry(0.106, 0.014, 8, 24), rimMat);
-      capRim.rotation.x = Math.PI * 0.5;
-      capRim.rotation.y = 0.18;
-      capRim.position.set(0.010, eyeY + 0.088, -fwdSign * 0.010);
-      const capStem = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.005, 0.024, 6), rimMat);
-      capStem.position.set(0.028, eyeY + 0.172, -fwdSign * 0.020);
-      capStem.rotation.z = -0.25;
-      // 雙側蓬鬆短捲耳髮
-      const curlMat = new THREE.MeshStandardMaterial({ color: 0x9c652f, roughness: 0.60 });
-      [-1, 1].forEach(function (sd) {
-        const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.036, 10, 8), curlMat);
-        tuft.scale.set(0.82, 1.32, 0.92);
-        tuft.position.set(sd * 0.106, eyeY - 0.012, eyeZ + fwdSign * 0.002);
-        beretGrp.add(tuft);
-      });
-      // 帽緣金柚果實＋雙翠葉徽飾
-      const yGrp = new THREE.Group();
-      yGrp.position.set(0.095, eyeY + 0.082, eyeZ + fwdSign * 0.032);
-      yGrp.rotation.set(0.12, fwdSign < 0 ? 0.52 : -0.52, -0.25);
-      const fruitMat = new THREE.MeshStandardMaterial({ color: 0xf4b938, roughness: 0.36, metalness: 0.08 });
-      const leafMat = new THREE.MeshStandardMaterial({ color: 0x4ca64c, roughness: 0.45 });
-      const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.015, 10, 8), fruitMat);
-      const leaf1 = new THREE.Mesh(new THREE.ConeGeometry(0.007, 0.026, 5), leafMat);
-      leaf1.position.set(-0.013, 0.012, 0); leaf1.rotation.z = 0.75;
-      const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.0065, 0.022, 5), leafMat);
-      leaf2.position.set(-0.004, 0.018, 0); leaf2.rotation.z = 0.25;
-      yGrp.add(fruit, leaf1, leaf2);
-      beretGrp.add(capCrown, capRim, capStem, yGrp);
-      headBone.add(beretGrp);
-      mounted.push(beretGrp);
-    } else if (acc === "gavel_brooch" && chestBone) {
-      // 阿朗：深色西裝背心翻領＋領帶＋法槌桂冠胸章（胸骨）＋單邊辯論耳掛（頭骨，區隔男主角！）
-      const vestGrp = new THREE.Group();
-      const vestMat = new THREE.MeshStandardMaterial({ color: 0x2c241d, roughness: 0.55, metalness: 0.08 });
-      const tieMat = new THREE.MeshStandardMaterial({ color: 0x8f2424, roughness: 0.45 });
-      [-1, 1].forEach(function (sd) {
-        const lapel = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.165, 0.022), vestMat);
-        lapel.position.set(sd * 0.056, 0.058, fwdSign * 0.088);
-        lapel.rotation.z = sd * 0.24;
-        lapel.rotation.y = -sd * 0.18 * fwdSign;
-        vestGrp.add(lapel);
-      });
-      const tieKnot = new THREE.Mesh(new THREE.ConeGeometry(0.016, 0.028, 4), tieMat);
-      tieKnot.rotation.x = Math.PI;
-      tieKnot.position.set(0, 0.112, fwdSign * 0.098);
-      const tieBlade = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.125, 0.008), tieMat);
-      tieBlade.position.set(0, 0.036, fwdSign * 0.098);
-      const gbGrp = new THREE.Group();
-      gbGrp.position.set(-0.064 * fwdSign, 0.058, fwdSign * 0.104);
-      const wreath = new THREE.Mesh(new THREE.TorusGeometry(0.021, 0.0036, 6, 16), goldMat);
-      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.0026, 0.0026, 0.030, 6), goldMat);
-      handle.rotation.z = -0.45;
-      const headG = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.020, 8), goldMat);
-      headG.position.set(0.006, 0.010, 0); headG.rotation.z = 1.1;
-      gbGrp.add(wreath, handle, headG);
-      vestGrp.add(tieKnot, tieBlade, gbGrp);
-      chestBone.add(vestGrp);
-      mounted.push(vestGrp);
-      if (headBone) {
-        const earGrp = new THREE.Group();
-        const earHook = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.004, 6, 14), darkMetal);
-        earHook.position.set(0.092, eyeY - 0.008, eyeZ * 0.15);
-        earHook.rotation.y = Math.PI * 0.5;
-        const micBoom = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.0022, 0.068, 6), darkMetal);
-        micBoom.rotation.x = Math.PI * 0.45;
-        micBoom.rotation.z = 0.32;
-        micBoom.position.set(0.072, eyeY - 0.034, eyeZ + fwdSign * 0.032);
-        earGrp.add(earHook, micBoom);
-        headBone.add(earGrp);
-        mounted.push(earGrp);
-      }
-    } else if (acc === "ink_scroll" && chestBone) {
-      // 墨白：頭頂束髮高髻＋玉簪（頭骨）＋深藍書院交領寬袖披肩＋朱印玉扣（胸骨，徹底脫離晨晨運動風！）
-      if (headBone) {
-        const bunGrp = new THREE.Group();
-        const inkHairMat = new THREE.MeshStandardMaterial({ color: 0x141822, roughness: 0.55 });
-        const topknot = new THREE.Mesh(new THREE.SphereGeometry(0.048, 12, 10), inkHairMat);
-        topknot.scale.set(0.92, 1.15, 0.92);
-        topknot.position.set(0, eyeY + 0.148, -fwdSign * 0.028);
-        const hairCrown = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.042, 0.038, 12), darkMetal);
-        hairCrown.position.set(0, eyeY + 0.140, -fwdSign * 0.028);
-        const crownPin = new THREE.Mesh(new THREE.CylinderGeometry(0.0032, 0.0032, 0.148, 8), jadeMat);
-        crownPin.rotation.z = Math.PI * 0.5;
-        crownPin.position.set(0, eyeY + 0.148, -fwdSign * 0.028);
-        bunGrp.add(topknot, hairCrown, crownPin);
-        headBone.add(bunGrp);
-        mounted.push(bunGrp);
-      }
-      const isGrp = new THREE.Group();
-      const ivoryTrim = new THREE.MeshStandardMaterial({ color: 0xede3cf, roughness: 0.52 });
-      [-1, 1].forEach(function (sd) {
-        const crossCollar = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.155, 0.012), ivoryTrim);
-        crossCollar.position.set(sd * 0.032, 0.056, fwdSign * 0.094);
-        crossCollar.rotation.z = -sd * 0.32;
-        isGrp.add(crossCollar);
-      });
-      const cinnabar = new THREE.MeshStandardMaterial({ color: 0xa63529, roughness: 0.42 });
-      const seal = new THREE.Mesh(new THREE.BoxGeometry(0.020, 0.028, 0.008), cinnabar);
-      seal.position.set(0, 0.026, fwdSign * 0.104);
-      const cord = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.0026, 6, 12), goldMat);
-      cord.position.set(0, 0.044, fwdSign * 0.104);
-      isGrp.add(seal, cord);
-      chestBone.add(isGrp);
-      mounted.push(isGrp);
-    } else if (acc === "jade_pendant" && chestBone) {
-      // 阿竹：貼合交領細飾＋青玉佩（移除浮空圓環穿模）
-      const jpGrp = new THREE.Group();
-      const lapelTrim = new THREE.MeshStandardMaterial({ color: 0xd9e8df, roughness: 0.52 });
-      [-1, 1].forEach(function (sd) {
-        const collar = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.145, 0.012), lapelTrim);
-        collar.position.set(sd * 0.032, 0.058, fwdSign * 0.092);
-        collar.rotation.z = -sd * 0.28;
-        jpGrp.add(collar);
-      });
-      const disc = new THREE.Mesh(new THREE.TorusGeometry(0.017, 0.005, 6, 14), jadeMat);
-      disc.position.set(0, 0.018, fwdSign * 0.106);
-      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.006, 6, 6), goldMat);
-      knot.position.set(0, 0.037, fwdSign * 0.106);
-      jpGrp.add(disc, knot);
-      chestBone.add(jpGrp);
-      mounted.push(jpGrp);
-    } else if (acc === "tea_host") {
-      // 清茗：古金茶葉髮簪（頭骨）＋貼身青瓷交領襟飾與玉佩（胸骨，零浮空圈環）＋左手捧青瓷茶盞
-      const shawlMat = new THREE.MeshStandardMaterial({ color: 0x3b6658, roughness: 0.58, metalness: 0.06 });
-      const ivoryLapelMat = new THREE.MeshStandardMaterial({ color: 0xf0e7d5, roughness: 0.50 });
-      const celadonCupMat = new THREE.MeshStandardMaterial({ color: 0xd8f3e8, roughness: 0.16, metalness: 0.08 });
-      const teaLiquidMat = new THREE.MeshStandardMaterial({ color: 0xb67b2e, roughness: 0.14, metalness: 0.18 });
-      mounted.accMats = { shawlMat: shawlMat, jadeMat: jadeMat };
-      if (headBone) {
-        const pinGrp = new THREE.Group();
-        const leaf = new THREE.Mesh(new THREE.OctahedronGeometry(0.024, 0), goldMat);
-        leaf.scale.set(1.5, 0.52, 0.36);
-        leaf.position.set(0.072, eyeY + 0.078, eyeZ + fwdSign * 0.014);
-        leaf.rotation.set(0.18, 0.45, -0.42);
-        const bead = new THREE.Mesh(new THREE.SphereGeometry(0.009, 8, 6), jadeMat);
-        bead.position.set(0.056, eyeY + 0.074, eyeZ + fwdSign * 0.022);
-        pinGrp.add(leaf, bead);
-        headBone.add(pinGrp);
-        mounted.push(pinGrp);
-      }
-      if (chestBone) {
-        const robeGrp = new THREE.Group();
-        [-1, 1].forEach(function (sd) {
-          const lapel = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.156, 0.011), sd === 1 ? shawlMat : ivoryLapelMat);
-          lapel.position.set(sd * 0.032, 0.048, fwdSign * 0.092);
-          lapel.rotation.z = -sd * 0.28;
-          robeGrp.add(lapel);
-        });
-        const jadeRing = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.0048, 6, 14), jadeMat);
-        jadeRing.position.set(0, 0.016, fwdSign * 0.104);
-        const goldKnot = new THREE.Mesh(new THREE.SphereGeometry(0.0058, 6, 6), goldMat);
-        goldKnot.position.set(0, 0.033, fwdSign * 0.104);
-        robeGrp.add(jadeRing, goldKnot);
-        chestBone.add(robeGrp);
-        mounted.push(robeGrp);
-      }
-      if (bones.leftHand) {
-        const cupGrp = new THREE.Group();
-        cupGrp.position.set(0.028, -0.022, fwdSign * 0.048);
-        const saucer = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.034, 0.007, 16), celadonCupMat);
-        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.022, 0.042, 14), celadonCupMat);
-        cup.position.y = 0.024;
-        const tea = new THREE.Mesh(new THREE.CircleGeometry(0.027, 12), teaLiquidMat);
-        tea.rotation.x = -Math.PI * 0.5;
-        tea.position.y = 0.042;
-        cupGrp.add(saucer, cup, tea);
-        bones.leftHand.add(cupGrp);
-        mounted.push(cupGrp);
-      }
-    }
-    return mounted.length ? mounted : null;
+    // Track 2 Overhaul: Strip un-outlined plastic primitive geometry accessories
+    // so native VRM anime silhouettes render cleanly without extra materials or draw calls.
+    // VRM_PERSONA_STYLING metadata stays intact for persona palette styling & smoke checks.
+    void bones;
+    void personaName;
+    void isVrm0;
+    return null;
   },
 
   getSeatModelSlug: function (seatOrName) {
@@ -1348,8 +1031,10 @@ const stage3dVrm = {
    * NEVER inherit UpperLeg (-1.40 rad) + compound negative tilts that flip the skirt upward!
    * Positive rx relaxes the hem DOWNWARD (gravity toward knees/cushion); ±rz splays sides gently outward.
    */
-  getSeatedSkirtTargetAngles: function (sb, sway) {
-    if (!sb) return { rx: 0, ry: 0, rz: 0 };
+  getSeatedSkirtTargetAngles: function (sb, sway, outObj) {
+    const out = outObj || { rx: 0, ry: 0, rz: 0 };
+    out.rx = 0; out.ry = 0; out.rz = 0;
+    if (!sb) return out;
     const d = Math.min(sb.depth || 0, 2);
     const zone = sb.skirtZone || "front";
     const sgn = sb.skirtSideSign || 0;
@@ -1357,32 +1042,32 @@ const stage3dVrm = {
     if (sb.skirtInheritsLeg) {
       // Parent UpperLeg is already bent -1.42 rad (-81 deg) forward along thigh; relax DOWNWARD (+rx) & tuck center inward!
       if (zone === "front") {
-        const rx = d === 0 ? 0.24 : (d === 1 ? 0.42 : 0.26);
-        const rz = d === 0 ? (-sgn * 0.05) : 0;
-        return { rx: rx + sw, ry: 0, rz: rz };
+        out.rx = (d === 0 ? 0.24 : (d === 1 ? 0.42 : 0.26)) + sw;
+        out.rz = d === 0 ? (-sgn * 0.05) : 0;
+        return out;
       }
       if (zone === "back") {
-        const rx = d === 0 ? 0.58 : (d === 1 ? 0.38 : 0.22);
-        return { rx: rx + sw * 0.35, ry: 0, rz: 0 };
+        out.rx = (d === 0 ? 0.58 : (d === 1 ? 0.38 : 0.22)) + sw * 0.35;
+        return out;
       }
       // side panel parented to UpperLeg (Gen-A VRMs: player, xiaoyun, qingming)
-      const rx = d === 0 ? 0.72 : (d === 1 ? 0.40 : 0.22);
-      const rz = d === 0 ? (sgn * 0.09) : (d === 1 ? (sgn * 0.04) : 0);
-      return { rx: rx + sw * 0.5, ry: 0, rz: rz };
+      out.rx = (d === 0 ? 0.72 : (d === 1 ? 0.40 : 0.22)) + sw * 0.5;
+      out.rz = d === 0 ? (sgn * 0.09) : (d === 1 ? (sgn * 0.04) : 0);
+      return out;
     }
     // Hips-parented skirt panels (Gen-B VRMs: nuannuan/xinger Side panels) start hanging straight down (0 rad)
     if (zone === "side") {
-      const rx = d === 0 ? -0.16 : (d === 1 ? 0.10 : 0.06);
-      const rz = d === 0 ? (sgn * 0.18) : (d === 1 ? (sgn * 0.06) : 0);
-      return { rx: rx + sw * 0.6, ry: 0, rz: rz };
+      out.rx = (d === 0 ? -0.16 : (d === 1 ? 0.10 : 0.06)) + sw * 0.6;
+      out.rz = d === 0 ? (sgn * 0.18) : (d === 1 ? (sgn * 0.06) : 0);
+      return out;
     }
     if (zone === "back") {
-      const rx = d === 0 ? 0.12 : (d === 1 ? 0.08 : 0.04);
-      return { rx: rx + sw * 0.4, ry: 0, rz: 0 };
+      out.rx = (d === 0 ? 0.12 : (d === 1 ? 0.08 : 0.04)) + sw * 0.4;
+      return out;
     }
     // Hips-parented front panel fallback
-    const rxF = d === 0 ? -0.58 : (d === 1 ? 0.34 : 0.22);
-    return { rx: rxF + sw, ry: 0, rz: 0 };
+    out.rx = (d === 0 ? -0.58 : (d === 1 ? 0.34 : 0.22)) + sw;
+    return out;
   },
 
   prepareLoadedAvatar: function (gltf, opts) {
@@ -1412,6 +1097,7 @@ const stage3dVrm = {
     const springBones = this.resolveSpringBones(gltf, boneRes.pickByIdxOrName);
 
     // CRITICAL STEP 1: Scale model in STANDING T-Pose BEFORE bending legs so seated pose never inflates avatar into a 2.9m giant!
+    let modelScale = 1.0;
     root.updateMatrixWorld(true);
     if (typeof THREE.Box3 === "function") {
       const box = new THREE.Box3().setFromObject(modelWrap);
@@ -1422,6 +1108,7 @@ const stage3dVrm = {
         box.getCenter(center);
         const h = Math.max(0.01, size.y);
         const sc = targetHeight / h;
+        modelScale = sc;
         modelWrap.scale.setScalar(sc);
         modelWrap.position.set(
           -center.x * sc,
@@ -1472,7 +1159,7 @@ const stage3dVrm = {
       // Anatomically drape skirt spring-bones DOWN over seated thighs & knees (compensating for UpperLeg -1.40 rad!)
       for (let si = 0; si < springBones.length; si++) {
         if (springBones[si].isSkirt && springBones[si].quatMeta) {
-          const skAng = this.getSeatedSkirtTargetAngles(springBones[si], 0);
+          const skAng = this.getSeatedSkirtTargetAngles(springBones[si], 0, this._skirtAngScratch);
           this.setBoneModelDeltaImmediate(springBones[si].quatMeta, skAng.rx, skAng.ry, skAng.rz, "YXZ");
         }
       }
@@ -1517,6 +1204,8 @@ const stage3dVrm = {
       !(typeof stage3d !== "undefined" && stage3d.isSoftwareRenderer)
     );
     const selfLoader = this;
+    const texCfg = this.getAdaptiveVrmTexSettings();
+    const isLiteShadowGpu = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer));
     const avatarTexCache = {};
     const origTexturesSeen = new Set();
     const finalTexturesUsed = new Set();
@@ -1590,41 +1279,37 @@ const stage3dVrm = {
             mapRecolored = true;
           }
 
-          // v19.0 Luminance-preserving texture recolor across ALL roles including Qingming, Player & bottoms/skirts!
-          if (personaStyling && !isOutline && m.map) {
+          // Track 2 Gradient-Preserving Recolor (keeps hair strands & highlights alive; NEVER flattens iris/eye/face textures!)
+          if (personaStyling && !isOutline && m.map && !isIrisMat && !isFaceMat) {
             if (isHairMat && personaStyling.hairHex) {
               ensureClonedMat();
-              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.hairHex, personaStyling.hairStr || 0.82, avatarTexCache);
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.hairHex, personaStyling.hairStr || 0.72, avatarTexCache, { isHair: true, maxDim: texCfg.maxDim, anisotropy: texCfg.anisotropy });
               mapRecolored = true;
             } else if (isTopsMat && personaStyling.topsHex) {
               ensureClonedMat();
-              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.topsHex, personaStyling.topsStr || 0.80, avatarTexCache);
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.topsHex, personaStyling.topsStr || 0.78, avatarTexCache, { maxDim: texCfg.maxDim, anisotropy: texCfg.anisotropy });
               mapRecolored = true;
             } else if (isNeckMat && personaStyling.neckHex) {
               ensureClonedMat();
-              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.neckHex, personaStyling.neckStr || 0.82, avatarTexCache);
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.neckHex, personaStyling.neckStr || 0.78, avatarTexCache, { maxDim: texCfg.maxDim, anisotropy: texCfg.anisotropy });
               mapRecolored = true;
             } else if (isBottomsMat && personaStyling.bottomsHex) {
               ensureClonedMat();
-              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.bottomsHex, personaStyling.bottomsStr || 0.88, avatarTexCache);
-              mapRecolored = true;
-            } else if (isIrisMat && personaStyling.eyeHex) {
-              ensureClonedMat();
-              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.eyeHex, 0.65, avatarTexCache);
+              m.map = selfLoader.recolorVrmTextureMap(m.map, personaStyling.bottomsHex, personaStyling.bottomsStr || 0.80, avatarTexCache, { maxDim: texCfg.maxDim, anisotropy: texCfg.anisotropy });
               mapRecolored = true;
             }
           }
 
-          // Downscale oversized non-recolored VRM textures (>512px) and disable mipmaps on 8x8 placeholders
+          // Adaptive VRM texture resolution (2048 dGPU / 1024 iGPU / 512 eco) + anisotropy + skip mipmaps on tiny placeholders
           if (!mapRecolored && m.map) {
-            const shrunk = selfLoader.downscaleVrmTextureIfNeeded(m.map, 512, avatarTexCache);
+            const shrunk = selfLoader.downscaleVrmTextureIfNeeded(m.map, texCfg.maxDim, avatarTexCache, texCfg.anisotropy);
             if (shrunk && shrunk !== m.map) {
               ensureClonedMat();
               m.map = shrunk;
             }
           }
           if (m.normalMap) {
-            const shrunkNor = selfLoader.downscaleVrmTextureIfNeeded(m.normalMap, 256, avatarTexCache);
+            const shrunkNor = selfLoader.downscaleVrmTextureIfNeeded(m.normalMap, Math.min(512, texCfg.maxDim), avatarTexCache, 1);
             if (shrunkNor && shrunkNor !== m.normalMap) {
               ensureClonedMat();
               m.normalMap = shrunkNor;
@@ -1671,10 +1356,26 @@ const stage3dVrm = {
         });
 
         child.material = isArr ? nextMats : nextMats[0];
-        // Cast shadow ONLY from primary opaque body/hair/cloth meshes (skips eyes/lashes/brows/mouth/outlines -> cuts shadow draw calls >55%!)
-        child.castShadow = !hasOutlineOnly && !isFaceMesh && !isMinorOverlayMesh && !allTransparentOverlay;
+        // Cast shadow ONLY from primary opaque meshes on discrete GPUs (iGPU relies on crisp contact shadows + static pavilion shadows -> saves ~186K shadow tris!)
+        child.castShadow = !isLiteShadowGpu && !hasOutlineOnly && !isFaceMesh && !isMinorOverlayMesh && !allTransparentOverlay;
         child.receiveShadow = !isFaceMesh && !allUnlitBasic;
-        child.frustumCulled = false;
+        // True safe frustum culling for SkinnedMeshes: inflate bounding sphere to cover seated/gesturing limbs so off-screen VRMs cull cleanly in close-ups!
+        if (child.geometry && typeof child.geometry.computeBoundingSphere === "function") {
+          try {
+            if (!child.geometry.boundingSphere) child.geometry.computeBoundingSphere();
+            if (child.geometry.boundingSphere && typeof child.geometry.boundingSphere.radius === "number") {
+              const minLocalR = 2.15 / Math.max(0.05, modelScale);
+              child.geometry.boundingSphere.radius = Math.max(child.geometry.boundingSphere.radius * 2.1, minLocalR);
+              child.frustumCulled = true;
+            } else {
+              child.frustumCulled = false;
+            }
+          } catch (e) {
+            child.frustumCulled = false;
+          }
+        } else {
+          child.frustumCulled = false;
+        }
       });
     }
     // Immediately free replaced original materials & unreferenced ImageBitmap textures so zero GPU/RAM leaks accumulate!
@@ -1770,12 +1471,16 @@ const stage3dVrm = {
     for (let i = 0; i < list.length; i++) {
       const b = list[i];
       if (b.mesh && b.mesh.morphTargetInfluences && b.idx < b.mesh.morphTargetInfluences.length) {
-        b.mesh.morphTargetInfluences[b.idx] = v * (b.weight || 1.0);
+        const nextV = v * (b.weight || 1.0);
+        if (Math.abs((b.mesh.morphTargetInfluences[b.idx] || 0) - nextV) > 0.0005) {
+          b.mesh.morphTargetInfluences[b.idx] = nextV;
+        }
       }
     }
   },
 
-  computeLivingIdleAction: function (t, seed, arch) {
+  computeLivingIdleAction: function (t, seed, arch, outObj) {
+    const out = outObj || { name: "", weight: 0, phase: 0 };
     const pool = (arch && Array.isArray(arch.idlePool) && arch.idlePool.length)
       ? arch.idlePool
       : ["sip_tea", "chin_rest", "look_around", "hands_clasp"];
@@ -1797,7 +1502,10 @@ const stage3dVrm = {
       }
     }
     const pick = Math.abs(slotIdx * 3 + Math.round(seed * 5)) % pool.length;
-    return { name: pool[pick], weight: w, phase: u };
+    out.name = pool[pick];
+    out.weight = w;
+    out.phase = u;
+    return out;
   },
 
   updateVrmAvatar: function (inst, opts) {
@@ -1846,11 +1554,14 @@ const stage3dVrm = {
       if (inst.celMats && inst.celMats.length) {
         const rimHex = o.moodKey === "night"
           ? (talkBoostFlag ? 0xfde68a : 0x93c5fd)
-          : (o.moodKey === "vote" ? 0xfdba74 : (o.moodKey === "day" ? 0xfff7d6 : 0xffe2a8));
-        const shadowHex = o.moodKey === "night"
-          ? 0x7c86bd
-          : (o.moodKey === "vote" ? 0xd9a8a0 : (o.moodKey === "day" ? 0xe8dff0 : 0xc8c2e0));
-        const warmB = o.moodKey === "night" ? 0.18 : (o.moodKey === "day" ? 0.06 : 0.14);
+          : (o.moodKey === "vote" ? 0xfdba74 : (o.moodKey === "day" ? 0xfff8dc : 0xffe6b3));
+        const shadowHexBody = o.moodKey === "night"
+          ? 0x8c96cc
+          : (o.moodKey === "vote" ? 0xdab8b4 : (o.moodKey === "day" ? 0xc8ccf0 : 0xc0c4e6));
+        const shadowHexFace = o.moodKey === "night"
+          ? 0xc8b4c4
+          : (o.moodKey === "vote" ? 0xf4cec2 : (o.moodKey === "day" ? 0xf6d8cc : 0xf2d0c4));
+        const warmB = o.moodKey === "night" ? 0.16 : (o.moodKey === "day" ? 0.05 : 0.12);
         for (let ci = 0; ci < inst.celMats.length; ci++) {
           const cm = inst.celMats[ci];
           const u = cm.uniforms;
@@ -1860,12 +1571,12 @@ const stage3dVrm = {
             if (typeof u.uVrmRimColor.value.convertSRGBToLinear === "function") u.uVrmRimColor.value.convertSRGBToLinear();
           }
           if (u.uVrmShadowTint && u.uVrmShadowTint.value && typeof u.uVrmShadowTint.value.setHex === "function") {
-            u.uVrmShadowTint.value.setHex(shadowHex);
+            u.uVrmShadowTint.value.setHex(cm.isFace ? shadowHexFace : shadowHexBody);
             if (typeof u.uVrmShadowTint.value.convertSRGBToLinear === "function") u.uVrmShadowTint.value.convertSRGBToLinear();
           }
-          const baseRim = cm.isFace ? 0.14 : (cm.isHair ? 0.28 : 0.22);
-          u.uVrmRimStrength.value = aliveFlag ? (talkBoostFlag ? baseRim * 1.55 : baseRim) : 0.04;
-          u.uVrmShadowLift.value = aliveFlag ? (cm.isFace ? 0.64 : 0.44) : 0.30;
+          const baseRim = cm.isFace ? 0.12 : (cm.isHair ? 0.25 : 0.19);
+          u.uVrmRimStrength.value = aliveFlag ? (talkBoostFlag ? baseRim * 1.48 : baseRim) : 0.04;
+          u.uVrmShadowLift.value = aliveFlag ? (cm.isFace ? 0.58 : 0.48) : 0.34;
           u.uVrmWarmBounce.value = aliveFlag ? warmB : 0.02;
         }
       }
@@ -1970,7 +1681,9 @@ const stage3dVrm = {
       !sleeping && !isActiveSpeaker && !o.isHovered && !o.isVoting && !o.isAccusing &&
       !o.isPointingAccuse && !o.isBeingVouched && !sweating && !o.act && inst.mode === "seated"
     );
-    const idleAct = useLivingIdle ? this.computeLivingIdleAction(t, seed, arch) : { name: "", weight: 0, phase: 0 };
+    const idleAct = useLivingIdle
+      ? this.computeLivingIdleAction(t, seed, arch, this._idleActScratch)
+      : (this._idleActScratch.name = "", this._idleActScratch.weight = 0, this._idleActScratch.phase = 0, this._idleActScratch);
     const iw = idleAct.weight;
     const iname = idleAct.name;
 
@@ -2545,15 +2258,8 @@ const stage3dVrm = {
     const runFingerPose = Boolean(!inst._fingersInitialized || o.isPriority || talking || Boolean(o.act));
     if (runFingerPose) {
       inst._fingersInitialized = true;
-      const FINGER_PRESETS = {
-        relaxed: [0.24, 0.32, 0.40, 0.48, 0.18],
-        open_palm: [0.06, 0.08, 0.12, 0.16, 0.06],
-        point_index: [0.04, 0.96, 1.04, 1.08, 0.56],
-        fist_cheer: [1.02, 1.08, 1.12, 1.14, 0.65],
-        tea_poise: [0.14, 0.26, 0.40, 0.20, 0.14]
-      };
-      const rCurls = FINGER_PRESETS[rHandPose] || FINGER_PRESETS.relaxed;
-      const lCurls = FINGER_PRESETS[lHandPose] || FINGER_PRESETS.relaxed;
+      const rCurls = VRM_FINGER_PRESETS[rHandPose] || VRM_FINGER_PRESETS.relaxed;
+      const lCurls = VRM_FINGER_PRESETS[lHandPose] || VRM_FINGER_PRESETS.relaxed;
       if (bm.rightIndexProximal) this.slerpBoneModelDelta(bm.rightIndexProximal, 0, 0, rCurls[0], 0.22, "YXZ");
       if (bm.rightMiddleProximal) this.slerpBoneModelDelta(bm.rightMiddleProximal, 0, 0, rCurls[1], 0.22, "YXZ");
       if (bm.rightRingProximal) this.slerpBoneModelDelta(bm.rightRingProximal, 0, 0, rCurls[2], 0.22, "YXZ");
@@ -2572,8 +2278,9 @@ const stage3dVrm = {
     inst.headInertia = (inst.headInertia || 0) * Math.pow(0.85, dt60) + dYaw * 1.85;
 
     const qMode = (typeof state !== "undefined" && state.quality3D) ? state.quality3D : "high";
-    const skipHairSpringsNow = Boolean(!o.isPriority && !talking && (qMode === "eco" || (qMode === "balanced" && (o.seatCount || 8) >= 10)));
-    const springStride = o.isPriority ? 1 : (qMode === "eco" ? 3 : (qMode === "balanced" ? 2 : 1));
+    const isIgpuVrm = Boolean(typeof stage3d !== "undefined" && stage3d.isIntegratedGpu);
+    const skipHairSpringsNow = Boolean(sleeping || (!o.isPriority && !talking && (qMode === "eco" || isIgpuVrm || (qMode === "balanced" && (o.seatCount || 8) >= 10))));
+    const springStride = o.isPriority ? 1 : (sleeping ? 6 : (qMode === "eco" ? 4 : ((isIgpuVrm || qMode === "balanced") ? 3 : 2)));
     const runSprings = springStride <= 1 || typeof o.frameCounter !== "number" || ((o.frameCounter + (o.seatId || 0)) % springStride === 0);
     if (runSprings && inst.springBones && inst.springBones.length) {
       for (let si = 0; si < inst.springBones.length; si++) {
@@ -2581,7 +2288,7 @@ const stage3dVrm = {
         if (!sb || !sb.quatMeta) continue;
         if (sb.isSkirt && inst.mode === "seated") {
           const skSway = Math.sin(t * 1.6 + sb.phase) * 0.014;
-          const skAng = this.getSeatedSkirtTargetAngles(sb, skSway);
+          const skAng = this.getSeatedSkirtTargetAngles(sb, skSway, this._skirtAngScratch);
           this.slerpBoneModelDelta(sb.quatMeta, skAng.rx, skAng.ry, skAng.rz, 0.16, "YXZ");
         } else if (sb.isSkirt) {
           // Standing skirt: ultra-gentle hem flutter strictly biased downward so breeze NEVER lifts skirt!

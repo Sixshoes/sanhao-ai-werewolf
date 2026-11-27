@@ -27,6 +27,9 @@ function resizeCanvas() {
   const maxVh = (typeof window !== "undefined" && window.innerHeight) ? window.innerHeight : 1080;
   const effW = Math.min(rect.width || maxVw, maxVw);
   const effH = Math.min(rect.height || maxVh, maxVh);
+  if (typeof stage3d !== "undefined" && typeof stage3d.invalidateLayoutCache === "function") {
+    stage3d.invalidateLayoutCache();
+  }
   const dpr = (typeof stage3d !== "undefined" && typeof stage3d.getOverlayDpr === "function")
     ? stage3d.getOverlayDpr()
     : Math.min(window.devicePixelRatio || 1, (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu) ? 1.25 : 1.5);
@@ -61,10 +64,12 @@ function invalidate3DOverlayCache() {
 
 function compute3DOverlaySignature(f, coords) {
   if (!f || !Array.isArray(coords)) return null;
+  const isLite3d = Boolean(typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer || (typeof state !== "undefined" && state.quality3D === "eco")));
+  const hasPointerTrail = !isLite3d && Boolean(state.pointerTrail && state.pointerTrail.length > 0);
   if (
     (state.seatBubbles && Object.keys(state.seatBubbles).length > 0) ||
     (state.dragAction && state.dragAction.active && state.dragAction.moved) ||
-    (state.pointerTrail && state.pointerTrail.length > 0) ||
+    hasPointerTrail ||
     (state.ripples && state.ripples.length > 0) ||
     (state.burstParticles && state.burstParticles.length > 0) ||
     (state.fxPopups && state.fxPopups.length > 0) ||
@@ -84,6 +89,12 @@ function compute3DOverlaySignature(f, coords) {
   const showTruth = f.p === "GAME_OVER" || (typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive());
   const camPreset = (typeof stage3d !== "undefined" && stage3d.camPreset) ? stage3d.camPreset : "cinema";
   const showcase = Boolean(typeof stage3d !== "undefined" && stage3d.showcaseMode);
+  const roleDealEl = typeof el === "function" ? el("roleDealOverlay") : null;
+  const roleDealOpen = Boolean(roleDealEl && !roleDealEl.classList.contains("hidden"));
+  if (roleDealOpen) {
+    return f.w + "x" + f.h + "|ROLE_DEAL_OPEN";
+  }
+  const isLobbyTitle = Boolean(!m.started && f.p === "LOBBY" && !showcase);
   const fpOffCenter = (camPreset === "firstperson" && typeof stage3d !== "undefined" && stage3d.orbit)
     ? ((Math.abs(stage3d.orbit.fpYaw || 0) > 0.34 || Math.abs(stage3d.orbit.fpFovOffset || 0) > 3) ? 1 : 0)
     : 0;
@@ -101,9 +112,10 @@ function compute3DOverlaySignature(f, coords) {
   if (typeof stage3d !== "undefined" && stage3d.hero && stage3d.hero.root && stage3d.hero.root.visible && !showcase && stage3d.camera && typeof THREE !== "undefined") {
     const hv = compute3DOverlaySignature._hostVec || (compute3DOverlaySignature._hostVec = new THREE.Vector3());
     const hp = stage3d.hero.root.position;
+    const hostQ = isLobbyTitle ? (8 * dpr) : qStep;
     hv.set(hp.x, hp.y + 2.28, hp.z).project(stage3d.camera);
     if (hv.z > -1 && hv.z < 1) {
-      sig += "|H:" + Math.round(((hv.x * 0.5 + 0.5) * f.w) / qStep) + "," + Math.round(((-hv.y * 0.5 + 0.5) * f.h) / qStep);
+      sig += "|H:" + Math.round(((hv.x * 0.5 + 0.5) * f.w) / hostQ) + "," + Math.round(((-hv.y * 0.5 + 0.5) * f.h) / hostQ);
     } else {
       sig += "|H:off";
     }
@@ -113,11 +125,17 @@ function compute3DOverlaySignature(f, coords) {
     const c = coords[i];
     const s = c.seat || {};
     const mark = (state.playerMarks && state.playerMarks[c.id]) || "";
+    // On Title Screen (LOBBY), draw3DOverlayHud draws ZERO plates for unhovered/unmarked seats — skipping them cuts Title 2D redraws from 100% -> <5%!
+    if (isLobbyTitle && state.hoverSeatId !== c.id && !mark && !s.claimedRole) continue;
     const wMark = (m.wolfGodMarks && m.wolfGodMarks[c.id]) || "";
     const hoverSus = (state.hoverSeatId === c.id && m.started && s.suspicionMap)
       ? ((s.suspicionMap[pid] || 50) >= 62 ? 2 : ((s.suspicionMap[pid] || 50) <= 38 ? 0 : 1))
       : -1;
-    sig += "|" + c.id + ":" + (c.visibleInView === false ? 0 : 1) + ":" + (c.offScreenDir || 0)
+    if (c.visibleInView === false) {
+      sig += "|" + c.id + ":0:" + (c.offScreenDir || 0);
+      continue;
+    }
+    sig += "|" + c.id + ":1:" + (c.offScreenDir || 0)
       + ":" + Math.round(c.x / qStep) + "," + Math.round(c.y / qStep) + "," + Math.round(c.r / qStep)
       + ":" + (s.alive === false ? 0 : 1) + ":" + (s.claimedRole || "") + ":" + (s.sweatExposed ? 1 : 0)
       + ":" + (s.microPulse || 0) + ":" + mark + ":" + wMark + ":" + hoverSus;
@@ -252,10 +270,13 @@ function drawStageOverlays(ctx, f, coords, skipBeams) {
     const bh = 24 * dpr;
     const bw = Math.min(w * 0.44, textW + padX * 2);
 
-    // Smart positioning: keep inside canvas and clear of center card when possible
-    let bx = node.x - bw * 0.5;
-    let by = node.y - node.r - bh - 12 * dpr;
-    if (by < 8 * dpr) {
+    // Track 1: Anchor micro-reaction badges cleanly below-left of avatar (clear of overhead nameplate & center speech card!)
+    const is3dOverlay = Boolean(skipBeams);
+    let bx = is3dOverlay ? (node.x - bw * 0.68) : (node.x - bw * 0.5);
+    let by = is3dOverlay ? (node.y + node.r * 0.34) : (node.y - node.r - bh - 12 * dpr);
+    if (is3dOverlay && by + bh > h - 96 * dpr) {
+      by = node.y - node.r * 0.25 - bh;
+    } else if (!is3dOverlay && by < 8 * dpr) {
       by = node.y + node.r + 14 * dpr;
     }
     bx = clamp(bx, 8 * dpr, w - bw - 8 * dpr);
@@ -373,106 +394,143 @@ function drawStageOverlays(ctx, f, coords, skipBeams) {
     }
   }
 
-  // 8. Cursor Stardust Trail, Click Shockwaves & Physics Burst Particles!
-  state.pointerTrail = state.pointerTrail.filter(function (pt) { return nowMs - pt.born < 420; });
-  state.pointerTrail.forEach(function (pt) {
-    const pProg = (nowMs - pt.born) / 420;
-    ctx.save();
-    ctx.globalAlpha = (1 - pProg) * 0.65;
-    ctx.beginPath();
-    ctx.arc(pt.x, pt.y, (3.2 * (1 - pProg) + 0.8) * dpr, 0, Math.PI * 2);
-    ctx.fillStyle = daylight ? "#f59e0b" : "#fde68a";
-    ctx.fill();
-    ctx.restore();
-  });
-
-  state.ripples = state.ripples.filter(function (rp) { return nowMs - rp.born < rp.ttl; });
-  state.ripples.forEach(function (rp) {
-    const prog = (nowMs - rp.born) / rp.ttl;
-    ctx.save();
-    ctx.globalAlpha = (1 - prog) * 0.72;
-    ctx.beginPath();
-    ctx.arc(rp.x, rp.y, (8 + prog * rp.maxR) * dpr, 0, Math.PI * 2);
-    ctx.strokeStyle = rp.color;
-    ctx.lineWidth = (2.6 * (1 - prog) + 0.6) * dpr;
-    ctx.stroke();
-    ctx.restore();
-  });
-
-  const dt60 = clamp(Number(f.dt60) || 1, 0.05, 3.0);
-  const bpDrag = Math.pow(0.965, dt60);
-  state.burstParticles = state.burstParticles.filter(function (bp) { return nowMs - bp.born < bp.ttl; });
-  state.burstParticles.forEach(function (bp) {
-    const prog = (nowMs - bp.born) / bp.ttl;
-    bp.x += bp.vx * dpr * dt60;
-    bp.y += bp.vy * dpr * dt60;
-    bp.vx *= bpDrag;
-    bp.vy = bp.vy * bpDrag + (bp.style === "petal" ? 0.045 : 0.08) * dt60;
-    bp.rot += bp.vRot * dt60;
-    ctx.save();
-    ctx.translate(bp.x, bp.y);
-    ctx.rotate(bp.rot);
-    ctx.globalAlpha = 1 - prog;
-    ctx.fillStyle = bp.color;
-    const sz = bp.size * dpr * (1 - prog * 0.35);
-    if (bp.style === "petal") {
-      ctx.beginPath();
-      ctx.ellipse(0, 0, sz * 1.25, sz * 0.58, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (bp.style === "slash") {
-      const slAng = Math.atan2(bp.vy, bp.vx);
-      ctx.rotate(slAng - bp.rot);
-      ctx.beginPath();
-      ctx.moveTo(-sz * 2.4, 0);
-      ctx.quadraticCurveTo(0, -sz * 0.48, sz * 2.4, 0);
-      ctx.quadraticCurveTo(0, sz * 0.48, -sz * 2.4, 0);
-      ctx.closePath();
-      ctx.fill();
-    } else if (bp.style === "ring") {
-      ctx.beginPath();
-      ctx.arc(0, 0, sz * (1.2 + prog * 2.4), 0, Math.PI * 2);
-      ctx.strokeStyle = bp.color;
-      ctx.lineWidth = Math.max(0.8, 2.2 * (1 - prog)) * dpr;
-      ctx.stroke();
-    } else if (bp.style === "star") {
-      ctx.beginPath();
-      ctx.moveTo(0, -sz * 1.4);
-      ctx.lineTo(sz * 0.45, -sz * 0.45);
-      ctx.lineTo(sz * 1.4, 0);
-      ctx.lineTo(sz * 0.45, sz * 0.45);
-      ctx.lineTo(0, sz * 1.4);
-      ctx.lineTo(-sz * 0.45, sz * 0.45);
-      ctx.lineTo(-sz * 1.4, 0);
-      ctx.lineTo(-sz * 0.45, -sz * 0.45);
-      ctx.closePath();
-      ctx.fill();
+  // 8. Cursor Stardust Trail, Click Shockwaves & Physics Burst Particles (in-place compaction -> zero per-frame array GC!)
+  const skipTrail3d = Boolean(skipBeams && typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer || state.quality3D === "eco"));
+  if (state.pointerTrail.length > 0) {
+    if (skipTrail3d) {
+      state.pointerTrail.length = 0;
     } else {
-      ctx.fillRect(-sz, -sz * 0.35, sz * 2, sz * 0.7);
+      let pw = 0;
+      for (let pi = 0; pi < state.pointerTrail.length; pi++) {
+        const pt = state.pointerTrail[pi];
+        if (pt && (nowMs - pt.born) < 420) state.pointerTrail[pw++] = pt;
+      }
+      state.pointerTrail.length = pw;
+      for (let pi = 0; pi < state.pointerTrail.length; pi++) {
+        const pt = state.pointerTrail[pi];
+        const pProg = (nowMs - pt.born) / 420;
+        ctx.save();
+        ctx.globalAlpha = (1 - pProg) * 0.65;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, (3.2 * (1 - pProg) + 0.8) * dpr, 0, Math.PI * 2);
+        ctx.fillStyle = daylight ? "#f59e0b" : "#fde68a";
+        ctx.fill();
+        ctx.restore();
+      }
     }
-    ctx.restore();
-  });
+  }
 
-  // 8.5 Floating Action VFX Popups (with elastic overshoot pop & crisp stroke!)
-  state.fxPopups = state.fxPopups.filter(function (fx) { return nowMs - fx.born < (fx.duration || 1350); });
-  state.fxPopups.forEach(function (fx) {
-    const dur = fx.duration || 1350;
-    const sc = fx.scale || 1;
-    const progress = (nowMs - fx.born) / dur;
-    const popEase = progress < 0.10
-      ? (0.65 + (progress / 0.10) * 0.52)
-      : (progress < 0.22 ? (1.17 - ((progress - 0.10) / 0.12) * 0.17) : 1.0);
-    ctx.save();
-    ctx.globalAlpha = progress < 0.72 ? 1 : clamp((1 - progress) / 0.28, 0, 1);
-    ctx.font = "600 " + Math.round(13 * sc * popEase * dpr) + "px 'Noto Serif TC', 'Noto Sans TC', serif";
-    ctx.textAlign = "center";
-    ctx.lineWidth = (2.6 * sc) * dpr;
-    ctx.strokeStyle = "rgba(10, 9, 8, 0.84)";
-    const py = fx.y - Math.pow(progress, 0.78) * 34 * dpr;
-    ctx.strokeText(fx.text, fx.x, py);
-    ctx.fillStyle = (fx.color === "#fde68a" || fx.color === "#fbbf24") ? "#eed49b" : fx.color;
-    ctx.fillText(fx.text, fx.x, py);
-    ctx.restore();
-  });
+  if (state.ripples.length > 0) {
+    let rw = 0;
+    for (let ri = 0; ri < state.ripples.length; ri++) {
+      const rp = state.ripples[ri];
+      if (rp && (nowMs - rp.born) < rp.ttl) state.ripples[rw++] = rp;
+    }
+    state.ripples.length = rw;
+    for (let ri = 0; ri < state.ripples.length; ri++) {
+      const rp = state.ripples[ri];
+      const prog = (nowMs - rp.born) / rp.ttl;
+      ctx.save();
+      ctx.globalAlpha = (1 - prog) * 0.72;
+      ctx.beginPath();
+      ctx.arc(rp.x, rp.y, (8 + prog * rp.maxR) * dpr, 0, Math.PI * 2);
+      ctx.strokeStyle = rp.color;
+      ctx.lineWidth = (2.6 * (1 - prog) + 0.6) * dpr;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  if (state.burstParticles.length > 0) {
+    const dt60 = clamp(Number(f.dt60) || 1, 0.05, 3.0);
+    const bpDrag = Math.pow(0.965, dt60);
+    let bpw = 0;
+    for (let bi = 0; bi < state.burstParticles.length; bi++) {
+      const bp = state.burstParticles[bi];
+      if (bp && (nowMs - bp.born) < bp.ttl) state.burstParticles[bpw++] = bp;
+    }
+    state.burstParticles.length = bpw;
+    for (let bi = 0; bi < state.burstParticles.length; bi++) {
+      const bp = state.burstParticles[bi];
+      const prog = (nowMs - bp.born) / bp.ttl;
+      bp.x += bp.vx * dpr * dt60;
+      bp.y += bp.vy * dpr * dt60;
+      bp.vx *= bpDrag;
+      bp.vy = bp.vy * bpDrag + (bp.style === "petal" ? 0.045 : 0.08) * dt60;
+      bp.rot += bp.vRot * dt60;
+      ctx.save();
+      ctx.translate(bp.x, bp.y);
+      ctx.rotate(bp.rot);
+      ctx.globalAlpha = 1 - prog;
+      ctx.fillStyle = bp.color;
+      const sz = bp.size * dpr * (1 - prog * 0.35);
+      if (bp.style === "petal") {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, sz * 1.25, sz * 0.58, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (bp.style === "slash") {
+        const slAng = Math.atan2(bp.vy, bp.vx);
+        ctx.rotate(slAng - bp.rot);
+        ctx.beginPath();
+        ctx.moveTo(-sz * 2.4, 0);
+        ctx.quadraticCurveTo(0, -sz * 0.48, sz * 2.4, 0);
+        ctx.quadraticCurveTo(0, sz * 0.48, -sz * 2.4, 0);
+        ctx.closePath();
+        ctx.fill();
+      } else if (bp.style === "ring") {
+        ctx.beginPath();
+        ctx.arc(0, 0, sz * (1.2 + prog * 2.4), 0, Math.PI * 2);
+        ctx.strokeStyle = bp.color;
+        ctx.lineWidth = Math.max(0.8, 2.2 * (1 - prog)) * dpr;
+        ctx.stroke();
+      } else if (bp.style === "star") {
+        ctx.beginPath();
+        ctx.moveTo(0, -sz * 1.4);
+        ctx.lineTo(sz * 0.45, -sz * 0.45);
+        ctx.lineTo(sz * 1.4, 0);
+        ctx.lineTo(sz * 0.45, sz * 0.45);
+        ctx.lineTo(0, sz * 1.4);
+        ctx.lineTo(-sz * 0.45, sz * 0.45);
+        ctx.lineTo(-sz * 1.4, 0);
+        ctx.lineTo(-sz * 0.45, -sz * 0.45);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillRect(-sz, -sz * 0.35, sz * 2, sz * 0.7);
+      }
+      ctx.restore();
+    }
+  }
+
+  // 8.5 Floating Action VFX Popups (in-place compaction + elastic overshoot pop & crisp stroke!)
+  if (state.fxPopups.length > 0) {
+    let fw = 0;
+    for (let fi = 0; fi < state.fxPopups.length; fi++) {
+      const fx = state.fxPopups[fi];
+      if (fx && (nowMs - fx.born) < (fx.duration || 1350)) state.fxPopups[fw++] = fx;
+    }
+    state.fxPopups.length = fw;
+    for (let fi = 0; fi < state.fxPopups.length; fi++) {
+      const fx = state.fxPopups[fi];
+      const dur = fx.duration || 1350;
+      const sc = fx.scale || 1;
+      const progress = (nowMs - fx.born) / dur;
+      const popEase = progress < 0.10
+        ? (0.65 + (progress / 0.10) * 0.52)
+        : (progress < 0.22 ? (1.17 - ((progress - 0.10) / 0.12) * 0.17) : 1.0);
+      ctx.save();
+      ctx.globalAlpha = progress < 0.72 ? 1 : clamp((1 - progress) / 0.28, 0, 1);
+      ctx.font = "600 " + Math.round(13 * sc * popEase * dpr) + "px 'Noto Serif TC', 'Noto Sans TC', serif";
+      ctx.textAlign = "center";
+      ctx.lineWidth = (2.6 * sc) * dpr;
+      ctx.strokeStyle = "rgba(10, 9, 8, 0.84)";
+      const py = fx.y - Math.pow(progress, 0.78) * 34 * dpr;
+      ctx.strokeText(fx.text, fx.x, py);
+      ctx.fillStyle = (fx.color === "#fde68a" || fx.color === "#fbbf24") ? "#eed49b" : fx.color;
+      ctx.fillText(fx.text, fx.x, py);
+      ctx.restore();
+    }
+  }
 
   // 9. Peripheral Ambient Edge Screen Flash (Center stays clear for unobstructed reading!)
   if (state.screenFlash) {
@@ -502,9 +560,11 @@ function drawSanctuaryFrame(nowMs) {
   const ctx = canvas._ctx2d || (canvas._ctx2d = canvas.getContext("2d"));
   const w = canvas.width;
   const h = canvas.height;
-  const dpr = (typeof stage3d !== "undefined" && typeof stage3d.getOverlayDpr === "function")
-    ? stage3d.getOverlayDpr()
-    : Math.min(window.devicePixelRatio || 1, (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu) ? 1.25 : 1.5);
+  const dpr = (typeof stage3d !== "undefined" && typeof stage3d.getCachedOverlayDpr === "function")
+    ? stage3d.getCachedOverlayDpr()
+    : ((typeof stage3d !== "undefined" && typeof stage3d.getOverlayDpr === "function")
+      ? stage3d.getOverlayDpr()
+      : Math.min(window.devicePixelRatio || 1, (typeof stage3d !== "undefined" && stage3d.isIntegratedGpu) ? 1.25 : 1.5));
 
   // 3D Mode: Render Three.js WebGL Sanctuary + Dirty-Flag Cached 4K Transparent 2D HUD Overlay!
   if (typeof stage3d !== "undefined" && stage3d.isActive()) {
@@ -516,6 +576,22 @@ function drawSanctuaryFrame(nowMs) {
         stats.hits += 1;
         return;
       }
+      // Pace passive transient-only 2D redraws (e.g. 4.2s seat bubbles on iGPU/eco) to ~22Hz instead of 60Hz full-canvas clearRect!
+      const isSoftTransient = Boolean(
+        sig === null &&
+        drawSanctuaryFrame._hadTransientFx &&
+        (stage3d.isIntegratedGpu || state.quality3D === "eco") &&
+        !(state.dragAction && state.dragAction.active && state.dragAction.moved) &&
+        !state.screenFlash &&
+        !(state.shakeUntil && nowMs < state.shakeUntil) &&
+        !(state.burstParticles && state.burstParticles.length > 0) &&
+        !(state.fxPopups && state.fxPopups.length > 0)
+      );
+      if (isSoftTransient && drawSanctuaryFrame._lastOverlayDrawMs && (nowMs - drawSanctuaryFrame._lastOverlayDrawMs) < 44) {
+        stats.hits += 1;
+        return;
+      }
+      drawSanctuaryFrame._lastOverlayDrawMs = nowMs;
       ctx.clearRect(0, 0, w, h);
       draw3DOverlayHud(ctx, res3d.f, res3d.coords);
       stats.draws += 1;
@@ -546,6 +622,7 @@ function drawSanctuaryFrame(nowMs) {
   }
 
   const inGame2D = Boolean(state.match && state.match.started && p !== "GAME_OVER");
+  const isWideLobby2D = !inGame2D && p !== "GAME_OVER" && (w / Math.max(1, h)) >= 1.15;
   const rawDt2D = drawSanctuaryFrame._last2DMs ? (nowMs - drawSanctuaryFrame._last2DMs) : 16.6667;
   drawSanctuaryFrame._last2DMs = nowMs;
   const dt2D = clamp(rawDt2D * 0.001, 0.001, 0.05);
@@ -559,10 +636,10 @@ function drawSanctuaryFrame(nowMs) {
     p: p,
     night: night,
     daylight: daylight,
-    cx: w * 0.5,
-    cy: inGame2D ? (h * 0.39) : (h * 0.50),
-    rx: inGame2D ? Math.min(w * 0.38, w * 0.45 - 38 * dpr) : Math.min(w * 0.435, w * 0.5 - 36 * dpr),
-    ry: inGame2D ? Math.min(h * 0.27, h * 0.34 - 28 * dpr) : Math.min(h * 0.435, h * 0.5 - 36 * dpr),
+    cx: isWideLobby2D ? (w * 0.585) : (w * 0.5),
+    cy: inGame2D ? (h * 0.345) : (h * 0.50),
+    rx: inGame2D ? Math.min(w * 0.35, w * 0.415 - 36 * dpr) : (isWideLobby2D ? Math.min(w * 0.36, w * 0.42 - 36 * dpr) : Math.min(w * 0.435, w * 0.5 - 36 * dpr)),
+    ry: inGame2D ? Math.min(h * 0.245, h * 0.31 - 26 * dpr) : Math.min(h * 0.435, h * 0.5 - 36 * dpr),
     tSec: nowMs * 0.001
   };
 
@@ -574,19 +651,49 @@ function drawSanctuaryFrame(nowMs) {
   ctx.restore();
 }
 
+const _MODAL_PAUSE_IDS = [
+  "modalPauseMenu", "modalJournal", "modalTutorial", "modalGuide",
+  "modalAiConfig", "modalMusic", "modalCareer", "modalFeedback", "roleDealOverlay"
+];
+function getAdaptiveFrameCapMs() {
+  const CAP_60_MS = 1000 / 60;
+  const CAP_120_MS = 1000 / 120;
+  if (typeof document !== "undefined" && typeof el === "function") {
+    const bootOv = el("bootPreloadOverlay");
+    if (bootOv && !bootOv.classList.contains("hidden") && startAnimationLoop._firstFrameDrawn) {
+      return 100; // 10 FPS while opaque boot preloader covers canvas
+    }
+    for (let i = 0; i < _MODAL_PAUSE_IDS.length; i++) {
+      const mEl = el(_MODAL_PAUSE_IDS[i]);
+      if (mEl && !mEl.classList.contains("hidden")) {
+        return 1000 / 15; // 15 FPS when full-screen modal covers the 3D scene
+      }
+    }
+  }
+  if (typeof state !== "undefined" && state.match && state.match.phase === "GAME_OVER" && typeof document !== "undefined" && document.body && document.body.classList && document.body.classList.contains("screen-gameover")) {
+    return 1000 / 20; // 20 FPS on settled Game Over ledger
+  }
+  if (typeof stage3d !== "undefined" && typeof stage3d.shouldPace30Fps === "function" && stage3d.shouldPace30Fps()) {
+    return 1000 / 30;
+  }
+  return shouldCapFrameRate60() ? CAP_60_MS : CAP_120_MS;
+}
+
 function startAnimationLoop() {
   if (state.animFrame) cancelAnimationFrame(state.animFrame);
   let lastDrawMs = 0;
-  const CAP_60_MS = 1000 / 60;
-  const CAP_120_MS = 1000 / 120;
+  let lastModalCheckMs = 0;
+  let cachedCapMs = shouldCapFrameRate60() ? (1000 / 60) : (1000 / 120);
   function frame(now) {
     if (typeof document !== "undefined" && document.hidden) {
       state.animFrame = null;
       return;
     }
-    // Discrete GPU in 3D high/balanced paces smoothly up to 120Hz (prevents 240Hz/360Hz WebGL IPC command-buffer flooding on Windows ANGLE!);
-    // iGPU / software / eco / 2D uses remainder-accumulated smooth 60fps pacing without beat-frequency judder!
-    const capMs = shouldCapFrameRate60() ? CAP_60_MS : CAP_120_MS;
+    if (!lastModalCheckMs || (now - lastModalCheckMs) > 220) {
+      lastModalCheckMs = now;
+      cachedCapMs = getAdaptiveFrameCapMs();
+    }
+    const capMs = cachedCapMs;
     const elapsed = lastDrawMs ? (now - lastDrawMs) : capMs;
     if (lastDrawMs && elapsed < (capMs - 0.8)) {
       state.animFrame = requestAnimationFrame(frame);
@@ -594,7 +701,11 @@ function startAnimationLoop() {
     }
     lastDrawMs = lastDrawMs ? (now - Math.min(capMs, elapsed % capMs)) : now;
     drawSanctuaryFrame(now);
-    drawSpotlightPortrait(now);
+    startAnimationLoop._firstFrameDrawn = true;
+    const spPortrait = typeof el === "function" ? el("speakerPortraitCanvas") : null;
+    if (!spPortrait || (!spPortrait.classList.contains("hidden") && spPortrait.offsetParent !== null)) {
+      drawSpotlightPortrait(now);
+    }
     state.animFrame = requestAnimationFrame(frame);
   }
   state.animFrame = requestAnimationFrame(frame);

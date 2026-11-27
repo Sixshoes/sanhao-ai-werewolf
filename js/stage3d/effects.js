@@ -138,6 +138,9 @@ function build3DEffects(scene) {
     reticle: null,
     reticleOuterMat: null,
     lastRelSig: "",
+    _hasActiveBeams: false,
+    _activeShockCount: 0,
+    _activeSmokeCount: 0,
     dragWorldEnd: new THREE.Vector3(),
     tmpP0: new THREE.Vector3(),
     tmpMid: new THREE.Vector3(),
@@ -286,7 +289,14 @@ function disposeRelChildren(group) {
 }
 
 function spawn3DShockwave(fx, worldPos, colorHex, nowMs, yLevel, maxScale) {
-  const slot = fx.shockPool.find(function (s) { return !s.active; }) || fx.shockPool[0];
+  let slot = null;
+  for (let i = 0; i < fx.shockPool.length; i++) {
+    if (!fx.shockPool[i].active) { slot = fx.shockPool[i]; break; }
+  }
+  const wasActive = Boolean(slot && slot.active);
+  if (!slot) slot = fx.shockPool[0];
+  if (!slot.active) fx._activeShockCount = (fx._activeShockCount || 0) + 1;
+  void wasActive;
   slot.active = true;
   slot.born = nowMs;
   slot.duration = 600;
@@ -299,8 +309,12 @@ function spawn3DShockwave(fx, worldPos, colorHex, nowMs, yLevel, maxScale) {
 }
 
 function spawn3DCandleSmoke(fx, worldPos, nowMs, opts) {
-  const slot = fx.smokePool.find(function (s) { return !s.active; });
+  let slot = null;
+  for (let i = 0; i < fx.smokePool.length; i++) {
+    if (!fx.smokePool[i].active) { slot = fx.smokePool[i]; break; }
+  }
   if (!slot) return;
+  fx._activeSmokeCount = (fx._activeSmokeCount || 0) + 1;
   const o = opts || {};
   slot.active = true;
   slot.born = nowMs;
@@ -322,6 +336,7 @@ function spawn3DCandleSmoke(fx, worldPos, nowMs, opts) {
 function update3DEffects(fx, anchors, f) {
   const nowMs = f.nowMs;
   const t = f.tSec;
+  const dt60Fx = clamp(Number(f && f.dt60) || 1, 0.05, 3.0);
 
   // 1. 3D Ground Targeting Reticle
   const focusId = (state.dragAction.active && state.dragAction.snapId)
@@ -329,9 +344,10 @@ function update3DEffects(fx, anchors, f) {
     || state.hoverSeatId;
   const focusAnchor = focusId ? anchors[focusId] : null;
   if (focusAnchor && focusAnchor.seat && focusAnchor.seat.alive) {
+    const retDamp = typeof dampFactor3D === "function" ? dampFactor3D(0.28, dt60Fx) : 0.28;
     fx.reticle.visible = true;
-    fx.reticle.position.x += (focusAnchor.worldPos.x - fx.reticle.position.x) * 0.28;
-    fx.reticle.position.z += (focusAnchor.worldPos.z - fx.reticle.position.z) * 0.28;
+    fx.reticle.position.x += (focusAnchor.worldPos.x - fx.reticle.position.x) * retDamp;
+    fx.reticle.position.z += (focusAnchor.worldPos.z - fx.reticle.position.z) * retDamp;
     fx.reticle.rotation.y = t * 1.45;
     const isDanger = f.p === "DAY_VOTE" || f.p === "NIGHT_WOLF" || f.p === "HUNTER_TRIGGER";
     fx.reticleOuterMat.color.setHex(isDanger ? 0xf43f5e : (f.night ? 0xa78bfa : 0xf59e0b));
@@ -339,26 +355,44 @@ function update3DEffects(fx, anchors, f) {
     fx.reticle.visible = false;
   }
 
-  // 2. 3D Parabolic Relationship Arcs (Rebuilt only when relation list actually changes!)
-  const rels = (state.showRelationsOnCanvas && state.match.relations) ? state.match.relations.slice(-9) : [];
-  const relSig = rels.map(function (r) { return r.fromId + "-" + r.toId + "-" + r.type; }).join("|") + ":" + Object.keys(anchors).length;
-  if (relSig !== fx.lastRelSig) {
-    fx.lastRelSig = relSig;
-    disposeRelChildren(fx.relGroup);
-    rels.forEach(function (rel) {
-      const aFrom = anchors[rel.fromId];
-      const aTo = anchors[rel.toId];
-      if (!aFrom || !aTo) return;
-      const p0 = aFrom.worldPos.clone().setY(1.85);
-      const p2 = aTo.worldPos.clone().setY(1.85);
-      const mid = p0.clone().add(p2).multiplyScalar(0.5);
-      mid.y = 3.2;
-      const curve = new THREE.QuadraticBezierCurve3(p0, mid, p2);
-      const geo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(24));
-      const col = rel.type === "trust" ? 0x34d399 : (rel.type === "vote" ? 0xfbbf24 : 0xf43f5e);
-      const mat = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.72 });
-      fx.relGroup.add(new THREE.Line(geo, mat));
-    });
+  // 2. 3D Parabolic Relationship Arcs (Zero-allocation idle fast path when hidden or empty!)
+  const rawRels = (state.showRelationsOnCanvas && state.match && Array.isArray(state.match.relations) && state.match.relations.length > 0)
+    ? state.match.relations
+    : null;
+  if (!rawRels) {
+    if (fx.lastRelSig !== "") {
+      fx.lastRelSig = "";
+      disposeRelChildren(fx.relGroup);
+    }
+  } else {
+    const startIdx = Math.max(0, rawRels.length - 9);
+    let relSig = "";
+    for (let ri = startIdx; ri < rawRels.length; ri++) {
+      const r = rawRels[ri];
+      relSig += (ri > startIdx ? "|" : "") + r.fromId + "-" + r.toId + "-" + r.type;
+    }
+    let anchorCnt = 0;
+    for (const _k in anchors) anchorCnt += 1;
+    relSig += ":" + anchorCnt;
+    if (relSig !== fx.lastRelSig) {
+      fx.lastRelSig = relSig;
+      disposeRelChildren(fx.relGroup);
+      for (let ri = startIdx; ri < rawRels.length; ri++) {
+        const rel = rawRels[ri];
+        const aFrom = anchors[rel.fromId];
+        const aTo = anchors[rel.toId];
+        if (!aFrom || !aTo) continue;
+        const p0 = aFrom.worldPos.clone().setY(1.85);
+        const p2 = aTo.worldPos.clone().setY(1.85);
+        const mid = p0.clone().add(p2).multiplyScalar(0.5);
+        mid.y = 3.2;
+        const curve = new THREE.QuadraticBezierCurve3(p0, mid, p2);
+        const geo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(24));
+        const col = rel.type === "trust" ? 0x34d399 : (rel.type === "vote" ? 0xfbbf24 : 0xf43f5e);
+        const mat = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.72 });
+        fx.relGroup.add(new THREE.Line(geo, mat));
+      }
+    }
   }
 
   // 3. Zero-GC 3D Glowing Arcing Drag Tether
@@ -399,163 +433,184 @@ function update3DEffects(fx, anchors, f) {
     for (let bi = 0; bi < da.beads.length; bi++) da.beads[bi].visible = false;
   }
 
-  // 4. Zero-GC Pooled 3D Ribbon Beams & Carved Flying Vote Tablets
-  state.beamFx = state.beamFx.filter(function (bm) { return nowMs - bm.born < (bm.duration + 260); });
-  for (let pi = 0; pi < fx.beamPool.length; pi++) {
-    const entry = fx.beamPool[pi];
-    const bm = state.beamFx[pi];
-    const aFrom = bm ? anchors[bm.fromId] : null;
-    const aTo = bm ? anchors[bm.toId] : null;
-    if (!bm || !aFrom || !aTo) {
-      entry.line.visible = false;
-      if (entry.ribbon) entry.ribbon.visible = false;
-      entry.orb.visible = false;
-      entry.card.visible = false;
-      for (let bi = 0; bi < entry.beads.length; bi++) entry.beads[bi].visible = false;
-      continue;
+  // 4. Zero-GC Pooled 3D Ribbon Beams & Carved Flying Vote Tablets (in-place compaction + idle skip!)
+  if (state.beamFx.length > 0) {
+    let bw = 0;
+    for (let bi = 0; bi < state.beamFx.length; bi++) {
+      const bm = state.beamFx[bi];
+      if (bm && (nowMs - bm.born) < (bm.duration + 260)) state.beamFx[bw++] = bm;
     }
-
-    const tRaw = (nowMs - bm.born) / bm.duration;
-    const prog = clamp(tRaw, 0, 1);
-    const isVoteTally = bm.kind === "vote";
-    const isHunter = bm.kind === "hunter";
-    const isClash = bm.kind === "clash" || bm.kind === "logic_break";
-    fx.tmpP0.copy(aFrom.handPos || aFrom.headPos);
-    if (isVoteTally) {
-      // Land wooden ballot tally directly on target's desk surface beside teacup!
-      const deskTarget = aTo.teaPos || aTo.worldPos;
-      fx.tmpP2.set(deskTarget.x, 1.24, deskTarget.z);
-    } else {
-      fx.tmpP2.copy(aTo.headPos);
-    }
-    fx.tmpMid.copy(fx.tmpP0).add(fx.tmpP2).multiplyScalar(0.5);
-    fx.tmpMid.y = isHunter ? 4.65 : (isClash ? 4.55 : (isVoteTally ? 3.45 : 3.55));
-
-    if (tRaw >= 1 && !bm.impacted) {
-      bm.impacted = true;
-      const isHostile = bm.kind === "grill" || isClash || isVoteTally || isHunter;
-      if (isVoteTally) {
-        // Tactile physical drop: 70ms Hit-Stop + seat spring dip + golden teacup water ripple + walnut knock!
-        if (typeof triggerHitStop === "function") triggerHitStop(70);
-        if (typeof sound !== "undefined" && typeof sound.playWoodTokenDrop === "function") sound.playWoodTokenDrop();
-        nudgeSeat(bm.toId, { scale: 0.87, vScale: 0.22, vy: 8.5, vTilt: 0.22 });
-        const ripplePos = aTo.teaPos || aTo.worldPos;
-        spawn3DShockwave(fx, ripplePos, "#d4a657", nowMs, 1.21, 2.35);
-        const toCoord = (state.seatCoords || []).find(function (c) { return c.id === bm.toId; });
-        if (toCoord && toCoord.visibleInView !== false && typeof spawnRipple === "function") {
-          spawnRipple(toCoord.x, toCoord.y, "#d4a657", 54);
-        }
-        spawnBurst(bm.toId, ["#d4a657", "#b88946", "#f5e6c8"], 8, "spark");
-      } else {
-        nudgeSeat(bm.toId, {
-          scale: isHunter ? 0.78 : (isHostile ? 0.86 : 1.15),
-          vScale: isHunter ? 0.28 : (isHostile ? 0.22 : -0.08),
-          vy: isHunter ? 11.0 : (isHostile ? 7.5 : -6.0),
-          vTilt: isHunter ? 0.36 : (isHostile ? 0.28 : 0.08)
-        });
-        spawnBurst(
-          bm.toId,
-          [bm.color, "#ffffff", "#fde68a"],
-          isHunter ? 30 : (isClash ? 20 : (isHostile ? 14 : 12)),
-          isHunter ? "spark" : (isClash ? "slash" : (isHostile ? "spark" : "petal"))
-        );
-        spawn3DShockwave(fx, aTo.worldPos, bm.color, nowMs, 0.14, isHunter ? 5.8 : (isClash ? 5.4 : 4.2));
-      }
-    }
-
-    if (isVoteTally) {
-      // Physical wooden tally: drop generic neon ribbon & comet beads, keep only a faint hairline arc + tumbling wood token!
-      const hairAlpha = tRaw <= 1 ? 0.22 : clamp(1 - (nowMs - bm.born - bm.duration) / 220, 0, 1) * 0.22;
-      writeQuadraticArcToBuffer(entry, fx.tmpP0, fx.tmpMid, fx.tmpP2, prog, 0.04);
-      entry.lineMat.color.set("#c49a5c");
-      entry.lineMat.opacity = hairAlpha;
-      entry.line.visible = hairAlpha > 0.02;
-      if (entry.ribbon) entry.ribbon.visible = false;
-      entry.orb.visible = false;
-      for (let bi = 0; bi < entry.beads.length; bi++) entry.beads[bi].visible = false;
-
-      if (tRaw <= 1.38) {
-        evalQuadraticPoint(fx.tmpPt, fx.tmpP0, fx.tmpMid, fx.tmpP2, prog);
-        if (!entry.cardMat.map) entry.cardMat.color.set("#7c5332");
-        entry.card.position.copy(fx.tmpPt);
-        if (tRaw < 1) {
-          // Crisp physical tumbling flip along flight arc
-          entry.card.rotation.set(prog * Math.PI * 3.5, prog * Math.PI * 2.0, prog * 1.4);
-        } else {
-          // Settles flat onto the walnut desk right on impact!
-          entry.card.position.y = 1.21;
-          entry.card.rotation.set(Math.PI * 0.5, (bm.fromId * 0.45) % 1.2, 0);
-        }
-        entry.card.visible = true;
-      } else {
-        entry.card.visible = false;
-      }
-    } else {
-      const trailBaseAlpha = (isHunter || isClash) ? 0.96 : 0.85;
-      const trailAlpha = tRaw <= 1 ? trailBaseAlpha : clamp(1 - (nowMs - bm.born - bm.duration) / 260, 0, 1) * trailBaseAlpha;
-      const ribWidth = isHunter ? 0.19 : (isClash ? 0.14 : 0.10);
-      writeQuadraticArcToBuffer(entry, fx.tmpP0, fx.tmpMid, fx.tmpP2, prog, ribWidth);
-      entry.lineMat.color.set(bm.color || "#fbbf24");
-      entry.lineMat.opacity = trailAlpha;
-      entry.line.visible = true;
-      if (entry.ribbon) {
-        entry.ribMat.color.set(bm.color || "#fbbf24");
-        entry.ribMat.opacity = trailAlpha * (isHunter ? 0.82 : (isClash ? 0.68 : 0.50));
-        entry.ribbon.visible = true;
-      }
-
-      if (tRaw <= 1.04) {
-        evalQuadraticPoint(fx.tmpPt, fx.tmpP0, fx.tmpMid, fx.tmpP2, prog);
-        entry.orbMat.color.set(bm.color || "#fbbf24");
-        entry.orb.position.copy(fx.tmpPt);
-        entry.orb.scale.setScalar(isHunter ? 2.15 : (isClash ? 1.48 : 1.05));
-        entry.orb.visible = true;
-        entry.card.visible = false;
-        const beadBase = isHunter ? 0.86 : (isClash ? 0.62 : 0.48);
+    state.beamFx.length = bw;
+  }
+  if (state.beamFx.length > 0 || fx._hasActiveBeams) {
+    fx._hasActiveBeams = state.beamFx.length > 0;
+    for (let pi = 0; pi < fx.beamPool.length; pi++) {
+      const entry = fx.beamPool[pi];
+      const bm = state.beamFx[pi];
+      const aFrom = bm ? anchors[bm.fromId] : null;
+      const aTo = bm ? anchors[bm.toId] : null;
+      if (!bm || !aFrom || !aTo) {
+        if (entry.line.visible) entry.line.visible = false;
+        if (entry.ribbon && entry.ribbon.visible) entry.ribbon.visible = false;
+        if (entry.orb.visible) entry.orb.visible = false;
+        if (entry.card.visible) entry.card.visible = false;
         for (let bi = 0; bi < entry.beads.length; bi++) {
-          const bu = Math.max(0, prog - (bi + 1) * 0.10);
-          evalQuadraticPoint(entry.beads[bi].position, fx.tmpP0, fx.tmpMid, fx.tmpP2, bu);
-          entry.beads[bi].scale.setScalar(Math.max(0.16, beadBase - bi * 0.075));
-          entry.beads[bi].visible = bu > 0.02;
+          if (entry.beads[bi].visible) entry.beads[bi].visible = false;
+        }
+        continue;
+      }
+
+      const tRaw = (nowMs - bm.born) / bm.duration;
+      const prog = clamp(tRaw, 0, 1);
+      const isVoteTally = bm.kind === "vote";
+      const isHunter = bm.kind === "hunter";
+      const isClash = bm.kind === "clash" || bm.kind === "logic_break";
+      fx.tmpP0.copy(aFrom.handPos || aFrom.headPos);
+      if (isVoteTally) {
+        // Land wooden ballot tally directly on target's desk surface beside teacup!
+        const deskTarget = aTo.teaPos || aTo.worldPos;
+        fx.tmpP2.set(deskTarget.x, 1.24, deskTarget.z);
+      } else {
+        fx.tmpP2.copy(aTo.headPos);
+      }
+      fx.tmpMid.copy(fx.tmpP0).add(fx.tmpP2).multiplyScalar(0.5);
+      fx.tmpMid.y = isHunter ? 4.65 : (isClash ? 4.55 : (isVoteTally ? 3.45 : 3.55));
+
+      if (tRaw >= 1 && !bm.impacted) {
+        bm.impacted = true;
+        const isHostile = bm.kind === "grill" || isClash || isVoteTally || isHunter;
+        if (isVoteTally) {
+          // Tactile physical drop: 70ms Hit-Stop + seat spring dip + golden teacup water ripple + walnut knock!
+          if (typeof triggerHitStop === "function") triggerHitStop(70);
+          if (typeof sound !== "undefined" && typeof sound.playWoodTokenDrop === "function") sound.playWoodTokenDrop();
+          nudgeSeat(bm.toId, { scale: 0.87, vScale: 0.22, vy: 8.5, vTilt: 0.22 });
+          const ripplePos = aTo.teaPos || aTo.worldPos;
+          spawn3DShockwave(fx, ripplePos, "#d4a657", nowMs, 1.21, 2.35);
+          const toCoord = (state.seatCoords || []).find(function (c) { return c.id === bm.toId; });
+          if (toCoord && toCoord.visibleInView !== false && typeof spawnRipple === "function") {
+            spawnRipple(toCoord.x, toCoord.y, "#d4a657", 54);
+          }
+          spawnBurst(bm.toId, ["#d4a657", "#b88946", "#f5e6c8"], 8, "spark");
+        } else {
+          nudgeSeat(bm.toId, {
+            scale: isHunter ? 0.78 : (isHostile ? 0.86 : 1.15),
+            vScale: isHunter ? 0.28 : (isHostile ? 0.22 : -0.08),
+            vy: isHunter ? 11.0 : (isHostile ? 7.5 : -6.0),
+            vTilt: isHunter ? 0.36 : (isHostile ? 0.28 : 0.08)
+          });
+          spawnBurst(
+            bm.toId,
+            [bm.color, "#ffffff", "#fde68a"],
+            isHunter ? 30 : (isClash ? 20 : (isHostile ? 14 : 12)),
+            isHunter ? "spark" : (isClash ? "slash" : (isHostile ? "spark" : "petal"))
+          );
+          spawn3DShockwave(fx, aTo.worldPos, bm.color, nowMs, 0.14, isHunter ? 5.8 : (isClash ? 5.4 : 4.2));
+        }
+      }
+
+      if (isVoteTally) {
+        // Physical wooden tally: drop generic neon ribbon & comet beads, keep only a faint hairline arc + tumbling wood token!
+        const hairAlpha = tRaw <= 1 ? 0.22 : clamp(1 - (nowMs - bm.born - bm.duration) / 220, 0, 1) * 0.22;
+        writeQuadraticArcToBuffer(entry, fx.tmpP0, fx.tmpMid, fx.tmpP2, prog, 0.04);
+        entry.lineMat.color.set("#c49a5c");
+        entry.lineMat.opacity = hairAlpha;
+        entry.line.visible = hairAlpha > 0.02;
+        if (entry.ribbon) entry.ribbon.visible = false;
+        entry.orb.visible = false;
+        for (let bi = 0; bi < entry.beads.length; bi++) entry.beads[bi].visible = false;
+
+        if (tRaw <= 1.38) {
+          evalQuadraticPoint(fx.tmpPt, fx.tmpP0, fx.tmpMid, fx.tmpP2, prog);
+          if (!entry.cardMat.map) entry.cardMat.color.set("#7c5332");
+          entry.card.position.copy(fx.tmpPt);
+          if (tRaw < 1) {
+            // Crisp physical tumbling flip along flight arc
+            entry.card.rotation.set(prog * Math.PI * 3.5, prog * Math.PI * 2.0, prog * 1.4);
+          } else {
+            // Settles flat onto the walnut desk right on impact!
+            entry.card.position.y = 1.21;
+            entry.card.rotation.set(Math.PI * 0.5, (bm.fromId * 0.45) % 1.2, 0);
+          }
+          entry.card.visible = true;
+        } else {
+          entry.card.visible = false;
         }
       } else {
-        entry.orb.visible = false;
-        entry.card.visible = false;
-        for (let bi = 0; bi < entry.beads.length; bi++) entry.beads[bi].visible = false;
+        const trailBaseAlpha = (isHunter || isClash) ? 0.96 : 0.85;
+        const trailAlpha = tRaw <= 1 ? trailBaseAlpha : clamp(1 - (nowMs - bm.born - bm.duration) / 260, 0, 1) * trailBaseAlpha;
+        const ribWidth = isHunter ? 0.19 : (isClash ? 0.14 : 0.10);
+        writeQuadraticArcToBuffer(entry, fx.tmpP0, fx.tmpMid, fx.tmpP2, prog, ribWidth);
+        entry.lineMat.color.set(bm.color || "#fbbf24");
+        entry.lineMat.opacity = trailAlpha;
+        entry.line.visible = true;
+        if (entry.ribbon) {
+          entry.ribMat.color.set(bm.color || "#fbbf24");
+          entry.ribMat.opacity = trailAlpha * (isHunter ? 0.82 : (isClash ? 0.68 : 0.50));
+          entry.ribbon.visible = true;
+        }
+
+        if (tRaw <= 1.04) {
+          evalQuadraticPoint(fx.tmpPt, fx.tmpP0, fx.tmpMid, fx.tmpP2, prog);
+          entry.orbMat.color.set(bm.color || "#fbbf24");
+          entry.orb.position.copy(fx.tmpPt);
+          entry.orb.scale.setScalar(isHunter ? 2.15 : (isClash ? 1.48 : 1.05));
+          entry.orb.visible = true;
+          entry.card.visible = false;
+          const beadBase = isHunter ? 0.86 : (isClash ? 0.62 : 0.48);
+          for (let bi = 0; bi < entry.beads.length; bi++) {
+            const bu = Math.max(0, prog - (bi + 1) * 0.10);
+            evalQuadraticPoint(entry.beads[bi].position, fx.tmpP0, fx.tmpMid, fx.tmpP2, bu);
+            entry.beads[bi].scale.setScalar(Math.max(0.16, beadBase - bi * 0.075));
+            entry.beads[bi].visible = bu > 0.02;
+          }
+        } else {
+          entry.orb.visible = false;
+          entry.card.visible = false;
+          for (let bi = 0; bi < entry.beads.length; bi++) entry.beads[bi].visible = false;
+        }
       }
     }
   }
 
-  // 5. Update Pooled Shockwaves
-  for (let i = 0; i < fx.shockPool.length; i++) {
-    const sw = fx.shockPool[i];
-    if (!sw.active) continue;
-    const prog = (nowMs - sw.born) / sw.duration;
-    if (prog >= 1) {
-      sw.active = false;
-      sw.mesh.visible = false;
-      continue;
+  // 5. Update Pooled Shockwaves (idle zero-scan fast path)
+  if ((fx._activeShockCount || 0) > 0) {
+    let shAlive = 0;
+    for (let i = 0; i < fx.shockPool.length; i++) {
+      const sw = fx.shockPool[i];
+      if (!sw.active) continue;
+      const prog = (nowMs - sw.born) / sw.duration;
+      if (prog >= 1) {
+        sw.active = false;
+        sw.mesh.visible = false;
+        continue;
+      }
+      shAlive += 1;
+      sw.mesh.scale.setScalar(1 + prog * sw.maxScale);
+      sw.mat.opacity = (1 - prog) * 0.85;
     }
-    sw.mesh.scale.setScalar(1 + prog * sw.maxScale);
-    sw.mat.opacity = (1 - prog) * 0.85;
+    fx._activeShockCount = shAlive;
   }
 
-  // 6. Update Pooled Candle Smoke Puffs
-  const dt60Fx = clamp(Number(f && f.dt60) || 1, 0.05, 3.0);
-  for (let i = 0; i < fx.smokePool.length; i++) {
-    const sp = fx.smokePool[i];
-    if (!sp.active) continue;
-    const prog = (nowMs - sp.born) / sp.duration;
-    if (prog >= 1) {
-      sp.active = false;
-      sp.mesh.visible = false;
-      continue;
+  // 6. Update Pooled Candle Smoke Puffs (idle zero-scan fast path)
+  if ((fx._activeSmokeCount || 0) > 0) {
+    let smAlive = 0;
+    for (let i = 0; i < fx.smokePool.length; i++) {
+      const sp = fx.smokePool[i];
+      if (!sp.active) continue;
+      const prog = (nowMs - sp.born) / sp.duration;
+      if (prog >= 1) {
+        sp.active = false;
+        sp.mesh.visible = false;
+        continue;
+      }
+      smAlive += 1;
+      sp.mesh.position.y += 0.014 * dt60Fx;
+      sp.mesh.position.x += (sp.vx + Math.sin(t * 3 + sp.born) * 0.002) * dt60Fx;
+      sp.mesh.position.z += sp.vz * dt60Fx;
+      sp.mesh.scale.setScalar(0.7 + prog * 2.1);
+      sp.mat.opacity = (1 - prog) * (sp.baseOpacity || 0.36);
     }
-    sp.mesh.position.y += 0.014 * dt60Fx;
-    sp.mesh.position.x += (sp.vx + Math.sin(t * 3 + sp.born) * 0.002) * dt60Fx;
-    sp.mesh.position.z += sp.vz * dt60Fx;
-    sp.mesh.scale.setScalar(0.7 + prog * 2.1);
-    sp.mat.opacity = (1 - prog) * (sp.baseOpacity || 0.36);
+    fx._activeSmokeCount = smAlive;
   }
 
   // 7. Role Skill 3D Aura Cylinder + UV-Scrolling Runes + Guard Dome Animation

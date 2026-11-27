@@ -151,7 +151,7 @@ const stage3d = {
       } catch (e) { }
     }
     const isSoftware = /swiftshader|subzero|llvmpipe|softpipe|software|microsoft basic render|\bwarp\b/i.test(info);
-    const isIntegrated = isSoftware || /intel.*(uhd|hd graphics|iris)|\bintel\(?r?\)?\s*(?:arc\(?tm\)?\s*)?graphics\b|radeon\(tm\)\s*graphics|amd radeon(?:\(tm\))?\s*(?:\d{3}m\s*)?graphics|vega \d/i.test(info);
+    const isIntegrated = isSoftware || /intel.*(uhd|hd graphics|iris)|\bintel\(?r?\)?\s*(?:arc\(?tm\)?\s*)?graphics\b|\bintel\(?r?\)?\s*arc\(?tm\)?\s*1[34]0[vt]\b|radeon\(tm\)\s*graphics|amd radeon(?:\(tm\))?\s*(?:\d{3}m\s*)?graphics|\bradeon(?:\(tm\))?\s*(?:[678]\d0m|vega\s*\d+)\b|vega \d|\badreno\b/i.test(info);
     const isWinUa = typeof navigator !== "undefined" && /windows/i.test(String(navigator.userAgent || ""));
     const isWindowsAngle = /angle\s*\(.*direct3d/i.test(info) || (isWinUa && !/apple/i.test(info));
     let shortLabel = isSoftware ? "CPU 軟體渲染（請開硬體加速）" : (isIntegrated ? "內顯最佳化" : "獨立/標準顯卡");
@@ -211,10 +211,14 @@ const stage3d = {
       : "";
     const gpuName = this.getCleanGpuName();
     const perfStr = gpuName + "｜" + baseLbl + fpsTag;
+    const warnDesktop = this.shouldWarnDesktopIntegratedGpu();
+    const uiKey = perfStr + "|" + (warnDesktop ? 1 : 0) + "|" + (this.isSoftwareRenderer ? 1 : 0);
+    if (this._lastGpuUiKey === uiKey) return;
+    this._lastGpuUiKey = uiKey;
     const qBtn = el("btnToggle3DQuality");
     if (qBtn) {
-      qBtn.textContent = baseLbl;
-      qBtn.title = perfStr;
+      if (qBtn.textContent !== baseLbl) qBtn.textContent = baseLbl;
+      if (qBtn.title !== perfStr) qBtn.title = perfStr;
     }
     const perfLine = el("gpuPerfStatusLine");
     if (perfLine) {
@@ -222,7 +226,6 @@ const stage3d = {
     }
     const hintEl = el("gpuDualCardHint");
     if (hintEl) {
-      const warnDesktop = this.shouldWarnDesktopIntegratedGpu();
       hintEl.classList.toggle("hidden", !warnDesktop);
       if (warnDesktop) {
         hintEl.textContent = this.isSoftwareRenderer
@@ -272,6 +275,23 @@ const stage3d = {
     const maxOverlayPixels = this.isSoftwareRenderer ? 1200000 : ((this.isIntegratedGpu || q === "eco") ? 1650000 : 2400000);
     const budgetDpr = Math.sqrt(maxOverlayPixels / Math.max(1, this.getStageViewportCssArea()));
     return Math.max(0.75, Math.min((typeof window !== "undefined" && window.devicePixelRatio) ? window.devicePixelRatio : 1, cap, budgetDpr));
+  },
+
+  getCachedOverlayDpr: function () {
+    if (this._cachedOverlayDpr && this._cachedOverlayDpr > 0) return this._cachedOverlayDpr;
+    this._cachedOverlayDpr = this.getOverlayDpr();
+    return this._cachedOverlayDpr;
+  },
+
+  invalidateLayoutCache: function () {
+    this._cachedOverlayDpr = 0;
+    if (this._ndcRectCache) this._ndcRectCache.at = 0;
+  },
+
+  shouldPace30Fps: function () {
+    if (!this.isActive()) return false;
+    if (typeof state === "undefined" || state.quality3D !== "eco") return false;
+    return Boolean((this._ecoDprScale || 1) <= 0.8 && (this._perfEmaMs || 0) > 35);
   },
 
   init: function () {
@@ -349,7 +369,7 @@ const stage3d = {
       this.seats = build3DSeatPool(scene);
       this.hero = typeof buildHeroCharacter === "function" ? buildHeroCharacter(scene) : null;
       this.fx = build3DEffects(scene);
-      this.postfx = typeof build3DPostFx === "function"
+      this.postfx = (typeof build3DPostFx === "function" && !this.isSoftwareRenderer && !this.isIntegratedGpu)
         ? build3DPostFx(renderer, scene, camera, {
           preferLightweight: this.isIntegratedGpu,
           isWindowsAngle: this.isWindowsAngle,
@@ -357,12 +377,13 @@ const stage3d = {
         })
         : null;
       // Pre-align renderer.toneMapping BEFORE the first draw call and KEEP it locked across quality changes (prevents 6-second full-scene shader recompile stalls!)
-      const willUsePostFxInit = Boolean(this.postfx && !this.isSoftwareRenderer);
+      // Bypass 2-pass EffectComposer FBOs completely on integrated GPUs & software renderers (direct single-pass ACESFilmicToneMapping!)
+      const willUsePostFxInit = Boolean(this.postfx && !this.isSoftwareRenderer && !this.isIntegratedGpu);
       if (willUsePostFxInit && THREE.NoToneMapping !== undefined) {
         renderer.toneMapping = THREE.NoToneMapping;
       } else if (THREE.ACESFilmicToneMapping !== undefined) {
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.02;
+        renderer.toneMappingExposure = 1.04;
       }
       this._vrmWarmupUntil = (typeof performance !== "undefined" ? performance.now() : Date.now()) + 3500;
       this._shadowBakedOnce = false;
@@ -391,7 +412,14 @@ const stage3d = {
       }
       this.ready = true;
       if (!this.isSoftwareRenderer) {
-        this.checkAutoHeroGlb();
+        const selfBoot = this;
+        if (typeof setTimeout === "function") {
+          setTimeout(function () {
+            if (!selfBoot.failed && selfBoot.ready) selfBoot.checkAutoHeroGlb();
+          }, this.isIntegratedGpu ? 220 : 80);
+        } else {
+          this.checkAutoHeroGlb();
+        }
       }
 
       this.applyQualityMode();
@@ -434,10 +462,17 @@ const stage3d = {
     if (this.env && this.env.teaSteamPoints) this.env.teaSteamPoints.visible = !isEco;
     if (this.env && this.env.petalGroup) this.env.petalGroup.visible = q === "high";
     if (this.env && this.env.godRaysGroup) this.env.godRaysGroup.visible = !isEco;
+    if (this.postfx && typeof this.postfx.setFxaaEnabled === "function") {
+      // Save 80% PostFX texture bandwidth on iGPUs / eco thermal downshift without shader recompile
+      const wantFxaa = !(isEco && (this.isIntegratedGpu || (this._ecoDprScale || 1) < 0.95));
+      this.postfx.setFxaaEnabled(wantFxaa);
+    }
     if (typeof this.syncSceneThemeUi === "function") this.syncSceneThemeUi();
     // Reset cached DPR and delegate to resize() so renderer.setSize(), camera.aspect & postfx ALWAYS stay 100% in sync!
     this._lastResizeDpr = 0;
+    this.invalidateLayoutCache();
     this.resize();
+    this._cachedOverlayDpr = this.getOverlayDpr();
     if (typeof invalidate3DOverlayCache === "function") invalidate3DOverlayCache();
     this.updateGpuStatusUi();
   },
@@ -569,7 +604,7 @@ const stage3d = {
     const headY = (hp && typeof hp.y === "number" && hp.y > 1.2) ? hp.y : 2.10;
     const lookY = isMobileSplit
       ? clamp(isInspect ? (headY - 0.18) : (headY - 0.24), 1.68, 1.98)
-      : clamp(isInspect ? (headY - 0.80) : (headY - 0.92), 1.08, 1.46);
+      : clamp(isInspect ? (headY - 0.86) : (headY - 0.98), 0.96, 1.40);
     const fov = isMobileSplit
       ? (isInspect ? 43 : 44)
       : (isInspect ? 39 : (isDramatic ? 38 : 40));
@@ -713,7 +748,8 @@ const stage3d = {
       }
     } else if (kind === "three_good_resonance") {
       if (this.env) this.env.lotusSpinBoost = 1.3;
-      const center = new THREE.Vector3(0, 0, 0);
+      const center = this._originVec3 || (this._originVec3 = new THREE.Vector3(0, 0, 0));
+      center.set(0, 0, 0);
       spawn3DShockwave(this.fx, center, "#fbbf24", nowMs, 1.28, 8.2);
       setTimeout(function () {
         if (stage3d.fx) spawn3DShockwave(stage3d.fx, center, "#34d399", performance.now(), 1.32, 7.0);
@@ -722,25 +758,47 @@ const stage3d = {
   },
 
   getNdcFromClient: function (clientX, clientY) {
+    const out = this._ndcScratch || (this._ndcScratch = { x: 0, y: 0 });
     const canvas = el("sanctuaryCanvas");
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: ((clientX - rect.left) / Math.max(1, rect.width)) * 2 - 1,
-      y: -((clientY - rect.top) / Math.max(1, rect.height)) * 2 + 1
-    };
+    if (!canvas) {
+      out.x = 0;
+      out.y = 0;
+      return out;
+    }
+    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    let cache = this._ndcRectCache;
+    if (!cache || cache.el !== canvas || !cache.at || (nowMs - cache.at) > 80) {
+      const r = canvas.getBoundingClientRect();
+      cache = this._ndcRectCache = { el: canvas, at: nowMs, left: r.left, top: r.top, width: Math.max(1, r.width), height: Math.max(1, r.height) };
+    }
+    out.x = ((clientX - cache.left) / cache.width) * 2 - 1;
+    out.y = -((clientY - cache.top) / cache.height) * 2 + 1;
+    return out;
   },
 
   raycastSeat: function (clientX, clientY) {
     if (!this.isActive() || !this.raycaster || !this.seats) return null;
+    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const rc = this._seatRayCache;
+    if (
+      rc &&
+      (nowMs - rc.at) < 36 &&
+      Math.abs(clientX - rc.x) <= 12 &&
+      Math.abs(clientY - rc.y) <= 12 &&
+      !(state.dragAction && state.dragAction.active)
+    ) {
+      return rc.res;
+    }
     const ndc = this.getNdcFromClient(clientX, clientY);
     this.raycaster.setFromCamera(ndc, this.camera);
     const hits = this.raycaster.intersectObjects(this.seats.hitMeshes, false);
+    let res = null;
     if (hits.length > 0 && hits[0].object && hits[0].object.userData && hits[0].object.userData.seatId) {
       const sid = hits[0].object.userData.seatId;
-      return state.seatCoords.find(function (c) { return c.id === sid; }) || null;
+      res = state.seatCoords.find(function (c) { return c.id === sid; }) || null;
     }
-    return null;
+    this._seatRayCache = { at: nowMs, x: clientX, y: clientY, res: res };
+    return res;
   },
 
   raycastCenterCrystal: function (clientX, clientY) {
@@ -1243,31 +1301,40 @@ const stage3d = {
     this.updateVrmLoadIndicator();
     const loader = this.gltfLoader || (this.gltfLoader = new THREE.GLTFLoader());
     loader.load(job.url, function (gltf) {
-      delete self.avatarLoadingKeys[job.key];
-      delete self.avatarQueuedKeys[job.key];
-      self.avatarActiveLoads = Math.max(0, self.avatarActiveLoads - 1);
-      self.avatarDoneCount += 1;
-      if (self.failed || !self.ready) {
-        if (gltf && gltf.scene) self.disposeObject3D(gltf.scene);
+      const finishJob = function () {
+        delete self.avatarLoadingKeys[job.key];
+        delete self.avatarQueuedKeys[job.key];
+        self.avatarActiveLoads = Math.max(0, self.avatarActiveLoads - 1);
+        self.avatarDoneCount += 1;
+        if (self.failed || !self.ready) {
+          if (gltf && gltf.scene) self.disposeObject3D(gltf.scene);
+          self.updateVrmLoadIndicator();
+          return;
+        }
+        const latestSeat = typeof getStageSeatListFor3D === "function"
+          ? getStageSeatListFor3D().find(function (x) { return x.id === job.seat.id; })
+          : job.seat;
+        const curActor = (self.seats && self.seats.slots) ? self.seats.slots[job.seat.id] : null;
+        const hasCustom = Boolean(curActor && curActor.boundModelSlug && curActor.boundModelSlug.indexOf("custom:") === 0);
+        const latestSlug = latestSeat ? stage3dVrm.getSeatModelSlug(latestSeat) : "";
+        const latestAvatarKey = latestSlug + "|" + (latestSeat && latestSeat.name ? latestSeat.name : "");
+        if (!hasCustom && latestSeat && latestSlug === job.slug && (!job.avatarKey || latestAvatarKey === job.avatarKey)) {
+          self.attachSeatAvatar(job.seat.id, gltf, job.url.split("/").pop(), true, job.slug, latestSeat);
+        } else if (gltf && gltf.scene) {
+          // Stale in-flight load after seat shuffle or custom VRM upload: dispose immediately so GPU textures & ImageBitmaps never leak!
+          self.disposeObject3D(gltf.scene);
+        }
         self.updateVrmLoadIndicator();
-        return;
-      }
-      const latestSeat = typeof getStageSeatListFor3D === "function"
-        ? getStageSeatListFor3D().find(function (x) { return x.id === job.seat.id; })
-        : job.seat;
-      const curActor = (self.seats && self.seats.slots) ? self.seats.slots[job.seat.id] : null;
-      const hasCustom = Boolean(curActor && curActor.boundModelSlug && curActor.boundModelSlug.indexOf("custom:") === 0);
-      const latestSlug = latestSeat ? stage3dVrm.getSeatModelSlug(latestSeat) : "";
-      const latestAvatarKey = latestSlug + "|" + (latestSeat && latestSeat.name ? latestSeat.name : "");
-      if (!hasCustom && latestSeat && latestSlug === job.slug && (!job.avatarKey || latestAvatarKey === job.avatarKey)) {
-        self.attachSeatAvatar(job.seat.id, gltf, job.url.split("/").pop(), true, job.slug, latestSeat);
-      } else if (gltf && gltf.scene) {
-        // Stale in-flight load after seat shuffle or custom VRM upload: dispose immediately so GPU textures & ImageBitmaps never leak!
-        self.disposeObject3D(gltf.scene);
-      }
-      self.updateVrmLoadIndicator();
-      if (!self.failed && self.ready) {
-        setTimeout(function () { self.pumpAvatarQueue(); }, 50);
+        if (!self.failed && self.ready) {
+          const nextDelay = self.isIntegratedGpu ? 160 : 60;
+          setTimeout(function () { self.pumpAvatarQueue(); }, nextDelay);
+        }
+      };
+      // Yield 1 macrotask slice between GLTF parse and material/texture prep so main-thread never stacks into multi-second Long Tasks!
+      if (typeof setTimeout === "function") {
+        setTimeout(finishJob, self.isIntegratedGpu ? 24 : 8);
+      } else {
+        finishJob();
       }
     }, undefined, function () {
       delete self.avatarLoadingKeys[job.key];
@@ -1276,7 +1343,7 @@ const stage3d = {
       self.avatarDoneCount += 1;
       self.updateVrmLoadIndicator();
       if (!self.failed && self.ready) {
-        setTimeout(function () { self.pumpAvatarQueue(); }, 50);
+        setTimeout(function () { self.pumpAvatarQueue(); }, self.isIntegratedGpu ? 140 : 60);
       }
     });
   },
@@ -1569,7 +1636,7 @@ const stage3d = {
     if (!this.isActive() || !this.raycaster || !this.fx) return;
     const ndc = this.getNdcFromClient(clientX, clientY);
     this.raycaster.setFromCamera(ndc, this.camera);
-    const hitPt = new THREE.Vector3();
+    const hitPt = this._dragHitScratch || (this._dragHitScratch = new THREE.Vector3());
     if (this.raycaster.ray.intersectPlane(this.tablePlane, hitPt)) {
       hitPt.x = clamp(hitPt.x, -8.5, 8.5);
       hitPt.z = clamp(hitPt.z, -8.5, 8.5);
@@ -1581,7 +1648,9 @@ const stage3d = {
     if (!this.isActive() || !this.env || !this.fx) return;
     this.env.lotusSpinBoost = 1.0;
     const nowMs = performance.now();
-    spawn3DShockwave(this.fx, new THREE.Vector3(0, 0, 0), "#fbbf24", nowMs, 1.28, 7.5);
+    const origin = this._originVec3 || (this._originVec3 = new THREE.Vector3(0, 0, 0));
+    origin.set(0, 0, 0);
+    spawn3DShockwave(this.fx, origin, "#fbbf24", nowMs, 1.28, 7.5);
     sound.playBlessing();
     showToast("輕觸三好蓮花核心：願本局存好心、說好話、做好事！", "emerald");
   },
@@ -1688,6 +1757,8 @@ const stage3d = {
     this._lastResizeW = w;
     this._lastResizeH = h;
     this._lastResizeDpr = dpr;
+    this.invalidateLayoutCache();
+    this._cachedOverlayDpr = this.getOverlayDpr();
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
@@ -1855,8 +1926,10 @@ const stage3d = {
       }
 
       const dramaFocusFp = typeof isDramaticFocusActive === "function" && isDramaticFocusActive(nowMs);
-      if (typeof document !== "undefined" && document.body && document.body.classList) {
-        document.body.classList.toggle("is-seat-focus-vignette", Boolean(dramaFocusFp));
+      const wantVigFp = Boolean(dramaFocusFp);
+      if (this._lastFocusVignette !== wantVigFp && typeof document !== "undefined" && document.body && document.body.classList) {
+        this._lastFocusVignette = wantVigFp;
+        document.body.classList.toggle("is-seat-focus-vignette", wantVigFp);
       }
       if (typeof this.camera.fov === "number") {
         const rawFpFov = this.getFirstPersonBaseFov() + (o.fpFovOffset || 0) + fpFocusLeanFov;
@@ -1927,25 +2000,28 @@ const stage3d = {
           isLandscapeCam ? (2.35 + largeTableR * 0.68) : (1.35 + largeTableR * 0.35)
         );
       } else if (!state.match.started || p === "LOBBY") {
-        // Theatrical Indie Title Screen Framing: gentle sweep showing intimate table + Qingming + layered mountains & Cloud Isle
-        o.targetYaw = -0.18 + Math.sin(f.tSec * 0.14) * 0.24;
+        // Track 1 Title Framing: shift table right ~10-14% on widescreen so seats 02/04 never sit behind the left Title column!
+        const camAspectLobby = (this.camera && this.camera.aspect) ? this.camera.aspect : 1.6;
+        const isWideLobby = camAspectLobby >= 1.15;
+        o.targetYaw = (isWideLobby ? -0.10 : -0.18) + Math.sin(f.tSec * 0.11) * (isWideLobby ? 0.14 : 0.20);
         o.targetPitch = 0.34;
-        o.targetRadius = 10.6 + largeTableR;
-        o.targetLookAt.set(-0.92, 1.42, -0.95);
+        o.targetRadius = (isWideLobby ? 11.4 : 10.6) + largeTableR;
+        o.targetLookAt.set(isWideLobby ? -2.15 : -0.92, 1.38, -0.88);
       } else if (f.night) {
+        const isLandscapePlay = (this.camera && this.camera.aspect ? this.camera.aspect : 1.6) >= 1.0;
         const nightFocusId = state.selectedSeatId || state.hoverSeatId;
         const nightAnchor = (nightFocusId && this.seats.anchors[nightFocusId]) ? this.seats.anchors[nightFocusId] : null;
         if (nightAnchor) {
           const np = nightAnchor.worldPos;
           o.targetYaw = -Math.sin(Math.atan2(np.x, np.z)) * 0.24;
           o.targetPitch = 0.60;
-          o.targetRadius = 11.0 + largeTableR * 0.85;
-          o.targetLookAt.set(np.x * 0.22, 0.68, np.z * 0.22 + 0.26);
+          o.targetRadius = (isLandscapePlay ? 11.6 : 11.0) + largeTableR * 0.85;
+          o.targetLookAt.set(np.x * 0.22, isLandscapePlay ? 0.44 : 0.68, np.z * 0.22 + (isLandscapePlay ? 0.92 : 0.26));
         } else {
           o.targetYaw = Math.sin(f.tSec * 0.12) * 0.14;
           o.targetPitch = 0.65;
-          o.targetRadius = 11.8 + largeTableR;
-          o.targetLookAt.set(0, 0.56, 0.32);
+          o.targetRadius = (isLandscapePlay ? 12.4 : 11.8) + largeTableR;
+          o.targetLookAt.set(0, isLandscapePlay ? 0.38 : 0.56, isLandscapePlay ? 0.98 : 0.32);
         }
       } else if ((p === "DAY_SPEECH" || p === "LAST_WORDS_SPEECH" || p === "SHERIFF_ELECTION") && state.activeSpeakerId && this.seats.anchors[state.activeSpeakerId]) {
         // v11.3 True Front-Facing Medium / Half-Body Speaker Shot (builds vivid character recall while keeping face & hands clear above HUD!)
@@ -1987,6 +2063,10 @@ const stage3d = {
           if (seerClaimCount >= 2) isDualConfrontation = true;
           else _camRivalAnchors.length = 0;
         }
+        const isLandscapeDay = (this.camera && this.camera.aspect ? this.camera.aspect : 1.6) >= 1.0;
+        const dayLookY = isLandscapeDay ? 0.40 : 0.62;
+        const dayLookZ = isLandscapeDay ? 1.08 : 0.35;
+        const dayExtraR = isLandscapeDay ? 0.75 : 0;
         if (isDualConfrontation) {
           // Dual-Rival Confrontation Framing (PK or Seer Clash! Zero per-frame array allocation)
           if (_camRivalAnchors.length >= 2) {
@@ -1995,13 +2075,13 @@ const stage3d = {
             const axisAng = Math.atan2(_camRivalAnchors[1].worldPos.z - _camRivalAnchors[0].worldPos.z, _camRivalAnchors[1].worldPos.x - _camRivalAnchors[0].worldPos.x);
             o.targetYaw = Math.sin(axisAng) * 0.52;
             o.targetPitch = 0.56;
-            o.targetRadius = 11.8 + largeTableR * 0.85;
-            o.targetLookAt.set(midX * 0.32, 0.65, midZ * 0.32 + 0.35);
+            o.targetRadius = 11.8 + dayExtraR + largeTableR * 0.85;
+            o.targetLookAt.set(midX * 0.32, dayLookY + 0.04, midZ * 0.32 + dayLookZ);
           } else {
             o.targetYaw = Math.sin(f.tSec * 0.2) * 0.16;
             o.targetPitch = 0.62;
-            o.targetRadius = 12.4 + largeTableR;
-            o.targetLookAt.set(0, 0.62, 0.35);
+            o.targetRadius = 12.4 + dayExtraR + largeTableR;
+            o.targetLookAt.set(0, dayLookY, dayLookZ);
           }
         } else if (p === "DAY_VOTE" || p === "DAY_VOTE_RESULT") {
           const leaderAnchor = (state.voteLeaderId && this.seats.anchors[state.voteLeaderId]) ? this.seats.anchors[state.voteLeaderId] : null;
@@ -2009,19 +2089,19 @@ const stage3d = {
             const lp = leaderAnchor.worldPos;
             o.targetYaw = -Math.sin(Math.atan2(lp.x, lp.z)) * 0.32;
             o.targetPitch = 0.54;
-            o.targetRadius = 11.5 + largeTableR * 0.85;
-            o.targetLookAt.set(lp.x * 0.24, 0.68, lp.z * 0.24 + 0.32);
+            o.targetRadius = 11.5 + dayExtraR + largeTableR * 0.85;
+            o.targetLookAt.set(lp.x * 0.24, dayLookY + 0.05, lp.z * 0.24 + dayLookZ);
           } else {
             o.targetYaw = Math.sin(f.tSec * 0.2) * 0.16;
             o.targetPitch = 0.62;
-            o.targetRadius = 12.4 + largeTableR;
-            o.targetLookAt.set(0, 0.62, 0.35);
+            o.targetRadius = 12.4 + dayExtraR + largeTableR;
+            o.targetLookAt.set(0, dayLookY, dayLookZ);
           }
         } else {
           o.targetYaw = 0;
           o.targetPitch = 0.54;
-          o.targetRadius = 12.0 + largeTableR;
-          o.targetLookAt.set(0, 0.64, 0.35);
+          o.targetRadius = 12.0 + dayExtraR + largeTableR;
+          o.targetLookAt.set(0, dayLookY + 0.02, dayLookZ);
         }
       }
     }
@@ -2044,7 +2124,8 @@ const stage3d = {
       }
     }
 
-    if (typeof document !== "undefined" && document.body && document.body.classList) {
+    if (this._lastFocusVignette !== false && typeof document !== "undefined" && document.body && document.body.classList) {
+      this._lastFocusVignette = false;
       document.body.classList.remove("is-seat-focus-vignette");
     }
     if (typeof this.camera.fov === "number" && !this.showcaseMode && this.camPreset !== "firstperson") {
@@ -2139,10 +2220,18 @@ const stage3d = {
                 );
               }
             }
-          } else if (!this._manualQualityLock && state.quality3D === "eco" && (this._ecoDprScale || 1) > 0.82 && this._perfEmaMs > 40) {
+          } else if (!this._manualQualityLock && state.quality3D === "eco" && (this._ecoDprScale || 1) > 0.82 && this._perfEmaMs > 38) {
             this._perfSlowMs = (this._perfSlowMs || 0) + sampleDt;
-            if (this._perfSlowMs > 2000) {
+            if (this._perfSlowMs > 1800) {
               this._ecoDprScale = 0.8;
+              this._perfSlowMs = 0;
+              this._perfEmaMs = 0;
+              this.applyQualityMode();
+            }
+          } else if (!this._manualQualityLock && state.quality3D === "eco" && (this._ecoDprScale || 1) > 0.70 && this._perfEmaMs > 44) {
+            this._perfSlowMs = (this._perfSlowMs || 0) + sampleDt;
+            if (this._perfSlowMs > 2200) {
+              this._ecoDprScale = 0.68;
               this._perfSlowMs = 0;
               this._perfEmaMs = 0;
               this.applyQualityMode();
@@ -2159,7 +2248,7 @@ const stage3d = {
     const p = state.match.phase;
     const night = isNightPhase(p) || (p === "GAME_OVER" && state.match.winner === "wolf");
     const daylight = state.match.started && !night && p !== "LOBBY";
-    const dpr = this.getOverlayDpr();
+    const dpr = this.getCachedOverlayDpr();
     const rawDtMs = this._lastRenderMs ? (nowMs - this._lastRenderMs) : 16.6667;
     this._lastRenderMs = nowMs;
     const inHitStop = Boolean(typeof state !== "undefined" && state.fxHitStopUntil && nowMs < state.fxHitStopUntil);
@@ -2228,8 +2317,8 @@ const stage3d = {
       }
     }
 
-    // Keep PostFX gradePass locked on all hardware GPUs so renderer.toneMapping NEVER flips (eliminates 6s shader recompile stalls!)
-    const usePostFxNow = Boolean(this.postfx && !this.isSoftwareRenderer);
+    // Direct single-pass render on iGPU & software (native ACESFilmicToneMapping locked at init); full PostFX pipeline on discrete GPUs!
+    const usePostFxNow = Boolean(this.postfx && !this.isSoftwareRenderer && !this.isIntegratedGpu);
     if (usePostFxNow) {
       // Single authoritative ACES Filmic pass inside PostFX gradePass (prevents double tone-mapping compression!)
       if (this.renderer && THREE.NoToneMapping !== undefined && this.renderer.toneMapping !== THREE.NoToneMapping) {
@@ -2267,6 +2356,11 @@ const stage3d = {
  */
 function draw3DOverlayHud(ctx, f, coords) {
   const { dpr, p } = f;
+  const roleDealEl = typeof el === "function" ? el("roleDealOverlay") : null;
+  if (roleDealEl && !roleDealEl.classList.contains("hidden")) {
+    state.fpGlanceButtons = [];
+    return;
+  }
   const isOver = p === "GAME_OVER";
   const inMatch = Boolean(state.match && state.match.started && !isOver);
   const isPickPhase = (p === "NIGHT_GUARD" || p === "NIGHT_SEER" || p === "NIGHT_WOLF" || p === "NIGHT_WITCH" || p === "HUNTER_TRIGGER" || p === "DAY_VOTE" || p === "DAY_PLAYER_TURN");
@@ -2291,6 +2385,13 @@ function draw3DOverlayHud(ctx, f, coords) {
             nextTop = Math.max(nextTop, Math.min(f.h * 0.36, (tr.bottom - cvRect.top + 8) * dpr));
           }
         }
+        const stripEl = el("seatButtonStrip");
+        if (stripEl && inMatch && !stripEl.classList.contains("hidden") && typeof stripEl.getBoundingClientRect === "function") {
+          const sr = stripEl.getBoundingClientRect();
+          if (sr.height > 0 && sr.bottom > cvRect.top && sr.top < cvRect.top + cvRect.height * 0.35) {
+            nextTop = Math.max(nextTop, Math.min(f.h * 0.38, (sr.bottom - cvRect.top + 8) * dpr));
+          }
+        }
         const deckEl = el("controlDeck");
         if (deckEl && inMatch && typeof deckEl.getBoundingClientRect === "function") {
           const dr = deckEl.getBoundingClientRect();
@@ -2311,9 +2412,25 @@ function draw3DOverlayHud(ctx, f, coords) {
     bottomSafeY = cache.bottom;
   }
 
-  const ROLE_SHORT_3D = {
+  const ROLE_SHORT_3D = draw3DOverlayHud._roleShort || (draw3DOverlayHud._roleShort = {
     seer: "觀察員", witch: "奉茶師", hunter: "糾察長", guard: "守衛",
     elder: "長老", villager: "書院生", wolf: "酸民狼", wolf_king: "流言首領"
+  });
+  let textWidthCache = draw3DOverlayHud._textWidthCache;
+  if (!textWidthCache || draw3DOverlayHud._textWidthDpr !== dpr) {
+    textWidthCache = draw3DOverlayHud._textWidthCache = new Map();
+    draw3DOverlayHud._textWidthDpr = dpr;
+  }
+  const measureCachedText = function (fontStr, textStr) {
+    const key = fontStr + "|" + textStr;
+    let wVal = textWidthCache.get(key);
+    if (wVal === undefined) {
+      ctx.font = fontStr;
+      wVal = ctx.measureText(textStr).width;
+      if (textWidthCache.size > 256) textWidthCache.clear();
+      textWidthCache.set(key, wVal);
+    }
+    return wVal;
   };
 
   const sorted = coords.slice().sort(function (a, b) { return (b.zDepth || 0) - (a.zDepth || 0); });
@@ -2451,10 +2568,8 @@ function draw3DOverlayHud(ctx, f, coords) {
       const namePx = Math.round((isNarrowFont ? 12 : 13) * (isSpeaking ? 1.06 : 1.0) * dpr);
       const numFont = "600 " + numPx + "px 'Noto Serif TC', Georgia, serif";
       const nameFont = "500 " + namePx + "px 'Noto Sans TC', 'Microsoft JhengHei UI', sans-serif";
-      ctx.font = numFont;
-      const numW = ctx.measureText(numLabel).width;
-      ctx.font = nameFont;
-      const nameW = ctx.measureText(topTag).width;
+      const numW = measureCachedText(numFont, numLabel);
+      const nameW = measureCachedText(nameFont, topTag);
       const gapX = Math.round(5.5 * dpr);
       const padH = Math.round((isSpeaking ? 12 : 9) * dpr);
       const tW = numW + gapX + nameW + padH * 2;
@@ -2487,8 +2602,7 @@ function draw3DOverlayHud(ctx, f, coords) {
       const hy = (-hostHead.y * 0.5 + 0.5) * f.h;
       const hFont = "700 " + Math.round(13 * dpr) + "px 'Noto Serif TC', 'Noto Sans TC', serif";
       const hTag = "清茗";
-      ctx.font = hFont;
-      const hW = ctx.measureText(hTag).width + 18 * dpr;
+      const hW = measureCachedText(hFont, hTag) + 18 * dpr;
       const hH = 22 * dpr;
       const clampedHy = clamp(hy - hH * 0.5, topSafeY, Math.max(topSafeY, bottomSafeY - hH));
       if (hy <= bottomSafeY + 12 * dpr) {
@@ -2549,13 +2663,15 @@ function draw3DOverlayHud(ctx, f, coords) {
       ctx.globalAlpha = pl.isDead ? 0.62 : 1.0;
     }
     if (pl.isSpeaking) {
-      ctx.shadowColor = "rgba(245, 196, 81, 0.58)";
-      ctx.shadowBlur = 14 * dpr;
+      // Zero-blur crisp golden lacquer outer rim (avoids expensive HiDPI 2D canvas shadowBlur Gaussian pass!)
+      drawRoundedRect(ctx, pl.x - pl.w * 0.5 - 2 * dpr, pl.y - 2 * dpr, pl.w + 4 * dpr, pl.h + 4 * dpr, 9 * dpr);
+      ctx.strokeStyle = "rgba(245, 196, 81, 0.34)";
+      ctx.lineWidth = 3.2 * dpr;
+      ctx.stroke();
     }
     drawRoundedRect(ctx, pl.x - pl.w * 0.5, pl.y, pl.w, pl.h, 7 * dpr);
     ctx.fillStyle = pl.topBg;
     ctx.fill();
-    ctx.shadowBlur = 0;
     ctx.lineWidth = (pl.isSpeaking ? 2.0 : (pl.isSubtle ? 1.1 : 1.4)) * dpr;
     ctx.strokeStyle = pl.topBorder;
     ctx.stroke();

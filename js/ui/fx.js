@@ -10,7 +10,7 @@ function spawnFx(seatId, text, color, opts) {
   const cleanText = typeof shStripCanvasEmoji === "function" ? shStripCanvasEmoji(text) : String(text || "");
   state.fxPopups.push({
     x: node ? node.x : 220,
-    y: node ? (node.y - 24) : 140,
+    y: node ? (node.y + 18) : 140,
     text: cleanText,
     color: color || "#fde68a",
     born: performance.now(),
@@ -71,7 +71,10 @@ function spawnRipple(x, y, color, maxR) {
 function spawnBurst(seatId, color, count, style) {
   const node = state.seatCoords.find(function (c) { return c.id === seatId; });
   if (!node) return;
-  const n = count || 18;
+  const isLiteFx = Boolean((typeof stage3d !== "undefined" && (stage3d.isIntegratedGpu || stage3d.isSoftwareRenderer)) || state.quality3D === "eco");
+  const rawN = count || 18;
+  const n = isLiteFx ? Math.max(4, Math.round(rawN * 0.55)) : rawN;
+  const maxPool = isLiteFx ? 75 : 140;
   const mul = typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0;
   const palette = Array.isArray(color) ? color : [color || "#fbbf24", "#fde68a", "#ffffff"];
   const now = performance.now();
@@ -92,8 +95,8 @@ function spawnBurst(seatId, color, count, style) {
       ttl: Math.round((1080 + Math.random() * 540) * mul)
     });
   }
-  if (state.burstParticles.length > 140) {
-    state.burstParticles.splice(0, state.burstParticles.length - 140);
+  if (state.burstParticles.length > maxPool) {
+    state.burstParticles.splice(0, state.burstParticles.length - maxPool);
   }
 }
 

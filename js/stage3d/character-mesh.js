@@ -151,6 +151,12 @@ const stage3dCharGeos = {
     this.haloRing = new THREE.RingGeometry(0.56, 0.66, 28);
     this.hitCyl = new THREE.CylinderGeometry(0.76, 0.76, 2.55, 10);
     this.plaqueBox = new THREE.BoxGeometry(0.78, 0.28, 0.048);
+    // Coalesce 6-face BoxGeometry groups (4 identical wood sides + 2 identical plaque faces) into 2 draw calls while preserving the 6-slot material array!
+    if (typeof this.plaqueBox.clearGroups === "function" && typeof this.plaqueBox.addGroup === "function" && Array.isArray(this.plaqueBox.groups) && this.plaqueBox.groups.length === 6) {
+      this.plaqueBox.clearGroups();
+      this.plaqueBox.addGroup(0, 24, 0);
+      this.plaqueBox.addGroup(24, 12, 4);
+    }
     this.candleWick = new THREE.CylinderGeometry(0.005, 0.006, 0.032, 5);
     this.candleHalo = new THREE.SphereGeometry(0.072, 8, 6);
     this.candleHit = new THREE.CylinderGeometry(0.16, 0.16, 0.52, 8);
@@ -160,6 +166,32 @@ const stage3dCharGeos = {
     this.markCrystal = new THREE.OctahedronGeometry(0.052, 0);
     this.idCard = new THREE.BoxGeometry(0.58, 0.032, 0.80);
     this.idCardHit = new THREE.BoxGeometry(0.76, 0.28, 0.96);
+
+    // Pre-merged static seat prop geometries (cuts ~100+ draw calls across 8–12 seats with zero visual change!)
+    if (typeof mergeStaticBufferGeos === "function") {
+      this.chairWoodMerged = mergeStaticBufferGeos([
+        { geo: this.backrest, py: 1.56, pz: -0.41 },
+        { geo: this.chairSplat, py: 1.14, pz: -0.42 },
+        { geo: this.chairSpindle, px: -0.38, py: 1.14, pz: -0.39 },
+        { geo: this.chairSpindle, px: 0.38, py: 1.14, pz: -0.39 },
+        { geo: this.chairLeg, px: -0.36, py: 0.325, pz: -0.37 },
+        { geo: this.chairLeg, px: 0.36, py: 0.325, pz: -0.37 },
+        { geo: this.chairLeg, px: -0.36, py: 0.325, pz: 0.31 },
+        { geo: this.chairLeg, px: 0.36, py: 0.325, pz: 0.31 }
+      ], false);
+      this.chairGoldMerged = mergeStaticBufferGeos([
+        { geo: this.cushionPiping, py: 0.62, pz: -0.03 },
+        { geo: this.chairMedallion, py: 1.30, pz: -0.42, rx: Math.PI * 0.5 }
+      ], false);
+      this.teaCupMerged = mergeStaticBufferGeos([
+        { geo: this.teasaucer, py: 0.011 },
+        { geo: this.teacup, py: 0.022 }
+      ], false);
+      this.teaLidMerged = mergeStaticBufferGeos([
+        { geo: this.teaLidRim },
+        { geo: this.teaLidKnob, py: 0.026 }
+      ], false);
+    }
     return this;
   }
 };
@@ -800,34 +832,38 @@ function create3DSeatActor(seat) {
   seatCushion.receiveShadow = true;
   chairGroup.add(seatCushion);
 
-  const piping = new THREE.Mesh(G.cushionPiping, chairGoldMat);
-  piping.position.set(0, 0.62, -0.03);
-  chairGroup.add(piping);
+  if (G.chairWoodMerged && G.chairGoldMerged) {
+    chairGroup.add(new THREE.Mesh(G.chairWoodMerged, chairWoodMat), new THREE.Mesh(G.chairGoldMerged, chairGoldMat));
+  } else {
+    const piping = new THREE.Mesh(G.cushionPiping, chairGoldMat);
+    piping.position.set(0, 0.62, -0.03);
+    chairGroup.add(piping);
 
-  const topRail = new THREE.Mesh(G.backrest, chairWoodMat);
-  topRail.position.set(0, 1.56, -0.41);
-  chairGroup.add(topRail);
+    const topRail = new THREE.Mesh(G.backrest, chairWoodMat);
+    topRail.position.set(0, 1.56, -0.41);
+    chairGroup.add(topRail);
 
-  const centerSplat = new THREE.Mesh(G.chairSplat, chairWoodMat);
-  centerSplat.position.set(0, 1.14, -0.42);
-  chairGroup.add(centerSplat);
+    const centerSplat = new THREE.Mesh(G.chairSplat, chairWoodMat);
+    centerSplat.position.set(0, 1.14, -0.42);
+    chairGroup.add(centerSplat);
 
-  const backMedallion = new THREE.Mesh(G.chairMedallion, chairGoldMat);
-  backMedallion.rotation.x = Math.PI * 0.5;
-  backMedallion.position.set(0, 1.30, -0.42);
-  chairGroup.add(backMedallion);
+    const backMedallion = new THREE.Mesh(G.chairMedallion, chairGoldMat);
+    backMedallion.rotation.x = Math.PI * 0.5;
+    backMedallion.position.set(0, 1.30, -0.42);
+    chairGroup.add(backMedallion);
 
-  [-0.38, 0.38].forEach(function (sx) {
-    const sp = new THREE.Mesh(G.chairSpindle, chairWoodMat);
-    sp.position.set(sx, 1.14, -0.39);
-    chairGroup.add(sp);
-  });
+    [-0.38, 0.38].forEach(function (sx) {
+      const sp = new THREE.Mesh(G.chairSpindle, chairWoodMat);
+      sp.position.set(sx, 1.14, -0.39);
+      chairGroup.add(sp);
+    });
 
-  [[-0.36, -0.37], [0.36, -0.37], [-0.36, 0.31], [0.36, 0.31]].forEach(function (p) {
-    const leg = new THREE.Mesh(G.chairLeg, chairWoodMat);
-    leg.position.set(p[0], 0.325, p[1]);
-    chairGroup.add(leg);
-  });
+    [[-0.36, -0.37], [0.36, -0.37], [-0.36, 0.31], [0.36, 0.31]].forEach(function (p) {
+      const leg = new THREE.Mesh(G.chairLeg, chairWoodMat);
+      leg.position.set(p[0], 0.325, p[1]);
+      chairGroup.add(leg);
+    });
+  }
   root.add(chairGroup);
 
   // 3. Sculpted Genshin-Style Seated Anime Character (Multi-layered Coat + Seated Legs + Sculpted Head + Rim Toon!)
@@ -1005,11 +1041,18 @@ function create3DSeatActor(seat) {
   const teaGroup = new THREE.Group();
   teaGroup.position.set(-0.48, 0.015, 0.12);
   const celadonMat = M.celadon;
-  const saucer = new THREE.Mesh(G.teasaucer, celadonMat);
-  saucer.position.y = 0.011;
-  saucer.receiveShadow = true;
-  const teacup = new THREE.Mesh(G.teacup, celadonMat);
-  teacup.position.y = 0.022;
+  if (G.teaCupMerged) {
+    const mergedCup = new THREE.Mesh(G.teaCupMerged, celadonMat);
+    mergedCup.receiveShadow = true;
+    teaGroup.add(mergedCup);
+  } else {
+    const saucer = new THREE.Mesh(G.teasaucer, celadonMat);
+    saucer.position.y = 0.011;
+    saucer.receiveShadow = true;
+    const teacup = new THREE.Mesh(G.teacup, celadonMat);
+    teacup.position.y = 0.022;
+    teaGroup.add(saucer, teacup);
+  }
   if (!G.teaLiquid) G.teaLiquid = new THREE.CircleGeometry(0.082, 12);
   const teaLiquid = new THREE.Mesh(G.teaLiquid, M.teaLiquid);
   teaLiquid.rotation.x = -Math.PI * 0.5;
@@ -1017,10 +1060,14 @@ function create3DSeatActor(seat) {
 
   // Eliminated Seat Teacup Cover Lid (合蓋覆杯) & Fog-Seal Plain Parchment Strip (迷霧封牌素色封條)
   const teaLidGroup = new THREE.Group();
-  const lidBody = new THREE.Mesh(G.teaLidRim, celadonMat);
-  const lidKnob = new THREE.Mesh(G.teaLidKnob, celadonMat);
-  lidKnob.position.y = 0.026;
-  teaLidGroup.add(lidBody, lidKnob);
+  if (G.teaLidMerged) {
+    teaLidGroup.add(new THREE.Mesh(G.teaLidMerged, celadonMat));
+  } else {
+    const lidBody = new THREE.Mesh(G.teaLidRim, celadonMat);
+    const lidKnob = new THREE.Mesh(G.teaLidKnob, celadonMat);
+    lidKnob.position.y = 0.026;
+    teaLidGroup.add(lidBody, lidKnob);
+  }
   teaLidGroup.position.y = 0.24;
   teaLidGroup.visible = false;
 
@@ -1029,7 +1076,7 @@ function create3DSeatActor(seat) {
   fogSealStrip.rotation.y = 0.28;
   fogSealStrip.visible = false;
 
-  teaGroup.add(saucer, teacup, teaLiquid, teaLidGroup, fogSealStrip);
+  teaGroup.add(teaLiquid, teaLidGroup, fogSealStrip);
   tablePropGroup.add(teaGroup);
 
   const markCrystalMat = new THREE.MeshStandardMaterial({
