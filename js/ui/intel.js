@@ -155,19 +155,38 @@ function positionSeatIntelPopover() {
   const pop = el("seatIntelPopover");
   if (!pop || pop.classList.contains("hidden")) return;
   const hud = el("inGameTopHud");
+  const seatStrip = el("seatButtonStrip");
+  const dock = el("controlDeck");
   const stageWrap = el("gameViewport");
+  const baseRect = (stageWrap && typeof stageWrap.getBoundingClientRect === "function") ? stageWrap.getBoundingClientRect() : { top: 0, height: (typeof window !== "undefined" ? window.innerHeight : 900) };
+  const baseTop = baseRect.top || 0;
+  const viewH = Math.max(400, baseRect.height || (typeof window !== "undefined" ? window.innerHeight : 900));
+  let safeTop = 58;
   if (hud && !hud.classList.contains("hidden") && typeof hud.getBoundingClientRect === "function") {
     const hudRect = hud.getBoundingClientRect();
-    const baseTop = (stageWrap && typeof stageWrap.getBoundingClientRect === "function") ? stageWrap.getBoundingClientRect().top : 0;
     if (hudRect.height > 0) {
-      const safeTop = Math.max(62, Math.ceil(hudRect.bottom - baseTop) + 8);
-      pop.style.top = safeTop + "px";
-      pop.style.maxHeight = "calc(100dvh - " + (safeTop + 16) + "px)";
-      return;
+      safeTop = Math.max(safeTop, Math.ceil(hudRect.bottom - baseTop) + 8);
     }
   }
-  pop.style.top = "";
-  pop.style.maxHeight = "";
+  if (seatStrip && !seatStrip.classList.contains("hidden") && typeof seatStrip.getBoundingClientRect === "function") {
+    const stripRect = seatStrip.getBoundingClientRect();
+    // Only avoid top-docked seat rail (when seatStrip sits near top edge)
+    if (stripRect.height > 0 && (stripRect.top - baseTop) < viewH * 0.35) {
+      safeTop = Math.max(safeTop, Math.ceil(stripRect.bottom - baseTop) + 8);
+    }
+  }
+  let safeBottomGap = 16;
+  if (dock && typeof dock.getBoundingClientRect === "function" && typeof window !== "undefined" && window.innerWidth < 1360) {
+    const dockRect = dock.getBoundingClientRect();
+    if (dockRect.height > 0 && dockRect.top > baseTop + safeTop + 140) {
+      const dockBottomOffset = Math.ceil((baseTop + viewH) - dockRect.top) + 8;
+      if (dockBottomOffset > 16 && dockBottomOffset < viewH * 0.55) {
+        safeBottomGap = dockBottomOffset;
+      }
+    }
+  }
+  pop.style.top = safeTop + "px";
+  pop.style.maxHeight = "calc(100dvh - " + (safeTop + safeBottomGap) + "px)";
 }
 
 function renderSeatIntelPopover() {

@@ -584,7 +584,7 @@ function preparePlayerLastWordsPanel(mode) {
       '<span class="play-card-stamp ' + stampCls + '">' + escapeHtml(item.tag) + '</span>' +
       '<span class="play-card-load-btn shrink-0" data-card-load="1" title="加入或移除此段到下方遺言欄">加入</span>' +
       '</div>' +
-      '<div class="play-card-title text-[13px] font-bold leading-snug line-clamp-1">' + escapeHtml(item.label) + '</div>' +
+      '<div class="play-card-title text-[13px] font-bold leading-snug">' + escapeHtml(item.label) + '</div>' +
       '<div class="play-card-preview text-[13px] leading-snug line-clamp-2 opacity-80">' + escapeHtml(item.text) + '</div>';
     const syncLwCardsUi = function () {
       const lwCur = el("lastWordsFreeInput") ? String(el("lastWordsFreeInput").value || "") : "";

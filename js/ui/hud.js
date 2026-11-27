@@ -88,7 +88,7 @@ function renderTutorialSlide() {
   for (let i = 0; i < slides.length; i++) {
     const d = document.createElement("button");
     d.type = "button";
-    d.className = "h-2 rounded-full transition-all " + (i === idx ? "w-6 bg-amber-400" : "w-2 bg-slate-700");
+    d.className = "h-1.5 transition-all " + (i === idx ? "w-6 bg-amber-400" : "w-2 bg-slate-700");
     d.setAttribute("aria-label", "第" + (i + 1) + "章");
     (function (pIdx) {
       d.addEventListener("click", function () {
@@ -200,10 +200,10 @@ function updateAllUI() {
   const aiDotEl = el("aiModeDot");
   if (aiDotEl) {
     aiDotEl.className = state.localLlmModel
-      ? "w-2 h-2 rounded-full bg-sky-400"
+      ? "w-2 h-2 rotate-45 bg-sky-400"
       : (state.geminiApiKey
-        ? "w-2 h-2 rounded-full bg-amber-400"
-        : (cloudProxyOn ? "w-2 h-2 rounded-full bg-indigo-400" : "w-2 h-2 rounded-full bg-emerald-400"));
+        ? "w-2 h-2 rotate-45 bg-amber-400"
+        : (cloudProxyOn ? "w-2 h-2 rotate-45 bg-indigo-400" : "w-2 h-2 rotate-45 bg-emerald-400"));
   }
   const activeLlmText = (typeof getActiveLlmLabel === "function")
     ? getActiveLlmLabel()
@@ -801,8 +801,8 @@ function renderPlayerRoleCard() {
       : "護心結界就緒・可守 1 席（防破盾）";
   } else if (effKey === "seer") {
     info = p.checkedHistory.length > 0
-      ? ("查驗：" + p.checkedHistory.map(function (c) { return c.targetId + "號=" + (c.isWolf ? "狼" : "好"); }).join("｜"))
-      : "尚未查驗・每晚靜心查證 1 位夥伴";
+      ? ("查：" + p.checkedHistory.map(function (c) { return c.targetId + (c.isWolf ? "狼" : "好"); }).join("・"))
+      : "尚未查驗・每晚查證 1 席";
   } else if (effKey === "witch") {
     const sv = p.savedSeatId ? ("｜銀水:" + p.savedSeatId + "號") : "";
     info = "暖心茶:" + (state.match.witchPotions.heal ? "有" : "已奉") + "｜清心茶:" + (state.match.witchPotions.purify ? "有" : "已奉") + sv;

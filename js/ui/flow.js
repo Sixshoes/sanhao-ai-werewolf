@@ -309,6 +309,9 @@ const indieFlow = {
     }
     ov.classList.remove("hidden", "is-unsealing", "is-revealed", "deal-theme-wolf", "deal-theme-good");
     ov.classList.add("is-sealed", isWolf ? "deal-theme-wolf" : "deal-theme-good");
+    if (typeof document !== "undefined" && document.body && document.body.classList) {
+      document.body.classList.add("role-deal-open");
+    }
     if (typeof sound !== "undefined" && typeof sound.playCardRustle === "function") {
       sound.playCardRustle();
     }
@@ -346,6 +349,9 @@ const indieFlow = {
     if (ov) {
       ov.classList.add("hidden");
       ov.classList.remove("is-sealed", "is-unsealing", "is-revealed", "deal-theme-wolf", "deal-theme-good");
+    }
+    if (typeof document !== "undefined" && document.body && document.body.classList) {
+      document.body.classList.remove("role-deal-open");
     }
     const pendingCb = this.onRoleDealClosed;
     this.onRoleDealClosed = null;
@@ -413,6 +419,11 @@ const indieFlow = {
     document.body.classList.toggle("phase-mode-night", isNightMode);
     document.body.classList.toggle("phase-mode-sheriff", isSheriffMode);
     document.body.classList.toggle("fourg-active", !isTitle && !isGameOver && fourGUsable);
+    document.body.classList.toggle("seat-rail-shown", showSeatBar);
+
+    if (isGameOver && typeof clearCutInQueue === "function") {
+      clearCutInQueue();
+    }
 
     if (!isListening && el("listenExtraToolsWrap")) {
       el("listenExtraToolsWrap").classList.remove("is-open");

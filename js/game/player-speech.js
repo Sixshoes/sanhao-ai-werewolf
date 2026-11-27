@@ -1295,7 +1295,7 @@ function createWolfGodHuntRow(targetSeats, attrName, compactCss) {
   const huntRow = document.createElement("div");
   huntRow.className = "pit-extra-row wolf-god-hunt-row";
   const hLbl = document.createElement("span");
-  hLbl.className = (compactCss ? "text-[13px]" : "text-[10px]") + " font-bold text-amber-300/90 shrink-0";
+  hLbl.className = "text-[13px] font-bold text-amber-300/90 shrink-0";
   hLbl.textContent = "獵神筆記：";
   huntRow.appendChild(hLbl);
   const marks = (state.match && state.match.wolfGodMarks) || {};
@@ -1384,7 +1384,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
       }
       const openBtn = document.createElement("button");
       openBtn.type = "button";
-      openBtn.className = "cta-ink text-[10px] px-2 py-0.5 shrink-0";
+      openBtn.className = "cta-ink text-[13px] px-2 py-0.5 shrink-0";
       openBtn.textContent = "完整票型 ↗";
       openBtn.addEventListener("click", function () {
         sound.unlock();
@@ -1461,7 +1461,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   const seatRow = document.createElement("div");
   seatRow.className = "pit-seat-row";
   const lbl = document.createElement("span");
-  lbl.className = "text-[10.5px] font-bold shrink-0 " + (isWolfPlayer ? "text-rose-300" : "text-amber-300/90");
+  lbl.className = "text-[13px] font-bold shrink-0 " + (isWolfPlayer ? "text-rose-300" : "text-amber-300/90");
   if (isWolfPlayer) {
     lbl.textContent = "甩鍋／假保：";
   } else {
@@ -1504,7 +1504,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   if (d.wolfIds.length > 0 || d.goodIds.length > 0 || d.claimRole || d.standSeerId || d.evidenceClueId || d.badgeFlowFirstId) {
     const clrBtn = document.createElement("button");
     clrBtn.type = "button";
-    clrBtn.className = "cta-link-quiet text-[10px] px-1.5 py-0.5 ml-auto";
+    clrBtn.className = "cta-link-quiet text-[13px] px-1.5 py-0.5 ml-auto";
     clrBtn.textContent = "↺ 清空";
     clrBtn.addEventListener("click", function () {
       sound.unlock();
@@ -1608,6 +1608,11 @@ function renderListenPitBar() {
     d.claimRole || d.standSeerId || d.evidenceClueId || d.badgeFlowFirstId
   );
 
+  if (state.match && !state.match._listenPitDefaultApplied) {
+    state.match._listenPitDefaultApplied = true;
+    state.listenPitCollapsed = true;
+  }
+
   host.classList.toggle("is-wolf-board", isWolfPlayer);
   host.classList.toggle("is-collapsed", Boolean(state.listenPitCollapsed));
 
@@ -1668,7 +1673,9 @@ function renderListenPitBar() {
   head.appendChild(actions);
   host.appendChild(head);
 
-  if (state.listenPitCollapsed) return;
+  // Mount body inside .listen-pit-body so collapsed bar stays 1 sleek line visually while keeping interactive DOM mounted
+  const pitBody = document.createElement("div");
+  pitBody.className = "listen-pit-body";
 
   // Row 1: Seat chips row
   const seatRow = document.createElement("div");
@@ -1718,7 +1725,7 @@ function renderListenPitBar() {
     });
     seatRow.appendChild(chip);
   });
-  host.appendChild(seatRow);
+  pitBody.appendChild(seatRow);
 
   // Row 2: Role claim / fill remaining / dual-seer stand / contradiction evidence
   const extraCtx = collectPitExtraActions(player, d, aliveOthers, null, null);
@@ -1738,12 +1745,12 @@ function renderListenPitBar() {
       });
       exRow.appendChild(btn);
     });
-    host.appendChild(exRow);
+    pitBody.appendChild(exRow);
   }
 
   // Row 3 (Wolf-only): Secret God-Hunt Notebook
   if (isWolfPlayer && targetSeats.length > 0) {
-    host.appendChild(createWolfGodHuntRow(targetSeats, "data-listen-wolf-god", true));
+    pitBody.appendChild(createWolfGodHuntRow(targetSeats, "data-listen-wolf-god", true));
   }
 
   // Row 4: Single-line live draft speech preview before player's turn
@@ -1754,14 +1761,15 @@ function renderListenPitBar() {
       prevEl.className = "listen-pit-preview";
       prevEl.title = previewTxt;
       prevEl.textContent = "待發陳詞預覽：" + previewTxt;
-      host.appendChild(prevEl);
+      pitBody.appendChild(prevEl);
     }
   } else if (hasWolfGodMarks && !hasAnyDraft && isWolfPlayer) {
     const tipEl = document.createElement("div");
     tipEl.className = "listen-pit-preview";
     tipEl.textContent = "獵神筆記僅狼隊自己可見，入夜鎖定時將自動提醒";
-    host.appendChild(tipEl);
+    pitBody.appendChild(tipEl);
   }
+  host.appendChild(pitBody);
 }
 
 function buildPlayerSmartBoardContext(player, sampleTarget, slotView, dualWorlds) {
@@ -1956,8 +1964,9 @@ function preparePlayerSpeechPanel() {
     const sampleHarsh = sampleTarget.id + "號別硬拗了，言票早露餡快投他！";
     if (qInJudge) qInJudge.value = sampleHarsh;
     if (el("playerSpeechInput")) el("playerSpeechInput").value = sampleHarsh;
-    state.rephraseTrayPinned = true;
-    renderRephraseChoicesTray(sampleHarsh);
+    state.rephraseTrayPinned = false;
+    if (el("rephraseChoicesTray")) el("rephraseChoicesTray").classList.add("hidden");
+    if (el("btnQuickInlineRewrite")) el("btnQuickInlineRewrite").classList.remove("hidden");
     refreshLiveNlpUI();
   } else if (isFreshTurn && hasStagedDraft) {
     syncDraftSpeechToInput();
@@ -2044,7 +2053,7 @@ function preparePlayerSpeechPanel() {
       cards.push({
         tgKind: "heart",
         tgTag: "真明心報查殺",
-        label: "亮底報查殺 " + cLabel + (smart.rivalSeerSeat ? "・打飛假觀察員" : "・留警徽流"),
+        label: "報查殺 " + cLabel + (smart.rivalSeerSeat ? "・打假觀" : "・警徽流"),
         draftPatch: {
           claimRole: "seer",
           wolfIds: [last.targetId].concat(smart.rivalSeerSeat ? [smart.rivalSeerSeat.id] : []).concat(checkedWolfIds),
@@ -2061,7 +2070,7 @@ function preparePlayerSpeechPanel() {
       cards.push({
         tgKind: "heart",
         tgTag: "真明心報金水",
-        label: "亮底報金水 " + cLabel + "・歸票 " + pushLbl,
+        label: "報金水 " + cLabel + "・歸 " + fmtSeatNum(pushId) + "號",
         draftPatch: {
           claimRole: "seer",
           wolfIds: [pushId].concat(smart.rivalSeerSeat && smart.rivalSeerSeat.id !== pushId ? [smart.rivalSeerSeat.id] : []).concat(checkedWolfIds),
@@ -2193,7 +2202,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "words",
       tgTag: "假保拉票",
-      label: "精準拉攏好人票倉 " + friendLbl + "・建立共識",
+      label: "拉攏好人 " + friendLbl + "・建共識",
       draftPatch: { claimRole: "wolf_stealth", goodIds: [friendTarget.id] },
       text: "這輪我特別想把 " + friendLbl + " 放進鐵好人坑！" + (friendSpoke ? "剛才聽他盤邏輯非常客觀、沒有亂扣帽子，" : "從前面整體表態來看他態度一直很穩，") + (friendClue ? ("加上他" + friendClue + "的視角也合理，") : "") + "好人千萬別內耗誤投 " + friendTarget.id + "號，跟著我一起把焦點鎖去真正矛盾的位置！"
     });
@@ -2205,7 +2214,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "words",
       tgTag: "硬氣反駁",
-      label: "反打點名你的 " + acLbl + "・點齊狼隊結構",
+      label: "反打 " + acLbl + "・點狼坑",
       draftPatch: { wolfIds: [ac.id].concat(extraWp ? [extraWp.id] : []) },
       text: "前置位 " + acLbl + " 剛才硬把我點進狼坑我直接回應：我全程認真盤邏輯、沒跟誰搞小動作，絕對不在狼坑！" + (acClue ? ("反倒是你" + acClue + "還沒解釋清楚，") : "你急著往我頭上扣帽子更像找抗推位，") + "這輪我先把 " + ac.id + "號" + (extraWp ? (" 跟 " + fmtSeatNum(extraWp.id) + "號" + extraWp.name) : "") + " 一起畫進重點狼坑！"
     });
@@ -2213,7 +2222,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "words",
       tgTag: "好人聯防",
-      label: "力保好人坑 " + friendLbl + "・穩住好人票型",
+      label: "力保 " + friendLbl + "・穩票型",
       draftPatch: { goodIds: [friendTarget.id] },
       text: friendSpoke
         ? ("我先幫好人把 " + friendLbl + " 認下來！剛剛聽他的發言條理分明、立場前後對得上" + (friendClue ? ("（且" + friendClue + "）") : "") + "，好人陣營先互保 " + friendTarget.id + "號，把票集中去檢視真正閃躲的位置！")
@@ -2268,7 +2277,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "deeds",
       tgTag: "拆穿假牌",
-      label: "正面打飛假觀察員 " + fmtSeatNum(fs.id) + "號 " + fs.name,
+      label: "打飛假觀 " + fmtSeatNum(fs.id) + "號" + fs.name,
       draftPatch: { claimRole: "seer", wolfIds: [fs.id], badgeFlowFirstId: smart.bf1Id, badgeFlowSecondId: smart.bf2Id },
       text: "終於輪到我發言了！剛才前置位 " + fmtSeatNum(fs.id) + "號" + fs.name + " 竟然冒充明心觀察員誤導全場，我才是真正的明心觀察員，他鐵定佔一個定狼坑！" + (smart.bfText ? (smart.bfText + "，") : "") + "請好人今天務必先把 " + fs.id + "號 請離茶席！"
     });
@@ -2351,7 +2360,7 @@ function preparePlayerSpeechPanel() {
       '<kbd class="ui-kbd">' + cardKeys[idx] + '</kbd>' +
       '</span>' +
       '</div>' +
-      '<div class="play-card-title text-[13px] font-bold leading-snug line-clamp-1">' + escapeHtml(cleanTitle) + '</div>' +
+      '<div class="play-card-title text-[13px] font-bold leading-snug">' + escapeHtml(cleanTitle) + '</div>' +
       '<div class="play-card-preview text-[13px] leading-snug line-clamp-2 opacity-80">' + escapeHtml(previewSnippet) + '</div>';
     const composeToggleFn = function (ev) {
       if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();

@@ -97,7 +97,7 @@
 
             <!-- Subtle 3D VRM Avatar Staggered Wakeup Progress Pill -->
             <div id="vrmLoadPill" class="hidden pointer-events-none">
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+              <span class="w-1.5 h-1.5 bg-amber-400 rotate-45"></span>
               <span id="vrmLoadPillText">正在喚醒茶席夥伴 0/8</span>
             </div>
 
@@ -105,7 +105,7 @@
             <div id="voteFlightBanner"
               class="hidden absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 text-sm font-bold cursor-pointer flex items-center gap-2 msg-enter"
               title="點擊立即展開最終票數">
-              <span class="inline-block w-2 h-2 bg-rose-400 animate-ping"></span>
+              <span class="inline-block w-2 h-2 bg-rose-400 rotate-45"></span>
               <span id="voteFlightText">飛票揭曉</span>
             </div>
 
@@ -249,8 +249,8 @@
             <!-- Quick Seat Picker Bar (In-flow above dock — mathematically 0px overlap!) -->
             <div id="seatButtonStrip" class="hidden"></div>
 
-            <!-- v24.3.1 Prominent In-Flow Three-Good & Four-Givings Deck -->
-            <div id="virtueQuickDeck" class="hidden virtue-quick-deck" role="region" aria-label="三好四給主動茶禮列">
+            <!-- v24.3.1 Prominent In-Flow Three-Good & Four-Givings Deck (Default-Folded for 70%+ Open Stage) -->
+            <div id="virtueQuickDeck" class="hidden virtue-quick-deck is-folded" role="region" aria-label="三好四給主動茶禮列">
               <button id="btnQuickLotus" type="button" class="vq-lotus-btn" title="點擊檢視三好蓮花修為與點亮條件">
                 <span class="vq-lotus-dots" aria-hidden="true">
                   <span id="vqDotHeart" class="vq-dot"></span>
@@ -280,7 +280,7 @@
               <span id="vqSynergyPill" class="hidden vq-synergy-pill">連心將啟</span>
               <div class="vq-right-tools">
                 <button id="btnQuickTeaAtmosphere" type="button" class="vq-atm-btn" title="點擊查看茶席風氣對說服力與從眾之影響">茶風 72</button>
-                <button id="btnToggleVirtueDeck" type="button" class="vq-fold-btn" aria-expanded="true" title="收合或展開四給奉茶列">收合</button>
+                <button id="btnToggleVirtueDeck" type="button" class="vq-fold-btn" aria-expanded="false" title="展開或收合四給奉茶列">展開</button>
               </div>
             </div>
 
@@ -502,7 +502,7 @@
                 <div id="panelStepper" class="hidden space-y-1.5">
                   <div id="stepperWaitRow"
                     class="flex items-center justify-center gap-2 text-sm font-medium text-slate-300 py-1">
-                    <span class="inline-block w-2 h-2 bg-amber-400 animate-ping"></span>
+                    <span class="inline-block w-2 h-2 bg-amber-400 rotate-45"></span>
                     <span id="stepperStatusText">行動進行中…</span>
                   </div>
 
@@ -855,7 +855,7 @@
                   <div id="gameOverVirtueLedger" class="hidden gameover-virtue-ledger"></div>
                   <div id="gameOverSeatTruthBox" class="hidden gameover-truth-table-wrap"></div>
                   <div id="gameOverCoachBox" class="space-y-1 text-left mt-2"></div>
-                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div class="gameover-sticky-actions grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <button id="btnReviewRolesModal" type="button" class="cta-ink py-2 px-2 text-[15px]">復盤手札</button>
                     <button id="btnExportReplay" type="button" class="cta-ink py-2 px-2 text-[15px]">匯出戰報</button>
                     <button id="btnPlayAgain" type="button" class="cta-cinnabar py-2 px-2 text-[15px]">再戰一局</button>
@@ -1288,7 +1288,7 @@
           </button>
           <button id="btnOpenAiModal" type="button" class="pause-action-btn">
             <span class="flex items-center gap-1.5"><span id="aiModeDot"
-                class="w-2 h-2 rounded-full bg-emerald-400"></span><span id="aiModeLabel">離線規則</span></span>
+                class="w-2 h-2 bg-emerald-400 rotate-45"></span><span id="aiModeLabel">離線規則</span></span>
             <span class="text-[13px] text-slate-400">設定</span>
           </button>
           <button id="btnToggle3D" type="button" class="pause-action-btn">3D舞台</button>

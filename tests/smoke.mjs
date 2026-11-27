@@ -9894,19 +9894,26 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others[2].id))
         .some(btn => btn.classList && btn.classList.contains("is-wolf"))
     );
-    const tBtn1 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")[0];
-    if (tBtn1) tBtn1.click();
-    const collapsedOk = Boolean(
+    // Default-collapsed for 70%+ open 3D stage -> click 1 expands -> click 2 collapses
+    const defaultCollapsedOk = Boolean(
       state.listenPitCollapsed === true &&
       findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")
         .some(b => b.getAttribute("aria-expanded") === "false")
     );
-    const tBtn2 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")[0];
-    if (tBtn2) tBtn2.click();
+    const tBtn1 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")[0];
+    if (tBtn1) tBtn1.click();
     const expandedOk = Boolean(
       state.listenPitCollapsed === false &&
       findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")
         .some(b => b.getAttribute("aria-expanded") === "true")
+    );
+    const tBtn2 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")[0];
+    if (tBtn2) tBtn2.click();
+    const collapsedOk = Boolean(
+      defaultCollapsedOk &&
+      state.listenPitCollapsed === true &&
+      findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")
+        .some(b => b.getAttribute("aria-expanded") === "false")
     );
 
     // Transition to DAY_PLAYER_TURN: #listenPitBar hides, #speechAdvancedDrawer stays default-collapsed, composer auto-hydrates!
@@ -10284,16 +10291,17 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     const pid = getPlayerId();
     const others = getAliveSeats().filter(s => s.id !== pid);
 
-    // A. Consolidated Four-Givings deck (synergy pill + fold toggle inside #virtueQuickDeck)
+    // A. Consolidated Four-Givings deck (default-folded for 70%+ open stage; click 1 unfolds, click 2 folds)
     state.match.phase = "DAY_SPEECH";
     state.activeSpeakerId = others[0].id;
     updateAllUI();
     el("btnQuick4GJoy").click();
     const synPillShown = !el("vqSynergyPill").classList.contains("hidden");
-    el("btnToggleVirtueDeck").click();
-    const foldedDeckOk = el("virtueQuickDeck").classList.contains("is-folded") && el("btnToggleVirtueDeck").getAttribute("aria-expanded") === "false";
+    const defaultFoldedOk = el("virtueQuickDeck").classList.contains("is-folded") && el("btnToggleVirtueDeck").getAttribute("aria-expanded") === "false";
     el("btnToggleVirtueDeck").click();
     const unfoldedDeckOk = !el("virtueQuickDeck").classList.contains("is-folded") && el("btnToggleVirtueDeck").getAttribute("aria-expanded") === "true";
+    el("btnToggleVirtueDeck").click();
+    const foldedDeckOk = defaultFoldedOk && el("virtueQuickDeck").classList.contains("is-folded") && el("btnToggleVirtueDeck").getAttribute("aria-expanded") === "false";
 
     // B. Listening Good/Wolf mark -> Vote Notes Deck display & 1-click lock
     state.playerMarks = {};
@@ -10742,6 +10750,32 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       throw new Error("v25.0 Lacquer-Vessel UI regression failed for " + k + ": " + JSON.stringify(v25Checks));
     }
   }
+
+  // v25.2 Structural Stage-Opening (>=70% Open 3D), Contrast & CSS Rendering Performance Checks
+  const theme25 = fs.readFileSync(path.join(ROOT, "css", "theme.css"), "utf8");
+  const v252Start = css25.indexOf("v25.2 STRUCTURAL STAGE-OPENING");
+  const v252Css = v252Start >= 0 ? css25.slice(v252Start) : "";
+  const v252Checks = {
+    hasV252Block: v252Start >= 0,
+    noFeTurbulenceNoise: !theme25.includes("feTurbulence"),
+    curtainRuleMin13px: !theme25.includes("font-size: 11px;"),
+    noPingPulseInHtml: !html25.includes("animate-ping") && !html25.includes("animate-pulse"),
+    noRepeatingGradInV25: !v25Css.includes("repeating-linear-gradient"),
+    noClipPathOnBigVessels: v252Css.includes("body.craft-ui .craft-modal-box") && v252Css.includes("clip-path: none;"),
+    hasTopDockedSeatRail: v252Css.includes("#seatButtonStrip:not(.hidden)") && v252Css.includes("position: fixed;"),
+    hasStickyGameOverCtas: html25.includes("gameover-sticky-actions") && v252Css.includes("position: sticky;"),
+    hasGameOverCutInSuppress: v252Css.includes("body.craft-ui.screen-gameover #dramaticCutIn"),
+    hasRoleDealBodyLock: fs.readFileSync(path.join(ROOT, "js", "ui", "flow.js"), "utf8").includes("role-deal-open"),
+    hasSpeechSlipWrap: v252Css.includes("white-space: normal;") && v252Css.includes("text-overflow: clip;"),
+    hasNightHudHighContrast: v252Css.includes("body.craft-ui.theme-night #inGameTopHud #bannerHeadline"),
+    hasTitleDarkVignette: v252Css.includes("body.craft-ui.theme-twilight.screen-title #focalCenterCard") && v252Css.includes("max-width: 368px;"),
+    zeroImportantOrBlurV252: !v252Css.includes("!important") && !v252Css.includes("backdrop-filter: blur(")
+  };
+  for (const [k, v] of Object.entries(v252Checks)) {
+    if (!v) {
+      throw new Error("v25.2 Stage-Opening & CSS Perf regression failed for " + k + ": " + JSON.stringify(v252Checks));
+    }
+  }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 Release-Freeze E2E smoke test PASSED!");
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 Release-Freeze E2E smoke test PASSED!");

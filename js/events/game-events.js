@@ -97,7 +97,15 @@ function resetMatchToLobby() {
   }
   if (el("matchPointBadge")) el("matchPointBadge").classList.add("hidden");
   if (el("teaAtmosphereBadge")) el("teaAtmosphereBadge").classList.add("hidden");
-  if (el("virtueQuickDeck")) el("virtueQuickDeck").classList.add("hidden");
+  if (el("virtueQuickDeck")) {
+    el("virtueQuickDeck").classList.add("hidden", "is-folded");
+    if (el("btnToggleVirtueDeck")) {
+      el("btnToggleVirtueDeck").setAttribute("aria-expanded", "false");
+      el("btnToggleVirtueDeck").textContent = "展開";
+    }
+  }
+  state.listenPitCollapsed = true;
+  state._listenPitDefaultApplied = true;
   state.match.sheriffRallyUsedDay = 0;
   state.match.pendingSheriffTransfer = null;
   state.match.pendingEvidenceTargetId = null;
@@ -186,7 +194,7 @@ function resetMatchToLobby() {
   if (el("lastWordsFreeInput")) el("lastWordsFreeInput").value = "";
   if (el("pitTemplateSyncBar")) el("pitTemplateSyncBar").classList.add("hidden");
   if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(el("quickFreeInput"));
-  if (el("btnQuickFreeSend")) el("btnQuickFreeSend").textContent = "陳詞送出 ↵";
+  if (el("btnQuickFreeSend")) el("btnQuickFreeSend").textContent = "送出陳詞";
   if (el("speechThreeGoodBadge")) el("speechThreeGoodBadge").classList.add("hidden");
   if (el("btnQuickInlineRewrite")) el("btnQuickInlineRewrite").classList.add("hidden");
   updateSpotlightBox("主持播報", "準備開局", "選擇下方人數與角色，按下「開始對局」即可進入第一晚！", "");

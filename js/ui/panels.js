@@ -123,7 +123,7 @@ function renderVoteResultPanel() {
 
   if (vr.lastWord) {
     const lwDiv = document.createElement("div");
-    lwDiv.className = "rounded-xl p-2 bg-amber-500/15 border border-amber-400/40 text-sm font-bold text-amber-100 leading-snug mb-1.5";
+    lwDiv.className = "p-2 bg-amber-500/15 border border-amber-400/40 text-sm font-bold text-amber-100 leading-snug mb-1.5";
     lwDiv.textContent = "離席遺言：" + vr.lastWord;
     barsBox.appendChild(lwDiv);
   }
@@ -145,13 +145,13 @@ function renderVoteResultPanel() {
     const isOut = vr.outId === e.id;
     const voters = (vr.groupedVoters[e.id] || []).join("、");
     const row = document.createElement("div");
-    row.className = "rounded-xl px-2.5 py-1.5 border " + (isOut ? "bg-rose-500/20 border-rose-400/50 vote-row-out" : "bg-slate-950/70 border-slate-800");
+    row.className = "px-2.5 py-1.5 border " + (isOut ? "bg-rose-500/20 border-rose-400/50 vote-row-out" : "bg-slate-950/70 border-slate-800");
     row.innerHTML =
       '<div class="flex items-center justify-between text-sm font-black">' +
       '<span class="' + (isOut ? "text-rose-200" : "text-slate-200") + '">' + fmtSeatNum(e.id) + "號 " + escapeHtml(sObj ? sObj.name : "") + (isOut ? "（出局）" : "") + "</span>" +
       '<span class="text-amber-300 math-font">' + e.count + " 票 (" + sharePct + "%)</span>" +
       "</div>" +
-      '<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden my-1">' +
+      '<div class="h-1 w-full bg-slate-800 overflow-hidden my-1">' +
       '<div class="h-full vote-bar-fill ' + (isOut ? "bg-rose-400" : "bg-amber-400") + '" style="width:' + pct + '%; animation-delay:' + (idx * 70) + 'ms;"></div>' +
       "</div>" +
       '<div class="text-[13px] text-slate-400">投票者：' + escapeHtml(voters || "無") + "</div>";
@@ -997,7 +997,7 @@ function renderSheriffElectionPanel() {
         const cs = getSeat(cid);
         if (!cs || !cs.alive) return;
         const badge = document.createElement("span");
-        badge.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-bold bg-amber-500/15 border border-amber-400/45 text-amber-100";
+        badge.className = "inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-bold bg-amber-500/15 border border-amber-400/45 text-amber-100";
         badge.textContent = "" + fmtSeatNum(cid) + "號 " + (cid === pid ? "你" : cs.name) + "（待發言）";
         rosterRow.appendChild(badge);
       });
@@ -1279,6 +1279,7 @@ function renderControlPanels() {
 }
 
 function renderGameOverMetrics() {
+  if (typeof clearCutInQueue === "function") clearCutInQueue();
   const m = state.match;
   const player = getPlayerSeat();
   const playerWon = player && player.team === m.winner;

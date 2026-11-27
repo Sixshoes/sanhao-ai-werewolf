@@ -311,7 +311,6 @@ body.screen-title #focalCenterCard {
   border-radius: 0;
   background: linear-gradient(90deg, rgba(14, 11, 8, 0.88) 0%, rgba(16, 12, 9, 0.64) 56%, rgba(16, 12, 9, 0.16) 82%, rgba(16, 12, 9, 0) 100%);
   box-shadow: none;
-  backdrop-filter: none;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -17561,12 +17560,10 @@ body.craft-ui.theme-twilight .vote-notes-empty {
   --v25-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --v25-hairline: rgba(226, 200, 152, 0.13);
   --v25-hairline-strong: rgba(226, 200, 152, 0.24);
-  --v25-vessel-bg:
-    repeating-linear-gradient(125deg, rgba(255, 240, 208, 0.018) 0 1px, transparent 1px 16px),
-    linear-gradient(168deg, rgba(28, 22, 17, 0.96) 0%, rgba(16, 13, 10, 0.97) 58%, rgba(10, 8, 7, 0.98) 100%);
+  --v25-vessel-bg: linear-gradient(168deg, rgba(28, 22, 17, 0.96) 0%, rgba(16, 13, 10, 0.97) 58%, rgba(10, 8, 7, 0.98) 100%);
   --v25-scrim-bottom: linear-gradient(180deg, rgba(10, 8, 7, 0) 0%, rgba(10, 8, 7, 0.56) 20%, rgba(9, 8, 7, 0.88) 56%, rgba(7, 6, 5, 0.97) 100%);
-  --v25-scrim-top: linear-gradient(180deg, rgba(9, 8, 7, 0.74) 0%, rgba(9, 8, 7, 0.30) 64%, rgba(9, 8, 7, 0) 100%);
-  --v25-scrim-left: linear-gradient(90deg, rgba(10, 8, 7, 0.90) 0%, rgba(12, 9, 8, 0.66) 56%, rgba(12, 9, 8, 0.18) 84%, rgba(12, 9, 8, 0) 100%);
+  --v25-scrim-top: linear-gradient(180deg, rgba(9, 8, 7, 0.78) 0%, rgba(9, 8, 7, 0.34) 64%, rgba(9, 8, 7, 0) 100%);
+  --v25-scrim-left: linear-gradient(90deg, rgba(11, 9, 8, 0.90) 0%, rgba(12, 10, 8, 0.70) 58%, rgba(12, 10, 8, 0.20) 86%, rgba(12, 10, 8, 0) 100%);
 }
 
 body.craft-ui.theme-day,
@@ -17574,12 +17571,10 @@ body.craft-ui.theme-daylight,
 body.craft-ui.theme-twilight {
   --v25-hairline: rgba(110, 84, 52, 0.14);
   --v25-hairline-strong: rgba(124, 92, 52, 0.28);
-  --v25-vessel-bg:
-    repeating-linear-gradient(125deg, rgba(120, 90, 52, 0.025) 0 1px, transparent 1px 16px),
-    linear-gradient(168deg, rgba(252, 248, 239, 0.97) 0%, rgba(245, 238, 224, 0.97) 62%, rgba(238, 229, 212, 0.98) 100%);
+  --v25-vessel-bg: linear-gradient(168deg, rgba(252, 248, 239, 0.97) 0%, rgba(245, 238, 224, 0.97) 62%, rgba(238, 229, 212, 0.98) 100%);
   --v25-scrim-bottom: linear-gradient(180deg, rgba(244, 236, 222, 0) 0%, rgba(244, 236, 222, 0.66) 20%, rgba(242, 234, 218, 0.92) 56%, rgba(238, 229, 212, 0.98) 100%);
-  --v25-scrim-top: linear-gradient(180deg, rgba(244, 236, 222, 0.76) 0%, rgba(244, 236, 222, 0.32) 64%, rgba(244, 236, 222, 0) 100%);
-  --v25-scrim-left: linear-gradient(90deg, rgba(246, 240, 228, 0.94) 0%, rgba(244, 237, 224, 0.72) 56%, rgba(244, 237, 224, 0.20) 84%, rgba(244, 237, 224, 0) 100%);
+  --v25-scrim-top: linear-gradient(180deg, rgba(244, 236, 222, 0.82) 0%, rgba(244, 236, 222, 0.36) 64%, rgba(244, 236, 222, 0) 100%);
+  --v25-scrim-left: linear-gradient(90deg, rgba(11, 9, 8, 0.90) 0%, rgba(12, 10, 8, 0.70) 58%, rgba(12, 10, 8, 0.20) 86%, rgba(12, 10, 8, 0) 100%);
 }
 
 /* 1. Global Ban: Zero Rounded Card Boxes, Zero 999px Capsule Pills, Zero Colored Left Borders, Zero Neon Glows */
@@ -19180,6 +19175,762 @@ body.craft-ui.theme-twilight #btnStepNext:hover {
   color: #fffaf0;
   background: linear-gradient(172deg, #ce4a3c 0%, #a53024 100%);
 }
+
+/* ==================== v25.2 STRUCTURAL STAGE-OPENING (>=70% OPEN 3D), HIGH-CONTRAST & GPU-PERF OVERHAUL ==================== */
+
+/* 1. Title Screen: Compact Ebony-Lacquer Vignette (Zero Left Seat Washout) + High-Contrast Ivory Typography & Top-Right Rail */
+body.craft-ui.screen-title #focalCenterCard,
+body.craft-ui.theme-twilight.screen-title #focalCenterCard,
+body.craft-ui.theme-day.screen-title #focalCenterCard,
+body.craft-ui.theme-daylight.screen-title #focalCenterCard {
+  max-width: 368px;
+  padding: 32px 34px;
+  background: var(--v25-scrim-left);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.craft-ui.screen-title #focalCenterCard::before {
+  left: 16px;
+  background: linear-gradient(180deg, transparent 0%, rgba(232, 202, 142, 0.34) 30%, rgba(232, 202, 142, 0.34) 70%, transparent 100%);
+}
+
+body.craft-ui.screen-title #panelLobby h1,
+body.craft-ui.theme-twilight.screen-title #panelLobby h1 {
+  color: #faf2e2;
+  background: none;
+  -webkit-text-fill-color: #faf2e2;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.76);
+}
+
+body.craft-ui.screen-title .title-release-badge,
+body.craft-ui.theme-twilight.screen-title .title-release-badge {
+  color: #ebd6ab;
+  border-color: rgba(232, 202, 142, 0.34);
+  background: rgba(18, 14, 11, 0.56);
+  opacity: 0.94;
+}
+
+body.craft-ui.screen-title .tea-creed-strip,
+body.craft-ui.theme-twilight.screen-title .tea-creed-strip {
+  color: rgba(242, 228, 200, 0.90);
+  opacity: 1;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.72);
+}
+
+body.craft-ui.screen-title #lobbySeatSummary,
+body.craft-ui.theme-twilight.screen-title #lobbySeatSummary {
+  color: rgba(238, 229, 212, 0.88);
+  opacity: 1;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.72);
+}
+
+body.craft-ui.screen-title .title-menu-item,
+body.craft-ui.theme-twilight.screen-title .title-menu-item,
+body.craft-ui.theme-day.screen-title .title-menu-item,
+body.craft-ui.theme-daylight.screen-title .title-menu-item {
+  color: #f0e7d8;
+  border-bottom-color: rgba(232, 202, 142, 0.24);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.74);
+}
+
+body.craft-ui.screen-title .title-menu-item:hover,
+body.craft-ui.theme-twilight.screen-title .title-menu-item:hover {
+  color: #ffffff;
+  border-bottom-color: rgba(242, 214, 156, 0.56);
+}
+
+body.craft-ui.screen-title .title-menu-item.is-primary,
+body.craft-ui.theme-twilight.screen-title .title-menu-item.is-primary {
+  color: #fdf7ec;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.44);
+}
+
+body.craft-ui.screen-title .lobby-more-summary,
+body.craft-ui.theme-twilight.screen-title .lobby-more-summary {
+  color: rgba(236, 226, 208, 0.86);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.72);
+}
+
+body.craft-ui.screen-title .lobby-quick-link {
+  color: #f0e7d8;
+  background: rgba(18, 14, 11, 0.74);
+  border-color: rgba(232, 202, 142, 0.28);
+}
+
+body.craft-ui.screen-title .title-top-actions {
+  background: rgba(14, 11, 9, 0.76);
+  border: 1px solid rgba(232, 202, 142, 0.30);
+  padding: 1px;
+}
+
+body.craft-ui.screen-title .title-scene-btn,
+body.craft-ui.screen-title .title-feedback-btn,
+body.craft-ui.theme-twilight.screen-title .title-scene-btn,
+body.craft-ui.theme-twilight.screen-title .title-feedback-btn {
+  color: #f2ece1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.82);
+}
+
+body.craft-ui.screen-title .title-scene-btn {
+  border-right-color: rgba(232, 202, 142, 0.24);
+}
+
+body.craft-ui.screen-title .title-scene-btn:hover,
+body.craft-ui.screen-title .title-feedback-btn:hover {
+  background: rgba(232, 202, 142, 0.14);
+  color: #ffffff;
+}
+
+/* 2. Full-Opacity Top HUD + High-Contrast Night & Daylight Parity */
+body.craft-ui.screen-ingame #inGameTopHud,
+body.craft-ui.theme-daylight.screen-ingame #inGameTopHud,
+body.craft-ui.theme-night.screen-ingame #inGameTopHud,
+body.craft-ui.screen-ingame #cornerRoleTile,
+body.craft-ui.theme-daylight.screen-ingame #cornerRoleTile,
+body.craft-ui.theme-night.screen-ingame #cornerRoleTile {
+  opacity: 1;
+}
+
+body.craft-ui.screen-ingame #inGameTopHud {
+  padding: 6px 18px 10px;
+}
+
+body.craft-ui.theme-night #inGameTopHud {
+  background: linear-gradient(180deg, rgba(8, 7, 11, 0.88) 0%, rgba(8, 7, 11, 0.48) 68%, rgba(8, 7, 11, 0) 100%);
+}
+
+body.craft-ui.theme-night #inGameTopHud #phaseBadge {
+  color: #f5d28b;
+  opacity: 1;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.90);
+}
+
+body.craft-ui.theme-night #inGameTopHud #bannerHeadline {
+  color: #fbf5e8;
+  font-size: 19px;
+  font-weight: 600;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.92);
+}
+
+body.craft-ui.theme-night #inGameTopHud #roundTitle {
+  color: rgba(242, 234, 218, 0.86);
+  opacity: 1;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.88);
+}
+
+body.craft-ui.theme-night #inGameTopHud .hud-sep-headline {
+  color: rgba(242, 222, 182, 0.46);
+}
+
+body.craft-ui.theme-night #inGameTopHud .hud-icon-btn {
+  color: #f2ece1;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.90);
+  border-left-color: rgba(232, 202, 142, 0.24);
+}
+
+body.craft-ui.theme-night #inGameTopHud .hud-icon-btn:hover {
+  background: rgba(232, 202, 142, 0.16);
+  color: #ffffff;
+}
+
+body.craft-ui.theme-day #inGameTopHud #bannerHeadline,
+body.craft-ui.theme-daylight #inGameTopHud #bannerHeadline,
+body.craft-ui.theme-twilight #inGameTopHud #bannerHeadline {
+  color: #1f1710;
+  font-size: 19px;
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgba(255, 250, 240, 0.88);
+}
+
+body.craft-ui.theme-day #inGameTopHud .hud-icon-btn,
+body.craft-ui.theme-daylight #inGameTopHud .hud-icon-btn,
+body.craft-ui.theme-twilight #inGameTopHud .hud-icon-btn {
+  color: #261d14;
+  font-weight: 500;
+  text-shadow: 0 1px 4px rgba(255, 250, 240, 0.86);
+}
+
+body.craft-ui.theme-day #inGameTopHud #roundTitle,
+body.craft-ui.theme-daylight #inGameTopHud #roundTitle,
+body.craft-ui.theme-twilight #inGameTopHud #roundTitle {
+  color: #4a3b2b;
+  opacity: 0.92;
+}
+
+/* 3. Structural Stage Opening (>=70% Open 3D Stage on Desktop & Laptop): Top-Docked Seat Rail + Top Guide Whisper + Bottom-Right Folded 4G */
+@media (min-width: 640px) {
+  body.craft-ui.screen-ingame #controlDeck {
+    contain: style;
+    padding: 6px 16px max(6px, env(safe-area-inset-bottom));
+    gap: 2px;
+  }
+
+  /* Move #seatButtonStrip cleanly to a 28px top rail directly beneath #inGameTopHud (never blocks speakers!) */
+  body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
+    position: fixed;
+    top: 38px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 26;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: auto;
+    max-width: calc(100vw - 24px);
+    height: 28px;
+    margin: 0;
+    padding: 2px 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-radius: 0;
+    border-top: 1px solid var(--v25-hairline);
+    border-bottom: 1px solid var(--v25-hairline-strong);
+  }
+
+  body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden)::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.craft-ui.screen-ingame #seatButtonStrip .seat-pill-btn {
+    padding: 2px 7px;
+    gap: 4px;
+    min-height: 24px;
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  body.craft-ui.screen-ingame #seatButtonStrip .seat-pill-avatar {
+    width: 17px;
+    height: 17px;
+  }
+
+  body.craft-ui.theme-night #seatButtonStrip:not(.hidden) {
+    background: linear-gradient(90deg, rgba(12, 10, 14, 0) 0%, rgba(12, 10, 14, 0.88) 5%, rgba(12, 10, 14, 0.88) 95%, rgba(12, 10, 14, 0) 100%);
+  }
+
+  body.craft-ui.theme-night #seatButtonStrip .seat-pill-btn {
+    color: #eee4d2;
+  }
+
+  /* Move #judgeShowcaseGuideBanner & #beginnerCoachBanner out of bottom stack -> slim top whisper strip */
+  body.craft-ui.screen-ingame:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
+  body.craft-ui.screen-ingame:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
+    position: fixed;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 24;
+    width: auto;
+    max-width: min(700px, calc(100vw - 32px));
+    margin: 0;
+    padding: 2px 10px;
+    gap: 6px;
+    border-radius: 0;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+  }
+
+  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
+  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
+    top: 70px;
+  }
+
+  body.craft-ui.theme-daylight #judgeShowcaseGuideBanner,
+  body.craft-ui.theme-day #judgeShowcaseGuideBanner,
+  body.craft-ui.theme-twilight #judgeShowcaseGuideBanner,
+  body.craft-ui.theme-daylight #beginnerCoachBanner,
+  body.craft-ui.theme-day #beginnerCoachBanner {
+    background: rgba(250, 245, 234, 0.94);
+    border: 1px solid var(--v25-hairline-strong);
+    color: #3a2d20;
+  }
+
+  body.craft-ui .judge-guide-step {
+    padding: 1px 6px;
+    border-radius: 0;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  body.craft-ui.screen-ingame #toastContainer {
+    top: 74px;
+    right: 16px;
+    bottom: auto;
+  }
+}
+
+/* Bottom-Right Symmetrical Folded Virtue Deck on Desktop/Laptop (0px vertical height over center 3D stage!) */
+@media (min-width: 960px) {
+  body.craft-ui.screen-ingame:not(.screen-gameover) #virtueQuickDeck:not(.hidden) {
+    position: fixed;
+    right: 16px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 25;
+    width: auto;
+    max-width: min(740px, calc(100vw - 32px));
+    margin: 0;
+    padding: 4px 8px;
+    gap: 5px;
+    border-radius: 0;
+    border: 1px solid var(--v25-hairline-strong);
+    background: var(--v25-vessel-bg);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  }
+
+  body.craft-ui.screen-ingame:not(.screen-gameover) #virtueQuickDeck.is-folded:not(.hidden) {
+    max-width: 212px;
+    padding: 4px 7px;
+    background: linear-gradient(270deg, rgba(246, 240, 228, 0.92) 0%, rgba(246, 240, 228, 0.72) 100%);
+    border: none;
+    border-top: 1px solid var(--v25-hairline-strong);
+    box-shadow: none;
+  }
+
+  body.craft-ui.screen-ingame #virtueQuickDeck.is-folded .vq-atm-btn {
+    display: none;
+  }
+
+  body.craft-ui.theme-night.screen-ingame:not(.screen-gameover) #virtueQuickDeck.is-folded:not(.hidden) {
+    background: linear-gradient(270deg, rgba(16, 13, 10, 0.88) 0%, rgba(16, 13, 10, 0.64) 100%);
+  }
+
+  body.craft-ui.screen-ingame #bottomUnifiedRow {
+    grid-template-columns: 224px minmax(0, 1fr) 224px;
+    gap: 10px;
+  }
+}
+
+@media (min-width: 960px) and (max-width: 1199px) {
+  body.craft-ui.screen-ingame #bottomUnifiedRow {
+    grid-template-columns: 204px minmax(0, 1fr) 204px;
+    gap: 8px;
+  }
+
+  body.craft-ui.screen-ingame #seatButtonStrip .seat-pill-avatar {
+    display: none;
+  }
+}
+
+/* 4. Ultra-Slim Bottom Command Shore (Listening <=26%, Speech/Vote <=34%) */
+body.craft-ui.screen-ingame #cornerRoleTile {
+  border-radius: 0;
+  padding: 5px 8px 4px;
+  min-width: 0;
+}
+
+body.craft-ui.screen-ingame #cornerRoleTile .role-nameplate {
+  font-size: 13.5px;
+  letter-spacing: 0.04em;
+}
+
+body.craft-ui.screen-ingame #cornerRoleTile .role-guide-trigger,
+body.craft-ui.screen-ingame #cornerRoleTile .role-mask-trigger {
+  padding: 1px 5px;
+  font-size: 13px;
+}
+
+body.craft-ui.screen-ingame #cornerRoleTile .role-tile-status {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+body.craft-ui.screen-ingame #focalCenterCard {
+  padding: 3px 6px 2px;
+}
+
+body.craft-ui #spotlightStageBox {
+  padding: 1px 0 2px;
+  margin-bottom: 2px;
+}
+
+body.craft-ui #spotlightStageBox > div:first-child {
+  gap: 10px;
+}
+
+body.craft-ui .vn-bust-wrap {
+  width: 56px;
+}
+
+body.craft-ui #speakerPortraitImg.vn-bust-img,
+body.craft-ui #speakerPortraitCanvas.vn-portrait-frame {
+  width: 54px;
+  height: 58px;
+}
+
+body.craft-ui #speakerActiveBanner {
+  margin-bottom: 2px;
+  padding: 0;
+}
+
+body.craft-ui #speakerSeatMedallion {
+  width: auto;
+  height: auto;
+  font-size: 21px;
+  padding-right: 8px;
+}
+
+body.craft-ui #spotlightSpeakerBadge {
+  font-size: 18px;
+}
+
+body.craft-ui #speakerStanceStrip {
+  margin-bottom: 2px;
+  gap: 4px;
+}
+
+body.craft-ui #spotlightText {
+  font-size: 15.5px;
+  line-height: 1.46;
+  min-height: 2.1rem;
+  max-height: 74px;
+  overflow-y: auto;
+  padding-bottom: 2px;
+}
+
+body.craft-ui .spotlight-progress-track {
+  margin-top: 3px;
+}
+
+body.craft-ui .spotlight-meta-foot {
+  margin-top: 2px;
+}
+
+body.craft-ui .spotlight-quiet-tools .cta-ink {
+  padding: 2px 8px;
+  font-size: 13px;
+}
+
+body.craft-ui.theme-day .spotlight-quiet-tools .cta-ink,
+body.craft-ui.theme-daylight .spotlight-quiet-tools .cta-ink,
+body.craft-ui.theme-twilight .spotlight-quiet-tools .cta-ink {
+  color: #261d14;
+  background: rgba(252, 248, 240, 0.92);
+  border-color: rgba(110, 84, 52, 0.34);
+}
+
+/* Default-Collapsed #listenPitBar: 1-line slim bar visually, full DOM mounted inside .listen-pit-body */
+body.craft-ui .listen-pit-bar {
+  padding: 2px 2px;
+  margin-bottom: 2px;
+  gap: 3px;
+}
+
+body.craft-ui .listen-pit-bar.is-collapsed .listen-pit-body {
+  display: none;
+}
+
+body.craft-ui .listen-pit-bar:not(.is-collapsed) .listen-pit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 3px;
+}
+
+body.craft-ui .listen-pit-bar.is-collapsed .listen-pit-sub {
+  display: inline;
+  font-size: 13px;
+  opacity: 0.78;
+}
+
+body.craft-ui #directorEventChoiceBar.director-choice-bar,
+body.craft-ui #turnWatchNotice {
+  padding: 2px 2px;
+  margin-bottom: 2px;
+  min-height: 24px;
+}
+
+body.craft-ui .stepper-action-row {
+  padding-top: 4px;
+}
+
+body.craft-ui #panelStepper {
+  gap: 2px;
+}
+
+body.craft-ui #panelStepper.space-y-1\.5 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 2px;
+}
+
+/* 5. Speech Slips Zero-Truncation 2-Row Layout + Clean Rephrase Tray & Vote Notes Diet */
+body.craft-ui #quickSpeechChips,
+body.craft-ui #lastWordsChips,
+body.craft-ui #sheriffPlayerQuickChips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+@media (max-width: 639px) {
+  body.craft-ui #quickSpeechChips,
+  body.craft-ui #lastWordsChips,
+  body.craft-ui #sheriffPlayerQuickChips {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.craft-ui #quickSpeechChips .play-card-btn,
+body.craft-ui.theme-day #quickSpeechChips .play-card-btn,
+body.craft-ui.theme-daylight #quickSpeechChips .play-card-btn,
+body.craft-ui.theme-twilight #quickSpeechChips .play-card-btn,
+body.craft-ui #lastWordsChips .play-card-btn,
+body.craft-ui #sheriffPlayerQuickChips .play-card-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 2px;
+  padding: 5px 8px;
+  min-height: 44px;
+  clip-path: none;
+  border-radius: 0;
+}
+
+body.craft-ui .play-card-btn > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 4px;
+}
+
+body.craft-ui .play-card-btn .play-card-title {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.32;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body.craft-ui #rephraseChoicesTray,
+body.craft-ui #rephraseChoicesTray.is-guide-focus,
+body.craft-ui #witchSubPanel.is-guide-focus,
+body.craft-ui #panelSheriffOrder.is-guide-focus {
+  border-radius: 0;
+}
+
+body.craft-ui #rephraseChoicesTray {
+  padding: 4px 4px 2px;
+}
+
+body.craft-ui #rephraseChoicesTray .rephrase-slip-btn {
+  border-radius: 0;
+  padding: 4px 7px;
+}
+
+body.craft-ui #panelPlayerSpeech.space-y-2 > :not([hidden]) ~ :not([hidden]),
+body.craft-ui #panelVote.space-y-2 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 4px;
+}
+
+body.craft-ui .vote-notes-deck {
+  padding: 4px 2px;
+  gap: 3px;
+}
+
+body.craft-ui .vote-note-chip {
+  padding: 2px 7px;
+  font-size: 13px;
+}
+
+body.craft-ui .speech-composer-textarea,
+body.craft-ui.screen-ingame #panelPlayerSpeech #quickFreeInput,
+body.craft-ui.theme-daylight.screen-ingame #panelPlayerSpeech #quickFreeInput {
+  min-height: 38px;
+  padding: 5px 8px;
+}
+
+/* Boost Disabled Focal CTA Contrast (Night #btnConfirmTarget & Vote #btnCastVote) */
+body.craft-ui .cta-cinnabar:disabled {
+  background: rgba(38, 32, 26, 0.86);
+  color: rgba(232, 222, 204, 0.74);
+  border-color: rgba(226, 200, 152, 0.30);
+}
+
+body.craft-ui.theme-day .cta-cinnabar:disabled,
+body.craft-ui.theme-daylight .cta-cinnabar:disabled,
+body.craft-ui.theme-twilight .cta-cinnabar:disabled {
+  background: rgba(232, 222, 204, 0.90);
+  color: #544434;
+  border-color: rgba(124, 92, 52, 0.36);
+}
+
+/* 6. Compact Laptop Height RWD (1024x700: Zero HUD Overlap & >=60% Open 3D Stage) */
+@media (max-height: 760px) and (min-width: 640px) {
+  body.craft-ui.screen-ingame #inGameTopHud {
+    padding: 4px 14px 6px;
+  }
+
+  body.craft-ui.screen-ingame #inGameTopHud #bannerHeadline {
+    font-size: 16.5px;
+  }
+
+  body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
+    top: 32px;
+    height: 25px;
+    padding: 1px 6px;
+  }
+
+  body.craft-ui.screen-ingame:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
+  body.craft-ui.screen-ingame:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
+    top: 34px;
+    padding: 1px 8px;
+  }
+
+  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
+  body.craft-ui.screen-ingame.seat-rail-shown:not(.screen-gameover) #beginnerCoachBanner:not(.hidden) {
+    top: 59px;
+  }
+
+  body.craft-ui.screen-ingame #controlDeck {
+    padding: 4px 12px 4px;
+  }
+
+  body.craft-ui .vn-bust-wrap {
+    width: 46px;
+  }
+
+  body.craft-ui #speakerPortraitImg.vn-bust-img,
+  body.craft-ui #speakerPortraitCanvas.vn-portrait-frame {
+    width: 44px;
+    height: 48px;
+  }
+
+  body.craft-ui #spotlightText {
+    font-size: 14.5px;
+    line-height: 1.42;
+    min-height: 1.9rem;
+    max-height: 60px;
+  }
+
+  body.craft-ui #quickSpeechChips .play-card-btn {
+    padding: 4px 7px;
+    min-height: 38px;
+  }
+
+  body.craft-ui.screen-ingame #panelPlayerSpeech #quickFreeInput,
+  body.craft-ui.theme-daylight.screen-ingame #panelPlayerSpeech #quickFreeInput {
+    min-height: 34px;
+    padding: 4px 7px;
+  }
+}
+
+/* 7. Serene Monumental Game Over Scroll: Top Clearance + Sticky Action Bar + Zero Cut-In / Stale HUD Badges */
+body.craft-ui.screen-gameover #dramaticCutIn,
+body.craft-ui.screen-gameover #comboBadge,
+body.craft-ui.screen-gameover #matchPointBadge,
+body.craft-ui.screen-gameover #teaAtmosphereBadge,
+body.craft-ui.screen-gameover #directorEventPill {
+  display: none;
+}
+
+body.craft-ui.screen-ingame.screen-gameover #controlDeck {
+  padding-top: 54px;
+  padding-bottom: 12px;
+}
+
+body.craft-ui.screen-ingame.screen-gameover #focalCenterCard {
+  clip-path: none;
+  max-height: calc(100dvh - 70px);
+  padding: 16px 20px 14px;
+  border: 1px solid var(--v25-hairline-strong);
+  overflow-y: auto;
+}
+
+body.craft-ui.screen-gameover .gameover-sticky-actions {
+  position: sticky;
+  bottom: -14px;
+  z-index: 6;
+  margin: 10px -20px -14px;
+  padding: 10px 20px;
+  background: rgba(248, 242, 231, 0.98);
+  border-top: 1px solid var(--v25-hairline-strong);
+}
+
+body.craft-ui.theme-night.screen-gameover .gameover-sticky-actions {
+  background: rgba(18, 14, 11, 0.98);
+}
+
+/* 8. Role Deal Ritual Focus: Clean Opaque Vignette & Hide Underlying Chrome */
+body.craft-ui.role-deal-open #inGameTopHud,
+body.craft-ui.role-deal-open #seatButtonStrip,
+body.craft-ui.role-deal-open #virtueQuickDeck,
+body.craft-ui.role-deal-open #cornerRoleTile,
+body.craft-ui.role-deal-open #judgeShowcaseGuideBanner,
+body.craft-ui.role-deal-open #beginnerCoachBanner {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.craft-ui #roleDealOverlay {
+  background: radial-gradient(circle at 50% 44%, rgba(18, 14, 11, 0.90) 0%, rgba(9, 7, 6, 0.96) 100%);
+}
+
+/* 9. CSS GPU Rendering Performance: Kill Heavy clip-path on Large/Scrolling Containers & Wasteful Infinite Animations */
+body.craft-ui .craft-modal-box,
+body.craft-ui #seatIntelPopover,
+body.craft-ui.theme-day #seatIntelPopover,
+body.craft-ui.theme-daylight #seatIntelPopover,
+body.craft-ui.theme-twilight #seatIntelPopover,
+body.craft-ui .intel-dossier-card,
+body.craft-ui .role-guide-popover,
+body.craft-ui .jargon-tooltip-popover,
+body.craft-ui .hope-confront-card,
+body.craft-ui .spirit-bet-banner,
+body.craft-ui .interject-popover,
+body.craft-ui .candlelit-review-card,
+body.craft-ui .pk-duel-banner,
+body.craft-ui #voteFlightBanner,
+body.craft-ui #vrmLoadPill,
+body.craft-ui .craft-toast,
+body.craft-ui .target-react-card,
+body.craft-ui .deal-card-back,
+body.craft-ui .deal-card-front {
+  clip-path: none;
+}
+
+body.craft-ui #btnStartMatch.is-guide-beckon::after,
+body.craft-ui #seatButtonStrip.is-guide-beckon .seat-pill-btn,
+body.craft-ui #seatButtonStrip.is-guide-beckon .seat-pill-btn::after,
+body.craft-ui #btnCastVote.is-guide-ready:not(:disabled)::after,
+body.craft-ui #btnConfirmTarget.is-guide-ready:not(:disabled)::after,
+body.craft-ui #btnStepNext.is-guide-ready:not(:disabled)::after,
+body.craft-ui #btnSeerRevealContinue.is-guide-ready:not(:disabled)::after,
+body.craft-ui #btnSheriffNextSpeech.is-guide-ready:not(:disabled)::after,
+body.craft-ui #btnTeaInterject.is-guide-beckon:not(:disabled)::after,
+body.craft-ui #btnQuickInlineRewrite.is-guide-beckon:not(:disabled)::after,
+body.craft-ui #btnSheriffRun.is-guide-beckon:not(:disabled)::after,
+body.craft-ui #quickSpeechChips.is-guide-beckon .play-card-btn::after,
+body.craft-ui #sheriffPlayerQuickChips.is-guide-beckon .play-card-btn::after,
+body.craft-ui #rephraseChoicesTray.is-guide-focus::before,
+body.craft-ui #witchSubPanel.is-guide-focus::before,
+body.craft-ui #panelSheriffOrder.is-guide-focus::before,
+body.craft-ui #rephraseChoicesTray.is-guide-focus .rephrase-slip-btn::after,
+body.craft-ui #cornerFourGDeck.is-guide-beckon .fourg-deck-head,
+body.craft-ui #cornerFourGDeck.is-guide-beckon .fourg-deck-head::before,
+body.craft-ui #threeGoodMeters.is-guide-beckon .lotus-petal-svg:not(.is-lit),
+body.craft-ui .portrait-speaking-glow,
+body.craft-ui .match-point-badge,
+body.craft-ui .lotus-petal-svg.is-lit,
+body.craft-ui #beginnerCoachText::before {
+  animation: none;
+}
+
+body.craft-ui #btnStartMatch.is-guide-beckon::after,
+body.craft-ui #seatButtonStrip.is-guide-beckon .seat-pill-btn::after,
+body.craft-ui #btnCastVote.is-guide-ready:not(:disabled)::after,
+body.craft-ui #btnConfirmTarget.is-guide-ready:not(:disabled)::after,
+body.craft-ui #btnStepNext.is-guide-ready:not(:disabled)::after,
+body.craft-ui #quickSpeechChips.is-guide-beckon .play-card-btn::after,
+body.craft-ui #sheriffPlayerQuickChips.is-guide-beckon .play-card-btn::after,
+body.craft-ui #rephraseChoicesTray.is-guide-focus .rephrase-slip-btn::after {
+  display: none;
+}
+
 
 
 

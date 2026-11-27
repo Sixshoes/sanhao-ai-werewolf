@@ -19,7 +19,7 @@ function renderTimeline(opts) {
 
   if (state.match.logs.length === 0) {
     const empty = document.createElement("div");
-    empty.className = "p-4 rounded-xl border border-slate-800 bg-slate-900/60 text-sm text-slate-300 text-center leading-relaxed";
+    empty.className = "p-4 border border-slate-800 bg-slate-900/60 text-sm text-slate-300 text-center leading-relaxed";
     empty.textContent = "入夜查探線索，天亮依序發言，公投請出混在席間的說謊者。";
     container.appendChild(empty);
     return;
@@ -35,7 +35,7 @@ function renderTimeline(opts) {
     else if (item.kind === "blessing") cls = "border-emerald-400/40 bg-emerald-950/50 text-emerald-100 font-bold";
     else if (item.kind === "speech" && item.speakerId === getPlayerId()) cls = "border-amber-400/40 bg-amber-950/30 text-white";
 
-    card.className = "rounded-xl border px-3 py-1.5 text-sm msg-enter " + cls;
+    card.className = "border px-3 py-1.5 text-sm msg-enter " + cls;
 
     if (item.kind === "speech") {
       const canQuote = Boolean(item.speakerId && item.speakerId !== getPlayerId() && state.match.started);
@@ -106,7 +106,7 @@ function renderTableMatrixIntoBody(opts) {
   if (typeof state !== "undefined") state._matrixDirty = false;
   body.innerHTML = "";
   if (!state.match || !state.match.started || !Array.isArray(state.match.seats)) {
-    body.innerHTML = '<div class="col-span-full rounded-xl p-5 text-center bg-slate-950/70 border border-slate-800 text-slate-400">開局後這裡會以矩陣方式整理每位茶客的宣稱身分、今日打／保對象與昨日票型。</div>';
+    body.innerHTML = '<div class="col-span-full p-5 text-center bg-slate-950/70 border border-slate-800 text-slate-400">開局後這裡會以矩陣方式整理每位茶客的宣稱身分、今日打／保對象與昨日票型。</div>';
     return;
   }
   const pid = getPlayerId();
@@ -163,7 +163,7 @@ function renderTableMatrixIntoBody(opts) {
     card.innerHTML =
       '<div class="flex items-center justify-between gap-1.5">' +
       '<div class="flex items-center gap-1.5 min-w-0">' +
-      '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[13px] font-black shrink-0" style="background:' + escapeHtml(s.color || "#64748b") + ';color:#0f172a;">' + num + '</span>' +
+      '<span class="inline-flex items-center justify-center w-5 h-5 text-[13px] font-black shrink-0" style="background:' + escapeHtml(s.color || "#64748b") + ';color:#0f172a;">' + num + '</span>' +
       '<span class="font-black text-amber-100 truncate">' + (isSh ? "[警] " : "") + escapeHtml(s.id === pid ? "你" : s.name) + (!s.alive ? "（離席）" : "") + '</span>' +
       '</div>' +
       '<div class="flex items-center gap-1 shrink-0">' +
@@ -210,7 +210,7 @@ function renderVoteSheetIntoBody() {
 
   if (!state.match.started) {
     if (subEl) subEl.textContent = "開局後將自動記錄每輪歸票與身分情報";
-    body.innerHTML = '<div class="rounded-xl p-6 text-center bg-slate-950/70 border border-slate-800 text-slate-400">開局後這裡會自動整理每輪誰投誰、誰棄票，以及你的場上推理筆記。</div>';
+    body.innerHTML = '<div class="p-6 text-center bg-slate-950/70 border border-slate-800 text-slate-400">開局後這裡會自動整理每輪誰投誰、誰棄票，以及你的場上推理筆記。</div>';
     return;
   }
 
@@ -243,7 +243,7 @@ function renderVoteSheetIntoBody() {
         ? "團隊勝利：三好推理穩定投票、成功請離所有酸民狼"
         : (m.winner === "wolf" ? "酸民狼奇襲得手，成功製造視角混亂" : "即時上帝視角觀戰中"));
     }
-    html += '<div class="rounded-2xl p-3 bg-amber-500/10 border border-amber-400/40 text-sm space-y-1">' +
+    html += '<div class="p-3 bg-amber-500/10 border border-amber-400/40 text-sm space-y-1">' +
       '<div class="font-black text-amber-300">本局關鍵轉折與勝負覆盤</div>' +
       '<div class="text-slate-100 leading-relaxed">' + escapeHtml(mvpParts.join("；")) + '（友善度 ' + m.harmonyScore + ' · 好話 ' + (st.goodWordsCount || 0) + ' · 矛盾抓包 ' + (st.contradictionsFound || 0) + '）</div>' +
       '</div>';
@@ -302,7 +302,7 @@ function renderVoteSheetIntoBody() {
           dayVoteLine = '<div class="text-slate-300">第 ' + nr.day + ' 天公投：平票／棄票無人離席</div>';
         }
       }
-      html += '<div class="rounded-2xl p-3 bg-slate-950/85 border border-emerald-500/30 space-y-1 text-[13px]">' +
+      html += '<div class="p-3 bg-slate-950/85 border border-emerald-500/30 space-y-1 text-[13px]">' +
         '<div class="text-sm font-black text-amber-300 pb-1 border-b border-slate-800/80">第 ' + nr.day + ' 輪・日夜時間軸</div>' +
         guardLine +
         '<div class="text-rose-200">' + wolfLine + '</div>' +
@@ -357,7 +357,7 @@ function renderVoteSheetIntoBody() {
 
     let shBallotRowsHtml = "";
     if (shTargetRows.length === 0) {
-      shBallotRowsHtml = '<div class="rounded-xl px-2.5 py-2 bg-slate-900/80 border border-amber-400/20 text-[13px] text-slate-300">本局警長由單一候選或快速開票直接誕生，無警下分票紀錄。</div>';
+      shBallotRowsHtml = '<div class="px-2.5 py-2 bg-slate-900/80 border border-amber-400/20 text-[13px] text-slate-300">本局警長由單一候選或快速開票直接誕生，無警下分票紀錄。</div>';
     } else {
       const shVoterTotal = Math.max(1, (shVoteRec.ballots || []).length);
       shTargetRows.forEach(function (item) {
@@ -367,21 +367,21 @@ function renderVoteSheetIntoBody() {
         const vChips = item.voters.map(function (vid) {
           const vs = getSeat(vid);
           const isMe = vid === getPlayerId();
-          return '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[13px] font-bold border ' +
+          return '<span class="inline-flex items-center px-2 py-0.5 text-[13px] font-bold border ' +
             (isMe ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/45' : 'bg-slate-800/90 text-slate-200 border-slate-700') +
             '">' + fmtSeatNum(vid) + ' ' + escapeHtml(vs ? (isMe ? "你" : vs.name) : '') + '</span>';
         }).join("");
-        shBallotRowsHtml += '<div class="rounded-xl p-2.5 border ' + (isWin ? 'bg-amber-500/12 border-amber-400/45' : 'bg-slate-900/90 border-slate-800') + '">' +
+        shBallotRowsHtml += '<div class="p-2.5 border ' + (isWin ? 'bg-amber-500/12 border-amber-400/45' : 'bg-slate-900/90 border-slate-800') + '">' +
           '<div class="flex items-center justify-between gap-2 mb-1">' +
           '<div class="flex items-center gap-2 min-w-0">' +
-          '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[13px] font-black shrink-0 ' + (isWin ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-200 border border-slate-700') + '">' + fmtSeatNum(item.targetId) + '</span>' +
+          '<span class="inline-flex items-center justify-center w-6 h-6 text-[13px] font-black shrink-0 ' + (isWin ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-200 border border-slate-700') + '">' + fmtSeatNum(item.targetId) + '</span>' +
           '<span class="text-sm font-black ' + (isWin ? 'text-amber-100' : 'text-slate-100') + '">' + escapeHtml(ts ? (item.targetId === getPlayerId() ? "你" : ts.name) : '') + '</span>' +
-          (isWin ? '<span class="text-[13px] font-bold px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-200">當選警長</span>' : '') +
+          (isWin ? '<span class="text-[13px] font-bold px-1.5 py-0.5 bg-amber-500/25 text-amber-200">當選警長</span>' : '') +
           '</div>' +
           '<span class="text-sm font-black text-amber-300 shrink-0">' + item.count + ' 票</span>' +
           '</div>' +
-          '<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-1.5">' +
-          '<div class="h-full rounded-full ' + (isWin ? 'bg-amber-400' : 'bg-sky-400/75') + '" style="width:' + barPct + '%"></div>' +
+          '<div class="h-1 w-full bg-slate-800 overflow-hidden mb-1.5">' +
+          '<div class="h-full ' + (isWin ? 'bg-amber-400' : 'bg-sky-400/75') + '" style="width:' + barPct + '%"></div>' +
           '</div>' +
           '<div class="flex items-center flex-wrap gap-1.5"><span class="text-[13px] font-bold text-slate-400 mr-0.5">警下投給他：</span>' + vChips + '</div>' +
           '</div>';
@@ -390,17 +390,17 @@ function renderVoteSheetIntoBody() {
     if (shAbstainers.length > 0) {
       const shAbsChips = shAbstainers.map(function (vid) {
         const vs = getSeat(vid);
-        return '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[13px] font-bold bg-slate-900 text-slate-400 border border-slate-800">' + fmtSeatNum(vid) + ' ' + escapeHtml(vs ? (vid === getPlayerId() ? "你" : vs.name) : '') + '</span>';
+        return '<span class="inline-flex items-center px-2 py-0.5 text-[13px] font-bold bg-slate-900 text-slate-400 border border-slate-800">' + fmtSeatNum(vid) + ' ' + escapeHtml(vs ? (vid === getPlayerId() ? "你" : vs.name) : '') + '</span>';
       }).join("");
-      shBallotRowsHtml += '<div class="rounded-xl px-2.5 py-1.5 bg-slate-950/60 border border-slate-800/80 flex items-center flex-wrap gap-1.5">' +
+      shBallotRowsHtml += '<div class="px-2.5 py-1.5 bg-slate-950/60 border border-slate-800/80 flex items-center flex-wrap gap-1.5">' +
         '<span class="text-[13px] font-bold text-slate-400 mr-1">警下棄票：</span>' + shAbsChips +
         '</div>';
     }
 
-    html += '<div class="rounded-2xl p-3 bg-amber-500/10 border border-amber-400/45 space-y-2">' +
+    html += '<div class="p-3 bg-amber-500/10 border border-amber-400/45 space-y-2">' +
       '<div class="flex items-center justify-between flex-wrap gap-1.5 pb-1.5 border-b border-amber-400/25">' +
       '<span class="text-sm font-black text-amber-200">第 ' + (shVoteRec.day || 1) + ' 天・警長競選票型（排坑重點依據）</span>' +
-      '<span class="px-2 py-0.5 rounded-full text-[13px] font-black bg-amber-500/25 text-amber-100 border border-amber-400/50">警長：' + escapeHtml(shWinnerLbl) + '</span>' +
+      '<span class="px-2 py-0.5 text-[13px] font-black bg-amber-500/25 text-amber-100 border border-amber-400/50">警長：' + escapeHtml(shWinnerLbl) + '</span>' +
       '</div>' +
       '<div class="flex items-center flex-wrap gap-1.5 text-[13px]"><span class="font-bold text-amber-200/80">警上候選：</span>' + shCandHtml + '</div>' +
       shWithHtml +
@@ -443,7 +443,7 @@ function renderVoteSheetIntoBody() {
     '</div>';
 
   if (state.match.voteHistory.length === 0) {
-    html += '<div class="rounded-xl px-3.5 py-3 bg-slate-950/70 border border-slate-800 text-slate-400 text-sm">目前還沒有公投紀錄，進入公投開票後會自動按被投對象分組整理。</div>';
+    html += '<div class="px-3.5 py-3 bg-slate-950/70 border border-slate-800 text-slate-400 text-sm">目前還沒有公投紀錄，進入公投開票後會自動按被投對象分組整理。</div>';
   } else {
     const dayCounts = {};
     state.match.voteHistory.forEach(function (vh, idx) {
