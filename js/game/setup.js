@@ -6,6 +6,11 @@
 function clearTransientMatchTimers() {
   if (typeof clearSkyCurtainTimer === "function") clearSkyCurtainTimer(true);
   if (typeof clearDeferredSpeechPrefetchTimer === "function") clearDeferredSpeechPrefetchTimer();
+  if (state._lwCueTimer) {
+    clearTimeout(state._lwCueTimer);
+    state._lwCueTimer = null;
+  }
+  state._dawnLwFlush = null;
   if (typeof indieFlow !== "undefined" && indieFlow) {
     indieFlow.onRoleDealClosed = null;
   }

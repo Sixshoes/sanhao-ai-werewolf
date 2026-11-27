@@ -252,7 +252,9 @@ function prefetchAiLastWords(seatIds, mode) {
   if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
   const normMode = mode || "first_night";
   const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
-  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const ep = (typeof orchestrator !== "undefined")
+    ? (typeof orchestrator.getEpoch === "function" ? orchestrator.getEpoch() : orchestrator.matchEpoch)
+    : 0;
   const useLiveLw = Boolean(
     typeof isExternalLlmActive === "function" &&
     isExternalLlmActive() &&
@@ -341,6 +343,10 @@ function startLastWordsSequence(seatIds, mode, onDone) {
 
 function advanceLastWordsQueue() {
   clearStepTimer();
+  if (state._lwCueTimer) {
+    clearTimeout(state._lwCueTimer);
+    state._lwCueTimer = null;
+  }
   stopTypewriterOnly();
   voice.stop();
   state.speakingInFlight = false;
@@ -378,7 +384,9 @@ function advanceLastWordsQueue() {
     return;
   }
 
-  const epLwNow = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const epLwNow = (typeof orchestrator !== "undefined")
+    ? (typeof orchestrator.getEpoch === "function" ? orchestrator.getEpoch() : orchestrator.matchEpoch)
+    : 0;
   const pfLwKey = epLwNow + ":" + ctx.mode + ":" + seat.id;
   const pfLwMap = (state.match && state.match._prefetchedLastWordsEpoch === epLwNow) ? state.match._prefetchedLastWords : null;
   const pfLw = pfLwMap ? pfLwMap[pfLwKey] : null;
@@ -450,7 +458,13 @@ function advanceLastWordsQueue() {
   if (ctx.queue && ctx.queue.length > 0) {
     prefetchAiLastWords(ctx.queue, ctx.mode);
   }
-  let lwCueTimer = setTimeout(function () {
+  if (state._lwCueTimer) {
+    clearTimeout(state._lwCueTimer);
+    state._lwCueTimer = null;
+  }
+  state._lwCueTimer = setTimeout(function () {
+    state._lwCueTimer = null;
+    if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epLw)) return;
     if (state._lastWordsTurnSeq === lwSeq && state.lastWordsCtx === ctx && state.activeSpeakerId === seat.id && state.speakingInFlight) {
       if (typeof syncSpeakerBannerVisuals === "function") {
         syncSpeakerBannerVisuals(seat, fmtSeatNum(seat.id) + "號 " + seat.name + "（遺言）", lwLabel, false);
@@ -464,14 +478,20 @@ function advanceLastWordsQueue() {
   const lwPromise = (pfLw && pfLw.promise) ? pfLw.promise : tryGenerateGeminiLastWords(seat, ctx.mode, lwObj);
   lwPromise
     .then(function (liveText) {
-      if (lwCueTimer) clearTimeout(lwCueTimer);
+      if (state._lwCueTimer) {
+        clearTimeout(state._lwCueTimer);
+        state._lwCueTimer = null;
+      }
       if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epLw)) return;
       if (state._lastWordsTurnSeq === lwSeq) state.speakingInFlight = false;
       if (state.lastWordsCtx !== ctx || state.activeSpeakerId !== seat.id) return;
       commitAiLastWords(liveText);
     })
     .catch(function () {
-      if (lwCueTimer) clearTimeout(lwCueTimer);
+      if (state._lwCueTimer) {
+        clearTimeout(state._lwCueTimer);
+        state._lwCueTimer = null;
+      }
       if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epLw)) return;
       if (state._lastWordsTurnSeq === lwSeq) state.speakingInFlight = false;
       if (state.lastWordsCtx !== ctx || state.activeSpeakerId !== seat.id) return;

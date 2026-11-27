@@ -50,6 +50,10 @@ const sound = {
   voiceRoomConv: null,
   cozyMouthPulse: 0,
   reverb: null,
+  _bgmInitialRampDone: false,
+  _bgmRevSend: null,
+  _revReturn: null,
+  _reverbInitTimer: null,
   muted: false,
   voiceDucking: false,
   bgmVol: 0.60,
@@ -78,6 +82,7 @@ const sound = {
         this.analyser.smoothingTimeConstant = 0.82;
 
         this.bgmGain = this.ctx.createGain();
+        this.bgmGain.gain.value = 0.0001;
         // Warm wood-body shelf + velvet high-cut to eliminate synthetic harshness
         this.bgmWarmLow = this.ctx.createBiquadFilter();
         this.bgmWarmLow.type = "lowshelf";
@@ -106,7 +111,7 @@ const sound = {
         this.ambientGain.gain.value = 0.22;
 
         this.sfxGain = this.ctx.createGain();
-        this.reverb = this.buildHallReverb(2.5);
+        this.reverb = null;
         const bgmRevHp = this.ctx.createBiquadFilter();
         bgmRevHp.type = "highpass";
         bgmRevHp.frequency.value = 260;
@@ -115,6 +120,8 @@ const sound = {
         bgmRevSend.gain.value = 0.48;
         const revReturn = this.ctx.createGain();
         revReturn.gain.value = 0.42;
+        this._bgmRevSend = bgmRevSend;
+        this._revReturn = revReturn;
 
         this.bgmGain.connect(this.bgmWarmLow);
         this.bgmWarmLow.connect(this.bgmAirTame);
@@ -123,10 +130,8 @@ const sound = {
         this.bgmConsonantCarve.connect(this.comp);
         this.bgmConsonantCarve.connect(bgmRevHp);
         bgmRevHp.connect(bgmRevSend);
-        bgmRevSend.connect(this.reverb);
         this.ambientGain.connect(this.comp);
         this.sfxGain.connect(this.comp);
-        this.reverb.connect(revReturn);
         revReturn.connect(this.comp);
         this.ensureNoiseBuffers();
 
@@ -203,17 +208,55 @@ const sound = {
 
         this.comp.connect(this.analyser);
         this.analyser.connect(this.ctx.destination);
-        this.applyVolumes();
+        this._bgmInitialRampDone = false;
+        this.applyVolumes({ skipBgmRamp: true });
+        const initCtx = this.ctx;
+        const selfReverb = this;
+        if (this._reverbInitTimer) {
+          clearTimeout(this._reverbInitTimer);
+          this._reverbInitTimer = null;
+        }
+        this._reverbInitTimer = setTimeout(function () {
+          selfReverb._reverbInitTimer = null;
+          if (!selfReverb.ctx || selfReverb.ctx !== initCtx) return;
+          try {
+            const hall = selfReverb.buildHallReverb(2.5);
+            selfReverb.reverb = hall;
+            if (hall) {
+              if (selfReverb._bgmRevSend) selfReverb._bgmRevSend.connect(hall);
+              if (selfReverb._revReturn) hall.connect(selfReverb._revReturn);
+            }
+          } catch (e) {}
+        }, 120);
       } catch (e) {
         this.ctx = null;
         return;
       }
     }
+    const selfUnlock = this;
+    const startWhenReady = function () {
+      if (!selfUnlock.ctx || selfUnlock.muted) {
+        selfUnlock.updateEqIndicator();
+        return;
+      }
+      selfUnlock.applyVolumes({ fastStart: !selfUnlock._bgmInitialRampDone });
+      if (!selfUnlock.seqTimer) {
+        selfUnlock.startSequencer();
+      } else {
+        selfUnlock.updateEqIndicator();
+      }
+    };
     if (this.ctx && this.ctx.state === "suspended") {
-      this.ctx.resume().catch(function () {});
-    }
-    if (!this.seqTimer && !this.muted) {
-      this.startSequencer();
+      const resumeRes = this.ctx.resume();
+      if (resumeRes && typeof resumeRes.then === "function") {
+        resumeRes.then(startWhenReady).catch(function () {
+          selfUnlock.updateEqIndicator();
+        });
+      } else {
+        startWhenReady();
+      }
+    } else {
+      startWhenReady();
     }
     this.updateEqIndicator();
     voice.unlock();
@@ -481,7 +524,7 @@ const sound = {
       this._pluckNoiseBuf = pBuf;
     }
     if (!this._breathNoiseBuf) {
-      const bLen = Math.max(256, Math.floor(rate * 2.0));
+      const bLen = Math.max(256, Math.floor(rate * 0.8));
       const bBuf = this.ctx.createBuffer(1, bLen, rate);
       const bCh = bBuf.getChannelData(0);
       let p0 = 0, p1 = 0, p2 = 0;
@@ -723,13 +766,19 @@ const sound = {
     return level;
   },
 
-  applyVolumes: function () {
+  applyVolumes: function (opts) {
     if (!this.ctx || !this.bgmGain || !this.sfxGain) return;
     const now = this.ctx.currentTime;
+    const useFastStart = Boolean((opts && opts.fastStart) || !this._bgmInitialRampDone);
     // v18.0 Mid-Band Vocal-Carve Mixing: keep warm BGM bed at 0.58 while carving 1.25kHz (-9dB) for crystal speech!
     const duckMul = this._briefDuckActive ? 0.14 : (this.voiceDucking ? 0.58 : 1.0);
-    const rampSec = this._briefDuckActive ? 0.04 : (this.voiceDucking ? 0.14 : 0.45);
-    this.bgmGain.gain.setTargetAtTime(this.muted ? 0.0001 : Math.max(0.0001, this.bgmVol * 0.52 * duckMul), now, rampSec);
+    const rampSec = this._briefDuckActive ? 0.04 : (this.voiceDucking ? 0.14 : (useFastStart ? 0.06 : 0.45));
+    if (!opts || !opts.skipBgmRamp) {
+      this.bgmGain.gain.setTargetAtTime(this.muted ? 0.0001 : Math.max(0.0001, this.bgmVol * 0.52 * duckMul), now, rampSec);
+      if (!this.muted && this.bgmVol > 0.01) {
+        this._bgmInitialRampDone = true;
+      }
+    }
     if (this.bgmVocalCarve) {
       const carveDb = this.voiceDucking ? -9.0 : 0.0;
       this.bgmVocalCarve.gain.setTargetAtTime(carveDb, now, this.voiceDucking ? 0.10 : 0.36);
@@ -876,7 +925,7 @@ const sound = {
     this.ensureNoiseBuffers();
     const effBpm = this.getEffectiveBpm(this.currentTrack);
     this._activeSeqBpm = effBpm;
-    this._nextStepTime = this.ctx.currentTime + 0.04;
+    this._nextStepTime = this.ctx.currentTime + 0.012;
     const self = this;
     this.refreshMusicModalLabels();
     this._schedulerTick();
@@ -922,12 +971,14 @@ const sound = {
       }
     }
 
+    const isASection = melBar < 4;
+
     // 2. Plucked Zither / Guqin / Nylon Guitar Arpeggio with human velocity phrasing & micro-timing
     const arpMidi = mv.arps[bar] ? mv.arps[bar][step] : null;
     if (arpMidi) {
       const phraseCurve = step === 0 ? 1.0 : (step === 4 ? 0.88 : (step % 2 === 0 ? 0.78 : 0.68));
       const humanize = 0.94 + Math.random() * 0.12;
-      const accent = 0.145 * phraseCurve * humanize;
+      const accent = (isASection ? 0.115 : 0.145) * phraseCurve * humanize;
       const strumOffset = step === 0 ? 0 : Math.random() * 0.008;
       this.voicePluck(midiToFreq(arpMidi), now + strumOffset, stepDur * 2.7, accent, step);
       if (typeof state !== "undefined" && state.match && state.match.phase === "DAY_PLAYER_TURN" && step % 4 === 0) {
@@ -935,7 +986,7 @@ const sound = {
       }
     }
 
-    // 3. Lyrical A/B Section Lead Solo Melody (Bamboo Dizi / Xiao / Solo Cello / Mallet)
+    // 3. Lyrical A/B Section Lead Solo Melody (A: Guzheng Lead + Harmonic Bell / B: Warm Bamboo Xiao/Dizi)
     const melRow = (mv.melody && mv.melody[melBar]) ? mv.melody[melBar] : null;
     const melMidi = melRow ? melRow[step] : null;
     if (melMidi) {
@@ -950,7 +1001,11 @@ const sound = {
       }
       const melDur = Math.max(stepDur * 1.45, Math.min(stepDur * 4.2, stepDur * holdSteps * 0.94));
       const baseMelVel = (this.currentTrack === "night" || this.currentTrack === "finale") ? 0.062 : 0.072;
-      this.voiceLead(midiToFreq(melMidi), nextMelMidi ? midiToFreq(nextMelMidi) : null, now, melDur, baseMelVel * speechDuckScale);
+      if (isASection) {
+        this.voiceGuzhengLead(melMidi, now, melDur, baseMelVel * speechDuckScale, step, melBar === 0 && step === 0);
+      } else {
+        this.voiceLead(midiToFreq(melMidi), nextMelMidi ? midiToFreq(nextMelMidi) : null, now, melDur, baseMelVel * speechDuckScale);
+      }
     }
 
     // 4. Bronze Singing Bowl / Celesta Overtone Motif
@@ -1050,6 +1105,24 @@ const sound = {
     } catch (e) {}
   },
 
+  voiceGuzhengLead: function (melMidi, t, dur, vel, step, isBarZeroOpen) {
+    if (this.muted || !this.ctx || !this.bgmGain) return;
+    try {
+      const melFreq = midiToFreq(melMidi);
+      if (!isFinite(melFreq) || melFreq <= 0) return;
+      const sustain = Math.max((dur || 0.45) * 1.15, 0.72);
+      if (isBarZeroOpen) {
+        const graceMidi = (this.currentTrack === "vote" || this.currentTrack === "sheriff") ? (melMidi - 5) : (melMidi - 7);
+        this.voicePluck(midiToFreq(graceMidi), t, Math.max(sustain * 0.85, 0.56), vel * 0.92, step);
+        this.voicePluck(melFreq, t + 0.02, sustain, vel * 1.68, step);
+        this.voiceBell(midiToFreq(melMidi + 12), t + 0.024, Math.min(sustain * 0.85, 0.95), vel * 0.24);
+      } else {
+        this.voicePluck(melFreq, t, sustain, vel * 1.55, step);
+        this.voiceBell(midiToFreq(melMidi + 12), t + 0.004, Math.min(sustain * 0.8, 0.88), vel * 0.22);
+      }
+    } catch (e) {}
+  },
+
   voiceLead: function (freq, nextFreq, t, dur, vel) {
     if (this.muted || !this.ctx || !this.bgmGain) return;
     try {
@@ -1087,27 +1160,27 @@ const sound = {
         filt.Q.value = 0.7;
         filt.frequency.setValueAtTime(Math.min(3400, targetFreq * 3.6), t);
       } else if (isGuqin) {
-        // Hollow cylindrical Bamboo Xiao + subtle 3rd harmonic
-        osc1.type = "sine";
+        // Warm hollow Bamboo Xiao: odd woodwind triangle harmonics centered around ~1050Hz
+        osc1.type = "triangle";
         osc2.type = "sine";
         osc1.frequency.setValueAtTime(targetFreq, t);
         osc2.frequency.setValueAtTime(targetFreq * 3.0, t);
-        mix2.gain.value = 0.045;
+        mix2.gain.value = 0.035;
         filt.type = "lowpass";
-        filt.Q.value = 0.8;
-        filt.frequency.setValueAtTime(Math.min(2400, targetFreq * 2.6), t);
-        filt.frequency.linearRampToValueAtTime(Math.min(2800, targetFreq * 3.1), t + Math.min(0.32, dur * 0.4));
+        filt.Q.value = 1.65;
+        filt.frequency.setValueAtTime(1050, t);
+        filt.frequency.linearRampToValueAtTime(1320, t + Math.min(0.32, dur * 0.4));
       } else {
-        // Eastern Bamboo Dizi flute: pure fundamental + delicate 2nd harmonic
-        osc1.type = "sine";
+        // Warm Eastern Bamboo Xiao/Dizi: triangle odd harmonics through resonant 1150Hz woodwind body
+        osc1.type = "triangle";
         osc2.type = "sine";
         osc1.frequency.setValueAtTime(targetFreq, t);
         osc2.frequency.setValueAtTime(targetFreq * 2.0, t);
-        mix2.gain.value = 0.13;
+        mix2.gain.value = 0.06;
         filt.type = "lowpass";
-        filt.Q.value = 0.85;
-        filt.frequency.setValueAtTime(Math.min(2800, targetFreq * 2.8), t);
-        filt.frequency.linearRampToValueAtTime(Math.min(3400, targetFreq * 3.5), t + Math.min(0.32, dur * 0.4));
+        filt.Q.value = 1.65;
+        filt.frequency.setValueAtTime(1150, t);
+        filt.frequency.linearRampToValueAtTime(1520, t + Math.min(0.32, dur * 0.4));
       }
 
       // Lock pitch glides and vibrato in CENTS (.detune) across BOTH oscillators to avoid beating
@@ -1131,10 +1204,10 @@ const sound = {
       const lfo = this.ctx.createOscillator();
       const lfoGain = this.ctx.createGain();
       lfo.type = "sine";
-      lfo.frequency.setValueAtTime(isCinema ? 5.2 : (isGuqin ? 4.2 : (isFolk ? 4.0 : 4.7)), t);
-      const vibCents = isCinema ? 13 : (isGuqin ? 7.5 : (isFolk ? 5 : 9));
+      lfo.frequency.setValueAtTime(isCinema ? 5.2 : (isGuqin ? 4.0 : (isFolk ? 4.0 : 4.2)), t);
+      const vibCents = isCinema ? 13 : (isGuqin ? 6.5 : (isFolk ? 5 : 5.5));
       lfoGain.gain.setValueAtTime(0, t);
-      lfoGain.gain.linearRampToValueAtTime(vibCents, t + Math.min(0.32, dur * 0.48));
+      lfoGain.gain.linearRampToValueAtTime(vibCents, t + Math.min(0.28, dur * 0.42));
       lfo.connect(lfoGain);
       if (osc1.detune) lfoGain.connect(osc1.detune);
       if (osc2.detune && !isCinema) lfoGain.connect(osc2.detune);
@@ -1151,25 +1224,25 @@ const sound = {
       filt.connect(gain);
       gain.connect(this.bgmGain);
 
-      // Continuous soft bamboo breath flow for Dizi (zen) / Xiao (guqin)
+      // 45ms embouchure Breath Chiff onset for Bamboo Xiao/Dizi
       let breathSrc = null, breathBp = null, breathGain = null;
-      if ((tMode === "zen" || isGuqin) && this._breathNoiseBuf) {
+      const chiffBuf = this._breathNoiseBuf || this._pluckNoiseBuf;
+      if ((tMode === "zen" || isGuqin) && chiffBuf) {
         breathSrc = this.ctx.createBufferSource();
-        breathSrc.buffer = this._breathNoiseBuf;
-        breathSrc.loop = true;
+        breathSrc.buffer = chiffBuf;
         breathBp = this.ctx.createBiquadFilter();
         breathBp.type = "bandpass";
-        breathBp.frequency.value = Math.min(2600, targetFreq * (isGuqin ? 1.5 : 2.0));
-        breathBp.Q.value = isGuqin ? 2.4 : 1.8;
+        breathBp.frequency.value = clamp(targetFreq * 2.1, 1150, 2200);
+        breathBp.Q.value = 2.6;
         breathGain = this.ctx.createGain();
         breathGain.gain.setValueAtTime(0.0001, t);
-        breathGain.gain.linearRampToValueAtTime(vel * (isGuqin ? 0.24 : 0.18), t + atk);
-        breathGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        breathGain.gain.linearRampToValueAtTime(vel * (isGuqin ? 0.30 : 0.24), t + 0.008);
+        breathGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
         breathSrc.connect(breathBp);
         breathBp.connect(breathGain);
         breathGain.connect(this.bgmGain);
         breathSrc.start(t);
-        breathSrc.stop(t + dur + 0.05);
+        breathSrc.stop(t + 0.055);
       }
 
       osc1.onended = function () {
@@ -1332,7 +1405,7 @@ const sound = {
 
         const noteVel = vel / Math.sqrt(Math.max(1, midis.length));
         const extDur = dur * 1.15;
-        const atk = Math.min(1.1, dur * 0.35);
+        const atk = Math.min(0.48, dur * 0.22);
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.linearRampToValueAtTime(noteVel, t + atk);
         gain.gain.setValueAtTime(noteVel * 0.85, t + dur * 0.72);

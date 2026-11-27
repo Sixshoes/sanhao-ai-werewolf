@@ -716,7 +716,9 @@ function scheduleStaggeredNextSpeechPrefetch(epGuard, turnSeqGuard) {
 function triggerImmediatePostPlayerPrefetch() {
   clearDeferredSpeechPrefetchTimer();
   if (typeof state === "undefined" || !state.match || !state.match.started) return false;
-  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const ep = (typeof orchestrator !== "undefined")
+    ? (typeof orchestrator.getEpoch === "function" ? orchestrator.getEpoch() : orchestrator.matchEpoch)
+    : 0;
   if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return false;
   state.match.tableStateRev = (state.match.tableStateRev || 0) + 1;
   state.match._prefetchedSpeech = null;
@@ -775,7 +777,9 @@ function _commitDeferredSeatPatch(speaker, generated) {
   }
 }
 
-function prefetchNextAiSpeech() {
+function prefetchNextAiSpeech(opts) {
+  const highPriority = Boolean(opts && opts.highPriority);
+  if (highPriority) clearDeferredSpeechPrefetchTimer();
   const m = state.match;
   if (!m || !m.started) return false;
   if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
@@ -788,12 +792,13 @@ function prefetchNextAiSpeech() {
   if (!extLlmOn && !wantNetTts) return false;
   const q = m.speechQueue || [];
   if (!q.length) return false;
+  const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
   const nextId = q.find(function (id) {
     const s = getSeat(id);
-    return Boolean(s && s.alive);
+    return Boolean(s && s.alive && (!highPriority || id !== pid));
   });
   if (!nextId) return false;
-  if (nextId === getPlayerId()) {
+  if (!highPriority && nextId === pid) {
     if (typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
       voice.prefetchBestTts("主持", "輪到" + nextId + "號你發言了，可點選詞卡組裝陳詞後送出。", "normal");
     }
@@ -802,10 +807,12 @@ function prefetchNextAiSpeech() {
   const nextSeat = getSeat(nextId);
   if (!nextSeat || !nextSeat.alive) return false;
 
-  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const ep = (typeof orchestrator !== "undefined")
+    ? (typeof orchestrator.getEpoch === "function" ? orchestrator.getEpoch() : orchestrator.matchEpoch)
+    : 0;
   const key = _buildSpeechPrefetchKey(nextId);
   const existing = m._prefetchedSpeech;
-  if (existing && existing.epoch === ep && existing.key === key) return true;
+  if (existing && existing.epoch === ep && existing.key === key && (!highPriority || existing.highPriority)) return true;
 
   // Dry-run heuristic so nextSeat.claimedRole / announced flags / badge flow are NEVER leaked before their turn!
   const fallbackMeta = _buildDryRunHeuristicSpeech(nextSeat);
@@ -813,6 +820,7 @@ function prefetchNextAiSpeech() {
     key: key,
     epoch: ep,
     seatId: nextId,
+    highPriority: highPriority,
     resolvedMeta: null,
     promise: null
   };

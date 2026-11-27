@@ -11,42 +11,42 @@ function midiToFreq(m) {
 const MOVEMENTS = {
   twilight: {
     name: "01 暮色山城（大廳主題）",
-    chordsLabel: "D5(add9) — Bm7(11) — Gsus2 — Asus4",
-    bpm: 66,
+    chordsLabel: "Dmaj9 — F#m7 — Gmaj9 — A13sus4",
+    bpm: 72,
     pads: [
-      [50, 57, 62, 64],
-      [47, 54, 62, 64],
-      [43, 50, 57, 62],
-      [45, 52, 57, 62]
+      [50, 57, 61, 64],
+      [42, 49, 52, 57],
+      [43, 50, 54, 57],
+      [45, 52, 55, 62]
     ],
     arps: [
-      [50, null, 57, 62, null, 64, 66, null],
-      [47, null, 54, 59, null, 62, 64, null],
-      [43, null, 50, 57, null, 62, 64, null],
-      [45, null, 52, 57, null, 62, 57, null]
+      [50, null, 57, 62, null, 61, 64, null],
+      [42, null, 49, 54, null, 57, 61, null],
+      [43, null, 50, 54, null, 57, 59, null],
+      [45, null, 52, 55, null, 57, 62, null]
     ],
     bells: [
       [74, null, null, null, null, null, null, null],
-      [null, null, null, null, null, null, null, null],
+      [null, null, null, null, 73, null, null, null],
       [71, null, null, null, null, null, null, null],
       [null, null, null, null, 69, null, null, null]
     ],
     melody: [
-      [null, null, 69, null, 71, 74, null, null],
-      [71, null, 69, null, 66, null, null, null],
-      [null, null, 64, null, 66, 69, null, null],
-      [66, null, 64, null, 62, null, null, null],
-      [null, null, 74, null, 76, 74, 71, null],
-      [69, null, 71, null, 69, null, 66, null],
-      [64, null, 66, null, 69, null, 71, null],
-      [69, null, null, null, 62, null, null, null]
+      [69, null, 76, null, 74, 71, 69, null],
+      [null, null, 66, 69, 71, null, 69, null],
+      [null, 66, 69, 71, 74, null, 71, null],
+      [69, null, 66, 64, 62, null, null, null],
+      [74, null, 78, null, 76, 74, 71, null],
+      [69, null, 71, 74, 73, null, 69, null],
+      [67, null, 69, 71, 74, 71, 69, 66],
+      [64, null, 66, 69, 62, null, null, null]
     ],
     drums: [0, 0, 0, 0, 0, 0, 0, 0]
   },
   night: {
     name: "02 深夜迷霧（天黑懸疑）",
-    chordsLabel: "Bm(add9) — Gmaj7(no3) — Em9 — F#sus4",
-    bpm: 54,
+    chordsLabel: "Bm9 — Gmaj7 — Em9 — F#7sus4",
+    bpm: 58,
     pads: [
       [47, 54, 59, 61],
       [43, 50, 54, 59],
@@ -63,51 +63,51 @@ const MOVEMENTS = {
       [null, null, null, null, 73, null, null, null],
       [null, null, null, null, null, null, 74, null],
       [null, null, null, null, 71, null, null, null],
-      [null, null, null, null, null, null, 70, null]
+      [null, null, null, null, null, null, 73, null]
     ],
     melody: [
-      [null, null, 66, null, null, null, 62, null],
-      [61, null, null, null, 59, null, null, null],
-      [null, null, 64, null, null, null, 62, null],
-      [61, null, null, null, null, null, null, null],
-      [null, null, 71, null, 69, null, 66, null],
-      [67, null, null, null, 66, null, null, null],
-      [null, null, 62, null, 61, null, 59, null],
-      [61, null, null, null, null, null, null, null]
+      [78, null, null, 74, 73, null, 71, null],
+      [null, null, 69, null, 66, null, null, null],
+      [71, null, null, 67, 66, null, 64, null],
+      [66, null, null, null, null, null, null, null],
+      [74, null, 73, null, 71, null, 66, null],
+      [67, null, 71, null, 69, null, 66, null],
+      [64, null, 66, 67, 66, null, 61, null],
+      [59, null, null, null, null, null, null, null]
     ],
     drums: [1, 0, 0, 2, 0, 0, 0, 0]
   },
   day: {
     name: "03 晨光論道（白天推理）",
-    chordsLabel: "Bm7 — Gsus2 — D5(add9) — A6sus4",
-    bpm: 76,
+    chordsLabel: "Gmaj9 — Asus4 — F#m7 — Bm9",
+    bpm: 82,
     pads: [
-      [47, 54, 57, 62],
-      [43, 50, 57, 59],
-      [50, 57, 62, 64],
-      [45, 52, 57, 62]
+      [43, 50, 54, 57],
+      [45, 52, 57, 62],
+      [42, 49, 52, 57],
+      [47, 54, 57, 61]
     ],
     arps: [
-      [47, null, 54, null, 59, 62, null, 57],
-      [43, null, 50, null, 55, 57, null, 59],
-      [50, null, 57, null, 62, 64, null, 62],
-      [45, null, 52, null, 57, 62, null, 57]
+      [43, null, 50, null, 54, 57, null, 59],
+      [45, null, 52, null, 57, 62, null, 57],
+      [42, null, 49, null, 54, 57, null, 61],
+      [47, null, 54, null, 59, 61, null, 57]
     ],
     bells: [
       [null, null, null, null, null, null, 74, null],
       [null, null, null, null, null, null, null, null],
-      [null, null, null, null, null, null, 76, null],
-      [null, null, null, null, 69, null, null, null]
+      [null, null, null, null, null, null, 73, null],
+      [null, null, null, null, 71, null, null, null]
     ],
     melody: [
-      [null, null, 66, null, 69, null, null, null],
-      [71, null, 69, 66, 64, null, null, null],
-      [null, null, 62, null, 64, 66, null, null],
-      [69, null, null, null, null, null, null, null],
-      [null, null, 71, null, 74, null, 71, null],
-      [69, null, 66, null, 64, null, null, null],
-      [66, null, 69, null, 71, null, 69, null],
-      [66, null, null, null, 62, null, null, null]
+      [66, null, 69, 71, null, 74, 71, null],
+      [69, null, 66, null, 64, 66, 69, null],
+      [71, null, 73, 74, null, 71, 69, 66],
+      [69, null, null, 66, 62, null, null, null],
+      [67, null, 71, 74, null, 76, 74, null],
+      [73, null, 71, 69, null, 66, 69, null],
+      [71, 69, 66, 64, 66, null, 69, 71],
+      [66, null, 64, null, 62, null, null, null]
     ],
     drums: [1, 0, 4, 0, 0, 3, 4, 0]
   },
@@ -147,35 +147,35 @@ const MOVEMENTS = {
   },
   vote: {
     name: "05 公投對決（高張力表決）",
-    chordsLabel: "Bm(no3) — A5 — G5 — F#7sus4",
-    bpm: 94,
+    chordsLabel: "Bm7 — Gmaj7 — Em7 — F#sus4",
+    bpm: 96,
     pads: [
-      [47, 54, 59, 62],
-      [45, 52, 57, 61],
-      [43, 50, 55, 59],
-      [42, 49, 54, 58]
+      [47, 54, 57, 62],
+      [43, 50, 54, 59],
+      [40, 47, 50, 55],
+      [42, 49, 54, 59]
     ],
     arps: [
       [47, 54, 59, null, 54, 62, null, null],
-      [45, 52, 57, null, 52, 61, null, null],
       [43, 50, 55, null, 50, 59, null, null],
-      [42, 49, 54, null, 49, 58, null, 61]
+      [40, 47, 52, null, 47, 55, null, null],
+      [42, 49, 54, null, 49, 59, null, 61]
     ],
     bells: [
       [71, null, null, null, null, null, null, null],
-      [69, null, null, null, null, null, null, null],
+      [74, null, null, null, null, null, null, null],
       [67, null, null, null, null, null, null, null],
-      [66, null, null, null, 70, null, null, null]
+      [66, null, null, null, 73, null, null, null]
     ],
     melody: [
-      [null, null, 71, null, 74, null, 73, null],
-      [69, null, null, null, 73, null, 71, null],
-      [67, null, null, null, 71, null, 69, null],
-      [66, null, null, null, 70, null, null, null],
-      [74, null, 73, null, 71, null, null, null],
-      [73, null, 71, null, 69, null, null, null],
-      [71, null, 69, null, 67, null, 66, null],
-      [66, null, 70, null, 73, null, null, null]
+      [71, null, 74, 73, 71, null, 66, null],
+      [67, null, 71, 74, 73, null, 69, null],
+      [71, null, 67, 66, 64, null, 67, 71],
+      [73, null, 74, 73, 69, null, null, null],
+      [74, null, 78, 76, 74, null, 71, null],
+      [73, null, 76, 74, 73, null, 69, null],
+      [71, 69, 67, 66, 67, 71, 74, 73],
+      [71, null, 66, null, 71, null, null, null]
     ],
     drums: [1, 0, 4, 1, 0, 3, 2, 0]
   },

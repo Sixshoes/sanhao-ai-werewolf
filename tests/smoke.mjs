@@ -6702,7 +6702,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       el("showcaseProfileCard").innerHTML.includes("好人癖好");
     const showcaseCardOk = Boolean(cardHiddenHero && cardShownMobai);
     const diag17 = collectFeedbackDiagnostics();
-    const version17Ok = Boolean(diag17 && diag17.version === "v25.5.2");
+    const version17Ok = Boolean(diag17 && diag17.version === "v25.5.3");
 
     // 6. Standard Day-1 Werewolf Order: Sheriff Election FIRST, THEN Night-1 Death Reveal (+ Dead-Sheriff Transfer + Election Explode Settlement)
     el("selectModeCount").value = "8";
@@ -7181,7 +7181,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.5.2") && swSrcPerf.includes("sanhao-assets-v25.5.0") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.5.3") && swSrcPerf.includes("sanhao-assets-v25.5.0") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7584,7 +7584,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.5.2"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.5.3"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v25.5.0"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8326,7 +8326,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
       && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
     docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("sanhao-assets-v25.5.0") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
-    scriptV242Ok: docScript241.includes("v25.5.0") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
+    scriptV242Ok: docScript241.includes("v25.5.3") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
     voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
     apiTimeout8400AndLruOk: apiGem242.includes("resolvePrimaryTimeoutMs(primaryModel)") && apiGem242.includes("21500 - elapsed") && apiGem242.includes("if (++evicted >= 200) break;") && apiGem242.includes("if (timer) clearTimeout(timer);"),
     webglContextLostOk: eng242.includes('canvas3d.addEventListener("webglcontextlost"'),
@@ -8878,10 +8878,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     specSyncedModelsAndCacheOk:
       docSpec2414.includes("gemini-4-hydrogen") &&
       docSpec2414.includes("api/tts.js") &&
-      docSpec2414.includes("sanhao-shell-v25.5.2") &&
+      docSpec2414.includes("sanhao-shell-v25.5.3") &&
       docSpec2414.length <= 5000,
     readmeSyncedOk:
-      readme2414.includes("sanhao-shell-v25.5.2") &&
+      readme2414.includes("sanhao-shell-v25.5.3") &&
       readme2414.includes("api/tts.js"),
     ...v24214Runtime
   };
@@ -9333,7 +9333,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   })()`, ctx);
   const docScriptV2431 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
   const demoScriptVirtueSyncOk = [
-    "v25.5.0",
+    "v25.5.3",
     "啟席預載遮罩",
     "三好四給主動茶禮列",
     "茶席風氣",
@@ -11268,9 +11268,267 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     };
   })()`, ctx);
 
+  const docScriptV2552 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
+  const scriptHeaderSyncOk = docScriptV2552.split(/\r?\n/)[0].includes("v25.5.3") && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(docScriptV2552);
+
+  const v2552AudioRes = await vm.runInContext(`(async () => {
+    const scoreKeys = ["twilight", "night", "day", "vote"];
+    const expectedBpms = { twilight: 72, night: 58, day: 82, vote: 96 };
+    const expectedStep0 = { twilight: 69, night: 78, day: 66, vote: 71 };
+    const movementsScoreOk = scoreKeys.every((k) => {
+      const mv = MOVEMENTS[k];
+      return mv && mv.bpm === expectedBpms[k]
+        && Array.isArray(mv.pads) && mv.pads.length === 4
+        && mv.pads.every((b) => Array.isArray(b) && b.length === 4 && b.every((m) => m >= 38))
+        && Array.isArray(mv.melody) && mv.melody.length === 8
+        && mv.melody[0][0] === expectedStep0[k]
+        && mv.melody.every((b) => Array.isArray(b) && b.length === 8 && b.every((m) => m === null || (m >= 50 && m <= 78)));
+    });
+    const noVoteOrNightClashOk = !["pads", "arps", "bells", "melody"].some((part) =>
+      MOVEMENTS.vote[part].some((bar) => Array.isArray(bar) && bar.some((n) => n === 58 || n === 70))
+    ) && !MOVEMENTS.night.bells.some((bar) => Array.isArray(bar) && bar.some((n) => n === 70))
+      && MOVEMENTS.night.bells[3][6] === 73;
+
+    const origAudioCtx = window.AudioContext;
+    const origWebkitCtx = window.webkitAudioContext;
+    const origSetTo = setTimeout;
+    const origClrTo = clearTimeout;
+    const origSetInt = setInterval;
+    const origClrInt = clearInterval;
+    const origVoiceUnlock = voice.unlock;
+    const snap = {
+      ctx: sound.ctx,
+      comp: sound.comp,
+      analyser: sound.analyser,
+      bgmGain: sound.bgmGain,
+      bgmWarmLow: sound.bgmWarmLow,
+      bgmAirTame: sound.bgmAirTame,
+      bgmVocalCarve: sound.bgmVocalCarve,
+      bgmConsonantCarve: sound.bgmConsonantCarve,
+      ambientGain: sound.ambientGain,
+      sfxGain: sound.sfxGain,
+      reverb: sound.reverb,
+      _bgmRevSend: sound._bgmRevSend,
+      _revReturn: sound._revReturn,
+      _reverbInitTimer: sound._reverbInitTimer,
+      _bgmInitialRampDone: sound._bgmInitialRampDone,
+      _briefDuckActive: sound._briefDuckActive,
+      voiceDucking: sound.voiceDucking,
+      voiceBus: sound.voiceBus,
+      voiceHighPass: sound.voiceHighPass,
+      voiceLowShelf: sound.voiceLowShelf,
+      voiceMidPeak: sound.voiceMidPeak,
+      voicePresence: sound.voicePresence,
+      voiceDeEss: sound.voiceDeEss,
+      voiceAnalyser: sound.voiceAnalyser,
+      voiceAnalyserData: sound.voiceAnalyserData,
+      voiceFreqData: sound.voiceFreqData,
+      voicePanner: sound.voicePanner,
+      voiceOutGain: sound.voiceOutGain,
+      voiceRevSend: sound.voiceRevSend,
+      voiceRoomConv: sound.voiceRoomConv,
+      seqTimer: sound.seqTimer,
+      stepIdx: sound.stepIdx,
+      barIdx: sound.barIdx,
+      _activeSeqBpm: sound._activeSeqBpm,
+      _nextStepTime: sound._nextStepTime,
+      muted: sound.muted,
+      bgmVol: sound.bgmVol,
+      sfxVol: sound.sfxVol,
+      timbre: sound.timbre,
+      currentTrack: sound.currentTrack,
+      _pluckNoiseBuf: sound._pluckNoiseBuf,
+      _breathNoiseBuf: sound._breathNoiseBuf
+    };
+
+    const origGuzhengLead = sound.voiceGuzhengLead;
+    const origVoiceLead = sound.voiceLead;
+    const origVoicePluck = sound.voicePluck;
+    const origVoiceBell = sound.voiceBell;
+
+    let deferredUnlockOk = false;
+    let abSectionTimbreOk = false;
+
+    try {
+      const timers = [];
+      let nextTid = 4000;
+      setTimeout = function (fn, ms) {
+        const id = nextTid++;
+        timers.push({ id, fn, ms });
+        return id;
+      };
+      clearTimeout = function (id) {
+        const idx = timers.findIndex((t) => t.id === id);
+        if (idx >= 0) timers.splice(idx, 1);
+      };
+      setInterval = function () { return 777; };
+      clearInterval = function () {};
+      voice.unlock = function () {};
+
+      const bgmRampSecs = [];
+      const createdOscs = [];
+      const createdFilters = [];
+      const createdBufSources = [];
+      let resolveResume = null;
+      const gainList = [];
+
+      const mkAudioParam = (initVal, onTarget) => ({
+        value: initVal || 0,
+        setValueAtTime() {},
+        linearRampToValueAtTime() {},
+        exponentialRampToValueAtTime() {},
+        setTargetAtTime(val, t, tc) {
+          if (onTarget) onTarget(tc, val);
+        }
+      });
+
+      const mockAudioCtxInstance = {
+        state: "suspended",
+        sampleRate: 44100,
+        currentTime: 2.0,
+        destination: {},
+        resume() {
+          mockAudioCtxInstance.state = "running";
+          return new Promise((res) => { resolveResume = res; });
+        },
+        createBuffer: (ch, len) => ({ length: len, getChannelData: () => new Float32Array(len) }),
+        createAnalyser: () => ({ fftSize: 64, frequencyBinCount: 32, smoothingTimeConstant: 0.8, connect() {}, disconnect() {}, getByteFrequencyData() {} }),
+        createDynamicsCompressor: () => ({ threshold: mkAudioParam(-14), knee: mkAudioParam(18), ratio: mkAudioParam(4), connect() {}, disconnect() {} }),
+        createGain: () => {
+          const idx = gainList.length;
+          const g = {
+            gain: mkAudioParam(1, (tc) => {
+              if (idx === 0 && typeof tc === "number") bgmRampSecs.push(tc);
+            }),
+            connect() {},
+            disconnect() {}
+          };
+          gainList.push(g);
+          return g;
+        },
+        createBiquadFilter: () => {
+          const f = { type: "lowpass", frequency: mkAudioParam(1000), Q: mkAudioParam(1), gain: mkAudioParam(0), connect() {}, disconnect() {} };
+          createdFilters.push(f);
+          return f;
+        },
+        createOscillator: () => {
+          const o = { type: "sine", frequency: mkAudioParam(440), detune: mkAudioParam(0), connect() {}, disconnect() {}, start() {}, stop() {}, onended: null };
+          createdOscs.push(o);
+          return o;
+        },
+        createBufferSource: () => {
+          const s = { buffer: null, loop: false, startedAt: null, stoppedAt: null, connect() {}, disconnect() {}, start(t) { s.startedAt = t; }, stop(t) { s.stoppedAt = t; }, onended: null };
+          createdBufSources.push(s);
+          return s;
+        },
+        createStereoPanner: () => ({ pan: mkAudioParam(0), connect() {}, disconnect() {} }),
+        createConvolver: () => ({ buffer: null, connect() {}, disconnect() {} })
+      };
+
+      const MockCtor = function () { return mockAudioCtxInstance; };
+      window.AudioContext = MockCtor;
+      window.webkitAudioContext = MockCtor;
+
+      const guzCalls = [];
+      const leadCalls = [];
+      const pluckCalls = [];
+      const bellCalls = [];
+      sound.voiceGuzhengLead = function (melMidi, t, dur, vel, step, isBarZeroOpen) {
+        guzCalls.push({ melMidi, step, isBarZeroOpen });
+        return origGuzhengLead.apply(this, arguments);
+      };
+      sound.voiceLead = function (freq, nextFreq, t, dur, vel) {
+        leadCalls.push({ freq, nextFreq, dur, oscStart: createdOscs.length, filtStart: createdFilters.length, bufStart: createdBufSources.length });
+        return origVoiceLead.apply(this, arguments);
+      };
+      sound.voicePluck = function (freq, t, dur, vel, stepOpt, destNode) {
+        pluckCalls.push({ freq, t, vel, stepOpt });
+        return origVoicePluck.apply(this, arguments);
+      };
+      sound.voiceBell = function (freq, t, dur, vel, destNode) {
+        bellCalls.push({ freq, t, vel });
+        return origVoiceBell.apply(this, arguments);
+      };
+
+      sound.ctx = null;
+      sound.reverb = null;
+      sound.seqTimer = null;
+      sound._reverbInitTimer = null;
+      sound._bgmInitialRampDone = false;
+      sound._briefDuckActive = false;
+      sound.voiceDucking = false;
+      sound._pluckNoiseBuf = null;
+      sound._breathNoiseBuf = null;
+      sound.muted = false;
+      sound.bgmVol = 0.6;
+      sound.sfxVol = 0.75;
+      sound.timbre = "zen";
+      sound.currentTrack = "twilight";
+      sound.barIdx = 0;
+      sound.stepIdx = 0;
+
+      sound.unlock();
+      const waitedBeforeResume = sound.seqTimer === null;
+      const deferredReverbInitiallyNull = sound.reverb === null && timers.some((t) => t.ms === 120);
+      const breathBufShortOk = Boolean(sound._breathNoiseBuf && sound._breathNoiseBuf.length === Math.max(256, Math.floor(44100 * 0.8)));
+
+      resolveResume();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const resumedStartedSeqOk = sound.seqTimer !== null && bgmRampSecs.includes(0.06);
+      const aSectionBrushOk = guzCalls.length === 1 && guzCalls[0].melMidi === 69 && guzCalls[0].isBarZeroOpen === true
+        && pluckCalls.length >= 3 && bellCalls.some((b) => Math.abs(b.freq - 880) < 2);
+
+      // Flush deferred 120ms Hall Reverb initialization timer
+      const revTimer = timers.find((t) => t.ms === 120);
+      if (revTimer) revTimer.fn();
+      const reverbLoadedAfterDelayOk = Boolean(sound.reverb && sound.reverb.buffer);
+
+      deferredUnlockOk = Boolean(waitedBeforeResume && deferredReverbInitiallyNull && breathBufShortOk && resumedStartedSeqOk && reverbLoadedAfterDelayOk);
+
+      // Test B-section (barIdx = 4, stepIdx = 0) Bamboo Xiao/Dizi triangle woodwind + 45ms Breath Chiff onset
+      guzCalls.length = 0;
+      leadCalls.length = 0;
+      sound.barIdx = 4;
+      sound.stepIdx = 0;
+      sound.timbre = "zen";
+      sound.tickStep(4.0);
+      const zenLeadCall = leadCalls[0];
+      const zenOsc1 = zenLeadCall ? createdOscs[zenLeadCall.oscStart] : null;
+      const zenFilt = zenLeadCall ? createdFilters[zenLeadCall.filtStart] : null;
+      const zenChiff = zenLeadCall ? createdBufSources[zenLeadCall.bufStart] : null;
+      const bSectionZenOk = Boolean(
+        guzCalls.length === 0 && leadCalls.length === 1
+        && zenOsc1 && zenOsc1.type === "triangle"
+        && zenFilt && zenFilt.type === "lowpass" && zenFilt.Q.value === 1.65
+        && zenChiff && zenChiff.loop === false && Math.abs((zenChiff.stoppedAt || 0) - 4.055) < 0.005
+      );
+      abSectionTimbreOk = Boolean(aSectionBrushOk && bSectionZenOk);
+    } finally {
+      if (sound._reverbInitTimer) clearTimeout(sound._reverbInitTimer);
+      if (sound.seqTimer) clearInterval(sound.seqTimer);
+      window.AudioContext = origAudioCtx;
+      window.webkitAudioContext = origWebkitCtx;
+      setTimeout = origSetTo;
+      clearTimeout = origClrTo;
+      setInterval = origSetInt;
+      clearInterval = origClrInt;
+      voice.unlock = origVoiceUnlock;
+      sound.voiceGuzhengLead = origGuzhengLead;
+      sound.voiceLead = origVoiceLead;
+      sound.voicePluck = origVoicePluck;
+      sound.voiceBell = origVoiceBell;
+      Object.assign(sound, snap);
+    }
+
+    return { movementsScoreOk, noVoteOrNightClashOk, deferredUnlockOk, abSectionTimbreOk };
+  })()`, ctx);
+
   const all2552 = Object.assign(
-    { apiThinkingZeroOk, frontendThinkingZeroOk, no38TtsModelsOk, shortVoteNightOk, mobileTtsBudgetOk, ttsMaxOneRetryOk },
-    v2552Runtime
+    { apiThinkingZeroOk, frontendThinkingZeroOk, no38TtsModelsOk, shortVoteNightOk, mobileTtsBudgetOk, ttsMaxOneRetryOk, scriptHeaderSyncOk },
+    v2552Runtime,
+    v2552AudioRes
   );
   for (const [k, v] of Object.entries(all2552)) {
     if (!v) {
@@ -11279,4 +11537,365 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 + v25.5.2 Release-Freeze E2E smoke test PASSED!");
+// ==================== v25.5.3 FULL AUDIT PATCHES & BLINDSPOT HARDENING ====================
+{
+  const apiGem2553 = (await import("../api/gemini.js")).default;
+  const apiTts2553 = (await import("../api/tts.js")).default;
+
+  // BUG-04: IPv6 loopback and bracketed host normalization in api/gemini.js & api/tts.js
+  const prevVercelEnv = process.env.VERCEL_ENV;
+  let ipv6OriginOk = false;
+  try {
+    process.env.VERCEL_ENV = "preview";
+    const checksHost = [apiGem2553, apiTts2553].every((mod) => {
+      return (
+        typeof mod._getHostname === "function" &&
+        mod._getHostname("[::1]:8000") === "::1" &&
+        mod._getHostname("[::1]") === "::1" &&
+        mod._getHostname("http://[::1]:8000") === "::1" &&
+        mod._getHostname("[2001:db8::1]:443") === "2001:db8::1" &&
+        mod._getHostname("[") === "" &&
+        mod._isAllowedOrigin({ headers: { host: "[::1]:3000", origin: "http://[::1]:3000" } }) === true &&
+        mod._isAllowedOrigin({ headers: { host: "[::1]:3000" } }) === true &&
+        mod._isAllowedOrigin({ headers: { host: "[2001:db8::1]:443", origin: "https://[2001:db8::1]:443" } }) === true &&
+        mod._isAllowedOrigin({ headers: { host: "[2001:db8::1]:443", origin: "https://evil.example" } }) === false
+      );
+    });
+    ipv6OriginOk = checksHost;
+  } finally {
+    if (prevVercelEnv === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = prevVercelEnv;
+  }
+
+  // BUG-01, BUG-02, BUG-03, BUG-05, BUG-06, BUG-07 timer hardening runtime verification
+  const prevFetch2553 = ctx.fetch;
+  const v2553Runtime = await vm.runInContext(`(async () => {
+    const hasBadgeBan = function (btn) {
+      return Array.from(btn.children || []).some((ch) => String(ch.textContent || "").trim() === "伴");
+    };
+    const hasWolfLeak = function (stripEl) {
+      return Array.from(stripEl.children || []).some((btn) =>
+        hasBadgeBan(btn) ||
+        String(btn.title || "").includes("（狼隊同伴）") ||
+        String(btn.title || "").includes("（獵神：")
+      );
+    };
+
+    // 1. BUG-01: state.hidePlayerRole hides wolf-mate & god-mark badges for ordinary wolf AND wolf_king
+    let hideWolfStripMaskOk = false;
+    const prevHide = state.hidePlayerRole;
+    try {
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "wolf";
+      el("chkSheriffMode").checked = false;
+      el("chkGuardMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      const pid = getPlayerId();
+      const pSelf = getPlayerSeat();
+      const goodTarget = state.match.seats.find((s) => s.team === "good");
+      const wolfMate = state.match.seats.find((s) => s.id !== pid && s.role === "wolf");
+      if (pSelf && goodTarget && wolfMate) {
+        pSelf.role = "wolf";
+        pSelf.isWolfKing = false;
+        state.match.wolfGodMarks = {};
+        state.match.wolfGodMarks[goodTarget.id] = "seer";
+        state.match.phase = "DAY_SPEECH";
+        state.hidePlayerRole = false;
+        renderSeatStrip();
+        const unmaskedHasWolfInfo = hasWolfLeak(el("seatButtonStrip"));
+
+        state.hidePlayerRole = true;
+        renderSeatStrip();
+        const maskedOrdWolfClean = !hasWolfLeak(el("seatButtonStrip"));
+
+        pSelf.isWolfKing = true;
+        state.match.phase = "NIGHT_WOLF";
+        renderSeatStrip();
+        const maskedKingWolfClean = !hasWolfLeak(el("seatButtonStrip")) &&
+          !Array.from(el("seatButtonStrip").children || []).some((b) => String(b.className || "").includes("is-disabled-target") && String(b.title || "").includes(wolfMate.name));
+
+        hideWolfStripMaskOk = Boolean(unmaskedHasWolfInfo && maskedOrdWolfClean && maskedKingWolfClean);
+      }
+    } finally {
+      state.hidePlayerRole = prevHide;
+      resetMatchToLobby();
+    }
+
+    // 2. BUG-02: Track A firstAttemptTimeoutMs < trackATotalBudgetMs & stripped retry within budget
+    let trackATimeoutAndRetryOk = false;
+    const origSetTo = setTimeout;
+    const origFetch = fetch;
+    const origDecode = voice.decodeGeminiAudioBytes;
+    const origIsStatic = voice.isStaticCloudHost;
+    const prevVoiceState = {
+      cloudAvail: voice.cloudGeminiTtsAvailable,
+      cooldown: voice.cloudGeminiTtsCooldownUntil,
+      key: state.geminiApiKey,
+      optOut: state.serverGeminiOptOut,
+      forceMob: state._forceMobileTtsBudget,
+      ctx: sound.ctx
+    };
+    try {
+      const timeoutArgs = [];
+      const sentTexts = [];
+      state.geminiApiKey = "";
+      state.serverGeminiOptOut = false;
+      voice.cloudGeminiTtsAvailable = true;
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      voice.isStaticCloudHost = () => true;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      sound.ctx = { sampleRate: 24000, currentTime: 0 };
+      voice.decodeGeminiAudioBytes = async () => ({ duration: 0.8 });
+      setTimeout = function (fn, ms) {
+        if (ms >= 1000) timeoutArgs.push(ms);
+        else if (ms <= 200) fn();
+        return timeoutArgs.length + 100;
+      };
+      let callNo = 0;
+      fetch = async function (_u, init) {
+        callNo += 1;
+        sentTexts.push(JSON.parse(init.body).text);
+        if (callNo === 1) return { ok: false, status: 500, arrayBuffer: async () => new ArrayBuffer(0) };
+        return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(256).buffer };
+      };
+      voice._cloudTtsFailStreak = 0;
+      voice._cloudTtsCooldownIs429 = false;
+      state._forceMobileTtsBudget = true;
+      const mobRes = await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["暖暖"], "暖暖", "這句話這輪測試第一次逾時與第二次去標籤重試。", "panic");
+      const mobOk = Boolean(mobRes) && timeoutArgs[0] === 3000 && sentTexts.length === 2 &&
+        sentTexts[0].includes("<breath>") && !sentTexts[1].includes("<breath>") &&
+        timeoutArgs[1] >= 1800 && timeoutArgs[1] <= 5200;
+
+      timeoutArgs.length = 0;
+      sentTexts.length = 0;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      voice._cloudTtsFailStreak = 0;
+      voice._cloudTtsCooldownIs429 = false;
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      fetch = async function (_u, init) {
+        sentTexts.push(JSON.parse(init.body).text);
+        return { ok: false, status: 502, arrayBuffer: async () => new ArrayBuffer(0) };
+      };
+      state._forceMobileTtsBudget = false;
+      await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["暖暖"], "暖暖", "桌機模式這輪也只在總預算內重試一次。", "panic");
+      const deskOk = timeoutArgs[0] === 4200 && sentTexts.length === 2 && timeoutArgs[1] >= 2200 && timeoutArgs[1] <= 6800;
+      trackATimeoutAndRetryOk = Boolean(mobOk && deskOk);
+    } finally {
+      setTimeout = origSetTo;
+      fetch = origFetch;
+      voice.decodeGeminiAudioBytes = origDecode;
+      voice.isStaticCloudHost = origIsStatic;
+      voice.cloudGeminiTtsAvailable = prevVoiceState.cloudAvail;
+      voice.cloudGeminiTtsCooldownUntil = prevVoiceState.cooldown;
+      voice._cloudTtsFailStreak = 0;
+      voice._cloudTtsCooldownIs429 = false;
+      state.geminiApiKey = prevVoiceState.key;
+      state.serverGeminiOptOut = prevVoiceState.optOut;
+      state._forceMobileTtsBudget = prevVoiceState.forceMob;
+      sound.ctx = prevVoiceState.ctx;
+      voice.studioCache = {};
+      voice.studioPending = {};
+    }
+
+    // 3. BUG-03: prefetchNextAiSpeech(opts) forwards highPriority and skips player seat
+    let highPriorityPrefetchOk = false;
+    const prevKeyPf = state.geminiApiKey;
+    const origDispatchPf = orchestrator.dispatchAgent;
+    const origPfTts = voice.prefetchBestTts;
+    try {
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.geminiApiKey = "dummy-key";
+      state.match.phase = "DAY_SPEECH";
+      const pid = getPlayerId();
+      const nextAiSeat = state.match.seats.find((s) => s.id !== pid && s.alive);
+      state.match.speechQueue = [pid, nextAiSeat.id];
+      state.match._prefetchedSpeech = null;
+      orchestrator.dispatchAgent = () => Promise.resolve(null);
+      voice.prefetchBestTts = () => false;
+
+      const blockedWhenPlayerHead = prefetchNextAiSpeech() === false && state.match._prefetchedSpeech === null;
+      const startedHighPri = triggerImmediatePostPlayerPrefetch() === true &&
+        state.match._prefetchedSpeech &&
+        state.match._prefetchedSpeech.seatId === nextAiSeat.id &&
+        state.match._prefetchedSpeech.highPriority === true;
+      highPriorityPrefetchOk = Boolean(blockedWhenPlayerHead && startedHighPri);
+    } finally {
+      state.geminiApiKey = prevKeyPf;
+      orchestrator.dispatchAgent = origDispatchPf;
+      voice.prefetchBestTts = origPfTts;
+      resetMatchToLobby();
+    }
+
+    // 4. BUG-05: Chunked fallback resolves normalized effProfile object + opts.personaKey = effKey
+    let normalizedFallbackProfileOk = false;
+    const origFetchGem = voice._fetchGeminiStudioAudio;
+    const origPlayBuf = voice.playBufferedStudioAudio;
+    const origLocalTts = voice.speakLocalBrowserTts;
+    const origSetTo5 = setTimeout;
+    const origIsStatic5 = voice.isStaticCloudHost;
+    const prevCtx5 = sound.ctx;
+    const prevKey5 = state.geminiApiKey;
+    const prevOptOut5 = state.serverGeminiOptOut;
+    const prevLocalAvail5 = voice.localNeuralAvailable;
+    const prevCloudAvail5 = voice.cloudGeminiTtsAvailable;
+    const prevPaused5 = voice.paused;
+    try {
+      setTimeout = (fn) => { fn(); return 1; };
+      sound.ctx = { sampleRate: 24000, currentTime: 0 };
+      state.geminiApiKey = "";
+      state.serverGeminiOptOut = false;
+      voice.isStaticCloudHost = () => true;
+      voice.localNeuralAvailable = false;
+      voice.cloudGeminiTtsAvailable = true;
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      voice._cloudTtsCooldownIs429 = false;
+      voice.paused = false;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      let chunkCall = 0;
+      voice._fetchGeminiStudioAudio = async () => {
+        chunkCall += 1;
+        return chunkCall === 1 ? { duration: 0.4 } : null;
+      };
+      let chunkDonePromise = null;
+      voice.playBufferedStudioAudio = (_seq, _buf, onChunkDone) => {
+        chunkDonePromise = Promise.resolve().then(() => (typeof onChunkDone === "function" ? onChunkDone() : null));
+        return true;
+      };
+      let capturedProf = null;
+      let capturedOpts = null;
+      voice.speakLocalBrowserTts = (_seq, prof, _txt, _mood, _busy, _done, tailOpts) => {
+        capturedProf = prof;
+        capturedOpts = tailOpts;
+      };
+      const fakeWrongProfile = { gender: "m", pitch: 0.77, rateMul: 1.0 };
+      const longText = "我覺得三號剛剛那段發言非常有道理，先保一下三號並且觀察前置位表情與語氣。不過二號位突然跳出來帶風向的節奏讓我有點懷疑，大家公投前一定要把昨晚的金水與查殺順序全部核對清楚才行。";
+      const okStart = await voice.playGeminiStudioTts(voice.utteranceSeq, fakeWrongProfile, longText, "normal", () => {}, { personaKey: "晴嵐" });
+      if (chunkDonePromise) await chunkDonePromise;
+      normalizedFallbackProfileOk = Boolean(
+        okStart &&
+        capturedProf && typeof capturedProf === "object" &&
+        capturedProf === PERSONA_VOICE_PROFILES["晴嵐"] &&
+        capturedOpts && capturedOpts.personaKey === "晴嵐"
+      );
+    } finally {
+      setTimeout = origSetTo5;
+      voice._fetchGeminiStudioAudio = origFetchGem;
+      voice.playBufferedStudioAudio = origPlayBuf;
+      voice.speakLocalBrowserTts = origLocalTts;
+      voice.isStaticCloudHost = origIsStatic5;
+      sound.ctx = prevCtx5;
+      state.geminiApiKey = prevKey5;
+      state.serverGeminiOptOut = prevOptOut5;
+      voice.localNeuralAvailable = prevLocalAvail5;
+      voice.cloudGeminiTtsAvailable = prevCloudAvail5;
+      voice.paused = prevPaused5;
+      voice._cloudTtsCooldownIs429 = false;
+      voice.studioCache = {};
+      voice.studioPending = {};
+    }
+
+    // 5. BUG-06 + Last-Words Blindspot: orchestrator.getEpoch()/isEpochValid() & clearTransientMatchTimers()
+    let epochApiVoiceOk = false;
+    let lwTimerCleanupOk = false;
+    const origLocalTts6 = voice.speakLocalBrowserTts;
+    const origCanSpeak6 = voice.canSpeak;
+    const prevPref6 = voice.enginePref;
+    const prevEnabled6 = voice.enabled;
+    const prevSpeaking6 = voice.speaking;
+    try {
+      const ep0 = orchestrator.getEpoch();
+      const getEpochMatchesOk = ep0 === orchestrator.matchEpoch && orchestrator.isEpochValid(ep0);
+      let capturedDone6 = null;
+      let origTurnFired = 0;
+      let audDoneFired = 0;
+      voice.canSpeak = () => true;
+      voice.enginePref = "local";
+      voice.enabled = true;
+      voice.speakLocalBrowserTts = (_s, _p, _t, _m, _b, onDone) => {
+        capturedDone6 = onDone;
+      };
+      voice.speak("暖暖", "第一段主線語音。", "normal", () => { origTurnFired += 1; }, {});
+      voice.speaking = true;
+      voice.speak("小澄", "第二段試聽語音。", "normal", () => { audDoneFired += 1; }, { isAudition: true });
+      orchestrator.bumpInterruptEpoch("test_bug06_audition");
+      if (typeof capturedDone6 === "function") capturedDone6();
+      epochApiVoiceOk = Boolean(getEpochMatchesOk && audDoneFired === 1 && origTurnFired === 0);
+
+      state._lwCueTimer = origSetTo ? setTimeout(() => {}, 1000) : 999;
+      state._dawnLwFlush = () => {};
+      clearTransientMatchTimers();
+      lwTimerCleanupOk = Boolean(state._lwCueTimer === null && state._dawnLwFlush === null);
+    } finally {
+      voice.speakLocalBrowserTts = origLocalTts6;
+      voice.canSpeak = origCanSpeak6;
+      voice.enginePref = prevPref6;
+      voice.enabled = prevEnabled6;
+      voice.speaking = prevSpeaking6;
+      voice.stop();
+      resetMatchToLobby();
+    }
+
+    return {
+      hideWolfStripMaskOk,
+      trackATimeoutAndRetryOk,
+      highPriorityPrefetchOk,
+      normalizedFallbackProfileOk,
+      epochApiVoiceOk,
+      lwTimerCleanupOk
+    };
+  })()`, ctx);
+  ctx.fetch = prevFetch2553;
+
+  // BUG-07 & Blindspot static source checks
+  const canvasEv2553 = fs.readFileSync(path.join(ROOT, "js/events/canvas-events.js"), "utf8");
+  const compCss2553 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const compCssNoComments2553 = compCss2553.replace(/\/\*[\s\S]*?\*\//g, "");
+  const sw2553 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const fb2553 = fs.readFileSync(path.join(ROOT, "js/ui/feedback.js"), "utf8");
+  const spec2553 = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
+  const script2553 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
+  const readme2553 = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  const lwSrc2553 = fs.readFileSync(path.join(ROOT, "js/game/last-words.js"), "utf8");
+  const touchedTexts2553 = [
+    canvasEv2553, compCss2553, sw2553, fb2553, spec2553, script2553, readme2553, lwSrc2553,
+    fs.readFileSync(path.join(ROOT, "js/ui/hud.js"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "js/core/orchestrator.js"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "js/game/day-speech.js"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "api/gemini.js"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "api/tts.js"), "utf8")
+  ];
+  const zeroEmoji2553Ok = touchedTexts2553.every((txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt));
+  const uiCacheAndLwTimerOk = Boolean(
+    canvasEv2553.includes("依當前局規本夜不可自刀，請選擇其他目標") &&
+    canvasEv2553.includes("他是你的酸民狼同伴，請改鎖定好人！") &&
+    compCss2553.includes("body.craft-ui.theme-daylight #heroShowcaseOverlay #heroShowcaseSub") &&
+    compCss2553.includes("body.craft-ui.theme-night #heroShowcaseOverlay #heroShowcaseSub") &&
+    !compCssNoComments2553.includes("!important") &&
+    !compCssNoComments2553.includes("backdrop-filter") &&
+    sw2553.includes('const SHELL_CACHE = "sanhao-shell-v25.5.3"') &&
+    fb2553.includes('version: "v25.5.3"') &&
+    spec2553.includes("v25.5.3") && spec2553.length <= 5000 &&
+    script2553.includes("v25.5.3") &&
+    readme2553.includes("v25.5.3") &&
+    lwSrc2553.includes("state._lwCueTimer") &&
+    lwSrc2553.includes("orchestrator.isEpochValid(epLw)") &&
+    zeroEmoji2553Ok
+  );
+
+  const all2553 = Object.assign({ ipv6OriginOk, uiCacheAndLwTimerOk }, v2553Runtime);
+  for (const [k, v] of Object.entries(all2553)) {
+    if (!v) {
+      throw new Error("v25.5.3 Audit & Blindspot regression failed for " + k + ": " + JSON.stringify(all2553));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 + v25.5.3 Release-Freeze E2E smoke test PASSED!");

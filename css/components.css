@@ -20406,11 +20406,17 @@ body.craft-ui.theme-night #heroShowcaseOverlay .showcase-more-drawer > summary {
 }
 body.craft-ui.theme-daylight #heroShowcaseOverlay #showcaseUploadHint,
 body.craft-ui.theme-day #heroShowcaseOverlay #showcaseUploadHint,
-body.craft-ui.theme-twilight #heroShowcaseOverlay #showcaseUploadHint {
+body.craft-ui.theme-twilight #heroShowcaseOverlay #showcaseUploadHint,
+body.craft-ui.theme-daylight #heroShowcaseOverlay #heroShowcaseSub,
+body.craft-ui.theme-day #heroShowcaseOverlay #heroShowcaseSub,
+body.craft-ui.theme-twilight #heroShowcaseOverlay #heroShowcaseSub {
   color: #524030;
 }
 body.craft-ui.theme-night #heroShowcaseOverlay #showcaseUploadHint {
   color: #cfc2ac;
+}
+body.craft-ui.theme-night #heroShowcaseOverlay #heroShowcaseSub {
+  color: #ded2be;
 }
 body.craft-ui.theme-daylight .pit-chip-live-tag,
 body.craft-ui.theme-day .pit-chip-live-tag,

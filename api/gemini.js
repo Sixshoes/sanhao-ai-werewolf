@@ -66,8 +66,14 @@ function getHostname(urlOrHost) {
   const raw = String(urlOrHost || "").trim();
   if (!raw) return "";
   try {
-    if (raw.includes("://")) return new URL(raw).hostname.toLowerCase();
-    return raw.split(":", 1)[0].replace(/^\[|\]$/g, "").toLowerCase();
+    if (raw.includes("://")) {
+      return new URL(raw).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    }
+    if (raw.startsWith("[")) {
+      const closeIdx = raw.indexOf("]");
+      return closeIdx > 1 ? raw.slice(1, closeIdx).toLowerCase() : "";
+    }
+    return raw.split(":", 1)[0].toLowerCase();
   } catch (e) {
     return "";
   }
@@ -109,7 +115,7 @@ function isAllowedOrigin(req) {
   if (secFetchSite === "same-origin") {
     return true;
   }
-  if (!isProd && (reqHost === "localhost" || reqHost === "127.0.0.1")) {
+  if (!isProd && (reqHost === "localhost" || reqHost === "127.0.0.1" || reqHost === "::1")) {
     return true;
   }
   return false;
@@ -482,6 +488,7 @@ async function handler(req, res) {
 }
 
 handler._isAllowedOrigin = isAllowedOrigin;
+handler._getHostname = getHostname;
 handler._checkRateLimit = checkRateLimit;
 handler._resolveSafeModel = resolveSafeModel;
 handler._extractSessionId = extractSessionId;

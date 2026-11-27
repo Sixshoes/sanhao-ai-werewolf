@@ -1691,10 +1691,9 @@ const voice = {
     const self = this;
     const p = (async function () {
       const isMobileNet = self.isMobileTtsNetworkEnv();
-      const geminiTtsTimeoutMs = isMobileNet ? 4200 : 5800;
-      const trackATotalBudgetMs = isMobileNet ? 4000 : 5500;
+      const personalKeyTimeoutMs = isMobileNet ? 4200 : 5800;
       const controller = (hasPersonalKey && typeof AbortController === "function") ? new AbortController() : null;
-      const timer = controller ? setTimeout(function () { controller.abort(); }, geminiTtsTimeoutMs) : null;
+      const timer = controller ? setTimeout(function () { controller.abort(); }, personalKeyTimeoutMs) : null;
       const callCloudTtsTrackA = async function () {
         const hdrs = { "Content-Type": "application/json" };
         if (typeof getOrCreateProxySessionId === "function") {
@@ -1702,6 +1701,9 @@ const voice = {
         }
         const strippedText = self.stripGeminiVocalTags(cleanText) || cleanText;
         const trackAStartedAt = Date.now();
+        const firstAttemptTimeoutMs = isMobileNet ? 3000 : 4200;
+        const trackATotalBudgetMs = isMobileNet ? 5200 : 6800;
+        const minRetryBudgetMs = isMobileNet ? 1800 : 2200;
         const postOnce = async function (txtToSend, attemptTimeoutMs) {
           const reqCtrl = typeof AbortController === "function" ? new AbortController() : null;
           const reqTimer = reqCtrl ? setTimeout(function () { reqCtrl.abort(); }, attemptTimeoutMs) : null;
@@ -1723,17 +1725,19 @@ const voice = {
         let cloudRes = null;
         let cloudErr = null;
         try {
-          cloudRes = await postOnce(payload.taggedTranscript, trackATotalBudgetMs);
+          cloudRes = await postOnce(payload.taggedTranscript, firstAttemptTimeoutMs);
         } catch (err1) {
           cloudErr = err1;
         }
         let retryCount = 0;
         const shouldRetry = !cloudRes || cloudRes.status === 400 || cloudRes.status === 500 || cloudRes.status === 502 || cloudRes.status === 504;
-        const retryRemainMs = trackATotalBudgetMs - (Date.now() - trackAStartedAt) - 160;
-        if (retryCount < 1 && shouldRetry && !(cloudErr && cloudErr.name === "AbortError") && retryRemainMs >= 1100) {
+        const retryRemainMs = trackATotalBudgetMs - (Date.now() - trackAStartedAt) - 150;
+        const hasTagDiff = strippedText !== payload.taggedTranscript;
+        const canRetryErr = !(cloudErr && cloudErr.name === "AbortError") || hasTagDiff;
+        if (retryCount < 1 && shouldRetry && canRetryErr && retryRemainMs >= minRetryBudgetMs) {
           retryCount += 1;
-          await new Promise(function (resolve) { setTimeout(resolve, 160); });
-          const attempt2TimeoutMs = Math.max(950, trackATotalBudgetMs - (Date.now() - trackAStartedAt));
+          await new Promise(function (resolve) { setTimeout(resolve, 150); });
+          const attempt2TimeoutMs = Math.max(minRetryBudgetMs, trackATotalBudgetMs - (Date.now() - trackAStartedAt));
           try {
             cloudRes = await postOnce(strippedText, attempt2TimeoutMs);
             cloudErr = null;
@@ -2053,23 +2057,25 @@ const voice = {
           return;
         }
         const tailOpts = Object.assign({}, opts, {
+          personaKey: effKey,
           onAudioReady: null,
           charRangeStart: chunkOffsets[fromIdx] || 0,
           charRangeEnd: cleanText.length
         });
+        const effProfile = (typeof PERSONA_VOICE_PROFILES !== "undefined" && PERSONA_VOICE_PROFILES[effKey]) || profile;
         if (self.localNeuralAvailable && typeof self.playFreeLocalNeuralTts === "function") {
           self.playFreeLocalNeuralTts(seq, effKey, remainText, moodNow, onDone, tailOpts).then(function (okNeural) {
             if (!okNeural && seq === self.utteranceSeq) {
-              self.speakLocalBrowserTts(seq, profile, remainText, moodNow, false, onDone, tailOpts);
+              self.speakLocalBrowserTts(seq, effProfile, remainText, moodNow, false, onDone, tailOpts);
             }
           }).catch(function () {
             if (seq === self.utteranceSeq) {
-              self.speakLocalBrowserTts(seq, profile, remainText, moodNow, false, onDone, tailOpts);
+              self.speakLocalBrowserTts(seq, effProfile, remainText, moodNow, false, onDone, tailOpts);
             }
           });
           return;
         }
-        self.speakLocalBrowserTts(seq, profile, remainText, moodNow, false, onDone, tailOpts);
+        self.speakLocalBrowserTts(seq, effProfile, remainText, moodNow, false, onDone, tailOpts);
       };
 
       const playChunkAt = function (idx, buf) {
@@ -2210,7 +2216,7 @@ const voice = {
       speechTurnSeq: (typeof state !== "undefined") ? state._speechTurnSeq : 0,
       lastWordsTurnSeq: (typeof state !== "undefined") ? state._lastWordsTurnSeq : 0,
       sheriffTurnSeq: (typeof state !== "undefined") ? state._sheriffTurnSeq : 0,
-      epoch: (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0
+      epoch: (typeof orchestrator !== "undefined") ? (typeof orchestrator.getEpoch === "function" ? orchestrator.getEpoch() : orchestrator.matchEpoch) : 0
     } : null;
     const wasBusy = Boolean(this.speaking || (this.isSupported() && (window.speechSynthesis.speaking || window.speechSynthesis.pending)));
     this.stop();
@@ -2220,8 +2226,10 @@ const voice = {
         if (self._activeOnDone === effectiveOnDone) self._activeOnDone = null;
         if (typeof onDone === "function") onDone();
         if (typeof savedOnDone === "function") {
+          const epochValidNow = (typeof orchestrator === "undefined") ||
+            (typeof orchestrator.isEpochValid === "function" ? orchestrator.isEpochValid(auditionOrigin.epoch) : orchestrator.matchEpoch === auditionOrigin.epoch);
           const stillSameTurn = !auditionOrigin || (
-            (typeof orchestrator === "undefined" || orchestrator.matchEpoch === auditionOrigin.epoch) &&
+            epochValidNow &&
             (typeof state === "undefined" || (
               (!state.match || (state.match.phase === auditionOrigin.phase && state.match.day === auditionOrigin.day)) &&
               state.activeSpeakerId === auditionOrigin.speakerId &&

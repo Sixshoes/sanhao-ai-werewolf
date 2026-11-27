@@ -324,7 +324,12 @@ function renderSeatStrip() {
     const bfActiveHud = (state.match.started && state.match.sheriffBadgeFlow) ? state.match.sheriffBadgeFlow : ((p === "NIGHT_SEER" && pSelf && pSelf.role === "seer" && state.match.sheriffBadgeFlowsBySeat) ? state.match.sheriffBadgeFlowsBySeat[pid] : null);
     const bfSlotTag = (bfActiveHud && s.alive) ? (bfActiveHud.firstTargetId === s.id ? "警1" : (bfActiveHud.secondTargetId === s.id ? "警2" : "")) : "";
     const mark = state.playerMarks[s.id] || null;
-    const isWolfPlayerStrip = Boolean(state.match.started && pSelf && (pSelf.role === "wolf" || pSelf.isWolfKing) && !state.hidePlayerRole);
+    const isWolfPlayerStrip = Boolean(
+      state.match.started &&
+      pSelf &&
+      !state.hidePlayerRole &&
+      (pSelf.role === "wolf" || pSelf.isWolfKing)
+    );
     const isWolfMateSeat = Boolean(isWolfPlayerStrip && (s.role === "wolf" || s.isWolfKing) && s.id !== pid);
     const wolfCanSelfKnifeN1 = Boolean(state.match.started && p === "NIGHT_WOLF" && pSelf && (pSelf.role === "wolf" || pSelf.isWolfKing) && typeof canPlayerWolfTargetSeat === "function" && canPlayerWolfTargetSeat(pSelf, s));
     const isWolfMateDisabled = Boolean(state.match.started && !state.hidePlayerRole && ((p === "NIGHT_WOLF" && pSelf && (pSelf.role === "wolf" || pSelf.isWolfKing) && !wolfCanSelfKnifeN1) || (p === "HUNTER_TRIGGER" && pSelf && pSelf.isWolfKing)) && (s.role === "wolf" || s.isWolfKing) && s.id !== pid);

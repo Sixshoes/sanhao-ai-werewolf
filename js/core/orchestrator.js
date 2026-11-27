@@ -119,6 +119,10 @@ const orchestrator = {
     return this.matchEpoch;
   },
 
+  getEpoch: function () {
+    return this.matchEpoch;
+  },
+
   isEpochValid: function (ep) {
     return ep === this.matchEpoch;
   },
