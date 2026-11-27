@@ -25,8 +25,13 @@ const sound = {
   comp: null,
   analyser: null,
   bgmGain: null,
+  bgmWarmLow: null,
+  bgmAirTame: null,
   bgmVocalCarve: null,
   bgmConsonantCarve: null,
+  _pluckNoiseBuf: null,
+  _breathNoiseBuf: null,
+  _nextStepTime: 0,
   ambientGain: null,
   ambientEnabled: true,
   sfxGain: null,
@@ -73,6 +78,17 @@ const sound = {
         this.analyser.smoothingTimeConstant = 0.82;
 
         this.bgmGain = this.ctx.createGain();
+        // Warm wood-body shelf + velvet high-cut to eliminate synthetic harshness
+        this.bgmWarmLow = this.ctx.createBiquadFilter();
+        this.bgmWarmLow.type = "lowshelf";
+        this.bgmWarmLow.frequency.value = 180;
+        this.bgmWarmLow.gain.value = 1.8;
+
+        this.bgmAirTame = this.ctx.createBiquadFilter();
+        this.bgmAirTame.type = "lowpass";
+        this.bgmAirTame.frequency.value = 5200;
+        this.bgmAirTame.Q.value = 0.65;
+
         // v18.0 + v24.4 Dual-Band Vocal-Carve Filters (1.25kHz body + 2.85kHz clarity dip replace flat muffling)
         this.bgmVocalCarve = this.ctx.createBiquadFilter();
         this.bgmVocalCarve.type = "peaking";
@@ -90,21 +106,29 @@ const sound = {
         this.ambientGain.gain.value = 0.22;
 
         this.sfxGain = this.ctx.createGain();
-        this.reverb = this.buildHallReverb(2.1);
+        this.reverb = this.buildHallReverb(2.5);
+        const bgmRevHp = this.ctx.createBiquadFilter();
+        bgmRevHp.type = "highpass";
+        bgmRevHp.frequency.value = 260;
+        bgmRevHp.Q.value = 0.7;
         const bgmRevSend = this.ctx.createGain();
-        bgmRevSend.gain.value = 0.85;
+        bgmRevSend.gain.value = 0.48;
         const revReturn = this.ctx.createGain();
-        revReturn.gain.value = 0.38;
+        revReturn.gain.value = 0.42;
 
-        this.bgmGain.connect(this.bgmVocalCarve);
+        this.bgmGain.connect(this.bgmWarmLow);
+        this.bgmWarmLow.connect(this.bgmAirTame);
+        this.bgmAirTame.connect(this.bgmVocalCarve);
         this.bgmVocalCarve.connect(this.bgmConsonantCarve);
         this.bgmConsonantCarve.connect(this.comp);
-        this.bgmConsonantCarve.connect(bgmRevSend);
+        this.bgmConsonantCarve.connect(bgmRevHp);
+        bgmRevHp.connect(bgmRevSend);
         bgmRevSend.connect(this.reverb);
         this.ambientGain.connect(this.comp);
         this.sfxGain.connect(this.comp);
         this.reverb.connect(revReturn);
         revReturn.connect(this.comp);
+        this.ensureNoiseBuffers();
 
         // Broadcast Vocal Chain (85Hz Sub-Rumble HPF + Per-Persona Sculpting EQ + 3D Stereo Pan + Lip-Sync Analyser)
         this.voiceBus = this.ctx.createGain();
@@ -436,20 +460,76 @@ const sound = {
     }
   },
 
+  ensureNoiseBuffers: function () {
+    if (!this.ctx || !this.ctx.sampleRate || typeof this.ctx.createBuffer !== "function") return;
+    const rate = this.ctx.sampleRate;
+    if (!this._pluckNoiseBuf) {
+      const len = Math.max(64, Math.floor(rate * 0.04));
+      const pBuf = this.ctx.createBuffer(1, len, rate);
+      const ch = pBuf.getChannelData(0);
+      let b0 = 0, b1 = 0, b2 = 0;
+      for (let i = 0; i < len; i++) {
+        const u = i / len;
+        const white = Math.random() * 2 - 1;
+        b0 = 0.997 * b0 + white * 0.029;
+        b1 = 0.985 * b1 + white * 0.032;
+        b2 = 0.950 * b2 + white * 0.048;
+        const pink = (b0 + b1 + b2 + white * 0.18) * 0.35;
+        const env = Math.sin(Math.PI * Math.min(1, u * 4)) * Math.pow(1 - u, 2.2);
+        ch[i] = pink * env;
+      }
+      this._pluckNoiseBuf = pBuf;
+    }
+    if (!this._breathNoiseBuf) {
+      const bLen = Math.max(256, Math.floor(rate * 2.0));
+      const bBuf = this.ctx.createBuffer(1, bLen, rate);
+      const bCh = bBuf.getChannelData(0);
+      let p0 = 0, p1 = 0, p2 = 0;
+      for (let i = 0; i < bLen; i++) {
+        const white = Math.random() * 2 - 1;
+        p0 = 0.997 * p0 + white * 0.029;
+        p1 = 0.985 * p1 + white * 0.032;
+        p2 = 0.950 * p2 + white * 0.048;
+        bCh[i] = (p0 + p1 + p2 + white * 0.14) * 0.28;
+      }
+      this._breathNoiseBuf = bBuf;
+    }
+  },
+
   buildHallReverb: function (seconds) {
     const conv = this.ctx.createConvolver();
-    const rate = this.ctx.sampleRate;
-    const length = Math.floor(rate * seconds);
+    const rate = this.ctx.sampleRate || 44100;
+    const dur = seconds || 2.5;
+    const length = Math.max(512, Math.floor(rate * dur));
+    const preDelaySamples = Math.floor(rate * 0.022);
     const impulse = this.ctx.createBuffer(2, length, rate);
+    const woodTaps = [
+      [11, 0.24, 0.16],
+      [19, 0.15, 0.22],
+      [29, 0.18, 0.12],
+      [41, 0.10, 0.15],
+      [57, 0.08, 0.09]
+    ];
     for (let ch = 0; ch < 2; ch++) {
       const buf = impulse.getChannelData(ch);
       let lp = 0;
-      for (let i = 0; i < length; i++) {
-        const t = i / length;
-        const env = Math.pow(1 - t, 2.6);
-        const white = (Math.random() * 2 - 1) * env * 0.45;
-        lp = lp * 0.72 + white * 0.28;
+      for (let i = preDelaySamples; i < length; i++) {
+        const t = (i - preDelaySamples) / Math.max(1, length - preDelaySamples);
+        const env = Math.pow(1 - t, 2.8) * Math.min(1, (i - preDelaySamples) / (rate * 0.018));
+        const white = (Math.random() * 2 - 1) * env * 0.36;
+        // Progressive high-frequency air absorption for warm mountain pavilion hall
+        const damp = 0.62 + 0.28 * t;
+        lp = lp * damp + white * (1 - damp);
         buf[i] = lp;
+      }
+      for (let k = 0; k < woodTaps.length; k++) {
+        const idx = preDelaySamples + Math.floor((woodTaps[k][0] / 1000) * rate) + (ch * 7);
+        if (idx > 1 && idx + 2 < length) {
+          const tapAmp = woodTaps[k][ch + 1] * 0.28;
+          buf[idx - 1] += tapAmp * 0.25;
+          buf[idx] += tapAmp * 0.55;
+          buf[idx + 1] += tapAmp * 0.20;
+        }
       }
     }
     conv.buffer = impulse;
@@ -730,22 +810,23 @@ const sound = {
     const mv = MOVEMENTS[tk] || MOVEMENTS.twilight;
     if (tk === "twilight" || tk === "finale") return mv.bpm;
     const dead = this.getCasualtyTensionCount();
-    // v18.0 Escalation: +4 BPM per fallen player (capped cleanly at +20 BPM)
-    return mv.bpm + Math.min(20, dead * 4);
+    // Escalate calmly: +4 BPM per fallen player (capped cleanly at +16 BPM)
+    return mv.bpm + Math.min(16, dead * 4);
   },
 
   syncWithPhase: function () {
     const next = this.resolveTargetTrack();
     const nextBpm = this.getEffectiveBpm(next);
-    if (next !== this.currentTrack || (this.seqTimer && Math.abs(nextBpm - (this._activeSeqBpm || nextBpm)) >= 4)) {
-      if (next !== this.currentTrack) {
-        this.currentTrack = next;
-        this.stepIdx = 0;
-        this.barIdx = 0;
-      }
+    if (next !== this.currentTrack) {
+      this.currentTrack = next;
+      this.stepIdx = 0;
+      this.barIdx = 0;
+      this._activeSeqBpm = nextBpm;
       if (this.seqTimer) {
         this.startSequencer();
       }
+    } else if (this.seqTimer && Math.abs(nextBpm - (this._activeSeqBpm || nextBpm)) >= 4) {
+      this._activeSeqBpm = nextBpm;
     }
     this.refreshMusicModalLabels();
   },
@@ -761,6 +842,28 @@ const sound = {
     if (bp) bp.textContent = effBpm + " BPM";
   },
 
+  _schedulerTick: function () {
+    if (!this.ctx || this.muted || this.bgmVol <= 0.01) return;
+    if (typeof document !== "undefined" && document.hidden) {
+      this._nextStepTime = this.ctx.currentTime + 0.05;
+      return;
+    }
+    const now = this.ctx.currentTime;
+    if (!this._nextStepTime || now - this._nextStepTime > 0.35) {
+      this._nextStepTime = now + 0.025;
+    }
+    const horizon = now + 0.14;
+    let guard = 0;
+    while (this._nextStepTime < horizon && guard < 4) {
+      const effBpm = this.getEffectiveBpm(this.currentTrack);
+      this._activeSeqBpm = effBpm;
+      const stepDur = (60 / effBpm) * 0.5;
+      this.tickStep(this._nextStepTime);
+      this._nextStepTime += stepDur;
+      guard += 1;
+    }
+  },
+
   startSequencer: function () {
     if (this.seqTimer) {
       clearInterval(this.seqTimer);
@@ -770,15 +873,16 @@ const sound = {
       this.updateEqIndicator();
       return;
     }
+    this.ensureNoiseBuffers();
     const effBpm = this.getEffectiveBpm(this.currentTrack);
     this._activeSeqBpm = effBpm;
-    const eighthMs = Math.round((60 / effBpm) * 500);
+    this._nextStepTime = this.ctx.currentTime + 0.04;
     const self = this;
     this.refreshMusicModalLabels();
-    this.tickStep();
+    this._schedulerTick();
     this.seqTimer = setInterval(function () {
-      self.tickStep();
-    }, eighthMs);
+      self._schedulerTick();
+    }, 35);
     this.updateEqIndicator();
   },
 
@@ -787,45 +891,51 @@ const sound = {
       clearInterval(this.seqTimer);
       this.seqTimer = null;
     }
+    this._nextStepTime = 0;
     this.updateEqIndicator();
   },
 
-  tickStep: function () {
+  tickStep: function (scheduledTime) {
     if (!this.ctx || this.muted || this.bgmVol <= 0.01 || (typeof document !== "undefined" && document.hidden)) return;
     const mv = MOVEMENTS[this.currentTrack] || MOVEMENTS.twilight;
     const effBpm = this.getEffectiveBpm(this.currentTrack);
-    const now = this.ctx.currentTime + 0.02;
+    const now = (typeof scheduledTime === "number" && scheduledTime > 0) ? scheduledTime : (this.ctx.currentTime + 0.02);
     const bar = this.barIdx % 4;
     const melBar = this.barIdx % 8;
     const step = this.stepIdx % 8;
     const stepDur = (60 / effBpm) * 0.5;
     const deadTension = this.getCasualtyTensionCount();
+    const speechDuckScale = this.voiceDucking ? 0.28 : 1.0;
 
-    // 1. Trigger warm extended Pad Chord & procedural sanctuary soundscape on step 0 of every bar
+    // 1. Warm sustained Pad Chord & procedural sanctuary soundscape on step 0 of every bar
     if (step === 0 && mv.pads[bar]) {
-      this.voicePad(mv.pads[bar], now, stepDur * 7.8, this.currentTrack === "night" ? 0.105 : 0.088);
+      const padVol = this.currentTrack === "night" ? 0.078 : 0.068;
+      this.voicePad(mv.pads[bar], now, stepDur * 8.4, padVol);
       if (deadTension >= 1 && this.currentTrack !== "twilight" && this.currentTrack !== "finale") {
-        const rootBass = mv.pads[bar][0] - 12;
-        const bassVol = clamp(0.032 + Math.min(4, deadTension) * 0.014, 0.03, 0.095);
-        this.voicePad([rootBass], now, stepDur * 7.9, bassVol);
+        let rootBass = mv.pads[bar][0] - 12;
+        if (rootBass < 36) rootBass += 12;
+        const bassVol = clamp(0.028 + Math.min(4, deadTension) * 0.011, 0.028, 0.072);
+        this.voicePad([rootBass], now, stepDur * 8.2, bassVol);
       }
       if (this.ambientEnabled) {
-        this.triggerAmbientPulse(this.currentTrack, now, stepDur * 7.8);
+        this.triggerAmbientPulse(this.currentTrack, now, stepDur * 8.0);
       }
     }
 
-    // 2. Plucked Zither / Guqin / Acoustic Guitar Arpeggio with subtle stereo string pan
+    // 2. Plucked Zither / Guqin / Nylon Guitar Arpeggio with human velocity phrasing & micro-timing
     const arpMidi = mv.arps[bar] ? mv.arps[bar][step] : null;
     if (arpMidi) {
-      const accent = (step === 0 || step === 4) ? 0.155 : 0.098;
-      this.voicePluck(midiToFreq(arpMidi), now, stepDur * 2.4, accent, step);
-      // Add extra octave shimmer when it is Player's turn to play a card!
-      if (state.match.phase === "DAY_PLAYER_TURN" && step % 2 === 0) {
-        this.voiceBell(midiToFreq(arpMidi + 12), now, stepDur * 1.8, 0.034);
+      const phraseCurve = step === 0 ? 1.0 : (step === 4 ? 0.88 : (step % 2 === 0 ? 0.78 : 0.68));
+      const humanize = 0.94 + Math.random() * 0.12;
+      const accent = 0.145 * phraseCurve * humanize;
+      const strumOffset = step === 0 ? 0 : Math.random() * 0.008;
+      this.voicePluck(midiToFreq(arpMidi), now + strumOffset, stepDur * 2.7, accent, step);
+      if (typeof state !== "undefined" && state.match && state.match.phase === "DAY_PLAYER_TURN" && step % 4 === 0) {
+        this.voiceBell(midiToFreq(arpMidi + 12), now + strumOffset, stepDur * 2.2, 0.028 * speechDuckScale);
       }
     }
 
-    // 3. Lyrical A/B Section Lead Solo Melody (Bamboo Xiao / Ocarina / Solo Cello)
+    // 3. Lyrical A/B Section Lead Solo Melody (Bamboo Dizi / Xiao / Solo Cello / Mallet)
     const melRow = (mv.melody && mv.melody[melBar]) ? mv.melody[melBar] : null;
     const melMidi = melRow ? melRow[step] : null;
     if (melMidi) {
@@ -838,22 +948,25 @@ const sound = {
         }
         holdSteps += 1;
       }
-      const melDur = Math.max(stepDur * 1.35, Math.min(stepDur * 3.8, stepDur * holdSteps * 0.92));
-      const melVel = (this.currentTrack === "night" || this.currentTrack === "finale") ? 0.068 : 0.078;
-      this.voiceLead(midiToFreq(melMidi), nextMelMidi ? midiToFreq(nextMelMidi) : null, now, melDur, melVel);
+      const melDur = Math.max(stepDur * 1.45, Math.min(stepDur * 4.2, stepDur * holdSteps * 0.94));
+      const baseMelVel = (this.currentTrack === "night" || this.currentTrack === "finale") ? 0.062 : 0.072;
+      this.voiceLead(midiToFreq(melMidi), nextMelMidi ? midiToFreq(nextMelMidi) : null, now, melDur, baseMelVel * speechDuckScale);
     }
 
-    // 4. Crystalline Bell / Singing Bowl Overtone Motif
+    // 4. Bronze Singing Bowl / Celesta Overtone Motif
     const bellMidi = mv.bells[bar] ? mv.bells[bar][step] : null;
     if (bellMidi) {
-      this.voiceBell(midiToFreq(bellMidi), now, stepDur * 3.5, 0.062);
+      const bellVel = 0.048 * (this.voiceDucking ? 0.45 : 1.0);
+      this.voiceBell(midiToFreq(bellMidi), now, stepDur * 4.0, bellVel);
     }
 
-    // 5. Subtle Taiko / Heartbeat / Woodblock Groove
+    // 5. Tanggu / Muyu Woodblock / Bamboo Rim / Brush Percussion Groove
     const drumCode = mv.drums ? mv.drums[step] : 0;
-    if (drumCode === 1) this.voiceDrum("deep", now, 0.16);
-    else if (drumCode === 2) this.voiceDrum("deep", now, 0.09);
-    else if (drumCode === 3) this.voiceDrum("wood", now, 0.06);
+    if (drumCode === 1) this.voiceDrum("deep", now, 0.14);
+    else if (drumCode === 2) this.voiceDrum("deep", now, 0.075);
+    else if (drumCode === 3) this.voiceDrum("wood", now, 0.055);
+    else if (drumCode === 4) this.voiceDrum("rim", now, 0.036);
+    else if (drumCode === 5) this.voiceDrum("brush", now, 0.032);
 
     this.stepIdx += 1;
     if (this.stepIdx >= 8) {
@@ -874,7 +987,7 @@ const sound = {
         for (let i = 0; i < windLen; i++) {
           const u = i / windLen;
           const swell = Math.sin(Math.PI * u);
-          lp = lp * 0.94 + (Math.random() * 2 - 1) * 0.06;
+          lp = lp * 0.955 + (Math.random() * 2 - 1) * 0.045;
           ch[i] = lp * swell;
         }
         this._windNoiseBuf = wBuf;
@@ -888,12 +1001,12 @@ const sound = {
       nSrc.buffer = this._windNoiseBuf;
       const bp = this.ctx.createBiquadFilter();
       bp.type = "bandpass";
-      bp.frequency.setValueAtTime(isNight ? 420 : (isTense ? 360 : 620), t);
-      bp.frequency.linearRampToValueAtTime(isNight ? 520 : (isTense ? 430 : 790), t + Math.min(barDur * 0.5, 2.2));
-      bp.Q.value = isNight ? 1.8 : 1.1;
+      bp.frequency.setValueAtTime(isNight ? 320 : (isTense ? 360 : 480), t);
+      bp.frequency.linearRampToValueAtTime(isNight ? 410 : (isTense ? 430 : 560), t + Math.min(barDur * 0.5, 2.2));
+      bp.Q.value = 0.9;
       const wGain = this.ctx.createGain();
       wGain.gain.setValueAtTime(0.0001, t);
-      wGain.gain.linearRampToValueAtTime(isNight ? 0.16 : 0.12, t + Math.min(barDur * 0.35, 1.2));
+      wGain.gain.linearRampToValueAtTime(isNight ? 0.12 : 0.095, t + Math.min(barDur * 0.35, 1.2));
       wGain.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(barDur * 0.95, 4.2));
       nSrc.connect(bp);
       bp.connect(wGain);
@@ -903,36 +1016,36 @@ const sound = {
       };
       nSrc.start(t);
 
-      // Subtle atmospheric accents: night mountain cricket vs serene tea chime when harmony >= 78
+      // Night courtyard bamboo water-drop / shishi-odoshi accent vs serene porcelain chime
       if (isNight && (this.barIdx % 2 === 1)) {
-        for (let p = 0; p < 3; p++) {
-          const pt = t + 0.55 + p * 0.11;
-          const oscC = this.ctx.createOscillator();
-          const gC = this.ctx.createGain();
-          oscC.type = "sine";
-          oscC.frequency.setValueAtTime(4180 + p * 60, pt);
-          gC.gain.setValueAtTime(0.0001, pt);
-          gC.gain.linearRampToValueAtTime(0.012, pt + 0.015);
-          gC.gain.exponentialRampToValueAtTime(0.0001, pt + 0.075);
-          oscC.connect(gC);
-          gC.connect(this.ambientGain);
-          oscC.onended = function () { try { oscC.disconnect(); gC.disconnect(); } catch (e) {} };
-          oscC.start(pt);
-          oscC.stop(pt + 0.085);
-        }
-      } else if (!isTense && (trackKey === "twilight" || trackKey === "day" || trackKey === "finale") && harmony >= 78 && (this.barIdx % 4 === 2)) {
+        const dt = t + Math.min(barDur * 0.45, 1.45);
+        const dropOsc = this.ctx.createOscillator();
+        const dropG = this.ctx.createGain();
+        dropOsc.type = "sine";
+        dropOsc.frequency.setValueAtTime(680, dt);
+        dropOsc.frequency.exponentialRampToValueAtTime(880, dt + 0.048);
+        dropG.gain.setValueAtTime(0.0001, dt);
+        dropG.gain.linearRampToValueAtTime(0.018, dt + 0.006);
+        dropG.gain.exponentialRampToValueAtTime(0.0001, dt + 0.19);
+        dropOsc.connect(dropG);
+        dropG.connect(this.ambientGain);
+        if (this.reverb) dropG.connect(this.reverb);
+        dropOsc.onended = function () { try { dropOsc.disconnect(); dropG.disconnect(); } catch (e) {} };
+        dropOsc.start(dt);
+        dropOsc.stop(dt + 0.21);
+      } else if (!isTense && (trackKey === "twilight" || trackKey === "day" || trackKey === "finale") && harmony >= 72 && (this.barIdx % 4 === 2)) {
         const chimeOsc = this.ctx.createOscillator();
         const chimeG = this.ctx.createGain();
         chimeOsc.type = "sine";
-        chimeOsc.frequency.setValueAtTime(midiToFreq(86), t + 0.35);
+        chimeOsc.frequency.setValueAtTime(midiToFreq(74), t + 0.35);
         chimeG.gain.setValueAtTime(0.0001, t + 0.35);
-        chimeG.gain.linearRampToValueAtTime(0.028, t + 0.38);
-        chimeG.gain.exponentialRampToValueAtTime(0.0001, t + 1.9);
+        chimeG.gain.linearRampToValueAtTime(0.024, t + 0.38);
+        chimeG.gain.exponentialRampToValueAtTime(0.0001, t + 2.0);
         chimeOsc.connect(chimeG);
         chimeG.connect(this.ambientGain);
         chimeOsc.onended = function () { try { chimeOsc.disconnect(); chimeG.disconnect(); } catch (e) {} };
         chimeOsc.start(t + 0.35);
-        chimeOsc.stop(t + 1.95);
+        chimeOsc.stop(t + 2.05);
       }
     } catch (e) {}
   },
@@ -940,49 +1053,96 @@ const sound = {
   voiceLead: function (freq, nextFreq, t, dur, vel) {
     if (this.muted || !this.ctx || !this.bgmGain) return;
     try {
-      const isCinema = this.timbre === "cinema";
-      const isFolk = this.timbre === "folk";
+      this.ensureNoiseBuffers();
+      const tMode = this.timbre || "zen";
+      const isCinema = tMode === "cinema";
+      const isFolk = tMode === "folk";
+      const isGuqin = tMode === "guqin";
+      const targetFreq = (isGuqin && freq > 660) ? freq * 0.5 : ((isCinema && freq > 520) ? freq * 0.5 : freq);
+
       const osc1 = this.ctx.createOscillator();
       const osc2 = this.ctx.createOscillator();
       const mix2 = this.ctx.createGain();
       const filt = this.ctx.createBiquadFilter();
       const gain = this.ctx.createGain();
 
-      osc1.type = isCinema ? "sawtooth" : (isFolk ? "triangle" : "sine");
-      osc2.type = isCinema ? "triangle" : "sine";
-      osc1.frequency.setValueAtTime(freq, t);
-      osc2.frequency.setValueAtTime(isFolk ? freq * 2 : freq, t);
-      mix2.gain.value = isFolk ? 0.16 : 0.28;
-
-      if (this.timbre === "guqin") {
-        // Gentle bamboo xiao micro-scoop onset from a semitone below
-        osc1.frequency.setValueAtTime(freq * 0.96, t);
-        osc1.frequency.exponentialRampToValueAtTime(freq, t + Math.min(0.08, dur * 0.2));
+      if (isCinema) {
+        osc1.type = "sawtooth";
+        osc2.type = "triangle";
+        osc1.frequency.setValueAtTime(targetFreq, t);
+        osc2.frequency.setValueAtTime(targetFreq, t);
+        if (osc2.detune) osc2.detune.setValueAtTime(5, t);
+        mix2.gain.value = 0.34;
+        filt.type = "lowpass";
+        filt.Q.value = 1.1;
+        filt.frequency.setValueAtTime(620, t);
+        filt.frequency.linearRampToValueAtTime(1300, t + Math.min(0.42, dur * 0.48));
+      } else if (isFolk) {
+        osc1.type = "sine";
+        osc2.type = "sine";
+        osc1.frequency.setValueAtTime(targetFreq, t);
+        osc2.frequency.setValueAtTime(targetFreq * 2.0, t);
+        mix2.gain.value = 0.08;
+        filt.type = "lowpass";
+        filt.Q.value = 0.7;
+        filt.frequency.setValueAtTime(Math.min(3400, targetFreq * 3.6), t);
+      } else if (isGuqin) {
+        // Hollow cylindrical Bamboo Xiao + subtle 3rd harmonic
+        osc1.type = "sine";
+        osc2.type = "sine";
+        osc1.frequency.setValueAtTime(targetFreq, t);
+        osc2.frequency.setValueAtTime(targetFreq * 3.0, t);
+        mix2.gain.value = 0.045;
+        filt.type = "lowpass";
+        filt.Q.value = 0.8;
+        filt.frequency.setValueAtTime(Math.min(2400, targetFreq * 2.6), t);
+        filt.frequency.linearRampToValueAtTime(Math.min(2800, targetFreq * 3.1), t + Math.min(0.32, dur * 0.4));
+      } else {
+        // Eastern Bamboo Dizi flute: pure fundamental + delicate 2nd harmonic
+        osc1.type = "sine";
+        osc2.type = "sine";
+        osc1.frequency.setValueAtTime(targetFreq, t);
+        osc2.frequency.setValueAtTime(targetFreq * 2.0, t);
+        mix2.gain.value = 0.13;
+        filt.type = "lowpass";
+        filt.Q.value = 0.85;
+        filt.frequency.setValueAtTime(Math.min(2800, targetFreq * 2.8), t);
+        filt.frequency.linearRampToValueAtTime(Math.min(3400, targetFreq * 3.5), t + Math.min(0.32, dur * 0.4));
       }
-      if (nextFreq && dur >= 0.45) {
-        const glideStart = t + dur * 0.82;
-        osc1.frequency.setValueAtTime(freq, glideStart);
-        osc1.frequency.exponentialRampToValueAtTime(freq + (nextFreq - freq) * 0.35, t + dur);
+
+      // Lock pitch glides and vibrato in CENTS (.detune) across BOTH oscillators to avoid beating
+      if (isGuqin && osc1.detune && osc2.detune) {
+        const scoopDur = Math.min(0.11, dur * 0.25);
+        osc1.detune.setValueAtTime(-45, t);
+        osc1.detune.linearRampToValueAtTime(0, t + scoopDur);
+        osc2.detune.setValueAtTime(-45, t);
+        osc2.detune.linearRampToValueAtTime(0, t + scoopDur);
+      }
+      if (nextFreq && dur >= 0.48 && osc1.detune && osc2.detune) {
+        const nextTarget = (isGuqin && nextFreq > 660) ? nextFreq * 0.5 : ((isCinema && nextFreq > 520) ? nextFreq * 0.5 : nextFreq);
+        const centsGlide = clamp(Math.log2(nextTarget / targetFreq) * 1200 * 0.28, -90, 90);
+        const glideStart = t + dur * 0.80;
+        osc1.detune.setValueAtTime(0, glideStart);
+        osc1.detune.linearRampToValueAtTime(centsGlide, t + dur);
+        osc2.detune.setValueAtTime(isCinema ? 5 : 0, glideStart);
+        osc2.detune.linearRampToValueAtTime((isCinema ? 5 : 0) + centsGlide, t + dur);
       }
 
-      // Expressive 5.2 Hz vibrato kicking in softly after attack
       const lfo = this.ctx.createOscillator();
       const lfoGain = this.ctx.createGain();
       lfo.type = "sine";
-      lfo.frequency.setValueAtTime(isCinema ? 5.6 : 5.1, t);
+      lfo.frequency.setValueAtTime(isCinema ? 5.2 : (isGuqin ? 4.2 : (isFolk ? 4.0 : 4.7)), t);
+      const vibCents = isCinema ? 13 : (isGuqin ? 7.5 : (isFolk ? 5 : 9));
       lfoGain.gain.setValueAtTime(0, t);
-      lfoGain.gain.linearRampToValueAtTime(isCinema ? freq * 0.008 : freq * 0.0055, t + Math.min(0.28, dur * 0.45));
+      lfoGain.gain.linearRampToValueAtTime(vibCents, t + Math.min(0.32, dur * 0.48));
       lfo.connect(lfoGain);
-      lfoGain.connect(osc1.frequency);
+      if (osc1.detune) lfoGain.connect(osc1.detune);
+      if (osc2.detune && !isCinema) lfoGain.connect(osc2.detune);
 
-      filt.type = "lowpass";
-      filt.Q.value = isCinema ? 1.6 : 0.9;
-      filt.frequency.setValueAtTime(isCinema ? 920 : Math.min(3400, freq * 3.2), t);
-      filt.frequency.linearRampToValueAtTime(isCinema ? 1650 : Math.min(4200, freq * 4.0), t + Math.min(0.35, dur * 0.4));
-
+      const atk = isFolk ? 0.015 : (isCinema ? Math.min(0.16, dur * 0.28) : Math.min(0.12, dur * 0.24));
       gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.linearRampToValueAtTime(vel, t + Math.min(0.11, dur * 0.24));
-      gain.gain.setValueAtTime(vel * 0.82, t + dur * 0.65);
+      gain.gain.linearRampToValueAtTime(vel, t + atk);
+      gain.gain.setValueAtTime(vel * (isFolk ? 0.65 : 0.84), t + dur * 0.65);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
       osc1.connect(filt);
@@ -991,27 +1151,25 @@ const sound = {
       filt.connect(gain);
       gain.connect(this.bgmGain);
 
-      // Soft airy bamboo breath transient on zen/guqin flute attack
-      if (!isCinema && !isFolk && this.ctx.sampleRate) {
-        const bFrames = Math.max(32, Math.floor(this.ctx.sampleRate * 0.032));
-        const bBuf = this.ctx.createBuffer(1, bFrames, this.ctx.sampleRate);
-        const ch = bBuf.getChannelData(0);
-        for (let i = 0; i < bFrames; i++) {
-          ch[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * (i / bFrames)) * 0.25;
-        }
-        const bSrc = this.ctx.createBufferSource();
-        bSrc.buffer = bBuf;
-        const bBp = this.ctx.createBiquadFilter();
-        bBp.type = "bandpass";
-        bBp.frequency.value = Math.min(3200, freq * 2.1);
-        bBp.Q.value = 2.0;
-        const bG = this.ctx.createGain();
-        bG.gain.value = vel * 0.38;
-        bSrc.connect(bBp);
-        bBp.connect(bG);
-        bG.connect(this.bgmGain);
-        bSrc.onended = function () { try { bSrc.disconnect(); bBp.disconnect(); bG.disconnect(); } catch (e) {} };
-        bSrc.start(t);
+      // Continuous soft bamboo breath flow for Dizi (zen) / Xiao (guqin)
+      let breathSrc = null, breathBp = null, breathGain = null;
+      if ((tMode === "zen" || isGuqin) && this._breathNoiseBuf) {
+        breathSrc = this.ctx.createBufferSource();
+        breathSrc.buffer = this._breathNoiseBuf;
+        breathSrc.loop = true;
+        breathBp = this.ctx.createBiquadFilter();
+        breathBp.type = "bandpass";
+        breathBp.frequency.value = Math.min(2600, targetFreq * (isGuqin ? 1.5 : 2.0));
+        breathBp.Q.value = isGuqin ? 2.4 : 1.8;
+        breathGain = this.ctx.createGain();
+        breathGain.gain.setValueAtTime(0.0001, t);
+        breathGain.gain.linearRampToValueAtTime(vel * (isGuqin ? 0.24 : 0.18), t + atk);
+        breathGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        breathSrc.connect(breathBp);
+        breathBp.connect(breathGain);
+        breathGain.connect(this.bgmGain);
+        breathSrc.start(t);
+        breathSrc.stop(t + dur + 0.05);
       }
 
       osc1.onended = function () {
@@ -1024,6 +1182,7 @@ const sound = {
           mix2.disconnect();
           filt.disconnect();
           gain.disconnect();
+          if (breathSrc) { breathSrc.disconnect(); breathBp.disconnect(); breathGain.disconnect(); }
         } catch (e) {}
       };
       osc1.start(t);
@@ -1035,91 +1194,129 @@ const sound = {
     } catch (e) {}
   },
 
-  voicePluck: function (freq, t, dur, vel, stepOpt) {
+  voicePluck: function (freq, t, dur, vel, stepOpt, destNode) {
+    if (this.muted || !this.ctx || !this.bgmGain) return;
     try {
+      this.ensureNoiseBuffers();
+      const tMode = this.timbre || "zen";
+      const outTarget = destNode || this.bgmGain;
+      const playFreq = (tMode === "guqin" && freq > 460) ? freq * 0.5 : freq;
+
       const osc1 = this.ctx.createOscillator();
       const osc2 = this.ctx.createOscillator();
+      const osc3 = this.ctx.createOscillator();
+      const osc2Mix = this.ctx.createGain();
+      const osc3Mix = this.ctx.createGain();
+      const woodBody = this.ctx.createBiquadFilter();
       const filt = this.ctx.createBiquadFilter();
       const gain = this.ctx.createGain();
 
-      if (this.timbre === "guqin") {
-        // Warm low silk-string fundamental + delicate octave harmonic + traditional yin-nao finger slide
-        osc1.type = "triangle";
-        osc2.type = "sine";
-        osc1.frequency.setValueAtTime(freq * 0.985, t);
-        osc1.frequency.exponentialRampToValueAtTime(freq, t + 0.048);
-        osc2.frequency.setValueAtTime(freq * 2.0, t);
-        filt.frequency.setValueAtTime(Math.min(4400, freq * 4.6), t);
-        filt.frequency.exponentialRampToValueAtTime(Math.max(200, freq * 1.15), t + 0.34);
-      } else if (this.timbre === "zen") {
-        osc1.type = "triangle";
-        osc2.type = "sine";
-        osc1.frequency.setValueAtTime(freq, t);
-        osc2.frequency.setValueAtTime(freq * 2, t);
-        filt.frequency.setValueAtTime(Math.min(7000, freq * 6.5), t);
-        filt.frequency.exponentialRampToValueAtTime(Math.max(220, freq * 1.5), t + 0.28);
-      } else if (this.timbre === "folk") {
-        osc1.type = "triangle";
-        osc2.type = "triangle";
-        osc2.detune.value = 5;
-        osc1.frequency.setValueAtTime(freq, t);
-        osc2.frequency.setValueAtTime(freq, t);
-        filt.frequency.setValueAtTime(Math.min(4800, freq * 4.2), t);
-        filt.frequency.exponentialRampToValueAtTime(Math.max(200, freq * 1.2), t + 0.22);
-      } else {
-        osc1.type = "sawtooth";
-        osc2.type = "sine";
-        osc1.frequency.setValueAtTime(freq, t);
-        osc2.frequency.setValueAtTime(freq, t);
-        filt.frequency.setValueAtTime(Math.min(3200, freq * 3.0), t);
-        filt.frequency.exponentialRampToValueAtTime(Math.max(180, freq * 1.1), t + 0.35);
+      osc1.type = tMode === "cinema" ? "sawtooth" : "triangle";
+      osc2.type = "sine";
+      osc3.type = "sine";
+      osc1.frequency.setValueAtTime(playFreq, t);
+      osc2.frequency.setValueAtTime(playFreq * 2.0, t);
+      osc3.frequency.setValueAtTime(playFreq * 3.0, t);
+
+      if (tMode === "guqin" && osc1.detune && osc2.detune && osc3.detune) {
+        // Traditional guqin chuo upward finger scoop locked in cents
+        osc1.detune.setValueAtTime(-42, t);
+        osc1.detune.linearRampToValueAtTime(0, t + 0.055);
+        osc2.detune.setValueAtTime(-42, t);
+        osc2.detune.linearRampToValueAtTime(0, t + 0.055);
+        osc3.detune.setValueAtTime(-42, t);
+        osc3.detune.linearRampToValueAtTime(0, t + 0.055);
       }
 
+      osc2Mix.gain.setValueAtTime(tMode === "guqin" ? 0.22 : (tMode === "zen" ? 0.26 : 0.16), t);
+      osc2Mix.gain.exponentialRampToValueAtTime(0.01, t + dur * 0.44);
+      osc3Mix.gain.setValueAtTime(tMode === "zen" ? 0.10 : 0.04, t);
+      osc3Mix.gain.exponentialRampToValueAtTime(0.005, t + dur * 0.22);
+
+      woodBody.type = "peaking";
+      woodBody.frequency.value = tMode === "guqin" ? 360 : 420;
+      woodBody.Q.value = 1.1;
+      woodBody.gain.value = tMode === "folk" ? 2.4 : 1.8;
+
       filt.type = "lowpass";
-      filt.Q.value = this.timbre === "guqin" ? 1.8 : 1.4;
+      filt.Q.value = tMode === "guqin" ? 1.5 : 1.1;
+      const startCut = tMode === "guqin"
+        ? Math.min(3200, playFreq * 4.2)
+        : (tMode === "cinema" ? Math.min(2600, playFreq * 2.8) : Math.min(5400, playFreq * 5.2));
+      const endCut = Math.max(210, playFreq * 1.15);
+      filt.frequency.setValueAtTime(startCut, t);
+      filt.frequency.exponentialRampToValueAtTime(endCut, t + Math.min(0.36, dur * 0.55));
 
+      const noteDur = tMode === "cinema" ? Math.min(dur * 0.55, 0.48) : dur;
       gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.linearRampToValueAtTime(vel, t + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      gain.gain.linearRampToValueAtTime(vel, t + 0.009);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + noteDur);
 
-      const osc2Mix = this.ctx.createGain();
-      osc2Mix.gain.value = this.timbre === "guqin" ? 0.24 : 0.32;
-
-      osc1.connect(filt);
+      osc1.connect(woodBody);
       osc2.connect(osc2Mix);
-      osc2Mix.connect(filt);
+      osc2Mix.connect(woodBody);
+      osc3.connect(osc3Mix);
+      osc3Mix.connect(woodBody);
+      woodBody.connect(filt);
       filt.connect(gain);
+
+      // Plectrum / fingertip string attack transient
+      let atkSrc = null, atkBp = null, atkG = null;
+      if (this._pluckNoiseBuf) {
+        atkSrc = this.ctx.createBufferSource();
+        atkSrc.buffer = this._pluckNoiseBuf;
+        atkBp = this.ctx.createBiquadFilter();
+        atkBp.type = "bandpass";
+        atkBp.frequency.value = clamp(playFreq * 3.0, 900, 3400);
+        atkBp.Q.value = 1.4;
+        atkG = this.ctx.createGain();
+        atkG.gain.value = vel * (tMode === "cinema" ? 0.55 : 0.36);
+        atkSrc.connect(atkBp);
+        atkBp.connect(atkG);
+        atkG.connect(woodBody);
+        atkSrc.start(t);
+      }
+
       let panNode = null;
       if (typeof stepOpt === "number" && typeof this.ctx.createStereoPanner === "function") {
         panNode = this.ctx.createStereoPanner();
         panNode.pan.value = clamp(((stepOpt % 4) - 1.5) * 0.14, -0.26, 0.26);
         gain.connect(panNode);
-        panNode.connect(this.bgmGain);
+        panNode.connect(outTarget);
       } else {
-        gain.connect(this.bgmGain);
+        gain.connect(outTarget);
       }
 
       osc1.onended = function () {
         try {
           osc1.disconnect();
           osc2.disconnect();
+          osc3.disconnect();
           osc2Mix.disconnect();
+          osc3Mix.disconnect();
+          woodBody.disconnect();
           filt.disconnect();
           gain.disconnect();
+          if (atkSrc) { atkSrc.disconnect(); atkBp.disconnect(); atkG.disconnect(); }
           if (panNode) panNode.disconnect();
         } catch (e) {}
       };
       osc1.start(t);
       osc2.start(t);
-      osc1.stop(t + dur + 0.04);
-      osc2.stop(t + dur + 0.04);
+      osc3.start(t);
+      osc1.stop(t + noteDur + 0.04);
+      osc2.stop(t + noteDur + 0.04);
+      osc3.stop(t + noteDur + 0.04);
     } catch (e) {}
   },
 
   voicePad: function (midis, t, dur, vel) {
+    if (this.muted || !this.ctx || !this.bgmGain) return;
     const self = this;
-    midis.forEach(function (m, idx) {
+    const stereoMap = [-0.34, 0.34, -0.16, 0.16];
+    midis.forEach(function (rawM, idx) {
       try {
+        const m = rawM < 38 ? rawM + 12 : rawM;
         const freq = midiToFreq(m);
         const osc = self.ctx.createOscillator();
         const filt = self.ctx.createBiquadFilter();
@@ -1127,95 +1324,204 @@ const sound = {
 
         osc.type = self.timbre === "cinema" ? "sawtooth" : "triangle";
         osc.frequency.setValueAtTime(freq, t);
-        osc.detune.value = (idx % 2 === 0 ? 4 : -4);
+        if (osc.detune) osc.detune.value = (idx % 2 === 0 ? 4 : -4);
 
         filt.type = "lowpass";
-        filt.frequency.setValueAtTime(self.currentTrack === "night" ? 680 : 1150, t);
+        filt.Q.value = 0.65;
+        filt.frequency.setValueAtTime(self.currentTrack === "night" ? 500 : (self.timbre === "cinema" ? 760 : 880), t);
 
-        const noteVel = vel / Math.sqrt(midis.length);
+        const noteVel = vel / Math.sqrt(Math.max(1, midis.length));
+        const extDur = dur * 1.15;
+        const atk = Math.min(1.1, dur * 0.35);
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(noteVel, t + Math.min(0.65, dur * 0.3));
-        gain.gain.setValueAtTime(noteVel * 0.85, t + dur * 0.65);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        gain.gain.linearRampToValueAtTime(noteVel, t + atk);
+        gain.gain.setValueAtTime(noteVel * 0.85, t + dur * 0.72);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + extDur);
 
         osc.connect(filt);
         filt.connect(gain);
-        gain.connect(self.bgmGain);
+        let panNode = null;
+        if (typeof self.ctx.createStereoPanner === "function") {
+          panNode = self.ctx.createStereoPanner();
+          panNode.pan.value = stereoMap[idx % stereoMap.length];
+          gain.connect(panNode);
+          panNode.connect(self.bgmGain);
+        } else {
+          gain.connect(self.bgmGain);
+        }
 
         osc.onended = function () {
-          try { osc.disconnect(); filt.disconnect(); gain.disconnect(); } catch (e) {}
+          try { osc.disconnect(); filt.disconnect(); gain.disconnect(); if (panNode) panNode.disconnect(); } catch (e) {}
         };
         osc.start(t);
-        osc.stop(t + dur + 0.05);
+        osc.stop(t + extDur + 0.05);
       } catch (e) {}
     });
   },
 
-  voiceBell: function (freq, t, dur, vel) {
+  voiceBell: function (freq, t, dur, vel, destNode) {
+    if (this.muted || !this.ctx || !this.bgmGain) return;
     try {
-      const carrier = this.ctx.createOscillator();
-      const mod = this.ctx.createOscillator();
-      const modGain = this.ctx.createGain();
+      const tMode = this.timbre || "zen";
+      const outTarget = destNode || this.bgmGain;
+      const isBowl = tMode === "zen" || tMode === "guqin";
+      const baseFreq = (isBowl && freq > 1180) ? freq * 0.5 : freq;
+
+      const c1 = this.ctx.createOscillator();
+      const c2 = this.ctx.createOscillator();
+      const c2Gain = this.ctx.createGain();
+      const partial = this.ctx.createOscillator();
+      const partialGain = this.ctx.createGain();
       const env = this.ctx.createGain();
 
-      carrier.type = "sine";
-      mod.type = "sine";
-      const ratio = (this.timbre === "zen" || this.timbre === "guqin") ? 2.756 : 2.0;
-      carrier.frequency.setValueAtTime(freq, t);
-      mod.frequency.setValueAtTime(freq * ratio, t);
+      c1.type = "sine";
+      c2.type = "sine";
+      partial.type = "sine";
+      c1.frequency.setValueAtTime(baseFreq, t);
 
-      modGain.gain.setValueAtTime(freq * 0.85, t);
-      modGain.gain.exponentialRampToValueAtTime(1.0, t + 0.25);
+      if (isBowl) {
+        // Bronze Singing Bowl: warm 0.7Hz beating halo + decaying 2.756x partial + felt-mallet 24ms onset
+        c2.frequency.setValueAtTime(baseFreq + 0.7, t);
+        c2Gain.gain.value = 0.65;
+        partial.frequency.setValueAtTime(baseFreq * 2.756, t);
+        partialGain.gain.setValueAtTime(0.16, t);
+        partialGain.gain.exponentialRampToValueAtTime(0.005, t + Math.min(dur * 0.55, 1.1));
+      } else if (tMode === "folk") {
+        c2.frequency.setValueAtTime(baseFreq * 2.0, t);
+        c2Gain.gain.value = 0.08;
+        partial.frequency.setValueAtTime(baseFreq * 4.0, t);
+        partialGain.gain.setValueAtTime(0.08, t);
+        partialGain.gain.exponentialRampToValueAtTime(0.002, t + Math.min(dur * 0.25, 0.32));
+      } else {
+        c2.frequency.setValueAtTime(baseFreq * 2.0, t);
+        c2Gain.gain.value = 0.16;
+        partial.frequency.setValueAtTime(baseFreq * 3.0, t);
+        partialGain.gain.setValueAtTime(0.05, t);
+        partialGain.gain.exponentialRampToValueAtTime(0.002, t + Math.min(dur * 0.3, 0.4));
+      }
 
+      const atk = isBowl ? 0.024 : 0.012;
       env.gain.setValueAtTime(0.0001, t);
-      env.gain.linearRampToValueAtTime(vel, t + 0.01);
+      env.gain.linearRampToValueAtTime(vel, t + atk);
       env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
-      mod.connect(modGain);
-      modGain.connect(carrier.frequency);
-      carrier.connect(env);
-      env.connect(this.bgmGain);
+      c1.connect(env);
+      c2.connect(c2Gain);
+      c2Gain.connect(env);
+      partial.connect(partialGain);
+      partialGain.connect(env);
+      env.connect(outTarget);
 
-      carrier.onended = function () {
-        try { mod.disconnect(); modGain.disconnect(); carrier.disconnect(); env.disconnect(); } catch (e) {}
+      c1.onended = function () {
+        try {
+          c1.disconnect(); c2.disconnect(); c2Gain.disconnect();
+          partial.disconnect(); partialGain.disconnect(); env.disconnect();
+        } catch (e) {}
       };
-      carrier.start(t);
-      mod.start(t);
-      carrier.stop(t + dur + 0.04);
-      mod.stop(t + dur + 0.04);
+      c1.start(t);
+      c2.start(t);
+      partial.start(t);
+      c1.stop(t + dur + 0.05);
+      c2.stop(t + dur + 0.05);
+      partial.stop(t + dur + 0.05);
     } catch (e) {}
   },
 
-  voiceDrum: function (kind, t, vel) {
+  voiceDrum: function (kind, t, vel, destNode) {
     if (this.muted || !this.ctx || !this.bgmGain) return;
     try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const bgmRef = this.bgmGain;
+      this.ensureNoiseBuffers();
+      const outTarget = destNode || this.bgmGain;
       if (kind === "deep") {
+        // Warm Tanggu leather membrane + soft mallet thump
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
         osc.type = "sine";
-        osc.frequency.setValueAtTime(108, t);
-        osc.frequency.exponentialRampToValueAtTime(38, t + 0.16);
+        osc.frequency.setValueAtTime(96, t);
+        osc.frequency.exponentialRampToValueAtTime(46, t + 0.14);
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(vel, t + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+        gain.gain.linearRampToValueAtTime(vel, t + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
         osc.connect(gain);
-        gain.connect(bgmRef);
-        osc.onended = function () { try { osc.disconnect(); gain.disconnect(); } catch (e) {} };
+        gain.connect(outTarget);
+
+        let nSrc = null, lp = null, nG = null;
+        if (this._pluckNoiseBuf) {
+          nSrc = this.ctx.createBufferSource();
+          nSrc.buffer = this._pluckNoiseBuf;
+          lp = this.ctx.createBiquadFilter();
+          lp.type = "lowpass";
+          lp.frequency.value = 280;
+          nG = this.ctx.createGain();
+          nG.gain.value = vel * 0.7;
+          nSrc.connect(lp);
+          lp.connect(nG);
+          nG.connect(outTarget);
+          nSrc.start(t);
+        }
+        osc.onended = function () {
+          try { osc.disconnect(); gain.disconnect(); if (nSrc) { nSrc.disconnect(); lp.disconnect(); nG.disconnect(); } } catch (e) {}
+        };
         osc.start(t);
-        osc.stop(t + 0.28);
-      } else {
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(760, t);
-        osc.frequency.exponentialRampToValueAtTime(420, t + 0.045);
+        osc.stop(t + 0.38);
+      } else if (kind === "rim" || kind === "brush") {
+        // Subtle bamboo rim click or soft tea-whisk brush
+        if (!this._pluckNoiseBuf) return;
+        const src = this.ctx.createBufferSource();
+        src.buffer = this._pluckNoiseBuf;
+        const bp = this.ctx.createBiquadFilter();
+        bp.type = "bandpass";
+        bp.frequency.value = kind === "rim" ? 1680 : 2400;
+        bp.Q.value = kind === "rim" ? 7.0 : 1.6;
+        const gain = this.ctx.createGain();
+        const hitDur = kind === "rim" ? 0.045 : 0.055;
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.linearRampToValueAtTime(vel, t + 0.004);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.055);
-        osc.connect(gain);
-        gain.connect(bgmRef);
-        osc.onended = function () { try { osc.disconnect(); gain.disconnect(); } catch (e) {} };
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + hitDur);
+        src.connect(bp);
+        bp.connect(gain);
+        gain.connect(outTarget);
+        src.onended = function () { try { src.disconnect(); bp.disconnect(); gain.disconnect(); } catch (e) {} };
+        src.start(t);
+      } else {
+        // Hollow Muyu woodblock: dual resonant wooden cavity bands + subtle click
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(540, t);
+        osc.frequency.exponentialRampToValueAtTime(490, t + 0.036);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(vel * 0.55, t + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.048);
+        osc.connect(g);
+        g.connect(outTarget);
+
+        let nSrc = null, bp1 = null, bp2 = null, nG = null;
+        if (this._pluckNoiseBuf) {
+          nSrc = this.ctx.createBufferSource();
+          nSrc.buffer = this._pluckNoiseBuf;
+          bp1 = this.ctx.createBiquadFilter();
+          bp1.type = "bandpass";
+          bp1.frequency.value = 720;
+          bp1.Q.value = 8.5;
+          bp2 = this.ctx.createBiquadFilter();
+          bp2.type = "bandpass";
+          bp2.frequency.value = 1240;
+          bp2.Q.value = 10.0;
+          nG = this.ctx.createGain();
+          nG.gain.value = vel * 1.4;
+          nSrc.connect(bp1);
+          nSrc.connect(bp2);
+          bp1.connect(nG);
+          bp2.connect(nG);
+          nG.connect(outTarget);
+          nSrc.start(t);
+        }
+        osc.onended = function () {
+          try { osc.disconnect(); g.disconnect(); if (nSrc) { nSrc.disconnect(); bp1.disconnect(); bp2.disconnect(); nG.disconnect(); } } catch (e) {}
+        };
         osc.start(t);
-        osc.stop(t + 0.065);
+        osc.stop(t + 0.055);
       }
     } catch (e) {}
   },
@@ -1243,39 +1549,60 @@ const sound = {
     } catch (e) {}
   },
   playNight: function () {
-    // Deep B-minor singing bowl gong
-    this.tone(midiToFreq(47), 1.2, "sine", 0.14, 0);
-    this.tone(midiToFreq(54), 1.0, "triangle", 0.08, 0.08);
-    this.tone(midiToFreq(62), 0.9, "sine", 0.06, 0.18);
+    if (this.muted || !this.ctx) return;
+    const t0 = this.ctx.currentTime + 0.015;
+    const out = this.sfxGain || this.bgmGain;
+    // Deep Tanggu sanctuary beat + solemn B-minor bronze singing bowl resonance
+    this.voiceDrum("deep", t0, 0.16, out);
+    this.voiceBell(midiToFreq(47), t0 + 0.02, 1.85, 0.14, out);
+    this.voiceBell(midiToFreq(54), t0 + 0.14, 1.55, 0.08, out);
+    this.voicePluck(midiToFreq(59), t0 + 0.28, 1.35, 0.09, 1, out);
   },
   playDawn: function () {
-    // Radiant Dadd9 pentatonic harp flourish
+    if (this.muted || !this.ctx) return;
+    const t0 = this.ctx.currentTime + 0.015;
+    const out = this.sfxGain || this.bgmGain;
+    // Radiant D-pentatonic Guzheng flourish + luminous bronze bell
     const notes = [62, 64, 66, 69, 74];
     const self = this;
-    notes.forEach(function (m, i) { self.tone(midiToFreq(m), 0.55, "triangle", 0.09, i * 0.07); });
+    notes.forEach(function (m, i) {
+      self.voicePluck(midiToFreq(m), t0 + i * 0.078, 1.05, 0.12, i, out);
+    });
+    this.voiceBell(midiToFreq(74), t0 + 0.36, 1.6, 0.075, out);
   },
   playSpeak: function () {
     this.tone(midiToFreq(69), 0.09, "triangle", 0.05, 0);
   },
   playBlessing: function () {
-    // Warm Dmaj9 shimmer
+    if (this.muted || !this.ctx) return;
+    const t0 = this.ctx.currentTime + 0.015;
+    const out = this.sfxGain || this.bgmGain;
+    // Warm Dmaj9 Guzheng shimmer + jade chime
     const self = this;
-    [62, 66, 69, 73, 76].forEach(function (m, i) { self.tone(midiToFreq(m), 0.5, "triangle", 0.075, i * 0.055); });
+    [62, 66, 69, 74].forEach(function (m, i) {
+      self.voicePluck(midiToFreq(m), t0 + i * 0.065, 0.95, 0.11, i, out);
+    });
+    this.voiceBell(midiToFreq(74), t0 + 0.24, 1.45, 0.07, out);
   },
   playVote: function () {
     if (this.muted || !this.ctx) return;
-    this.voiceDrum("deep", this.ctx.currentTime, 0.22);
-    this.tone(midiToFreq(54), 0.24, "triangle", 0.09, 0.02);
+    const t0 = this.ctx.currentTime + 0.01;
+    const out = this.sfxGain || this.bgmGain;
+    this.voiceDrum("deep", t0, 0.20, out);
+    this.voiceDrum("wood", t0 + 0.02, 0.08, out);
+    this.tone(midiToFreq(54), 0.24, "triangle", 0.075, 0.02);
   },
   playHunterShot: function () {
     if (this.muted || !this.ctx) return;
-    const t0 = this.ctx.currentTime;
-    this.voiceDrum("deep", t0, 0.34);
-    this.voiceDrum("deep", t0 + 0.16, 0.24);
-    this.tone(midiToFreq(74), 0.16, "sawtooth", 0.08, 0);
-    this.tone(midiToFreq(62), 0.45, "triangle", 0.13, 0.05);
-    this.tone(midiToFreq(50), 0.72, "sine", 0.16, 0.12);
-    this.tone(midiToFreq(69), 0.55, "triangle", 0.08, 0.2);
+    const t0 = this.ctx.currentTime + 0.01;
+    const out = this.sfxGain || this.bgmGain;
+    // Dramatic double Tanggu pulse + fierce low Guqin snap + bronze gong tension
+    this.voiceDrum("deep", t0, 0.30, out);
+    this.voiceDrum("deep", t0 + 0.16, 0.22, out);
+    this.voicePluck(midiToFreq(50), t0 + 0.02, 0.85, 0.18, 0, out);
+    this.voicePluck(midiToFreq(62), t0 + 0.06, 0.95, 0.14, 2, out);
+    this.voiceBell(midiToFreq(58), t0 + 0.10, 1.35, 0.11, out);
+    this.voiceBell(midiToFreq(69), t0 + 0.20, 1.15, 0.07, out);
   },
   playVoiceBlip: function (seatId) {
     this.playCozySyllable(seatId, 0, "啊", "");
@@ -1467,8 +1794,14 @@ const sound = {
     } catch (e) {}
   },
   playWin: function (goodWon) {
+    if (this.muted || !this.ctx) return;
+    const t0 = this.ctx.currentTime + 0.02;
+    const out = this.sfxGain || this.bgmGain;
     const seq = goodWon ? [62, 66, 69, 74, 78] : [59, 57, 54, 50, 47];
     const self = this;
-    seq.forEach(function (m, i) { self.tone(midiToFreq(m), 0.65, "triangle", 0.1, i * 0.11); });
+    seq.forEach(function (m, i) {
+      self.voicePluck(midiToFreq(m), t0 + i * 0.11, 1.35, 0.13, i, out);
+    });
+    this.voiceBell(midiToFreq(goodWon ? 74 : 59), t0 + 0.44, 2.0, 0.095, out);
   }
 };

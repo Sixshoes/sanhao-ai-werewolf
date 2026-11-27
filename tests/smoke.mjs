@@ -9973,4 +9973,127 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
+// ==================== SOUNDTRACK ACOUSTIC ENGINE REGRESSION ====================
+{
+  const audioUpgradeRes = vm.runInContext(`(() => {
+    const trackKeys = ["twilight", "night", "day", "sheriff", "vote", "matchpoint", "finale"];
+    const scoreRangeOk = trackKeys.every(k => {
+      const mv = MOVEMENTS[k];
+      if (!mv || mv.bpm > 108) return false;
+      if (!Array.isArray(mv.pads) || mv.pads.length !== 4) return false;
+      if (!mv.pads.every(bar => Array.isArray(bar) && bar.every(m => m >= 38))) return false;
+      if (!Array.isArray(mv.melody) || mv.melody.length !== 8) return false;
+      return mv.melody.every(bar => Array.isArray(bar) && bar.length === 8 && bar.every(m => m === null || (m >= 50 && m <= 78)));
+    });
+
+    const mkParam = (v) => ({ value: v || 0, setValueAtTime(){}, linearRampToValueAtTime(){}, exponentialRampToValueAtTime(){}, setTargetAtTime(){} });
+    const mockCtx = {
+      sampleRate: 44100,
+      currentTime: 2.0,
+      destination: {},
+      createBuffer: (ch, len) => ({ length: len, getChannelData: () => new Float32Array(len) }),
+      createOscillator: () => ({ type: "sine", frequency: mkParam(440), detune: mkParam(0), connect(){}, disconnect(){}, start(){}, stop(){}, onended: null }),
+      createGain: () => ({ gain: mkParam(1), connect(){}, disconnect(){} }),
+      createBiquadFilter: () => ({ type: "lowpass", frequency: mkParam(1000), Q: mkParam(1), gain: mkParam(0), connect(){}, disconnect(){} }),
+      createBufferSource: () => ({ buffer: null, loop: false, connect(){}, disconnect(){}, start(){}, stop(){}, onended: null }),
+      createStereoPanner: () => ({ pan: mkParam(0), connect(){}, disconnect(){} }),
+      createConvolver: () => ({ buffer: null, connect(){}, disconnect(){} }),
+      createDynamicsCompressor: () => ({ threshold: mkParam(-14), knee: mkParam(18), ratio: mkParam(4), connect(){}, disconnect(){} })
+    };
+
+    const snap = {
+      ctx: sound.ctx,
+      bgmGain: sound.bgmGain,
+      sfxGain: sound.sfxGain,
+      ambientGain: sound.ambientGain,
+      reverb: sound.reverb,
+      comp: sound.comp,
+      muted: sound.muted,
+      bgmVol: sound.bgmVol,
+      sfxVol: sound.sfxVol,
+      timbre: sound.timbre,
+      currentTrack: sound.currentTrack,
+      barIdx: sound.barIdx,
+      stepIdx: sound.stepIdx,
+      ambientEnabled: sound.ambientEnabled,
+      pluckBuf: sound._pluckNoiseBuf,
+      breathBuf: sound._breathNoiseBuf
+    };
+
+    let renderOk = false;
+    try {
+      sound.ctx = mockCtx;
+      sound.bgmGain = mockCtx.createGain();
+      sound.sfxGain = mockCtx.createGain();
+      sound.ambientGain = mockCtx.createGain();
+      sound.comp = mockCtx.createDynamicsCompressor();
+      sound.muted = false;
+      sound.bgmVol = 0.6;
+      sound.sfxVol = 0.75;
+      sound.ambientEnabled = true;
+      sound._pluckNoiseBuf = null;
+      sound._breathNoiseBuf = null;
+      sound.ensureNoiseBuffers();
+      sound.reverb = sound.buildHallReverb(2.5);
+
+      const noiseBuffersOk = Boolean(sound._pluckNoiseBuf && sound._breathNoiseBuf && sound.reverb && sound.reverb.buffer);
+
+      ["zen", "guqin", "folk", "cinema"].forEach(tMode => {
+        sound.timbre = tMode;
+        sound.voicePluck(440, 2.0, 0.8, 0.14, 1);
+        sound.voiceLead(523.25, 587.33, 2.0, 0.9, 0.08);
+        sound.voicePad([47, 54, 59, 62], 2.0, 2.4, 0.07);
+        sound.voiceBell(880, 2.0, 1.5, 0.05);
+      });
+
+      ["deep", "wood", "rim", "brush"].forEach(dk => sound.voiceDrum(dk, 2.0, 0.12));
+
+      trackKeys.forEach(tk => {
+        sound.currentTrack = tk;
+        sound.barIdx = 1;
+        sound.stepIdx = 0;
+        sound.tickStep(2.0);
+        sound.triggerAmbientPulse(tk, 2.0, 3.0);
+      });
+
+      sound.playNight();
+      sound.playDawn();
+      sound.playBlessing();
+      sound.playVote();
+      sound.playHunterShot();
+      sound.playWin(true);
+      sound.playWin(false);
+      sound.playRoleRevealFanfare(true);
+      sound.playRoleRevealFanfare(false);
+
+      renderOk = noiseBuffersOk;
+    } finally {
+      sound.ctx = snap.ctx;
+      sound.bgmGain = snap.bgmGain;
+      sound.sfxGain = snap.sfxGain;
+      sound.ambientGain = snap.ambientGain;
+      sound.reverb = snap.reverb;
+      sound.comp = snap.comp;
+      sound.muted = snap.muted;
+      sound.bgmVol = snap.bgmVol;
+      sound.sfxVol = snap.sfxVol;
+      sound.timbre = snap.timbre;
+      sound.currentTrack = snap.currentTrack;
+      sound.barIdx = snap.barIdx;
+      sound.stepIdx = snap.stepIdx;
+      sound.ambientEnabled = snap.ambientEnabled;
+      sound._pluckNoiseBuf = snap.pluckBuf;
+      sound._breathNoiseBuf = snap.breathBuf;
+    }
+
+    return { scoreRangeOk, renderOk };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(audioUpgradeRes)) {
+    if (!v) {
+      throw new Error("SOUNDTRACK ACOUSTIC UPGRADE check failed for " + k + ": " + JSON.stringify(audioUpgradeRes));
+    }
+  }
+}
+
 console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 Release-Freeze E2E smoke test PASSED!");
