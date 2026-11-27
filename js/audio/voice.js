@@ -63,13 +63,16 @@ const HOST_VOICE_PACK_MAP = {
   "第1晚，天黑請靜心。護心守衛請選擇今晚要守護的座位。": "assets/voice_pack/host_n1_guard.mp3",
   "第2晚，天黑請靜心。護心守衛請選擇今晚要守護的座位。": "assets/voice_pack/host_n2_guard.mp3",
   "第1晚，天黑請靜心。鍵盤酸民狼請選擇今晚散播迷霧的對象。": "assets/voice_pack/host_n1_wolf.mp3",
+  "第1晚，天黑請靜心。鍵盤酸民狼請選擇今晚散播迷霧的對象，並可於屏風密謀指定明日戰術。": "assets/voice_pack/host_n1_wolf.mp3",
   "第2晚，天黑請靜心。鍵盤酸民狼請選擇今晚散播迷霧的對象。": "assets/voice_pack/host_n2_wolf.mp3",
+  "第2晚，天黑請靜心。鍵盤酸民狼請選擇今晚散播迷霧的對象，並可於屏風密謀指定明日戰術。": "assets/voice_pack/host_n2_wolf.mp3",
   "第1晚，天黑請靜心。明心觀察員請點擊外圍座位查證身分。": "assets/voice_pack/host_n1_seer.mp3",
   "第2晚，天黑請靜心。明心觀察員請點擊外圍座位查證身分。": "assets/voice_pack/host_n2_seer.mp3",
   "滴水奉茶師請睜眼，要端出清心醒神茶請可疑者離席冷靜嗎？": "assets/voice_pack/host_witch_ask.mp3",
   "第1天，天亮請睜眼！昨晚是平安夜，沒有人出局，現在開始輪流發言。": "assets/voice_pack/host_d1_peace.mp3",
   "第2天，天亮請睜眼！昨晚是平安夜，沒有人出局，現在開始輪流發言。": "assets/voice_pack/host_d2_peace.mp3",
   "輪到1號你發言了，請選擇卡牌表態。": "assets/voice_pack/host_turn_p1.mp3",
+  "輪到1號你發言了，可點選詞卡組裝陳詞後送出。": "assets/voice_pack/host_turn_p1.mp3",
   "全員發言結束，請點擊外圍座位投票抓狼。": "assets/voice_pack/host_vote_open.mp3",
   "全員發言結束，開始計票。": "assets/voice_pack/host_vote_count.mp3",
   "開票完成，本輪平票沒有人出局，請點擊進入夜晚。": "assets/voice_pack/host_vote_tie_none.mp3",
@@ -154,7 +157,7 @@ const voice = {
     const self = this;
     setTimeout(function () {
       self.prefetchFreeLocalNeural("主持", "第1晚，天黑請靜心。", "host_night");
-      self.prefetchFreeLocalNeural("主持", "輪到1號你發言了，請選擇卡牌表態。", "normal");
+      self.prefetchFreeLocalNeural("主持", "輪到1號你發言了，可點選詞卡組裝陳詞後送出。", "normal");
     }, 1200);
   },
 
@@ -823,18 +826,26 @@ const voice = {
     const inSheriffSpeech = Boolean(phNow === "SHERIFF_ELECTION" && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech");
     const isSpeechStage = (phNow === "DAY_SPEECH" || phNow === "LAST_WORDS_SPEECH" || inSheriffSpeech);
     const isTypingNow = Boolean(typeof state !== "undefined" && state.typewriter && state.typewriter.active);
+    const stillActive = Boolean((active || isTypingNow) && !this.paused);
     if (sWave && isSpeechStage) {
-      sWave.classList.toggle("playing", active || isTypingNow);
+      sWave.classList.toggle("playing", stillActive);
+      sWave.classList.toggle("hidden", !stillActive);
+    }
+    const pImg = document.getElementById("speakerPortraitImg");
+    if (pImg && isSpeechStage && !pImg.classList.contains("hidden")) {
+      const hasSeatSpeaker = Boolean(typeof state !== "undefined" && state.activeSpeakerId);
+      pImg.classList.toggle("portrait-speaking-glow", stillActive);
+      pImg.classList.toggle("portrait-speaking-breathe", Boolean(hasSeatSpeaker && stillActive));
     }
     if (isSpeechStage) {
       const livePill = document.getElementById("speakerLiveStatePill");
       if (livePill) {
-        livePill.textContent = isTypingNow ? "發言中" : (active ? "語音中" : "已講畢");
+        livePill.textContent = this.paused ? "已暫停" : (isTypingNow ? "發言中" : (active ? "語音中" : "已講畢"));
       }
       const nextBtn = document.getElementById("btnStepNext");
       if (nextBtn && (phNow === "DAY_SPEECH" || phNow === "LAST_WORDS_SPEECH") && !nextBtn.classList.contains("hidden")) {
-        nextBtn.className = (!isTypingNow && !active)
-          ? "cta-brass py-1.5 px-3.5 text-xs shrink-0 inline-flex items-center"
+        nextBtn.className = (!isTypingNow && !active && !this.paused)
+          ? "cta-cinnabar py-1.5 px-4 text-[15px] shrink-0 inline-flex items-center"
           : "cta-ink py-1.5 px-3 text-xs shrink-0 inline-flex items-center";
       }
     }
@@ -899,7 +910,9 @@ const voice = {
     this._liveBufferState = null;
     this._liveBrowserRestart = null;
     this._resumePendingClause = null;
+    this._resumePendingChunk = null;
     this._resumeWatchdogFinish = null;
+    this._activeOnDone = null;
     this.activeUtterance = null;
     this.liveSpokenText = "";
     this.liveCharIndex = -1;
@@ -1090,6 +1103,10 @@ const voice = {
       if (this.pauseMeta && this.pauseMeta.audioBuf && sound.ctx) {
         const pm = this.pauseMeta;
         this.playBufferedStudioAudio(pm.seq, pm.audioBuf, pm.onDone, Object.assign({}, pm.opts, { startOffset: pm.offset || 0 }));
+      } else if (typeof this._resumePendingChunk === "function") {
+        const fnChunk = this._resumePendingChunk;
+        this._resumePendingChunk = null;
+        fnChunk();
       } else if (this.isSupported() && (this.activeUtterance || typeof this._resumePendingClause === "function")) {
         try { window.speechSynthesis.resume(); } catch (e) {}
         this.setVisualSpeaking(true);
@@ -1564,6 +1581,8 @@ const voice = {
       seatId: opts && opts.seatId,
       sitCfg: opts && opts.sitCfg,
       onAudioReady: opts && opts.onAudioReady,
+      charRangeStart: (opts && typeof opts.charRangeStart === "number") ? opts.charRangeStart : undefined,
+      charRangeEnd: (opts && typeof opts.charRangeEnd === "number") ? opts.charRangeEnd : undefined,
       totalDurationHintMs: Math.round(audioBuf.duration * 1000)
     };
     return this.playBufferedStudioAudio(seq, audioBuf, onDone, playOpts);
@@ -1653,8 +1672,8 @@ const voice = {
 
     const self = this;
     const p = (async function () {
+      const geminiTtsTimeoutMs = clamp(11200 + cleanText.length * 45, 11400, 14500);
       const controller = typeof AbortController === "function" ? new AbortController() : null;
-      const geminiTtsTimeoutMs = clamp(8500 + cleanText.length * 45, 9500, 11800);
       const timer = controller ? setTimeout(function () { controller.abort(); }, geminiTtsTimeoutMs) : null;
       const callCloudTtsTrackA = async function () {
         const hdrs = { "Content-Type": "application/json" };
@@ -1663,16 +1682,22 @@ const voice = {
         }
         const strippedText = self.stripGeminiVocalTags(cleanText) || cleanText;
         const postOnce = async function (txtToSend) {
-          return fetch("/api/tts", {
-            method: "POST",
-            headers: hdrs,
-            signal: controller ? controller.signal : undefined,
-            body: JSON.stringify({
-              voice: payload.voiceName,
-              style: payload.stylePrompt,
-              text: txtToSend
-            })
-          });
+          const reqCtrl = typeof AbortController === "function" ? new AbortController() : null;
+          const reqTimer = reqCtrl ? setTimeout(function () { reqCtrl.abort(); }, geminiTtsTimeoutMs) : null;
+          try {
+            return await fetch("/api/tts", {
+              method: "POST",
+              headers: hdrs,
+              signal: reqCtrl ? reqCtrl.signal : undefined,
+              body: JSON.stringify({
+                voice: payload.voiceName,
+                style: payload.stylePrompt,
+                text: txtToSend
+              })
+            });
+          } finally {
+            if (reqTimer) clearTimeout(reqTimer);
+          }
         };
         let cloudRes = null;
         let cloudErr = null;
@@ -1681,35 +1706,35 @@ const voice = {
         } catch (err1) {
           cloudErr = err1;
         }
-        if (cloudErr && cloudErr.name === "AbortError") throw cloudErr;
         const shouldRetry = !cloudRes || cloudRes.status === 400 || cloudRes.status === 500 || cloudRes.status === 502 || cloudRes.status === 504;
-        if (shouldRetry && !(controller && controller.signal && controller.signal.aborted)) {
+        if (shouldRetry && !(cloudErr && cloudErr.name === "AbortError")) {
           await new Promise(function (resolve) { setTimeout(resolve, 280); });
-          if (!(controller && controller.signal && controller.signal.aborted)) {
-            try {
-              cloudRes = await postOnce(strippedText);
-              cloudErr = null;
-            } catch (err2) {
-              if (err2 && err2.name === "AbortError") throw err2;
-              cloudErr = err2;
-            }
+          try {
+            cloudRes = await postOnce(strippedText);
+            cloudErr = null;
+          } catch (err2) {
+            cloudErr = err2;
           }
         }
         if (cloudRes && cloudRes.ok) {
           self._cloudTtsFailStreak = 0;
+          self._cloudTtsCooldownIs429 = false;
           const arrBuf = await cloudRes.arrayBuffer();
           if (arrBuf && arrBuf.byteLength >= 128) return new Uint8Array(arrBuf);
           return null;
         }
         const st = cloudRes ? cloudRes.status : 0;
         if (st === 401 || st === 403 || st === 503) {
+          self._cloudTtsCooldownIs429 = false;
           self.cloudGeminiTtsCooldownUntil = Date.now() + 180000;
         } else if (st === 429) {
           const raRaw = (cloudRes.headers && typeof cloudRes.headers.get === "function") ? cloudRes.headers.get("Retry-After") : "";
           const raSec = parseInt(String(raRaw || ""), 10);
           const backoffMs = clamp((isFinite(raSec) && raSec > 0) ? raSec * 1000 : 8000, 6000, 15000);
+          self._cloudTtsCooldownIs429 = true;
           self.cloudGeminiTtsCooldownUntil = Date.now() + backoffMs;
-        } else if (cloudErr || st >= 500) {
+        } else if (cloudErr || st >= 500 || st === 0) {
+          self._cloudTtsCooldownIs429 = false;
           self._cloudTtsFailStreak = (self._cloudTtsFailStreak || 0) + 1;
           if (self._cloudTtsFailStreak >= 2) {
             self.cloudGeminiTtsCooldownUntil = Date.now() + 10000;
@@ -1753,7 +1778,7 @@ const voice = {
           const fallbackVoiceMap = { Orus: "Puck", Enceladus: "Puck", Achird: "Charon", Iapetus: "Puck", Fenrir: "Puck", Leda: "Zephyr", Aoede: "Zephyr", Callirrhoe: "Zephyr", Autonoe: "Zephyr", Laomedeia: "Zephyr", Vindemiatrix: "Zephyr", Sulafat: "Zephyr" };
           const fbVoice = fallbackVoiceMap[payload.voiceName] || "";
           const hasTagsDiff = strippedForFallback !== payload.taggedTranscript;
-          const directModels = ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview"];
+          const directModels = ["gemini-2.5-flash-preview-tts", "gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview"];
           for (let mi = 0; mi < directModels.length && !audioBytes; mi++) {
             const directModelId = directModels[mi];
             const is38Direct = directModelId.indexOf("gemini-3.8-") === 0;
@@ -1991,19 +2016,24 @@ const voice = {
       const finishRemainingFallback = function (fromIdx) {
         if (seq !== self.utteranceSeq) return;
         const remainText = chunks.slice(fromIdx).join("");
-        if (self.paused || !remainText) {
+        if (!remainText) {
           self.utteranceSeq += 1;
           self.setVisualSpeaking(false);
           self.syncPauseButtonUi();
           if (typeof onDone === "function") onDone();
           return;
         }
+        if (self.paused) {
+          self._resumePendingChunk = function () { finishRemainingFallback(fromIdx); };
+          return;
+        }
         const tailOpts = Object.assign({}, opts, {
+          onAudioReady: null,
           charRangeStart: chunkOffsets[fromIdx] || 0,
           charRangeEnd: cleanText.length
         });
         if (self.localNeuralAvailable && typeof self.playFreeLocalNeuralTts === "function") {
-          self.playFreeLocalNeuralTts(seq, profile, remainText, moodNow, onDone, tailOpts).then(function (okNeural) {
+          self.playFreeLocalNeuralTts(seq, effKey, remainText, moodNow, onDone, tailOpts).then(function (okNeural) {
             if (!okNeural && seq === self.utteranceSeq) {
               self.speakLocalBrowserTts(seq, profile, remainText, moodNow, false, onDone, tailOpts);
             }
@@ -2018,7 +2048,7 @@ const voice = {
       };
 
       const playChunkAt = function (idx, buf) {
-        if (seq !== self.utteranceSeq || self.paused) return false;
+        if (seq !== self.utteranceSeq) return false;
         const isLast = idx === chunks.length - 1;
         const startC = chunkOffsets[idx] || 0;
         const endC = isLast ? cleanText.length : (chunkOffsets[idx + 1] || cleanText.length);
@@ -2029,10 +2059,10 @@ const voice = {
           const nextIdx = idx + 1;
           try {
             let nextBuf = await ensureChunkFetch(nextIdx);
-            // Anti-robotic-fallback retry: if a transient 502/504/429 blip hit chunk nextIdx, retry Gemini TTS ONCE before ever switching voice engines mid-speech!
+            // Anti-robotic-fallback retry: retry ONCE on transient non-429 blips without wiping rate-limit cooldowns!
             if (!nextBuf && seq === self.utteranceSeq && !self.paused) {
               const cdRemain = (self.cloudGeminiTtsCooldownUntil || 0) - Date.now();
-              if (cdRemain < 25000) {
+              if (!self._cloudTtsCooldownIs429 && cdRemain < 25000) {
                 self.cloudGeminiTtsCooldownUntil = 0;
                 await new Promise(function (resolve) { setTimeout(resolve, 340); });
                 if (seq === self.utteranceSeq && !self.paused) {
@@ -2040,14 +2070,23 @@ const voice = {
                 }
               }
             }
-            if (!nextBuf || seq !== self.utteranceSeq) {
+            if (seq !== self.utteranceSeq) return;
+            if (!nextBuf) {
               finishRemainingFallback(nextIdx);
               return;
             }
             const prevTxt = chunks[idx].trim();
             const bridgeMs = /[。！？；]$/.test(prevTxt) ? 75 : 38;
             await new Promise(function (resolve) { setTimeout(resolve, bridgeMs); });
-            if (seq !== self.utteranceSeq || self.paused) return;
+            if (seq !== self.utteranceSeq) return;
+            if (self.paused) {
+              self._resumePendingChunk = function () {
+                if (seq !== self.utteranceSeq || self.paused) return;
+                const okResumed = playChunkAt(nextIdx, nextBuf);
+                if (!okResumed) finishRemainingFallback(nextIdx);
+              };
+              return;
+            }
             const okStarted = playChunkAt(nextIdx, nextBuf);
             if (!okStarted) finishRemainingFallback(nextIdx);
           } catch (e) {
@@ -2060,7 +2099,7 @@ const voice = {
           skipPrepBeat: idx > 0,
           skipRateAdjust: true,
           skipDetune: true,
-          skipTypewriterSync: idx === 0,
+          skipTypewriterSync: idx > 0,
           onAudioReady: idx === 0 ? (opts && opts.onAudioReady) : null,
           charRangeStart: startC,
           charRangeEnd: endC,
@@ -2137,15 +2176,25 @@ const voice = {
 
   speak: function (personaName, rawText, mood, onDone, opts) {
     const clean = this.formatMandarinText(rawText);
+    const isAudition = Boolean(opts && opts.isAudition);
+    const savedOnDone = isAudition ? this._activeOnDone : null;
     const wasBusy = Boolean(this.speaking || (this.isSupported() && (window.speechSynthesis.speaking || window.speechSynthesis.pending)));
     this.stop();
+    const self = this;
+    const effectiveOnDone = (typeof onDone === "function" || typeof savedOnDone === "function")
+      ? function () {
+        if (self._activeOnDone === effectiveOnDone) self._activeOnDone = null;
+        if (typeof onDone === "function") onDone();
+        if (typeof savedOnDone === "function") savedOnDone();
+      }
+      : null;
     if (!clean || !this.canSpeak()) {
       if (opts && typeof opts.onAudioReady === "function") opts.onAudioReady(0);
-      if (typeof onDone === "function") setTimeout(onDone, 0);
+      if (typeof effectiveOnDone === "function") setTimeout(effectiveOnDone, 0);
       return;
     }
+    this._activeOnDone = effectiveOnDone;
     const seq = ++this.utteranceSeq;
-    const self = this;
     const effKey = this.resolvePersonaKey(personaName);
     const profile = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["你"];
     const seatId = (opts && opts.seatId) ? opts.seatId : profile.seatHint;
@@ -2184,7 +2233,7 @@ const voice = {
     const fallbackToBrowser = function () {
       if (seq !== self.utteranceSeq) return;
       if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
-      self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, onDone, forwardOpts);
+      self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, effectiveOnDone, forwardOpts);
     };
 
     // Priority 0: Pre-generated Qingming Host + Judge Showcase Neural Voice Pack (0.02s studio playback + real FFT lip-sync even on static Vercel with zero API key!)
@@ -2195,10 +2244,10 @@ const voice = {
     const useBundledPack = Boolean(bundledUrl && sound && sound.ctx && !(state.geminiApiKey && this.enginePref === "gemini"));
     if (useBundledPack) {
       this.setVisualSpeaking(true);
-      this.playBundledVoiceClip(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (okPack) {
+      this.playBundledVoiceClip(seq, effKey, clean, mood || "normal", effectiveOnDone, forwardOpts).then(function (okPack) {
         if (okPack || seq !== self.utteranceSeq) return;
         if (self.localNeuralAvailable && sound.ctx) {
-          self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
+          self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", effectiveOnDone, forwardOpts).then(function (ok2) {
             if (ok2 || seq !== self.utteranceSeq) return;
             fallbackToBrowser();
           }).catch(fallbackToBrowser);
@@ -2215,10 +2264,10 @@ const voice = {
     const wantGeminiFirst = Boolean((state.geminiApiKey || this.isCloudGeminiTtsActive()) && sound.ctx && this.enginePref !== "local");
     if (wantGeminiFirst) {
       this.setVisualSpeaking(true);
-      this.playGeminiStudioTts(seq, profile, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
+      this.playGeminiStudioTts(seq, profile, clean, mood || "normal", effectiveOnDone, forwardOpts).then(function (ok) {
         if (ok || seq !== self.utteranceSeq) return;
         if (self.localNeuralAvailable && sound.ctx) {
-          self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok2) {
+          self.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", effectiveOnDone, forwardOpts).then(function (ok2) {
             if (ok2 || seq !== self.utteranceSeq) return;
             fallbackToBrowser();
           }).catch(fallbackToBrowser);
@@ -2231,7 +2280,7 @@ const voice = {
 
     if (this.localNeuralAvailable && sound.ctx) {
       this.setVisualSpeaking(true);
-      this.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", onDone, forwardOpts).then(function (ok) {
+      this.playFreeLocalNeuralTts(seq, effKey, clean, mood || "normal", effectiveOnDone, forwardOpts).then(function (ok) {
         if (ok || seq !== self.utteranceSeq) return;
         fallbackToBrowser();
       }).catch(fallbackToBrowser);

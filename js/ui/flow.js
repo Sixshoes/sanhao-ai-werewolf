@@ -1045,7 +1045,7 @@ const indieFlow = {
         const tgt = (typeof stage3d !== "undefined" && stage3d.showcaseTarget) ? String(stage3d.showcaseTarget) : "hero";
         if (tgt === "hero") {
           const line = "歡迎蒞臨青嵐書院茶席！我是清茗，今晚且看諸位同窗如何明辨是非、說好話抓出酸民狼。";
-          if (typeof voice !== "undefined" && typeof voice.speakHost === "function") voice.speakHost(line, undefined, "normal");
+          if (typeof voice !== "undefined" && typeof voice.speak === "function") voice.speak("主持", line, "normal", undefined, { seatId: 0, isAudition: true });
           if (typeof stage3d !== "undefined" && typeof stage3d.setHeroAction === "function") stage3d.setHeroAction("speak_gesture", 3200);
           if (typeof showToast === "function") showToast("清茗：「" + line + "」", "emerald");
           return;
@@ -1058,7 +1058,7 @@ const indieFlow = {
           ? "我是書院推理夥伴，今晚一定細心傾聽每一句線索，帶領好人陣營獲勝！"
           : ((pProf && pProf.sampleQuote) || "這局我們一起說好話、理性抓出酸民狼！");
         if (typeof voice !== "undefined" && typeof voice.speak === "function") {
-          voice.speak(s.name, sample, "normal", undefined);
+          voice.speak(s.name, sample, "normal", undefined, { isAudition: true });
         }
         if (typeof stage3d !== "undefined" && typeof stage3d.setHeroAction === "function") {
           stage3d.setHeroAction("speak_gesture", 3200);

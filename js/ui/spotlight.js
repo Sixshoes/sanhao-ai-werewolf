@@ -358,7 +358,7 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
     wave.style.opacity = speaker ? "1" : "0.35";
   }
   if (pill) {
-    pill.textContent = isTyping ? "發言中" : (voice.speaking ? "語音中" : "已講畢");
+    pill.textContent = (typeof voice !== "undefined" && voice.paused) ? "已暫停" : (isTyping ? "發言中" : (voice.speaking ? "語音中" : "已講畢"));
   }
   if (hint) {
     hint.textContent = isTyping

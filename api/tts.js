@@ -424,7 +424,9 @@ async function handler(req, res) {
     if (remaining < 2600) break;
     const timeoutMs = Math.min(i === 0 ? PRIMARY_TIMEOUT_MS : FALLBACK_MODEL_TIMEOUT_MS, remaining - 400);
     let out = await callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, timeoutMs, false);
-    if (!out.ok && out.status === 400 && (CORE_FALLBACK_VOICE_MAP[voiceName] || strippedForRetry !== text)) {
+    const voiceChangesOnRetry = Boolean(CORE_FALLBACK_VOICE_MAP[voiceName] && CORE_FALLBACK_VOICE_MAP[voiceName] !== voiceName);
+    const tagsChangeOnRetry = modelId.startsWith("gemini-3.8-") && strippedForRetry !== text;
+    if (!out.ok && out.status === 400 && (voiceChangesOnRetry || tagsChangeOnRetry)) {
       const retryRemaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
       if (retryRemaining >= 2600) {
         // Retry once with guaranteed core prebuilt voice & stripped inline tags while keeping >= 6s budget for fallback models

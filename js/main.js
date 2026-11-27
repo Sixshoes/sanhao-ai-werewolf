@@ -276,14 +276,66 @@ window.onload = function () {
     const hadSwController = Boolean(navigator.serviceWorker.controller);
     if (hadSwController && typeof navigator.serviceWorker.addEventListener === "function") {
       let swReloading = false;
+      const resolveDynamicSwVersion = function () {
+        return new Promise(function (resolve) {
+          const ctrl = navigator.serviceWorker.controller;
+          const fallbackVer = (ctrl && ctrl.scriptURL ? ctrl.scriptURL : "sw") + ":" + Math.floor(Date.now() / 60000);
+          if (!ctrl || typeof MessageChannel !== "function") {
+            resolve(fallbackVer);
+            return;
+          }
+          let settled = false;
+          const done = function (v) {
+            if (settled) return;
+            settled = true;
+            resolve(String(v || fallbackVer));
+          };
+          try {
+            const mc = new MessageChannel();
+            mc.port1.onmessage = function (ev) { done(ev && ev.data); };
+            ctrl.postMessage("GET_SW_VERSION", [mc.port2]);
+            setTimeout(function () { done(fallbackVer); }, 350);
+          } catch (e) {
+            done(fallbackVer);
+          }
+        });
+      };
+      const performGuardedSwReload = function () {
+        if (swReloading) return;
+        resolveDynamicSwVersion().then(function (swVer) {
+          if (swReloading) return;
+          const guardKey = "sanhao_sw_reloaded:" + swVer;
+          try {
+            if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(guardKey) === "1") return;
+            if (typeof sessionStorage !== "undefined") sessionStorage.setItem(guardKey, "1");
+          } catch (e) {}
+          swReloading = true;
+          if (window.location && typeof window.location.reload === "function") window.location.reload();
+        });
+      };
+      if (typeof window !== "undefined") {
+        window._applyPendingSwUpdateReload = function () {
+          if (typeof state !== "undefined") state._pendingSwUpdateReload = false;
+          performGuardedSwReload();
+        };
+      }
       navigator.serviceWorker.addEventListener("controllerchange", function () {
         if (swReloading) return;
-        try {
-          if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("sanhao_sw_reloaded_v254") === "1") return;
-          if (typeof sessionStorage !== "undefined") sessionStorage.setItem("sanhao_sw_reloaded_v254", "1");
-        } catch (e) {}
-        swReloading = true;
-        if (window.location && typeof window.location.reload === "function") window.location.reload();
+        const inActiveMatch = Boolean(
+          typeof state !== "undefined" &&
+          state.match &&
+          state.match.started &&
+          state.match.phase !== "LOBBY" &&
+          state.match.phase !== "GAME_OVER"
+        );
+        if (inActiveMatch) {
+          state._pendingSwUpdateReload = true;
+          if (typeof showToast === "function") {
+            showToast("系統已於背景更新至最新版，本局結束返回大廳後將自動套用。", "emerald");
+          }
+          return;
+        }
+        performGuardedSwReload();
       });
     }
     navigator.serviceWorker.register("./sw.js").then(function (reg) {

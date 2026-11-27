@@ -524,11 +524,24 @@ function toggleSpectatorFastForward() {
       closeSpiritRoundBet(true);
       return true;
     }
-    if (state.match && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH")) {
-      if (state.typewriter && state.typewriter.active && typeof completeCurrentTypewriter === "function") {
+    const inSheriffSpeechFf = Boolean(
+      state.match &&
+      state.match.phase === "SHERIFF_ELECTION" &&
+      state.match.sheriffElectionCtx &&
+      state.match.sheriffElectionCtx.stage === "speech"
+    );
+    if (state.match && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH" || inSheriffSpeechFf)) {
+      if (state.match.phase === "LAST_WORDS_SPEECH" && !state.lastWordsCtx && typeof state._dawnLwFlush === "function") {
+        const flushDawnLw = state._dawnLwFlush;
+        state._dawnLwFlush = null;
+        flushDawnLw();
+      } else if (state.typewriter && state.typewriter.active && typeof completeCurrentTypewriter === "function") {
         completeCurrentTypewriter(true);
-      } else if (!state.speakingInFlight && typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
-        maybeScheduleAutoAdvanceAfterSpeech();
+      } else if (!state.speakingInFlight) {
+        if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
+        if (inSheriffSpeechFf && !state.stepTimer && typeof advanceSheriffSpeechTurn === "function") {
+          advanceSheriffSpeechTurn();
+        }
       }
     } else if (state.match && state.match.phase === "HUNTER_RESOLVE" && typeof state.hunterResolveCommit === "function") {
       const goHunt = state.hunterResolveCommit;

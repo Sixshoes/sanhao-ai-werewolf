@@ -17,7 +17,7 @@ function isExternalLlmActive() {
 }
 
 const OFFICIAL_CLOUD_GEMINI_MODELS = Object.freeze(["gemini-2.5-pro", "gemini-4-hydrogen", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
-const OFFICIAL_PERSONAL_GEMINI_MODELS = Object.freeze(["gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
+const OFFICIAL_PERSONAL_GEMINI_MODELS = Object.freeze(["gemini-4-hydrogen", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
 
 function normalizeCloudGeminiModel(modelId) {
   const m = String(modelId || "").trim();
@@ -323,7 +323,7 @@ async function callGeminiText(promptText, opts) {
   }
   if (!state.geminiApiKey) {
     if (!isServerGeminiProxyActive()) return null;
-    const prox = await callServerGeminiProxyOnce(promptText, 22000, opts);
+    const prox = await callServerGeminiProxyOnce(promptText, 23000, opts);
     if (prox.ok && prox.text) {
       state._lastGeminiWarnKey = null;
       state._proxyFailStreak = 0;
@@ -373,7 +373,7 @@ async function callGeminiText(promptText, opts) {
     }
     return null;
   }
-  const fallbackList = ["gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-flash"].filter(function (m) { return m !== primary; });
+  const fallbackList = ["gemini-4-hydrogen", "gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite"].filter(function (m) { return m !== primary; });
   let lastStatus = first.status;
   for (let i = 0; i < fallbackList.length; i++) {
     const fbModel = fallbackList[i];

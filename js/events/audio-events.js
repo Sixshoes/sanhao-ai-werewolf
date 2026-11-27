@@ -284,9 +284,10 @@ function bindAudioVoiceEvents() {
     const prof = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["暖暖"];
     if (voice.mode === "cozy") {
       playCozyAudition(prof.seatHint || 3);
+      if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
     } else {
       clearCozyAuditionTimers();
-      voice.speak(personaName, lines[personaName] || lines["暖暖"], personaName === "主持" ? "host_night" : "normal");
+      voice.speak(personaName, lines[personaName] || lines["暖暖"], personaName === "主持" ? "host_night" : "normal", undefined, { isAudition: true });
     }
   }
 
@@ -297,13 +298,17 @@ function bindAudioVoiceEvents() {
       const m = el(id).getAttribute("data-vmode") || "hybrid";
       voice.mode = m;
       voice.enabled = true;
-      voice.stop();
       el("voiceToggleLabel").textContent = voice.getModeLabel();
       ["btnVoiceModeHybrid", "btnVoiceModeNatural", "btnVoiceModeCozy"].forEach(function (other) {
         if (el(other)) el(other).classList.toggle("is-active", other === id);
       });
       voice.refreshVoices();
       saveUserPrefs();
+      if (m === "cozy") {
+        const savedCozyDone = voice._activeOnDone;
+        voice.stop();
+        if (typeof savedCozyDone === "function") savedCozyDone();
+      }
       auditionPersonaVoice("暖暖");
     });
   });
@@ -369,7 +374,7 @@ function bindAudioVoiceEvents() {
     saveUserPrefs();
     if ((voice.mode === "tts" || voice.mode === "hybrid") && voice.enabled) {
       clearCozyAuditionTimers();
-      voice.speak("暖暖", "已切換為這組聲線，祝你推理順利！", "normal");
+      voice.speak("暖暖", "已切換為這組聲線，祝你推理順利！", "normal", undefined, { isAudition: true });
     }
   });
 
@@ -386,11 +391,17 @@ function bindAudioVoiceEvents() {
       voice.stop();
       maybeScheduleAutoAdvanceAfterSpeech();
     } else if ((state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH" || (state.match.phase === "SHERIFF_ELECTION" && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech")) && state.typewriter.fullText) {
-      const sp = getSeat(state.activeSpeakerId);
+      const sp = state.activeSpeakerId ? getSeat(state.activeSpeakerId) : null;
       if (voice.canSpeak()) {
-        voice.speakCharacter(sp, state.typewriter.fullText, "normal", function () {
-          maybeScheduleAutoAdvanceAfterSpeech();
-        });
+        if (!sp) {
+          voice.speakHost(state.typewriter.fullText, function () {
+            maybeScheduleAutoAdvanceAfterSpeech();
+          });
+        } else {
+          voice.speakCharacter(sp, state.typewriter.fullText, "normal", function () {
+            maybeScheduleAutoAdvanceAfterSpeech();
+          });
+        }
       }
     }
   });
@@ -399,7 +410,7 @@ function bindAudioVoiceEvents() {
     ev.stopPropagation();
     sound.unlock();
     if (state.typewriter.fullText) {
-      const sp = getSeat(state.activeSpeakerId);
+      const sp = state.activeSpeakerId ? getSeat(state.activeSpeakerId) : null;
       if (!voice.enabled) {
         voice.enabled = true;
         el("voiceToggleLabel").textContent = voice.getModeLabel();
@@ -410,6 +421,10 @@ function bindAudioVoiceEvents() {
       }
       if (voice.mode === "cozy") {
         playCozyAudition(sp ? sp.id : 3);
+      } else if (!sp) {
+        voice.speakHost(state.typewriter.fullText, function () {
+          maybeScheduleAutoAdvanceAfterSpeech();
+        });
       } else {
         voice.speakCharacter(sp, state.typewriter.fullText, "normal", function () {
           maybeScheduleAutoAdvanceAfterSpeech();

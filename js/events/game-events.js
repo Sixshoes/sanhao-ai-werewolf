@@ -201,6 +201,9 @@ function resetMatchToLobby() {
   renderPinnedCluesTray();
   renderTimeline({ deferIfHidden: true });
   updateAllUI();
+  if (state._pendingSwUpdateReload && typeof window !== "undefined" && typeof window._applyPendingSwUpdateReload === "function") {
+    window._applyPendingSwUpdateReload();
+  }
 }
 
 function bindMatchFlowEvents() {

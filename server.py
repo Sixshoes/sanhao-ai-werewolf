@@ -755,9 +755,13 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             return
 
         cache_ctl = (
-            "public, max-age=3600"
-            if route.startswith("/assets/")
-            else ("no-cache" if route.endswith((".html", ".js", ".css")) else "public, max-age=300")
+            "no-cache"
+            if route == "/assets/models/manifest.json"
+            else (
+                "public, max-age=3600"
+                if route.startswith("/assets/")
+                else ("no-cache" if route.endswith((".html", ".js", ".css")) else "public, max-age=300")
+            )
         )
         fs_path = raw_fs_path
         if fs_path.is_file():

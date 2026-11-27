@@ -1167,7 +1167,7 @@ async function executeAiTurnSpeech(speaker) {
       if (q.length === 0) {
         pfHost("主持", "全員發言結束，請點擊外圍座位投票抓狼。", "normal");
       } else if (q[0] === getPlayerId()) {
-        pfHost("主持", "輪到" + getPlayerId() + "號你發言了，請選擇卡牌表態。", "normal");
+        pfHost("主持", "輪到" + getPlayerId() + "號你發言了，可點選詞卡組裝陳詞後送出。", "normal");
       }
     }
   }

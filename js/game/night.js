@@ -256,11 +256,12 @@ function finishCandlelitNightReview() {
   if (typeof cb === "function") cb();
 }
 
-function scheduleNightStep(fn, ms) {
+function scheduleNightStep(fn, ms, opts) {
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const preserveWait = Boolean(opts && opts.preserveWait);
   const noPlayerNight = !playerHasActiveNightSkillNow();
-  // Compress idle AI night-resolution delays for non-acting civilians (~1.8s total across 3 roles!)
-  const tunedMs = noPlayerNight ? Math.min(ms, 560) : ms;
+  // Compress idle AI night-resolution delays for non-acting civilians (~1.8s total across 3 roles), except when waiting on host/last-words voice!
+  const tunedMs = (noPlayerNight && !preserveWait) ? Math.min(ms, 560) : ms;
   const waitMs = ff ? Math.min(ms, 180) : tunedMs;
   const wrapped = function () {
     if (!state.match || !state.match.started || state.match.phase === "LOBBY" || state.match.phase === "GAME_OVER") return;
@@ -609,10 +610,11 @@ function proceedToNightWolf() {
         finishAiWolfStep();
       };
       voice.speakHost("第" + state.match.day + "晚，天黑請靜心。", function () {
-        state.stepTimer = scheduleNightStep(runWolfOnce, 220);
+        clearStepTimer();
+        state.stepTimer = scheduleNightStep(runWolfOnce, 220, { preserveWait: true });
       }, "host_night");
-      // Safety cap so nightfall never stalls if audio is blocked/unavailable
-      state.stepTimer = scheduleNightStep(runWolfOnce, 5200);
+      // Safety cap so nightfall never stalls if audio is blocked/unavailable (preserveWait prevents 560ms clamp!)
+      state.stepTimer = scheduleNightStep(runWolfOnce, 5200, { preserveWait: true });
     } else {
       if (!isFfNight && !(player && player.alive && player.role === "guard")) {
         voice.speakHost("第" + state.match.day + "晚，天黑請靜心。", undefined, "host_night");
@@ -1210,10 +1212,8 @@ function resolveDawn() {
     if (checkAndHandleGameOver()) return;
     if (hunterTriggeredSeat) {
       const ffHunterDawn = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-      if (!ffHunterDawn) {
-        voice.speakHost(dawnVoiceLine + "直心糾察長發動正氣共鳴，請選擇一人一同離席冷靜。", undefined, "host_dawn");
-      }
-      triggerHunterResonance(hunterTriggeredSeat, "AFTER_DAWN");
+      const dawnHunterLine = !ffHunterDawn ? (dawnVoiceLine + "直心糾察長發動正氣共鳴，請選擇一人一同離席冷靜。") : "";
+      triggerHunterResonance(hunterTriggeredSeat, "AFTER_DAWN", { waitVoiceLine: dawnHunterLine, voiceMood: "host_dawn" });
       return;
     }
     if (state.match.pendingNight1LastWords.length > 0) {
@@ -1228,7 +1228,6 @@ function resolveDawn() {
         state.activeSpeakerId = firstSeatLw.id;
         state.speakingInFlight = true;
         updateAllUI();
-        state.speakingInFlight = true;
         if (typeof syncSpeakerBannerVisuals === "function") {
           syncSpeakerBannerVisuals(firstSeatLw, fmtSeatNum(firstSeatLw.id) + "號 " + firstSeatLw.name + "（遺言）", "首夜遺言", false);
         }
@@ -1240,6 +1239,7 @@ function resolveDawn() {
         const launchDawnLw = function () {
           if (dawnLwStarted) return;
           dawnLwStarted = true;
+          state._dawnLwFlush = null;
           clearStepTimer();
           state.speakingInFlight = false;
           if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
@@ -1248,23 +1248,39 @@ function resolveDawn() {
             enterDayDiscussionWithSheriffHooks("");
           });
         };
+        state._dawnLwFlush = launchDawnLw;
+        const armDawnLwSafety = function (msWait) {
+          if (state.stepTimer) { clearTimeout(state.stepTimer); state.stepTimer = null; }
+          state.stepTimer = setTimeout(function () {
+            if (typeof voice !== "undefined" && voice.paused) {
+              armDawnLwSafety(1200);
+              return;
+            }
+            launchDawnLw();
+          }, msWait);
+        };
         const waitDawnLwVoice = Boolean(dawnVoiceLine && typeof voice !== "undefined" && typeof voice.speakHost === "function" && typeof voice.canSpeak === "function" && voice.canSpeak());
         if (waitDawnLwVoice) {
           voice.speakHost(dawnVoiceLine, function () {
+            if (dawnLwStarted) return;
+            if (state.stepTimer) { clearTimeout(state.stepTimer); state.stepTimer = null; }
             state.stepTimer = setTimeout(launchDawnLw, 260);
           }, "host_dawn");
-          state.stepTimer = setTimeout(launchDawnLw, 6500);
+          armDawnLwSafety(6500);
         } else {
           if (dawnVoiceLine && typeof voice !== "undefined" && typeof voice.speakHost === "function") {
             voice.speakHost(dawnVoiceLine, undefined, "host_dawn");
           }
-          state.stepTimer = setTimeout(launchDawnLw, 900);
+          armDawnLwSafety(900);
         }
         return;
       }
       startLastWordsSequence(lwIds, "first_night", function () {
         enterDayDiscussionWithSheriffHooks("");
       });
+      if (!ffDawnLw && !firstIsAi && dawnVoiceLine && typeof voice !== "undefined" && typeof voice.speakHost === "function") {
+        voice.speakHost(dawnVoiceLine, undefined, "host_dawn");
+      }
       return;
     }
     enterDayDiscussionWithSheriffHooks(dawnVoiceLine);
@@ -1407,11 +1423,8 @@ function settleNightCasualtiesOnElectionExplode() {
     }
   });
   if (explodeHunterSeat) {
-    const ffExpH = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-    if (!ffExpH && typeof voice !== "undefined" && voice.canSpeak()) {
-      voice.speakHost("雖有酸民狼警上自爆，但首夜倒牌的直心糾察長仍可發動正氣共鳴，請選擇一人一同離席後再進入黑夜。", undefined, "host_dawn");
-    }
-    triggerHunterResonance(explodeHunterSeat, "AFTER_ELECTION_EXPLODE");
+    const explodeHunterLine = "雖有酸民狼警上自爆，但首夜倒牌的直心糾察長仍可發動正氣共鳴，請選擇一人一同離席後再進入黑夜。";
+    triggerHunterResonance(explodeHunterSeat, "AFTER_ELECTION_EXPLODE", { waitVoiceLine: explodeHunterLine, voiceMood: "host_dawn" });
     return true;
   }
   return false;
@@ -1480,8 +1493,11 @@ function chooseAiHunterTarget(hunterSeat) {
   return chosenId;
 }
 
-function triggerHunterResonance(hunterSeat, nextStage) {
+function triggerHunterResonance(hunterSeat, nextStage, opts) {
   const isWK = Boolean(hunterSeat && hunterSeat.isWolfKing);
+  const waitVoiceLine = opts && opts.waitVoiceLine ? String(opts.waitVoiceLine) : "";
+  const voiceMood = (opts && opts.voiceMood) || "normal";
+  const ffNow = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   state.match.phase = "HUNTER_TRIGGER";
   state.match.afterHunterNext = nextStage;
   state.match.lastHunterShot = null;
@@ -1496,10 +1512,16 @@ function triggerHunterResonance(hunterSeat, nextStage) {
       text: ""
     });
     updateAllUI();
+    if (!ffNow && waitVoiceLine && typeof voice !== "undefined" && voice.canSpeak()) {
+      voice.speakHost(waitVoiceLine, undefined, voiceMood);
+    }
   } else {
     updateAllUI();
-    state.stepTimer = scheduleNightStep(function () {
-      if (state.match.phase !== "HUNTER_TRIGGER") return;
+    let aiHunterFired = false;
+    const runAiHunterDecision = function () {
+      if (aiHunterFired || state.match.phase !== "HUNTER_TRIGGER") return;
+      aiHunterFired = true;
+      clearStepTimer();
       const pickId = chooseAiHunterTarget(hunterSeat);
       const best = pickId ? getSeat(pickId) : null;
       if (best && best.alive) {
@@ -1530,7 +1552,17 @@ function triggerHunterResonance(hunterSeat, nextStage) {
         state.hunterResolveCommit = finishHold;
         state.stepTimer = scheduleNightStep(finishHold, 1050);
       }
-    }, 850);
+    };
+    if (!ffNow && waitVoiceLine && typeof voice !== "undefined" && voice.canSpeak()) {
+      voice.speakHost(waitVoiceLine, function () {
+        if (aiHunterFired || state.match.phase !== "HUNTER_TRIGGER") return;
+        clearStepTimer();
+        state.stepTimer = scheduleNightStep(runAiHunterDecision, 320);
+      }, voiceMood);
+      state.stepTimer = scheduleNightStep(runAiHunterDecision, 5400, { preserveWait: true });
+    } else {
+      state.stepTimer = scheduleNightStep(runAiHunterDecision, 850);
+    }
   }
 }
 
@@ -1601,12 +1633,6 @@ function executeHunterShotPresentation(hunterSeat, targetSeat) {
     title: roleLabel + " " + fmtSeatNum(hunterSeat.id) + "號 " + hName + " 發動" + actLabel + "，帶走 " + fmtSeatNum(targetSeat.id) + "號 " + tName + (isWK ? " 一同離席（開槍反撲無遺言）。" : " 一同離席。"),
     text: ""
   });
-  const ffHunter = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-  if (!ffHunter && typeof voice !== "undefined" && voice.canSpeak()) {
-    voice.speakHost(roleLabel + " " + hunterSeat.id + "號" + hName + " 發動" + actLabel + "，帶走 " + targetSeat.id + "號" + tName + (isWK ? " 一同離席冷靜，開槍反撲不留遺言！" : " 一同離席冷靜！"));
-  }
-  updateAllUI();
-
   let committed = false;
   function commitAfterHunterShot() {
     if (committed || state.match.phase !== "HUNTER_RESOLVE" || !state.match.started) return;
@@ -1621,7 +1647,20 @@ function executeHunterShotPresentation(hunterSeat, targetSeat) {
     resumeAfterHunter();
   }
   state.hunterResolveCommit = commitAfterHunterShot;
-  state.stepTimer = scheduleNightStep(commitAfterHunterShot, 2250);
+  const ffHunter = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  if (!ffHunter && typeof voice !== "undefined" && voice.canSpeak()) {
+    voice.speakHost(
+      roleLabel + " " + hunterSeat.id + "號" + hName + " 發動" + actLabel + "，帶走 " + targetSeat.id + "號" + tName + (isWK ? " 一同離席冷靜，開槍反撲不留遺言！" : " 一同離席冷靜！"),
+      function () {
+        clearStepTimer();
+        state.stepTimer = scheduleNightStep(commitAfterHunterShot, 360, { preserveWait: true });
+      }
+    );
+    state.stepTimer = scheduleNightStep(commitAfterHunterShot, 5200, { preserveWait: true });
+  } else {
+    state.stepTimer = scheduleNightStep(commitAfterHunterShot, 2250, { preserveWait: true });
+  }
+  updateAllUI();
 }
 
 function resumeAfterHunter() {

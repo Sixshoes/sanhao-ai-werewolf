@@ -90,22 +90,35 @@ function startVotingPhase() {
     if (elderNoVote && typeof showToast === "function") {
       showToast("你身為已亮牌的清心長老，本輪不具投票權，由其餘夥伴計票。", "emerald");
     }
-    if (!ffVote) {
-      voice.speakHost(inPk
-        ? "平票 PK 拉票結束，依凹嗚規則由非平票玩家進行決選投票！"
-        : (elderNoVote
-          ? "你身為已亮牌的清心長老失去投票權，本輪由其餘夥伴計票。"
-          : "全員發言結束，開始計票。"));
-    }
+    let tallyTriggered = false;
     const triggerVoteTally = function () {
-      if (!state.match || state.match.phase !== "DAY_VOTE") return;
+      if (tallyTriggered || !state.match || state.match.phase !== "DAY_VOTE") return;
+      tallyTriggered = true;
+      clearStepTimer();
       finalizeVoteRound(null);
     };
+    const hostVoteLine = inPk
+      ? "平票 PK 拉票結束，依凹嗚規則由非平票玩家進行決選投票！"
+      : (elderNoVote
+        ? "你身為已亮牌的清心長老失去投票權，本輪由其餘夥伴計票。"
+        : "全員發言結束，開始計票。");
     if (!inPk && !elderNoVote && typeof openSpiritRoundBet === "function") {
       const openedBet = openSpiritRoundBet("vote_out", triggerVoteTally);
-      if (openedBet) return;
+      if (openedBet) {
+        if (!ffVote) voice.speakHost(hostVoteLine);
+        return;
+      }
     }
-    state.stepTimer = setTimeout(triggerVoteTally, ffVote ? 240 : 1100);
+    if (!ffVote && typeof voice !== "undefined" && typeof voice.canSpeak === "function" && voice.canSpeak()) {
+      voice.speakHost(hostVoteLine, function () {
+        clearStepTimer();
+        state.stepTimer = setTimeout(triggerVoteTally, 220);
+      });
+      state.stepTimer = setTimeout(triggerVoteTally, 4500);
+    } else {
+      if (!ffVote && typeof voice !== "undefined" && typeof voice.speakHost === "function") voice.speakHost(hostVoteLine);
+      state.stepTimer = setTimeout(triggerVoteTally, ffVote ? 240 : 1100);
+    }
     return;
   }
   updateAllUI();
@@ -602,10 +615,10 @@ function finalizeVoteRound(playerTargetId) {
       const canWkShot = Boolean(outSeat.isWolfKing && (aliveWolvesAfterOut > 0 || state.match.variantMode === "lone_wolf_king"));
       if (outSeat.role === "hunter" || canWkShot) {
         state.match.pendingVotedHunterId = outSeat.id;
-        voice.speakHost(canWkShot
+        const hunterVoteLine = canWkShot
           ? (outSeat.id + "號" + outSeat.name + "身為流言首領，臨走前發動最後帶風向反撲！")
-          : (outSeat.id + "號" + outSeat.name + "最高票離席，觸發直心糾察長正氣共鳴！"));
-        triggerHunterResonance(outSeat, "AFTER_VOTE");
+          : (outSeat.id + "號" + outSeat.name + "最高票離席，觸發直心糾察長正氣共鳴！");
+        triggerHunterResonance(outSeat, "AFTER_VOTE", { waitVoiceLine: hunterVoteLine, voiceMood: "normal" });
         return;
       }
       state.match.pendingVotedHunterId = null;
@@ -848,14 +861,22 @@ function runVoteFlightSequence(ballots, onDone, meta) {
         verdictLine = "開票完畢，票數持平，即將進入裁決…";
       }
       if (fTxt) fTxt.textContent = verdictLine;
-      if (typeof voice !== "undefined" && typeof voice.speakHost === "function") {
+      if (typeof voice !== "undefined" && typeof voice.speakHost === "function" && typeof voice.canSpeak === "function" && voice.canSpeak()) {
+        voice.speakHost(verdictLine, function () {
+          if (finished || !state.match.started) return;
+          timers.push(setTimeout(finishNow, 260));
+        });
+      } else if (typeof voice !== "undefined" && typeof voice.speakHost === "function") {
         voice.speakHost(verdictLine);
       }
     }, ballots.length * stepMs);
     timers.push(verdictTimer);
   }
 
-  timers.push(setTimeout(finishNow, ballots.length * stepMs + verdictHoldMs));
+  const finalHoldMs = (!ff && typeof voice !== "undefined" && typeof voice.canSpeak === "function" && voice.canSpeak())
+    ? Math.max(verdictHoldMs, 4600)
+    : verdictHoldMs;
+  timers.push(setTimeout(finishNow, ballots.length * stepMs + finalHoldMs));
 }
 
 // ==================== FOUR GIVINGS (4G) POWER CARDS & SYNERGIES ====================

@@ -76,6 +76,12 @@ self.addEventListener("activate", function (event) {
   );
 });
 
+self.addEventListener("message", function (event) {
+  if (event && event.data === "GET_SW_VERSION" && event.ports && event.ports[0]) {
+    try { event.ports[0].postMessage(SHELL_CACHE); } catch (e) {}
+  }
+});
+
 self.addEventListener("fetch", function (event) {
   const req = event.request;
   if (req.method !== "GET") return;
