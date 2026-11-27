@@ -5,7 +5,7 @@
  * 環境變數設定（於 Vercel Project → Settings → Environment Variables）：
  * - GEMINI_API_KEY               (必填) Google AI Studio API Key
  * - GEMINI_PUBLIC_TTS_ENABLED    (選填，預設開啟；設為 "false" 可一鍵關閉公版雲端語音)
- * - GEMINI_TTS_MODEL             (選填，預設 gemini-3.8-flash-lite-tts，失敗自動降級 gemini-2.5-flash-preview-tts)
+ * - GEMINI_TTS_MODEL             (選填，預設 gemini-2.5-flash-preview-tts，失敗自動降級 gemini-3.1-flash-tts-preview)
  * - GEMINI_TTS_SESSION_MAX_RPM   (選填，每瀏覽器會話每分鐘上限，預設 36)
  * - GEMINI_TTS_SESSION_MAX_RPD   (選填，每瀏覽器會話每日上限，預設 180)
  * - GEMINI_TTS_NAT_IP_MAX_RPM    (選填，同區網共用 IP 總上限，預設 96)
@@ -32,16 +32,12 @@ const CORE_FALLBACK_VOICE_MAP = {
   Iapetus: "Puck"
 };
 const ALLOWED_TTS_MODELS = new Set([
-  "gemini-3.8-flash-lite-tts",
-  "gemini-3.8-flash-tts",
   "gemini-2.5-flash-preview-tts",
   "gemini-3.1-flash-tts-preview"
 ]);
 const DEFAULT_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 const TTS_FALLBACK_ORDER = [
   "gemini-2.5-flash-preview-tts",
-  "gemini-3.8-flash-lite-tts",
-  "gemini-3.8-flash-tts",
   "gemini-3.1-flash-tts-preview"
 ];
 
@@ -408,7 +404,7 @@ async function handler(req, res) {
     const earliest = fullOrder.slice().sort(function (a, b) {
       return (_badModelCooldown.get(a) || 0) - (_badModelCooldown.get(b) || 0);
     })[0];
-    queue.push(earliest || "gemini-3.8-flash-tts");
+    queue.push(earliest || DEFAULT_TTS_MODEL);
   }
 
   let lastStatus = 502;

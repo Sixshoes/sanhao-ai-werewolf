@@ -439,13 +439,13 @@ class ServerTestCase(unittest.TestCase):
         def fake_urlopen(req, timeout=None):
             body = json.loads(req.data.decode("utf-8"))
             calls.append((req.full_url, body))
-            if "gemini-3.8-" in req.full_url:
+            if "gemini-2.5-flash-preview-tts" in req.full_url:
                 raise urllib.error.HTTPError(
                     req.full_url,
                     400,
                     "Bad Request",
                     hdrs=None,
-                    fp=io.BytesIO(b'{"error":"bad tag"}'),
+                    fp=io.BytesIO(b'{"error":"bad voice"}'),
                 )
             raw_pcm = b"\x00\x00" * 48
             b64 = base64.b64encode(raw_pcm).decode("ascii")
@@ -477,15 +477,15 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual(mime_type, "audio/wav")
         self.assertTrue(wav_bytes.startswith(b"RIFF"))
         self.assertGreaterEqual(len(calls), 2)
-        part_38 = calls[0][1]["contents"][0]["parts"][0]
-        part_25 = calls[-1][1]["contents"][0]["parts"][0]
-        self.assertIn("gemini-3.8-flash-lite-tts", calls[0][0])
-        self.assertIn("speechMetadata", part_38)
-        self.assertIn("<breath>", part_38["text"])
-        self.assertIn("gemini-2.5-flash-preview-tts", calls[-1][0])
+        part_25 = calls[0][1]["contents"][0]["parts"][0]
+        part_31 = calls[-1][1]["contents"][0]["parts"][0]
+        self.assertIn("gemini-2.5-flash-preview-tts", calls[0][0])
         self.assertNotIn("speechMetadata", part_25)
         self.assertNotIn("<breath>", part_25["text"])
         self.assertNotIn("<short pause>", part_25["text"])
+        self.assertIn("gemini-3.1-flash-tts-preview", calls[-1][0])
+        self.assertNotIn("speechMetadata", part_31)
+        self.assertNotIn("<breath>", part_31["text"])
 
     def test_v244_edge_male_voice_fallback_retry(self):
         import asyncio
@@ -521,7 +521,7 @@ class ServerTestCase(unittest.TestCase):
                 self.assertEqual(edge_attempts, ["zh-CN-YunxiNeural", "zh-CN-YunjianNeural"])
                 self.assertTrue(out_file.exists())
 
-        calls_38_mid = []
+        calls_mid = []
 
         class _FakeResp2:
             def __init__(self, payload_bytes):
@@ -537,8 +537,8 @@ class ServerTestCase(unittest.TestCase):
                 return False
 
         def fake_urlopen_mid(req, timeout=None):
-            calls_38_mid.append(req.full_url)
-            if "gemini-3.8-flash-lite-tts" in req.full_url:
+            calls_mid.append(req.full_url)
+            if "gemini-2.5-flash-preview-tts" in req.full_url:
                 raise urllib.error.HTTPError(req.full_url, 503, "Busy", hdrs=None, fp=io.BytesIO(b"{}"))
             raw_pcm = b"\x01\x00" * 48
             b64 = base64.b64encode(raw_pcm).decode("ascii")
@@ -556,7 +556,35 @@ class ServerTestCase(unittest.TestCase):
             wav_b, mime_t = server.call_gemini_tts_wav("test-key", "這輪先投三號", "Fenrir", "沉穩", timeout=5)
         self.assertEqual(mime_t, "audio/wav")
         self.assertTrue(wav_b.startswith(b"RIFF"))
-        self.assertTrue(any("gemini-3.8-flash-tts" in u for u in calls_38_mid))
+        self.assertTrue(any("gemini-3.1-flash-tts-preview" in u for u in calls_mid))
+
+    def test_v2552_flash25_zero_thinking_budget(self):
+        seen_bodies = []
+
+        class _FakeTextResp:
+            def __init__(self, payload_bytes):
+                self._payload = payload_bytes
+
+            def read(self):
+                return self._payload
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        def fake_text_open(req, timeout=None):
+            seen_bodies.append((req.full_url, json.loads(req.data.decode("utf-8"))))
+            return _FakeTextResp(json.dumps({"candidates": [{"content": {"parts": [{"text": "測試回應"}]}}]}).encode("utf-8"))
+
+        with patch("urllib.request.urlopen", side_effect=fake_text_open):
+            txt1, mdl1 = server.call_gemini_text_rest("test-key", "gemini-2.5-flash", "你好")
+            txt2, mdl2 = server.call_gemini_text_rest("test-key", "gemini-2.5-flash-lite", "你好")
+        self.assertEqual((txt1, mdl1), ("測試回應", "gemini-2.5-flash"))
+        self.assertEqual((txt2, mdl2), ("測試回應", "gemini-2.5-flash-lite"))
+        for _, b in seen_bodies:
+            self.assertEqual(b["generationConfig"].get("thinkingConfig"), {"thinkingBudget": 0})
 
 
 if __name__ == "__main__":

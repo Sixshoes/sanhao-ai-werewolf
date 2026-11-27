@@ -257,6 +257,7 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(safeModel) + ":generateContent";
   const isPro = safeModel === "gemini-2.5-pro";
   const isGemini4 = /^gemini-4-/.test(safeModel);
+  const isFlash25ZeroThink = safeModel === "gemini-2.5-flash" || safeModel === "gemini-2.5-flash-lite";
   const genCfg = {
     maxOutputTokens: (isPro || isGemini4) ? ((opts && opts.jsonMode) ? 3072 : 2048) : ((opts && opts.jsonMode) ? 1536 : 1024)
   };
@@ -266,6 +267,8 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
     genCfg.temperature = clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard);
     if (isPro) {
       genCfg.thinkingConfig = { thinkingBudget: 512 };
+    } else if (isFlash25ZeroThink) {
+      genCfg.thinkingConfig = { thinkingBudget: 0 };
     }
   }
   if (opts && opts.jsonMode) {

@@ -203,6 +203,23 @@ const voice = {
     return true;
   },
 
+  isMobileTtsNetworkEnv: function () {
+    if (typeof state !== "undefined" && typeof state._forceMobileTtsBudget === "boolean") {
+      return state._forceMobileTtsBudget;
+    }
+    if (typeof detectTutorialDeviceMode === "function") {
+      if (detectTutorialDeviceMode() === "phone") return true;
+    }
+    try {
+      const ua = (typeof navigator !== "undefined" && navigator.userAgent) ? String(navigator.userAgent) : "";
+      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua)) return true;
+      const conn = (typeof navigator !== "undefined") && (navigator.connection || navigator.mozConnection || navigator.webkitConnection);
+      const effType = conn && conn.effectiveType ? String(conn.effectiveType).toLowerCase() : "";
+      if (effType === "slow-2g" || effType === "2g" || effType === "3g") return true;
+    } catch (e) {}
+    return false;
+  },
+
   probeLocalNeuralServer: async function () {
     if (this.localNeuralChecked) return this.localNeuralAvailable;
     this.localNeuralChecked = true;
@@ -1214,7 +1231,8 @@ const voice = {
 
     if (opts && typeof opts.onAudioReady === "function" && startOffset === 0) {
       try { opts.onAudioReady((opts.totalDurationHintMs || estPlayMs) + prepDelayMs); } catch (e) {}
-    } else if (audioBuf && audioBuf.duration && startOffset === 0 && !(opts && opts.skipTypewriterSync) && typeof syncTypewriterToAudioDuration === "function") {
+    }
+    if (audioBuf && audioBuf.duration && startOffset === 0 && !(opts && opts.skipTypewriterSync) && typeof syncTypewriterToAudioDuration === "function") {
       syncTypewriterToAudioDuration((opts && opts.totalDurationHintMs ? opts.totalDurationHintMs : estPlayMs) + prepDelayMs);
     }
 
@@ -1672,8 +1690,9 @@ const voice = {
 
     const self = this;
     const p = (async function () {
-      const geminiTtsTimeoutMs = clamp(11200 + cleanText.length * 45, 11400, 14500);
-      const trackATotalBudgetMs = clamp(11800 + cleanText.length * 30, 12000, 13800);
+      const isMobileNet = self.isMobileTtsNetworkEnv();
+      const geminiTtsTimeoutMs = isMobileNet ? 4200 : 5800;
+      const trackATotalBudgetMs = isMobileNet ? 4000 : 5500;
       const controller = (hasPersonalKey && typeof AbortController === "function") ? new AbortController() : null;
       const timer = controller ? setTimeout(function () { controller.abort(); }, geminiTtsTimeoutMs) : null;
       const callCloudTtsTrackA = async function () {
@@ -1704,15 +1723,17 @@ const voice = {
         let cloudRes = null;
         let cloudErr = null;
         try {
-          cloudRes = await postOnce(payload.taggedTranscript, Math.min(geminiTtsTimeoutMs, trackATotalBudgetMs));
+          cloudRes = await postOnce(payload.taggedTranscript, trackATotalBudgetMs);
         } catch (err1) {
           cloudErr = err1;
         }
+        let retryCount = 0;
         const shouldRetry = !cloudRes || cloudRes.status === 400 || cloudRes.status === 500 || cloudRes.status === 502 || cloudRes.status === 504;
-        const retryRemainMs = trackATotalBudgetMs - (Date.now() - trackAStartedAt) - 280;
-        if (shouldRetry && !(cloudErr && cloudErr.name === "AbortError") && retryRemainMs >= 3200) {
-          await new Promise(function (resolve) { setTimeout(resolve, 280); });
-          const attempt2TimeoutMs = Math.max(2800, trackATotalBudgetMs - (Date.now() - trackAStartedAt));
+        const retryRemainMs = trackATotalBudgetMs - (Date.now() - trackAStartedAt) - 160;
+        if (retryCount < 1 && shouldRetry && !(cloudErr && cloudErr.name === "AbortError") && retryRemainMs >= 1100) {
+          retryCount += 1;
+          await new Promise(function (resolve) { setTimeout(resolve, 160); });
+          const attempt2TimeoutMs = Math.max(950, trackATotalBudgetMs - (Date.now() - trackAStartedAt));
           try {
             cloudRes = await postOnce(strippedText, attempt2TimeoutMs);
             cloudErr = null;
@@ -1773,7 +1794,7 @@ const voice = {
             if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
           }
         }
-        // Track C: Direct browser Gemini TTS (3.8 Flash Lite -> 3.8 Flash -> 2.5 Flash Preview with stripped tags)
+        // Track C: Direct browser Gemini TTS (2.5 Flash Preview -> 3.1 Flash TTS Preview with stripped tags)
         if (!audioBytes && hasPersonalKey) {
           const strippedForFallback = self.stripGeminiVocalTags(cleanText) || cleanText;
           const ttsPrompt25 = payload.stylePrompt
@@ -1782,7 +1803,7 @@ const voice = {
           const fallbackVoiceMap = { Orus: "Puck", Enceladus: "Puck", Achird: "Charon", Iapetus: "Puck", Fenrir: "Puck", Leda: "Zephyr", Aoede: "Zephyr", Callirrhoe: "Zephyr", Autonoe: "Zephyr", Laomedeia: "Zephyr", Vindemiatrix: "Zephyr", Sulafat: "Zephyr" };
           const fbVoice = fallbackVoiceMap[payload.voiceName] || "";
           const hasTagsDiff = strippedForFallback !== payload.taggedTranscript;
-          const directModels = ["gemini-2.5-flash-preview-tts", "gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview"];
+          const directModels = ["gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview"];
           for (let mi = 0; mi < directModels.length && !audioBytes; mi++) {
             const directModelId = directModels[mi];
             const is38Direct = directModelId.indexOf("gemini-3.8-") === 0;

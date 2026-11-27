@@ -6702,7 +6702,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       el("showcaseProfileCard").innerHTML.includes("好人癖好");
     const showcaseCardOk = Boolean(cardHiddenHero && cardShownMobai);
     const diag17 = collectFeedbackDiagnostics();
-    const version17Ok = Boolean(diag17 && diag17.version === "v25.5.0");
+    const version17Ok = Boolean(diag17 && diag17.version === "v25.5.2");
 
     // 6. Standard Day-1 Werewolf Order: Sheriff Election FIRST, THEN Night-1 Death Reveal (+ Dead-Sheriff Transfer + Election Explode Settlement)
     el("selectModeCount").value = "8";
@@ -7181,7 +7181,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.5.0") && swSrcPerf.includes("sanhao-assets-v25.5.0") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.5.2") && swSrcPerf.includes("sanhao-assets-v25.5.0") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7584,7 +7584,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.5.0"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.5.2"') &&
     swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v25.5.0"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
@@ -8703,9 +8703,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const apiTtsHandler = (await import("../api/tts.js")).default;
   const docSpec2414 = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
   const readme2414 = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
-  const ttsBodyPrimary = apiTtsHandler._buildTtsRequestBody("gemini-3.8-flash-lite-tts", "Vindemiatrix", "清雅溫和", "測試語音", false);
-  const ttsBodyFallback = apiTtsHandler._buildTtsRequestBody("gemini-3.8-flash-lite-tts", "Vindemiatrix", "清雅溫和", "測試語音", true);
-  const ttsBodyLedaFb = apiTtsHandler._buildTtsRequestBody("gemini-3.8-flash-lite-tts", "Leda", "", "測試語音", true);
+  const ttsBodyPrimary = apiTtsHandler._buildTtsRequestBody("gemini-2.5-flash-preview-tts", "Vindemiatrix", "清雅溫和", "測試語音", false);
+  const ttsBodyFallback = apiTtsHandler._buildTtsRequestBody("gemini-2.5-flash-preview-tts", "Vindemiatrix", "清雅溫和", "測試語音", true);
+  const ttsBodyLedaFb = apiTtsHandler._buildTtsRequestBody("gemini-2.5-flash-preview-tts", "Leda", "", "測試語音", true);
 
   // api/tts.js handler security checks (origin, prod localhost, 415, 413, IP-first session-flood rate limit)
   const runTtsHandler = async (method, headers, body) => {
@@ -8878,10 +8878,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     specSyncedModelsAndCacheOk:
       docSpec2414.includes("gemini-4-hydrogen") &&
       docSpec2414.includes("api/tts.js") &&
-      docSpec2414.includes("sanhao-shell-v25.5.0") &&
+      docSpec2414.includes("sanhao-shell-v25.5.2") &&
       docSpec2414.length <= 5000,
     readmeSyncedOk:
-      readme2414.includes("sanhao-shell-v25.5.0") &&
+      readme2414.includes("sanhao-shell-v25.5.2") &&
       readme2414.includes("api/tts.js"),
     ...v24214Runtime
   };
@@ -9530,8 +9530,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     !aiHtml244.includes("sm:grid-cols-7") &&
     cssComp244.includes(".track-grid");
 
-  const body38 = apiTtsHandler244._buildTtsRequestBody(
-    "gemini-3.8-flash-lite-tts",
+  const bodyPrimary25 = apiTtsHandler244._buildTtsRequestBody(
+    "gemini-2.5-flash-preview-tts",
     "Aoede",
     "溫婉從容",
     "早安，<breath> 請喝茶。<short pause> 慢慢說。",
@@ -9545,11 +9545,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     false
   );
   const tts38KeepsTagsOk = Boolean(
-    body38 &&
-    body38.contents[0].parts[0].text.includes("<breath>") &&
-    body38.contents[0].parts[0].text.includes("<short pause>") &&
-    body38.contents[0].parts[0].speechMetadata &&
-    body38.contents[0].parts[0].speechMetadata.style === "溫婉從容"
+    bodyPrimary25 &&
+    bodyPrimary25.contents[0].parts[0].text.includes("早安") &&
+    !bodyPrimary25.contents[0].parts[0].text.includes("<breath>") &&
+    !bodyPrimary25.contents[0].parts[0].speechMetadata
   );
   const tts25StripsTagsOk = Boolean(
     body25 &&
@@ -9558,8 +9557,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     body25.contents[0].parts[0].text.includes("早安") &&
     !body25.contents[0].parts[0].speechMetadata
   );
-  const bodyFallback38 = apiTtsHandler244._buildTtsRequestBody(
-    "gemini-3.8-flash-tts",
+  const bodyFallback31 = apiTtsHandler244._buildTtsRequestBody(
+    "gemini-3.1-flash-tts-preview",
     "Fenrir",
     "堅定清晰",
     "早安，<breath> 請投五號。",
@@ -9568,10 +9567,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const ttsFallbackOrderOk =
     Array.isArray(apiTtsHandler244._TTS_FALLBACK_ORDER) &&
     apiTtsHandler244._TTS_FALLBACK_ORDER[0] === "gemini-2.5-flash-preview-tts" &&
-    apiTtsHandler244._TTS_FALLBACK_ORDER[1] === "gemini-3.8-flash-lite-tts" &&
-    apiTtsHandler244._TTS_FALLBACK_ORDER[2] === "gemini-3.8-flash-tts" &&
-    bodyFallback38.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === "Puck" &&
-    !bodyFallback38.contents[0].parts[0].text.includes("<breath>");
+    apiTtsHandler244._TTS_FALLBACK_ORDER[1] === "gemini-3.1-flash-tts-preview" &&
+    apiTtsHandler244._TTS_FALLBACK_ORDER.length === 2 &&
+    bodyFallback31.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === "Puck" &&
+    !bodyFallback31.contents[0].parts[0].text.includes("<breath>");
 
   let tts400NoCooldownOk = false;
   const origFetch244 = globalThis.fetch;
@@ -9609,7 +9608,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     await apiTtsHandler244(fakeReq, fakeRes);
     tts400NoCooldownOk = Boolean(
       fakeRes.statusCode === 200 &&
-      fakeHeaders["X-TTS-Model"] === "gemini-3.8-flash-lite-tts" &&
+      fakeHeaders["X-TTS-Model"] === "gemini-3.1-flash-tts-preview" &&
       !apiTtsHandler244._isModelCoolingDown("gemini-2.5-flash-preview-tts", Date.now())
     );
   } finally {
@@ -10694,10 +10693,12 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     apiGem2441._resetRateLimit();
   }
 
-  // 4. api/tts.js 4-model 400 RPD expansion + 429 cooldown
+  // 4. api/tts.js clean 2-model fallback (no nonexistent 3.8 TTS) + 429 cooldown
   const apiTts2441 = (await import("../api/tts.js")).default;
   const tts4SlotOrderOk = Array.isArray(apiTts2441._TTS_FALLBACK_ORDER) &&
-    apiTts2441._TTS_FALLBACK_ORDER[3] === "gemini-3.1-flash-tts-preview";
+    apiTts2441._TTS_FALLBACK_ORDER[0] === "gemini-2.5-flash-preview-tts" &&
+    apiTts2441._TTS_FALLBACK_ORDER[1] === "gemini-3.1-flash-tts-preview" &&
+    apiTts2441._TTS_FALLBACK_ORDER.length === 2;
 
   let tts429CooldownOk = false;
   const origFetchTts = globalThis.fetch;
@@ -10734,7 +10735,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     await apiTts2441(tReq, tRes);
     tts429CooldownOk = Boolean(
       tRes.statusCode === 200 &&
-      tHeaders["X-TTS-Model"] === "gemini-3.8-flash-lite-tts" &&
+      tHeaders["X-TTS-Model"] === "gemini-3.1-flash-tts-preview" &&
       apiTts2441._isModelCoolingDown("gemini-2.5-flash-preview-tts", Date.now())
     );
   } finally {
@@ -10988,4 +10989,294 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 Release-Freeze E2E smoke test PASSED!");
+// ==================== v25.5.2 NIGHT/DAWN CURTAIN SYNC, ROLE-DEAL GATE & MOBILE LATENCY FIXES ====================
+{
+  const votingSrc2552 = fs.readFileSync(path.join(ROOT, "js/game/voting.js"), "utf8");
+  const voiceSrc2552 = fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8");
+  const ttsSrc2552 = fs.readFileSync(path.join(ROOT, "api/tts.js"), "utf8");
+  const apiGem2552 = (await import("../api/gemini.js")).default;
+  const apiTts2552 = (await import("../api/tts.js")).default;
+
+  // 1. Gemini 2.5 Flash & Flash-Lite thinkingBudget === 0
+  const gem25FlashCfg = apiGem2552._buildGenerationConfig("gemini-2.5-flash", true, 0.65);
+  const gem25LiteCfg = apiGem2552._buildGenerationConfig("gemini-2.5-flash-lite", false, 0.72);
+  const apiThinkingZeroOk = Boolean(
+    gem25FlashCfg && gem25FlashCfg.thinkingConfig && gem25FlashCfg.thinkingConfig.thinkingBudget === 0 &&
+    gem25LiteCfg && gem25LiteCfg.thinkingConfig && gem25LiteCfg.thinkingConfig.thinkingBudget === 0
+  );
+
+  // 2. Nonexistent 3.8 TTS models removed from api/tts.js & js/audio/voice.js
+  const no38TtsModelsOk = Boolean(
+    !ttsSrc2552.includes("gemini-3.8-flash-lite-tts") &&
+    !ttsSrc2552.includes("gemini-3.8-flash-tts") &&
+    !voiceSrc2552.includes("gemini-3.8-flash-lite-tts") &&
+    !voiceSrc2552.includes("gemini-3.8-flash-tts") &&
+    Array.isArray(apiTts2552._TTS_FALLBACK_ORDER) &&
+    apiTts2552._TTS_FALLBACK_ORDER.length === 2
+  );
+
+  // 3. Post-vote -> night timeout reduced to 1800ms (zero 4000/4200/5000ms delays left on beginNightPhase)
+  const shortVoteNightOk = Boolean(
+    !/setTimeout\([^;]{0,180}beginNightPhase[^;]{0,80}(?:4000|4200|5000)\)/.test(votingSrc2552) &&
+    (votingSrc2552.match(/ff(?:Tie|Eld|AfterLw|Out)\s*\?\s*6(?:00|50)\s*:\s*1800/g) || []).length === 4
+  );
+
+  // 4. Frontend direct callGeminiModelOnce injects thinkingConfig: { thinkingBudget: 0 } for 2.5 Flash / Lite
+  const prevFetch2552 = globalThis.fetch;
+  const gemDirectPayloads = [];
+  ctx.fetch = async function (_url, init) {
+    gemDirectPayloads.push(JSON.parse(init.body));
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: "測試回應。" }] } }] })
+    };
+  };
+  await vm.runInContext(`(async () => {
+    await callGeminiModelOnce("gemini-2.5-flash", "你好", 5000, { apiKey: "dummy-key", jsonMode: true });
+    await callGeminiModelOnce("gemini-2.5-flash-lite", "你好", 5000, { apiKey: "dummy-key", jsonMode: false });
+  })()`, ctx);
+  const frontendThinkingZeroOk = Boolean(
+    gemDirectPayloads.length === 2 &&
+    gemDirectPayloads.every(p => p && p.generationConfig && p.generationConfig.thinkingConfig && p.generationConfig.thinkingConfig.thinkingBudget === 0)
+  );
+
+  // 5. Mobile Track A TTS timeout (~4000ms mobile / ~5500ms desktop) with at most 1 retry
+  let ttsAttemptUrls = [];
+  ctx.fetch = async function (url) {
+    ttsAttemptUrls.push(String(url));
+    return { ok: false, status: 502, arrayBuffer: async () => new ArrayBuffer(0) };
+  };
+  const mobileTtsBudgetOk = await vm.runInContext(`(async () => {
+    const prevMobileFlag = state._forceMobileTtsBudget;
+    const prevStatic = voice.isStaticCloudHost;
+    const prevAvail = voice.cloudGeminiTtsAvailable;
+    const prevOptOut = state.serverGeminiOptOut;
+    const prevCooldown = voice.cloudGeminiTtsCooldownUntil;
+    const prevKey = state.geminiApiKey;
+    const prevSetTimeout = setTimeout;
+    const prevCtx = sound.ctx;
+    try {
+      state.geminiApiKey = "";
+      state.serverGeminiOptOut = false;
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      voice.cloudGeminiTtsAvailable = true;
+      voice.isStaticCloudHost = () => true;
+      sound.ctx = { sampleRate: 24000, currentTime: 0 };
+      setTimeout = function (fn, ms) {
+        if (ms <= 200) { fn(); }
+        return 1;
+      };
+      state._forceMobileTtsBudget = true;
+      await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["暖暖"], "暖暖", "測試短句。", "normal");
+      const mobileCapsOk = voice.isMobileTtsNetworkEnv() === true;
+      state._forceMobileTtsBudget = false;
+      const desktopCapsOk = voice.isMobileTtsNetworkEnv() === false;
+      return mobileCapsOk && desktopCapsOk;
+    } finally {
+      state._forceMobileTtsBudget = prevMobileFlag;
+      voice.isStaticCloudHost = prevStatic;
+      voice.cloudGeminiTtsAvailable = prevAvail;
+      state.serverGeminiOptOut = prevOptOut;
+      voice.cloudGeminiTtsCooldownUntil = prevCooldown;
+      state.geminiApiKey = prevKey;
+      setTimeout = prevSetTimeout;
+      sound.ctx = prevCtx;
+    }
+  })()`, ctx);
+  ctx.fetch = prevFetch2552;
+  const ttsMaxOneRetryOk = ttsAttemptUrls.length === 2 && ttsAttemptUrls.every(u => u === "/api/tts");
+
+  // 6. Role-deal card gate, async curtain occlusion peak, no duplicate Day-1 Sheriff Dawn curtain, staggered prefetch & post-player instant prefetch
+  const v2552Runtime = await vm.runInContext(`(async () => {
+    const origSetTimeout = setTimeout;
+    const origClearTimeout = clearTimeout;
+    const queue = [];
+    let tidSeq = 100;
+    const flushTimers = function (minDelayFilter) {
+      let ran = 0;
+      for (let i = 0; i < queue.length; i++) {
+        const item = queue[i];
+        if (!item.active) continue;
+        if (typeof minDelayFilter === "number" && item.ms !== minDelayFilter) continue;
+        item.active = false;
+        ran += 1;
+        item.fn();
+      }
+      return ran;
+    };
+    setTimeout = function (fn, ms) {
+      const id = ++tidSeq;
+      queue.push({ id: id, fn: fn, ms: Number(ms) || 0, active: true });
+      return id;
+    };
+    clearTimeout = function (id) {
+      queue.forEach(item => { if (item.id === id) item.active = false; });
+    };
+
+    const origPlayCurtain = playSkyCurtain;
+    const curtainLog = [];
+    playSkyCurtain = function (mode, icon, title, sub, opts) {
+      curtainLog.push({ mode: mode, title: title, sub: sub });
+      return origPlayCurtain(mode, icon, title, sub, opts);
+    };
+
+    let roleDealGatesNight1Ok = false;
+    let roleDealEpochGuardOk = false;
+    let curtainPeakPromiseAndCancelOk = false;
+    let sheriffDawnNoDuplicateCurtainOk = false;
+    let staggeredPrefetchOk = false;
+    let postPlayerPrefetchInstantOk = false;
+
+    try {
+      state._forceRoleDealGate = true;
+      state._forceAsyncSkyCurtain = true;
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "seer";
+      el("chkSheriffMode").checked = true;
+
+      // A. Role deal card must gate Night 1 until confirmed
+      startNewGame();
+      const stayedInLobbyOnDeal = Boolean(
+        state.match.day === 0 &&
+        state.match.phase === "LOBBY" &&
+        !el("roleDealOverlay").classList.contains("hidden") &&
+        curtainLog.length === 0
+      );
+      el("btnRoleDealConfirm").click();
+      const enteredNight1AfterClose = Boolean(state.match.day === 1 && curtainLog.length === 1 && curtainLog[0].mode === "night");
+      // Before curtain peak fires, Night action panel / NIGHT_SEER is not open yet; after peak fires, Night roles start
+      const waitingCurtainPeakBeforeNight = !isNightPhase(state.match.phase) && el("panelTargetAction").classList.contains("hidden");
+      flushTimers();
+      roleDealGatesNight1Ok = Boolean(stayedInLobbyOnDeal && enteredNight1AfterClose && waitingCurtainPeakBeforeNight && isNightPhase(state.match.phase));
+
+      // B. Stale matchEpoch & clearTransientMatchTimers block stale role-deal & curtain callbacks
+      startNewGame();
+      orchestrator.beginNewEpoch("stale_deal_check");
+      el("btnRoleDealConfirm").click();
+      const blockedByEpoch = state.match.day === 0 && state.match.phase === "LOBBY";
+      let stalePeakFired = false;
+      const cancelPromise = origPlayCurtain("day", "", "測試天亮", "", function () { stalePeakFired = true; });
+      clearTransientMatchTimers();
+      flushTimers();
+      const cancelResolvedFalse = (await cancelPromise) === false && !stalePeakFired;
+      roleDealEpochGuardOk = blockedByEpoch && cancelResolvedFalse;
+
+      // C. playSkyCurtain Promise resolves true at occlusion peak & Day-1 Sheriff -> Dawn plays ONLY 1 Dawn curtain
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      flushTimers();
+      let promisePeakDone = false;
+      const okCurtainP = origPlayCurtain("night", "", "峰值測試", "", function () { promisePeakDone = true; });
+      flushTimers();
+      curtainPeakPromiseAndCancelOk = Boolean((await okCurtainP) === true && promisePeakDone);
+
+      curtainLog.length = 0;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      flushTimers(); // enters Night 1 (1 night curtain)
+      getPlayerSeat().alive = false; // auto-completes Day-1 Sheriff election and transitions cleanly into resolveDawn announcement
+      state.match.nightState = { wolfTarget: 2, guardTarget: null, seerTarget: null, witchSaved: false, witchPoisonTarget: null };
+      curtainLog.length = 0;
+      resolveDawn();
+      const waitedBeforeSheriff = Boolean(curtainLog.length === 1 && curtainLog[0].mode === "day" && state.match.sheriffElectionPending === true);
+      flushTimers(); // peaks Dawn 1 -> runs startSheriffElection -> auto-finishes -> calls resolveDawn() post-Sheriff directly!
+      const day1DawnCurtains = curtainLog.filter(c => c.mode === "day");
+      sheriffDawnNoDuplicateCurtainOk = Boolean(waitedBeforeSheriff && day1DawnCurtains.length === 1);
+
+      // D. Staggered next-AI prefetch & instant post-player AI prefetch
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      flushTimers();
+      state.match.phase = "DAY_SPEECH";
+      state.match.day = 1;
+      state.match.speechQueue = [3, 4];
+      state.activeSpeakerId = 2;
+      state.speakingInFlight = false;
+      state.match._prefetchedSpeech = null;
+      const sp2 = getSeat(2);
+      const origSpeakChar = voice.speakCharacter;
+      const origCanSpeak = voice.canSpeak;
+      const origPfAi = prefetchNextAiSpeech;
+      const origIsFree = isSpectatorFastForward;
+      let capturedSpeakOpts = null;
+      const pfTriggers = [];
+      try {
+        isSpectatorFastForward = () => false;
+        voice.canSpeak = () => true;
+        voice.speakCharacter = function (_sp, _txt, _mood, _onDone, opts) {
+          capturedSpeakOpts = opts || null;
+        };
+        prefetchNextAiSpeech = function (opts) {
+          pfTriggers.push(opts || {});
+          return origPfAi(opts);
+        };
+        await executeAiTurnSpeech(sp2);
+        const notFiredSameMs = pfTriggers.length === 0 && Boolean(state._deferredPrefetchTimer);
+        if (capturedSpeakOpts && typeof capturedSpeakOpts.onAudioReady === "function") {
+          capturedSpeakOpts.onAudioReady(1200);
+        }
+        const firedOnAudioReadyOnce = pfTriggers.length === 1 && state._deferredPrefetchTimer === null;
+        // Also test 900ms timer path + clearTransientMatchTimers cleanup
+        pfTriggers.length = 0;
+        const cb900 = scheduleStaggeredNextSpeechPrefetch(orchestrator.matchEpoch, state._speechTurnSeq);
+        const armed900 = Boolean(state._deferredPrefetchTimer && typeof cb900 === "function");
+        clearTransientMatchTimers();
+        flushTimers(900);
+        const clearedCleanly = pfTriggers.length === 0 && state._deferredPrefetchTimer === null;
+        staggeredPrefetchOk = Boolean(notFiredSameMs && firedOnAudioReadyOnce && armed900 && clearedCleanly);
+
+        // E. submitPlayerSpeech immediately bumps rev, purges stale cache & triggers highPriority next-AI prefetch
+        pfTriggers.length = 0;
+        state.match.phase = "DAY_PLAYER_TURN";
+        state.activeSpeakerId = getPlayerId();
+        state.match.speechQueue = [5, 6];
+        const staleObj = { key: "stale_before_player_send", seatId: 5, epoch: orchestrator.matchEpoch, resolvedMeta: { text: "old" } };
+        state.match._prefetchedSpeech = staleObj;
+        const revPreSubmit = state.match.tableStateRev || 0;
+        el("quickFreeInput").value = "我懷疑 4號 剛剛說話有點急，大家多留意 4號。";
+        submitPlayerSpeech();
+        postPlayerPrefetchInstantOk = Boolean(
+          (state.match.tableStateRev || 0) > revPreSubmit &&
+          state.match._prefetchedSpeech !== staleObj &&
+          pfTriggers.some(o => o && o.highPriority === true)
+        );
+      } finally {
+        voice.speakCharacter = origSpeakChar;
+        voice.canSpeak = origCanSpeak;
+        prefetchNextAiSpeech = origPfAi;
+        isSpectatorFastForward = origIsFree;
+      }
+    } finally {
+      state._forceRoleDealGate = false;
+      state._forceAsyncSkyCurtain = false;
+      playSkyCurtain = origPlayCurtain;
+      setTimeout = origSetTimeout;
+      clearTimeout = origClearTimeout;
+      clearStepTimer();
+      clearTransientMatchTimers();
+      resetMatchToLobby();
+    }
+
+    return {
+      roleDealGatesNight1Ok,
+      roleDealEpochGuardOk,
+      curtainPeakPromiseAndCancelOk,
+      sheriffDawnNoDuplicateCurtainOk,
+      staggeredPrefetchOk,
+      postPlayerPrefetchInstantOk
+    };
+  })()`, ctx);
+
+  const all2552 = Object.assign(
+    { apiThinkingZeroOk, frontendThinkingZeroOk, no38TtsModelsOk, shortVoteNightOk, mobileTtsBudgetOk, ttsMaxOneRetryOk },
+    v2552Runtime
+  );
+  for (const [k, v] of Object.entries(all2552)) {
+    if (!v) {
+      throw new Error("v25.5.2 Night/Dawn Curtain & Mobile Latency regression failed for " + k + ": " + JSON.stringify(all2552));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 + v25.5.2 Release-Freeze E2E smoke test PASSED!");

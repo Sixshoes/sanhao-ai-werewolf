@@ -384,11 +384,11 @@ def strip_gemini_vocal_tags(raw_text):
 
 
 def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=14):
-    """Call official Gemini TTS generateContent API (3.8 Flash Lite -> 3.8 Flash -> 2.5 Flash Preview); return RIFF WAV bytes."""
+    """Call official Gemini TTS generateContent API (2.5 Flash Preview -> 3.1 Flash TTS Preview); return RIFF WAV bytes."""
     import base64
     v_name = voice_name if voice_name in ALLOWED_GEMINI_VOICES else "Kore"
     fb_v = GEMINI_TTS_VOICE_FALLBACK.get(v_name)
-    models_to_try = ("gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview")
+    models_to_try = ("gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview")
     last_err = None
     raw_text = str(text)
     stripped_text = strip_gemini_vocal_tags(raw_text) or raw_text
@@ -533,6 +533,8 @@ def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeo
         gen_cfg["temperature"] = clamp_gemini_temperature(temperature)
         if is_pro25:
             gen_cfg["thinkingConfig"] = {"thinkingBudget": 512}
+        elif safe_model in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+            gen_cfg["thinkingConfig"] = {"thinkingBudget": 0}
     if json_mode:
         gen_cfg["responseMimeType"] = "application/json"
     body = json.dumps({

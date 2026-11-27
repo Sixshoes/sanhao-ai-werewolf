@@ -743,8 +743,9 @@ function startSpotlightTypewriter(opts) {
       const tTxt = el("spotlightTraitTag") ? el("spotlightTraitTag").textContent : "";
       syncSpeakerBannerVisuals(curSp, bTxt, tTxt, false);
       maybeScheduleAutoAdvanceAfterSpeech();
-    });
+    }, { onAudioReady: opts.onAudioReady });
   } else {
+    if (typeof opts.onAudioReady === "function") opts.onAudioReady(0);
     commitPendingSpeechLog(speaker ? speaker.id : null);
     maybeScheduleAutoAdvanceAfterSpeech();
   }

@@ -243,13 +243,20 @@ const indieFlow = {
     }, 200);
   },
 
-  showRoleDealRitual: function (roleKey) {
+  showRoleDealRitual: function (roleKey, onClosed) {
     this.onRoleDealClosed = null;
     const ov = el("roleDealOverlay");
     const pSelf = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
     const effKey = (pSelf && typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(pSelf) : null) || roleKey;
     const rDef = ROLE_DEFS[effKey] || ROLE_DEFS[roleKey];
-    if (!ov || !rDef) return;
+    if (!ov || !rDef) return false;
+    const dealEpoch = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+    this.onRoleDealClosed = (typeof onClosed === "function")
+      ? function () {
+        if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(dealEpoch)) return;
+        onClosed();
+      }
+      : null;
     if (this.dealTimer) {
       clearTimeout(this.dealTimer);
       this.dealTimer = null;
@@ -323,6 +330,7 @@ const indieFlow = {
       self.dealUnsealTimer = null;
       self.unsealRoleDealCard();
     }, Math.round(1350 * clamp(pacingMul, 0.7, 1.3)));
+    return true;
   },
 
   hideRoleDealRitual: function (opts) {

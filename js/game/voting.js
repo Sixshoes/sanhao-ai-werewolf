@@ -523,7 +523,12 @@ function finalizeVoteRound(playerTargetId) {
       const ffTie = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
       if (!ffTie) voice.speakHost("開票完成，本輪平票沒有人出局，請點擊進入夜晚。");
       if (state.autoPlay || ffTie) {
-        state.stepTimer = setTimeout(beginNightPhase, ffTie ? 600 : 4000);
+        const epVoteTie = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+        state.stepTimer = setTimeout(function () {
+          if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epVoteTie)) return;
+          if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
+          beginNightPhase();
+        }, ffTie ? 600 : 1800);
       }
       return;
     }
@@ -570,7 +575,12 @@ function finalizeVoteRound(playerTargetId) {
       const ffEld = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
       if (!ffEld) voice.speakHost(outSeat.id + "號" + outSeat.name + "亮出清心長老身分免於離席！請點擊進入夜晚。");
       if (state.autoPlay || ffEld) {
-        state.stepTimer = setTimeout(beginNightPhase, ffEld ? 600 : 4000);
+        const epVoteEld = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+        state.stepTimer = setTimeout(function () {
+          if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epVoteEld)) return;
+          if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
+          beginNightPhase();
+        }, ffEld ? 600 : 1800);
       }
       return;
     }
@@ -669,7 +679,12 @@ function finalizeVoteRound(playerTargetId) {
           }
           const ffAfterLw = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
           if (state.autoPlay || ffAfterLw) {
-            state.stepTimer = setTimeout(beginNightPhase, ffAfterLw ? 650 : 4200);
+            const epVoteLw = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+            state.stepTimer = setTimeout(function () {
+              if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epVoteLw)) return;
+              if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
+              beginNightPhase();
+            }, ffAfterLw ? 650 : 1800);
           }
         });
         return;
@@ -697,7 +712,12 @@ function finalizeVoteRound(playerTargetId) {
       state.match.phase = "DAY_VOTE_RESULT";
       updateAllUI();
       if (state.autoPlay || ffOut) {
-        state.stepTimer = setTimeout(beginNightPhase, ffOut ? 650 : 5000);
+        const epVoteOut = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+        state.stepTimer = setTimeout(function () {
+          if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epVoteOut)) return;
+          if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
+          beginNightPhase();
+        }, ffOut ? 650 : 1800);
       }
     }
 
@@ -1505,6 +1525,8 @@ function triggerWolfSelfExplode(seatId, opts) {
   // 1. Cleanly abort every active timer, TTS stream, typewriter, prefetch, and in-flight LLM callback!
   clearStepTimer();
   clearBlitzVoteTimer();
+  if (typeof clearSkyCurtainTimer === "function") clearSkyCurtainTimer(false);
+  if (typeof clearDeferredSpeechPrefetchTimer === "function") clearDeferredSpeechPrefetchTimer();
   closeHopeConfrontationModal();
   if (typeof clearWolfScreenTacticTimer === "function") clearWolfScreenTacticTimer();
   if (typeof stopTypewriterOnly === "function") stopTypewriterOnly();

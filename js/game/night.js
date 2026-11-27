@@ -347,8 +347,12 @@ function beginNightPhase() {
   state.match.nightState = { guardTarget: null, wolfTarget: null, seerTarget: null, witchSaved: false, witchPoisonTarget: null };
 
   sound.playNight();
-  if (state.match.day > 1) {
-    playSkyCurtain("night", "", formatNightOrdinalZh(state.match.day), "");
+  ["panelTargetAction", "panelVote", "panelVoteResult", "panelPlayerSpeech"].forEach(function (pidEl) {
+    if (el(pidEl)) el(pidEl).classList.add("hidden");
+  });
+  if (typeof document !== "undefined" && document.body && document.body.classList) {
+    document.body.classList.remove("theme-twilight", "theme-day", "theme-daylight");
+    document.body.classList.add("theme-night");
   }
   addLog({ kind: "night", title: "第 " + state.match.day + "晚・天黑行動", text: "" });
 
@@ -361,31 +365,38 @@ function beginNightPhase() {
     proceedToNightWolf();
   };
 
-  const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
-  const ffNow = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const epNight = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const nightSub = state.match.day === 1 ? "天黑請閉眼・首夜行動開始" : "";
+  playSkyCurtain("night", "", formatNightOrdinalZh(state.match.day), nightSub, function () {
+    if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epNight)) return;
+    if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
 
-  // v16.0 Eliminated spectator gets a 5s Spirit Intuition Bet before Night resolution!
-  if (isBrowserUi && !ffNow && typeof openSpiritRoundBet === "function" && state.match.day >= 2) {
-    const canOpenNightBet = (typeof isSpectatorGuessActive !== "function" || isSpectatorGuessActive())
-      && !(typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive())
-      && getAliveSeats().length >= 2;
-    if (canOpenNightBet) {
-      if (!isNightPhase(state.match.phase)) {
-        state.match.phase = "NIGHT_WOLF";
-        if (typeof orchestrator !== "undefined") {
-          orchestrator.emit("phase:changed", { phase: "NIGHT_WOLF", day: state.match.day });
+    const isBrowserUi = typeof window !== "undefined" && typeof window.matchMedia === "function";
+    const ffNow = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+
+    // v16.0 Eliminated spectator gets a 5s Spirit Intuition Bet before Night resolution!
+    if (isBrowserUi && !ffNow && typeof openSpiritRoundBet === "function" && state.match.day >= 2) {
+      const canOpenNightBet = (typeof isSpectatorGuessActive !== "function" || isSpectatorGuessActive())
+        && !(typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive())
+        && getAliveSeats().length >= 2;
+      if (canOpenNightBet) {
+        if (!isNightPhase(state.match.phase)) {
+          state.match.phase = "NIGHT_WOLF";
+          if (typeof orchestrator !== "undefined") {
+            orchestrator.emit("phase:changed", { phase: "NIGHT_WOLF", day: state.match.day });
+          }
         }
+        if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") {
+          stage3d.clearCloseUp();
+        }
+        updateAllUI();
+        const openedNightBet = openSpiritRoundBet("night_kill", runNightRoles);
+        if (openedNightBet) return;
       }
-      if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") {
-        stage3d.clearCloseUp();
-      }
-      updateAllUI();
-      const openedNightBet = openSpiritRoundBet("night_kill", runNightRoles);
-      if (openedNightBet) return;
     }
-  }
-  // Post-vote -> next-day pacing: skip automatic Candlelit Night Review so non-acting roles proceed swiftly to dawn
-  runNightRoles();
+    // Post-vote -> next-day pacing: skip automatic Candlelit Night Review so non-acting roles proceed swiftly to dawn
+    runNightRoles();
+  });
 }
 
 function chooseAiGuardTarget(guardSeat, rngVal) {
@@ -1007,13 +1018,19 @@ function resolveDawn() {
   // 標準狼人殺規則：第 1 天若啟用警長制度，天亮先「上警競選」，全員在席完成競選後才公布首夜倒牌／平安夜！
   if (state.match.day === 1 && state.sheriffMode && state.match.sheriffElectionPending && typeof startSheriffElection === "function") {
     sound.playDawn();
+    if (el("panelTargetAction")) el("panelTargetAction").classList.add("hidden");
     state.match.pendingDawnAfterSheriff = true;
     state.match.dawnAfterSheriffRan = true;
-    playSkyCurtain("day", "", formatDayOrdinalZh(1), "天亮請睜眼・先進行上警競選");
-    startSheriffElection(function () {
-      if (!state.match.started || state.match.phase === "GAME_OVER") return;
-      state.match.pendingDawnAfterSheriff = false;
-      resolveDawn();
+    const epDawnSh = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+    playSkyCurtain("day", "", formatDayOrdinalZh(1), "天亮請睜眼・先進行上警競選", function () {
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epDawnSh)) return;
+      if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
+      startSheriffElection(function () {
+        if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epDawnSh)) return;
+        if (!state.match.started || state.match.phase === "GAME_OVER") return;
+        state.match.pendingDawnAfterSheriff = false;
+        resolveDawn();
+      });
     });
     return;
   }
@@ -1023,6 +1040,7 @@ function resolveDawn() {
   state.match.dawnAfterSheriffRan = false;
   if (!afterPreDawnSheriff) {
     sound.playDawn();
+    if (el("panelTargetAction")) el("panelTargetAction").classList.add("hidden");
   }
   if (typeof orchestrator !== "undefined") orchestrator.emit("phase:changed", { phase: "DAWN_RESOLVE", day: state.match.day });
 
@@ -1132,6 +1150,7 @@ function resolveDawn() {
 
   let hunterTriggeredSeat = null;
   let dawnVoiceLine = "";
+  let dawnCurtainSub = "";
   state.match.lastNightCasualties = casualties.map(function (c) { return c.id; });
   state.match.seats.forEach(function (s) { s.publicVoteIntent = null; });
   if (casualties.length === 0) {
@@ -1141,11 +1160,10 @@ function resolveDawn() {
       addLog({ kind: "dawn", title: "警長競選結束，公布昨夜結果：昨晚平安夜！沒人出局", text: "" });
       dawnVoiceLine = "警長競選結束！現在公布昨夜結果，昨晚是平安夜，沒有人出局，準備開始輪流發言。";
     } else {
-      playSkyCurtain("day", "", formatDayOrdinalZh(state.match.day), "昨夜平安，全員在場");
+      dawnCurtainSub = "昨夜平安，全員在場";
       addLog({ kind: "dawn", title: "天亮了：昨晚平安夜！沒人出局", text: "" });
       dawnVoiceLine = "第" + state.match.day + "天，天亮請睜眼！昨晚是平安夜，沒有人出局，現在開始輪流發言。";
     }
-    if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation([]);
   } else {
     casualties.forEach(function (c) {
       const seat = getSeat(c.id);
@@ -1155,13 +1173,12 @@ function resolveDawn() {
     });
     triggerShake(260);
     state.match.harmonyScore = clamp(state.match.harmonyScore - 6 * casualties.length, 0, 100);
-    if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation(casualties);
     const noLwTag = state.match.day >= 2 ? "（第2夜起夜間離席一律覆杯閉麥、無遺言）" : "（首夜離席保留遺言）";
     if (afterPreDawnSheriff) {
       addLog({ kind: "dawn", title: "警長競選結束，公布首夜倒牌：" + names.join("、") + " 昨夜離席冷靜" + noLwTag, text: "" });
       dawnVoiceLine = "警長競選結束！現在公布昨夜結果，昨晚" + names.join("、") + "首夜倒牌離席，請發表首夜遺言。";
     } else {
-      playSkyCurtain("day", "", formatDayOrdinalZh(state.match.day), "昨夜 " + names.join("、") + " 離席" + (state.match.day >= 2 ? "・覆杯無遺言" : ""));
+      dawnCurtainSub = "昨夜 " + names.join("、") + " 離席" + (state.match.day >= 2 ? "・覆杯無遺言" : "");
       addLog({ kind: "dawn", title: "天亮了：" + names.join("、") + " 昨夜離席冷靜" + noLwTag, text: "" });
       dawnVoiceLine = "第" + state.match.day + "天，天亮請睜眼！昨晚" + names.join("、") + "離席冷靜了。" + (state.match.day >= 2 ? "第2夜起夜間離席一律無遺言，直接覆杯閉麥。" : "請發表首夜遺言。");
     }
@@ -1287,16 +1304,30 @@ function resolveDawn() {
     enterDayDiscussionWithSheriffHooks(dawnVoiceLine);
   }
 
-  if (checkAndHandleGameOver()) return;
-  const skipPreElectionSheriffPass = Boolean(state.match.day === 1 && state.match.sheriffElectionPending);
-  const deadShSeat = (!skipPreElectionSheriffPass && state.match.sheriffSeatId && fallenIds.indexOf(state.match.sheriffSeatId) !== -1)
-    ? getSeat(state.match.sheriffSeatId)
-    : null;
-  if (deadShSeat && typeof handleSheriffEliminated === "function") {
-    handleSheriffEliminated(deadShSeat, continueAfterDawnSheriff);
-    return;
+  const finishDawnTransition = function () {
+    if (typeof triggerDawnCasualtyPresentation === "function") triggerDawnCasualtyPresentation(casualties);
+    if (checkAndHandleGameOver()) return;
+    const skipPreElectionSheriffPass = Boolean(state.match.day === 1 && state.match.sheriffElectionPending);
+    const deadShSeat = (!skipPreElectionSheriffPass && state.match.sheriffSeatId && fallenIds.indexOf(state.match.sheriffSeatId) !== -1)
+      ? getSeat(state.match.sheriffSeatId)
+      : null;
+    if (deadShSeat && typeof handleSheriffEliminated === "function") {
+      handleSheriffEliminated(deadShSeat, continueAfterDawnSheriff);
+      return;
+    }
+    continueAfterDawnSheriff();
+  };
+
+  if (afterPreDawnSheriff) {
+    finishDawnTransition();
+  } else {
+    const epDawn = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+    playSkyCurtain("day", "", formatDayOrdinalZh(state.match.day), dawnCurtainSub, function () {
+      if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epDawn)) return;
+      if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
+      finishDawnTransition();
+    });
   }
-  continueAfterDawnSheriff();
 }
 
 function settleNightCasualtiesOnElectionExplode() {

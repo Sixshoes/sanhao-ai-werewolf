@@ -4,6 +4,11 @@
 "use strict";
 
 function clearTransientMatchTimers() {
+  if (typeof clearSkyCurtainTimer === "function") clearSkyCurtainTimer(true);
+  if (typeof clearDeferredSpeechPrefetchTimer === "function") clearDeferredSpeechPrefetchTimer();
+  if (typeof indieFlow !== "undefined" && indieFlow) {
+    indieFlow.onRoleDealClosed = null;
+  }
   if (state.voteFlight && Array.isArray(state.voteFlight.timers)) {
     state.voteFlight.timers.forEach(function (t) { clearTimeout(t); });
   }
@@ -857,8 +862,28 @@ function startNewGame() {
   updateAllUI();
   showToast("抽牌完成！本局你是 " + playerNumTag() + "（" + rDef.name + "）", "emerald");
   if (typeof orchestrator !== "undefined") orchestrator.emit("match:started", { totalSeats: count, playerRole: playerRole });
-  if (typeof indieFlow !== "undefined") indieFlow.showRoleDealRitual(effRoleKey);
-  beginNightPhase();
+  let night1Launched = false;
+  const epNight1 = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const launchFirstNightOnce = function () {
+    if (night1Launched) return;
+    if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epNight1)) return;
+    if (!state.match || !state.match.started || state.match.day !== 0 || state.match.phase !== "LOBBY") return;
+    night1Launched = true;
+    beginNightPhase();
+  };
+  const shouldGateOnRoleDeal = Boolean(
+    (typeof window !== "undefined" && typeof window.HTMLElement === "function") ||
+    (typeof state !== "undefined" && state._forceRoleDealGate)
+  );
+  if (typeof indieFlow !== "undefined" && typeof indieFlow.showRoleDealRitual === "function") {
+    const ritualShown = indieFlow.showRoleDealRitual(effRoleKey, launchFirstNightOnce);
+    if (!shouldGateOnRoleDeal || !ritualShown) {
+      indieFlow.onRoleDealClosed = null;
+      launchFirstNightOnce();
+    }
+  } else {
+    launchFirstNightOnce();
+  }
 }
 
 // ==================== WIN CHECK ====================

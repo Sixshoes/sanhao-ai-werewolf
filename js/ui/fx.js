@@ -505,15 +505,98 @@ function triggerShake(ms) {
   state.shakeUntil = performance.now() + (ms || 280);
 }
 
-function playSkyCurtain(mode, icon, title, sub) {
+function clearSkyCurtainTimer(hideDom) {
+  if (typeof state !== "undefined") {
+    if (state._skyCurtainPeakTimer) {
+      clearTimeout(state._skyCurtainPeakTimer);
+      state._skyCurtainPeakTimer = null;
+    }
+    const cancelFn = state._skyCurtainCancel;
+    state._skyCurtainCancel = null;
+    if (typeof cancelFn === "function") {
+      try { cancelFn(); } catch (e) {}
+    }
+  }
+  if (hideDom) {
+    const c = el("dayNightCurtain");
+    if (c && c.classList) c.classList.remove("active");
+  }
+}
+
+function playSkyCurtain(mode, icon, title, sub, optsOrPeakCb) {
+  clearSkyCurtainTimer(false);
+  const cfg = typeof optsOrPeakCb === "function"
+    ? { onPeak: optsOrPeakCb }
+    : (optsOrPeakCb && typeof optsOrPeakCb === "object" ? optsOrPeakCb : {});
+  const onPeak = typeof cfg.onPeak === "function" ? cfg.onPeak : null;
+  const epCurtain = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+
   const c = el("dayNightCurtain");
-  if (!c) return;
-  el("curtainIcon").textContent = "";
-  el("curtainTitle").textContent = title;
-  el("curtainSub").textContent = sub || "";
-  c.className = "mode-" + mode;
-  void c.offsetWidth;
-  c.classList.add("active");
+  if (c) {
+    if (el("curtainIcon")) el("curtainIcon").textContent = "";
+    if (el("curtainTitle")) el("curtainTitle").textContent = title;
+    if (el("curtainSub")) el("curtainSub").textContent = sub || "";
+    c.className = "mode-" + mode;
+    void c.offsetWidth;
+    c.classList.add("active");
+  }
+
+  const ffNow = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  const isAsyncCurtainEnv = Boolean(
+    (typeof window !== "undefined" && typeof window.HTMLElement === "function") ||
+    (typeof state !== "undefined" && state._forceAsyncSkyCurtain)
+  );
+  if (!c || ffNow || !isAsyncCurtainEnv) {
+    const validNow = typeof orchestrator === "undefined" || orchestrator.isEpochValid(epCurtain);
+    if (validNow && onPeak) onPeak();
+    return Promise.resolve(validNow);
+  }
+
+  const pacingMul = clamp(typeof getFxPacingMul === "function" ? getFxPacingMul() : 1.0, 0.7, 1.2);
+  const basePeakMs = typeof cfg.peakMs === "number" ? cfg.peakMs : 260;
+  const peakDelayMs = Math.max(80, Math.round(basePeakMs * pacingMul));
+
+  return new Promise(function (resolve) {
+    let settled = false;
+    const finishCurtain = function (completed) {
+      if (settled) return;
+      settled = true;
+      if (typeof state !== "undefined") {
+        if (state._skyCurtainPeakTimer) {
+          clearTimeout(state._skyCurtainPeakTimer);
+          state._skyCurtainPeakTimer = null;
+        }
+        state._skyCurtainCancel = null;
+      }
+      resolve(Boolean(completed));
+    };
+
+    if (typeof state !== "undefined") {
+      state._skyCurtainCancel = function () {
+        finishCurtain(false);
+      };
+      state._skyCurtainPeakTimer = setTimeout(function () {
+        const validEpoch = typeof orchestrator === "undefined" || orchestrator.isEpochValid(epCurtain);
+        if (!validEpoch) {
+          finishCurtain(false);
+          return;
+        }
+        if (onPeak) {
+          try {
+            onPeak();
+          } finally {
+            finishCurtain(true);
+          }
+        } else {
+          finishCurtain(true);
+        }
+      }, peakDelayMs);
+    } else {
+      const validFallback = typeof orchestrator === "undefined" || orchestrator.isEpochValid(epCurtain);
+      if (validFallback && onPeak) onPeak();
+      finishCurtain(validFallback);
+    }
+  });
 }
 
 function syncWorldTheme() {

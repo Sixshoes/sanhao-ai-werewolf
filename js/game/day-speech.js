@@ -366,8 +366,11 @@ function advanceSpeechQueue() {
   updateAllUI();
 
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
-  const hasReadyPrefetch = Boolean(typeof isPrefetchedAiSpeechReady === "function" && isPrefetchedAiSpeechReady(speaker.id));
-  const delayMs = ff ? 85 : (hasReadyPrefetch ? 45 : (state.autoPlay ? 220 : 120));
+  const hasReadyPrefetch = Boolean(
+    (typeof isPrefetchedOrInFlightAiSpeech === "function" && isPrefetchedOrInFlightAiSpeech(speaker.id)) ||
+    (typeof isPrefetchedAiSpeechReady === "function" && isPrefetchedAiSpeechReady(speaker.id))
+  );
+  const delayMs = ff ? 85 : (hasReadyPrefetch ? 35 : (state.autoPlay ? 220 : 120));
   state.stepTimer = setTimeout(function () {
     executeAiTurnSpeech(speaker);
   }, delayMs);
@@ -375,6 +378,7 @@ function advanceSpeechQueue() {
 
 function bumpTableStateRev(rePrefetch) {
   if (typeof state === "undefined" || !state.match) return;
+  if (typeof clearDeferredSpeechPrefetchTimer === "function") clearDeferredSpeechPrefetchTimer();
   state.match.tableStateRev = (state.match.tableStateRev || 0) + 1;
   state.match._prefetchedSpeech = null;
   if (rePrefetch && state.match.phase === "DAY_SPEECH" && typeof prefetchNextAiSpeech === "function") {
@@ -663,6 +667,62 @@ function isPrefetchedAiSpeechReady(seatId) {
   return Boolean(pf && pf.epoch === ep && pf.seatId === seatId && pf.key === _buildSpeechPrefetchKey(seatId) && pf.resolvedMeta);
 }
 
+function isPrefetchedOrInFlightAiSpeech(seatId) {
+  const pf = state.match && state.match._prefetchedSpeech;
+  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  return Boolean(pf && pf.epoch === ep && pf.seatId === seatId && pf.key === _buildSpeechPrefetchKey(seatId) && (pf.resolvedMeta || pf.promise));
+}
+
+function clearDeferredSpeechPrefetchTimer() {
+  if (typeof state !== "undefined" && state._deferredPrefetchTimer) {
+    clearTimeout(state._deferredPrefetchTimer);
+    state._deferredPrefetchTimer = null;
+  }
+}
+
+function prefetchPredictableHostCue() {
+  if (typeof voice === "undefined" || !state.match) return;
+  const pfHost = typeof voice.prefetchBestTts === "function"
+    ? voice.prefetchBestTts.bind(voice)
+    : (typeof voice.prefetchFreeLocalNeural === "function" ? voice.prefetchFreeLocalNeural.bind(voice) : null);
+  if (!pfHost) return;
+  const q = state.match.speechQueue || [];
+  if (q.length === 0) {
+    pfHost("主持", "全員發言結束，請點擊外圍座位投票抓狼。", "normal");
+  } else if (q[0] === getPlayerId()) {
+    pfHost("主持", "輪到" + getPlayerId() + "號你發言了，可點選詞卡組裝陳詞後送出。", "normal");
+  }
+}
+
+function scheduleStaggeredNextSpeechPrefetch(epGuard, turnSeqGuard) {
+  clearDeferredSpeechPrefetchTimer();
+  const ffNow = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+  if (ffNow || !state.match || !state.match.started) return null;
+  let fired = false;
+  const runStaggeredPrefetch = function () {
+    if (fired) return;
+    fired = true;
+    clearDeferredSpeechPrefetchTimer();
+    if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epGuard)) return;
+    if (!state.match || !state.match.started || state.match.phase !== "DAY_SPEECH") return;
+    if (typeof turnSeqGuard === "number" && state._speechTurnSeq !== turnSeqGuard) return;
+    prefetchNextAiSpeech();
+    prefetchPredictableHostCue();
+  };
+  state._deferredPrefetchTimer = setTimeout(runStaggeredPrefetch, 900);
+  return runStaggeredPrefetch;
+}
+
+function triggerImmediatePostPlayerPrefetch() {
+  clearDeferredSpeechPrefetchTimer();
+  if (typeof state === "undefined" || !state.match || !state.match.started) return false;
+  const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return false;
+  state.match.tableStateRev = (state.match.tableStateRev || 0) + 1;
+  state.match._prefetchedSpeech = null;
+  return prefetchNextAiSpeech({ highPriority: true });
+}
+
 function _buildDryRunHeuristicSpeech(seat) {
   const m = state.match || {};
   const prevBf = m.sheriffBadgeFlow;
@@ -728,7 +788,11 @@ function prefetchNextAiSpeech() {
   if (!extLlmOn && !wantNetTts) return false;
   const q = m.speechQueue || [];
   if (!q.length) return false;
-  const nextId = q[0];
+  const nextId = q.find(function (id) {
+    const s = getSeat(id);
+    return Boolean(s && s.alive);
+  });
+  if (!nextId) return false;
   if (nextId === getPlayerId()) {
     if (typeof voice !== "undefined" && typeof voice.prefetchBestTts === "function") {
       voice.prefetchBestTts("主持", "輪到" + nextId + "號你發言了，可點選詞卡組裝陳詞後送出。", "normal");
@@ -1145,6 +1209,7 @@ async function executeAiTurnSpeech(speaker) {
   if (typeof orchestrator !== "undefined") {
     orchestrator.emit("speech:committed", { speakerId: speaker.id, accuseId: generated.accuseId || null, isToxic: Boolean(generated.hasToxicSlip) });
   }
+  const onAudioReadyPrefetch = scheduleStaggeredNextSpeechPrefetch(ep, turnSeq);
   startSpotlightTypewriter({
     speaker: speaker,
     badge: badgeTitle,
@@ -1153,22 +1218,7 @@ async function executeAiTurnSpeech(speaker) {
     voiceMood: moodTag,
     speechEv: aiEvObj,
     charDelay: 34,
-    holdMs: 2400
+    holdMs: 2400,
+    onAudioReady: onAudioReadyPrefetch
   });
-
-  // Prefetch next AI speaker's LLM + TTS in parallel while this character is speaking (zero-wait conversational flow!)
-  prefetchNextAiSpeech();
-
-  // Prefetch next predictable host prompt so transitions feel zero-latency!
-  if (typeof voice !== "undefined") {
-    const pfHost = typeof voice.prefetchBestTts === "function" ? voice.prefetchBestTts.bind(voice) : (typeof voice.prefetchFreeLocalNeural === "function" ? voice.prefetchFreeLocalNeural.bind(voice) : null);
-    if (pfHost) {
-      const q = state.match.speechQueue || [];
-      if (q.length === 0) {
-        pfHost("主持", "全員發言結束，請點擊外圍座位投票抓狼。", "normal");
-      } else if (q[0] === getPlayerId()) {
-        pfHost("主持", "輪到" + getPlayerId() + "號你發言了，可點選詞卡組裝陳詞後送出。", "normal");
-      }
-    }
-  }
 }

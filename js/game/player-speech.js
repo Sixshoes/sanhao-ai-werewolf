@@ -2844,6 +2844,9 @@ function submitPlayerSpeech() {
   if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
   state.match.phase = "DAY_SPEECH";
   state.activeSpeakerId = pid;
+  if (typeof triggerImmediatePostPlayerPrefetch === "function") {
+    triggerImmediatePostPlayerPrefetch();
+  }
   updateAllUI();
   startSpotlightTypewriter({
     speaker: player,
@@ -2853,7 +2856,4 @@ function submitPlayerSpeech() {
     charDelay: 30,
     holdMs: 1850
   });
-  if (typeof prefetchNextAiSpeech === "function") {
-    prefetchNextAiSpeech();
-  }
 }
