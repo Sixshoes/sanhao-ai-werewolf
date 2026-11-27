@@ -8859,9 +8859,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       ttsBodyLedaFb.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === "Zephyr" &&
       !ttsApiSrc2412.includes("? voiceName\n    : voiceName"),
     ttsTimeoutBudgetHeadroomOk:
-      ttsApiSrc2412.includes("PRIMARY_TIMEOUT_MS = 7500") &&
+      ttsApiSrc2412.includes("PRIMARY_TIMEOUT_MS = 5500") &&
       ttsApiSrc2412.includes("RETRY_400_TIMEOUT_MS = 4000") &&
-      ttsApiSrc2412.includes("FALLBACK_MODEL_TIMEOUT_MS = 6000"),
+      ttsApiSrc2412.includes("FALLBACK_MODEL_TIMEOUT_MS = 4200"),
     ttsHandlerSecurityOk:
       ttsCrossRes.status === 403 &&
       ttsProdLocalRes.status === 403 &&
@@ -9560,9 +9560,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   );
   const ttsFallbackOrderOk =
     Array.isArray(apiTtsHandler244._TTS_FALLBACK_ORDER) &&
-    apiTtsHandler244._TTS_FALLBACK_ORDER[0] === "gemini-3.8-flash-lite-tts" &&
-    apiTtsHandler244._TTS_FALLBACK_ORDER[1] === "gemini-3.8-flash-tts" &&
-    apiTtsHandler244._TTS_FALLBACK_ORDER[2] === "gemini-2.5-flash-preview-tts" &&
+    apiTtsHandler244._TTS_FALLBACK_ORDER[0] === "gemini-2.5-flash-preview-tts" &&
+    apiTtsHandler244._TTS_FALLBACK_ORDER[1] === "gemini-3.8-flash-lite-tts" &&
+    apiTtsHandler244._TTS_FALLBACK_ORDER[2] === "gemini-3.8-flash-tts" &&
     bodyFallback38.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === "Puck" &&
     !bodyFallback38.contents[0].parts[0].text.includes("<breath>");
 
@@ -9574,7 +9574,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   try {
     const fakeWavB64 = Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(192, 1)]).toString("base64");
     globalThis.fetch = async function (url) {
-      if (String(url).includes("gemini-3.8-flash-lite-tts")) {
+      if (String(url).includes("gemini-2.5-flash-preview-tts")) {
         return { ok: false, status: 400, json: async () => ({ error: "bad request" }) };
       }
       return {
@@ -9602,8 +9602,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     await apiTtsHandler244(fakeReq, fakeRes);
     tts400NoCooldownOk = Boolean(
       fakeRes.statusCode === 200 &&
-      fakeHeaders["X-TTS-Model"] === "gemini-3.8-flash-tts" &&
-      !apiTtsHandler244._isModelCoolingDown("gemini-3.8-flash-lite-tts", Date.now())
+      fakeHeaders["X-TTS-Model"] === "gemini-3.8-flash-lite-tts" &&
+      !apiTtsHandler244._isModelCoolingDown("gemini-2.5-flash-preview-tts", Date.now())
     );
   } finally {
     globalThis.fetch = origFetch244;
@@ -10676,7 +10676,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     gem429CooldownOk = Boolean(
       gRes.statusCode === 200 &&
       parsedG.ok === true &&
-      parsedG.model === "gemini-3.8-flash" &&
+      parsedG.model === "gemini-2.5-flash" &&
       parsedG.fallbackFrom === "gemini-4-hydrogen" &&
       apiGem2441._isModelCoolingDown("gemini-4-hydrogen", Date.now())
     );
@@ -10700,7 +10700,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   try {
     const fakeWavB64 = Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(192, 2)]).toString("base64");
     globalThis.fetch = async function (url) {
-      if (String(url).includes("gemini-3.8-flash-lite-tts")) {
+      if (String(url).includes("gemini-2.5-flash-preview-tts")) {
         return { ok: false, status: 429, json: async () => ({ error: "rate limit" }) };
       }
       return {
@@ -10727,8 +10727,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     await apiTts2441(tReq, tRes);
     tts429CooldownOk = Boolean(
       tRes.statusCode === 200 &&
-      tHeaders["X-TTS-Model"] === "gemini-3.8-flash-tts" &&
-      apiTts2441._isModelCoolingDown("gemini-3.8-flash-lite-tts", Date.now())
+      tHeaders["X-TTS-Model"] === "gemini-3.8-flash-lite-tts" &&
+      apiTts2441._isModelCoolingDown("gemini-2.5-flash-preview-tts", Date.now())
     );
   } finally {
     globalThis.fetch = origFetchTts;

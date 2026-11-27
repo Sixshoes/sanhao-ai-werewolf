@@ -1654,7 +1654,7 @@ const voice = {
     const self = this;
     const p = (async function () {
       const controller = typeof AbortController === "function" ? new AbortController() : null;
-      const geminiTtsTimeoutMs = clamp(10000 + cleanText.length * 75, 11000, 22000);
+      const geminiTtsTimeoutMs = clamp(8500 + cleanText.length * 45, 9500, 11800);
       const timer = controller ? setTimeout(function () { controller.abort(); }, geminiTtsTimeoutMs) : null;
       const callCloudTtsTrackA = async function () {
         const hdrs = { "Content-Type": "application/json" };

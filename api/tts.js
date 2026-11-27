@@ -37,11 +37,11 @@ const ALLOWED_TTS_MODELS = new Set([
   "gemini-2.5-flash-preview-tts",
   "gemini-3.1-flash-tts-preview"
 ]);
-const DEFAULT_TTS_MODEL = "gemini-3.8-flash-lite-tts";
+const DEFAULT_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 const TTS_FALLBACK_ORDER = [
+  "gemini-2.5-flash-preview-tts",
   "gemini-3.8-flash-lite-tts",
   "gemini-3.8-flash-tts",
-  "gemini-2.5-flash-preview-tts",
   "gemini-3.1-flash-tts-preview"
 ];
 
@@ -413,10 +413,10 @@ async function handler(req, res) {
 
   let lastStatus = 502;
   const startedAt = Date.now();
-  const TOTAL_BUDGET_MS = 19500;
-  const PRIMARY_TIMEOUT_MS = 7500;
+  const TOTAL_BUDGET_MS = 10500;
+  const PRIMARY_TIMEOUT_MS = 5500;
   const RETRY_400_TIMEOUT_MS = 4000;
-  const FALLBACK_MODEL_TIMEOUT_MS = 6000;
+  const FALLBACK_MODEL_TIMEOUT_MS = 4200;
   const strippedForRetry = stripGeminiVocalTags(text) || text;
   for (let i = 0; i < queue.length; i++) {
     const modelId = queue[i];

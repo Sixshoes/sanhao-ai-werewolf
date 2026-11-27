@@ -16,7 +16,7 @@ function isExternalLlmActive() {
   return typeof state !== "undefined" && Boolean(state.geminiApiKey || state.localLlmModel || isServerGeminiProxyActive());
 }
 
-const OFFICIAL_CLOUD_GEMINI_MODELS = Object.freeze(["gemini-2.5-pro", "gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
+const OFFICIAL_CLOUD_GEMINI_MODELS = Object.freeze(["gemini-2.5-pro", "gemini-4-hydrogen", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
 const OFFICIAL_PERSONAL_GEMINI_MODELS = Object.freeze(["gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
 
 function normalizeCloudGeminiModel(modelId) {
@@ -147,7 +147,7 @@ function resolveGeminiSpeechTemperature(sceneKind, ctxOpts) {
 async function callServerGeminiProxyOnce(promptText, timeoutMs, opts) {
   if (typeof fetch !== "function") return { ok: false, status: 0, text: null, model: "", error: "瀏覽器不支援網路請求", latencyMs: 0 };
   const controller = typeof AbortController === "function" ? new AbortController() : null;
-  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 14000) : null;
+  const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 23000) : null;
   const sid = getOrCreateProxySessionId();
   const safeTemp = clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard);
   const chosenModel = normalizeCloudGeminiModel((opts && opts.model) ? opts.model : state.serverGeminiModel);
