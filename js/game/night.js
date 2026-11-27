@@ -304,6 +304,7 @@ function beginNightPhase() {
   state.lastWordsCtx = null;
   state.voteResultPayload = null;
   state.match.day += 1;
+  state.match.wolfExplodedToday = false;
   state.match.activeDirectorEvent = null;
   state.match.directorEventClearedDay = 0;
   state.match.rewriteCritReady = false;
@@ -1753,6 +1754,15 @@ function resumeAfterHunter() {
 }
 
 // ==================== NIGHT / HUNTER CONFIRM ====================
+function canPlayerWolfTargetSeat(playerSeat, targetSeat) {
+  if (!playerSeat || !playerSeat.alive || !(playerSeat.role === "wolf" || playerSeat.isWolfKing)) return false;
+  if (!targetSeat || !targetSeat.alive) return false;
+  const targetIsWolf = Boolean(targetSeat.role === "wolf" || targetSeat.isWolfKing);
+  if (!targetIsWolf) return true;
+  const aliveWolvesNow = getAliveSeats().filter(function (s) { return s.role === "wolf" || s.isWolfKing; });
+  return Boolean(state.match && state.match.day === 1 && aliveWolvesNow.length >= 2);
+}
+
 function confirmTargetAction() {
   sound.unlock();
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
@@ -1795,9 +1805,10 @@ function confirmTargetAction() {
   }
 
   if (phase === "NIGHT_WOLF") {
-    const aliveWolvesNow = getAliveSeats().filter(function (s) { return s.role === "wolf"; });
+    const aliveWolvesNow = getAliveSeats().filter(function (s) { return s.role === "wolf" || s.isWolfKing; });
     const allowSelfKnifeN1 = Boolean(state.match.day === 1 && aliveWolvesNow.length >= 2);
-    if (!target || !target.alive || (target.role === "wolf" && !allowSelfKnifeN1)) {
+    const targetIsWolf = Boolean(target && (target.role === "wolf" || target.isWolfKing));
+    if (!target || !target.alive || (targetIsWolf && !allowSelfKnifeN1)) {
       showToast(allowSelfKnifeN1 ? "請點選 1 位在席目標（首夜可點己方執行自刀騙藥）" : "點選 1 位好人當目標！", "warn");
       return;
     }

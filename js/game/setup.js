@@ -34,6 +34,7 @@ function clearTransientMatchTimers() {
 
 function startGuidedBeginnerMatch() {
   if (el("modalTutorial")) el("modalTutorial").classList.add("hidden");
+  state.activeVariant = "standard";
   el("selectModeCount").value = "6";
   el("selectPreferredRole").value = "seer";
   if (el("selectAiDifficulty")) el("selectAiDifficulty").value = "easy";
@@ -294,6 +295,7 @@ function startJudgeShowcaseMatch() {
     isMatchPoint: true,
     hopeConfrontation: null,
     wolfExplodedToday: false,
+    wolfExplodedDay: 0,
     interjectBonusCharges: 0,
     guardAwakenBonusWeightDay: 0,
     guardBlockedLastNight: false,
@@ -595,13 +597,32 @@ function startNewGame() {
   }
 
   const aiWolves = seats.filter(function (s) { return s.id !== playerSeatId && s.role === "wolf"; });
+  const hasSeerInMatch = seats.some(function (s) { return s.role === "seer"; });
   const fakeSeerProb = state.aiDifficulty === "pro" ? 0.94 : (state.aiDifficulty === "easy" ? 0.45 : 0.72);
-  if (aiWolves.length > 0 && Math.random() < fakeSeerProb) {
-    aiWolves[0].fakeSeer = true;
+  if (hasSeerInMatch && variantMode !== "lone_wolf_king" && aiWolves.length > 0 && Math.random() < fakeSeerProb) {
+    const wolfWeights = aiWolves.map(function (w) {
+      const prof = typeof getPersonaProfile === "function" ? getPersonaProfile(w) : null;
+      const bold = (prof && typeof prof.boldness === "number")
+        ? prof.boldness
+        : (w.deductionStyle === "bold" ? 1.35 : (w.deductionStyle === "cautious" ? 0.72 : 1.0));
+      return Math.max(0.35, bold * (w.isWolfKing ? 1.2 : 1.0));
+    });
+    const totalWeight = wolfWeights.reduce(function (a, b) { return a + b; }, 0);
+    let pickRoll = Math.random() * totalWeight;
+    let fakeSeerPick = aiWolves[aiWolves.length - 1];
+    for (let wi = 0; wi < aiWolves.length; wi++) {
+      pickRoll -= wolfWeights[wi];
+      if (pickRoll <= 0) {
+        fakeSeerPick = aiWolves[wi];
+        break;
+      }
+    }
+    fakeSeerPick.fakeSeer = true;
   }
-  // Pro difficulty: wolves keep calmer microPulse; Easy difficulty: wolves sweat more noticeably
+  // Pro difficulty: wolves keep calmer microPulse (preserving lone_wolf_king calm buff); Easy difficulty: wolves sweat more noticeably
   if (state.aiDifficulty === "pro") {
-    seats.forEach(function (s) { if (s.role === "wolf") s.microPulse = Math.max(58, s.microPulse - 12); });
+    const minWolfPulse = variantMode === "lone_wolf_king" ? 44 : 58;
+    seats.forEach(function (s) { if (s.role === "wolf") s.microPulse = Math.max(minWolfPulse, s.microPulse - 12); });
   } else if (state.aiDifficulty === "easy") {
     seats.forEach(function (s) { if (s.role === "wolf") s.microPulse = Math.min(96, s.microPulse + 8); });
   }
@@ -703,6 +724,7 @@ function startNewGame() {
     isMatchPoint: false,
     hopeConfrontation: null,
     wolfExplodedToday: false,
+    wolfExplodedDay: 0,
     interjectBonusCharges: 0,
     guardAwakenBonusWeightDay: 0,
     guardBlockedLastNight: false,

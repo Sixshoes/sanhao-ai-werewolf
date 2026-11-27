@@ -436,7 +436,7 @@ function computeTableWindVane() {
   });
   if (markedWolves.length > 0) {
     const pSelfVane = typeof getPlayerSeat === "function" ? getPlayerSeat() : null;
-    const isWolfVane = Boolean(pSelfVane && pSelfVane.role === "wolf");
+    const isWolfVane = Boolean(!state.hidePlayerRole && pSelfVane && pSelfVane.role === "wolf");
     parts.push((isWolfVane ? "你標甩鍋：" : "你標疑：") + markedWolves.map(function (id) { return fmtSeatNum(id); }).join("、"));
   }
 

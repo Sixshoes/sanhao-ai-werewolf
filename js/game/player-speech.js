@@ -977,7 +977,7 @@ function loadQuickCardIntoAdvancedEditor(item, cardBtn, slotView, dualWorlds) {
   const player = getPlayerSeat();
   if (!player) return { added: false };
   const pid = getPlayerId();
-  const isWolfPlayer = player.role === "wolf";
+  const isWolfPlayer = Boolean(!state.hidePlayerRole && player.role === "wolf");
   const wolfCap = getPlayerWolfPitCap();
   const d = ensurePlayerDraftPits(false);
   if (!Array.isArray(d.composedModules)) d.composedModules = [];
@@ -1324,7 +1324,7 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
   if (!state.match || !state.match.started || !player) return;
 
   const pid = getPlayerId();
-  const isWolfPlayer = player.role === "wolf";
+  const isWolfPlayer = Boolean(!state.hidePlayerRole && player.role === "wolf");
   const d = ensurePlayerDraftPits(false);
   const aliveOthers = getAliveSeats().filter(function (s) { return s.id !== pid; });
   const targetSeats = isWolfPlayer
@@ -1544,11 +1544,11 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
 }
 
 function getPlayerKnownMicroTag(player, seatId, shRec, shVotedMap) {
-  if (player && player.role === "seer" && Array.isArray(player.checkedHistory)) {
+  if (!state.hidePlayerRole && player && player.role === "seer" && Array.isArray(player.checkedHistory)) {
     const hit = player.checkedHistory.slice().reverse().find(function (c) { return c && c.targetId === seatId; });
     if (hit) return hit.isWolf ? "查殺" : "金水";
   }
-  if (player && player.role === "witch" && player.savedSeatId === seatId) {
+  if (!state.hidePlayerRole && player && player.role === "witch" && player.savedSeatId === seatId) {
     return "銀水";
   }
   return getSeatSheriffMicroTag(seatId, shRec, shVotedMap);
@@ -1590,7 +1590,7 @@ function renderListenPitBar() {
   host.innerHTML = "";
 
   const pid = getPlayerId();
-  const isWolfPlayer = player.role === "wolf";
+  const isWolfPlayer = Boolean(!state.hidePlayerRole && player.role === "wolf");
   const p = state.match.phase;
   const d = ensurePlayerDraftPits(true);
   const aliveOthers = getAliveSeats().filter(function (s) { return s.id !== pid; });
@@ -2255,7 +2255,7 @@ function preparePlayerSpeechPanel() {
     const pushSeat = goodPushPool.find(function (s) { return s.id === sampleTarget.id; }) || goodPushPool[0] || sampleTarget;
     const pushLbl = fmtSeatNum(pushSeat.id) + "號" + pushSeat.name;
     const pushClue = smart.getSheriffClue(pushSeat.id) || smart.getTodayStanceDesc(pushSeat.id);
-    if (state.match.wolfTactic === "deep_stealth") {
+    if (state.match.wolfTactic === "deep_stealth" || state.match.wolfTactic === "deep_stealth_bus") {
       cards.push({
         tgKind: "deeds",
         tgTag: "深水倒鉤",

@@ -534,7 +534,7 @@ function renderVoteSheetIntoBody() {
   let rows = "";
   state.match.seats.forEach(function (s) {
     const effKey = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(s) : s.role;
-    const knownKey = canSeeTruth ? effKey : state.match.playerKnownRoles[s.id];
+    const knownKey = canSeeTruth ? effKey : (state.hidePlayerRole ? null : state.match.playerKnownRoles[s.id]);
     const rDefRow = (knownKey && ROLE_DEFS[knownKey]) ? ROLE_DEFS[knownKey] : (canSeeTruth && typeof getSeatRoleDef === "function" ? getSeatRoleDef(s) : null);
     let roleBadge = '<span class="px-2 py-0.5 rounded-md text-[13px] font-semibold bg-slate-800/80 text-slate-400">未知</span>';
     if (knownKey === "good_verified") {

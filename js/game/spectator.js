@@ -66,7 +66,7 @@ function isSpectatorGuessActive() {
 
 function getSpectatorGuessMode() {
   const player = getPlayerSeat();
-  return (player && player.team === "wolf") ? "god_hunt" : "wolf_hunt";
+  return (!state.hidePlayerRole && player && player.team === "wolf") ? "god_hunt" : "wolf_hunt";
 }
 
 function getActiveGodRoleKeys() {
@@ -654,7 +654,8 @@ function renderSpectatorGuessPanel() {
     godRow.className = "flex items-center gap-1 flex-wrap";
     seats.forEach(function (st) {
       if (st.id === pid) return;
-      const rName = ROLE_DEFS[st.role] ? ROLE_DEFS[st.role].name : st.role;
+      const rDefGod = typeof getSeatRoleDef === "function" ? getSeatRoleDef(st) : ROLE_DEFS[st.role];
+      const rName = rDefGod ? rDefGod.name : st.role;
       const pill = document.createElement("span");
       const topTarget = Object.keys(st.suspicionMap || {}).filter(function (k) {
         const ts = getSeat(parseInt(k, 10));

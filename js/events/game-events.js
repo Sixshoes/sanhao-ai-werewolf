@@ -83,6 +83,7 @@ function resetMatchToLobby() {
   state.match.isMatchPoint = false;
   state.match.hopeConfrontation = null;
   state.match.wolfExplodedToday = false;
+  state.match.wolfExplodedDay = 0;
   state.match.interjectBonusCharges = 0;
   state.match.guardAwakenBonusWeightDay = 0;
   state.match.guardAwakenBonusUsed = false;
@@ -375,7 +376,7 @@ function bindIntelAndDetectiveEvents() {
         finalizeVoteRound(sid);
       } else if ((ph === "NIGHT_GUARD" && pSelf && pSelf.alive && pSelf.role === "guard" && state.match.lastGuardTargetId !== sid) ||
                  (ph === "NIGHT_SEER" && !state.seerReveal && pSelf && pSelf.alive && pSelf.role === "seer") ||
-                 (ph === "NIGHT_WOLF" && pSelf && pSelf.alive && pSelf.role === "wolf" && s.role !== "wolf") ||
+                 (ph === "NIGHT_WOLF" && pSelf && pSelf.alive && (pSelf.role === "wolf" || pSelf.isWolfKing) && (typeof canPlayerWolfTargetSeat === "function" ? canPlayerWolfTargetSeat(pSelf, s) : s.role !== "wolf")) ||
                  (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && canSeatTriggerShot(pSelf) && !(pSelf.isWolfKing && s.role === "wolf"))) {
         closeSeatIntel();
         confirmTargetAction();
@@ -1458,9 +1459,12 @@ function bindNightVoteAndFourGEvents() {
           o.classList.toggle("is-active", o === btn);
         });
         const tacLabels = {
+          mate_fake_seer_gold: "夜間指令：狼同伴明日將跳明心觀察員發你金水帶風向！",
           fake_seer: "夜間指令：狼同伴明日將跳明心觀察員帶風向！",
-          deep_stealth: "夜間指令：狼同伴明日將低調倒鉤絕不露綻！",
-          pack_push: "夜間指令：狼同伴明日發言與投票將全力配合你的目標！"
+          player_fake_seer_push: "夜間指令：狼同伴明日發言與投票將全力配合你悍跳推坑！",
+          pack_push: "夜間指令：狼同伴明日發言與投票將全力配合你的目標！",
+          deep_stealth_bus: "夜間指令：狼同伴明日將全員深水倒鉤互踩做身分！",
+          deep_stealth: "夜間指令：狼同伴明日將低調倒鉤絕不露綻！"
         };
         sound.tone(560, 0.08, "triangle", 0.05, 0);
         showToast(tacLabels[tac] || "已更新狼隊戰術指令", "emerald");

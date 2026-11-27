@@ -113,6 +113,7 @@ const state = {
     isMatchPoint: false,
     hopeConfrontation: null,
     wolfExplodedToday: false,
+    wolfExplodedDay: 0,
     interjectBonusCharges: 0,
     guardAwakenBonusWeightDay: 0,
     guardBlockedLastNight: false,
@@ -279,7 +280,7 @@ function loadUserPrefs() {
     if (typeof p.guardMode === "boolean") state.guardMode = p.guardMode;
     if (typeof p.geminiModel === "string" && p.geminiModel) {
       const mNorm = p.geminiModel.trim();
-      if (mNorm === "gemini-4-hydrogen" || mNorm === "gemini-3.1-flash-lite" || mNorm === "gemini-2.5-pro" || mNorm === "gemini-2.5-flash" || mNorm === "gemini-2.5-flash-lite") {
+      if (mNorm === "gemini-4-hydrogen" || mNorm === "gemini-3.8-flash" || mNorm === "gemini-3.1-flash-lite" || mNorm === "gemini-2.5-pro" || mNorm === "gemini-2.5-flash" || mNorm === "gemini-2.5-flash-lite") {
         state.geminiModel = mNorm;
       } else if (mNorm.indexOf("lite") !== -1) {
         state.geminiModel = "gemini-3.1-flash-lite";
@@ -289,7 +290,7 @@ function loadUserPrefs() {
     }
     if (typeof p.serverGeminiModel === "string" && p.serverGeminiModel) {
       const smNorm = p.serverGeminiModel.trim();
-      if (smNorm === "gemini-2.5-pro" || smNorm === "gemini-4-hydrogen" || smNorm === "gemini-3.1-flash-lite" || smNorm === "gemini-2.5-flash" || smNorm === "gemini-2.5-flash-lite") {
+      if (smNorm === "gemini-2.5-pro" || smNorm === "gemini-4-hydrogen" || smNorm === "gemini-3.8-flash" || smNorm === "gemini-3.1-flash-lite" || smNorm === "gemini-2.5-flash" || smNorm === "gemini-2.5-flash-lite") {
         state.serverGeminiModel = smNorm;
       } else {
         state.serverGeminiModel = "gemini-4-hydrogen";

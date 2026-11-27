@@ -34,6 +34,7 @@ function normalizePersonalGeminiModel(modelId) {
 function getShortGeminiModelLabel(modelId) {
   const m = String(modelId || "").trim();
   if (m === "gemini-4-hydrogen") return "4 Flash";
+  if (m === "gemini-3.8-flash") return "3.8 Flash";
   if (m === "gemini-3.1-flash-lite") return "3.1 Lite";
   if (m === "gemini-2.5-pro") return "2.5 Pro";
   if (m === "gemini-2.5-flash-lite") return "2.5 Lite";

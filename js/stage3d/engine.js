@@ -842,11 +842,13 @@ const stage3d = {
       if (typeof showToast === "function") showToast("目前裝置不支援 3D 角色鑑賞模式", "warn");
       return;
     }
+    const wasShowcase = Boolean(this.showcaseMode);
     this.showcaseMode = wantOn;
     document.body.classList.toggle("hero-showcase-active", this.showcaseMode);
     const panel = el("heroShowcaseOverlay");
     if (panel) panel.classList.toggle("hidden", !this.showcaseMode);
     if (this.showcaseMode) {
+      if (!wasShowcase) this._preShowcaseCamPreset = this.camPreset || "cinema";
       if (typeof closeRoleGuidePopover === "function") closeRoleGuidePopover();
       if (state.viewMode !== "3d") this.setViewMode("3d");
       this.closeUpSeatId = null;
@@ -863,6 +865,10 @@ const stage3d = {
       sound.playBlessing();
     } else {
       this.showcaseTarget = "hero";
+      if (this._preShowcaseCamPreset) {
+        this.camPreset = this._preShowcaseCamPreset;
+        this._preShowcaseCamPreset = null;
+      }
       this.resetCamera();
     }
     this.resize();

@@ -1601,6 +1601,7 @@ function triggerWolfSelfExplode(seatId, opts) {
   wolf.outReason = "拂袖掀席自爆";
   wolf.claimedRole = "wolf";
   m.wolfExplodedToday = true;
+  m.wolfExplodedDay = m.day || 1;
   m.speechQueue = [];
   m.pkCandidates = null;
   m.sheriffOrderCtx = null;
@@ -1738,17 +1739,22 @@ function useFourGConvenience() {
       });
       showToast("已理清關係線並號召好人集中覆議 " + fmtSeatNum(sel.id) + "號（" + digestText + "）", "emerald");
     } else {
-      // Find the seat with a real observable contradiction, toxic slip, or early claim
+      // Find another alive seat with a real observable contradiction, toxic slip, or early claim (never self-rally!)
       const evs = state.match.daySpeechEvents || [];
-      const susEv = evs.find(function (ev) { return ev.speakerId !== getPlayerId() && ev.contradiction; })
-        || evs.find(function (ev) { return ev.speakerId !== getPlayerId() && ev.hasToxicSlip; })
-        || evs.find(function (ev) { return ev.speakerId !== getPlayerId() && ev.claimRole === "seer"; })
-        || evs.find(function (ev) { return ev.speakerId !== getPlayerId(); })
-        || evs[0];
+      const isOtherAliveSpeaker = function (ev) {
+        if (!ev || ev.speakerId === getPlayerId()) return false;
+        const st = getSeat(ev.speakerId);
+        return Boolean(st && st.alive);
+      };
+      const susEv = evs.find(function (ev) { return isOtherAliveSpeaker(ev) && ev.contradiction; })
+        || evs.find(function (ev) { return isOtherAliveSpeaker(ev) && ev.hasToxicSlip; })
+        || evs.find(function (ev) { return isOtherAliveSpeaker(ev) && ev.claimRole === "seer"; })
+        || evs.find(isOtherAliveSpeaker)
+        || null;
       const highlightId = susEv ? susEv.speakerId : null;
       convEchoTargetId = highlightId;
       const hs = highlightId ? getSeat(highlightId) : null;
-      if (hs && hs.alive) {
+      if (hs && hs.alive && hs.id !== getPlayerId()) {
         state.selectedSeatId = hs.id;
         state.match.convenienceRallyTargetId = hs.id;
         spawnFx(hs.id, "焦點覆議", "#c084fc");

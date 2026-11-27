@@ -212,14 +212,15 @@ function updateAllUI() {
 
   const lobbyWolfN = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
   const pForHead = m.started ? getPlayerSeat() : null;
-  const isWolfHead = Boolean(pForHead && pForHead.role === "wolf");
+  const isWolfHead = Boolean(!state.hidePlayerRole && pForHead && pForHead.role === "wolf");
+  const isWolfKingHead = Boolean(!state.hidePlayerRole && pForHead && pForHead.isWolfKing);
   const phaseMap = {
     LOBBY: { pill: "準備開局", head: "找出 " + lobbyWolfN + " 名說謊的酸民狼" },
     NIGHT_GUARD: { pill: "護心結界", head: "擇一席展開護心結界" },
     NIGHT_WOLF: { pill: "第" + m.day + "晚", head: isWolfHead ? "酸民狼密議 · 擇定目標並定明日戰術" : "天黑請閉眼…" },
     NIGHT_SEER: { pill: "明心查證", head: "擇一席靜心查證立場" },
     NIGHT_WITCH: { pill: "滴水奉茶", head: "是否端出暖心回甘茶護回夥伴？" },
-    HUNTER_TRIGGER: { pill: (pForHead && pForHead.isWolfKing) ? "流言反撲" : "正氣共鳴", head: (pForHead && pForHead.isWolfKing) ? "擇一好人席同行" : "擇一席一同離席冷靜" },
+    HUNTER_TRIGGER: { pill: isWolfKingHead ? "流言反撲" : "正氣共鳴", head: isWolfKingHead ? "擇一好人席同行" : "擇一席一同離席冷靜" },
     HUNTER_RESOLVE: {
       pill: "正氣共鳴",
       head: m.lastHunterShot
@@ -323,9 +324,10 @@ function renderSeatStrip() {
     const bfActiveHud = (state.match.started && state.match.sheriffBadgeFlow) ? state.match.sheriffBadgeFlow : ((p === "NIGHT_SEER" && pSelf && pSelf.role === "seer" && state.match.sheriffBadgeFlowsBySeat) ? state.match.sheriffBadgeFlowsBySeat[pid] : null);
     const bfSlotTag = (bfActiveHud && s.alive) ? (bfActiveHud.firstTargetId === s.id ? "警1" : (bfActiveHud.secondTargetId === s.id ? "警2" : "")) : "";
     const mark = state.playerMarks[s.id] || null;
-    const isWolfPlayerStrip = Boolean(state.match.started && pSelf && pSelf.role === "wolf" && !state.hidePlayerRole);
-    const isWolfMateSeat = Boolean(isWolfPlayerStrip && s.role === "wolf" && s.id !== pid);
-    const isWolfMateDisabled = Boolean(state.match.started && ((p === "NIGHT_WOLF" && pSelf && pSelf.role === "wolf") || (p === "HUNTER_TRIGGER" && pSelf && pSelf.isWolfKing)) && s.role === "wolf" && s.id !== pid);
+    const isWolfPlayerStrip = Boolean(state.match.started && pSelf && (pSelf.role === "wolf" || pSelf.isWolfKing) && !state.hidePlayerRole);
+    const isWolfMateSeat = Boolean(isWolfPlayerStrip && (s.role === "wolf" || s.isWolfKing) && s.id !== pid);
+    const wolfCanSelfKnifeN1 = Boolean(state.match.started && p === "NIGHT_WOLF" && pSelf && (pSelf.role === "wolf" || pSelf.isWolfKing) && typeof canPlayerWolfTargetSeat === "function" && canPlayerWolfTargetSeat(pSelf, s));
+    const isWolfMateDisabled = Boolean(state.match.started && !state.hidePlayerRole && ((p === "NIGHT_WOLF" && pSelf && (pSelf.role === "wolf" || pSelf.isWolfKing) && !wolfCanSelfKnifeN1) || (p === "HUNTER_TRIGGER" && pSelf && pSelf.isWolfKing)) && (s.role === "wolf" || s.isWolfKing) && s.id !== pid);
     const wolfGodMarkTag = (isWolfPlayerStrip && !isWolfMateSeat && state.match.wolfGodMarks && state.match.wolfGodMarks[s.id] && typeof getWolfGodMarkDef === "function")
       ? getWolfGodMarkDef(state.match.wolfGodMarks[s.id]).label
       : "";
@@ -340,7 +342,7 @@ function renderSeatStrip() {
     else if (isSpeaking) cls.push("is-speaking");
     else if (mark === "wolf") cls.push("is-mark-wolf");
     else if (mark === "good") cls.push("is-mark-good");
-    if (s.alive && (isWolfMateDisabled || isLastGuardedDisabled || isPkOutDisabled || (canDoubleClickConfirm && s.id === pid && p !== "DAY_PLAYER_TURN" && p !== "NIGHT_GUARD"))) {
+    if (s.alive && (isWolfMateDisabled || isLastGuardedDisabled || isPkOutDisabled || (canDoubleClickConfirm && s.id === pid && p !== "DAY_PLAYER_TURN" && p !== "NIGHT_GUARD" && !wolfCanSelfKnifeN1))) {
       cls.push("is-disabled-target");
     }
     btn.className = cls.join(" ");
@@ -366,7 +368,7 @@ function renderSeatStrip() {
     nameSpan.textContent = (isSheriff ? "[警] " : "") + (s.id === pid ? "你" : s.name);
     btn.appendChild(nameSpan);
 
-    const canConfirmThisSeat = Boolean(canDoubleClickConfirm && isSelected && s.alive && (s.id !== pid || p === "NIGHT_GUARD") && !isWolfMateDisabled && !isLastGuardedDisabled && !isPkOutDisabled);
+    const canConfirmThisSeat = Boolean(canDoubleClickConfirm && isSelected && s.alive && (s.id !== pid || p === "NIGHT_GUARD" || wolfCanSelfKnifeN1) && !isWolfMateDisabled && !isLastGuardedDisabled && !isPkOutDisabled);
     let badgeText = "";
     let badgeKind = "";
     const effRoleGod = typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(s) : s.role;

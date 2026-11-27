@@ -407,7 +407,7 @@ function bindModalEvents() {
       const btn = el(item.id);
       if (!btn) return;
       const active = item.model === selectedCloudModelUi ||
-        (item.model === "gemini-4-hydrogen" && selectedCloudModelUi === "gemini-2.5-flash") ||
+        (item.model === "gemini-4-hydrogen" && (selectedCloudModelUi === "gemini-2.5-flash" || selectedCloudModelUi === "gemini-3.8-flash")) ||
         (item.model === "gemini-3.1-flash-lite" && selectedCloudModelUi === "gemini-2.5-flash-lite");
       btn.classList.toggle("is-active", active);
       btn.setAttribute("aria-pressed", active ? "true" : "false");
@@ -729,7 +729,7 @@ function bindModalEvents() {
         return;
       }
 
-      const keyFallbackOrder = ["gemini-4-hydrogen", "gemini-3.1-flash-lite", "gemini-2.5-flash"].filter(function (m) { return m !== chosenModel; });
+      const keyFallbackOrder = ["gemini-4-hydrogen", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"].filter(function (m) { return m !== chosenModel; });
       for (let fi = 0; fi < keyFallbackOrder.length; fi++) {
         const fbModel = keyFallbackOrder[fi];
         const fbRes = await callGeminiModelOnce(fbModel, "請只回覆「連線成功」四個字", 10000, { apiKey: key });

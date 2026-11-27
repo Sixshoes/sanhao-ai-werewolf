@@ -365,12 +365,14 @@ function renderVotePickPanel() {
   }
 
   el("panelVote").classList.remove("hidden");
-  const isWolfVoter = Boolean(player && player.role === "wolf");
+  const isWolfVoter = Boolean(!state.hidePlayerRole && player && player.role === "wolf");
   const gwBadge = el("voteGoodwillBadge");
   if (gwBadge) {
     const tgObj = (state.match && state.match.threeGood) || { heart: 0, words: 0, deeds: 0, resonanceTriggered: false };
     const litCnt = (tgObj.heart > 0 ? 1 : 0) + (tgObj.words > 0 ? 1 : 0) + (tgObj.deeds > 0 ? 1 : 0);
-    if (!isWolfVoter && state.match.goodwillVoteBonus) {
+    if (state.hidePlayerRole) {
+      gwBadge.className = "hidden vote-goodwill-badge";
+    } else if (!isWolfVoter && state.match.goodwillVoteBonus) {
       gwBadge.textContent = "三好蓮花覺醒 · 黃金善意票 +1 生效";
       gwBadge.className = "vote-goodwill-badge is-gold";
     } else if (isWolfVoter && tgObj.resonanceTriggered) {
@@ -648,7 +650,7 @@ function renderStepperPanel(p) {
   if (markRow) markRow.classList.toggle("hidden", !showMarkTools);
   if (showMarkTools) {
     const curMark = state.playerMarks[activeSpeaker.id] || null;
-    const isWolfListener = Boolean(pSeatLive && pSeatLive.role === "wolf");
+    const isWolfListener = Boolean(!state.hidePlayerRole && pSeatLive && pSeatLive.role === "wolf");
     const isWolfMateSpeaking = Boolean(isWolfListener && activeSpeaker.role === "wolf");
     if (isWolfMateSpeaking) {
       el("btnMarkGood").disabled = true;
@@ -1510,7 +1512,7 @@ function selectSeat(seatId) {
     }
     if ((p === "NIGHT_GUARD" && player && player.alive && player.role === "guard" && state.match.lastGuardTargetId !== seatId) ||
       (seatId !== pid && p === "NIGHT_SEER" && !state.seerReveal && player && player.alive && player.role === "seer") ||
-      (seatId !== pid && p === "NIGHT_WOLF" && player && player.alive && player.role === "wolf" && target.role !== "wolf") ||
+      (p === "NIGHT_WOLF" && player && player.alive && (player.role === "wolf" || player.isWolfKing) && (typeof canPlayerWolfTargetSeat === "function" ? canPlayerWolfTargetSeat(player, target) : (seatId !== pid && target.role !== "wolf"))) ||
       (seatId !== pid && p === "HUNTER_TRIGGER" && player && canSeatTriggerShot(player) && !player.alive && !(player.isWolfKing && target.role === "wolf"))) {
       confirmTargetAction();
       return;
@@ -1520,7 +1522,7 @@ function selectSeat(seatId) {
   const isSpecMode = (typeof isSpectatorGuessActive === "function" && isSpectatorGuessActive());
   if ((p === "DAY_SPEECH" || p === "DAY_PLAYER_TURN" || p === "DAY_VOTE_RESULT" || isSpecMode) && target && seatId !== pid) {
     if (state.intelSeatId === seatId && target.alive && p === "DAY_SPEECH" && !isSpecMode) {
-      const isWolfSelf = Boolean(player && player.role === "wolf");
+      const isWolfSelf = Boolean(!state.hidePlayerRole && player && player.role === "wolf");
       if (isWolfSelf && target.role === "wolf") {
         spawnFx(seatId, "狼隊同伴", "#fb7185");
       } else {

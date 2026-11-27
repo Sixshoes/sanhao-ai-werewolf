@@ -532,7 +532,7 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
     const worldB = buildWorld(seerB, seerA);
 
     let preferredSide = worldA.score >= worldB.score ? "A" : "B";
-    if (self && self.role === "wolf" && snap.wolfTactic !== "deep_stealth") {
+    if (self && self.role === "wolf" && snap.wolfTactic !== "deep_stealth" && snap.wolfTactic !== "deep_stealth_bus") {
       const aIsWolfTeam = Boolean(wolfTeamMap[seerA.id]);
       const bIsWolfTeam = Boolean(wolfTeamMap[seerB.id]);
       if (aIsWolfTeam && !bIsWolfTeam) preferredSide = "A";

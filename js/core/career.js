@@ -496,10 +496,10 @@ function buildMatchTurningPoints() {
       m.sheriffVoteRecord.seerClaimIds.map(nameOf).join(" 與 ") + " 同台競選警徽，由 " + nameOf(m.sheriffVoteRecord.winnerId) + " 掌歸票權。",
       "gold"
     );
-  } else if (m.wolfExplodedToday) {
+  } else if (m.wolfExplodedDay || m.wolfExplodedToday) {
     pushPoint(
       "day_explode",
-      "第 " + (m.day || 1) + " 日",
+      "第 " + (m.wolfExplodedDay || m.day || 1) + " 日",
       "酸民狼自爆搶節奏",
       "酸民狼亮牌離席沒收當日剩餘流程，強行切入黑夜打斷好人歸票。",
       "cinnabar"

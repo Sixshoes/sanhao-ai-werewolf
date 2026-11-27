@@ -253,12 +253,12 @@ function bindCanvasEvents() {
           }
         } else if (p === "NIGHT_GUARD" && targetId === state.match.lastGuardTargetId && player && player.alive && player.role === "guard") {
           showToast("《凹嗚》規則：同一位夥伴不可連續兩晚守護！", "warn");
-        } else if (p === "NIGHT_WOLF" && player && player.alive && player.role === "wolf" && getSeat(targetId) && getSeat(targetId).role === "wolf") {
+        } else if (p === "NIGHT_WOLF" && player && player.alive && (player.role === "wolf" || player.isWolfKing) && getSeat(targetId) && (getSeat(targetId).role === "wolf" || getSeat(targetId).isWolfKing) && !(typeof canPlayerWolfTargetSeat === "function" && canPlayerWolfTargetSeat(player, getSeat(targetId)))) {
           showToast("他是你的酸民狼同伴，請改鎖定好人！", "warn");
         } else if (((p === "NIGHT_GUARD" && player && player.alive && player.role === "guard" && state.match.lastGuardTargetId !== targetId) ||
                     (p === "NIGHT_SEER" && !state.seerReveal && player && player.alive && player.role === "seer") ||
-                    (p === "NIGHT_WOLF" && player && player.alive && player.role === "wolf" && getSeat(targetId) && getSeat(targetId).role !== "wolf") ||
-                    (p === "HUNTER_TRIGGER" && player && canSeatTriggerShot(player) && !player.alive && !(player.isWolfKing && getSeat(targetId) && getSeat(targetId).role === "wolf"))) && (p === "NIGHT_GUARD" || targetId !== pid)) {
+                    (p === "NIGHT_WOLF" && player && player.alive && (player.role === "wolf" || player.isWolfKing) && getSeat(targetId) && (typeof canPlayerWolfTargetSeat === "function" ? canPlayerWolfTargetSeat(player, getSeat(targetId)) : getSeat(targetId).role !== "wolf")) ||
+                    (p === "HUNTER_TRIGGER" && player && canSeatTriggerShot(player) && !player.alive && !(player.isWolfKing && getSeat(targetId) && getSeat(targetId).role === "wolf"))) && (p === "NIGHT_GUARD" || targetId !== pid || (p === "NIGHT_WOLF" && typeof canPlayerWolfTargetSeat === "function" && canPlayerWolfTargetSeat(player, getSeat(targetId))))) {
           state.selectedSeatId = targetId;
           confirmTargetAction();
         } else if (p === "DAY_PLAYER_TURN" && targetId !== pid) {

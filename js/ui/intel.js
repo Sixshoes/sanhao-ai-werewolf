@@ -34,7 +34,7 @@ function openRadialMenu(seatId) {
   state.radialTargetId = seatId;
   const pSelfRad = (state.match && state.match.started) ? getPlayerSeat() : null;
   const tSeatRad = (state.match && state.match.started) ? getSeat(seatId) : null;
-  const isWolfRad = Boolean(pSelfRad && pSelfRad.role === "wolf");
+  const isWolfRad = Boolean(!state.hidePlayerRole && pSelfRad && pSelfRad.role === "wolf");
   const isMateRad = Boolean(isWolfRad && tSeatRad && tSeatRad.role === "wolf");
   if (typeof menu.querySelector === "function") {
     const rbGood = menu.querySelector('[data-radial="good"]');
@@ -246,7 +246,7 @@ function renderSeatIntelPopover() {
     }
   }
   const pSelfNow = state.match.started ? getPlayerSeat() : null;
-  const isWolfView = Boolean(pSelfNow && pSelfNow.role === "wolf");
+  const isWolfView = Boolean(!state.hidePlayerRole && pSelfNow && pSelfNow.role === "wolf");
   const isWolfMateSeat = Boolean(isWolfView && s.role === "wolf");
   const wolfGodTag = (isWolfView && !isWolfMateSeat && state.match.wolfGodMarks && state.match.wolfGodMarks[s.id] && typeof getWolfGodMarkDef === "function")
     ? ("・" + getWolfGodMarkDef(state.match.wolfGodMarks[s.id]).label)
@@ -446,12 +446,14 @@ function renderSeatIntelPopover() {
       } else if (ph === "NIGHT_SEER" && !state.seerReveal && pAliveSelf && pSelf.role === "seer") {
         quickLabel = "立即查證 " + fmtSeatNum(s.id) + "號";
         quickIco = "seer";
-      } else if (ph === "NIGHT_WOLF" && pAliveSelf && pSelf.role === "wolf" && s.role !== "wolf") {
-        quickLabel = "夜間鎖定 " + fmtSeatNum(s.id) + "號";
+      } else if (ph === "NIGHT_WOLF" && pAliveSelf && (pSelf.role === "wolf" || pSelf.isWolfKing) && (state.hidePlayerRole || (typeof canPlayerWolfTargetSeat === "function" ? canPlayerWolfTargetSeat(pSelf, s) : s.role !== "wolf"))) {
+        const isSelfKnifeLabel = Boolean(!state.hidePlayerRole && (s.role === "wolf" || s.isWolfKing));
+        quickLabel = isSelfKnifeLabel ? ("首夜自刀博藥 " + fmtSeatNum(s.id) + "號") : ("夜間鎖定 " + fmtSeatNum(s.id) + "號");
         quickIco = "wolf";
-      } else if (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && typeof canSeatTriggerShot === "function" && canSeatTriggerShot(pSelf) && !(pSelf.isWolfKing && s.role === "wolf")) {
-        quickLabel = pSelf.isWolfKing ? ("反撲帶走 " + fmtSeatNum(s.id) + "號") : ("共鳴請離 " + fmtSeatNum(s.id) + "號");
-        quickIco = pSelf.isWolfKing ? "crown" : "scales";
+      } else if (ph === "HUNTER_TRIGGER" && pSelf && !pSelf.alive && typeof canSeatTriggerShot === "function" && canSeatTriggerShot(pSelf) && (state.hidePlayerRole || !(pSelf.isWolfKing && s.role === "wolf"))) {
+        const showWkLbl = Boolean(!state.hidePlayerRole && pSelf.isWolfKing);
+        quickLabel = showWkLbl ? ("反撲帶走 " + fmtSeatNum(s.id) + "號") : ("共鳴請離 " + fmtSeatNum(s.id) + "號");
+        quickIco = showWkLbl ? "crown" : "scales";
       } else if (ph === "DAY_PLAYER_TURN") {
         quickLabel = "設為發言點名對象";
         quickIco = "target";

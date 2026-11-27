@@ -1778,18 +1778,18 @@ const sound = {
       const self = this;
       if (isWolf) {
         // Enigmatic twilight taiko pulse + deep guqin minor cadence for Acid-Wolf faction reveal
-        this.voiceDrum("deep", now, 0.24);
+        this.voiceDrum("deep", now, 0.24, this.sfxGain);
         [50, 53, 57, 58].forEach(function (midi, idx) {
-          self.voicePluck(midiToFreq(midi), now + 0.05 + idx * 0.095, 0.95, 0.14);
+          self.voicePluck(midiToFreq(midi), now + 0.05 + idx * 0.095, 0.95, 0.14, idx, self.sfxGain);
         });
-        this.voiceBell(midiToFreq(62), now + 0.34, 1.35, 0.06);
+        this.voiceBell(midiToFreq(62), now + 0.34, 1.35, 0.06, this.sfxGain);
       } else {
         // Luminous pentatonic guzheng glissando + resonant bronze singing bowl for Academy Good faction reveal
         [62, 66, 69, 71, 74].forEach(function (midi, idx) {
-          self.voicePluck(midiToFreq(midi), now + idx * 0.068, 1.05, 0.14);
+          self.voicePluck(midiToFreq(midi), now + idx * 0.068, 1.05, 0.14, idx, self.sfxGain);
         });
-        this.voiceBell(midiToFreq(74), now + 0.22, 1.85, 0.10);
-        this.voiceBell(midiToFreq(81), now + 0.34, 1.55, 0.065);
+        this.voiceBell(midiToFreq(74), now + 0.22, 1.85, 0.10, this.sfxGain);
+        this.voiceBell(midiToFreq(81), now + 0.34, 1.55, 0.065, this.sfxGain);
       }
     } catch (e) {}
   },

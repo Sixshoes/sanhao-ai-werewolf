@@ -180,7 +180,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
       };
     }
     if (speaker.team === "wolf") {
-      const slipPk = wolfTactic === "deep_stealth" ? false : shouldWolfEmitToxicSlip(speaker, day, 9);
+      const slipPk = (wolfTactic === "deep_stealth" || wolfTactic === "deep_stealth_bus") ? false : shouldWolfEmitToxicSlip(speaker, day, 9);
       const pkWolfTxt = typeof buildPersonaPkText === "function"
         ? buildPersonaPkText(speaker, "wolf", { rebutLead: rebutLead, rName: rName, extraProof: "", signoff: signoff })
         : null;
@@ -329,7 +329,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         vouchId: null,
         wolfPits: wPits0A,
         goodPits: mergePits(null, baseGoodIds, 2, seerWolfOnMe.speakerId),
-        hasToxicSlip: wolfTactic === "deep_stealth" ? false : shouldWolfEmitToxicSlip(speaker, day, 1, true),
+        hasToxicSlip: (wolfTactic === "deep_stealth" || wolfTactic === "deep_stealth_bus") ? false : shouldWolfEmitToxicSlip(speaker, day, 1, true),
         text: rebutLead + "別亂栽贓好不好！剛剛前置位 " + accName + " 自稱觀察員就硬把我打進狼坑，根本想搶話語權把好人推出去吧？我明明是清白好人，請大家別信 " + accName + " 一面之詞，這輪我堅持反投 " + accName + "！"
       };
     }
@@ -464,7 +464,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         vouchId: null,
         wolfPits: wolfFakePits,
         goodPits: [],
-        hasToxicSlip: wolfTactic === "deep_stealth" ? false : shouldWolfEmitToxicSlip(speaker, day, 3),
+        hasToxicSlip: (wolfTactic === "deep_stealth" || wolfTactic === "deep_stealth_bus") ? false : shouldWolfEmitToxicSlip(speaker, day, 3),
         text: xiaoyunOverExplain ? (baseWolfRebutText + xiaoyunOverExplain) : baseWolfRebutText
       };
     }

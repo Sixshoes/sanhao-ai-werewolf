@@ -494,21 +494,22 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       ? stage3dVrm.getIdleArchetype(s.name, s.id)
       : null;
     const basePostureLean = archFallback ? (archFallback.spineLean || 0) : 0;
-    const breath = s.alive ? Math.sin(t * (archFallback ? archFallback.breathFreq : 2.2) + s.id * 1.1) * 0.025 : 0;
-    const leanIn = isSpeaking ? (0.14 + liveAmp * 0.08) : (isBeingAccusedNow ? -0.14 : (isHovered ? 0.07 : (!s.alive ? 0.22 * actor.outFade : basePostureLean)));
+    const inSeatShowcase = Boolean(typeof stage3d !== "undefined" && stage3d.showcaseMode && stage3d.showcaseTarget === s.id);
+    const breath = (s.alive || inSeatShowcase) ? Math.sin(t * (archFallback ? archFallback.breathFreq : 2.2) + s.id * 1.1) * 0.025 : 0;
+    const leanIn = isSpeaking ? (0.14 + liveAmp * 0.08) : (isBeingAccusedNow ? -0.14 : ((isHovered || inSeatShowcase) ? 0.07 : ((!s.alive && !inSeatShowcase) ? 0.22 * actor.outFade : basePostureLean)));
     actor.figureGroup.position.y = 0.72 + breath + Math.max(0, -phys.oy * 0.015);
     actor.figureGroup.rotation.x = leanIn;
-    actor.figureGroup.rotation.z = phys.tilt * 0.45 + (s.alive && archFallback ? (archFallback.headTiltBias || 0) * 0.35 : 0);
+    actor.figureGroup.rotation.z = phys.tilt * 0.45 + ((s.alive || inSeatShowcase) && archFallback ? (archFallback.headTiltBias || 0) * 0.35 : 0);
     actor.figureGroup.scale.setScalar(phys.scale);
 
-    // Wolf Night Partner Secret Eye-Contact (stays awake & looks directly at player when player is Wolf at Night!)
+    // Wolf Night Partner Secret Eye-Contact (stays awake & looks directly at player when player is Wolf at Night; hidden when hidePlayerRole is on!)
     const playerSeatObj = getPlayerSeat();
-    const isWolfNightMate = Boolean(f.night && p === "NIGHT_WOLF" && s.alive && s.role === "wolf" && !isSelf && playerSeatObj && playerSeatObj.role === "wolf");
+    const isWolfNightMate = Boolean(!state.hidePlayerRole && f.night && p === "NIGHT_WOLF" && s.alive && s.role === "wolf" && !isSelf && playerSeatObj && playerSeatObj.role === "wolf");
 
     // ===== REAL 3D HEAD TRACKING =====
     let targetHeadYaw = 0;
     let targetHeadPitch = 0;
-    if (!s.alive && !isSpeaking) {
+    if (!s.alive && !isSpeaking && !inSeatShowcase) {
       targetHeadPitch = 0.48;
     } else if (isWolfNightMate && seatWorldMap[pid]) {
       const pp = seatWorldMap[pid];
@@ -517,9 +518,9 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       while (diff < -Math.PI) diff += Math.PI * 2;
       targetHeadYaw = clamp(diff, -0.95, 0.95);
       targetHeadPitch = -0.05 + Math.sin(t * 3.5) * 0.06;
-    } else if (f.night && !isSelected) {
+    } else if (f.night && !isSelected && !inSeatShowcase) {
       targetHeadPitch = 0.46;
-    } else if (isHovered || isDragSnap) {
+    } else if (isHovered || isDragSnap || inSeatShowcase) {
       let diff = Math.atan2(camera.position.x - pos.x, camera.position.z - pos.z) - baseFacingY;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
@@ -794,8 +795,8 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     }
 
     // Drive optional VRoid .VRM / rigged .GLB avatar attached to this AI seat
-    const isPrioritySeat = Boolean(isSpeaking || isHovered || isSelected || isDragSnap || isBeingAccusedNow || isVotingNow);
-    const isDeadSettled = Boolean(!s.alive && !isSpeaking && actor.outFade > 0.96 && actor._vrmUpdatedOnce);
+    const isPrioritySeat = Boolean(isSpeaking || isHovered || isSelected || isDragSnap || isBeingAccusedNow || isVotingNow || inSeatShowcase);
+    const isDeadSettled = Boolean(!s.alive && !isSpeaking && !inSeatShowcase && actor.outFade > 0.96 && actor._vrmUpdatedOnce);
     const isOffScreenPrev = Boolean(actor._wasOffScreen && actor._vrmUpdatedOnce);
     const isIgpuSeats = Boolean(typeof stage3d !== "undefined" && stage3d.isIntegratedGpu);
     const vrmStride = isPrioritySeat
@@ -816,7 +817,6 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         actor.showcaseAction = "";
         actor.showcaseActionUntil = 0;
       }
-      const inSeatShowcase = Boolean(typeof stage3d !== "undefined" && stage3d.showcaseMode && stage3d.showcaseTarget === s.id);
       const scAct = inSeatShowcase ? (actor.showcaseAction || "") : "";
       const isPreppingNow = Boolean(state.speechPrepUntil && nowMs < state.speechPrepUntil && state.speechPrepSeatId === s.id);
       const liveBeat = (state.activeMentionBeat && nowMs < state.activeMentionBeat.until) ? state.activeMentionBeat : null;
@@ -829,7 +829,7 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
       const isPointingAcc = Boolean(isMentionPointBeat || (isSpeaking && activeAccuseTargetId && seatWorldMap[activeAccuseTargetId] && !liveBeat));
       const isBeingVouchedNow = Boolean(s.alive && activeVouchTargetId === s.id && state.activeSpeakerId && state.activeSpeakerId !== s.id);
       const speechActNow = isSpeaking ? (activeClaimRole ? "claim_role" : (activeVouchTargetId ? "vouch_warm" : "")) : "";
-      let moodNowVrm = (isBeingAccusedNow || isMentionedTargetNow) ? "shock" : (!s.alive ? "sorrow" : getSeatEmotion(s.id, nowMs));
+      let moodNowVrm = (isBeingAccusedNow || isMentionedTargetNow) ? "shock" : ((!s.alive && !inSeatShowcase) ? "sorrow" : getSeatEmotion(s.id, nowMs));
       if (scAct === "gasp_react") moodNowVrm = "shock";
       else if (scAct === "celebrate") moodNowVrm = "laugh";
       else if (scAct === "welcome_bow" || scAct === "purify_cast") moodNowVrm = "happy";
@@ -858,8 +858,8 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         seed: s.id * 1.7,
         personaName: s.name,
         moodKey: curMoodKey,
-        alive: s.alive || isSpeaking,
-        sleeping: f.night && !isSelected && !isWolfNightMate,
+        alive: s.alive || isSpeaking || inSeatShowcase,
+        sleeping: f.night && !isSelected && !isWolfNightMate && !inSeatShowcase,
         talking: scTalking,
         isPrepping: isPreppingNow,
         sitState: sitStateNow,
@@ -879,8 +879,8 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
         isListeningCurious: isListeningCurious,
         isListeningAgree: isListeningAgree,
         speechAct: speechActNow,
-        isHovered: isHovered || isSelected,
-        isPriority: isSpeaking || isHovered || isSelected || isDragSnap,
+        isHovered: isHovered || isSelected || inSeatShowcase,
+        isPriority: isSpeaking || isHovered || isSelected || isDragSnap || inSeatShowcase,
         seatCount: nSeats,
         frameCounter: pool.frameCounter,
         seatId: s.id,
@@ -891,11 +891,11 @@ function update3DSeats(pool, camera, f, canvasW, canvasH, fx3d, camPreset) {
     // Throttled + Signature-Cached Live 3D Anime Face Update (skipped cleanly when external .VRM avatar is active or face state unchanged!)
     const isEco = state.quality3D === "eco";
     const isBal = state.quality3D === "balanced";
-    const redrawEvery = (isSpeaking || isHovered || isSelected || isDragSnap)
+    const redrawEvery = (isSpeaking || isHovered || isSelected || isDragSnap || inSeatShowcase)
       ? (isEco ? 3 : 2)
       : (isEco ? 12 : ((nSeats >= 10 || isBal) ? 8 : 5));
     if (!actor.useVrm && actor.faceBundle && (!actor.faceDrawnOnce || (pool.frameCounter + s.id) % redrawEvery === 0)) {
-      const sleepingFace = Boolean(f.night && !isSelected && !isWolfNightMate) || !s.alive;
+      const sleepingFace = (Boolean(f.night && !isSelected && !isWolfNightMate) || !s.alive) && !inSeatShowcase;
       const sweating = Boolean(state.match.started && s.alive && (state.match.microPulseRevealed || s.sweatExposed) && s.microPulse >= 60);
       const moodNow = isBeingAccusedNow ? "shock" : getSeatEmotion(s.id, nowMs);
       const gazeX = clamp(actor.headYaw * 1.15, -1, 1);

@@ -2406,22 +2406,36 @@ const stage3dVrm = {
     if (bm.rightHand) this.slerpBoneModelDelta(bm.rightHand, clamp(rWristX, -0.42, 0.42), clamp(rWristY, -0.38, 0.38), clamp(rWristZ, -0.36, 0.36), 0.075, "YXZ");
     if (bm.leftHand) this.slerpBoneModelDelta(bm.leftHand, clamp(lWristX, -0.42, 0.42), -clamp(lWristY, -0.38, 0.38), -clamp(lWristZ, -0.36, 0.36), 0.075, "YXZ");
 
-    // Expressive Finger Pose Articulation (v23.3: run once for resting seats, animate every frame for active speakers/priority/acting seats!)
-    const runFingerPose = Boolean(!inst._fingersInitialized || o.isPriority || talking || Boolean(o.act));
-    if (runFingerPose) {
+    // Expressive Finger Pose Articulation (v25.5: snap initial resting pose cleanly & settle smoothly back to relaxed after leaving focus!)
+    const fingerPoseKey = rHandPose + "|" + lHandPose;
+    const activeFingerSeat = Boolean(o.isPriority || talking || Boolean(o.act));
+    const isFirstFingerInit = !inst._fingersInitialized;
+    if (isFirstFingerInit) {
       inst._fingersInitialized = true;
+      inst._lastFingerPoseKey = fingerPoseKey;
+      inst._fingerSettleFrames = 0;
+    } else if (activeFingerSeat || inst._lastFingerPoseKey !== fingerPoseKey) {
+      inst._lastFingerPoseKey = fingerPoseKey;
+      inst._fingerSettleFrames = 24;
+    }
+    const runFingerPose = Boolean(isFirstFingerInit || activeFingerSeat || (inst._fingerSettleFrames || 0) > 0);
+    if (runFingerPose) {
+      if (!isFirstFingerInit && !activeFingerSeat) {
+        inst._fingerSettleFrames = Math.max(0, (inst._fingerSettleFrames || 0) - 1);
+      }
+      const fAlpha = isFirstFingerInit ? 1.0 : clamp(0.14 * Math.min(dt60, 2.5), 0.075, 0.35);
       const rCurls = VRM_FINGER_PRESETS[rHandPose] || VRM_FINGER_PRESETS.relaxed;
       const lCurls = VRM_FINGER_PRESETS[lHandPose] || VRM_FINGER_PRESETS.relaxed;
-      if (bm.rightIndexProximal) this.slerpBoneModelDelta(bm.rightIndexProximal, 0, 0, rCurls[0], 0.075, "YXZ");
-      if (bm.rightMiddleProximal) this.slerpBoneModelDelta(bm.rightMiddleProximal, 0, 0, rCurls[1], 0.075, "YXZ");
-      if (bm.rightRingProximal) this.slerpBoneModelDelta(bm.rightRingProximal, 0, 0, rCurls[2], 0.075, "YXZ");
-      if (bm.rightLittleProximal) this.slerpBoneModelDelta(bm.rightLittleProximal, 0, 0, rCurls[3], 0.075, "YXZ");
-      if (bm.rightThumbProximal) this.slerpBoneModelDelta(bm.rightThumbProximal, 0, rCurls[4] * 0.45, rCurls[4] * 0.32, 0.075, "YXZ");
-      if (bm.leftIndexProximal) this.slerpBoneModelDelta(bm.leftIndexProximal, 0, 0, -lCurls[0], 0.075, "YXZ");
-      if (bm.leftMiddleProximal) this.slerpBoneModelDelta(bm.leftMiddleProximal, 0, 0, -lCurls[1], 0.075, "YXZ");
-      if (bm.leftRingProximal) this.slerpBoneModelDelta(bm.leftRingProximal, 0, 0, -lCurls[2], 0.075, "YXZ");
-      if (bm.leftLittleProximal) this.slerpBoneModelDelta(bm.leftLittleProximal, 0, 0, -lCurls[3], 0.075, "YXZ");
-      if (bm.leftThumbProximal) this.slerpBoneModelDelta(bm.leftThumbProximal, 0, -lCurls[4] * 0.45, -lCurls[4] * 0.32, 0.075, "YXZ");
+      if (bm.rightIndexProximal) this.slerpBoneModelDelta(bm.rightIndexProximal, 0, 0, rCurls[0], fAlpha, "YXZ");
+      if (bm.rightMiddleProximal) this.slerpBoneModelDelta(bm.rightMiddleProximal, 0, 0, rCurls[1], fAlpha, "YXZ");
+      if (bm.rightRingProximal) this.slerpBoneModelDelta(bm.rightRingProximal, 0, 0, rCurls[2], fAlpha, "YXZ");
+      if (bm.rightLittleProximal) this.slerpBoneModelDelta(bm.rightLittleProximal, 0, 0, rCurls[3], fAlpha, "YXZ");
+      if (bm.rightThumbProximal) this.slerpBoneModelDelta(bm.rightThumbProximal, 0, rCurls[4] * 0.45, rCurls[4] * 0.32, fAlpha, "YXZ");
+      if (bm.leftIndexProximal) this.slerpBoneModelDelta(bm.leftIndexProximal, 0, 0, -lCurls[0], fAlpha, "YXZ");
+      if (bm.leftMiddleProximal) this.slerpBoneModelDelta(bm.leftMiddleProximal, 0, 0, -lCurls[1], fAlpha, "YXZ");
+      if (bm.leftRingProximal) this.slerpBoneModelDelta(bm.leftRingProximal, 0, 0, -lCurls[2], fAlpha, "YXZ");
+      if (bm.leftLittleProximal) this.slerpBoneModelDelta(bm.leftLittleProximal, 0, 0, -lCurls[3], fAlpha, "YXZ");
+      if (bm.leftThumbProximal) this.slerpBoneModelDelta(bm.leftThumbProximal, 0, -lCurls[4] * 0.45, -lCurls[4] * 0.32, fAlpha, "YXZ");
     }
 
     // 3. SpringBone Hair, Ribbons & Skirt Model-Space Physics (lively follow-through hair sway, flip-free seated skirt!)

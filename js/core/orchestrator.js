@@ -567,12 +567,18 @@ const orchestrator = {
         const divSummary = (vmCoach && vmCoach.summaryLines && vmCoach.summaryLines.length)
           ? vmCoach.summaryLines.slice(0, 2).join("；")
           : "全場無明顯言票背離";
+        const coachWinLbl = summary.winnerTeam === "good"
+          ? "三好書院（好人勝）"
+          : (summary.winnerTeam === "early_end" ? "提前結束觀戰（未分勝負）" : "酸民狼陣營勝");
+        const coachFourGCount = (mSnap.stats && typeof mSnap.stats.fourGCount === "number")
+          ? mSnap.stats.fourGCount
+          : (mSnap.fourGivingsUsed ? Object.keys(mSnap.fourGivingsUsed).filter(function (k) { return Boolean(mSnap.fourGivingsUsed[k]); }).length : 0);
         const coachPrompt = "你是青嵐書院《三好AI狼人殺》茶席總監「清茗」，剛結束一場對局，請以上帝視角給玩家精闢溫暖的覆盤點評。\n" +
-          "勝方：" + (summary.winnerTeam === "good" ? "三好書院（好人勝）" : "酸民狼陣營勝") + "（" + summary.reason + "）\n" +
+          "勝方：" + coachWinLbl + "（" + summary.reason + "）\n" +
           "全場底牌：" + seatsBrief + "\n" +
           "投票脈絡：" + votesBrief + "\n" +
           "言行一致度觀察：" + divSummary + "\n" +
-          "三好與四給表現：" + summary.kindnessHighlight + "｜友善度：" + (mSnap.harmonyScore || 70) + "｜四給連心次數：" + ((mSnap.fourGUsedCount) || 0) + "\n" +
+          "三好與四給表現：" + summary.kindnessHighlight + "｜友善度：" + (mSnap.harmonyScore || 70) + "｜四給連心次數：" + coachFourGCount + "\n" +
           "請只輸出單一純 JSON（3段各32～55字，自然繁體中文，無表情符號與 Markdown）：" +
           '{"turnPoint":"本局勝負關鍵轉折點分析","threeGoodReview":"玩家本局三好說好話、言行一致度與四給策略亮點點評","nextTip":"下一局具體進階建議"}';
         callGeminiText(coachPrompt, { jsonMode: true }).then(function (rawCoach) {
