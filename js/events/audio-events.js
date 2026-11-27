@@ -254,7 +254,7 @@ function bindAudioVoiceEvents() {
     });
   }
 
-  function auditionPersonaVoice(personaName) {
+  function auditionPersonaVoice(personaName, auditionOpts) {
     sound.unlock();
     if (!voice.enabled) {
       voice.enabled = true;
@@ -284,7 +284,9 @@ function bindAudioVoiceEvents() {
     const prof = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["暖暖"];
     if (voice.mode === "cozy") {
       playCozyAudition(prof.seatHint || 3);
-      if (typeof maybeScheduleAutoAdvanceAfterSpeech === "function") maybeScheduleAutoAdvanceAfterSpeech();
+      if (!(auditionOpts && auditionOpts.skipCozySchedule) && typeof maybeScheduleAutoAdvanceAfterSpeech === "function") {
+        maybeScheduleAutoAdvanceAfterSpeech();
+      }
     } else {
       clearCozyAuditionTimers();
       voice.speak(personaName, lines[personaName] || lines["暖暖"], personaName === "主持" ? "host_night" : "normal", undefined, { isAudition: true });
@@ -304,12 +306,16 @@ function bindAudioVoiceEvents() {
       });
       voice.refreshVoices();
       saveUserPrefs();
+      let cozyHandledAdvance = false;
       if (m === "cozy") {
         const savedCozyDone = voice._activeOnDone;
         voice.stop();
-        if (typeof savedCozyDone === "function") savedCozyDone();
+        if (typeof savedCozyDone === "function") {
+          savedCozyDone();
+          cozyHandledAdvance = true;
+        }
       }
-      auditionPersonaVoice("暖暖");
+      auditionPersonaVoice("暖暖", { skipCozySchedule: cozyHandledAdvance });
     });
   });
 

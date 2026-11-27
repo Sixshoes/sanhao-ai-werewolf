@@ -20254,12 +20254,14 @@ body.craft-ui #panelPlayerSpeech > div:first-child {
   gap: 6px;
 }
 
-@media (max-width: 1199px) and (min-width: 1024px) {
+@media (max-width: 1199px) and (min-width: 768px) {
   body.craft-ui.screen-ingame #inGameTopHud #bannerHeadline {
     font-size: 16.5px;
     max-width: min(320px, 34vw);
   }
+}
 
+@media (max-width: 1199px) and (min-width: 1024px) {
   body.craft-ui.screen-ingame #bottomUnifiedRow {
     grid-template-columns: 208px minmax(0, 1fr) 208px;
     gap: 8px;

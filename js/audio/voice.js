@@ -1673,7 +1673,8 @@ const voice = {
     const self = this;
     const p = (async function () {
       const geminiTtsTimeoutMs = clamp(11200 + cleanText.length * 45, 11400, 14500);
-      const controller = typeof AbortController === "function" ? new AbortController() : null;
+      const trackATotalBudgetMs = clamp(11800 + cleanText.length * 30, 12000, 13800);
+      const controller = (hasPersonalKey && typeof AbortController === "function") ? new AbortController() : null;
       const timer = controller ? setTimeout(function () { controller.abort(); }, geminiTtsTimeoutMs) : null;
       const callCloudTtsTrackA = async function () {
         const hdrs = { "Content-Type": "application/json" };
@@ -1681,9 +1682,10 @@ const voice = {
           hdrs["X-Tea-Session"] = getOrCreateProxySessionId();
         }
         const strippedText = self.stripGeminiVocalTags(cleanText) || cleanText;
-        const postOnce = async function (txtToSend) {
+        const trackAStartedAt = Date.now();
+        const postOnce = async function (txtToSend, attemptTimeoutMs) {
           const reqCtrl = typeof AbortController === "function" ? new AbortController() : null;
-          const reqTimer = reqCtrl ? setTimeout(function () { reqCtrl.abort(); }, geminiTtsTimeoutMs) : null;
+          const reqTimer = reqCtrl ? setTimeout(function () { reqCtrl.abort(); }, attemptTimeoutMs) : null;
           try {
             return await fetch("/api/tts", {
               method: "POST",
@@ -1702,15 +1704,17 @@ const voice = {
         let cloudRes = null;
         let cloudErr = null;
         try {
-          cloudRes = await postOnce(payload.taggedTranscript);
+          cloudRes = await postOnce(payload.taggedTranscript, Math.min(geminiTtsTimeoutMs, trackATotalBudgetMs));
         } catch (err1) {
           cloudErr = err1;
         }
         const shouldRetry = !cloudRes || cloudRes.status === 400 || cloudRes.status === 500 || cloudRes.status === 502 || cloudRes.status === 504;
-        if (shouldRetry && !(cloudErr && cloudErr.name === "AbortError")) {
+        const retryRemainMs = trackATotalBudgetMs - (Date.now() - trackAStartedAt) - 280;
+        if (shouldRetry && !(cloudErr && cloudErr.name === "AbortError") && retryRemainMs >= 3200) {
           await new Promise(function (resolve) { setTimeout(resolve, 280); });
+          const attempt2TimeoutMs = Math.max(2800, trackATotalBudgetMs - (Date.now() - trackAStartedAt));
           try {
-            cloudRes = await postOnce(strippedText);
+            cloudRes = await postOnce(strippedText, attempt2TimeoutMs);
             cloudErr = null;
           } catch (err2) {
             cloudErr = err2;
@@ -2178,6 +2182,15 @@ const voice = {
     const clean = this.formatMandarinText(rawText);
     const isAudition = Boolean(opts && opts.isAudition);
     const savedOnDone = isAudition ? this._activeOnDone : null;
+    const auditionOrigin = (isAudition && typeof savedOnDone === "function") ? {
+      phase: (typeof state !== "undefined" && state.match) ? state.match.phase : null,
+      day: (typeof state !== "undefined" && state.match) ? state.match.day : 0,
+      speakerId: (typeof state !== "undefined") ? state.activeSpeakerId : null,
+      speechTurnSeq: (typeof state !== "undefined") ? state._speechTurnSeq : 0,
+      lastWordsTurnSeq: (typeof state !== "undefined") ? state._lastWordsTurnSeq : 0,
+      sheriffTurnSeq: (typeof state !== "undefined") ? state._sheriffTurnSeq : 0,
+      epoch: (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0
+    } : null;
     const wasBusy = Boolean(this.speaking || (this.isSupported() && (window.speechSynthesis.speaking || window.speechSynthesis.pending)));
     this.stop();
     const self = this;
@@ -2185,7 +2198,19 @@ const voice = {
       ? function () {
         if (self._activeOnDone === effectiveOnDone) self._activeOnDone = null;
         if (typeof onDone === "function") onDone();
-        if (typeof savedOnDone === "function") savedOnDone();
+        if (typeof savedOnDone === "function") {
+          const stillSameTurn = !auditionOrigin || (
+            (typeof orchestrator === "undefined" || orchestrator.matchEpoch === auditionOrigin.epoch) &&
+            (typeof state === "undefined" || (
+              (!state.match || (state.match.phase === auditionOrigin.phase && state.match.day === auditionOrigin.day)) &&
+              state.activeSpeakerId === auditionOrigin.speakerId &&
+              state._speechTurnSeq === auditionOrigin.speechTurnSeq &&
+              state._lastWordsTurnSeq === auditionOrigin.lastWordsTurnSeq &&
+              state._sheriffTurnSeq === auditionOrigin.sheriffTurnSeq
+            ))
+          );
+          if (stillSameTurn) savedOnDone();
+        }
       }
       : null;
     if (!clean || !this.canSpeak()) {

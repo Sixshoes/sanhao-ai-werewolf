@@ -8326,7 +8326,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
       && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
     docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("sanhao-assets-v25.5.0") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
-    scriptV242Ok: docScript241.includes("v24.4.0") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
+    scriptV242Ok: docScript241.includes("v25.5.0") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
     voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
     apiTimeout8400AndLruOk: apiGem242.includes("resolvePrimaryTimeoutMs(primaryModel)") && apiGem242.includes("21500 - elapsed") && apiGem242.includes("if (++evicted >= 200) break;") && apiGem242.includes("if (timer) clearTimeout(timer);"),
     webglContextLostOk: eng242.includes('canvas3d.addEventListener("webglcontextlost"'),
@@ -9333,7 +9333,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   })()`, ctx);
   const docScriptV2431 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
   const demoScriptVirtueSyncOk = [
-    "v24.4.0",
+    "v25.5.0",
     "啟席預載遮罩",
     "三好四給主動茶禮列",
     "茶席風氣",

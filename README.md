@@ -1,13 +1,13 @@
-# 三好 AI 狼人殺（青嵐書院・清茗茶席 3D 互動反霸凌推理系統 v24.4.0）
+# 三好 AI 狼人殺（青嵐書院・清茗茶席 3D 互動反霸凌推理系統 v25.5.0）
 
 一款將 **「三好（做好事、說好話、存好心）」** 與 **「四給（給信心、給歡喜、給希望、給方便）」** 融入社會推理規則的純網頁 3D 反霸凌桌遊。全站採免註冊、零外部 CDN 腳本依賴與 100% 盲審匿名架構，支援桌機、平板與手機跨裝置體驗，並內建五層自動化驗證流水線。
 
 ---
 
-## 核心特色與系統架構（v24.4.0）
+## 核心特色與系統架構（v25.5.0）
 
 - **零洩漏盲視防弊架構（`js/ai/blind-view.js`）**：透過 JavaScript `Proxy` 陷阱與凍結快照隔離 AI 視角，非狼人角色無法讀取任何他席真實底牌或隱藏欄位，並於送出大型語言模型前執行 `auditLlmPromptLeak()` 靜態字串稽核（通過 496/496 項防弊壓力檢測，0 次洩漏）。
-- **雙核四代理編排、雲端主力模型與配音代理**：集中編排器（`js/core/orchestrator.js`）統籌四大代理，雲端代理（`api/gemini.js`）以 `gemini-4-hydrogen` 為主力並支援 `gemini-3.1-flash-lite` 備援、`gemini-2.5-pro` 深度選配與本機 Ollama／本地引擎自動降級（溫度夾限 `[0.45, 0.85]`）；雲端配音代理（`api/tts.js`）整合 `gemini-3.8-flash-lite-tts` 主力與 `gemini-2.5-flash-preview-tts` 雙模備援（16 種角色音色與核心音色降級）。
+- **雙核四代理編排、雲端主力模型與配音代理**：集中編排器（`js/core/orchestrator.js`）統籌四大代理，雲端代理（`api/gemini.js`）以 `gemini-4-hydrogen` 為主力並支援 `gemini-2.5-flash`／`gemini-3.8-flash`／`gemini-3.1-flash-lite` 備援、`gemini-2.5-pro` 深度選配與本機 Ollama／本地引擎自動降級（溫度夾限 `[0.45, 0.85]`）；雲端配音代理（`api/tts.js`）整合 `gemini-2.5-flash-preview-tts` 穩定主力與 `gemini-3.8-flash-lite-tts`／`gemini-3.8-flash-tts` 多模備援（16 種角色音色與核心音色降級）。
 - **三好與四給實戰機制化**：
   - **顯性主動茶禮列、風氣三段生態與因果錄**：入席前先透過資源預載遮罩喚醒天穹與 3D 夥伴；白天階段於座次列下方常駐展開「三好四給主動茶禮列」與茶風指示，友善度即時牽動「清朗茶風／茶席平瀾／流言起霧」說服力與從眾效應，四給擋票護席與理線破霧獲 AI 致謝回響，終局呈現「三好四給因果錄」。
   - **三選一婉轉潤飾籤**：偵測尖銳字眼時展開「直指矛盾／溫言請教／留白觀望」三張選擇籤，保留玩家推理主導權。
@@ -61,7 +61,7 @@ python server.py
 ├── manifest.webmanifest        # PWA 離線應用清單
 ├── sw.js                       # 雙池 Service Worker（sanhao-shell-v25.5.0 + sanhao-assets-v25.5.0）
 ├── api/gemini.js               # 雲端 Serverless Gemini 代理（gemini-4-hydrogen 主力／多模降級）
-├── api/tts.js                  # 雲端 Serverless Gemini TTS 配音代理（3.8 Flash Lite -> 2.5 Flash 備援）
+├── api/tts.js                  # 雲端 Serverless Gemini TTS 配音代理（2.5 Flash Preview 穩定主力 -> 3.8 備援）
 ├── server.py                   # 本機伺服器＋免費 Edge-TTS 語音快取＋Gemini/Ollama 代理
 ├── CREDITS.md                  # 第三方開放素材與開源授權聲明（CC0 / MIT）
 ├── docs/
