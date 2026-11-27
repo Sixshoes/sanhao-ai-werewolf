@@ -1277,7 +1277,7 @@ function bindNightVoteAndFourGEvents() {
       deckEl.classList.toggle("is-folded");
       const folded = deckEl.classList.contains("is-folded");
       foldBtn.setAttribute("aria-expanded", folded ? "false" : "true");
-      foldBtn.textContent = folded ? "四給 ▾" : "收合 ▴";
+      foldBtn.textContent = folded ? "展開" : "收合";
       if (typeof sound !== "undefined" && typeof sound.tone === "function") {
         sound.tone(folded ? 430 : 540, 0.05, "triangle", 0.035, 0);
       }

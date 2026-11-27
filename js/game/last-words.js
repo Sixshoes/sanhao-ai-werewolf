@@ -582,7 +582,7 @@ function preparePlayerLastWordsPanel(mode) {
     btn.innerHTML =
       '<div class="flex items-center justify-between gap-1.5 w-full">' +
       '<span class="play-card-stamp ' + stampCls + '">' + escapeHtml(item.tag) + '</span>' +
-      '<span class="play-card-load-btn shrink-0" data-card-load="1" title="加入或移除此段到下方遺言欄，看完再按「送出遺言」">+ 加入組裝</span>' +
+      '<span class="play-card-load-btn shrink-0" data-card-load="1" title="加入或移除此段到下方遺言欄">加入</span>' +
       '</div>' +
       '<div class="play-card-title text-[13px] font-bold leading-snug line-clamp-1">' + escapeHtml(item.label) + '</div>' +
       '<div class="play-card-preview text-[13px] leading-snug line-clamp-2 opacity-80">' + escapeHtml(item.text) + '</div>';
@@ -594,7 +594,7 @@ function preparePlayerLastWordsPanel(mode) {
         const active = Boolean(ref.text && lwCur.indexOf(ref.text) !== -1);
         if (cardNode.classList) cardNode.classList.toggle("is-draft-loaded", active);
         const badge = typeof cardNode.querySelector === "function" ? cardNode.querySelector("[data-card-load]") : null;
-        if (badge) badge.textContent = active ? "已加入" : "+ 加入組裝";
+        if (badge) badge.textContent = active ? "已加入" : "加入";
       });
     };
     const toggleLwDraft = function (ev) {

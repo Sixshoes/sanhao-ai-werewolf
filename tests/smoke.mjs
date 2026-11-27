@@ -10721,4 +10721,27 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 Release-Freeze E2E smoke test PASSED!");
+// ==================== v25.0 UNIFIED LACQUER-VESSEL & FRAMELESS INK-WASH UI ====================
+{
+  const css25 = fs.readFileSync(path.join(ROOT, "css", "components.css"), "utf8");
+  const html25 = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const v25BlockStart = css25.indexOf("v25.0 UNIFIED LACQUER-VESSEL");
+  const v25Css = v25BlockStart >= 0 ? css25.slice(v25BlockStart) : "";
+  const v25Checks = {
+    hasChamferTokens: v25Css.includes("--v25-cut-sm:") && v25Css.includes("--v25-cut-md:") && v25Css.includes("--v25-cut-lg:"),
+    hasVesselEase: v25Css.includes("cubic-bezier(0.22, 1, 0.36, 1)"),
+    hasFramelessScrims: v25Css.includes("--v25-scrim-bottom:") && v25Css.includes("--v25-scrim-top:") && v25Css.includes("--v25-scrim-left:"),
+    hasZeroCapsuleOverride: v25Css.includes("body.craft-ui #inGameTopHud > div:last-child") && v25Css.includes("border-radius: 0;"),
+    hasGameOverMonumental: v25Css.includes("body.craft-ui .go-metric-val") && v25Css.includes("body.craft-ui .go-coach-item"),
+    hasLightThemeParity: v25Css.includes("body.craft-ui.theme-day .go-metric-val") && v25Css.includes("body.craft-ui.theme-twilight.screen-title .title-menu-item"),
+    zeroImportantOrBlur: !v25Css.includes("!important") && !v25Css.includes("backdrop-filter: blur("),
+    conciseHtmlButtons: html25.includes(">掀席自爆<") && html25.includes(">靜候天明<") && html25.includes(">順時針<") && html25.includes(">送出陳詞<") && html25.includes(">確認開局<")
+  };
+  for (const [k, v] of Object.entries(v25Checks)) {
+    if (!v) {
+      throw new Error("v25.0 Lacquer-Vessel UI regression failed for " + k + ": " + JSON.stringify(v25Checks));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 Release-Freeze E2E smoke test PASSED!");

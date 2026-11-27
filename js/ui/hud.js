@@ -341,9 +341,6 @@ function renderSeatStrip() {
       cls.push("is-disabled-target");
     }
     btn.className = cls.join(" ");
-    if (s.alive && s.color && !isSelected) {
-      btn.style.borderLeftColor = s.color;
-    }
 
     const artUrl = (typeof getPortraitImageUrl === "function") ? getPortraitImageUrl(s) : null;
     if (artUrl) {
@@ -1039,9 +1036,9 @@ function renderPkDuelBanner(liveCounts) {
   if (el("pkRightName")) el("pkRightName").textContent = fmtSeatNum(right.id) + "號 " + (right.id === pid ? "你" : right.name);
   const lv = liveCounts ? (liveCounts[left.id] || 0) : null;
   const rv = liveCounts ? (liveCounts[right.id] || 0) : null;
-  if (el("pkLeftVotes")) el("pkLeftVotes").textContent = lv !== null ? ("即時 " + lv + " 票") : (state.activeSpeakerId === left.id ? "正在拉票" : "PK 對決台");
-  if (el("pkRightVotes")) el("pkRightVotes").textContent = rv !== null ? ("即時 " + rv + " 票") : (state.activeSpeakerId === right.id ? "正在拉票" : "PK 對決台");
-  if (el("pkDuelMidLabel")) el("pkDuelMidLabel").textContent = cands.length > 2 ? ("VS (" + cands.length + "席)") : "VS";
+  if (el("pkLeftVotes")) el("pkLeftVotes").textContent = lv !== null ? (lv + " 票") : (state.activeSpeakerId === left.id ? "拉票中" : "PK 席");
+  if (el("pkRightVotes")) el("pkRightVotes").textContent = rv !== null ? (rv + " 票") : (state.activeSpeakerId === right.id ? "拉票中" : "PK 席");
+  if (el("pkDuelMidLabel")) el("pkDuelMidLabel").textContent = cands.length > 2 ? ("VS · " + cands.length) : "VS";
   banner.classList.remove("hidden");
   banner.setAttribute("aria-hidden", "false");
 }
@@ -1060,7 +1057,7 @@ function renderDirectorEventChoiceBar() {
 
   const label = document.createElement("span");
   label.className = "text-[13px] font-bold text-emerald-200 truncate";
-  label.textContent = "" + ev.shortTitle + "：" + ev.badge;
+  label.textContent = "" + ev.shortTitle + " · " + ev.badge;
   bar.appendChild(label);
 
   const btnGroup = document.createElement("div");
@@ -1068,8 +1065,8 @@ function renderDirectorEventChoiceBar() {
   const choices = ev.id === "truth_lantern"
     ? [{ key: "front", text: "照前半席" }, { key: "back", text: "照後半席" }]
     : (ev.id === "boba_truce"
-      ? [{ key: "boba", text: "請選中者喝冬瓜青 (+8)" }]
-      : [{ key: "cheer", text: "響應茶會 (+10)" }]);
+      ? [{ key: "boba", text: "奉冬瓜青" }]
+      : [{ key: "cheer", text: "響應茶會" }]);
 
   choices.forEach(function (ch) {
     const btn = document.createElement("button");

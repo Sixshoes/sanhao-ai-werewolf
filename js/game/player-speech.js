@@ -738,9 +738,9 @@ function updateQuickFreeSendLabel(dArg, playerArg) {
   if (wLen || gLen) {
     const wTag = isWolfPlayer ? "甩" : "狼";
     const gTag = isWolfPlayer ? "保" : "好";
-    btnSend.textContent = "陳詞送出 (" + (wLen ? (wLen + wTag) : "") + (wLen && gLen ? "·" : "") + (gLen ? (gLen + gTag) : "") + ") ↵";
+    btnSend.textContent = "送出陳詞 · " + (wLen ? (wLen + wTag) : "") + (wLen && gLen ? "·" : "") + (gLen ? (gLen + gTag) : "");
   } else {
-    btnSend.textContent = "陳詞送出 ↵";
+    btnSend.textContent = "送出陳詞";
   }
 }
 
@@ -968,7 +968,7 @@ function syncQuickSpeechCardLoadStates(dArg) {
     const active = Boolean(key && modKeys[key]);
     if (cardNode.classList) cardNode.classList.toggle("is-draft-loaded", active);
     const loadBadge = typeof cardNode.querySelector === "function" ? cardNode.querySelector("[data-card-load]") : null;
-    if (loadBadge) loadBadge.textContent = active ? "已加入" : "+ 加入組裝";
+    if (loadBadge) loadBadge.textContent = active ? "已加入" : "加入";
   });
 }
 
@@ -1620,21 +1620,17 @@ function renderListenPitBar() {
   const titleEl = document.createElement("span");
   titleEl.className = "listen-pit-title";
   if (isWolfPlayer) {
-    titleEl.textContent = "邊聽邊佈局 · 甩鍋／假保（" + d.wolfIds.length + "甩 · " + d.goodIds.length + "保）";
+    titleEl.textContent = "狼隊密記 · " + d.wolfIds.length + "甩 " + d.goodIds.length + "保";
   } else {
     const wolfTotal = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
-    titleEl.textContent = "邊聽邊記 · 好人／狼人（" + d.goodIds.length + "好 · " + d.wolfIds.length + "/" + wolfTotal + "狼）";
+    titleEl.textContent = "邊聽邊記 · " + d.goodIds.length + "好 " + d.wolfIds.length + "/" + wolfTotal + "狼";
   }
   const subEl = document.createElement("span");
   subEl.className = "listen-pit-sub";
   if (state.listenPitCollapsed) {
     subEl.textContent = formatListenDraftSummary(d, isWolfPlayer);
-  } else if (spokenTodayCount === 0 && p !== "LAST_WORDS_SPEECH") {
-    subEl.textContent = isWolfPlayer
-      ? "點 1 下甩鍋 · 2 下假保 · 3 下清除（投票時自動整理成筆記）"
-      : "點 1 下標狼 · 2 下標好 · 3 下清除（投票時自動整理成筆記）";
   } else {
-    subEl.textContent = "點選席位即時更新公投筆記（投票時直接點選落籌）";
+    subEl.textContent = "";
   }
   titleWrap.appendChild(titleEl);
   titleWrap.appendChild(subEl);
@@ -1647,7 +1643,7 @@ function renderListenPitBar() {
     const clrBtn = document.createElement("button");
     clrBtn.type = "button";
     clrBtn.className = "cta-link-quiet listen-pit-tool-btn shrink-0";
-    clrBtn.textContent = "↺ 清空";
+    clrBtn.textContent = "清空";
     clrBtn.title = "清空目前好人／狼人標記與立場草稿";
     clrBtn.addEventListener("click", function () {
       sound.unlock();
@@ -1661,7 +1657,7 @@ function renderListenPitBar() {
   toggleBtn.setAttribute("data-listen-pit-toggle", "1");
   toggleBtn.setAttribute("aria-expanded", state.listenPitCollapsed ? "false" : "true");
   toggleBtn.className = "listen-pit-toggle-btn shrink-0";
-  toggleBtn.textContent = state.listenPitCollapsed ? "展開排坑 ▾" : "收合 ▴";
+  toggleBtn.textContent = state.listenPitCollapsed ? "展開" : "收合";
   toggleBtn.addEventListener("click", function () {
     sound.unlock();
     state.listenPitCollapsed = !state.listenPitCollapsed;
@@ -2351,7 +2347,7 @@ function preparePlayerSpeechPanel() {
       '<div class="flex items-center justify-between gap-1.5">' +
       '<span class="play-card-stamp ' + stampTone + '">' + escapeHtml(item.tgTag) + '</span>' +
       '<span class="flex items-center gap-1.5">' +
-      '<span class="play-card-load-btn" data-card-load="1" title="加入或移除此段到下方陳詞欄，組裝完再按「陳詞送出」">' + (isLoaded ? "已加入" : "+ 加入組裝") + '</span>' +
+      '<span class="play-card-load-btn" data-card-load="1" title="加入或移除此段到下方陳詞欄">' + (isLoaded ? "已加入" : "加入") + '</span>' +
       '<kbd class="ui-kbd">' + cardKeys[idx] + '</kbd>' +
       '</span>' +
       '</div>' +

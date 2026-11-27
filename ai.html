@@ -41,8 +41,8 @@
         <span id="bootPreloadStatus">正在喚醒書院古亭與茶席夥伴…</span>
         <span id="bootPreloadPct" class="tabular-nums">6%</span>
       </div>
-      <p id="bootPreloadCreed" class="boot-preload-creed">存好心明辨真偽 · 說好話凝聚共識 · 做好事護持茶席</p>
-      <button id="btnSkipBootPreload" type="button" class="hidden cta-ink px-4 py-1.5 text-[14px] mt-2">略過等待 · 直接入席</button>
+      <p id="bootPreloadCreed" class="boot-preload-creed">存好心 · 說好話 · 做好事</p>
+      <button id="btnSkipBootPreload" type="button" class="hidden cta-ink px-4 py-1.5 text-[14px] mt-2">直接入席</button>
     </div>
   </div>
   <div id="worldSkyBackdrop"></div>
@@ -103,11 +103,10 @@
 
             <!-- Ballot-Flight Reveal Banner -->
             <div id="voteFlightBanner"
-              class="hidden absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 text-sm font-bold shadow-xl cursor-pointer flex items-center gap-2 msg-enter"
+              class="hidden absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 text-sm font-bold cursor-pointer flex items-center gap-2 msg-enter"
               title="點擊立即展開最終票數">
-              <span class="inline-block w-2 h-2 rounded-full bg-rose-400 animate-ping"></span>
-              <span id="voteFlightText">開票飛票中…</span>
-              <span class="text-[13px] opacity-70">點此跳過</span>
+              <span class="inline-block w-2 h-2 bg-rose-400 animate-ping"></span>
+              <span id="voteFlightText">飛票揭曉</span>
             </div>
 
             <!-- Dual-Portrait PK Confrontation Banner -->
@@ -278,10 +277,10 @@
                   <span id="vqSubConvenience" class="vq-card-sub">理線歸票</span>
                 </button>
               </div>
-              <span id="vqSynergyPill" class="hidden vq-synergy-pill">再奉 1 盞・連心共鳴</span>
+              <span id="vqSynergyPill" class="hidden vq-synergy-pill">連心將啟</span>
               <div class="vq-right-tools">
-                <button id="btnQuickTeaAtmosphere" type="button" class="vq-atm-btn" title="點擊查看茶席風氣對說服力與從眾之影響">茶席平瀾 72</button>
-                <button id="btnToggleVirtueDeck" type="button" class="vq-fold-btn" aria-expanded="true" title="收合或展開四給奉茶列">收合 ▴</button>
+                <button id="btnQuickTeaAtmosphere" type="button" class="vq-atm-btn" title="點擊查看茶席風氣對說服力與從眾之影響">茶風 72</button>
+                <button id="btnToggleVirtueDeck" type="button" class="vq-fold-btn" aria-expanded="true" title="收合或展開四給奉茶列">收合</button>
               </div>
             </div>
 
@@ -330,7 +329,7 @@
                 <!-- GUIDED BEGINNER STEP-BY-STEP COACH BANNER (Only shown in 新手帶玩席, 1-click dismissable) -->
                 <div id="beginnerCoachBanner" class="hidden beginner-coach-banner msg-enter">
                   <div id="beginnerCoachText" class="flex-1 min-w-0 leading-relaxed"></div>
-                  <button id="btnDismissBeginnerCoach" type="button" class="cta-ink text-[13px] px-2 py-0.5 shrink-0">× 我會玩了</button>
+                  <button id="btnDismissBeginnerCoach" type="button" class="cta-ink text-[13px] px-2 py-0.5 shrink-0">已知</button>
                 </div>
 
                 <!-- v20.0 JUDGE SHOWCASE 3-STEP GUIDE PILL (Non-blocking, <= 20 chars/step) -->
@@ -442,7 +441,7 @@
 
                   <details class="lobby-more-drawer max-w-[290px]">
                     <summary class="lobby-more-summary text-[14px] text-slate-300 hover:text-amber-200 cursor-pointer select-none">
-                      <span>更多模式・教學與設定</span>
+                      <span>更多選項</span>
                       <span class="lobby-more-caret" aria-hidden="true"></span>
                     </summary>
                     <div class="lobby-more-body pt-3 space-y-2.5">
@@ -467,32 +466,32 @@
 
                 <!-- v16.0 WOLF SELF-EXPLODE BAR (Alive Human Wolf in Sheriff/Day/Vote) -->
                 <div id="wolfSelfExplodeBar" class="hidden wolf-explode-bar msg-enter">
-                  <span class="wolf-explode-hint">酸民狼決死指令：亮牌離席，沒收當日剩餘發言、警徽流與公投直入黑夜</span>
-                  <button id="btnWolfSelfExplode" type="button" class="wolf-explode-btn shrink-0">拂袖掀席（自爆）</button>
+                  <span class="wolf-explode-hint">酸民狼決死</span>
+                  <button id="btnWolfSelfExplode" type="button" class="wolf-explode-btn shrink-0">掀席自爆</button>
                 </div>
 
                 <!-- v16.0 FOUR-G HOPE 15s TWO-WAY CONFRONTATION PANEL (Zero God-View) -->
                 <div id="hopeConfrontationModal" class="hidden hope-confront-card msg-enter">
                   <div class="flex items-center justify-between gap-2 mb-1.5">
-                    <span id="hopeConfrontTitle" class="font-serif-craft text-sm font-bold text-sky-200 truncate">明燈雙向對質</span>
+                    <span id="hopeConfrontTitle" class="font-serif-craft text-sm font-bold text-sky-200 truncate">明燈對質</span>
                     <div class="flex items-center gap-1.5 shrink-0">
-                      <span id="hopeConfrontTimer" class="hope-timer-pill">15 秒</span>
+                      <span id="hopeConfrontTimer" class="hope-timer-pill">15s</span>
                       <button id="btnHopeConfrontClose" type="button" class="cta-ink text-[13px] px-2 py-0.5">收燈</button>
                     </div>
                   </div>
                   <div id="hopeConfrontPicker" class="hidden grid grid-cols-3 sm:grid-cols-4 gap-1.5 mb-2"></div>
                   <div id="hopeConfrontResult" class="hidden space-y-1.5"></div>
                   <div class="flex justify-end mt-1.5">
-                    <button id="btnHopeConfrontStart" type="button" class="hidden cta-brass py-1 px-3 text-[13px]" disabled>開啟 15 秒明燈對質</button>
+                    <button id="btnHopeConfrontStart" type="button" class="hidden cta-brass py-1 px-3 text-[13px]" disabled>開啟對質</button>
                   </div>
                 </div>
 
                 <!-- v16.0 SPECTATOR 5s SPIRIT ROUND INTUITION BET BANNER -->
                 <div id="spiritBetBanner" class="hidden spirit-bet-banner msg-enter">
                   <div class="flex items-center justify-between gap-2 mb-1">
-                    <span id="spiritBetTitle" class="text-[13px] font-serif-craft font-bold text-amber-200 truncate">席外茶靈直覺押注</span>
+                    <span id="spiritBetTitle" class="text-[13px] font-serif-craft font-bold text-amber-200 truncate">席外直覺押注</span>
                     <div class="flex items-center gap-1.5 shrink-0">
-                      <span id="spiritBetTimer" class="hope-timer-pill">5 秒</span>
+                      <span id="spiritBetTimer" class="hope-timer-pill">5s</span>
                       <button id="btnSpiritBetSkip" type="button" class="cta-ink text-[13px] px-2 py-0.5">略過</button>
                     </div>
                   </div>
@@ -503,19 +502,19 @@
                 <div id="panelStepper" class="hidden space-y-1.5">
                   <div id="stepperWaitRow"
                     class="flex items-center justify-center gap-2 text-sm font-medium text-slate-300 py-1">
-                    <span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                    <span class="inline-block w-2 h-2 bg-amber-400 animate-ping"></span>
                     <span id="stepperStatusText">行動進行中…</span>
                   </div>
 
                   <div id="turnWatchNotice"
-                    class="hidden rounded px-2.5 py-1.5 bg-amber-500/15 border border-amber-400/50 flex items-center justify-between gap-2 msg-enter">
+                    class="hidden px-2.5 py-1.5 flex items-center justify-between gap-2 msg-enter">
                     <div id="turnWatchText" class="text-[13px] font-medium text-amber-200 leading-snug">
-                      對方剛點名你，先記進筆記，輪到你的順位再回應。</div>
+                      對方已點名你</div>
                     <div class="flex items-center gap-1 shrink-0">
                       <button id="btnWarmDeescalate" type="button"
-                        class="hidden cta-celadon py-1 px-2 text-[13px] shrink-0"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4c-2.2 3.8-2.6 7.5 0 12 2.6-4.5 2.2-8.2 0-12z"/><path d="M5 19.5h14"/></svg>說好話化解</button>
+                        class="hidden cta-celadon py-1 px-2 text-[13px] shrink-0"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4c-2.2 3.8-2.6 7.5 0 12 2.6-4.5 2.2-8.2 0-12z"/><path d="M5 19.5h14"/></svg>溫言化解</button>
                       <button id="btnQuickPinWatch" type="button"
-                        class="cta-brass py-1 px-2 text-[13px] shrink-0">記進筆記</button>
+                        class="cta-ink py-1 px-2 text-[13px] shrink-0">記筆記</button>
                     </div>
                   </div>
 
@@ -524,9 +523,9 @@
                     <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
                       <div class="flex items-center gap-2 min-w-0">
                         <span class="candlelit-seal">燭下覆茶</span>
-                        <span class="text-[13px] text-amber-100/95 leading-snug">圈選明日盯防字卡（最多 2 席 · 明日發言亮標並贈免費看心虛 1 次）</span>
+                        <span class="text-[13px] text-amber-100/95 leading-snug">圈選明日二席</span>
                       </div>
-                      <button id="btnCandlelitDone" type="button" class="cta-brass py-1 px-3 text-[13px] shrink-0">覆茶靜候天明</button>
+                      <button id="btnCandlelitDone" type="button" class="cta-brass py-1 px-3 text-[13px] shrink-0">靜候天明</button>
                     </div>
                     <div id="candlelitSlipsList" class="candlelit-cards-grid"></div>
                   </div>
@@ -534,40 +533,40 @@
                   <!-- TEA-CUP INTERJECTION POPOVER (Once Per Day Live Cross-Examination) -->
                   <div id="interjectPopover" class="hidden interject-popover msg-enter">
                     <div class="flex items-center justify-between gap-2 mb-1.5">
-                      <span id="interjectTargetTitle" class="text-[13px] font-serif-craft font-bold text-amber-200 truncate">舉杯當場追問 · 每日一盞</span>
+                      <span id="interjectTargetTitle" class="text-[13px] font-serif-craft font-bold text-amber-200 truncate">舉杯追問</span>
                       <button id="btnInterjectCancel" type="button" class="cta-ink text-[13px] px-2 py-0.5 shrink-0">收盞</button>
                     </div>
                     <div id="interjectQuickPrompts" class="grid grid-cols-1 sm:grid-cols-3 gap-1 mb-1.5"></div>
                     <div class="flex items-center gap-1.5">
-                      <input id="interjectCustomInput" type="text" maxlength="18" placeholder="自訂 18 字內短問…"
-                        class="flex-1 min-w-0 rounded px-2 py-1 text-[13px] border focus:outline-none focus:border-amber-400" />
-                      <button id="btnInterjectSend" type="button" class="cta-brass px-2.5 py-1 text-[13px] shrink-0">舉杯發問</button>
+                      <input id="interjectCustomInput" type="text" maxlength="18" placeholder="輸入短問…"
+                        class="flex-1 min-w-0 px-2 py-1 text-[13px] border focus:outline-none focus:border-amber-400" />
+                      <button id="btnInterjectSend" type="button" class="cta-brass px-2.5 py-1 text-[13px] shrink-0">發問</button>
                     </div>
                   </div>
 
-                  <div class="stepper-action-row flex items-center justify-between gap-2 pt-1 border-t border-slate-800/70">
+                  <div class="stepper-action-row flex items-center justify-between gap-2 pt-1">
                     <div id="detectiveMarkRow" class="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
                       <button id="btnMarkGood" type="button"
                         class="cta-ink py-1 px-2.5 text-[13px] shrink-0"
-                        title="聆聽席點頭認同：記為好人夥伴並於投票筆記整理（後位茶友會察覺你的反應）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg>認同・標好人</button>
+                        title="聆聽席點頭認同：記為好人夥伴並於投票筆記整理"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg>標好人</button>
                       <button id="btnMarkWolf" type="button"
                         class="cta-ink py-1 px-2.5 text-[13px] shrink-0"
-                        title="聆聽席皺眉存疑：記為可疑狼坑並於投票筆記整理（後位茶友會察覺你的反應）"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9 9-9z"/><path d="M12 8.5v4.2"/><path d="M12 16h.01"/></svg>存疑・標狼人</button>
+                        title="聆聽席皺眉存疑：記為可疑狼坑並於投票筆記整理"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9 9-9z"/><path d="M12 8.5v4.2"/><path d="M12 16h.01"/></svg>標狼人</button>
                       <button id="btnTeaInterject" type="button"
-                        class="cta-brass py-1 px-2.5 text-[13px] shrink-0"
-                        title="每日限 1 次：趁對方發言露破綻時當場舉杯追問，逼出即時回防"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>舉杯追問</button>
+                        class="cta-ink py-1 px-2.5 text-[13px] shrink-0"
+                        title="每日限 1 次：趁對方發言露破綻時當場舉杯追問"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-4z"/><path d="M16 12h2a2 2 0 0 1 0 4h-2"/><path d="M4 20h14"/></svg>舉杯追問</button>
                       <button id="btnToggleListenTools" type="button"
                         class="cta-ink cta-quiet listen-more-toggle py-1 px-2 text-[13px] shrink-0"
                         aria-expanded="false"
-                        title="展開進階偵探工具（記重點、看心虛、票型排坑）">偵探工具 ▾</button>
+                        title="展開進階偵探工具（記重點、看心虛、票型排坑）">工具</button>
                       <span id="listenExtraToolsWrap" class="listen-extra-tools">
                         <button id="btnPinCurrentSpeaker" type="button"
                           class="cta-ink cta-quiet py-1 px-2 text-[13px] shrink-0"
                           title="把他的立場存成重點便條，輪到你發言時一鍵引用"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-3.5L7 20V4z"/></svg>記重點</button>
                         <button id="btnMicroInspect" type="button" class="cta-ink cta-quiet py-1 px-2 text-[13px] shrink-0"
-                          title="每日限次偵測目前發言者的心虛緊張值，幫你判斷是否在說謊"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>看心虛</button>
+                          title="每日限次偵測目前發言者的心虛緊張值"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>看心虛</button>
                         <button id="btnOpenPitSheet" type="button" class="pit-quick-btn py-1 px-2.5 text-[13px] shrink-0"
-                          title="開啟警長與歷輪公投票型手札，對照誰投誰來精準排坑"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg>票型排坑</button>
+                          title="開啟警長與歷輪公投票型手札"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg>票型排坑</button>
                         <span id="tableMomentumText"
                           class="hidden"></span>
                       </span>
@@ -577,7 +576,7 @@
                     </div>
                     <button id="btnSpectatorEndNow" type="button"
                       class="hidden cta-ink py-1.5 px-2.5 text-[15px] shrink-0">直接結束</button>
-                    <button id="btnStepNext" type="button" class="cta-brass py-1.5 px-4 text-[15px] shrink-0">下一位 →</button>
+                    <button id="btnStepNext" type="button" class="cta-cinnabar py-1.5 px-4 text-[15px] shrink-0">下一位</button>
                   </div>
                 </div>
 
@@ -585,28 +584,28 @@
                 <div id="panelTargetAction" class="hidden space-y-2 text-center">
                   <div id="nightRoleTipStrip" class="hidden night-role-tip-strip"></div>
                   <div id="targetPromptBox"
-                    class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-amber-100 leading-snug">
-                    請點選席間座位
+                    class="font-serif-craft text-[21px] sm:text-[24px] font-bold text-amber-100 leading-snug">
+                    點選席位
                   </div>
-                  <div id="seerRevealCard" class="hidden rounded p-3 border text-center space-y-1.5 msg-enter">
-                    <div id="seerRevealTitle" class="font-serif-craft text-sm font-bold"></div>
-                    <div id="seerRevealSub" class="text-[13px] opacity-90"></div>
+                  <div id="seerRevealCard" class="hidden p-3 text-center space-y-1.5 msg-enter">
+                    <div id="seerRevealTitle" class="font-serif-craft text-base font-bold"></div>
+                    <div id="seerRevealSub" class="text-[13px] opacity-80"></div>
                     <button id="btnSeerRevealContinue" type="button"
-                      class="cta-brass mt-1 px-5 py-1.5 text-[15px]">記住了・繼續</button>
+                      class="cta-cinnabar mt-1 px-5 py-1.5 text-[15px]">繼續</button>
                   </div>
                   <div id="witchSubPanel" class="hidden grid grid-cols-2 gap-2">
-                    <button id="btnWitchHeal" type="button" class="cta-celadon py-2 px-3 text-[15px]">暖心茶護回</button>
-                    <button id="btnWitchPurify" type="button" class="cta-ink py-2 px-3 text-[15px]">清心茶請離</button>
+                    <button id="btnWitchHeal" type="button" class="cta-celadon py-2 px-3 text-[15px]">暖心護回</button>
+                    <button id="btnWitchPurify" type="button" class="cta-ink py-2 px-3 text-[15px]">清心請離</button>
                   </div>
                   <div id="wolfTacticRow" class="hidden space-y-1">
                     <div class="flex items-center justify-between gap-2 text-[13px] px-1">
-                      <span class="font-serif-craft font-bold text-rose-200">屏風密議 · 擇一明日戰術</span>
+                      <span class="font-serif-craft font-bold text-rose-200">屏風密議</span>
                       <span id="wolfTacticTimerLabel" class="text-amber-300 font-bold tabular-nums"></span>
                     </div>
                     <div class="flex items-center justify-center gap-1.5 flex-wrap">
-                      <button type="button" data-wolf-tactic="mate_fake_seer_gold" class="wolf-tactic-btn is-active">同伴悍跳發我金水</button>
-                      <button type="button" data-wolf-tactic="player_fake_seer_push" class="wolf-tactic-btn">我親自悍跳同伴衝票</button>
-                      <button type="button" data-wolf-tactic="deep_stealth_bus" class="wolf-tactic-btn">全員深水倒鉤互踩做身分</button>
+                      <button type="button" data-wolf-tactic="mate_fake_seer_gold" class="wolf-tactic-btn is-active" title="同伴悍跳發我金水">同伴悍跳</button>
+                      <button type="button" data-wolf-tactic="player_fake_seer_push" class="wolf-tactic-btn" title="我親自悍跳同伴衝票">親跳衝票</button>
+                      <button type="button" data-wolf-tactic="deep_stealth_bus" class="wolf-tactic-btn" title="全員深水倒鉤互踩做身分">深水倒鉤</button>
                     </div>
                   </div>
                   <div id="targetActionBtnsRow" class="flex items-center justify-center gap-2">
@@ -616,106 +615,105 @@
                   </div>
                 </div>
 
-                <!-- 4. STREAMLINED 3-LAYER PLAYER TURN DECK (HEADER + 3 QUICK CARDS + CLEAN INPUT BAR + COLLAPSIBLE ADVANCED PIT DRAWER) -->
+                <!-- 4. STREAMLINED PLAYER TURN DECK -->
                 <div id="panelPlayerSpeech" class="hidden space-y-2">
                   <div class="flex items-center justify-between gap-2 flex-wrap gap-y-1">
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span id="playerTurnHeading"
-                        class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-emerald-300 truncate">輪到你發言</span>
-                      <span id="playerSpeechTargetLabel" class="text-[13px] text-slate-400 truncate hidden sm:inline">對象：02號</span>
+                        class="font-serif-craft text-[21px] sm:text-[24px] font-bold text-emerald-300 truncate">輪到你發言</span>
+                      <span id="playerSpeechTargetLabel" class="text-[13px] text-slate-400 truncate hidden sm:inline">02號</span>
                       <button id="btnCycleSpeechTarget" type="button" class="cta-ink text-[13px] px-2 py-0.5 shrink-0"
-                        title="輪換下方 3 張快捷發言卡的點名對象 (快捷鍵 Tab)">換人 ↻</button>
+                        title="輪換下方點名對象 (快捷鍵 Tab)">換人</button>
                       <span id="playerComboBonusHint" class="hidden text-[13px] text-amber-300 shrink-0"></span>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
                       <div id="playerTurnOrderStrip" class="hidden"></div>
                       <button id="btnToggleCustomSpeech" type="button"
                         class="speech-adv-toggle speech-pit-cta shrink-0"
-                        title="展開排坑與亮牌組句面板（結合警長票型點選狼坑／好人坑）"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg>排坑／亮牌 ▾</button>
+                        title="展開排坑與亮牌組句面板">排坑／亮牌</button>
                     </div>
                   </div>
                   <div id="playerTurnStepHint" class="hidden"></div>
 
                   <div id="pinnedCluesTray" class="hidden flex items-center gap-1 flex-wrap"></div>
                   <div id="tableWindVaneSpeech"
-                    class="hidden wind-vane-strip text-[13px] text-amber-200/90 bg-slate-950/60 border border-amber-400/30 rounded px-2 py-1 truncate">
+                    class="hidden wind-vane-strip text-[13px] text-amber-200/90 px-2 py-1 truncate">
                   </div>
 
-                  <!-- Hidden legacy duplicate dashboard (info already lives cleanly in bottom-left #cornerRoleTile) -->
+                  <!-- Hidden legacy duplicate dashboard -->
                   <div id="roleTurnDashboard" class="hidden"></div>
 
-                  <!-- 3 Horizontal Ready-Made Action Cards Side-by-Side (Primary 1-Click Speech!) -->
+                  <!-- Compact Chamfered Speech Slips -->
                   <div id="quickSpeechChips"></div>
 
-                  <!-- Collapsible Advanced Pit Builder & Role Claim Drawer (Tucked away until clicked!) -->
+                  <!-- Collapsible Advanced Pit Builder & Role Claim Drawer -->
                   <div id="speechAdvancedDrawer" class="hidden speech-adv-drawer space-y-1.5">
                     <div id="pitTemplateSyncBar" class="hidden pit-template-sync-bar">
-                      <span id="pitTemplateSyncText" class="truncate">已帶入快捷套版立場，點選下方席位或身分可疊加調整</span>
+                      <span id="pitTemplateSyncText" class="truncate">已載入立場</span>
                       <button id="btnRebuildFromPits" type="button"
                         class="cta-ink cta-quiet px-2 py-0.5 text-[13px] shrink-0"
-                        title="依照目前選取的排坑與亮牌重新組合標準推理句">依排坑重組 ↻</button>
+                        title="依排坑重組推理句">依坑重組</button>
                     </div>
                     <div id="pitSheriffRefStrip" class="hidden pit-sheriff-strip"></div>
                     <div id="pitBadgeFlowBar" class="hidden badge-flow-bar"></div>
                     <div id="playerPitBuilder" class="pit-builder-box"></div>
-                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-700/50 text-[13px] text-slate-400">
-                      <span>自由排坑組句，或試煉婉轉修辭</span>
+                    <div class="flex items-center justify-end gap-2 pt-1 text-[13px] text-slate-400">
                       <button id="btnQuickSpiceDemo" type="button"
                         class="cta-ink cta-quiet px-2 py-0.5 text-[13px] shrink-0"
-                        title="填入一句語氣較急的範例，體驗三選一婉轉潤飾靈感籤"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2.5 3.4 5.5 6 5.5 10a5.5 5.5 0 0 1-11 0"/></svg>語氣範例</button>
+                        title="填入範例句試用婉轉潤飾"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2.5 3.4 5.5 6 5.5 10a5.5 5.5 0 0 1-11 0"/></svg>語氣範例</button>
                     </div>
                   </div>
 
-                  <!-- Three-Option Diegetic Rephrase Slips Tray (Player retains agency!) -->
+                  <!-- Three-Option Diegetic Rephrase Slips Tray -->
                   <div id="rephraseChoicesTray" class="hidden rephrase-tray space-y-1 msg-enter">
                     <div class="flex items-center justify-between gap-2 text-[13px]">
-                      <span id="rephraseTrayHint" class="text-amber-200/95 font-medium truncate">語氣稍急 · 擇一靈感籤添幾分婉轉</span>
+                      <span id="rephraseTrayHint" class="text-amber-200/95 font-medium truncate">婉轉靈感籤</span>
                       <button id="btnCloseRephraseTray" type="button" class="text-[13px] text-slate-400 hover:text-amber-200 shrink-0">維持原句</button>
                     </div>
                     <div id="rephraseSlipsGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
                   </div>
 
-                  <!-- Wide Two-Row Unified Speech Composer (Full-Width Textarea + Integrated Toolbar) -->
+                  <!-- Frameless Unified Speech Composer -->
                   <div class="free-speech-bar speech-composer-box">
-                    <textarea id="quickFreeInput" rows="2" placeholder="點上方詞卡自由組裝陳詞，或直接打字微調，看完再按右側送出（Enter 送出 · Shift+Enter 換行）…"
-                      class="speech-composer-textarea w-full rounded px-3 py-2 text-[15px] border focus:outline-none focus:border-emerald-400"></textarea>
+                    <textarea id="quickFreeInput" rows="2" placeholder="點詞籤或輸入陳詞…"
+                      class="speech-composer-textarea w-full px-3 py-2 text-[15px] focus:outline-none"></textarea>
                     <div class="speech-composer-toolbar flex items-center justify-between gap-2 flex-wrap">
                       <div class="flex items-center gap-1.5 flex-wrap min-w-0">
                         <button id="btnMicVoiceSpeech" type="button"
                           class="cta-ink px-2.5 py-1 text-[13px] shrink-0"
-                          title="開口說話輸入發言（瀏覽器原生繁中語音辨識，再按一次停止）"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9v6M12 5v14M16 9v6M4 11v2M20 11v2"/></svg><span class="hidden sm:inline">語音</span></button>
+                          title="語音輸入"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9v6M12 5v14M16 9v6M4 11v2M20 11v2"/></svg><span class="hidden sm:inline">語音</span></button>
                         <div id="quickStancePills" class="flex items-center gap-1 flex-wrap">
-                          <button type="button" data-stance="accuse" class="composer-pill-btn" title="追加理性點疑當前選中座位的起手句">+ 點疑對象</button>
-                          <button type="button" data-stance="vouch" class="composer-pill-btn" title="追加誠懇力保好夥伴的起手句">+ 保好夥伴</button>
-                          <button type="button" data-stance="peace" class="composer-pill-btn" title="追加呼籲三好理性歸票的起手句">+ 溫言緩議</button>
+                          <button type="button" data-stance="accuse" class="composer-pill-btn" title="追加理性點疑起手句">點疑</button>
+                          <button type="button" data-stance="vouch" class="composer-pill-btn" title="追加力保夥伴起手句">力保</button>
+                          <button type="button" data-stance="peace" class="composer-pill-btn" title="追加溫言緩議起手句">緩議</button>
                         </div>
                         <button id="btnClearSpeechDraft" type="button"
                           class="hidden composer-pill-btn is-muted"
-                          title="清空目前輸入與排坑草稿">清空 ↺</button>
+                          title="清空草稿">清空</button>
                       </div>
                       <div class="flex items-center gap-1.5 shrink-0 ml-auto">
                         <span id="speechCharCounter" class="hidden speech-char-counter shrink-0" aria-live="polite">0 / 28</span>
                         <span id="speechThreeGoodBadge" class="hidden speech-tg-badge shrink-0"></span>
                         <button id="btnQuickInlineRewrite" type="button"
-                          class="hidden cta-brass px-2.5 py-1 text-[13px] shrink-0"
-                          title="展開三選一茶席潤飾靈感籤，保留原意並添一分婉轉說服力"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>潤飾詞句</button>
+                          class="hidden cta-ink px-2.5 py-1 text-[13px] shrink-0"
+                          title="展開婉轉潤飾靈感籤"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>潤飾詞句</button>
                         <button id="btnQuickFreeSend" type="button"
-                          class="cta-celadon px-4 py-1.5 text-[15px] shrink-0"
-                          title="將輸入欄內的發言對全場送出（快捷鍵 Enter）">陳詞送出 ↵</button>
+                          class="cta-cinnabar px-4 py-1.5 text-[15px] shrink-0"
+                          title="送出陳詞 (Enter)">送出陳詞</button>
                       </div>
                     </div>
                   </div>
 
-                  <!-- Consolidated hidden compatibility bridge (merged into single .free-speech-bar) -->
+                  <!-- Consolidated hidden compatibility bridge -->
                   <div id="customSpeechDrawer" class="hidden" aria-hidden="true">
                     <span id="nlpFeedbackBadge">溫和有理</span>
-                    <button id="btnDemoToxicSample" type="button">填入語氣範例</button>
+                    <button id="btnDemoToxicSample" type="button">語氣範例</button>
                     <textarea id="playerSpeechInput" rows="1"></textarea>
                     <span id="scoreKindWords">85%</span><div id="barKindWords"></div>
                     <span id="scoreGoodHeart">80%</span><div id="barGoodHeart"></div>
                     <span id="scoreGoodDeed">75%</span><div id="barGoodDeed"></div>
                     <button id="btnRewriteKindness" type="button">潤飾詞句</button>
-                    <button id="btnSubmitSpeech" type="button">送出自訂台詞</button>
+                    <button id="btnSubmitSpeech" type="button">送出陳詞</button>
                   </div>
                 </div>
 
@@ -723,22 +721,22 @@
                 <div id="panelVote" class="hidden space-y-2">
                   <div id="voteGoodwillBadge" class="hidden vote-goodwill-badge"></div>
                   <div id="tableWindVaneVote"
-                    class="hidden wind-vane-strip text-[13px] text-amber-200/90 bg-slate-950/60 border border-amber-400/30 rounded px-2 py-1 truncate">
+                    class="hidden wind-vane-strip text-[13px] text-amber-200/90 px-2 py-1 truncate">
                   </div>
                   <div id="voteNotesDeck" class="hidden vote-notes-deck"></div>
                   <div class="flex items-center justify-between gap-3 flex-wrap gap-y-2">
                     <div class="min-w-0 text-left">
-                      <div id="votePromptLabel" class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-rose-300">
-                        點選席間座位投出公投票</div>
+                      <div id="votePromptLabel" class="font-serif-craft text-[22px] sm:text-[26px] font-bold text-rose-300">
+                        公投決議</div>
                       <div class="flex items-center gap-2 text-[13px]">
-                        <span id="selectedVoteBadge" class="text-amber-300 font-medium">尚未鎖定對象</span>
+                        <span id="selectedVoteBadge" class="text-amber-300 font-medium">尚未鎖定</span>
                         <span id="blitzVoteTimerBadge" class="hidden blitz-vote-badge"></span>
                         <span id="voteTargetIntelLine" class="hidden text-slate-400 truncate"></span>
                       </div>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
-                      <button id="btnSheriffRally" type="button" class="hidden cta-brass py-2 px-2.5 text-[15px] shrink-0"
-                        title="警長號召好人集中歸票"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>警長歸票</button>
+                      <button id="btnSheriffRally" type="button" class="hidden cta-ink py-2 px-2.5 text-[15px] shrink-0"
+                        title="警長號召好人集中歸票"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>警長歸票</button>
                       <button id="btnCastVote" type="button" class="cta-cinnabar py-2 px-4 text-[15px]">確認投票</button>
                       <button id="btnAbstainVote" type="button" class="cta-ink py-2 px-3 text-[15px]">棄票</button>
                     </div>
@@ -748,18 +746,18 @@
                 <!-- 5B. VOTE TALLY REVEAL STRIP -->
                 <div id="panelVoteResult" class="hidden space-y-2 msg-enter">
                   <div class="flex items-center justify-between gap-2">
-                    <div id="voteResultHeadline" class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-amber-300">
+                    <div id="voteResultHeadline" class="font-serif-craft text-[22px] sm:text-[26px] font-bold text-amber-300">
                       開票結果</div>
                     <div id="voteResultBtnRow" class="flex items-center gap-1.5 shrink-0">
                       <button id="btnVoteEndNow" type="button"
-                        class="hidden cta-ink py-1.5 px-3 text-[15px]">直接結束看底牌</button>
+                        class="hidden cta-ink py-1.5 px-3 text-[15px]">直接結束</button>
                       <button id="btnVoteResultNext" type="button"
                         class="cta-cinnabar py-1.5 px-4 text-[15px]">進入夜晚</button>
                     </div>
                   </div>
                   <div id="votePlayerOutChoiceNotice"
-                    class="hidden rounded px-3 py-1.5 bg-rose-500/15 border border-rose-400/45 text-sm text-rose-100">
-                    你已被請離茶席！要直接結束揭曉全員底牌，還是繼續留下觀戰？
+                    class="hidden px-3 py-1.5 text-sm text-rose-100">
+                    你已離席，可結束揭曉或留席觀戰
                   </div>
                   <div id="voteResultBars"
                     class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-left max-h-[140px] overflow-y-auto custom-scroll">
@@ -770,19 +768,18 @@
                 <div id="panelLastWords" class="hidden space-y-2 msg-enter">
                   <div class="flex items-center justify-between gap-2">
                     <span id="lastWordsHeading"
-                      class="font-serif-craft text-[19px] sm:text-[22px] font-bold text-amber-300">發表離席遺言</span>
+                      class="font-serif-craft text-[21px] sm:text-[24px] font-bold text-amber-300">離席遺言</span>
                     <button id="btnSkipLastWords" type="button"
                       class="cta-ink text-[13px] px-2.5 py-0.5 shrink-0">略過</button>
                   </div>
                   <div id="lastWordsSubHint" class="hidden"></div>
                   <div id="lastWordsChips" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
                   <div class="speech-composer-box is-amber-composer">
-                    <textarea id="lastWordsFreeInput" rows="2" placeholder="點上方詞卡自由組裝遺言，確認完整後再按「送出遺言」（Enter 送出 · Shift+Enter 換行）…"
-                      class="speech-composer-textarea w-full rounded px-3 py-2 text-[15px] border focus:outline-none focus:border-amber-400"></textarea>
-                    <div class="speech-composer-toolbar flex items-center justify-between gap-2 flex-wrap">
-                      <span class="text-[13px] opacity-80">點上方詞卡自由組裝到輸入欄，看完再按「送出遺言」</span>
+                    <textarea id="lastWordsFreeInput" rows="2" placeholder="點詞籤或輸入遺言…"
+                      class="speech-composer-textarea w-full px-3 py-2 text-[15px] focus:outline-none"></textarea>
+                    <div class="speech-composer-toolbar flex items-center justify-end gap-2">
                       <button id="btnSendLastWords" type="button"
-                        class="cta-brass px-4 py-1.5 text-[15px] shrink-0 ml-auto">送出遺言 ↵</button>
+                        class="cta-cinnabar px-4 py-1.5 text-[15px] shrink-0">送出遺言</button>
                     </div>
                   </div>
                 </div>
@@ -790,65 +787,64 @@
                 <!-- 5D. SHERIFF BADGE TRANSFER -->
                 <div id="panelSheriffTransfer" class="hidden space-y-2 text-center msg-enter">
                   <div id="sheriffTransferHeadline"
-                    class="font-serif-craft text-[18px] sm:text-[22px] font-bold text-amber-300"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>警長離席 · 擇一存活夥伴接棒警徽，或當場撕毀
+                    class="font-serif-craft text-[21px] sm:text-[24px] font-bold text-amber-300"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>移交警徽
                   </div>
                   <div id="sheriffTransferFlowGuide" class="hidden badge-flow-guide text-left"></div>
                   <div id="sheriffTransferButtons" class="flex items-center justify-center gap-1.5 flex-wrap"></div>
                   <button id="btnShatterSheriffBadge" type="button" class="cta-ink py-1.5 px-3 text-[15px]"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>撕毀警徽</button>
                 </div>
 
-                <!-- 5E. TURN-BY-TURN SHERIFF ELECTION (上警輪流發言 & 警下投票決選) -->
+                <!-- 5E. TURN-BY-TURN SHERIFF ELECTION -->
                 <div id="panelSheriffElection" class="hidden space-y-2 text-center msg-enter">
                   <div class="flex items-center justify-between gap-2 flex-wrap">
                     <div id="sheriffElectionHeadline"
-                      class="font-serif-craft text-[18px] sm:text-[22px] font-bold text-amber-300 text-left"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>上警競選 · 輪流陳詞拉票</div>
+                      class="font-serif-craft text-[21px] sm:text-[24px] font-bold text-amber-300 text-left"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>上警競選</div>
                     <div id="sheriffOrderStrip" class="flex items-center gap-1 flex-wrap justify-end"></div>
                   </div>
                   <div id="sheriffElectionCandidates" class="space-y-1 text-left max-h-[128px] overflow-y-auto custom-scroll"></div>
-                  <div id="sheriffPlayerTurnBox" class="hidden space-y-1.5 text-left rounded p-2 border border-amber-400/40 bg-amber-500/10">
-                    <div class="text-[13px] font-bold text-amber-200"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>輪到你警上陳詞</div>
+                  <div id="sheriffPlayerTurnBox" class="hidden space-y-1.5 text-left p-2">
+                    <div class="text-[13px] font-bold text-amber-200"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>警上陳詞</div>
                     <div id="sheriffPlayerBadgeFlowBar" class="badge-flow-bar"></div>
                     <div id="sheriffPlayerQuickChips" class="grid grid-cols-1 sm:grid-cols-3 gap-1.5"></div>
                     <div class="speech-composer-box is-amber-composer">
-                      <textarea id="sheriffPlayerInput" rows="2" placeholder="點上方宣言卡自由組裝並同步雙警徽流，確認後再送出（Enter 送出 · Shift+Enter 換行）…"
-                        class="speech-composer-textarea w-full rounded px-3 py-2 text-[15px] border focus:outline-none focus:border-amber-400"></textarea>
-                      <div class="speech-composer-toolbar flex items-center justify-between gap-2 flex-wrap">
-                        <span class="text-[13px] opacity-80">點宣言卡組裝陳詞並同步警徽流，確認後再按「送出陳詞」</span>
-                        <button id="btnSheriffPlayerSend" type="button" class="cta-brass px-4 py-1.5 text-[15px] shrink-0 ml-auto">送出陳詞 ↵</button>
+                      <textarea id="sheriffPlayerInput" rows="2" placeholder="點詞籤或輸入宣言…"
+                        class="speech-composer-textarea w-full px-3 py-2 text-[15px] focus:outline-none"></textarea>
+                      <div class="speech-composer-toolbar flex items-center justify-end gap-2">
+                        <button id="btnSheriffPlayerSend" type="button" class="cta-cinnabar px-4 py-1.5 text-[15px] shrink-0">送出陳詞</button>
                       </div>
                     </div>
                   </div>
                   <div id="sheriffElectionVoteRow" class="flex items-center justify-center gap-1.5 flex-wrap"></div>
                   <div id="sheriffElectionBtnRow" class="flex items-center justify-center gap-2 flex-wrap">
-                    <button id="btnSheriffRun" type="button" class="cta-brass py-1.5 px-3 text-[15px]"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M7.5 10.5L12 6l4.5 4.5M5 19h14"/></svg>我要上警競選</button>
+                    <button id="btnSheriffRun" type="button" class="cta-cinnabar py-1.5 px-3 text-[15px]"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M7.5 10.5L12 6l4.5 4.5M5 19h14"/></svg>上警競選</button>
                     <button id="btnSheriffStartSpeech" type="button" class="cta-ink py-1.5 px-3 text-[15px]">警下聽選</button>
-                    <button id="btnSheriffNextSpeech" type="button" class="hidden cta-brass py-1.5 px-4 text-[15px]">下一位候選人 → <kbd class="ui-kbd ml-1">Space</kbd></button>
+                    <button id="btnSheriffNextSpeech" type="button" class="hidden cta-cinnabar py-1.5 px-4 text-[15px]">下一位</button>
                     <button id="btnSheriffWithdraw" type="button" class="hidden cta-ink cta-quiet py-1.5 px-3 text-[15px]"><svg class="sh-ico sh-ico-muted" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v18M6 4h11l-2.5 4.2L17 12.5H6"/></svg>拱手退水</button>
-                    <button id="btnSheriffPass" type="button" class="cta-ink cta-quiet py-1.5 px-3 text-[15px]"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><polygon points="15.5 8.5 13.4 13.4 8.5 15.5 10.6 10.6 15.5 8.5"/></svg>略過發言 · 直接決選</button>
+                    <button id="btnSheriffPass" type="button" class="cta-ink cta-quiet py-1.5 px-3 text-[15px]">直接決選</button>
                   </div>
                 </div>
 
-                <!-- 5F. SHERIFF ORDER PICKER (警左 / 警右順逆時針) -->
+                <!-- 5F. SHERIFF ORDER PICKER -->
                 <div id="panelSheriffOrder" class="hidden space-y-2 text-center msg-enter">
                   <div id="sheriffOrderHeadline"
-                    class="font-serif-craft text-[18px] sm:text-[22px] font-bold text-amber-300"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>你是本局警長 · 請指定今日發言順序</div>
+                    class="font-serif-craft text-[21px] sm:text-[24px] font-bold text-amber-300"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l1.5-9 4 4L12 6l2.5 6 4-4L20 17H4z"/><path d="M5 20h14"/></svg>指定發言</div>
                   <div class="flex items-center justify-center gap-2">
-                    <button id="btnSheriffOrderCW" type="button" class="cta-brass py-1.5 px-4 text-[15px]">↻ 順時針開講</button>
-                    <button id="btnSheriffOrderCCW" type="button" class="cta-celadon py-1.5 px-4 text-[15px]">↺ 逆時針開講</button>
+                    <button id="btnSheriffOrderCW" type="button" class="cta-cinnabar py-1.5 px-4 text-[15px]">順時針</button>
+                    <button id="btnSheriffOrderCCW" type="button" class="cta-ink py-1.5 px-4 text-[15px]">逆時針</button>
                   </div>
                 </div>
 
                 <!-- 6. FULL THEATRICAL GAME OVER LEDGER -->
                 <div id="panelGameOver" class="hidden space-y-3.5 text-center">
-                  <div id="gameOverBannerCard" class="rounded p-4 border border-amber-400/40 bg-amber-500/10">
-                    <div class="flex items-center justify-between">
+                  <div id="gameOverBannerCard" class="gameover-hero-banner">
+                    <div class="flex items-center justify-between gap-3">
                       <h3 id="gameOverHeadline"
-                        class="font-serif-craft text-xl font-black text-amber-300 tracking-wider">勝負揭曉</h3>
+                        class="font-serif-craft text-2xl sm:text-3xl font-black text-amber-300 tracking-wider">勝負揭曉</h3>
                       <span id="playerGradeBadge" class="seal-chop text-sm">S</span>
                     </div>
                     <p id="gameOverReason" class="text-sm text-slate-200 text-left mt-1.5"></p>
                     <p id="gameOverTruthLine"
-                      class="text-sm font-medium text-amber-200 text-left mt-2 pt-2 border-t border-amber-400/20 leading-relaxed">
+                      class="text-sm font-medium text-amber-200 text-left mt-2 pt-2 leading-relaxed">
                     </p>
                     <p id="gameOverMissionLine" class="hidden text-[13px] font-bold text-emerald-300 text-left mt-1.5">
                     </p>
@@ -863,7 +859,7 @@
                     <button id="btnReviewRolesModal" type="button" class="cta-ink py-2 px-2 text-[15px]">復盤手札</button>
                     <button id="btnExportReplay" type="button" class="cta-ink py-2 px-2 text-[15px]">匯出戰報</button>
                     <button id="btnPlayAgain" type="button" class="cta-cinnabar py-2 px-2 text-[15px]">再戰一局</button>
-                    <button id="btnBackToTitleOver" type="button" class="cta-ink py-2 px-2 text-[15px]">返回主畫面</button>
+                    <button id="btnBackToTitleOver" type="button" class="cta-ink py-2 px-2 text-[15px]">返回主頁</button>
                   </div>
                 </div>
 
@@ -1070,7 +1066,7 @@
       </div>
 
       <div class="setup-drawer-footer mt-auto pt-2">
-        <button id="btnConfirmSetupStart" type="button" class="cta-cinnabar w-full py-2.5 text-sm">確認入席開局</button>
+        <button id="btnConfirmSetupStart" type="button" class="cta-cinnabar w-full py-2.5 text-sm">確認開局</button>
       </div>
     </div>
   </div>
@@ -1146,16 +1142,16 @@
         <div id="showcasePersonaBio" class="text-sm text-amber-100/95 mt-0.5 leading-snug"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5c-7 0-12 4.5-13 13 8.5-1 13-6 13-13z"/><path d="M6 18l6-6"/></svg>清茗茶席引路人｜使用下方箭頭切換茶友 3D 造型</div>
         <div id="showcaseProfileCard" class="hidden showcase-profile-card"></div>
       </div>
-      <button id="btnCloseHeroShowcase" type="button" class="hud-icon-btn shrink-0 whitespace-nowrap">← 返回茶席</button>
+      <button id="btnCloseHeroShowcase" type="button" class="hud-icon-btn shrink-0 whitespace-nowrap">返回</button>
     </div>
 
     <div class="showcase-studio-dock space-y-2.5">
       <!-- Primary Clean 5-Control Strip: Prev / Counter / Next + 3 Tea-Robe Palette Swatches -->
       <div class="showcase-carousel-row flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2">
-          <button id="btnShowcasePrev" type="button" class="cta-ink px-3.5 py-2 text-[15px]" aria-label="上一位角色">◀ 上一位</button>
+          <button id="btnShowcasePrev" type="button" class="cta-ink px-3.5 py-2 text-[15px]" aria-label="上一位角色">上一位</button>
           <span id="showcaseTargetCounter" class="showcase-target-counter text-[15px] font-serif-craft font-bold text-amber-200 px-2.5">清茗 · 1/13</span>
-          <button id="btnShowcaseNext" type="button" class="cta-ink px-3.5 py-2 text-[15px]" aria-label="下一位角色">下一位 ▶</button>
+          <button id="btnShowcaseNext" type="button" class="cta-ink px-3.5 py-2 text-[15px]" aria-label="下一位角色">下一位</button>
         </div>
 
         <div id="showcasePaletteGroup" class="flex items-center gap-2 flex-wrap">
@@ -1166,11 +1162,11 @@
       </div>
 
       <!-- Quiet Secondary Drawer: Voice Audition + Optional Pose / Custom VRM -->
-      <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
-        <button id="btnShowcaseAuditionVoice" type="button" class="cta-celadon px-4 py-1.5 text-[15px]"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9v6M12 5v14M16 9v6M4 11v2M20 11v2"/></svg>試聽台詞</button>
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+        <button id="btnShowcaseAuditionVoice" type="button" class="cta-cinnabar px-4 py-1.5 text-[15px]"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9v6M12 5v14M16 9v6M4 11v2M20 11v2"/></svg>試聽台詞</button>
         <details class="showcase-more-drawer">
-          <summary class="text-sm text-slate-300 hover:text-amber-200 cursor-pointer select-none px-2 py-1">動態姿勢 / 載入模型 ▾</summary>
-          <div class="mt-2 pt-2 border-t border-slate-800/70 space-y-2">
+          <summary class="text-sm text-slate-300 hover:text-amber-200 cursor-pointer select-none px-2 py-1">姿勢模型</summary>
+          <div class="mt-2 pt-2 space-y-2">
             <div class="flex items-center gap-1.5 flex-wrap">
               <button type="button" data-hero-action="welcome_bow" class="showcase-chip is-active">迎賓揮手</button>
               <button type="button" data-hero-action="idle_breathe" class="showcase-chip">靜息品茗</button>
@@ -1180,10 +1176,10 @@
               <button type="button" data-hero-action="celebrate" class="showcase-chip">勝利歡呼</button>
             </div>
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <span id="showcaseUploadHint" class="text-[13px] text-slate-400">支援即時載入自訂 .VRM / .GLB 模型</span>
+              <span id="showcaseUploadHint" class="text-[13px] text-slate-400">支援 VRM / GLB</span>
               <div class="flex items-center gap-2">
-                <button id="btnResetHeroRig" type="button" class="hidden cta-ink px-3 py-1.5 text-[15px]">切回內建 3D</button>
-                <button id="btnUploadHeroGlb" type="button" class="cta-ink px-3 py-1.5 text-[15px]">載入 .VRM / .GLB</button>
+                <button id="btnResetHeroRig" type="button" class="hidden cta-ink px-3 py-1.5 text-[15px]">預設模型</button>
+                <button id="btnUploadHeroGlb" type="button" class="cta-ink px-3 py-1.5 text-[15px]">載入模型</button>
                 <input id="inputHeroGlb" type="file" accept=".vrm,.glb,.gltf" class="hidden" />
               </div>
             </div>
@@ -1309,15 +1305,15 @@
         <div id="gpuPerfStatusLine" class="text-[13px] text-slate-400 text-center tabular-nums">3D 引擎就緒・即時監測中</div>
         <div id="gpuDualCardHint" class="gpu-dual-hint hidden"></div>
 
-        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
-          <button id="btnOpenTutorialPause" type="button" class="pause-action-btn text-emerald-200"><span class="inline-flex items-center"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v17H5.5A2.5 2.5 0 0 0 3 22V5.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v17h6.5a2.5 2.5 0 0 1 2.5 2V5.5z"/></svg>遊戲使用教學</span></button>
-          <button id="btnOpenHeroShowcasePause" type="button" class="pause-action-btn text-amber-200">3D 角色鑑賞</button>
-          <button id="btnOpenGuide" type="button" class="pause-action-btn">三好與 AI 架構</button>
-          <button id="btnOpenCareer" type="button" class="pause-action-btn">書院生涯印記</button>
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <button id="btnOpenTutorialPause" type="button" class="pause-action-btn text-emerald-200"><span class="inline-flex items-center"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v17H5.5A2.5 2.5 0 0 0 3 22V5.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v17h6.5a2.5 2.5 0 0 1 2.5 2V5.5z"/></svg>遊戲教學</span></button>
+          <button id="btnOpenHeroShowcasePause" type="button" class="pause-action-btn text-amber-200">角色鑑賞</button>
+          <button id="btnOpenGuide" type="button" class="pause-action-btn">規則架構</button>
+          <button id="btnOpenCareer" type="button" class="pause-action-btn">書院印記</button>
           <button id="btnOpenLogDrawer" type="button" class="pause-action-btn">對話手札</button>
           <button id="btnOpenVoteSheet" type="button" class="pause-action-btn">票型小抄</button>
-          <button id="btnOpenFeedback" type="button" class="pause-action-btn col-span-2" title="提交試玩反饋、建議或回報 BUG">提交使用反饋</button>
-          <button id="btnRestartTop" type="button" class="cta-cinnabar py-2 text-[15px] text-center col-span-2">返回主畫面</button>
+          <button id="btnOpenFeedback" type="button" class="pause-action-btn col-span-2" title="提交試玩反饋、建議或回報 BUG">使用反饋</button>
+          <button id="btnRestartTop" type="button" class="cta-cinnabar py-2 text-[15px] text-center col-span-2">返回主頁</button>
         </div>
 
         <div class="shortcut-legend-bar" aria-label="鍵盤快捷鍵速查">
@@ -1357,12 +1353,12 @@
       <div id="tutorialScrollArea" class="p-4 flex-1 overflow-y-auto custom-scroll">
         <div id="tutorialSlideBody" class="min-h-[210px] flex flex-col justify-start text-center space-y-3"></div>
       </div>
-      <div class="px-4 py-3 border-t border-slate-800 flex items-center justify-between gap-2 shrink-0">
-        <button id="btnTutPrev" type="button" class="cta-ink px-3 py-1.5 text-[15px]">← 上一章</button>
+      <div class="px-4 py-3 flex items-center justify-between gap-2 shrink-0">
+        <button id="btnTutPrev" type="button" class="cta-ink px-3 py-1.5 text-[15px]">上一章</button>
         <div id="tutorialDots" class="flex items-center justify-center gap-1.5"></div>
         <div class="flex items-center gap-1.5">
-          <button id="btnTutNext" type="button" class="cta-brass px-4 py-1.5 text-[15px]">下一章 →</button>
-          <button id="btnLaunchGuidedDemo" type="button" class="hidden cta-cinnabar px-4 py-1.5 text-[15px]"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>開啟新手帶玩席</button>
+          <button id="btnTutNext" type="button" class="cta-cinnabar px-4 py-1.5 text-[15px]">下一章</button>
+          <button id="btnLaunchGuidedDemo" type="button" class="hidden cta-cinnabar px-4 py-1.5 text-[15px]">新手帶玩</button>
         </div>
       </div>
     </div>
@@ -1569,8 +1565,8 @@
         <div id="aiTestResultBox" class="hidden ai-test-result ed-card text-[13px] leading-relaxed" role="status" aria-live="polite"></div>
 
         <div class="flex items-center justify-between gap-2 pt-1">
-          <button id="btnClearApiKey" type="button" class="cta-ink px-3 py-1.5 text-[13px]">切回離線規則</button>
-          <button id="btnSaveApiKey" type="button" class="cta-brass px-4 py-1.5 text-[14px]">測試並套用</button>
+          <button id="btnClearApiKey" type="button" class="cta-ink px-3 py-1.5 text-[13px]">離線規則</button>
+          <button id="btnSaveApiKey" type="button" class="cta-cinnabar px-4 py-1.5 text-[14px]">測試套用</button>
         </div>
       </div>
     </div>
@@ -1787,19 +1783,16 @@
   <div id="modalFeedback"
     class="hidden fixed inset-0 z-50 craft-modal-backdrop flex items-center justify-center p-3 sm:p-4" role="dialog" aria-label="玩家使用反饋">
     <div class="craft-modal-box max-w-lg w-full max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl">
-      <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2">
-        <div>
-          <h3 class="modal-title-serif text-lg font-bold text-amber-300 tracking-wider"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7.5a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13V5.5z"/><path d="M8.5 8.5h7M8.5 11.5h4.5"/></svg>玩家使用反饋</h3>
-          <div class="ed-sub-note mt-0.5">回報問題、畫面建議或規則心得。</div>
-        </div>
+      <div class="px-4 py-3 flex items-center justify-between gap-2">
+        <h3 class="modal-title-serif text-lg font-bold text-amber-300 tracking-wider"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7.5a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13V5.5z"/><path d="M8.5 8.5h7M8.5 11.5h4.5"/></svg>使用反饋</h3>
         <button id="btnCloseFeedback" type="button" class="cta-ink text-[15px] px-2.5 py-1 shrink-0">關閉</button>
       </div>
       <div class="p-4 overflow-y-auto custom-scroll space-y-3 text-sm text-slate-200">
         <!-- 1. Star Rating -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
-            <span class="font-bold text-amber-200">整體體驗評分</span>
-            <span id="feedbackRatingText" class="text-[13px] font-bold text-amber-300">5 星 · 很喜歡這個體驗</span>
+            <span class="font-bold text-amber-200">體驗評分</span>
+            <span id="feedbackRatingText" class="text-[13px] font-bold text-amber-300">5 星</span>
           </div>
           <div id="feedbackStarGroup" class="flex items-center gap-1.5">
             <button type="button" data-fb-star="1" class="fb-star-btn is-lit" aria-label="1星"><svg class="sh-ico sh-ico-gold sh-ico-solo" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 3 14.6 8.8 21 9.5 16.2 13.8 17.6 20 12 16.7 6.4 20 7.8 13.8 3 9.5 9.4 8.8 12 3"/></svg></button>
@@ -1815,24 +1808,24 @@
           <div class="font-bold text-amber-200">反饋類型</div>
           <div id="feedbackCatGroup" class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
             <button type="button" data-fb-cat="bug" class="fb-cat-btn"><svg class="sh-ico sh-ico-cinnabar" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9.5 16.5h-19L12 3z"/><path d="M12 9.5v4.5M12 16.8h.01"/></svg>問題回報</button>
-            <button type="button" data-fb-cat="ui" class="fb-cat-btn"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.5 3.5l2 2-9.5 9.5-3.2 1.2 1.2-3.2 9.5-9.5z"/></svg>畫面與視角</button>
-            <button type="button" data-fb-cat="gameplay" class="fb-cat-btn"><svg class="sh-ico sh-ico-indigo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/></svg>角色與規則</button>
-            <button type="button" data-fb-cat="idea" class="fb-cat-btn is-active"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>許願與建議</button>
+            <button type="button" data-fb-cat="ui" class="fb-cat-btn"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.5 3.5l2 2-9.5 9.5-3.2 1.2 1.2-3.2 9.5-9.5z"/></svg>畫面視角</button>
+            <button type="button" data-fb-cat="gameplay" class="fb-cat-btn"><svg class="sh-ico sh-ico-indigo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/></svg>角色規則</button>
+            <button type="button" data-fb-cat="idea" class="fb-cat-btn is-active"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z"/></svg>許願建議</button>
           </div>
         </div>
 
-        <!-- 3. Nickname (Optional) & Message -->
+        <!-- 3. Nickname & Message -->
         <div class="space-y-2">
           <div>
-            <label for="inputFeedbackName" class="block text-[13px] text-slate-400 mb-1">暱稱（選填）</label>
-            <input id="inputFeedbackName" type="text" maxlength="32" placeholder="未填將匿名送出"
-              class="w-full rounded-lg px-3 py-1.5 bg-slate-950/85 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-amber-400" />
+            <label for="inputFeedbackName" class="block text-[13px] text-slate-400 mb-1">暱稱</label>
+            <input id="inputFeedbackName" type="text" maxlength="32" placeholder="未填匿名"
+              class="w-full px-3 py-1.5 bg-slate-950/85 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-amber-400" />
           </div>
           <div>
-            <label for="inputFeedbackBody" class="block text-[13px] text-amber-200 font-bold mb-1">反饋內容（必填）</label>
+            <label for="inputFeedbackBody" class="block text-[13px] text-amber-200 font-bold mb-1">內容</label>
             <textarea id="inputFeedbackBody" rows="4" maxlength="1500"
-              placeholder="簡述遇到的問題或建議…"
-              class="w-full rounded-lg px-3 py-2 bg-slate-950/85 border border-slate-700 text-sm text-slate-100 leading-relaxed focus:outline-none focus:border-amber-400 resize-y"></textarea>
+              placeholder="輸入問題或建議…"
+              class="w-full px-3 py-2 bg-slate-950/85 border border-slate-700 text-sm text-slate-100 leading-relaxed focus:outline-none focus:border-amber-400 resize-y"></textarea>
           </div>
         </div>
 
@@ -1840,7 +1833,7 @@
         <div class="space-y-1.5">
           <label class="inline-flex items-center gap-2 cursor-pointer text-[13px] text-slate-300">
             <input id="chkFeedbackIncludeEnv" type="checkbox" checked class="accent-amber-400" />
-            <span>附帶對局環境參數（不含金鑰或底牌）</span>
+            <span>附帶環境參數</span>
           </label>
           <pre id="feedbackEnvPreview" class="fb-env-preview"></pre>
         </div>
@@ -1854,16 +1847,16 @@
         <div id="feedbackResultCard" class="hidden fb-result-card space-y-2">
           <div id="feedbackResultMsg" class="text-[13px] font-bold text-emerald-200 leading-relaxed"></div>
           <div class="flex flex-wrap gap-2">
-            <button id="btnOpenGithubFeedback" type="button" class="hidden cta-brass px-3 py-1.5 text-[15px]" aria-hidden="true">回饋備份</button>
-            <button id="btnCopyLastFeedback" type="button" class="cta-celadon px-3 py-1.5 text-[15px]"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M7.5 8.5h9M7.5 12h9M7.5 15.5h5.5"/></svg>複製完整反饋</button>
+            <button id="btnOpenGithubFeedback" type="button" class="hidden cta-ink px-3 py-1.5 text-[15px]" aria-hidden="true">回饋備份</button>
+            <button id="btnCopyLastFeedback" type="button" class="cta-ink px-3 py-1.5 text-[15px]"><svg class="sh-ico sh-ico-jade" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M7.5 8.5h9M7.5 12h9M7.5 15.5h5.5"/></svg>複製反饋</button>
           </div>
         </div>
 
         <!-- 7. Local Stored Feedback Log & Export -->
-        <div class="pt-2 border-t border-slate-800/80 space-y-2">
+        <div class="pt-2 space-y-2">
           <div class="flex items-center justify-between gap-2">
-            <span id="feedbackHistoryCount" class="text-[13px] text-slate-400">本機已留存 0 筆</span>
-            <button id="btnExportFeedbackJson" type="button" class="hidden cta-ink px-2.5 py-1 text-[13px]"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="1.5"/><path d="M8 10h8M10 3h4v7h-4z"/></svg>匯出全部反饋 (.json)</button>
+            <span id="feedbackHistoryCount" class="text-[13px] text-slate-400">已留存 0 筆</span>
+            <button id="btnExportFeedbackJson" type="button" class="hidden cta-ink px-2.5 py-1 text-[13px]"><svg class="sh-ico sh-ico-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="1.5"/><path d="M8 10h8M10 3h4v7h-4z"/></svg>匯出紀錄</button>
           </div>
           <div id="feedbackHistoryList" class="space-y-1.5 max-h-36 overflow-y-auto custom-scroll"></div>
         </div>

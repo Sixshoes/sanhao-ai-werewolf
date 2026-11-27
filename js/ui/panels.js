@@ -108,9 +108,9 @@ function renderVoteResultPanel() {
   }
   if (el("btnVoteResultNext")) {
     if (vr.playerVotedOut) {
-      el("btnVoteResultNext").textContent = "繼續往下看（觀戰）";
+      el("btnVoteResultNext").textContent = "繼續觀戰";
     } else if (!state.match.pkCandidates) {
-      el("btnVoteResultNext").textContent = (p1 && !p1.alive) ? "繼續觀戰・進入夜晚" : "進入夜晚";
+      el("btnVoteResultNext").textContent = (p1 && !p1.alive) ? "繼續觀戰" : "進入夜晚";
     }
   }
   el("voteResultHeadline").textContent = vr.headline;
@@ -229,7 +229,7 @@ function renderVoteNotesDeck(player, pkActive) {
   head.className = "vote-notes-head";
   const titleSpan = document.createElement("span");
   titleSpan.className = "vote-notes-title";
-  titleSpan.textContent = isWolfVoter ? "酸民狼密箋・公投帶票筆記" : "我的公投筆記（點席位即鎖定投票）";
+  titleSpan.textContent = isWolfVoter ? "狼隊密箋" : "公投筆記";
   head.appendChild(titleSpan);
 
   const linksWrap = document.createElement("div");
@@ -238,7 +238,7 @@ function renderVoteNotesDeck(player, pkActive) {
   btnSheet.type = "button";
   btnSheet.id = "btnVoteNotesOpenSheet";
   btnSheet.className = "vote-note-link-btn";
-  btnSheet.textContent = "歷輪票型 ↗";
+  btnSheet.textContent = "歷輪票型";
   btnSheet.addEventListener("click", function () {
     sound.unlock();
     if (typeof openVoteSheetModal === "function") openVoteSheetModal();
@@ -247,7 +247,7 @@ function renderVoteNotesDeck(player, pkActive) {
   btnMat.type = "button";
   btnMat.id = "btnVoteNotesOpenMatrix";
   btnMat.className = "vote-note-link-btn";
-  btnMat.textContent = "立場矩陣 ↗";
+  btnMat.textContent = "立場矩陣";
   btnMat.addEventListener("click", function () {
     sound.unlock();
     if (typeof indieFlow !== "undefined" && typeof indieFlow.openJournal === "function") {
@@ -344,7 +344,7 @@ function renderVoteNotesDeck(player, pkActive) {
   if (!hasGroups && clues.length === 0) {
     const emptyEl = document.createElement("div");
     emptyEl.className = "vote-notes-empty";
-    emptyEl.textContent = "尚未標記好壞人 · 可直接點上方座位落籌，或點右側「歷輪票型」對照";
+    emptyEl.textContent = "尚無標記";
     deck.appendChild(emptyEl);
   }
 }
@@ -397,7 +397,7 @@ function renderVotePickPanel() {
     rallyBtn.classList.toggle("hidden", !isPlayerSheriff);
     const usedToday = state.match.sheriffRallyUsedDay === state.match.day;
     rallyBtn.disabled = !isPlayerSheriff || usedToday;
-    rallyBtn.textContent = usedToday ? "本輪已歸票" : "警長歸票";
+    rallyBtn.textContent = usedToday ? "已歸票" : "警長歸票";
   }
   const pkActive = isPkVoteActive();
   renderVoteNotesDeck(player, pkActive);
@@ -406,14 +406,14 @@ function renderVotePickPanel() {
     : "";
   if (el("votePromptLabel")) {
     el("votePromptLabel").textContent = pkActive
-      ? ("平票 PK 決選 · 請從 " + pkListLabel + " 擇一")
-      : (isWolfVoter ? "酸民狼歸票 · 擇一好人席帶節奏" : "公投落籌 · 擇席請離");
+      ? "平票決選"
+      : (isWolfVoter ? "狼隊歸票" : "公投決議");
   }
   const sel = getSeat(state.selectedSeatId);
   const validVote = Boolean(sel && isValidVoteTarget(sel.id));
   el("selectedVoteBadge").textContent = validVote
-    ? ("已鎖定 · " + fmtSeatNum(sel.id) + "號 " + sel.name)
-    : (pkActive ? ("僅限 " + pkListLabel + " 或棄票") : "請擇定茶席座位");
+    ? ("鎖定 · " + fmtSeatNum(sel.id) + "號 " + sel.name)
+    : (pkActive ? ("限 " + pkListLabel) : "尚未鎖定");
   const vIntel = el("voteTargetIntelLine");
   if (vIntel) {
     if (validVote) {
@@ -431,9 +431,9 @@ function renderVotePickPanel() {
   const castBtn = el("btnCastVote");
   castBtn.disabled = !validVote;
   if (validVote) {
-    castBtn.innerHTML = escapeHtml("確認投給 " + fmtSeatNum(sel.id) + "號") + ' <kbd class="ui-kbd ml-1">Enter</kbd>';
+    castBtn.textContent = "投 " + fmtSeatNum(sel.id) + "號";
   } else {
-    castBtn.textContent = pkActive ? "擇 PK 席位" : "擇席落籌";
+    castBtn.textContent = pkActive ? "擇定決選" : "擇席落籌";
   }
 }
 
@@ -619,13 +619,13 @@ function renderStepperPanel(p) {
     stepNextBtn.classList.toggle("hidden", !showStepNext);
     if (showStepNext) {
       const nextLabel = isHunterResolve
-        ? "繼續 →"
+        ? "繼續"
         : (state.typewriter.active
           ? "顯示全文"
           : (isLwSpeech
-            ? "繼續 →"
-            : (p === "DAY_VOTE" ? "直接開票 →" : (lastSp ? "進入公投 →" : "下一位 →"))));
-      stepNextBtn.innerHTML = escapeHtml(nextLabel) + ' <kbd class="ui-kbd ml-1">Space</kbd>';
+            ? "繼續"
+            : (p === "DAY_VOTE" ? "直接開票" : (lastSp ? "進入公投" : "下一位"))));
+      stepNextBtn.textContent = nextLabel;
     }
   }
   const stepRow = stepNextBtn ? stepNextBtn.parentElement : null;
@@ -651,15 +651,15 @@ function renderStepperPanel(p) {
     if (isWolfMateSpeaking) {
       el("btnMarkGood").disabled = true;
       el("btnMarkWolf").disabled = true;
-      el("btnMarkGood").textContent = "同伴發言中";
+      el("btnMarkGood").textContent = "同伴發言";
       el("btnMarkWolf").textContent = "狼隊配合";
       el("btnMarkGood").className = "py-1 px-2 text-[13px] shrink-0 cta-ink opacity-80";
       el("btnMarkWolf").className = "py-1 px-2 text-[13px] shrink-0 cta-ink opacity-80";
     } else if (isWolfListener) {
       el("btnMarkGood").disabled = false;
       el("btnMarkWolf").disabled = false;
-      el("btnMarkGood").textContent = curMark === "good" ? "已標假保" : "標記假保";
-      el("btnMarkWolf").textContent = curMark === "wolf" ? "已標甩鍋" : "標記甩鍋";
+      el("btnMarkGood").textContent = curMark === "good" ? "已標假保" : "標假保";
+      el("btnMarkWolf").textContent = curMark === "wolf" ? "已標甩鍋" : "標甩鍋";
       el("btnMarkGood").className = "py-1 px-2 text-[13px] shrink-0 " + (
         curMark === "good" ? "cta-celadon font-bold" : "cta-ink"
       );
@@ -669,8 +669,8 @@ function renderStepperPanel(p) {
     } else {
       el("btnMarkGood").disabled = false;
       el("btnMarkWolf").disabled = false;
-      el("btnMarkGood").textContent = curMark === "good" ? "已標好人" : "認同・標好人";
-      el("btnMarkWolf").textContent = curMark === "wolf" ? "已標狼人" : "存疑・標狼人";
+      el("btnMarkGood").textContent = curMark === "good" ? "已標好人" : "標好人";
+      el("btnMarkWolf").textContent = curMark === "wolf" ? "已標狼人" : "標狼人";
       el("btnMarkGood").className = "py-1 px-2 text-[13px] shrink-0 " + (
         curMark === "good" ? "cta-celadon font-bold" : "cta-ink"
       );
@@ -686,7 +686,7 @@ function renderStepperPanel(p) {
       const pAliveHere = Boolean(pSeatLive && pSeatLive.alive);
       interjBtn.classList.toggle("hidden", !pAliveHere);
       interjBtn.disabled = !canInterj;
-      interjBtn.textContent = usedToday ? "今日已追問" : "舉杯追問 (1)";
+      interjBtn.textContent = usedToday ? "已追問" : "舉杯追問";
       interjBtn.title = usedToday
         ? "今日舉杯追問次數已用完，明日刷新"
         : "每日限 1 次：當場舉杯拋出短問，逼發言者即時回防";
@@ -725,7 +725,7 @@ function renderStepperPanel(p) {
         microBtn.disabled = !canInspect;
         microBtn.textContent = doneAlready
           ? "已看心虛"
-          : (isWatchedFree ? "免費看心虛" : ("看心虛(" + mRem + ")"));
+          : (isWatchedFree ? "免費看心虛" : "看心虛");
         microBtn.title = doneAlready
           ? "今天已查看過這位發言者的心虛緊張度"
           : (isWatchedFree
@@ -1106,7 +1106,7 @@ function renderSheriffElectionPanel() {
         card.innerHTML =
           '<div class="flex items-center justify-between gap-1.5 w-full">' +
           '<span class="text-[13px] font-bold text-amber-200 truncate">' + escapeHtml(opt.title) + '</span>' +
-          '<span class="play-card-load-btn shrink-0" data-card-load="1" title="加入或移除此段到下方陳詞欄並同步警徽流">' + (isLoaded ? "已加入" : "+ 加入組裝") + '</span>' +
+          '<span class="play-card-load-btn shrink-0" data-card-load="1" title="加入或移除此段到下方陳詞欄並同步警徽流">' + (isLoaded ? "已加入" : "加入") + '</span>' +
           '</div>' +
           '<div class="text-[13px] text-slate-300 line-clamp-2">' + escapeHtml(opt.text) + '</div>';
         const toggleShDraft = function (ev) {
@@ -1151,7 +1151,7 @@ function renderSheriffElectionPanel() {
               const refIn = Boolean(refOpt.text && preservedText.indexOf(refOpt.text) !== -1);
               if (cNode.classList) cNode.classList.toggle("is-draft-loaded", refIn);
               const badgeEl = typeof cNode.querySelector === "function" ? cNode.querySelector("[data-card-load]") : null;
-              if (badgeEl) badgeEl.textContent = refIn ? "已加入" : "+ 加入組裝";
+              if (badgeEl) badgeEl.textContent = refIn ? "已加入" : "加入";
             });
           }
           const finalInp = el("sheriffPlayerInput");
@@ -1224,8 +1224,8 @@ function renderSheriffElectionPanel() {
         const cs = getSeat(cid);
         return Boolean(cs && cs.alive && ctx.candidateIds.indexOf(cid) !== -1);
       }).length;
-      const lbl = remainingAfter === 0 ? "進入警下投票 →" : "下一位候選人 →";
-      nextSpBtn.innerHTML = escapeHtml(lbl) + ' <kbd class="ui-kbd ml-1">Space</kbd>';
+      const lbl = remainingAfter === 0 ? "進入投票" : "下一位";
+      nextSpBtn.textContent = lbl;
     }
   }
   if (el("btnSheriffWithdraw")) {
@@ -1233,11 +1233,11 @@ function renderSheriffElectionPanel() {
   }
   if (el("btnSheriffPass")) {
     if (stage === "vote") {
-      el("btnSheriffPass").textContent = ctx.playerRunning ? "維持上警・開始開票" : "棄票／自動開票";
+      el("btnSheriffPass").textContent = ctx.playerRunning ? "開始開票" : "棄票開票";
     } else if (stage === "speech") {
-      el("btnSheriffPass").textContent = "略過剩餘發言・直接開票";
+      el("btnSheriffPass").textContent = "直接開票";
     } else {
-      el("btnSheriffPass").textContent = "略過發言・直接決選";
+      el("btnSheriffPass").textContent = "直接決選";
     }
   }
 }
@@ -1283,8 +1283,8 @@ function renderGameOverMetrics() {
   const player = getPlayerSeat();
   const playerWon = player && player.team === m.winner;
   el("gameOverHeadline").textContent = m.winner === "early_end"
-    ? "已提前結束・揭曉底牌"
-    : ((m.winner === "good" ? "好人贏了！" : "酸民狼贏了！") + (playerWon ? " (勝利)" : ""));
+    ? "提前結束"
+    : ((m.winner === "good" ? "好人勝" : "酸民狼勝") + (playerWon ? " · 勝局" : ""));
   el("gameOverReason").textContent = m.winReason;
   const truthEl = el("gameOverTruthLine");
   if (truthEl) {
@@ -1359,8 +1359,8 @@ function renderGameOverMetrics() {
   box.innerHTML = "";
   metrics.forEach(function (item) {
     const d = document.createElement("div");
-    d.className = "p-1.5 rounded-xl bg-slate-950 border border-slate-800";
-    d.innerHTML = '<div class="text-[13px] text-slate-400">' + escapeHtml(item.label) + '</div><div class="text-sm font-black text-amber-200">' + escapeHtml(item.val) + "</div>";
+    d.className = "go-metric-item";
+    d.innerHTML = '<div class="go-metric-val">' + escapeHtml(item.val) + '</div><div class="go-metric-label">' + escapeHtml(item.label) + "</div>";
     box.appendChild(d);
   });
 
@@ -1375,7 +1375,7 @@ function renderGameOverMetrics() {
           '<span class="virtue-title-seal">' + escapeHtml(ledger.virtueTitle) + '</span>' +
         '</div>' +
         '<div class="virtue-ledger-sub">' + escapeHtml(ledger.virtueSubtitle) +
-          '（終局茶風：' + escapeHtml(ledger.atmosphere.label) + ' · 友善度 ' + escapeHtml(ledger.harmonyScore) + '）</div>' +
+          ' · ' + escapeHtml(ledger.atmosphere.label) + ' ' + escapeHtml(ledger.harmonyScore) + '</div>' +
         '<div class="virtue-petal-grid">';
       ledger.petals.forEach(function (pt) {
         vHtml +=
@@ -1461,8 +1461,8 @@ function renderGameOverMetrics() {
     const insights = buildAiPostMatchCoachInsights();
     insights.forEach(function (ci) {
       const card = document.createElement("div");
-      card.className = "rounded-lg px-2 py-1 bg-slate-950/75 border border-amber-400/25 text-[13px] text-slate-200 leading-snug";
-      card.innerHTML = '<span class="font-bold text-amber-300">' + escapeHtml(ci.icon + " " + ci.title + "：") + "</span>" + escapeHtml(ci.text);
+      card.className = "go-coach-item";
+      card.innerHTML = '<span class="go-coach-title">' + escapeHtml(ci.icon + " " + ci.title) + "</span>" + escapeHtml(ci.text);
       coachBox.appendChild(card);
     });
   }

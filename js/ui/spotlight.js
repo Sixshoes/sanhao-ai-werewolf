@@ -370,10 +370,10 @@ function syncSpeakerBannerVisuals(speaker, badge, trait, isTyping) {
   if (nextBtn && (state.match.phase === "DAY_SPEECH" || state.match.phase === "LAST_WORDS_SPEECH")) {
     const isLw = state.match.phase === "LAST_WORDS_SPEECH";
     const isLastOfRound = isLw ? true : ((state.match.speechQueue || []).length === 0);
-    const lbl = isTyping ? "顯示全文" : (isLw ? "繼續 →" : (isLastOfRound ? "進入公投 →" : "下一位 →"));
-    nextBtn.innerHTML = escapeHtml(lbl) + ' <kbd class="ui-kbd ml-1">Space</kbd>';
+    const lbl = isTyping ? "顯示全文" : (isLw ? "繼續" : (isLastOfRound ? "進入公投" : "下一位"));
+    nextBtn.textContent = lbl;
     nextBtn.className = (!isTyping && !voice.speaking)
-      ? "cta-brass py-1.5 px-3.5 text-[15px] shrink-0 inline-flex items-center"
+      ? "cta-cinnabar py-1.5 px-4 text-[15px] shrink-0 inline-flex items-center"
       : "cta-ink py-1.5 px-3 text-[15px] shrink-0 inline-flex items-center";
   }
   const spProf = (speaker && typeof getPersonaProfile === "function") ? getPersonaProfile(speaker) : null;
