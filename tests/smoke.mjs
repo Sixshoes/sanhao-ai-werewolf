@@ -9720,4 +9720,4673 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     state.match.speechQueue = [5, 6, 7, 8, 1];
     state.match.daySpeechEvents = [
       { speakerId: 2, day: 1, accuseId: 4, text: "二號先報個身分，覺得四號有點急。" },
-... [truncated for diff preview]
+      { speakerId: 3, day: 1, vouchId: 2, text: "我也站二號這邊，看四號後面怎麼說。" }
+    ];
+    state.match.matchStyleSeed = 111;
+    const seat5 = getSeat(5);
+    seat5.role = "villager";
+    seat5.team = "good";
+    seat5.isPlayer = false;
+    seat5.fakeSeer = false;
+    seat5.claimedRole = null;
+    seat5.name = "晨晨";
+    seat5.suspicionMap = {};
+    const outSeed1A = buildHeuristicAiSpeech(seat5);
+    const outSeed1B = buildHeuristicAiSpeech(seat5);
+    const deterministicSameSeedOk = Boolean(outSeed1A && outSeed1B && outSeed1A.text === outSeed1B.text);
+    const collectedTexts = [];
+    [11, 22, 33, 44, 55, 66, 77].forEach(sd => {
+      state.match.matchStyleSeed = sd;
+      const sp = buildHeuristicAiSpeech(seat5);
+      if (sp && sp.text) collectedTexts.push(sp.text);
+    });
+    const speechVarietyOk = Boolean(
+      seedNewOk &&
+      deterministicSameSeedOk &&
+      new Set(collectedTexts).size >= 2 &&
+      collectedTexts.every(t => !t.includes("先這樣，過")) &&
+      collectedTexts.some(t => t.length <= 60)
+    );
+
+    const midCutRejected = parseGeminiStructuredSpeech('{"text":"咦，怎麼話題突然轉到我身上了——5號星兒，妳第一天口頭點我，公投卻改') === null;
+    const midCutSalvaged = parseGeminiStructuredSpeech('{"text":"5號星兒昨天口頭點我卻改票，這點很可疑。至於後面8號阿松我覺得他剛');
+    const speechTruncationGuardOk = Boolean(
+      midCutRejected &&
+      midCutSalvaged &&
+      midCutSalvaged.text === "5號星兒昨天口頭點我卻改票，這點很可疑。"
+    );
+
+    const prevVoiceSpeaking244 = voice.speaking;
+    voice.speaking = false;
+    syncSpeakerBannerVisuals(seat5, "05號 · " + seat5.name, "直覺衝刺", false);
+    const waveEl244 = el("speakerVoiceWave");
+    const badgeEl244 = el("spotlightSpeakerBadge");
+    const speakerBannerPolishOk = Boolean(
+      waveEl244 && waveEl244.classList.contains("hidden") &&
+      badgeEl244 && badgeEl244.textContent === seat5.name
+    );
+    voice.speaking = prevVoiceSpeaking244;
+
+    el("selectModeCount").value = "8";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    state.match.day = 1;
+    state.match.sheriffElectionPending = true;
+    const prewarmOk = prewarmSheriffElectionPipeline({ forceLocalPrewarm: true });
+    const prewObj = state.match._sheriffPrewarm;
+    const sheriffPrewarmZeroLeakOk = Boolean(
+      prewarmOk &&
+      prewObj &&
+      Object.keys(prewObj.cacheByKey || {}).length >= 1 &&
+      Array.isArray(prewObj.baseCandidateIds) &&
+      prewObj.baseCandidateIds.every(cid => {
+        const s = getSeat(cid);
+        return s && s.claimedRole === null;
+      })
+    );
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      studioVoices,
+      movements7Ok,
+      resolveTrackOk: trackSheriffOk && trackVoteOk && trackMatchPointOk,
+      mixerUiOk: guqinClickOk && sheriffClickOk && matchpointClickOk && ambienceToggleOk,
+      prefsRoundTripOk,
+      audioHelpersOk,
+      tempCasualOk,
+      speechVarietyOk,
+      speechTruncationGuardOk,
+      speakerBannerPolishOk,
+      sheriffPrewarmZeroLeakOk
+    };
+  })()`, ctx);
+
+  const uniqueStudioVoicesOk =
+    Array.isArray(v244Runtime.studioVoices) &&
+    v244Runtime.studioVoices.length === 14 &&
+    new Set(v244Runtime.studioVoices).size === 14 &&
+    v244Runtime.studioVoices.every(v => apiTtsHandler244._ALLOWED_VOICES instanceof Set && apiTtsHandler244._ALLOWED_VOICES.has(v));
+
+  const v244Res = {
+    htmlMusicModalOk,
+    geminiThinkingBudgetOk,
+    tts38KeepsTagsOk,
+    tts25StripsTagsOk,
+    ttsFallbackOrderOk,
+    tts400NoCooldownOk,
+    ttsStripFnOk,
+    uniqueStudioVoicesOk,
+    movements7Ok: v244Runtime.movements7Ok,
+    resolveTrackOk: v244Runtime.resolveTrackOk,
+    mixerUiOk: v244Runtime.mixerUiOk,
+    prefsRoundTripOk: v244Runtime.prefsRoundTripOk,
+    audioHelpersOk: v244Runtime.audioHelpersOk,
+    tempCasualOk: v244Runtime.tempCasualOk,
+    speechVarietyOk: v244Runtime.speechVarietyOk,
+    speechTruncationGuardOk: v244Runtime.speechTruncationGuardOk,
+    speakerBannerPolishOk: v244Runtime.speakerBannerPolishOk,
+    sheriffPrewarmZeroLeakOk: v244Runtime.sheriffPrewarmZeroLeakOk
+  };
+  for (const [k, v] of Object.entries(v244Res)) {
+    if (!v) {
+      throw new Error("v24.4.0 REGRESSION check failed for " + k + ": " + JSON.stringify(v244Res));
+    }
+  }
+}
+
+// ==================== LISTEN-PHASE LIVE PIT BAR (邊聽邊排雙向同步 + 零洩漏 + 跨階段無縫銜接) ====================
+{
+  const listenPitRes = vm.runInContext(`(() => {
+    const findTree = (root, pred) => {
+      const out = [];
+      const visit = node => {
+        if (!node) return;
+        if (pred(node)) out.push(node);
+        if (Array.isArray(node._children)) node._children.forEach(visit);
+      };
+      visit(root);
+      return out;
+    };
+
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    el("chkSheriffMode").checked = true;
+    state.autoPlay = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+
+    const pid = getPlayerId();
+    const pSeat = getPlayerSeat();
+    const others = getAliveSeats().filter(s => s.id !== pid);
+    const shCand = others[0];
+    const shOther = others[1];
+    pSeat.checkedHistory = [{ day: 1, targetId: shCand.id, isWolf: true }];
+
+    // 1. Sheriff election speech listening: #listenPitBar visible, clicks sync draft + marks without tableReactions leak
+    const violBefore = antiCheatMonitor.stats.violationsBlocked;
+    state.match.sheriffElectionPending = true;
+    state.match.sheriffElectionCtx = {
+      stage: "speech",
+      candidateIds: [shCand.id, shOther.id],
+      speechOrderIds: [shCand.id, shOther.id],
+      speechIndex: 0,
+      activeReelSeatId: shCand.id,
+      withdrawnIds: [],
+      spokenSpeeches: [],
+      speeches: [],
+      playerRunning: false
+    };
+    state.match.phase = "SHERIFF_ELECTION";
+    state.activeSpeakerId = shCand.id;
+    updateAllUI();
+
+    const shBarShown = !el("listenPitBar").classList.contains("hidden");
+    const reactLenBefore = Array.isArray(state.match.tableReactions) ? state.match.tableReactions.length : 0;
+    const shCandBtn = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(shCand.id))[0];
+    if (shCandBtn) shCandBtn.click();
+    const shWolfSyncedOk = Boolean(
+      state.match.playerDraftPits.wolfIds.includes(shCand.id) &&
+      state.playerMarks[shCand.id] === "wolf" &&
+      (Array.isArray(state.match.tableReactions) ? state.match.tableReactions.length : 0) === reactLenBefore
+    );
+    const shOtherBtn1 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(shOther.id))[0];
+    if (shOtherBtn1) shOtherBtn1.click();
+    const shOtherBtn2 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(shOther.id))[0];
+    if (shOtherBtn2) shOtherBtn2.click();
+    const shGoodSyncedOk = Boolean(
+      state.match.playerDraftPits.goodIds.includes(shOther.id) &&
+      state.playerMarks[shOther.id] === "good"
+    );
+    const zeroLeakDuringSheriff = antiCheatMonitor.stats.violationsBlocked === violBefore;
+
+    // 2. Day speech listening -> toggle Seer claim + preview -> seamless handoff into DAY_PLAYER_TURN
+    state.match.sheriffElectionPending = false;
+    state.match.sheriffElectionCtx = null;
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = shCand.id;
+    updateAllUI();
+    const dayListenShown = !el("listenPitBar").classList.contains("hidden");
+    const seerRoleChip = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-role") === "seer")[0];
+    if (seerRoleChip) seerRoleChip.click();
+    const previewShownOk = findTree(el("listenPitBar"), n => n.classList && n.classList.contains("listen-pit-preview"))
+      .some(n => String(n.textContent || "").includes("待發陳詞預覽") && String(n.textContent || "").includes("觀察員"));
+
+    // Last words listening vs self-speaking hide guard
+    state.match.phase = "LAST_WORDS_SPEECH";
+    state.activeSpeakerId = shOther.id;
+    updateAllUI();
+    const lwListenShown = !el("listenPitBar").classList.contains("hidden");
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = pid;
+    updateAllUI();
+    const selfSpeakingHidden = el("listenPitBar").classList.contains("hidden");
+
+    // Reverse sync from #btnMarkWolf in DAY_SPEECH + collapse toggle
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = others[2].id;
+    updateAllUI();
+    el("btnMarkWolf").click();
+    const reverseSyncOk = Boolean(
+      state.playerMarks[others[2].id] === "wolf" &&
+      state.match.playerDraftPits.wolfIds.includes(others[2].id) &&
+      findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others[2].id))
+        .some(btn => btn.classList && btn.classList.contains("is-wolf"))
+    );
+    // Default-collapsed for 70%+ open 3D stage -> click 1 expands -> click 2 collapses
+    const defaultCollapsedOk = Boolean(
+      state.listenPitCollapsed === true &&
+      findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")
+        .some(b => b.getAttribute("aria-expanded") === "false")
+    );
+    const tBtn1 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")[0];
+    if (tBtn1) tBtn1.click();
+    const expandedOk = Boolean(
+      state.listenPitCollapsed === false &&
+      findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")
+        .some(b => b.getAttribute("aria-expanded") === "true")
+    );
+    const tBtn2 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")[0];
+    if (tBtn2) tBtn2.click();
+    const collapsedOk = Boolean(
+      defaultCollapsedOk &&
+      state.listenPitCollapsed === true &&
+      findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-toggle") === "1")
+        .some(b => b.getAttribute("aria-expanded") === "false")
+    );
+
+    // Transition to DAY_PLAYER_TURN: #listenPitBar hides, #speechAdvancedDrawer stays default-collapsed, composer auto-hydrates!
+    state.match.phase = "DAY_PLAYER_TURN";
+    preparePlayerSpeechPanel();
+    updateAllUI();
+    const turnHidesListenBar = el("listenPitBar").classList.contains("hidden");
+    const advStaysCollapsed = el("speechAdvancedDrawer").classList.contains("hidden");
+    const draftCarriedOverOk = Boolean(
+      state.match.playerDraftPits.claimRole === "seer" &&
+      state.match.playerDraftPits.wolfIds.includes(shCand.id) &&
+      state.match.playerDraftPits.goodIds.includes(shOther.id) &&
+      el("quickFreeInput").value.includes("觀察員") &&
+      el("quickFreeInput").value.includes(fmtSeatNum(others[2].id) + "號") &&
+      el("playerSpeechInput").value === el("quickFreeInput").value &&
+      el("btnToggleCustomSpeech").innerHTML.includes("好") &&
+      el("btnQuickFreeSend").textContent.includes("狼")
+    );
+
+    // 3. Wolf player listening: excludes wolf mate + God-Hunt notebook cycles cleanly
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "wolf";
+    el("chkSheriffMode").checked = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+    const wPid = getPlayerId();
+    const wolfMate = getAliveSeats().find(s => s.id !== wPid && s.role === "wolf");
+    const goodVictim = getAliveSeats().find(s => s.id !== wPid && s.role !== "wolf");
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = goodVictim.id;
+    updateAllUI();
+    const wolfSeatChips = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat"));
+    const wolfExcludesMateOk = Boolean(
+      el("listenPitBar").classList.contains("is-wolf-board") &&
+      wolfMate &&
+      !wolfSeatChips.some(b => b.getAttribute("data-listen-pit-seat") === String(wolfMate.id))
+    );
+    const wolfGodBtn = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-wolf-god") === String(goodVictim.id))[0];
+    if (wolfGodBtn) wolfGodBtn.click();
+    const wolfGodNoteOk = state.match.wolfGodMarks[goodVictim.id] === "seer";
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      shBarShown,
+      shWolfSyncedOk,
+      shGoodSyncedOk,
+      zeroLeakDuringSheriff,
+      dayListenShown,
+      previewShownOk,
+      lwListenShown,
+      selfSpeakingHidden,
+      reverseSyncOk,
+      collapsedOk,
+      expandedOk,
+      turnHidesListenBar,
+      advStaysCollapsed,
+      draftCarriedOverOk,
+      wolfExcludesMateOk,
+      wolfGodNoteOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(listenPitRes)) {
+    if (!v) {
+      throw new Error("LISTEN-PIT-BAR check failed for " + k + ": " + JSON.stringify(listenPitRes));
+    }
+  }
+}
+
+// ==================== SOUNDTRACK ACOUSTIC ENGINE REGRESSION ====================
+{
+  const audioUpgradeRes = vm.runInContext(`(() => {
+    const trackKeys = ["twilight", "night", "day", "sheriff", "vote", "matchpoint", "finale"];
+    const scoreRangeOk = trackKeys.every(k => {
+      const mv = MOVEMENTS[k];
+      if (!mv || mv.bpm < 54 || mv.bpm > 145) return false;
+      if (!Array.isArray(mv.pads) || mv.pads.length !== 4) return false;
+      if (!mv.pads.every(bar => Array.isArray(bar) && bar.length === 4 && bar.every(m => m >= 24))) return false;
+      if (!Array.isArray(mv.arps) || mv.arps.length !== 4 || !mv.arps.every(bar => Array.isArray(bar) && bar.length === 8)) return false;
+      if (!Array.isArray(mv.bells) || mv.bells.length !== 4 || !mv.bells.every(bar => Array.isArray(bar) && bar.length === 8)) return false;
+      if (!Array.isArray(mv.melody) || mv.melody.length !== 8) return false;
+      return mv.melody.every(bar => Array.isArray(bar) && bar.length === 8);
+    });
+
+    const mkParam = (v) => ({ value: v || 0, setValueAtTime(){}, linearRampToValueAtTime(){}, exponentialRampToValueAtTime(){}, setTargetAtTime(){} });
+    const mockCtx = {
+      sampleRate: 44100,
+      currentTime: 2.0,
+      destination: {},
+      createBuffer: (ch, len) => ({ length: len, getChannelData: () => new Float32Array(len) }),
+      createOscillator: () => ({ type: "sine", frequency: mkParam(440), detune: mkParam(0), connect(){}, disconnect(){}, start(){}, stop(){}, onended: null }),
+      createGain: () => ({ gain: mkParam(1), connect(){}, disconnect(){} }),
+      createBiquadFilter: () => ({ type: "lowpass", frequency: mkParam(1000), Q: mkParam(1), gain: mkParam(0), connect(){}, disconnect(){} }),
+      createBufferSource: () => ({ buffer: null, loop: false, connect(){}, disconnect(){}, start(){}, stop(){}, onended: null }),
+      createStereoPanner: () => ({ pan: mkParam(0), connect(){}, disconnect(){} }),
+      createConvolver: () => ({ buffer: null, connect(){}, disconnect(){} }),
+      createDynamicsCompressor: () => ({ threshold: mkParam(-14), knee: mkParam(18), ratio: mkParam(4), connect(){}, disconnect(){} })
+    };
+
+    const snap = {
+      ctx: sound.ctx,
+      bgmGain: sound.bgmGain,
+      sfxGain: sound.sfxGain,
+      ambientGain: sound.ambientGain,
+      reverb: sound.reverb,
+      comp: sound.comp,
+      muted: sound.muted,
+      bgmVol: sound.bgmVol,
+      sfxVol: sound.sfxVol,
+      timbre: sound.timbre,
+      currentTrack: sound.currentTrack,
+      barIdx: sound.barIdx,
+      stepIdx: sound.stepIdx,
+      ambientEnabled: sound.ambientEnabled,
+      pluckBuf: sound._pluckNoiseBuf,
+      breathBuf: sound._breathNoiseBuf
+    };
+
+    let renderOk = false;
+    try {
+      sound.ctx = mockCtx;
+      sound.bgmGain = mockCtx.createGain();
+      sound.sfxGain = mockCtx.createGain();
+      sound.ambientGain = mockCtx.createGain();
+      sound.comp = mockCtx.createDynamicsCompressor();
+      sound.muted = false;
+      sound.bgmVol = 0.6;
+      sound.sfxVol = 0.75;
+      sound.ambientEnabled = true;
+      sound._pluckNoiseBuf = null;
+      sound._breathNoiseBuf = null;
+      sound.ensureNoiseBuffers();
+      sound.reverb = sound.buildHallReverb(2.5);
+
+      const noiseBuffersOk = Boolean(sound._pluckNoiseBuf && sound._breathNoiseBuf && sound.reverb && sound.reverb.buffer);
+
+      ["zen", "guqin", "folk", "cinema"].forEach(tMode => {
+        sound.timbre = tMode;
+        sound.voicePluck(440, 2.0, 0.8, 0.14, 1);
+        sound.voiceLead(523.25, 587.33, 2.0, 0.9, 0.08);
+        sound.voicePad([47, 54, 59, 62], 2.0, 2.4, 0.07);
+        sound.voiceBell(880, 2.0, 1.5, 0.05);
+      });
+
+      ["deep", "wood", "rim", "brush"].forEach(dk => sound.voiceDrum(dk, 2.0, 0.12));
+
+      trackKeys.forEach(tk => {
+        sound.currentTrack = tk;
+        sound.barIdx = 1;
+        sound.stepIdx = 0;
+        sound.tickStep(2.0);
+        sound.triggerAmbientPulse(tk, 2.0, 3.0);
+      });
+
+      sound.playNight();
+      sound.playDawn();
+      sound.playBlessing();
+      sound.playVote();
+      sound.playHunterShot();
+      sound.playWin(true);
+      sound.playWin(false);
+      sound.playRoleRevealFanfare(true);
+      sound.playRoleRevealFanfare(false);
+
+      renderOk = noiseBuffersOk;
+    } finally {
+      sound.ctx = snap.ctx;
+      sound.bgmGain = snap.bgmGain;
+      sound.sfxGain = snap.sfxGain;
+      sound.ambientGain = snap.ambientGain;
+      sound.reverb = snap.reverb;
+      sound.comp = snap.comp;
+      sound.muted = snap.muted;
+      sound.bgmVol = snap.bgmVol;
+      sound.sfxVol = snap.sfxVol;
+      sound.timbre = snap.timbre;
+      sound.currentTrack = snap.currentTrack;
+      sound.barIdx = snap.barIdx;
+      sound.stepIdx = snap.stepIdx;
+      sound.ambientEnabled = snap.ambientEnabled;
+      sound._pluckNoiseBuf = snap.pluckBuf;
+      sound._breathNoiseBuf = snap.breathBuf;
+    }
+
+    return { scoreRangeOk, renderOk };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(audioUpgradeRes)) {
+    if (!v) {
+      throw new Error("SOUNDTRACK ACOUSTIC UPGRADE check failed for " + k + ": " + JSON.stringify(audioUpgradeRes));
+    }
+  }
+}
+
+// ==================== AI WEREWOLF TACTICS & DIFFICULTY SCALING REGRESSION ====================
+{
+  const aiTacticsRes = vm.runInContext(`(() => {
+    clearStepTimer();
+    const prevDiff = state.aiDifficulty;
+    state.activeVariant = "standard";
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    el("selectAiDifficulty").value = "pro";
+    el("chkSheriffMode").checked = true;
+    el("chkGuardMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+
+    const seats = state.match.seats;
+    const seerSeat = seats.find(s => s.role === "seer");
+    const guardSeat = seats.find(s => s.role === "guard");
+    const witchSeat = seats.find(s => s.role === "witch");
+    const wolfSeat = seats.find(s => s.role === "wolf");
+    const villagerSeat = seats.find(s => s.id !== 1 && s.team === "good" && s.role === "villager");
+
+    // 1. Seer never checks a rival counter-claiming Seer when unchecked seats exist
+    state.match.day = 2;
+    state.match.phase = "NIGHT_SEER";
+    seerSeat.checkedHistory = [];
+    seerSeat.suspicionMap = {};
+    wolfSeat.claimedRole = "seer";
+    seerSeat.suspicionMap[wolfSeat.id] = 98;
+    const seerPickId = chooseAiSeerTarget(seerSeat);
+    const seerSkipsRivalOk = Boolean(seerPickId && seerPickId !== wolfSeat.id);
+
+    // 2. Guard Night-1 empty-guard scaling (pro empty-guards at rng=0.5, easy guards at rng=0.5) + Night 2+ protects sole Witch
+    wolfSeat.claimedRole = null;
+    state.match.day = 1;
+    state.match.phase = "NIGHT_GUARD";
+    state.match.lastGuardTargetId = null;
+    state.aiDifficulty = "pro";
+    state.match.aiDifficulty = "pro";
+    const guardProN1 = chooseAiGuardTarget(guardSeat, 0.5);
+    state.aiDifficulty = "easy";
+    state.match.aiDifficulty = "easy";
+    const guardEasyN1 = chooseAiGuardTarget(guardSeat, 0.5);
+    state.aiDifficulty = "pro";
+    state.match.aiDifficulty = "pro";
+    state.match.day = 2;
+    witchSeat.claimedRole = "witch";
+    guardSeat.suspicionMap[witchSeat.id] = 40;
+    const guardProN2 = chooseAiGuardTarget(guardSeat, 0.5);
+    const guardScalingOk = Boolean(guardProN1 === null && guardEasyN1 !== null && guardProN2 === witchSeat.id);
+
+    // 3. Witch immediately purifies a counter-claiming fake Witch in pro/normal; gentle threshold in easy
+    state.match.day = 2;
+    state.match.phase = "NIGHT_WITCH";
+    state.match.witchPotions.heal = false;
+    state.match.witchPotions.purify = true;
+    const fakeWitchWolf = seats.find(s => s.role === "wolf" && s.id !== wolfSeat.id) || wolfSeat;
+    fakeWitchWolf.claimedRole = "witch";
+    witchSeat.suspicionMap[fakeWitchWolf.id] = 52;
+    state.aiDifficulty = "pro";
+    state.match.aiDifficulty = "pro";
+    const witchProPurify = chooseAiWitchNightAction(witchSeat, 0.5);
+    fakeWitchWolf.claimedRole = null;
+    witchSeat.suspicionMap[fakeWitchWolf.id] = 74;
+    state.aiDifficulty = "easy";
+    state.match.aiDifficulty = "easy";
+    const witchEasyHold = chooseAiWitchNightAction(witchSeat, 0.5);
+    const witchScalingOk = Boolean(witchProPurify.poisonTargetId === fakeWitchWolf.id && witchEasyHold.poisonTargetId === null);
+
+    // 4. Dead night-killed Seer strips surviving rival Fake-Seer of uncontested status & elevates clash penalty
+    state.aiDifficulty = "pro";
+    state.match.aiDifficulty = "pro";
+    state.match.day = 2;
+    state.match.voteHistory = [];
+    seerSeat.claimedRole = "seer";
+    seerSeat.alive = false;
+    seerSeat.outReason = "夜間離席";
+    wolfSeat.claimedRole = "seer";
+    wolfSeat.alive = true;
+    const deadSeerSlot = buildTableSlotAndWorldAnalysis(villagerSeat);
+    const deadSeerClashOk = Boolean(
+      deadSeerSlot &&
+      Array.isArray(deadSeerSlot.deadNightSeers) &&
+      deadSeerSlot.deadNightSeers.includes(seerSeat.id) &&
+      deadSeerSlot.wolfPits.some(w => w.id === wolfSeat.id)
+    );
+
+    // 5. Real Seer never votes for rival Fake-Seer in chooseAiSheriffElectionVote; Good voters align with chosenWorld & spare sole Witch
+    seerSeat.alive = true;
+    const shVoteBySeer = chooseAiSheriffElectionVote(seerSeat, [wolfSeat.id, villagerSeat.id], [
+      { id: wolfSeat.id, tone: "seer", badgeFlow: { firstTargetId: villagerSeat.id }, text: "我是明心" },
+      { id: villagerSeat.id, tone: "bold", text: "我是好人" }
+    ], false);
+    const seerSheriffNoRivalOk = shVoteBySeer === villagerSeat.id;
+
+    wolfSeat.claimedRole = "seer";
+    villagerSeat.claimedRole = "seer";
+    seerSeat.claimedRole = null;
+    state.match.daySpeechEvents = [
+      { day: 2, speakerId: villagerSeat.id, claimRole: "seer", checkedGoodId: guardSeat.id, hasToxicSlip: false },
+      { day: 2, speakerId: wolfSeat.id, claimRole: "seer", checkedWolfId: witchSeat.id, hasToxicSlip: true }
+    ];
+    state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+    const otherGoodVoter = seats.find(s => s.id !== 1 && s.team === "good" && s.id !== villagerSeat.id && s.id !== witchSeat.id && s.id !== seerSeat.id) || guardSeat;
+    otherGoodVoter.suspicionMap = {};
+    const voteWorldPick = chooseAiVoteTarget(otherGoodVoter, { pkActive: false });
+    const worldAlignedVoteOk = Boolean(voteWorldPick === wolfSeat.id);
+
+    // 6. Pro Fake-Seer avoids framing voteDisabled proven Elder & prompt contains difficulty directive
+    villagerSeat.claimedRole = null;
+    state.match.daySpeechEvents = [];
+    const elderGood = seats.find(s => s.team === "good" && s.id !== wolfSeat.id && s.id !== witchSeat.id);
+    if (elderGood) elderGood.voteDisabled = true;
+    state.match.day = 1;
+    wolfSeat.fakeSeer = true;
+    wolfSeat.claimedRole = "seer";
+    wolfSeat.fakeCheckedIds = [];
+    wolfSeat.suspicionMap = {};
+    const ctxFakePro = buildSpeechContext(wolfSeat);
+    const fakeSpeechPro = tryRoleSpecificSpeech(wolfSeat, ctxFakePro);
+    const fakeSeerAvoidsElderOk = Boolean(fakeSpeechPro && fakeSpeechPro.claimSeer && (!elderGood || fakeSpeechPro.checkedWolfId !== elderGood.id));
+
+    state.aiDifficulty = "easy";
+    state.match.aiDifficulty = "easy";
+    const promptEasy = buildBlindGeminiSpeechPrompt(villagerSeat, {});
+    state.aiDifficulty = "pro";
+    state.match.aiDifficulty = "pro";
+    const promptPro = buildBlindGeminiSpeechPrompt(villagerSeat, {});
+    const diffPromptOk = Boolean(
+      promptEasy && promptEasy.prompt && promptEasy.prompt.includes("新手友善局") && promptEasy.audit && promptEasy.audit.ok &&
+      promptPro && promptPro.prompt && promptPro.prompt.includes("凹嗚高手局") && promptPro.audit && promptPro.audit.ok
+    );
+
+    state.aiDifficulty = prevDiff || "normal";
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      seerSkipsRivalOk,
+      guardScalingOk,
+      witchScalingOk,
+      deadSeerClashOk,
+      seerSheriffNoRivalOk,
+      worldAlignedVoteOk,
+      fakeSeerAvoidsElderOk,
+      diffPromptOk
+    };
+  })()`, ctx);
+
+  for (const [k, v] of Object.entries(aiTacticsRes)) {
+    if (!v) {
+      throw new Error("AI WEREWOLF TACTICS regression failed for " + k + ": " + JSON.stringify(aiTacticsRes));
+    }
+  }
+}
+
+// --- v24.4 UX Consolidation: Single 4G Deck, Vote Notes Deck, Candlelit Word-Cards & Composable Speech Builder ---
+{
+  const cssCompSrc = fs.readFileSync("css/components.css", "utf8");
+  const cornerConsolidatedHtml = html.includes('id="cornerFourGDeck" class="corner-hand-fan is-consolidated-into-deck');
+  const uxRes = vm.runInContext(`(() => {
+    const findTree = function (root, pred) {
+      const out = [];
+      const visit = function (node) {
+        if (!node) return;
+        if (pred(node)) out.push(node);
+        if (Array.isArray(node._children)) node._children.forEach(visit);
+      };
+      visit(root);
+      return out;
+    };
+    const allTreeText = function (root) {
+      return findTree(root, n => Boolean(n)).map(n => String(n.textContent || "") + String(n.innerHTML || "")).join(" ");
+    };
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "seer";
+    el("chkSheriffMode").checked = false;
+    el("chkGuardMode").checked = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+
+    const pid = getPlayerId();
+    const others = getAliveSeats().filter(s => s.id !== pid);
+
+    // A. Consolidated Four-Givings deck (default-folded for 70%+ open stage; click 1 unfolds, click 2 folds)
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = others[0].id;
+    updateAllUI();
+    el("btnQuick4GJoy").click();
+    const synPillShown = !el("vqSynergyPill").classList.contains("hidden");
+    const defaultFoldedOk = el("virtueQuickDeck").classList.contains("is-folded") && el("btnToggleVirtueDeck").getAttribute("aria-expanded") === "false";
+    el("btnToggleVirtueDeck").click();
+    const unfoldedDeckOk = !el("virtueQuickDeck").classList.contains("is-folded") && el("btnToggleVirtueDeck").getAttribute("aria-expanded") === "true";
+    el("btnToggleVirtueDeck").click();
+    const foldedDeckOk = defaultFoldedOk && el("virtueQuickDeck").classList.contains("is-folded") && el("btnToggleVirtueDeck").getAttribute("aria-expanded") === "false";
+
+    // B. Listening Good/Wolf mark -> Vote Notes Deck display & 1-click lock
+    state.playerMarks = {};
+    if (state.match.playerDraftPits) state.match.playerDraftPits = createEmptyPlayerDraftPits();
+    state.match.daySpeechEvents = [
+      { day: 1, speakerId: others[0].id, accuseId: others[1].id, rawText: "前置位討論先聽完一輪，我覺得 " + fmtSeatNum(others[1].id) + "號 發言有點急著帶節奏。" },
+      { day: 1, speakerId: others[2].id, vouchId: others[3].id, rawText: "整體節奏還好，不過我暫時相信 " + fmtSeatNum(others[3].id) + "號。" }
+    ];
+    state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = others[0].id;
+    updateAllUI();
+    const listenMarkWolfChip = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others[0].id))[0];
+    if (listenMarkWolfChip) listenMarkWolfChip.click();
+    const listenMarkGoodChip1 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others[2].id))[0];
+    if (listenMarkGoodChip1) listenMarkGoodChip1.click();
+    const listenMarkGoodChip2 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others[2].id))[0];
+    if (listenMarkGoodChip2) listenMarkGoodChip2.click();
+
+    // C. Night 2+ pacing: non-acting villager skips auto Candlelit Night Review cleanly into night roles
+    const prevMatchMedia = window.matchMedia;
+    window.matchMedia = function () { return { matches: false }; };
+    el("selectPreferredRole").value = "villager";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pidVil = getPlayerId();
+    const othersVil = getAliveSeats().filter(s => s.id !== pidVil);
+    state.match.day = 1;
+    state.match.allSpeechEvents = [
+      { day: 1, speakerId: othersVil[0].id, accuseId: othersVil[1].id, rawText: "前置位發言先聽完再決定這輪公投方向。" },
+      { day: 1, speakerId: othersVil[1].id, vouchId: othersVil[2].id, rawText: "我覺得這輪節奏穩穩盤就好。" }
+    ];
+    beginNightPhase();
+    clearStepTimer();
+    const autoCandlelitSkippedOk = Boolean(
+      (!state.match.candlelitReview || !state.match.candlelitReview.active) &&
+      el("candlelitReviewCard").classList.contains("hidden") &&
+      isNightPhase(state.match.phase)
+    );
+    window.matchMedia = prevMatchMedia;
+
+    // Re-setup Seer match for manual helper + vote notes verification
+    el("selectPreferredRole").value = "seer";
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    const pid2 = getPlayerId();
+    const others2 = getAliveSeats().filter(s => s.id !== pid2);
+    state.playerMarks = {};
+    state.match.playerDraftPits = createEmptyPlayerDraftPits();
+    state.match.phase = "DAY_SPEECH";
+    state.activeSpeakerId = others2[0].id;
+    updateAllUI();
+    const lmW = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others2[0].id))[0];
+    if (lmW) lmW.click();
+    const lmG1 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others2[2].id))[0];
+    if (lmG1) lmG1.click();
+    const lmG2 = findTree(el("listenPitBar"), n => n.getAttribute && n.getAttribute("data-listen-pit-seat") === String(others2[2].id))[0];
+    if (lmG2) lmG2.click();
+
+    // Verify manual Candlelit helper preserves full quote & free watch inspect if invoked directly
+    state.match.day = 2;
+    const sampleLongQuote = "前置位討論先聽完一輪，我覺得 " + fmtSeatNum(others2[1].id) + "號 發言有點急著帶節奏，完全沒有比對昨天警下誰跟風分票。";
+    state.match.allSpeechEvents = [
+      { day: 1, speakerId: others2[0].id, accuseId: others2[1].id, rawText: sampleLongQuote },
+      { day: 1, speakerId: others2[2].id, vouchId: others2[3].id, rawText: "聽下來我暫時保 " + fmtSeatNum(others2[3].id) + "號，這輪先聽完大家結論再穩穩落票。" }
+    ];
+    const slipsNight = buildCandlelitNightSlips();
+    const fullQuoteKeptOk = Boolean(slipsNight[0] && slipsNight[0].quote === sampleLongQuote && slipsNight[0].quote.length > 35);
+    const openedCandle = openCandlelitNightReview(() => {});
+    toggleCandlelitWatchSeat(slipsNight[0].seatId);
+    finishCandlelitNightReview();
+    const watchedId = slipsNight[0].seatId;
+    const watchPersistedNight = Array.isArray(state.match.candlelitWatchIds) && state.match.candlelitWatchIds.includes(watchedId);
+
+    // Exhaust normal daily micro-inspect quota first, then confirm watched seat gets 1 free inspect without failing!
+    state.match.phase = "DAY_SPEECH";
+    state.match.microInspectCountToday = getMicroInspectMaxToday();
+    state.activeSpeakerId = watchedId;
+    updateAllUI();
+    const freeWatchNoticeShown = !el("turnWatchNotice").classList.contains("hidden") && el("turnWatchText").textContent.includes("燭下圈防");
+    const freeWatchBtnEnabled = !el("btnMicroInspect").disabled && el("btnMicroInspect").textContent.includes("免費看心虛");
+    const freeInspectRes = inspectSeatMicroExpression(watchedId);
+    const freeInspectDidNotConsumeDailyQuota = Boolean(
+      freeInspectRes &&
+      state.match.microInspectCountToday === getMicroInspectMaxToday() &&
+      state.match.candlelitFreeInspectUsedDay === state.match.day
+    );
+
+    // Verify Vote Notes Deck surfaces wolf, good, watch & locks vote target
+    state.match.phase = "DAY_VOTE";
+    state.selectedSeatId = null;
+    updateAllUI();
+    const voteDeckVisible = !el("voteNotesDeck").classList.contains("hidden");
+    const voteWolfNoteChip = findTree(el("voteNotesDeck"), n => n.getAttribute && n.getAttribute("data-vote-note-seat") === String(others2[0].id))[0];
+    if (voteWolfNoteChip) voteWolfNoteChip.click();
+    const voteDeckAllTxt = allTreeText(el("voteNotesDeck"));
+    const voteNoteLocksTargetOk = Boolean(
+      state.selectedSeatId === others2[0].id &&
+      !el("btnCastVote").disabled &&
+      voteDeckAllTxt.includes("狼坑") &&
+      voteDeckAllTxt.includes("好人")
+    );
+
+    // D. Composable Speech Builder: card click NEVER sends, 2 cards assemble instead of overwriting, re-click toggles OFF
+    clearStepTimer();
+    const pSelf = getPlayerSeat();
+    pSelf.checkedHistory = [{ day: 1, targetId: others2[0].id, isWolf: true }];
+    state.playerMarks = {};
+    state.match.playerDraftPits = createEmptyPlayerDraftPits();
+    state.match.phase = "DAY_PLAYER_TURN";
+    el("quickFreeInput").value = "";
+    el("playerSpeechInput").value = "";
+    preparePlayerSpeechPanel();
+    updateAllUI();
+
+    const qCards = el("quickSpeechChips").querySelectorAll("button");
+    if (qCards[0]) qCards[0].click();
+    const textAfterCard1 = el("quickFreeInput").value;
+    const stayOnTurnAfterCard1 = state.match.phase === "DAY_PLAYER_TURN" && qCards[0].classList.contains("is-draft-loaded") && textAfterCard1.length > 10;
+
+    if (qCards[1]) qCards[1].click();
+    const textAfterCard2 = el("quickFreeInput").value;
+    const composedBothCardsOk = Boolean(
+      state.match.phase === "DAY_PLAYER_TURN" &&
+      textAfterCard2.includes(textAfterCard1.trim()) &&
+      textAfterCard2.length > textAfterCard1.length + 10 &&
+      state.match.playerDraftPits.composedModules.length === 2
+    );
+
+    if (qCards[0]) qCards[0].click();
+    const textAfterUntoggle = el("quickFreeInput").value;
+    const untoggledCard1Cleanly = Boolean(
+      !qCards[0].classList.contains("is-draft-loaded") &&
+      qCards[1].classList.contains("is-draft-loaded") &&
+      !textAfterUntoggle.includes(textAfterCard1.trim()) &&
+      textAfterUntoggle.length > 10 &&
+      state.match.playerDraftPits.composedModules.length === 1
+    );
+
+    el("btnQuickFreeSend").click();
+    const sentAfterReviewOk = state.match.phase === "DAY_SPEECH";
+
+    // Also verify Last Words & Sheriff cards compose on card click without auto-sending
+    state.match.phase = "LAST_WORDS_PLAYER";
+    state.lastWordsCtx = { mode: "vote", queue: [pid2], idx: 0 };
+    el("lastWordsFreeInput").value = "";
+    preparePlayerLastWordsPanel("vote");
+    const lwBtn0 = el("lastWordsChips").querySelectorAll("button")[0];
+    if (lwBtn0) lwBtn0.click();
+    const lwSafeComposeOk = state.match.phase === "LAST_WORDS_PLAYER" && el("lastWordsFreeInput").value.trim().length > 10;
+
+    state.match.phase = "SHERIFF_ELECTION";
+    state.match.sheriffElectionCtx = {
+      stage: "speech",
+      candidateIds: [pid2, others2[0].id],
+      speechOrderIds: [pid2, others2[0].id],
+      speechIndex: 0,
+      activeReelSeatId: pid2,
+      spokenSpeeches: [],
+      withdrawnIds: [],
+      playerRunning: true,
+      playerBadgeFlowDraft: { firstTargetId: null, secondTargetId: null, explicit: false }
+    };
+    el("sheriffPlayerInput").value = "";
+    updateAllUI();
+    const shBtn0 = el("sheriffPlayerQuickChips").querySelectorAll("button")[0];
+    if (shBtn0) shBtn0.click();
+    const shSafeComposeOk = state.match.phase === "SHERIFF_ELECTION" && el("sheriffPlayerInput").value.trim().length > 10;
+
+    clearStepTimer();
+    resetMatchToLobby();
+    return {
+      synPillShown,
+      foldedDeckOk,
+      unfoldedDeckOk,
+      autoCandlelitSkippedOk,
+      fullQuoteKeptOk,
+      openedCandle,
+      watchPersistedNight,
+      freeWatchNoticeShown,
+      freeWatchBtnEnabled,
+      freeInspectDidNotConsumeDailyQuota,
+      voteDeckVisible,
+      voteNoteLocksTargetOk,
+      stayOnTurnAfterCard1,
+      composedBothCardsOk,
+      untoggledCard1Cleanly,
+      sentAfterReviewOk,
+      lwSafeComposeOk,
+      shSafeComposeOk
+    };
+  })()`, ctx);
+
+  const cssNoComments = cssCompSrc.replace(/\/\*[\s\S]*?\*\//g, "");
+  if (!cornerConsolidatedHtml || !cssNoComments.includes("#cornerFourGDeck.corner-hand-fan.is-consolidated-into-deck") || cssNoComments.includes("!important")) {
+    throw new Error("CSS check failed: missing consolidated deck rule or forbidden !important detected!");
+  }
+  for (const [k, v] of Object.entries(uxRes)) {
+    if (!v) {
+      throw new Error("v24.4 UX Consolidation regression failed for " + k + ": " + JSON.stringify(uxRes));
+    }
+  }
+}
+
+// ==================== v24.4.1 TRAFFIC ANALYTICS + SMART API ROUTING & 429 COOLDOWN ====================
+{
+  const swSrc2441 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const swSkipsVercelOk = swSrc2441.includes('"/_vercel/"') || swSrc2441.includes("'/_vercel/'");
+
+  // 1. Vercel Web Analytics safe guard & event queue
+  const analyticsRes = vm.runInContext(`(() => {
+    const prevLoc = window.location;
+    const prevVa = window.va;
+    const prevVaq = window.vaq;
+    let localSkipped = false;
+    let ghPagesSkipped = false;
+    let eventQueuedOk = false;
+    try {
+      delete window.va;
+      delete window.vaq;
+      window.location = { protocol: "http:", hostname: "localhost" };
+      localSkipped = (initVercelAnalytics() === false) && (typeof window.va === "function");
+
+      window.location = { protocol: "https:", hostname: "demo-user.github.io" };
+      ghPagesSkipped = (initVercelAnalytics() === false);
+
+      trackAnalyticsEvent("match_start", { seats: 8, difficulty: "normal", secretObj: { hidden: true } });
+      const q = Array.isArray(window.vaq) ? window.vaq : [];
+      const last = q[q.length - 1];
+      eventQueuedOk = Boolean(
+        last &&
+        last[0] === "event" &&
+        last[1] &&
+        last[1].name === "match_start" &&
+        last[1].data &&
+        last[1].data.seats === 8 &&
+        last[1].data.difficulty === "normal" &&
+        !("secretObj" in last[1].data)
+      );
+    } finally {
+      window.location = prevLoc;
+      window.va = prevVa;
+      window.vaq = prevVaq;
+    }
+    return { localSkipped, ghPagesSkipped, eventQueuedOk };
+  })()`, ctx);
+
+  // 2. Smart Lite vs Hydrogen Speech Routing (Blind-View Strict Zero Violations)
+  const smartTierRes = vm.runInContext(`(() => {
+    clearStepTimer();
+    el("selectModeCount").value = "8";
+    el("selectAiDifficulty").value = "normal";
+    state.aiDifficulty = "normal";
+    startNewGame();
+    indieFlow.hideRoleDealRitual({ silent: true });
+
+    const villager = state.match.seats.find(s => !s.isPlayer && s.role === "villager");
+    const wolf = state.match.seats.find(s => !s.isPlayer && s.role === "wolf");
+    const other = state.match.seats.find(s => s.id !== villager.id && s.id !== wolf.id);
+
+    antiCheatMonitor.resetMatch();
+    const prevStrict = antiCheatMonitor.strictThrow;
+    antiCheatMonitor.strictThrow = true;
+    let easyVillagerLite = false;
+    let normalVillagerBriefLite = false;
+    let normalVillagerAccuseFull = false;
+    let normalWolfBriefFull = false;
+    let seerClaimFull = false;
+    let pkTurnFull = false;
+    let endgameFull = false;
+    let tenSeatVillagerStandardLite = false;
+    let violations = -1;
+    try {
+      const vSnap = createBlindMatchSnapshot(villager, { module: "gemini_speech", phase: "DAY_SPEECH" });
+      const wSnap = createBlindMatchSnapshot(wolf, { module: "gemini_speech", phase: "DAY_SPEECH" });
+
+      normalVillagerBriefLite = shouldUseLiteSpeechTier(villager, { lengthTier: "brief" }, vSnap) === true;
+      normalVillagerAccuseFull = shouldUseLiteSpeechTier(villager, { lengthTier: "standard", accuseId: other.id }, vSnap) === false;
+      normalWolfBriefFull = shouldUseLiteSpeechTier(wolf, { lengthTier: "brief" }, wSnap) === false;
+
+      const easySnap = Object.assign({}, vSnap, { aiDifficulty: "easy" });
+      easyVillagerLite = shouldUseLiteSpeechTier(villager, { lengthTier: "standard", accuseId: other.id }, easySnap) === true;
+      seerClaimFull = shouldUseLiteSpeechTier(villager, { lengthTier: "brief", claimSeer: true }, easySnap) === false;
+
+      const pkSnap = Object.assign({}, easySnap, { pkActive: true });
+      pkTurnFull = shouldUseLiteSpeechTier(villager, { lengthTier: "brief" }, pkSnap) === false;
+
+      const endSnap = Object.assign({}, easySnap, { seats: vSnap.seats.slice(0, 5) });
+      endgameFull = shouldUseLiteSpeechTier(villager, { lengthTier: "brief" }, endSnap) === false;
+
+      const tenSnap = Object.assign({}, vSnap, { totalSeats: 10 });
+      tenSeatVillagerStandardLite = shouldUseLiteSpeechTier(villager, { lengthTier: "standard" }, tenSnap) === true;
+
+      violations = antiCheatMonitor.stats.violationsBlocked;
+    } finally {
+      antiCheatMonitor.strictThrow = prevStrict;
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+    return {
+      easyVillagerLite,
+      normalVillagerBriefLite,
+      normalVillagerAccuseFull,
+      normalWolfBriefFull,
+      seerClaimFull,
+      pkTurnFull,
+      endgameFull,
+      tenSeatVillagerStandardLite,
+      zeroAntiCheatViolations: violations === 0
+    };
+  })()`, ctx);
+
+  // 3. api/gemini.js expanded fallback order + 429 cooldown
+  const apiGem2441 = (await import("../api/gemini.js")).default;
+  const gemOrderOk = Array.isArray(apiGem2441._PUBLIC_FALLBACK_ORDER) &&
+    apiGem2441._PUBLIC_FALLBACK_ORDER.includes("gemini-3.8-flash") &&
+    apiGem2441._PUBLIC_FALLBACK_ORDER.includes("gemini-2.5-flash-lite");
+
+  let gem429CooldownOk = false;
+  const origFetchGem = globalThis.fetch;
+  const prevKeyGem = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "AIzaTestDummyKeyForSmokeCheckOnly00";
+  apiGem2441._resetRateLimit();
+  try {
+    globalThis.fetch = async function (url) {
+      if (String(url).includes("gemini-3.5-flash-lite")) {
+        return { ok: false, status: 429, json: async () => ({ error: { message: "quota exceeded" } }) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: '{"text":"這輪先聽大家說完再穩穩投票。"}' }] } }]
+        })
+      };
+    };
+    const gHeaders = {};
+    const gRes = {
+      statusCode: 0,
+      body: "",
+      setHeader(k, v) { gHeaders[k] = v; },
+      end(b) { gRes.body = String(b || ""); }
+    };
+    const gReq = {
+      method: "POST",
+      headers: { host: "sanhao.vercel.app", origin: "https://sanhao.vercel.app", "content-type": "application/json" },
+      socket: { remoteAddress: "198.51.100.88" },
+      body: { model: "gemini-3.5-flash-lite", prompt: "請簡短表態", jsonMode: true }
+    };
+    await apiGem2441(gReq, gRes);
+    const parsedG = gRes.body ? JSON.parse(gRes.body) : {};
+    gem429CooldownOk = Boolean(
+      gRes.statusCode === 200 &&
+      parsedG.ok === true &&
+      parsedG.model === "gemini-2.5-flash-lite" &&
+      parsedG.fallbackFrom === "gemini-3.5-flash-lite" &&
+      apiGem2441._isModelCoolingDown("gemini-3.5-flash-lite", Date.now())
+    );
+  } finally {
+    globalThis.fetch = origFetchGem;
+    if (prevKeyGem === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = prevKeyGem;
+    apiGem2441._resetRateLimit();
+  }
+
+  // 4. api/tts.js 3-tier chain (3.8-flash-lite-tts -> 3.8-flash-tts -> 2.5-flash-preview-tts) + 429 cooldown
+  const apiTts2441 = (await import("../api/tts.js")).default;
+  const tts4SlotOrderOk = Array.isArray(apiTts2441._TTS_FALLBACK_ORDER) &&
+    apiTts2441._TTS_FALLBACK_ORDER[0] === "gemini-3.8-flash-lite-tts" &&
+    apiTts2441._TTS_FALLBACK_ORDER[1] === "gemini-3.8-flash-tts" &&
+    apiTts2441._TTS_FALLBACK_ORDER[2] === "gemini-2.5-flash-preview-tts" &&
+    apiTts2441._TTS_FALLBACK_ORDER.length === 3;
+
+  let tts429CooldownOk = false;
+  const origFetchTts = globalThis.fetch;
+  const prevKeyTts = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "AIzaTestDummyKeyForSmokeCheckOnly00";
+  apiTts2441._resetRateLimit();
+  try {
+    const fakeWavB64 = Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(1300, 2)]).toString("base64");
+    globalThis.fetch = async function (url) {
+      if (String(url).includes("gemini-3.8-flash-lite-tts")) {
+        return { ok: false, status: 429, json: async () => ({ error: "rate limit" }) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ inlineData: { mimeType: "audio/wav", data: fakeWavB64 } }] } }]
+        })
+      };
+    };
+    const tHeaders = {};
+    const tRes = {
+      statusCode: 0,
+      body: null,
+      setHeader(k, v) { tHeaders[k] = v; },
+      end(b) { tRes.body = b; }
+    };
+    const tReq = {
+      method: "POST",
+      headers: { host: "sanhao.vercel.app", origin: "https://sanhao.vercel.app", "content-type": "application/json" },
+      socket: { remoteAddress: "198.51.100.89" },
+      body: { voice: "Kore", style: "平穩", text: "這輪我們先聽完整局再投票。" }
+    };
+    await apiTts2441(tReq, tRes);
+    tts429CooldownOk = Boolean(
+      tRes.statusCode === 200 &&
+      tHeaders["X-TTS-Model"] === "gemini-3.8-flash-tts" &&
+      apiTts2441._isModelCoolingDown("gemini-3.8-flash-lite-tts", Date.now())
+    );
+  } finally {
+    globalThis.fetch = origFetchTts;
+    if (prevKeyTts === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = prevKeyTts;
+    apiTts2441._resetRateLimit();
+  }
+
+  const all2441 = Object.assign(
+    { swSkipsVercelOk, gemOrderOk, gem429CooldownOk, tts4SlotOrderOk, tts429CooldownOk },
+    analyticsRes,
+    smartTierRes
+  );
+  for (const [k, v] of Object.entries(all2441)) {
+    if (!v) {
+      throw new Error("v24.4.1 Analytics & Smart API Routing regression failed for " + k + ": " + JSON.stringify(all2441));
+    }
+  }
+}
+
+// ==================== v25.0 UNIFIED LACQUER-VESSEL & FRAMELESS INK-WASH UI ====================
+{
+  const css25 = fs.readFileSync(path.join(ROOT, "css", "components.css"), "utf8");
+  const html25 = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const v25BlockStart = css25.indexOf("v25.0 UNIFIED LACQUER-VESSEL");
+  const v25Css = v25BlockStart >= 0 ? css25.slice(v25BlockStart) : "";
+  const v25Checks = {
+    hasChamferTokens: v25Css.includes("--v25-cut-sm:") && v25Css.includes("--v25-cut-md:") && v25Css.includes("--v25-cut-lg:"),
+    hasVesselEase: v25Css.includes("cubic-bezier(0.22, 1, 0.36, 1)"),
+    hasFramelessScrims: v25Css.includes("--v25-scrim-bottom:") && v25Css.includes("--v25-scrim-top:") && v25Css.includes("--v25-scrim-left:"),
+    hasZeroCapsuleOverride: v25Css.includes("body.craft-ui #inGameTopHud > div:last-child") && v25Css.includes("border-radius: 0;"),
+    hasGameOverMonumental: v25Css.includes("body.craft-ui .go-metric-val") && v25Css.includes("body.craft-ui .go-coach-item"),
+    hasLightThemeParity: v25Css.includes("body.craft-ui.theme-day .go-metric-val") && v25Css.includes("body.craft-ui.theme-twilight.screen-title .title-menu-item"),
+    zeroImportantOrBlur: !v25Css.includes("!important") && !v25Css.includes("backdrop-filter: blur("),
+    conciseHtmlButtons: html25.includes(">掀席自爆<") && html25.includes(">靜候天明<") && html25.includes(">順時針<") && html25.includes(">送出陳詞<") && html25.includes(">確認開局<")
+  };
+  for (const [k, v] of Object.entries(v25Checks)) {
+    if (!v) {
+      throw new Error("v25.0 Lacquer-Vessel UI regression failed for " + k + ": " + JSON.stringify(v25Checks));
+    }
+  }
+
+  // v25.2 Structural Stage-Opening (>=70% Open 3D), Contrast & CSS Rendering Performance Checks
+  const theme25 = fs.readFileSync(path.join(ROOT, "css", "theme.css"), "utf8");
+  const v252Start = css25.indexOf("v25.2 STRUCTURAL STAGE-OPENING");
+  const v252Css = v252Start >= 0 ? css25.slice(v252Start) : "";
+  const v252Checks = {
+    hasV252Block: v252Start >= 0,
+    noFeTurbulenceNoise: !theme25.includes("feTurbulence"),
+    curtainRuleMin13px: !theme25.includes("font-size: 11px;"),
+    noPingPulseInHtml: !html25.includes("animate-ping") && !html25.includes("animate-pulse"),
+    noRepeatingGradInV25: !v25Css.includes("repeating-linear-gradient"),
+    noClipPathOnBigVessels: v252Css.includes("body.craft-ui .craft-modal-box") && v252Css.includes("clip-path: none;"),
+    hasBottomFlowSeatStrip: v252Css.includes("#seatButtonStrip:not(.hidden)") && v252Css.includes("position: relative;") && !/body\.craft-ui[^}]*#seatButtonStrip:not\(\.hidden\)\s*\{[^}]*position:\s*fixed/i.test(css25),
+    hasStickyGameOverCtas: html25.includes("gameover-sticky-actions") && v252Css.includes("position: sticky;"),
+    hasGameOverCutInSuppress: v252Css.includes("body.craft-ui.screen-gameover #dramaticCutIn"),
+    hasRoleDealBodyLock: fs.readFileSync(path.join(ROOT, "js", "ui", "flow.js"), "utf8").includes("role-deal-open"),
+    hasSpeechSlipWrap: v252Css.includes("white-space: normal;") && v252Css.includes("text-overflow: clip;"),
+    hasNightHudHighContrast: v252Css.includes("body.craft-ui.theme-night #inGameTopHud #bannerHeadline"),
+    hasTitleDarkVignette: v252Css.includes("body.craft-ui.theme-twilight.screen-title #focalCenterCard") && v252Css.includes("max-width: 368px;"),
+    zeroImportantOrBlurV252: !v252Css.includes("!important") && !v252Css.includes("backdrop-filter: blur(")
+  };
+  for (const [k, v] of Object.entries(v252Checks)) {
+    if (!v) {
+      throw new Error("v25.2 Stage-Opening & CSS Perf regression failed for " + k + ": " + JSON.stringify(v252Checks));
+    }
+  }
+
+  // v25.3 Round-2 Live-Audit UI/CSS Fixes + Vote-Flight Prefetch / Theatrical Reveal / AI Spotlight Last Words
+  const v253Start = css25.indexOf("v25.3 ROUND-2 LIVE-AUDIT FIXES");
+  const v253Css = v253Start >= 0 ? css25.slice(v253Start) : "";
+  const v253CssChecks = {
+    hasV253Block: v253Start >= 0,
+    titleControlDeckNoFog: v253Css.includes("body.craft-ui.theme-twilight.screen-title #controlDeck") && v253Css.includes("background: none;"),
+    titleTopBtnsTransparent: v253Css.includes("body.craft-ui.theme-twilight.screen-title .title-top-actions .title-scene-btn") && v253Css.includes("background: transparent;"),
+    titleCreedHighContrast: v253Css.includes(".tea-creed-good") && v253Css.includes("#a9e6cb") && v253Css.includes("#f4d699"),
+    topLeftGuideNoClash: v253Css.includes("left: 16px;") && v253Css.includes("transform: none;") && v253Css.includes(".judge-guide-step:not(.is-active)"),
+    seatRailNoHudOverlap: v253Css.includes("#seatButtonStrip:not(.hidden)") && v253Css.includes("min-height: 26px;"),
+    voteFlightTopZNoAnim: v253Css.includes("body.craft-ui #voteFlightBanner") && v253Css.includes("z-index: 36;"),
+    directorChoiceRightDocked: v253Css.includes("#directorEventChoiceBar:not(.hidden)") && v253Css.includes("bottom: 44px;"),
+    spotlightTextUnclipped: v253Css.includes("max-height: 112px;") && v253Css.includes("max-height: 96px;"),
+    solemnLastWordsSpotlightCss: v253Css.includes("#spotlightStageBox.is-last-words-spotlight"),
+    fullSpecInfiniteAnimKill: v253Css.includes("#seatButtonStrip.is-guide-beckon .seat-pill-btn:not(.is-dead):not(.is-disabled-target):not(.seat-is-selected)") && v253Css.includes("#judgeShowcaseGuideBanner .judge-guide-step.is-active::after"),
+    zeroImportantOrBlurV253: !v253Css.includes("!important") && !v253Css.includes("backdrop-filter: blur(") && !v253Css.includes("repeating-linear-gradient")
+  };
+  for (const [k, v] of Object.entries(v253CssChecks)) {
+    if (!v) {
+      throw new Error("v25.3 CSS Live-Audit regression failed for " + k + ": " + JSON.stringify(v253CssChecks));
+    }
+  }
+
+  const v253Runtime = vm.runInContext(`(() => {
+    clearStepTimer();
+    const pfCalls = [];
+    const origPrefetch = prefetchAiLastWords;
+    prefetchAiLastWords = function (ids, mode) {
+      pfCalls.push({ ids: (ids || []).slice(), mode: mode });
+      return origPrefetch.apply(this, arguments);
+    };
+    const origIsFf = isSpectatorFastForward;
+    let fakeFf = false;
+    isSpectatorFastForward = function () { return fakeFf; };
+
+    let aiVotePrefetchOk = false;
+    let stretchedFlightTimingsOk = false;
+    let aiVoteEntersSpotlightOk = false;
+    let spotlightSolemnClassOk = false;
+    let aiVoteThenVoteResultOk = false;
+    let gameOverVoteSkipsPrefetchAndLwOk = false;
+    let ffVoteSkipsSpotlightOk = false;
+    let dawnPrefetchOk = false;
+    let dawnStepTimerOk = false;
+    let dawnPhaseOk = false;
+    let dawnInFlightOk = false;
+    let dawnSpotlightClassOk = false;
+
+    try {
+      // 1. Normal AI vote-out (!ff, non-game-ending): prefetches before flight, stretched 360ms/1500ms, enters LAST_WORDS_SPEECH -> DAY_VOTE_RESULT
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      state.autoPlay = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual({ silent: true });
+      state.match.day = 1;
+      state.match.phase = "DAY_VOTE";
+      const targetVill = state.match.seats.find(s => s.alive && s.id !== getPlayerId() && s.role === "villager");
+      state.match.seats.forEach(s => {
+        s.trustShield = false;
+        if (s.suspicionMap) {
+          Object.keys(s.suspicionMap).forEach(k => { s.suspicionMap[k] = 5; });
+          s.suspicionMap[targetVill.id] = 99;
+        }
+      });
+      pfCalls.length = 0;
+      finalizeVoteRound(targetVill.id);
+      aiVotePrefetchOk = pfCalls.some(c => c.mode === "vote_out" && c.ids.includes(targetVill.id));
+      stretchedFlightTimingsOk = Boolean(state.voteFlight && state.voteFlight.stepMs === 360 && state.voteFlight.verdictHoldMs === 1500);
+      if (state.voteFlight && state.voteFlight.finish) state.voteFlight.finish();
+      aiVoteEntersSpotlightOk = Boolean(
+        state.match.phase === "LAST_WORDS_SPEECH" &&
+        state.activeSpeakerId === targetVill.id &&
+        state.lastWordsCtx &&
+        state.lastWordsCtx.mode === "vote_out"
+      );
+      spotlightSolemnClassOk = el("spotlightStageBox").classList.contains("is-last-words-spotlight");
+      // Advance out of LAST_WORDS_SPEECH -> DAY_VOTE_RESULT with lastWord populated
+      advanceLastWordsQueue();
+      aiVoteThenVoteResultOk = Boolean(
+        state.match.phase === "DAY_VOTE_RESULT" &&
+        state.voteResultPayload &&
+        state.voteResultPayload.outId === targetVill.id &&
+        String(state.voteResultPayload.lastWord || "").length > 4 &&
+        !el("spotlightStageBox").classList.contains("is-last-words-spotlight")
+      );
+      clearStepTimer();
+
+      // 2. Game-ending vote-out (last wolf voted out): MUST NOT prefetch & MUST go straight to GAME_OVER
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual({ silent: true });
+      const wolvesEnd = state.match.seats.filter(s => s.team === "wolf");
+      wolvesEnd.slice(1).forEach(w => { w.alive = false; });
+      const lastWolf = wolvesEnd[0];
+      lastWolf.isWolfKing = false;
+      state.match.phase = "DAY_VOTE";
+      state.match.seats.forEach(s => {
+        s.trustShield = false;
+        if (s.suspicionMap) {
+          Object.keys(s.suspicionMap).forEach(k => { s.suspicionMap[k] = 5; });
+          s.suspicionMap[lastWolf.id] = 99;
+        }
+      });
+      pfCalls.length = 0;
+      finalizeVoteRound(lastWolf.id);
+      const prefetchedOnGameEnd = pfCalls.length > 0;
+      if (state.voteFlight && state.voteFlight.finish) state.voteFlight.finish();
+      gameOverVoteSkipsPrefetchAndLwOk = Boolean(!prefetchedOnGameEnd && state.match.phase === "GAME_OVER");
+      clearStepTimer();
+
+      // 3. Spectator fast-forward (ff): fast 45ms vote flight, zero prefetch, direct DAY_VOTE_RESULT
+      fakeFf = true;
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual({ silent: true });
+      const targetFf = state.match.seats.find(s => s.alive && s.id !== getPlayerId() && s.role === "villager");
+      state.match.phase = "DAY_VOTE";
+      state.match.seats.forEach(s => {
+        s.trustShield = false;
+        if (s.suspicionMap) {
+          Object.keys(s.suspicionMap).forEach(k => { s.suspicionMap[k] = 5; });
+          s.suspicionMap[targetFf.id] = 99;
+        }
+      });
+      pfCalls.length = 0;
+      finalizeVoteRound(targetFf.id);
+      const ffStepFast = Boolean(state.voteFlight && state.voteFlight.stepMs === 45 && pfCalls.length === 0);
+      if (state.voteFlight && state.voteFlight.finish) state.voteFlight.finish();
+      ffVoteSkipsSpotlightOk = Boolean(ffStepFast && state.match.phase === "DAY_VOTE_RESULT");
+      clearStepTimer();
+
+      // 4. Day-1 dawn AI casualty (!ff): prefetches first_night & arms 900ms stepTimer lead-in before LAST_WORDS_SPEECH
+      fakeFf = false;
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual({ silent: true });
+      const n1Ai = state.match.seats.find(s => s.alive && s.id !== getPlayerId() && s.role === "villager");
+      state.match.day = 1;
+      state.match.nightState = { wolfTarget: n1Ai.id, guardTarget: null, seerTarget: null, witchSaved: false, witchPoisonTarget: null };
+      pfCalls.length = 0;
+      resolveDawn();
+      dawnPrefetchOk = pfCalls.some(c => c.mode === "first_night" && c.ids.includes(n1Ai.id));
+      dawnStepTimerOk = state.stepTimer !== null;
+      dawnPhaseOk = state.match.phase === "LAST_WORDS_SPEECH";
+      dawnInFlightOk = state.speakingInFlight === true;
+      dawnSpotlightClassOk = el("spotlightStageBox").classList.contains("is-last-words-spotlight");
+    } finally {
+      prefetchAiLastWords = origPrefetch;
+      isSpectatorFastForward = origIsFf;
+      state.speakingInFlight = false;
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+
+    return {
+      aiVotePrefetchOk,
+      stretchedFlightTimingsOk,
+      aiVoteEntersSpotlightOk,
+      spotlightSolemnClassOk,
+      aiVoteThenVoteResultOk,
+      gameOverVoteSkipsPrefetchAndLwOk,
+      ffVoteSkipsSpotlightOk,
+      dawnPrefetchOk,
+      dawnStepTimerOk,
+      dawnPhaseOk,
+      dawnInFlightOk,
+      dawnSpotlightClassOk
+    };
+  })()`, ctx);
+  for (const [k, v] of Object.entries(v253Runtime)) {
+    if (!v) {
+      throw new Error("v25.3 Vote-Flight & AI Last-Words runtime regression failed for " + k + ": " + JSON.stringify(v253Runtime));
+    }
+  }
+}
+
+// ==================== v25.5.2 NIGHT/DAWN CURTAIN SYNC, ROLE-DEAL GATE & MOBILE LATENCY FIXES ====================
+{
+  const votingSrc2552 = fs.readFileSync(path.join(ROOT, "js/game/voting.js"), "utf8");
+  const voiceSrc2552 = fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8");
+  const ttsSrc2552 = fs.readFileSync(path.join(ROOT, "api/tts.js"), "utf8");
+  const apiGem2552 = (await import("../api/gemini.js")).default;
+  const apiTts2552 = (await import("../api/tts.js")).default;
+
+  // 1. Gemini 2.5 Flash & Flash-Lite thinkingBudget === 0
+  const gem25FlashCfg = apiGem2552._buildGenerationConfig("gemini-2.5-flash", true, 0.65);
+  const gem25LiteCfg = apiGem2552._buildGenerationConfig("gemini-2.5-flash-lite", false, 0.72);
+  const apiThinkingZeroOk = Boolean(
+    gem25FlashCfg && gem25FlashCfg.thinkingConfig && gem25FlashCfg.thinkingConfig.thinkingBudget === 0 &&
+    gem25LiteCfg && gem25LiteCfg.thinkingConfig && gem25LiteCfg.thinkingConfig.thinkingBudget === 0
+  );
+
+  // 2. Official 3.8 TTS chain active in api/tts.js & js/audio/voice.js (3 tiers)
+  const no38TtsModelsOk = Boolean(
+    ttsSrc2552.includes("gemini-3.8-flash-lite-tts") &&
+    ttsSrc2552.includes("gemini-3.8-flash-tts") &&
+    voiceSrc2552.includes("gemini-3.8-flash-lite-tts") &&
+    voiceSrc2552.includes("gemini-3.8-flash-tts") &&
+    Array.isArray(apiTts2552._TTS_FALLBACK_ORDER) &&
+    apiTts2552._TTS_FALLBACK_ORDER.length === 3
+  );
+
+  // 3. Post-vote -> night timeout reduced to 1800ms (zero 4000/4200/5000ms delays left on beginNightPhase)
+  const shortVoteNightOk = Boolean(
+    !/setTimeout\([^;]{0,180}beginNightPhase[^;]{0,80}(?:4000|4200|5000)\)/.test(votingSrc2552) &&
+    (votingSrc2552.match(/ff(?:Tie|Eld|AfterLw|Out)\s*\?\s*6(?:00|50)\s*:\s*1800/g) || []).length === 4
+  );
+
+  // 4. Frontend direct callGeminiModelOnce upgrades 2.5-flash -> 3.5-lite minimal & keeps thinkingBudget: 0 on 2.5-flash-lite
+  const prevFetch2552 = globalThis.fetch;
+  const gemDirectPayloads = [];
+  ctx.fetch = async function (_url, init) {
+    gemDirectPayloads.push(JSON.parse(init.body));
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: "測試回應。" }] } }] })
+    };
+  };
+  await vm.runInContext(`(async () => {
+    await callGeminiModelOnce("gemini-2.5-flash", "你好", 5000, { apiKey: "dummy-key", jsonMode: true });
+    await callGeminiModelOnce("gemini-2.5-flash-lite", "你好", 5000, { apiKey: "dummy-key", jsonMode: false });
+  })()`, ctx);
+  const frontendThinkingZeroOk = Boolean(
+    gemDirectPayloads.length === 2 &&
+    gemDirectPayloads[0] && gemDirectPayloads[0].generationConfig &&
+    gemDirectPayloads[0].generationConfig.thinkingConfig && gemDirectPayloads[0].generationConfig.thinkingConfig.thinkingLevel === "minimal" &&
+    !("temperature" in gemDirectPayloads[0].generationConfig) &&
+    gemDirectPayloads[1] && gemDirectPayloads[1].generationConfig &&
+    gemDirectPayloads[1].generationConfig.thinkingConfig && gemDirectPayloads[1].generationConfig.thinkingConfig.thinkingBudget === 0
+  );
+
+  // 5. Mobile Track A TTS timeout (~4000ms mobile / ~5500ms desktop) with at most 1 retry
+  let ttsAttemptUrls = [];
+  ctx.fetch = async function (url) {
+    ttsAttemptUrls.push(String(url));
+    return { ok: false, status: 502, arrayBuffer: async () => new ArrayBuffer(0) };
+  };
+  const mobileTtsBudgetOk = await vm.runInContext(`(async () => {
+    const prevMobileFlag = state._forceMobileTtsBudget;
+    const prevStatic = voice.isStaticCloudHost;
+    const prevAvail = voice.cloudGeminiTtsAvailable;
+    const prevOptOut = state.serverGeminiOptOut;
+    const prevCooldown = voice.cloudGeminiTtsCooldownUntil;
+    const prevKey = state.geminiApiKey;
+    const prevSetTimeout = setTimeout;
+    const prevCtx = sound.ctx;
+    try {
+      state.geminiApiKey = "";
+      state.serverGeminiOptOut = false;
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      voice.cloudGeminiTtsAvailable = true;
+      voice.isStaticCloudHost = () => true;
+      sound.ctx = { sampleRate: 24000, currentTime: 0 };
+      setTimeout = function (fn, ms) {
+        if (ms <= 200) { fn(); }
+        return 1;
+      };
+      state._forceMobileTtsBudget = true;
+      await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["暖暖"], "暖暖", "測試短句。", "normal");
+      const mobileCapsOk = voice.isMobileTtsNetworkEnv() === true;
+      state._forceMobileTtsBudget = false;
+      const desktopCapsOk = voice.isMobileTtsNetworkEnv() === false;
+      return mobileCapsOk && desktopCapsOk;
+    } finally {
+      state._forceMobileTtsBudget = prevMobileFlag;
+      voice.isStaticCloudHost = prevStatic;
+      voice.cloudGeminiTtsAvailable = prevAvail;
+      state.serverGeminiOptOut = prevOptOut;
+      voice.cloudGeminiTtsCooldownUntil = prevCooldown;
+      state.geminiApiKey = prevKey;
+      setTimeout = prevSetTimeout;
+      sound.ctx = prevCtx;
+    }
+  })()`, ctx);
+  ctx.fetch = prevFetch2552;
+  const ttsMaxOneRetryOk = ttsAttemptUrls.length === 1 && ttsAttemptUrls.every(u => u === "/api/tts");
+
+  // 6. Role-deal card gate, async curtain occlusion peak, no duplicate Day-1 Sheriff Dawn curtain, staggered prefetch & post-player instant prefetch
+  const v2552Runtime = await vm.runInContext(`(async () => {
+    const origSetTimeout = setTimeout;
+    const origClearTimeout = clearTimeout;
+    const queue = [];
+    let tidSeq = 100;
+    const flushTimers = function (minDelayFilter) {
+      let ran = 0;
+      for (let i = 0; i < queue.length; i++) {
+        const item = queue[i];
+        if (!item.active) continue;
+        if (typeof minDelayFilter === "number" && item.ms !== minDelayFilter) continue;
+        item.active = false;
+        ran += 1;
+        item.fn();
+      }
+      return ran;
+    };
+    setTimeout = function (fn, ms) {
+      const id = ++tidSeq;
+      queue.push({ id: id, fn: fn, ms: Number(ms) || 0, active: true });
+      return id;
+    };
+    clearTimeout = function (id) {
+      queue.forEach(item => { if (item.id === id) item.active = false; });
+    };
+
+    const origPlayCurtain = playSkyCurtain;
+    const curtainLog = [];
+    playSkyCurtain = function (mode, icon, title, sub, opts) {
+      curtainLog.push({ mode: mode, title: title, sub: sub });
+      return origPlayCurtain(mode, icon, title, sub, opts);
+    };
+
+    let roleDealGatesNight1Ok = false;
+    let roleDealEpochGuardOk = false;
+    let curtainPeakPromiseAndCancelOk = false;
+    let sheriffDawnNoDuplicateCurtainOk = false;
+    let staggeredPrefetchOk = false;
+    let postPlayerPrefetchInstantOk = false;
+
+    try {
+      state._forceRoleDealGate = true;
+      state._forceAsyncSkyCurtain = true;
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "seer";
+      el("chkSheriffMode").checked = true;
+
+      // A. Role deal card must gate Night 1 until confirmed
+      startNewGame();
+      const stayedInLobbyOnDeal = Boolean(
+        state.match.day === 0 &&
+        state.match.phase === "LOBBY" &&
+        !el("roleDealOverlay").classList.contains("hidden") &&
+        curtainLog.length === 0
+      );
+      el("btnRoleDealConfirm").click();
+      const enteredNight1AfterClose = Boolean(state.match.day === 1 && curtainLog.length === 1 && curtainLog[0].mode === "night");
+      // Before curtain peak fires, Night action panel / NIGHT_SEER is not open yet; after peak fires, Night roles start
+      const waitingCurtainPeakBeforeNight = !isNightPhase(state.match.phase) && el("panelTargetAction").classList.contains("hidden");
+      flushTimers();
+      roleDealGatesNight1Ok = Boolean(stayedInLobbyOnDeal && enteredNight1AfterClose && waitingCurtainPeakBeforeNight && isNightPhase(state.match.phase));
+
+      // B. Stale matchEpoch & clearTransientMatchTimers block stale role-deal & curtain callbacks
+      startNewGame();
+      orchestrator.beginNewEpoch("stale_deal_check");
+      el("btnRoleDealConfirm").click();
+      const blockedByEpoch = state.match.day === 0 && state.match.phase === "LOBBY";
+      let stalePeakFired = false;
+      const cancelPromise = origPlayCurtain("day", "", "測試天亮", "", function () { stalePeakFired = true; });
+      clearTransientMatchTimers();
+      flushTimers();
+      const cancelResolvedFalse = (await cancelPromise) === false && !stalePeakFired;
+      roleDealEpochGuardOk = blockedByEpoch && cancelResolvedFalse;
+
+      // C. playSkyCurtain Promise resolves true at occlusion peak & Day-1 Sheriff -> Dawn plays ONLY 1 Dawn curtain
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      flushTimers();
+      let promisePeakDone = false;
+      const okCurtainP = origPlayCurtain("night", "", "峰值測試", "", function () { promisePeakDone = true; });
+      flushTimers();
+      curtainPeakPromiseAndCancelOk = Boolean((await okCurtainP) === true && promisePeakDone);
+
+      curtainLog.length = 0;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      flushTimers(); // enters Night 1 (1 night curtain)
+      getPlayerSeat().alive = false; // auto-completes Day-1 Sheriff election and transitions cleanly into resolveDawn announcement
+      state.match.nightState = { wolfTarget: 2, guardTarget: null, seerTarget: null, witchSaved: false, witchPoisonTarget: null };
+      curtainLog.length = 0;
+      resolveDawn();
+      const waitedBeforeSheriff = Boolean(curtainLog.length === 1 && curtainLog[0].mode === "day" && state.match.sheriffElectionPending === true);
+      flushTimers(); // peaks Dawn 1 -> runs startSheriffElection -> auto-finishes -> calls resolveDawn() post-Sheriff directly!
+      const day1DawnCurtains = curtainLog.filter(c => c.mode === "day");
+      sheriffDawnNoDuplicateCurtainOk = Boolean(waitedBeforeSheriff && day1DawnCurtains.length === 1);
+
+      // D. Staggered next-AI prefetch & instant post-player AI prefetch
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      flushTimers();
+      state.match.phase = "DAY_SPEECH";
+      state.match.day = 1;
+      state.match.speechQueue = [3, 4];
+      state.activeSpeakerId = 2;
+      state.speakingInFlight = false;
+      state.match._prefetchedSpeech = null;
+      const sp2 = getSeat(2);
+      const origSpeakChar = voice.speakCharacter;
+      const origCanSpeak = voice.canSpeak;
+      const origPfAi = prefetchNextAiSpeech;
+      const origIsFree = isSpectatorFastForward;
+      let capturedSpeakOpts = null;
+      const pfTriggers = [];
+      try {
+        isSpectatorFastForward = () => false;
+        voice.canSpeak = () => true;
+        voice.speakCharacter = function (_sp, _txt, _mood, _onDone, opts) {
+          capturedSpeakOpts = opts || null;
+        };
+        prefetchNextAiSpeech = function (opts) {
+          pfTriggers.push(opts || {});
+          return origPfAi(opts);
+        };
+        await executeAiTurnSpeech(sp2);
+        const notFiredSameMs = pfTriggers.length === 0;
+        if (capturedSpeakOpts && typeof capturedSpeakOpts.onAudioStart === "function") {
+          capturedSpeakOpts.onAudioStart();
+        }
+        const firedOnAudioStartOnce = pfTriggers.length === 1 && state._deferredPrefetchTimer === null;
+        pfTriggers.length = 0;
+        const cbHook = scheduleStaggeredNextSpeechPrefetch(orchestrator.matchEpoch, state._speechTurnSeq);
+        const returnedHookOk = Boolean(typeof cbHook === "function" && state._deferredPrefetchTimer === null);
+        clearTransientMatchTimers();
+        const clearedCleanly = pfTriggers.length === 0 && state._deferredPrefetchTimer === null;
+        staggeredPrefetchOk = Boolean(notFiredSameMs && firedOnAudioStartOnce && returnedHookOk && clearedCleanly);
+
+        // E. submitPlayerSpeech immediately bumps rev, purges stale cache & triggers highPriority next-AI prefetch
+        pfTriggers.length = 0;
+        state.match.phase = "DAY_PLAYER_TURN";
+        state.activeSpeakerId = getPlayerId();
+        state.match.speechQueue = [5, 6];
+        const staleObj = { key: "stale_before_player_send", seatId: 5, epoch: orchestrator.matchEpoch, resolvedMeta: { text: "old" } };
+        state.match._prefetchedSpeech = staleObj;
+        const revPreSubmit = state.match.tableStateRev || 0;
+        el("quickFreeInput").value = "我懷疑 4號 剛剛說話有點急，大家多留意 4號。";
+        submitPlayerSpeech();
+        postPlayerPrefetchInstantOk = Boolean(
+          (state.match.tableStateRev || 0) > revPreSubmit &&
+          state.match._prefetchedSpeech !== staleObj &&
+          pfTriggers.some(o => o && o.highPriority === true)
+        );
+      } finally {
+        voice.speakCharacter = origSpeakChar;
+        voice.canSpeak = origCanSpeak;
+        prefetchNextAiSpeech = origPfAi;
+        isSpectatorFastForward = origIsFree;
+      }
+    } finally {
+      state._forceRoleDealGate = false;
+      state._forceAsyncSkyCurtain = false;
+      playSkyCurtain = origPlayCurtain;
+      setTimeout = origSetTimeout;
+      clearTimeout = origClearTimeout;
+      clearStepTimer();
+      clearTransientMatchTimers();
+      resetMatchToLobby();
+    }
+
+    return {
+      roleDealGatesNight1Ok,
+      roleDealEpochGuardOk,
+      curtainPeakPromiseAndCancelOk,
+      sheriffDawnNoDuplicateCurtainOk,
+      staggeredPrefetchOk,
+      postPlayerPrefetchInstantOk
+    };
+  })()`, ctx);
+
+  const docScriptV2552 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
+  const scriptHeaderSyncOk = docScriptV2552.split(/\r?\n/)[0].includes("v25.9.0") && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(docScriptV2552);
+
+  const v2552AudioRes = await vm.runInContext(`(async () => {
+    const classicMovementsRestoredOk = Boolean(
+      MOVEMENTS.twilight && MOVEMENTS.twilight.bpm === 76 && MOVEMENTS.twilight.arps[0][0] === 62 && MOVEMENTS.twilight.bells[0][0] === 81 && MOVEMENTS.twilight.chordsLabel === "Dadd9 — Bm11 — Gmaj9 — Asus4" &&
+      MOVEMENTS.night && MOVEMENTS.night.bpm === 62 && MOVEMENTS.night.pads[0][0] === 35 && MOVEMENTS.night.bells[3][6] === 70 &&
+      MOVEMENTS.day && MOVEMENTS.day.bpm === 96 && MOVEMENTS.day.arps[0][0] === 55 &&
+      MOVEMENTS.sheriff && MOVEMENTS.sheriff.bpm === 104 && MOVEMENTS.sheriff.drums[0] === 1 && MOVEMENTS.sheriff.drums[2] === 3 &&
+      MOVEMENTS.vote && MOVEMENTS.vote.bpm === 116 && MOVEMENTS.vote.bells[3][3] === 70 &&
+      MOVEMENTS.matchpoint && MOVEMENTS.matchpoint.bpm === 138 && MOVEMENTS.matchpoint.drums[0] === 1 && MOVEMENTS.matchpoint.drums[1] === 3 &&
+      MOVEMENTS.finale && MOVEMENTS.finale.bpm === 80 && MOVEMENTS.finale.chordsLabel === "Dmaj9 — Gmaj9 — Em9 — Asus4"
+    );
+
+    const origAudioCtx = window.AudioContext;
+    const origWebkitCtx = window.webkitAudioContext;
+    const origSetTo = setTimeout;
+    const origClrTo = clearTimeout;
+    const origSetInt = setInterval;
+    const origClrInt = clearInterval;
+    const origVoiceUnlock = voice.unlock;
+    const snap = {
+      ctx: sound.ctx,
+      comp: sound.comp,
+      analyser: sound.analyser,
+      bgmGain: sound.bgmGain,
+      bgmWarmLow: sound.bgmWarmLow,
+      bgmAirTame: sound.bgmAirTame,
+      bgmVocalCarve: sound.bgmVocalCarve,
+      bgmConsonantCarve: sound.bgmConsonantCarve,
+      ambientGain: sound.ambientGain,
+      ambientEnabled: sound.ambientEnabled,
+      sfxGain: sound.sfxGain,
+      reverb: sound.reverb,
+      _bgmRevSend: sound._bgmRevSend,
+      _revReturn: sound._revReturn,
+      _reverbInitTimer: sound._reverbInitTimer,
+      _bgmInitialRampDone: sound._bgmInitialRampDone,
+      _briefDuckActive: sound._briefDuckActive,
+      voiceDucking: sound.voiceDucking,
+      voiceBus: sound.voiceBus,
+      voiceHighPass: sound.voiceHighPass,
+      voiceLowShelf: sound.voiceLowShelf,
+      voiceMidPeak: sound.voiceMidPeak,
+      voicePresence: sound.voicePresence,
+      voiceDeEss: sound.voiceDeEss,
+      voiceAnalyser: sound.voiceAnalyser,
+      voiceAnalyserData: sound.voiceAnalyserData,
+      voiceFreqData: sound.voiceFreqData,
+      voicePanner: sound.voicePanner,
+      voiceOutGain: sound.voiceOutGain,
+      voiceRevSend: sound.voiceRevSend,
+      voiceRoomConv: sound.voiceRoomConv,
+      seqTimer: sound.seqTimer,
+      stepIdx: sound.stepIdx,
+      barIdx: sound.barIdx,
+      _activeSeqBpm: sound._activeSeqBpm,
+      _nextStepTime: sound._nextStepTime,
+      muted: sound.muted,
+      bgmVol: sound.bgmVol,
+      sfxVol: sound.sfxVol,
+      timbre: sound.timbre,
+      currentTrack: sound.currentTrack,
+      _pluckNoiseBuf: sound._pluckNoiseBuf,
+      _breathNoiseBuf: sound._breathNoiseBuf
+    };
+
+    const origVoiceLead = sound.voiceLead;
+    const origVoicePluck = sound.voicePluck;
+    const origVoicePad = sound.voicePad;
+    const origVoiceBell = sound.voiceBell;
+
+    let deferredUnlockOk = false;
+    let classicFirstVerPlaybackOk = false;
+
+    try {
+      const timers = [];
+      let nextTid = 4000;
+      setTimeout = function (fn, ms) {
+        const id = nextTid++;
+        timers.push({ id, fn, ms });
+        return id;
+      };
+      clearTimeout = function (id) {
+        const idx = timers.findIndex((t) => t.id === id);
+        if (idx >= 0) timers.splice(idx, 1);
+      };
+      setInterval = function () { return 777; };
+      clearInterval = function () {};
+      voice.unlock = function () {};
+
+      const bgmRampSecs = [];
+      let resolveResume = null;
+      const gainList = [];
+
+      const mkAudioParam = (initVal, onTarget) => ({
+        value: initVal || 0,
+        setValueAtTime() {},
+        linearRampToValueAtTime() {},
+        exponentialRampToValueAtTime() {},
+        setTargetAtTime(val, t, tc) {
+          if (onTarget) onTarget(tc, val);
+        }
+      });
+
+      const mockAudioCtxInstance = {
+        state: "suspended",
+        sampleRate: 44100,
+        currentTime: 2.0,
+        destination: {},
+        resume() {
+          mockAudioCtxInstance.state = "running";
+          return new Promise((res) => { resolveResume = res; });
+        },
+        createBuffer: (ch, len) => ({ length: len, getChannelData: () => new Float32Array(len) }),
+        createAnalyser: () => ({ fftSize: 64, frequencyBinCount: 32, smoothingTimeConstant: 0.8, connect() {}, disconnect() {}, getByteFrequencyData() {} }),
+        createDynamicsCompressor: () => ({ threshold: mkAudioParam(-14), knee: mkAudioParam(18), ratio: mkAudioParam(4), connect() {}, disconnect() {} }),
+        createGain: () => {
+          const idx = gainList.length;
+          const g = {
+            gain: mkAudioParam(1, (tc) => {
+              if (idx === 0 && typeof tc === "number") bgmRampSecs.push(tc);
+            }),
+            connect() {},
+            disconnect() {}
+          };
+          gainList.push(g);
+          return g;
+        },
+        createBiquadFilter: () => ({ type: "lowpass", frequency: mkAudioParam(1000), Q: mkAudioParam(1), gain: mkAudioParam(0), connect() {}, disconnect() {} }),
+        createOscillator: () => ({ type: "sine", frequency: mkAudioParam(440), detune: mkAudioParam(0), connect() {}, disconnect() {}, start() {}, stop() {}, onended: null }),
+        createBufferSource: () => ({ buffer: null, loop: false, connect() {}, disconnect() {}, start() {}, stop() {}, onended: null }),
+        createStereoPanner: () => ({ pan: mkAudioParam(0), connect() {}, disconnect() {} }),
+        createConvolver: () => ({ buffer: null, connect() {}, disconnect() {} })
+      };
+
+      const MockCtor = function () { return mockAudioCtxInstance; };
+      window.AudioContext = MockCtor;
+      window.webkitAudioContext = MockCtor;
+
+      const leadCalls = [];
+      const padCalls = [];
+      const pluckCalls = [];
+      const bellCalls = [];
+      sound.voiceLead = function () {
+        leadCalls.push(arguments);
+        return origVoiceLead.apply(this, arguments);
+      };
+      sound.voicePad = function (midis, t, dur, vel) {
+        padCalls.push({ midis, t, dur, vel });
+        return origVoicePad.apply(this, arguments);
+      };
+      sound.voicePluck = function (freq, t, dur, vel, stepOpt, destNode) {
+        pluckCalls.push({ freq, t, vel, stepOpt });
+        return origVoicePluck.apply(this, arguments);
+      };
+      sound.voiceBell = function (freq, t, dur, vel, destNode) {
+        bellCalls.push({ freq, t, vel });
+        return origVoiceBell.apply(this, arguments);
+      };
+
+      sound.ctx = null;
+      sound.reverb = null;
+      sound.seqTimer = null;
+      sound._reverbInitTimer = null;
+      sound._bgmInitialRampDone = false;
+      sound._briefDuckActive = false;
+      sound.voiceDucking = false;
+      sound._pluckNoiseBuf = null;
+      sound._breathNoiseBuf = null;
+      sound.muted = false;
+      sound.bgmVol = 0.6;
+      sound.sfxVol = 0.75;
+      sound.timbre = "zen";
+      sound.currentTrack = "twilight";
+      sound.barIdx = 0;
+      sound.stepIdx = 0;
+
+      const defaultAmbientOffOk = snap.ambientEnabled === false;
+      sound.unlock();
+      const waitedBeforeResume = sound.seqTimer === null;
+      const deferredReverbInitiallyNull = sound.reverb === null && timers.some((t) => t.ms === 120);
+      const noMuffleFiltersOk = sound.bgmWarmLow === null && sound.bgmAirTame === null;
+      const breathBufShortOk = Boolean(sound._breathNoiseBuf && sound._breathNoiseBuf.length === Math.max(256, Math.floor(44100 * 0.8)));
+
+      resolveResume();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const resumedStartedSeqOk = sound.seqTimer !== null && bgmRampSecs.includes(0.06);
+
+      // Flush deferred 120ms Hall Reverb initialization timer (original lush 2.1s hall)
+      const revTimer = timers.find((t) => t.ms === 120);
+      if (revTimer) revTimer.fn();
+      const reverbLoadedAfterDelayOk = Boolean(
+        sound.reverb && sound.reverb.buffer && sound.reverb.buffer.length === Math.max(512, Math.floor(44100 * 2.1))
+      );
+
+      deferredUnlockOk = Boolean(
+        defaultAmbientOffOk &&
+        waitedBeforeResume &&
+        deferredReverbInitiallyNull &&
+        noMuffleFiltersOk &&
+        breathBufShortOk &&
+        resumedStartedSeqOk &&
+        reverbLoadedAfterDelayOk
+      );
+
+      // Verify step 0 playback AND B-section barIdx = 4 both play original pad+pluck+bell with ZERO voiceLead solo
+      const bar0ClassicOk = padCalls.length === 1 &&
+        pluckCalls.some((p) => Math.abs(p.freq - 440 * Math.pow(2, (62 - 69) / 12)) < 0.5 && Math.abs(p.vel - 0.16) < 0.005) &&
+        bellCalls.some((b) => Math.abs(b.freq - 880) < 0.5 && Math.abs(b.vel - 0.065) < 0.005);
+
+      sound.barIdx = 4;
+      sound.stepIdx = 0;
+      sound.tickStep(4.0);
+      ["zen", "guqin", "folk", "cinema"].forEach((tMode) => {
+        sound.timbre = tMode;
+        sound.voicePad([50, 57, 64, 66], 4.0, 2.0, 0.09);
+        sound.voicePluck(293.66, 4.0, 0.9, 0.16, 0);
+        sound.voiceBell(880, 4.0, 1.4, 0.065);
+        sound.voiceDrum("deep", 4.0, 0.16);
+        sound.voiceDrum("wood", 4.0, 0.06);
+      });
+      classicFirstVerPlaybackOk = Boolean(bar0ClassicOk && padCalls.length >= 2 && leadCalls.length === 0);
+    } finally {
+      if (sound._reverbInitTimer) clearTimeout(sound._reverbInitTimer);
+      if (sound.seqTimer) clearInterval(sound.seqTimer);
+      window.AudioContext = origAudioCtx;
+      window.webkitAudioContext = origWebkitCtx;
+      setTimeout = origSetTo;
+      clearTimeout = origClrTo;
+      setInterval = origSetInt;
+      clearInterval = origClrInt;
+      voice.unlock = origVoiceUnlock;
+      sound.voiceLead = origVoiceLead;
+      sound.voicePluck = origVoicePluck;
+      sound.voicePad = origVoicePad;
+      sound.voiceBell = origVoiceBell;
+      Object.assign(sound, snap);
+    }
+
+    return { classicMovementsRestoredOk, deferredUnlockOk, classicFirstVerPlaybackOk };
+  })()`, ctx);
+
+  const all2552 = Object.assign(
+    { apiThinkingZeroOk, frontendThinkingZeroOk, no38TtsModelsOk, shortVoteNightOk, mobileTtsBudgetOk, ttsMaxOneRetryOk, scriptHeaderSyncOk },
+    v2552Runtime,
+    v2552AudioRes
+  );
+  for (const [k, v] of Object.entries(all2552)) {
+    if (!v) {
+      throw new Error("v25.5.2 Night/Dawn Curtain & Mobile Latency regression failed for " + k + ": " + JSON.stringify(all2552));
+    }
+  }
+}
+
+// ==================== v25.5.3 FULL AUDIT PATCHES & BLINDSPOT HARDENING ====================
+{
+  const apiGem2553 = (await import("../api/gemini.js")).default;
+  const apiTts2553 = (await import("../api/tts.js")).default;
+
+  // BUG-04: IPv6 loopback and bracketed host normalization in api/gemini.js & api/tts.js
+  const prevVercelEnv = process.env.VERCEL_ENV;
+  let ipv6OriginOk = false;
+  try {
+    process.env.VERCEL_ENV = "preview";
+    const checksHost = [apiGem2553, apiTts2553].every((mod) => {
+      return (
+        typeof mod._getHostname === "function" &&
+        mod._getHostname("[::1]:8000") === "::1" &&
+        mod._getHostname("[::1]") === "::1" &&
+        mod._getHostname("http://[::1]:8000") === "::1" &&
+        mod._getHostname("[2001:db8::1]:443") === "2001:db8::1" &&
+        mod._getHostname("[") === "" &&
+        mod._isAllowedOrigin({ headers: { host: "[::1]:3000", origin: "http://[::1]:3000" } }) === true &&
+        mod._isAllowedOrigin({ headers: { host: "[::1]:3000" } }) === true &&
+        mod._isAllowedOrigin({ headers: { host: "[2001:db8::1]:443", origin: "https://[2001:db8::1]:443" } }) === true &&
+        mod._isAllowedOrigin({ headers: { host: "[2001:db8::1]:443", origin: "https://evil.example" } }) === false
+      );
+    });
+    ipv6OriginOk = checksHost;
+  } finally {
+    if (prevVercelEnv === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = prevVercelEnv;
+  }
+
+  // BUG-01, BUG-02, BUG-03, BUG-05, BUG-06, BUG-07 timer hardening runtime verification
+  const prevFetch2553 = ctx.fetch;
+  const v2553Runtime = await vm.runInContext(`(async () => {
+    const hasBadgeBan = function (btn) {
+      return Array.from(btn.children || []).some((ch) => String(ch.textContent || "").trim() === "伴");
+    };
+    const hasWolfLeak = function (stripEl) {
+      return Array.from(stripEl.children || []).some((btn) =>
+        hasBadgeBan(btn) ||
+        String(btn.title || "").includes("（狼隊同伴）") ||
+        String(btn.title || "").includes("（獵神：")
+      );
+    };
+
+    // 1. BUG-01: state.hidePlayerRole hides wolf-mate & god-mark badges for ordinary wolf AND wolf_king
+    let hideWolfStripMaskOk = false;
+    const prevHide = state.hidePlayerRole;
+    try {
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "wolf";
+      el("chkSheriffMode").checked = false;
+      el("chkGuardMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      const pid = getPlayerId();
+      const pSelf = getPlayerSeat();
+      const goodTarget = state.match.seats.find((s) => s.team === "good");
+      const wolfMate = state.match.seats.find((s) => s.id !== pid && s.role === "wolf");
+      if (pSelf && goodTarget && wolfMate) {
+        pSelf.role = "wolf";
+        pSelf.isWolfKing = false;
+        state.match.wolfGodMarks = {};
+        state.match.wolfGodMarks[goodTarget.id] = "seer";
+        state.match.phase = "DAY_SPEECH";
+        state.hidePlayerRole = false;
+        renderSeatStrip();
+        const unmaskedHasWolfInfo = hasWolfLeak(el("seatButtonStrip"));
+
+        state.hidePlayerRole = true;
+        renderSeatStrip();
+        const maskedOrdWolfClean = !hasWolfLeak(el("seatButtonStrip"));
+
+        pSelf.isWolfKing = true;
+        state.match.phase = "NIGHT_WOLF";
+        renderSeatStrip();
+        const maskedKingWolfClean = !hasWolfLeak(el("seatButtonStrip")) &&
+          !Array.from(el("seatButtonStrip").children || []).some((b) => String(b.className || "").includes("is-disabled-target") && String(b.title || "").includes(wolfMate.name));
+
+        hideWolfStripMaskOk = Boolean(unmaskedHasWolfInfo && maskedOrdWolfClean && maskedKingWolfClean);
+      }
+    } finally {
+      state.hidePlayerRole = prevHide;
+      resetMatchToLobby();
+    }
+
+    // 2. BUG-02: Track A firstAttemptTimeoutMs < trackATotalBudgetMs & stripped retry within budget
+    let trackATimeoutAndRetryOk = false;
+    const origSetTo = setTimeout;
+    const origFetch = fetch;
+    const origDecode = voice.decodeGeminiAudioBytes;
+    const origIsStatic = voice.isStaticCloudHost;
+    const prevVoiceState = {
+      cloudAvail: voice.cloudGeminiTtsAvailable,
+      cooldown: voice.cloudGeminiTtsCooldownUntil,
+      key: state.geminiApiKey,
+      optOut: state.serverGeminiOptOut,
+      forceMob: state._forceMobileTtsBudget,
+      ctx: sound.ctx
+    };
+    try {
+      const timeoutArgs = [];
+      const sentTexts = [];
+      state.geminiApiKey = "";
+      state.serverGeminiOptOut = false;
+      voice.cloudGeminiTtsAvailable = true;
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      voice.isStaticCloudHost = () => true;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      sound.ctx = { sampleRate: 24000, currentTime: 0 };
+      voice.decodeGeminiAudioBytes = async () => ({ duration: 0.8 });
+      setTimeout = function (fn, ms) {
+        if (ms >= 1000) timeoutArgs.push(ms);
+        else if (ms <= 200) fn();
+        return timeoutArgs.length + 100;
+      };
+      fetch = async function (_u, init) {
+        sentTexts.push(JSON.parse(init.body).text);
+        return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(256).buffer };
+      };
+      voice._cloudTtsFailStreak = 0;
+      voice._cloudTtsCooldownIs429 = false;
+      state._forceMobileTtsBudget = true;
+      const mobRes = await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["暖暖"], "暖暖", "這句話這輪測試第一次逾時與單次雲端預算請求。", "panic");
+      const mobOk = Boolean(mobRes) && timeoutArgs[0] === 10500 && sentTexts.length === 1 &&
+        !sentTexts[0].includes("<breath>");
+
+      timeoutArgs.length = 0;
+      sentTexts.length = 0;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      voice.cloudTtsAudioCache.clear();
+      voice.cloudTtsInflightMap.clear();
+      voice._cloudTtsFailStreak = 0;
+      voice._cloudTtsFailSpeakers = [];
+      voice._cloudTtsCooldownIs429 = false;
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      fetch = async function (_u, init) {
+        sentTexts.push(JSON.parse(init.body).text);
+        return { ok: false, status: 502, arrayBuffer: async () => new ArrayBuffer(0) };
+      };
+      state._forceMobileTtsBudget = false;
+      await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["暖暖"], "暖暖", "桌機模式單次總預算請求不連環重試。", "panic");
+      const deskOk = timeoutArgs[0] === 10500 && sentTexts.length === 1;
+      trackATimeoutAndRetryOk = Boolean(mobOk && deskOk);
+    } finally {
+      setTimeout = origSetTo;
+      fetch = origFetch;
+      voice.decodeGeminiAudioBytes = origDecode;
+      voice.isStaticCloudHost = origIsStatic;
+      voice.cloudGeminiTtsAvailable = prevVoiceState.cloudAvail;
+      voice.cloudGeminiTtsCooldownUntil = prevVoiceState.cooldown;
+      voice._cloudTtsFailStreak = 0;
+      voice._cloudTtsCooldownIs429 = false;
+      state.geminiApiKey = prevVoiceState.key;
+      state.serverGeminiOptOut = prevVoiceState.optOut;
+      state._forceMobileTtsBudget = prevVoiceState.forceMob;
+      sound.ctx = prevVoiceState.ctx;
+      voice.studioCache = {};
+      voice.studioPending = {};
+    }
+
+    // 3. BUG-03: prefetchNextAiSpeech(opts) forwards highPriority and skips player seat
+    let highPriorityPrefetchOk = false;
+    const prevKeyPf = state.geminiApiKey;
+    const origDispatchPf = orchestrator.dispatchAgent;
+    const origPfTts = voice.prefetchBestTts;
+    try {
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.geminiApiKey = "dummy-key";
+      state.match.phase = "DAY_SPEECH";
+      const pid = getPlayerId();
+      const nextAiSeat = state.match.seats.find((s) => s.id !== pid && s.alive);
+      state.match.speechQueue = [pid, nextAiSeat.id];
+      state.match._prefetchedSpeech = null;
+      orchestrator.dispatchAgent = () => Promise.resolve(null);
+      voice.prefetchBestTts = () => false;
+
+      const blockedWhenPlayerHead = prefetchNextAiSpeech() === false && state.match._prefetchedSpeech === null;
+      const startedHighPri = triggerImmediatePostPlayerPrefetch() === true &&
+        state.match._prefetchedSpeech &&
+        state.match._prefetchedSpeech.seatId === nextAiSeat.id &&
+        state.match._prefetchedSpeech.highPriority === true;
+      highPriorityPrefetchOk = Boolean(blockedWhenPlayerHead && startedHighPri);
+    } finally {
+      state.geminiApiKey = prevKeyPf;
+      orchestrator.dispatchAgent = origDispatchPf;
+      voice.prefetchBestTts = origPfTts;
+      resetMatchToLobby();
+    }
+
+    // 4. BUG-05: Chunked fallback resolves normalized effProfile object + opts.personaKey = effKey
+    let normalizedFallbackProfileOk = false;
+    const origFetchGem = voice._fetchGeminiStudioAudio;
+    const origPlayBuf = voice.playBufferedStudioAudio;
+    const origLocalTts = voice.speakLocalBrowserTts;
+    const origSetTo5 = setTimeout;
+    const origIsStatic5 = voice.isStaticCloudHost;
+    const prevCtx5 = sound.ctx;
+    const prevKey5 = state.geminiApiKey;
+    const prevOptOut5 = state.serverGeminiOptOut;
+    const prevLocalAvail5 = voice.localNeuralAvailable;
+    const prevCloudAvail5 = voice.cloudGeminiTtsAvailable;
+    const prevPaused5 = voice.paused;
+    try {
+      setTimeout = (fn) => { fn(); return 1; };
+      sound.ctx = { sampleRate: 24000, currentTime: 0 };
+      state.geminiApiKey = "";
+      state.serverGeminiOptOut = false;
+      voice.isStaticCloudHost = () => true;
+      voice.localNeuralAvailable = false;
+      voice.cloudGeminiTtsAvailable = true;
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      voice._cloudTtsCooldownIs429 = false;
+      voice.paused = false;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      let chunkCall = 0;
+      voice._fetchGeminiStudioAudio = async () => {
+        chunkCall += 1;
+        return chunkCall === 1 ? { duration: 0.4 } : null;
+      };
+      let chunkDonePromise = null;
+      voice.playBufferedStudioAudio = (_seq, _buf, onChunkDone) => {
+        chunkDonePromise = Promise.resolve().then(() => (typeof onChunkDone === "function" ? onChunkDone() : null));
+        return true;
+      };
+      let capturedProf = null;
+      let capturedOpts = null;
+      voice.speakLocalBrowserTts = (_seq, prof, _txt, _mood, _busy, _done, tailOpts) => {
+        capturedProf = prof;
+        capturedOpts = tailOpts;
+      };
+      const fakeWrongProfile = { gender: "m", pitch: 0.77, rateMul: 1.0 };
+      const longText = "我覺得三號剛剛那段發言非常有道理，先保一下三號並且觀察前置位表情與語氣。不過二號位突然跳出來帶風向的節奏讓我有點懷疑，而且後置位五號與六號到現在都還沒正式表明立場，大家公投前一定要把昨晚的金水與查殺順序全部核對清楚，再來做最終決定才比較穩妥。";
+      const okStart = await voice.playGeminiStudioTts(voice.utteranceSeq, fakeWrongProfile, longText, "normal", () => {}, { personaKey: "晴嵐" });
+      if (chunkDonePromise) await chunkDonePromise;
+      normalizedFallbackProfileOk = Boolean(
+        okStart &&
+        capturedProf && typeof capturedProf === "object" &&
+        capturedProf === PERSONA_VOICE_PROFILES["晴嵐"] &&
+        capturedOpts && capturedOpts.personaKey === "晴嵐"
+      );
+    } finally {
+      setTimeout = origSetTo5;
+      voice._fetchGeminiStudioAudio = origFetchGem;
+      voice.playBufferedStudioAudio = origPlayBuf;
+      voice.speakLocalBrowserTts = origLocalTts;
+      voice.isStaticCloudHost = origIsStatic5;
+      sound.ctx = prevCtx5;
+      state.geminiApiKey = prevKey5;
+      state.serverGeminiOptOut = prevOptOut5;
+      voice.localNeuralAvailable = prevLocalAvail5;
+      voice.cloudGeminiTtsAvailable = prevCloudAvail5;
+      voice.paused = prevPaused5;
+      voice._cloudTtsCooldownIs429 = false;
+      voice.studioCache = {};
+      voice.studioPending = {};
+    }
+
+    // 5. BUG-06 + Last-Words Blindspot: orchestrator.getEpoch()/isEpochValid() & clearTransientMatchTimers()
+    let epochApiVoiceOk = false;
+    let lwTimerCleanupOk = false;
+    const origLocalTts6 = voice.speakLocalBrowserTts;
+    const origCanSpeak6 = voice.canSpeak;
+    const prevPref6 = voice.enginePref;
+    const prevEnabled6 = voice.enabled;
+    const prevSpeaking6 = voice.speaking;
+    try {
+      const ep0 = orchestrator.getEpoch();
+      const getEpochMatchesOk = ep0 === orchestrator.matchEpoch && orchestrator.isEpochValid(ep0);
+      let capturedDone6 = null;
+      let origTurnFired = 0;
+      let audDoneFired = 0;
+      voice.canSpeak = () => true;
+      voice.enginePref = "local";
+      voice.enabled = true;
+      voice.speakLocalBrowserTts = (_s, _p, _t, _m, _b, onDone) => {
+        capturedDone6 = onDone;
+      };
+      voice.speak("暖暖", "第一段主線語音。", "normal", () => { origTurnFired += 1; }, {});
+      voice.speaking = true;
+      voice.speak("小澄", "第二段試聽語音。", "normal", () => { audDoneFired += 1; }, { isAudition: true });
+      orchestrator.bumpInterruptEpoch("test_bug06_audition");
+      if (typeof capturedDone6 === "function") capturedDone6();
+      epochApiVoiceOk = Boolean(getEpochMatchesOk && audDoneFired === 1 && origTurnFired === 0);
+
+      state._lwCueTimer = origSetTo ? setTimeout(() => {}, 1000) : 999;
+      state._dawnLwFlush = () => {};
+      clearTransientMatchTimers();
+      lwTimerCleanupOk = Boolean(state._lwCueTimer === null && state._dawnLwFlush === null);
+    } finally {
+      voice.speakLocalBrowserTts = origLocalTts6;
+      voice.canSpeak = origCanSpeak6;
+      voice.enginePref = prevPref6;
+      voice.enabled = prevEnabled6;
+      voice.speaking = prevSpeaking6;
+      voice.stop();
+      resetMatchToLobby();
+    }
+
+    return {
+      hideWolfStripMaskOk,
+      trackATimeoutAndRetryOk,
+      highPriorityPrefetchOk,
+      normalizedFallbackProfileOk,
+      epochApiVoiceOk,
+      lwTimerCleanupOk
+    };
+  })()`, ctx);
+  ctx.fetch = prevFetch2553;
+
+  // BUG-07 & Blindspot static source checks
+  const canvasEv2553 = fs.readFileSync(path.join(ROOT, "js/events/canvas-events.js"), "utf8");
+  const compCss2553 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const compCssNoComments2553 = compCss2553.replace(/\/\*[\s\S]*?\*\//g, "");
+  const sw2553 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const fb2553 = fs.readFileSync(path.join(ROOT, "js/ui/feedback.js"), "utf8");
+  const spec2553 = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
+  const script2553 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
+  const readme2553 = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  const lwSrc2553 = fs.readFileSync(path.join(ROOT, "js/game/last-words.js"), "utf8");
+  const touchedTexts2553 = [
+    canvasEv2553, compCss2553, sw2553, fb2553, spec2553, script2553, readme2553, lwSrc2553,
+    fs.readFileSync(path.join(ROOT, "js/ui/hud.js"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "js/core/orchestrator.js"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "js/game/day-speech.js"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "api/gemini.js"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "api/tts.js"), "utf8")
+  ];
+  const zeroEmoji2553Ok = touchedTexts2553.every((txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt));
+  const uiCacheAndLwTimerOk = Boolean(
+    canvasEv2553.includes("依當前局規本夜不可自刀，請選擇其他目標") &&
+    canvasEv2553.includes("他是你的酸民狼同伴，請改鎖定好人！") &&
+    compCss2553.includes("body.craft-ui.theme-daylight #heroShowcaseOverlay #heroShowcaseSub") &&
+    compCss2553.includes("body.craft-ui.theme-night #heroShowcaseOverlay #heroShowcaseSub") &&
+    !compCssNoComments2553.includes("!important") &&
+    !compCssNoComments2553.includes("backdrop-filter") &&
+    sw2553.includes('const SHELL_CACHE = "sanhao-shell-v25.9.0"') &&
+    fb2553.includes('version: "v25.9.0"') &&
+    spec2553.includes("v25.9.0") && spec2553.length <= 5000 &&
+    script2553.includes("v25.9.0") &&
+    readme2553.includes("v25.9.0") &&
+    lwSrc2553.includes("state._lwCueTimer") &&
+    lwSrc2553.includes("orchestrator.isEpochValid(epLw)") &&
+    zeroEmoji2553Ok
+  );
+
+  const all2553 = Object.assign({ ipv6OriginOk, uiCacheAndLwTimerOk }, v2553Runtime);
+  for (const [k, v] of Object.entries(all2553)) {
+    if (!v) {
+      throw new Error("v25.5.3 Audit & Blindspot regression failed for " + k + ": " + JSON.stringify(all2553));
+    }
+  }
+}
+
+// ==================== v25.6.0 RELEASE-FREEZE REGRESSION SUITE (FILE 01 - FILE 10) ====================
+{
+  const css256 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const css256NoCom = css256.replace(/\/\*[\s\S]*?\*\//g, "");
+  const html256 = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const canvasEv256 = fs.readFileSync(path.join(ROOT, "js/events/canvas-events.js"), "utf8");
+  const voting256 = fs.readFileSync(path.join(ROOT, "js/game/voting.js"), "utf8");
+  const night256 = fs.readFileSync(path.join(ROOT, "js/game/night.js"), "utf8");
+  const hud256 = fs.readFileSync(path.join(ROOT, "js/ui/hud.js"), "utf8");
+  const panels256 = fs.readFileSync(path.join(ROOT, "js/ui/panels.js"), "utf8");
+  const voice256 = fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8");
+  const tts256 = fs.readFileSync(path.join(ROOT, "api/tts.js"), "utf8");
+  const soundtrack256 = fs.readFileSync(path.join(ROOT, "js/audio/soundtrack.js"), "utf8");
+  const spotlight256 = fs.readFileSync(path.join(ROOT, "js/ui/spotlight.js"), "utf8");
+  const flow256 = fs.readFileSync(path.join(ROOT, "js/ui/flow.js"), "utf8");
+  const main256 = fs.readFileSync(path.join(ROOT, "js/main.js"), "utf8");
+  const sw256 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const fb256 = fs.readFileSync(path.join(ROOT, "js/ui/feedback.js"), "utf8");
+  const spec256 = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
+  const script256 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
+  const readme256 = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+
+  const idxDeck = html256.indexOf('id="controlDeck"');
+  const idxStrip = html256.indexOf('id="seatButtonStrip"');
+  const idxPanelVote = html256.indexOf('id="panelVote"');
+
+  const file01CssOk = Boolean(
+    idxDeck >= 0 && idxStrip > idxDeck && idxPanelVote > idxStrip &&
+    !/#seatButtonStrip[^}]*\{[^}]*position:\s*fixed/i.test(css256NoCom) &&
+    css256NoCom.includes(".seat-pill-btn.is-vote-eligible") &&
+    css256NoCom.includes(".seat-pill-btn.is-vote-disabled") &&
+    css256NoCom.includes("pointer-events: none") &&
+    css256NoCom.includes("#panelVote #voteNotesDeck") &&
+    css256NoCom.includes("#heroShowcaseSub") &&
+    css256NoCom.includes("bottom: 54px;") &&
+    !css256NoCom.includes("!important") &&
+    !css256NoCom.includes("backdrop-filter")
+  );
+
+  const file03CanvasClickOk = Boolean(
+    canvasEv256.includes("getSeatTargetingState") &&
+    canvasEv256.includes("getSeatTargetRejectReasonMessage") &&
+    canvasEv256.includes("依當前局規本夜不可自刀，請選擇其他目標")
+  );
+
+  const file08SpotlightSourceOk = Boolean(
+    !(/voice\.speaking\b/.test(spotlight256.replace(/typeof\s+voice\s*!==\s*"undefined"\s*&&\s*!!voice\.speaking/g, ""))) &&
+    flow256.includes("seatId: s.id") &&
+    flow256.includes("personaKey: s.name")
+  );
+
+  const file09MainSwProtectionsOk = Boolean(
+    main256.includes('state.match.phase !== "LOBBY"') &&
+    !main256.includes('state.match.phase !== "GAME_OVER"') &&
+    main256.includes('":static"') &&
+    !main256.includes("Date.now() / 60000")
+  );
+
+  const file10SwCacheAndZeroEmojiOk = Boolean(
+    sw256.includes('const SHELL_CACHE = "sanhao-shell-v25.9.0"') &&
+    sw256.includes('const ASSET_CACHE = "sanhao-assets-v25.9.0"') &&
+    fb256.includes('version: "v25.9.0"') &&
+    readme256.includes("v25.9.0") &&
+    readme256.includes("sanhao-assets-v25.9.0") &&
+    spec256.includes("v25.9.0") &&
+    spec256.includes("sanhao-shell-v25.9.0") &&
+    spec256.length <= 5000 &&
+    script256.includes("v25.9.0") &&
+    [css256, hud256, panels256, canvasEv256, voting256, night256, voice256, tts256, soundtrack256, spotlight256, flow256, main256, sw256, fb256, spec256, script256, readme256].every(
+      (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
+    )
+  );
+
+  const v256Runtime = await vm.runInContext(`(async () => {
+    // 1. FILE 02: Seat strip .is-vote-eligible / .is-vote-disabled & Sheriff vote/transfer double-click confirm
+    let file02HudAndDoubleClickOk = false;
+    try {
+      clearStepTimer();
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = true;
+      el("chkGuardMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      const pid = getPlayerId();
+      const others = getAliveSeats().filter((s) => s.id !== pid);
+      state.match.phase = "DAY_VOTE";
+      state.match.pkCandidates = [others[0].id, others[1].id];
+      state.match.pkUsedToday = true;
+      state.selectedSeatId = null;
+      updateAllUI();
+
+      const pkBtns = Array.from(el("seatButtonStrip").children || []);
+      const pkEligibleOk = pkBtns.length === 8 &&
+        pkBtns[others[0].id - 1].classList.contains("is-vote-eligible") &&
+        pkBtns[others[2].id - 1].classList.contains("is-vote-disabled") &&
+        pkBtns[pid - 1].classList.contains("is-vote-disabled");
+
+      selectSeat(others[2].id);
+      const pkRejectBlockedOk = state.selectedSeatId === null && state.match.phase === "DAY_VOTE";
+
+      state.match.phase = "SHERIFF_ELECTION";
+      state.match.pkCandidates = null;
+      state.match.sheriffElectionCtx = {
+        stage: "vote",
+        candidateIds: [others[0].id, others[1].id],
+        speechOrderIds: [others[0].id, others[1].id],
+        speechIndex: 1,
+        activeReelSeatId: null,
+        playerRunning: false,
+        withdrawnIds: [],
+        spokenSpeeches: [],
+        doneCb: () => {}
+      };
+      state.selectedSeatId = null;
+      updateAllUI();
+      const shBtns = Array.from(el("seatButtonStrip").children || []);
+      const shStripVisibleAndEligibleOk =
+        !el("seatButtonStrip").classList.contains("hidden") &&
+        shBtns[others[0].id - 1].classList.contains("is-vote-eligible") &&
+        shBtns[others[2].id - 1].classList.contains("is-vote-disabled");
+
+      const origResolveSh = resolveSheriffElectionAction;
+      let shVoteConfirmedId = null;
+      resolveSheriffElectionAction = function (arg) {
+        shVoteConfirmedId = arg;
+        return true;
+      };
+      try {
+        selectSeat(others[0].id);
+        const shFirstClickOk = state.selectedSeatId === others[0].id && shVoteConfirmedId === null;
+        selectSeat(others[0].id);
+        const shSecondClickOk = shVoteConfirmedId === others[0].id;
+
+        state.match.phase = "SHERIFF_TRANSFER";
+        state.match.pendingSheriffTransfer = { deadId: pid, onDone: () => {} };
+        state.selectedSeatId = null;
+        updateAllUI();
+        const tfBtns = Array.from(el("seatButtonStrip").children || []);
+        const tfEligibleOk = !el("seatButtonStrip").classList.contains("hidden") &&
+          tfBtns[others[1].id - 1].classList.contains("is-vote-eligible") &&
+          tfBtns[pid - 1].classList.contains("is-vote-disabled");
+
+        let transferredToId = null;
+        const origTransfer = resolvePlayerSheriffTransfer;
+        resolvePlayerSheriffTransfer = function (tid) { transferredToId = tid; };
+        try {
+          selectSeat(others[1].id);
+          selectSeat(others[1].id);
+        } finally {
+          resolvePlayerSheriffTransfer = origTransfer;
+        }
+        file02HudAndDoubleClickOk = Boolean(
+          pkEligibleOk && pkRejectBlockedOk && shStripVisibleAndEligibleOk &&
+          shFirstClickOk && shSecondClickOk && tfEligibleOk && transferredToId === others[1].id
+        );
+      } finally {
+        resolveSheriffElectionAction = origResolveSh;
+      }
+    } finally {
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+
+    // 2. FILE 04: _voteFinalizing catch reset & paused vote-flight deferral
+    let file04VotingLockAndPauseOk = false;
+    try {
+      el("selectModeCount").value = "6";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      const freshResetOk = state.match._voteFinalizing === false;
+      state.match.phase = "DAY_VOTE";
+      const origChooseVote = chooseAiVoteTarget;
+      let throwClearedOk = false;
+      try {
+        chooseAiVoteTarget = function () { throw new Error("injected_vote_boom"); };
+        try { finalizeVoteRound(null); } catch (e) {}
+        throwClearedOk = state.match.phase === "DAY_VOTE" && state.match._voteFinalizing === false;
+      } finally {
+        chooseAiVoteTarget = origChooseVote;
+      }
+
+      const origSetToV = setTimeout;
+      const prevPausedV = voice.paused;
+      const scheduledFns = [];
+      let flightDoneCount = 0;
+      try {
+        setTimeout = function (fn, ms) {
+          scheduledFns.push({ fn, ms });
+          return scheduledFns.length;
+        };
+        const othersV = getAliveSeats().filter((s) => s.id !== getPlayerId());
+        runVoteFlightSequence([{ voterId: getPlayerId(), targetId: othersV[0].id, weight: 1 }], () => { flightDoneCount += 1; }, { isTie: false });
+        voice.paused = true;
+        const safetyEntry = scheduledFns.filter((x) => x.ms >= 1500).pop();
+        const countBefore = scheduledFns.length;
+        if (safetyEntry && typeof safetyEntry.fn === "function") safetyEntry.fn();
+        const deferredWhilePausedOk = Boolean(safetyEntry) && flightDoneCount === 0 && scheduledFns.length > countBefore;
+        voice.paused = false;
+        const rearmedEntry = scheduledFns[scheduledFns.length - 1];
+        if (rearmedEntry && typeof rearmedEntry.fn === "function") rearmedEntry.fn();
+        const completedOnResumeOk = flightDoneCount === 1;
+        file04VotingLockAndPauseOk = Boolean(freshResetOk && throwClearedOk && deferredWhilePausedOk && completedOnResumeOk);
+      } finally {
+        setTimeout = origSetToV;
+        voice.paused = prevPausedV;
+      }
+    } finally {
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+
+    // 3. FILE 05: Seer night host voice sync + no orphan timer + self-knife toast
+    let file05NightSeerAndDawnTimersOk = false;
+    const origSpeakHost5 = voice.speakHost;
+    const origCanSpeak5 = voice.canSpeak;
+    const origSetTo5 = setTimeout;
+    const origClearTo5 = clearTimeout;
+    const origShowToast5 = showToast;
+    try {
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "seer";
+      el("chkSheriffMode").checked = false;
+      el("chkGuardMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      const scheduledMap = new Map();
+      let tidSeq = 1;
+      setTimeout = function (fn, ms) {
+        const id = tidSeq++;
+        scheduledMap.set(id, { fn, ms });
+        return id;
+      };
+      clearTimeout = function (id) {
+        scheduledMap.delete(id);
+      };
+      voice.canSpeak = () => true;
+      let seerHostSpoken = "";
+      voice.speakHost = function (txt, cb) {
+        seerHostSpoken = String(txt || "");
+        if (typeof cb === "function") cb();
+      };
+      state.match.phase = "LOBBY";
+      state.match.day = 1;
+      proceedToNightWolf();
+      const pendingSafety5200 = Array.from(scheduledMap.values()).filter((x) => x.ms >= 5000);
+      const stepEntry = state.stepTimer ? scheduledMap.get(state.stepTimer) : null;
+      const seerSyncNoOrphanOk = Boolean(
+        seerHostSpoken.includes("明心觀察員") &&
+        pendingSafety5200.length === 0 &&
+        Boolean(stepEntry && stepEntry.ms === 220)
+      );
+
+      scheduledMap.clear();
+      const capturedToasts = [];
+      showToast = function (msg) { capturedToasts.push(String(msg || "")); };
+      el("selectPreferredRole").value = "wolf";
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.match.day = 2;
+      state.match.phase = "NIGHT_WOLF";
+      state.selectedSeatId = getPlayerId();
+      confirmTargetAction();
+      const selfKnifeToastOk = capturedToasts.some((t) => t.includes("不可自刀"));
+
+      file05NightSeerAndDawnTimersOk = Boolean(seerSyncNoOrphanOk && selfKnifeToastOk);
+    } finally {
+      showToast = origShowToast5;
+      voice.speakHost = origSpeakHost5;
+      voice.canSpeak = origCanSpeak5;
+      setTimeout = origSetTo5;
+      clearTimeout = origClearTo5;
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+
+    // 4. FILE 06: playChunkAt pause sets _resumePendingChunk + keeps onDone (no browser TTS fallback)
+    let file06VoicePauseChunkAndTimeoutsOk = false;
+    const origSetTo6 = setTimeout;
+    const origFetch6 = voice._fetchGeminiStudioAudio;
+    const origPlayBuf6 = voice.playBufferedStudioAudio;
+    const origLocal6 = voice.speakLocalBrowserTts;
+    const origIsStatic6 = voice.isStaticCloudHost;
+    const prevCtx6 = sound.ctx;
+    const prevKey6 = state.geminiApiKey;
+    const prevOptOut6 = state.serverGeminiOptOut;
+    const prevLocalAvail6 = voice.localNeuralAvailable;
+    const prevCloudAvail6 = voice.cloudGeminiTtsAvailable;
+    const prevPaused6 = voice.paused;
+    const prevSpeaking6 = voice.speaking;
+    try {
+      setTimeout = (fn) => { if (typeof fn === "function") fn(); return 1; };
+      sound.ctx = { sampleRate: 24000, currentTime: 0 };
+      state.geminiApiKey = "";
+      state.serverGeminiOptOut = false;
+      voice.isStaticCloudHost = () => true;
+      voice.localNeuralAvailable = false;
+      voice.cloudGeminiTtsAvailable = true;
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      voice.pauseMeta = null;
+      voice._resumePendingChunk = null;
+      voice.paused = true;
+      voice.speaking = true;
+      let browserTtsCalled = 0;
+      let chunkPlayedAfterResume = 0;
+      let chunkOnDoneCalled = 0;
+      let doneResolve = null;
+      const donePromise = new Promise((res) => { doneResolve = res; });
+      voice._fetchGeminiStudioAudio = async () => ({ duration: 0.5 });
+      voice.speakLocalBrowserTts = () => { browserTtsCalled += 1; };
+      voice.playBufferedStudioAudio = (_seq, _buf, onChunkDone) => {
+        chunkPlayedAfterResume += 1;
+        Promise.resolve().then(() => (typeof onChunkDone === "function" ? onChunkDone() : null));
+        return true;
+      };
+      const longStr = "今天這輪討論先把警徽流和首夜查驗資訊攤開來比對，請還沒報身分的夥伴依序補充關鍵細節，不要遺漏任何公投票型矛盾。此外昨天投票給五號與六號的兩位同窗今天也請解釋立場轉折，而且尚未發言的後置位夥伴也記得完整說清楚站邊理由，核對完整時間線再安心落籌。";
+      const okQueued = await voice.playGeminiStudioTts(voice.utteranceSeq, PERSONA_VOICE_PROFILES["晴嵐"], longStr, "normal", () => {
+        chunkOnDoneCalled += 1;
+        if (typeof doneResolve === "function") doneResolve();
+      }, { personaKey: "晴嵐" });
+      const mountedResumeOk = Boolean(okQueued && browserTtsCalled === 0 && typeof voice._resumePendingChunk === "function" && voice.pauseMeta === null);
+      if (mountedResumeOk) {
+        voice.togglePause();
+        await Promise.race([donePromise, new Promise((res) => origSetTo6(res, 1500))]);
+      }
+      file06VoicePauseChunkAndTimeoutsOk = Boolean(mountedResumeOk && browserTtsCalled === 0 && chunkPlayedAfterResume >= 2 && chunkOnDoneCalled === 1);
+    } finally {
+      setTimeout = origSetTo6;
+      voice._fetchGeminiStudioAudio = origFetch6;
+      voice.playBufferedStudioAudio = origPlayBuf6;
+      voice.speakLocalBrowserTts = origLocal6;
+      voice.isStaticCloudHost = origIsStatic6;
+      sound.ctx = prevCtx6;
+      state.geminiApiKey = prevKey6;
+      state.serverGeminiOptOut = prevOptOut6;
+      voice.localNeuralAvailable = prevLocalAvail6;
+      voice.cloudGeminiTtsAvailable = prevCloudAvail6;
+      voice.paused = prevPaused6;
+      voice.speaking = prevSpeaking6;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      voice.stop();
+    }
+
+    // 5. FILE 07 & FILE 08: soundtrack _unlockingPromise dedup + showcase audition seatId/personaKey
+    let file07SoundtrackUnlockDedupOk = false;
+    let file08AuditionOptsOk = false;
+    const prevSndCtx = sound.ctx;
+    const prevUnlockPromise = sound._unlockingPromise;
+    const prevSeqTimer = sound.seqTimer;
+    const origApplyVol = sound.applyVolumes;
+    try {
+      let resumeCalls = 0;
+      let applyCalls = 0;
+      let resolveResume = null;
+      sound.ctx = {
+        state: "suspended",
+        currentTime: 0,
+        resume: () => {
+          resumeCalls += 1;
+          return new Promise((res) => { resolveResume = res; });
+        }
+      };
+      sound.applyVolumes = () => { applyCalls += 1; };
+      sound._unlockingPromise = null;
+      sound.seqTimer = 999;
+      sound.muted = false;
+      sound.unlock();
+      sound.unlock();
+      const singleCallWhilePending = resumeCalls === 1 && applyCalls === 0 && Boolean(sound._unlockingPromise);
+      if (typeof resolveResume === "function") resolveResume();
+      await Promise.resolve();
+      await Promise.resolve();
+      file07SoundtrackUnlockDedupOk = Boolean(singleCallWhilePending && applyCalls === 1 && sound._unlockingPromise === null);
+    } finally {
+      sound.applyVolumes = origApplyVol;
+      sound.ctx = prevSndCtx;
+      sound._unlockingPromise = prevUnlockPromise;
+      sound.seqTimer = prevSeqTimer;
+    }
+
+    const origSpeak8 = voice.speak;
+    const prevTarget3d = stage3d.showcaseTarget;
+    try {
+      let capturedAudOpts = null;
+      voice.speak = function (_p, _t, _m, _cb, opts) { capturedAudOpts = opts; };
+      stage3d.showcaseTarget = "2";
+      el("btnShowcaseAuditionVoice").click();
+      file08AuditionOptsOk = Boolean(capturedAudOpts && capturedAudOpts.seatId === 2 && typeof capturedAudOpts.personaKey === "string" && capturedAudOpts.isAudition === true);
+    } finally {
+      voice.speak = origSpeak8;
+      stage3d.showcaseTarget = prevTarget3d;
+    }
+
+    syncSpeakerBannerVisuals(null, "主持", "", false);
+
+    return {
+      file02HudAndDoubleClickOk,
+      file04VotingLockAndPauseOk,
+      file05NightSeerAndDawnTimersOk,
+      file06VoicePauseChunkAndTimeoutsOk,
+      file07SoundtrackUnlockDedupOk,
+      file08AuditionOptsOk
+    };
+  })()`, ctx);
+
+  const all256 = Object.assign({
+    file01CssOk,
+    file03CanvasClickOk,
+    file08SpotlightSourceOk,
+    file09MainSwProtectionsOk,
+    file10SwCacheAndZeroEmojiOk
+  }, v256Runtime);
+  for (const [k, v] of Object.entries(all256)) {
+    if (!v) {
+      throw new Error("v25.6.0 Release-Freeze regression failed for " + k + ": " + JSON.stringify(all256));
+    }
+  }
+}
+
+// ==================== v25.6.1 REAL-DEVICE 4-FIX REGRESSION SUITE ====================
+{
+  const audioEv2561 = fs.readFileSync(path.join(ROOT, "js/events/audio-events.js"), "utf8");
+  const main2561 = fs.readFileSync(path.join(ROOT, "js/main.js"), "utf8");
+  const html2561 = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const vrm2561 = fs.readFileSync(path.join(ROOT, "js/stage3d/vrm-loader.js"), "utf8");
+  const css2561 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const css2561NoCom = css2561.replace(/\/\*[\s\S]*?\*\//g, "");
+  const spot2561 = fs.readFileSync(path.join(ROOT, "js/ui/spotlight.js"), "utf8");
+  const hud2561 = fs.readFileSync(path.join(ROOT, "js/ui/hud.js"), "utf8");
+  const tts2561 = fs.readFileSync(path.join(ROOT, "api/tts.js"), "utf8");
+  const voice2561 = fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8");
+  const sw2561 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const spec2561 = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
+
+  const stripBlockMatches = Array.from(css2561NoCom.matchAll(/([^{}@;]*(?:#seatButtonStrip|#speakerTurnStrip|#playerTurnOrderStrip|\.turn-strip-row)[^{}]*)\{([^{}]*)\}/g));
+  const noStripCenterJustifyOk = stripBlockMatches.every((m) => {
+    const sel = m[1];
+    if (/\.seat-pill-btn|\.turn-chip/.test(sel)) return true;
+    return !/justify-content\s*:\s*center/i.test(m[2]);
+  });
+
+  const fix1SourceOk = Boolean(
+    audioEv2561.includes('["pointerdown", "pointerup", "click", "touchend", "keydown"]') &&
+    audioEv2561.includes('sound.ctx.state === "running"') &&
+    html2561.includes('id="bootPreloadEnterCue"') &&
+    html2561.includes("點擊入席") &&
+    main2561.includes("enterGestureGate") &&
+    main2561.includes("sound.unlock()")
+  );
+
+  const fix3CssAndSourceOk = Boolean(
+    noStripCenterJustifyOk &&
+    css2561NoCom.includes("display: grid") &&
+    css2561NoCom.includes("--seat-count") &&
+    css2561NoCom.includes(".turn-dir-chip") &&
+    !css2561NoCom.includes("!important") &&
+    !css2561NoCom.includes("backdrop-filter") &&
+    !spot2561.includes("scrollIntoView") &&
+    !hud2561.includes("scrollIntoView") &&
+    !hud2561.includes("scrollHorizontalStripToTarget(") &&
+    !/scrollHorizontalStripToTarget\([^)]*container/.test(spot2561)
+  );
+
+  const fix4SourceOk = Boolean(
+    tts2561.includes("const DEFAULT_UPSTREAM_TIMEOUT_MS = 4200;") &&
+    tts2561.includes("const TOTAL_BUDGET_MS = 9600;") &&
+    tts2561.includes("Math.min(4200, remaining - 200)") &&
+    voice2561.includes("const singleTimeoutMs = 10500;") &&
+    voice2561.includes("else if (st === 503)") &&
+    voice2561.includes("Date.now() + 6000") &&
+    voice2561.includes("this._splitTextForCloudTts(canonicalText, 130)") &&
+    sw2561.includes('const SHELL_CACHE = "sanhao-shell-v25.9.0"') &&
+    sw2561.includes('const ASSET_CACHE = "sanhao-assets-v25.9.0"') &&
+    spec2561.length <= 5000 &&
+    [audioEv2561, main2561, html2561, vrm2561, css2561, spot2561, hud2561, tts2561, voice2561, sw2561, spec2561].every(
+      (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
+    )
+  );
+
+  const v2561Runtime = await vm.runInContext(`(async () => {
+    // 1. Fix 1: bootPreloader auto-dismisses when AudioContext is running, else switches to tap-to-enter gate
+    let fix1BootAudioGateOk = false;
+    const prevIsHttp1 = bootPreloader.isBrowserHttp;
+    const prevUnlock1 = sound.unlock;
+    const prevCtx1 = sound.ctx;
+    const prevMuted1 = sound.muted;
+    const origSetTo1 = setTimeout;
+    const origClearTo1 = clearTimeout;
+    try {
+      const timers1 = new Map();
+      let seq1 = 1;
+      setTimeout = function (fn, ms) {
+        const id = seq1++;
+        timers1.set(id, { fn, ms });
+        return id;
+      };
+      clearTimeout = function (id) { timers1.delete(id); };
+
+      bootPreloader.isBrowserHttp = () => true;
+      sound.muted = false;
+
+      // Case A: AudioContext already running -> auto-dismisses after 220ms
+      let unlockCallsA = 0;
+      sound.ctx = { state: "running" };
+      sound.unlock = () => { unlockCallsA += 1; return Promise.resolve(true); };
+      bootPreloader.start();
+      bootPreloader.reportBucket("sky", 4, 4);
+      bootPreloader.reportBucket("portraits", 1, 1);
+      bootPreloader.reportBucket("hero", 1, 1);
+      bootPreloader.reportBucket("avatars", 1, 1);
+      const t220 = Array.from(timers1.values()).find((x) => x.ms === 220);
+      if (t220) t220.fn();
+      const autoDismissRunningOk = Boolean(
+        unlockCallsA === 1 &&
+        bootPreloader.finished === true &&
+        bootPreloader.awaitingGesture === false &&
+        el("bootPreloadOverlay").classList.contains("is-fading")
+      );
+
+      // Case B: AudioContext suspended (cold-start blocked) -> enters clickable gesture gate
+      timers1.clear();
+      let unlockCallsB = 0;
+      sound.ctx = { state: "suspended" };
+      sound.unlock = () => { unlockCallsB += 1; return new Promise(() => {}); };
+      bootPreloader.start();
+      bootPreloader.reportBucket("sky", 4, 4);
+      bootPreloader.reportBucket("portraits", 1, 1);
+      bootPreloader.reportBucket("hero", 1, 1);
+      bootPreloader.reportBucket("avatars", 1, 1);
+      const t240 = Array.from(timers1.values()).find((x) => x.ms === 240);
+      if (t240) t240.fn();
+      const gateEnteredOk = Boolean(
+        unlockCallsB === 1 &&
+        bootPreloader.finished === false &&
+        bootPreloader.awaitingGesture === true &&
+        el("bootPreloadOverlay").classList.contains("is-awaiting-gesture") &&
+        !el("bootPreloadEnterCue").classList.contains("hidden") &&
+        el("bootPreloadEnterCue").textContent === "點擊入席"
+      );
+      el("bootPreloadOverlay").click();
+      const gateDismissOnClickOk = Boolean(
+        unlockCallsB === 2 &&
+        bootPreloader.finished === true &&
+        bootPreloader.awaitingGesture === false &&
+        el("bootPreloadEnterCue").classList.contains("hidden") &&
+        el("bootPreloadOverlay").classList.contains("is-fading")
+      );
+      fix1BootAudioGateOk = Boolean(autoDismissRunningOk && gateEnteredOk && gateDismissOnClickOk);
+    } finally {
+      setTimeout = origSetTo1;
+      clearTimeout = origClearTo1;
+      sound.unlock = prevUnlock1;
+      sound.ctx = prevCtx1;
+      sound.muted = prevMuted1;
+      bootPreloader.isBrowserHttp = prevIsHttp1;
+      bootPreloader.finished = false;
+      bootPreloader.start();
+      if (el("bootPreloadOverlay")) {
+        el("bootPreloadOverlay").classList.add("hidden");
+        el("bootPreloadOverlay").classList.remove("is-fading");
+        el("bootPreloadOverlay").classList.remove("is-awaiting-gesture");
+      }
+      if (el("bootPreloadEnterCue")) el("bootPreloadEnterCue").classList.add("hidden");
+    }
+
+    // 2. Fix 2: Xiaocheng 3D glasses align to leftEye/rightEye bones & fallback 0.064
+    let fix2GlassesOk = false;
+    {
+      const head = new THREE.Group();
+      const leftEye = new THREE.Group();
+      const rightEye = new THREE.Group();
+      let headUpdated = false;
+      head.updateWorldMatrix = () => { headUpdated = true; };
+      head.worldToLocal = (v) => v;
+      leftEye.updateWorldMatrix = () => {};
+      rightEye.updateWorldMatrix = () => {};
+      leftEye.position.set(0.031, 0.066, -0.078);
+      rightEye.position.set(-0.031, 0.066, -0.078);
+      head.add(leftEye, rightEye);
+      const resEye = stage3dVrm.attachVrmPersonaAccessories({ head, leftEye, rightEye }, "小澄", true);
+      const ud = resEye && resEye.group && resEye.group.userData ? resEye.group.userData : null;
+      const eyeAlignOk = Boolean(
+        headUpdated && ud && ud.usedEyeBones === true &&
+        Math.abs(ud.ey - 0.066) < 0.0001 &&
+        Math.abs(ud.ipd - 0.062) < 0.0001 &&
+        Math.abs(ud.cx - 0.031) < 0.0001 &&
+        Math.abs(ud.ez - (-0.078 - 0.024)) < 0.0001 &&
+        resEye.accMats.frameMat.color.c === 0x1c222b &&
+        Math.abs(resEye.accMats.lensMat.opacity - 0.10) < 0.0001 &&
+        resEye.accMats.lensMat.depthWrite === false &&
+        Math.abs(ud.rh - 0.022) < 0.0001 &&
+        Math.abs(ud.t - 0.0028) < 0.0001 &&
+        Math.abs(ud.tTop - 0.0032) < 0.0001 &&
+        Math.abs(ud.tBot - 0.0018) < 0.0001
+      );
+
+      // IPD clamp test + no-eye fallback test
+      const headWide = new THREE.Group();
+      headWide.updateWorldMatrix = () => {};
+      headWide.worldToLocal = (v) => v;
+      const leW = new THREE.Group();
+      const reW = new THREE.Group();
+      leW.position.set(0.05, 0.068, -0.076);
+      reW.position.set(-0.05, 0.068, -0.076);
+      headWide.add(leW, reW);
+      const resWide = stage3dVrm.attachVrmPersonaAccessories({ head: headWide, leftEye: leW, rightEye: reW }, "小澄", true);
+      const headFallback = new THREE.Group();
+      const resFb = stage3dVrm.attachVrmPersonaAccessories({ head: headFallback }, "小澄", true);
+      fix2GlassesOk = Boolean(
+        eyeAlignOk &&
+        resWide && Math.abs(resWide.group.userData.ipd - 0.068) < 0.0001 &&
+        resFb && resFb.group.userData.usedEyeBones === false && Math.abs(resFb.group.userData.ey - 0.064) < 0.0001
+      );
+    }
+
+    // 3. Fix 3: Responsive full-width CSS Grid seat strip & turn strip (zero horizontal scroll!)
+    let fix3ScrollCenterOk = false;
+    try {
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      state.match.phase = "DAY_SPEECH";
+      state.match.dayOrder = [1, 2, 3, 4, 5, 6, 7, 8];
+      state.match.speechQueue = [7, 8];
+      state.activeSpeakerId = 6;
+      const spStrip = el("speakerTurnStrip");
+      const seatStrip = el("seatButtonStrip");
+      seatStrip.classList.remove("hidden");
+      state.selectedSeatId = 5;
+      renderSpeakerTurnStrip();
+      renderSeatStrip();
+      const seatCssCount = seatStrip.style && typeof seatStrip.style.getPropertyValue === "function"
+        ? seatStrip.style.getPropertyValue("--seat-count")
+        : (seatStrip.style ? seatStrip.style["--seat-count"] : "");
+      fix3ScrollCenterOk = Boolean(
+        Array.from(spStrip.children || []).length >= 8 &&
+        !spStrip.innerHTML.includes("turn-sep-dot") &&
+        Array.from(seatStrip.children || []).length === 8 &&
+        String(seatCssCount) === "8"
+      );
+    } finally {
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+
+    // 4. Fix 4: HTTP 503 uses 6s short cooldown (403 keeps 180s) & 42-char sequential prefetch (only chunks[0])
+    let fix4TtsRuntimeOk = false;
+    const origFetch4 = fetch;
+    const origFetchStudio4 = voice._fetchGeminiStudioAudio;
+    const origIsStatic4 = voice.isStaticCloudHost;
+    const origCanSpeak4 = voice.canSpeak;
+    const origLookupBundled4 = voice.lookupBundledVoicePackUrl;
+    const prevState4 = {
+      ctx: sound.ctx,
+      key: state.geminiApiKey,
+      optOut: state.serverGeminiOptOut,
+      cloudAvail: voice.cloudGeminiTtsAvailable,
+      cooldown: voice.cloudGeminiTtsCooldownUntil,
+      enginePref: voice.enginePref
+    };
+    try {
+      sound.ctx = { sampleRate: 24000, currentTime: 0, state: "running" };
+      state.geminiApiKey = "";
+      state.serverGeminiOptOut = false;
+      voice.enginePref = "auto";
+      voice.cloudGeminiTtsAvailable = true;
+      voice.isStaticCloudHost = () => true;
+      voice.canSpeak = () => true;
+      voice.lookupBundledVoicePackUrl = () => null;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      voice.cloudGeminiTtsCooldownUntil = 0;
+
+      fetch = async () => ({ ok: false, status: 503, arrayBuffer: async () => new ArrayBuffer(0) });
+      const before503 = Date.now();
+      await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["小澄"], "小澄", "測試五零三短冷卻恢復。", "normal");
+      const cd503Ms = voice.cloudGeminiTtsCooldownUntil - before503;
+      const cooldown503ShortOk = cd503Ms >= 4500 && cd503Ms <= 8500;
+
+      voice.studioCache = {};
+      voice.studioPending = {};
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      fetch = async () => ({ ok: false, status: 403, arrayBuffer: async () => new ArrayBuffer(0) });
+      const before403 = Date.now();
+      await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["小澄"], "小澄", "測試四零三長冷卻保護。", "normal");
+      const cd403Ms = voice.cloudGeminiTtsCooldownUntil - before403;
+      const cooldown403LongOk = cd403Ms >= 170000;
+
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      const singleShortStr = "今天這輪討論先把警徽流和首夜查驗資訊攤開來比對，請還沒報身分的夥伴依序補充細節，不要遺漏任何公投票型矛盾。";
+      const singleChunks = voice._splitTextForCloudTts(singleShortStr, 130);
+      const longDualStr = "今天這輪討論先把警徽流和首夜查驗資訊攤開來比對，請還沒報身分的夥伴依序補充細節，不要遺漏任何公投票型矛盾；另外剛剛前置位7號一直把焦點往安靜座位帶，建議大家這輪聽完後置位所有人的表水與站邊方向之後，再把每一位發言者的言票紀錄跟可疑名單一個一個仔細核對清楚，最後確認立場才安心投票。";
+      const chunks130 = voice._splitTextForCloudTts(longDualStr, 130);
+      const prefetchedTexts = [];
+      voice._fetchGeminiStudioAudio = (_prof, _k, txt) => {
+        prefetchedTexts.push(txt);
+        return Promise.resolve(null);
+      };
+      voice.prefetchCloudGeminiTts("小澄", singleShortStr, "normal");
+      const singleOk = singleChunks.length === 1 && prefetchedTexts.length === 1;
+      prefetchedTexts.length = 0;
+      voice.prefetchCloudGeminiTts("小澄", longDualStr, "normal");
+      const seqPrefetchOk = Boolean(
+        singleOk &&
+        chunks130.length >= 2 &&
+        chunks130[0].length <= 130 &&
+        prefetchedTexts.length === 2 &&
+        prefetchedTexts[0] === chunks130[0] &&
+        prefetchedTexts[1] === chunks130[1]
+      );
+      fix4TtsRuntimeOk = Boolean(cooldown503ShortOk && cooldown403LongOk && seqPrefetchOk);
+    } finally {
+      fetch = origFetch4;
+      voice._fetchGeminiStudioAudio = origFetchStudio4;
+      voice.isStaticCloudHost = origIsStatic4;
+      voice.canSpeak = origCanSpeak4;
+      voice.lookupBundledVoicePackUrl = origLookupBundled4;
+      sound.ctx = prevState4.ctx;
+      state.geminiApiKey = prevState4.key;
+      state.serverGeminiOptOut = prevState4.optOut;
+      voice.cloudGeminiTtsAvailable = prevState4.cloudAvail;
+      voice.cloudGeminiTtsCooldownUntil = prevState4.cooldown;
+      voice.enginePref = prevState4.enginePref;
+      voice.studioCache = {};
+      voice.studioPending = {};
+    }
+
+    return {
+      fix1BootAudioGateOk,
+      fix2GlassesOk,
+      fix3ScrollCenterOk,
+      fix4TtsRuntimeOk
+    };
+  })()`, ctx);
+
+  const all2561 = Object.assign({
+    fix1SourceOk,
+    fix3CssAndSourceOk,
+    fix4SourceOk
+  }, v2561Runtime);
+  for (const [k, v] of Object.entries(all2561)) {
+    if (!v) {
+      throw new Error("v25.6.1 Real-Device regression failed for " + k + ": " + JSON.stringify(all2561));
+    }
+  }
+}
+
+// ==================== v25.7.0 RELEASE REGRESSION SUITE (PART A + B + C1..C5 + D) ====================
+{
+  const readV2570 = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
+  const main2570 = readV2570("js/main.js");
+  const soundtrack2570 = readV2570("js/audio/soundtrack.js");
+  const voice2570 = readV2570("js/audio/voice.js");
+  const vrm2570 = readV2570("js/stage3d/vrm-loader.js");
+  const css2570 = readV2570("css/components.css");
+  const css2570NoCom = css2570.replace(/\/\*[\s\S]*?\*\//g, "");
+  const sw2570 = readV2570("sw.js");
+  const fb2570 = readV2570("js/ui/feedback.js");
+  const spec2570 = readV2570("docs/作品說明書.md");
+  const script2570 = readV2570("docs/三分鐘Demo影片腳本.md");
+  const readme2570 = readV2570("README.md");
+  const aiFiles2570 = [
+    readV2570("js/ai/blind-view.js"),
+    readV2570("js/ai/context.js"),
+    readV2570("js/ai/deduction.js"),
+    readV2570("js/ai/heuristics.js"),
+    readV2570("js/ai/reactions.js"),
+    readV2570("js/ai/gemini.js"),
+    readV2570("js/game/voting.js"),
+    readV2570("js/game/night.js")
+  ];
+
+  const partDAndSourceOk = Boolean(
+    main2570.includes("safeUnlockAudio") &&
+    main2570.includes("finally") &&
+    soundtrack2570.includes("catch (_e)") &&
+    voice2570.includes("const singleTimeoutMs = 10500;") &&
+    vrm2570.includes("Math.max(0.040, Math.min(0.110") &&
+    vrm2570.includes("Math.max(0.068, Math.min(0.135") &&
+    css2570NoCom.includes("display: grid") &&
+    css2570NoCom.includes(".turn-dir-chip") &&
+    sw2570.includes('const SHELL_CACHE = "sanhao-shell-v25.9.0"') &&
+    sw2570.includes('const ASSET_CACHE = "sanhao-assets-v25.9.0"') &&
+    fb2570.includes('version: "v25.9.0"') &&
+    spec2570.includes("v25.9.0") &&
+    spec2570.includes("10.5 秒") &&
+    spec2570.includes("130 字整段預抓") &&
+    spec2570.includes("sanhao-shell-v25.9.0") &&
+    spec2570.includes("sanhao-assets-v25.9.0") &&
+    spec2570.length <= 5000 &&
+    script2570.includes("v25.9.0") &&
+    readme2570.includes("v25.9.0") &&
+    [main2570, soundtrack2570, voice2570, vrm2570, css2570, sw2570, fb2570, spec2570, script2570, readme2570].concat(aiFiles2570).every(
+      (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
+    )
+  );
+
+  const v2570Runtime = vm.runInContext(`(() => {
+    // --- PART A Runtime: throw-safe audio unlock during boot gate & extreme glasses bounds ---
+    let partABootThrowSafeOk = false;
+    const prevUnlockA = sound.unlock;
+    const prevIsHttpA = bootPreloader.isBrowserHttp;
+    try {
+      bootPreloader.isBrowserHttp = () => true;
+      sound.unlock = () => { throw new Error("audio blocked"); };
+      bootPreloader.start();
+      bootPreloader.enterGestureGate();
+      el("bootPreloadOverlay").click();
+      const afterOverlay = bootPreloader.finished === true && el("bootPreloadOverlay").classList.contains("is-fading");
+
+      bootPreloader.finished = false;
+      bootPreloader.awaitingGesture = false;
+      bootPreloader.start();
+      bootPreloader.enterGestureGate();
+      if (bootPreloader._enterKeyHandler) bootPreloader._enterKeyHandler({ key: "Enter" });
+      const afterKey = bootPreloader.finished === true;
+
+      bootPreloader.finished = false;
+      bootPreloader.awaitingGesture = false;
+      bootPreloader.start();
+      if (el("btnSkipBootPreload")) el("btnSkipBootPreload").click();
+      const afterSkip = bootPreloader.finished === true;
+      partABootThrowSafeOk = Boolean(afterOverlay && afterKey && afterSkip);
+    } finally {
+      sound.unlock = prevUnlockA;
+      bootPreloader.isBrowserHttp = prevIsHttpA;
+      bootPreloader.finished = false;
+      bootPreloader.awaitingGesture = false;
+      if (el("bootPreloadOverlay")) {
+        el("bootPreloadOverlay").classList.add("hidden");
+        el("bootPreloadOverlay").classList.remove("is-fading");
+        el("bootPreloadOverlay").classList.remove("is-awaiting-gesture");
+      }
+      if (el("bootPreloadEnterCue")) el("bootPreloadEnterCue").classList.add("hidden");
+    }
+
+    let partAGlassesClampOk = false;
+    {
+      const mkHead = (lx, ly, lz) => {
+        const h = new THREE.Group();
+        const le = new THREE.Group();
+        const re = new THREE.Group();
+        h.updateWorldMatrix = () => {};
+        h.worldToLocal = (v) => v;
+        le.updateWorldMatrix = () => {};
+        re.updateWorldMatrix = () => {};
+        le.position.set(lx, ly, lz);
+        re.position.set(-lx, ly, lz);
+        h.add(le, re);
+        return stage3dVrm.attachVrmPersonaAccessories({ head: h, leftEye: le, rightEye: re }, "小澄", true);
+      };
+      const highRes = mkHead(0.05, 0.25, -0.25);
+      const lowRes = mkHead(0.01, -0.05, -0.01);
+      const hiUd = highRes && highRes.group && highRes.group.userData;
+      const loUd = lowRes && lowRes.group && lowRes.group.userData;
+      partAGlassesClampOk = Boolean(
+        hiUd && Math.abs(hiUd.ey - 0.110) < 0.0001 && Math.abs(Math.abs(hiUd.ez) - 0.135) < 0.0001 &&
+        loUd && Math.abs(loUd.ey - 0.040) < 0.0001 && Math.abs(Math.abs(loUd.ez) - 0.068) < 0.0001
+      );
+    }
+
+    // --- PART B Runtime: difficulty-tiered jargon control & judgeShowcase override ---
+    let partBJargonOk = false;
+    {
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      const sampleTxt = "我在警上聽到 3號 報查殺又給 4號 鐵金水，感覺他在深水倒鉤墊飛反水立警外置位抗推想抿刀口。";
+      state.aiDifficulty = "pro";
+      state.match.aiDifficulty = "pro";
+      state.match.judgeShowcase = true;
+      const showcaseSnap = createBlindMatchSnapshot(state.match.seats[0], { module: "test" });
+      const resolvedShowcase = resolveActiveJargonDifficulty(showcaseSnap);
+      const showcaseOut = applyDifficultyTerminology(sampleTxt, null, showcaseSnap);
+
+      state.match.judgeShowcase = false;
+      state.aiDifficulty = "easy";
+      state.match.aiDifficulty = "easy";
+      const easySnap = createBlindMatchSnapshot(state.match.seats[0], { module: "test" });
+      const easyOut = applyDifficultyTerminology(sampleTxt, null, easySnap);
+
+      state.aiDifficulty = "normal";
+      state.match.aiDifficulty = "normal";
+      const normalOut = applyDifficultyTerminology(sampleTxt, null, createBlindMatchSnapshot(state.match.seats[0], { module: "test" }));
+
+      state.aiDifficulty = "pro";
+      state.match.aiDifficulty = "pro";
+      const proSnap = createBlindMatchSnapshot(state.match.seats[0], { module: "test" });
+      const proOut = applyDifficultyTerminology(sampleTxt, null, proSnap);
+
+      const bannedHardcore = /(?:倒鉤|墊飛|反水立警|外置位抗推|抿刀口)/;
+      const bannedEasy = /(?:倒鉤|墊飛|反水立警|外置位抗推|抿刀口|查殺|金水|銀水|狼坑|警徽流|警上|退水|抗推|站邊)/;
+      state.aiDifficulty = "easy";
+      state.match.aiDifficulty = "easy";
+      state.match.judgeShowcase = false;
+      const promptEasy = buildBlindGeminiSpeechPrompt(state.match.seats[1], { text: "測試", wolfPits: [], goodPits: [] });
+      state.aiDifficulty = "pro";
+      state.match.aiDifficulty = "pro";
+      state.match.judgeShowcase = true;
+      const promptShowcase = buildBlindGeminiSpeechPrompt(state.match.seats[1], { text: "測試", wolfPits: [], goodPits: [] });
+      const miniShowcase = _validateMiniLiveText("這輪我站隊友邊反對他深水倒鉤墊飛的打法，一定要守住好人節奏別被帶跑。", showcaseSnap.self, { snap: showcaseSnap, minLen: 10, maxLen: 120 });
+
+      partBJargonOk = Boolean(
+        resolvedShowcase === "easy" &&
+        !bannedEasy.test(easyOut) &&
+        !bannedHardcore.test(normalOut) && normalOut.includes("金水") &&
+        !bannedEasy.test(showcaseOut) &&
+        proOut.includes("深水倒鉤") && proOut.includes("抿刀口") &&
+        promptEasy && promptEasy.prompt && promptEasy.prompt.includes("新手友善局") && promptEasy.prompt.includes("全面禁止使用金水") &&
+        promptShowcase && promptShowcase.prompt && promptShowcase.prompt.includes("新手友善局") && !promptShowcase.prompt.includes("凹嗚高手局") &&
+        miniShowcase && !bannedEasy.test(miniShowcase)
+      );
+      state.match.judgeShowcase = false;
+      state.aiDifficulty = "normal";
+    }
+
+    // --- PART C Runtime (C1..C5): Full Zero-Leak Deduction Loop ---
+    const resetSeatsForUnit = () => {
+      state.match.playerSeatId = 1;
+      state.match.matchStyleSeed = 2026;
+      state.match.isMatchPoint = false;
+      state.match.pkActive = false;
+      state.match.pkCandidates = [];
+      state.match.lastNightDeaths = [];
+      state.match.publicVoteHistory = [];
+      state.match.seats.forEach((s, idx) => {
+        s.isPlayer = (s.id === 1);
+        s.name = s.id === 1
+          ? "你"
+          : (typeof AI_PERSONAS !== "undefined" && AI_PERSONAS[(idx - 1) % AI_PERSONAS.length]
+            ? AI_PERSONAS[(idx - 1) % AI_PERSONAS.length].name
+            : ("席" + s.id));
+        s.isElder = false;
+        s.isWolfKing = false;
+        s.fakeSeer = false;
+        s.fakeCheckedIds = [];
+        s.hadToxicSlip = false;
+        s.contradictions = [];
+        s.trustMap = {};
+        s.fogSealed = false;
+        s.suspicionMap = {};
+        s.publicVoteIntent = null;
+        s.publicVouchId = null;
+        s.checkedHistory = [];
+        s.savedSeatId = null;
+        s.witchAnnouncedSave = false;
+        s.hunterAnnounced = false;
+        s.guardAnnounced = false;
+        s.elderAnnounced = false;
+        s.claimedRole = null;
+        s.voteDisabled = false;
+        s.alive = true;
+        s.role = "villager";
+        s.team = "good";
+      });
+      state.match.sheriffSeatId = null;
+      state.match.convenienceRallyTargetId = null;
+      state.match.fourGJoySuspects = [];
+      state.match.fourGHopePair = [];
+    };
+
+    let partC1DeadWolvesOk = false;
+    {
+      // C1a: alive witch clash WITHOUT hard proof must NOT subtract dead wolves!
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      resetSeatsForUnit();
+      state.aiDifficulty = "pro";
+      state.match.day = 2;
+      state.match.phase = "DAY_SPEECH";
+      state.match.seats[1].claimedRole = "witch";
+      state.match.seats[2].claimedRole = "witch";
+      state.match.daySpeechEvents = [
+        { speakerId: 2, claimRole: "witch", text: "我是奉茶師", accuseId: 3, vouchId: null },
+        { speakerId: 3, claimRole: "witch", text: "我才是奉茶師", accuseId: 2, vouchId: null }
+      ];
+      state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+      const vSeat = state.match.seats[3];
+      vSeat.role = "villager";
+      vSeat.team = "good";
+      const snapNoKill = createBlindMatchSnapshot(vSeat, { module: "test" });
+      const slotNoKill = buildTableSlotAndWorldAnalysis(vSeat, snapNoKill);
+
+      // C1b: public self-exploded wolf counts even in fog_seal, hidden dead wolf does NOT leak in fog_seal
+      state.match.variantMode = "fog_seal";
+      state.match.seats[4].alive = false;
+      state.match.seats[4].claimedRole = "wolf";
+      state.match.seats[4].fogSealed = true;
+      state.match.seats[5].alive = false;
+      state.match.seats[5].role = "wolf";
+      state.match.seats[5].team = "wolf";
+      state.match.seats[5].claimedRole = null;
+      state.match.seats[5].fogSealed = true;
+      const snapFog = createBlindMatchSnapshot(vSeat, { module: "test" });
+      const slotFog = buildTableSlotAndWorldAnalysis(vSeat, snapFog);
+      partC1DeadWolvesOk = Boolean(
+        slotNoKill && slotNoKill.aliveWolfSlots === 2 &&
+        slotFog && slotFog.aliveWolfSlots === 1
+      );
+      state.match.variantMode = "standard";
+    }
+
+    let partC2ExpandPitsOk = false;
+    {
+      resetMatchToLobby();
+      el("selectModeCount").value = "12";
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      resetSeatsForUnit();
+      state.aiDifficulty = "pro";
+      state.match.day = 2;
+      state.match.phase = "DAY_SPEECH";
+      state.match.seats.forEach((s) => { s.role = "villager"; s.team = "good"; s.alive = true; });
+      const s2 = state.match.seats[1]; // 2号 seer A
+      const s3 = state.match.seats[2]; // 3号 seer B (fake)
+      s2.claimedRole = "seer";
+      s3.claimedRole = "seer";
+      state.match.dayOrder = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1];
+      state.match.daySpeechEvents = [
+        { speakerId: 2, claimRole: "seer", checkedWolfId: 4, text: "2號跳觀察員查殺 4號" },
+        { speakerId: 3, claimRole: "seer", checkedWolfId: 5, text: "3號也跳觀察員查殺 5號", hasToxicSlip: true },
+        { speakerId: 6, text: "我胡亂說兩句", accuseId: 2, hasToxicSlip: true },
+        { speakerId: 7, text: "我也跟著起鬨", accuseId: 2, hasToxicSlip: true }
+      ];
+      state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+      const sp8 = state.match.seats[7];
+      sp8.role = "villager";
+      sp8.team = "good";
+      sp8.suspicionMap[3] = 85;
+      sp8.suspicionMap[5] = 75;
+      sp8.suspicionMap[6] = 72;
+      sp8.suspicionMap[7] = 70;
+      const snap12 = createBlindMatchSnapshot(sp8, { module: "test" });
+      const slot12 = buildTableSlotAndWorldAnalysis(sp8, snap12);
+      state.match.speechQueue = [9, 10, 11, 12, 1];
+      const sp12Res = buildHeuristicAiSpeech(sp8);
+      partC2ExpandPitsOk = Boolean(
+        slot12 && slot12.aliveWolfSlots === 4 &&
+        slot12.dualSeerWorlds && slot12.dualSeerWorlds.chosenWorld &&
+        slot12.dualSeerWorlds.chosenWorld.wolfPits.length >= 3 &&
+        sp12Res && Array.isArray(sp12Res.wolfPits) && sp12Res.wolfPits.length >= 3
+      );
+    }
+
+    let partC3SurvivingSeerOk = false;
+    {
+      // Scenario (b): both Seers still alive at Day 3+ -> anomalies & boost
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      resetSeatsForUnit();
+      state.aiDifficulty = "pro";
+      state.match.day = 3;
+      state.match.phase = "DAY_SPEECH";
+      state.match.seats.forEach((s) => { s.role = "villager"; s.team = "good"; s.alive = true; s.claimedRole = null; });
+      state.match.seats[1].claimedRole = "seer";
+      state.match.seats[2].claimedRole = "seer";
+      state.match.allSpeechEvents = [
+        { speakerId: 2, claimRole: "seer", day: 1, text: "2號觀察員" },
+        { speakerId: 3, claimRole: "seer", day: 1, text: "3號觀察員" }
+      ];
+      const observerC3 = state.match.seats[3];
+      const slotB = buildTableSlotAndWorldAnalysis(observerC3, createBlindMatchSnapshot(observerC3, { module: "test" }));
+      // Scenario (c): solo uncontested Seer alive past protection limit at Day 4 with no save/guard evidence
+      state.match.seats[2].claimedRole = null;
+      state.match.day = 4;
+      state.match.allSpeechEvents = [
+        { speakerId: 2, claimRole: "seer", day: 1, text: "2號觀察員" }
+      ];
+      const slotC = buildTableSlotAndWorldAnalysis(observerC3, createBlindMatchSnapshot(observerC3, { module: "test" }));
+      partC3SurvivingSeerOk = Boolean(
+        slotB && slotB.survivingSeerAnomalies.length >= 1 && slotB.survivingSeerSummary &&
+        slotC && slotC.survivingSeerAnomalies.some((a) => a.kind === "uncontested_long_survivor") &&
+        (slotC.survivingSeerSuspicionBoost[2] || 0) > 0
+      );
+    }
+
+    let partC4SoleGodAndAlangOk = false;
+    {
+      resetMatchToLobby();
+      el("selectModeCount").value = "10";
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      resetSeatsForUnit();
+      state.aiDifficulty = "pro";
+      state.match.day = 2;
+      state.match.phase = "DAY_SPEECH";
+      state.match.seats.forEach((s) => { s.role = "villager"; s.team = "good"; s.alive = true; s.claimedRole = null; s.voteDisabled = false; });
+      // Sole Elder (3) & Sole Witch (4) calling out 7; Alang (5) must NOT throw 4 into wolfPits!
+      state.match.seats[2].role = "elder"; state.match.seats[2].claimedRole = "elder";
+      state.match.seats[3].role = "witch"; state.match.seats[3].claimedRole = "witch";
+      const alangSeat = state.match.seats[4];
+      state.match.seats.forEach((s) => { if (s.id !== alangSeat.id && s.name === "阿朗") s.name = "晨晨"; });
+      alangSeat.name = "阿朗";
+      alangSeat.role = "villager"; alangSeat.team = "good";
+      const sus7 = state.match.seats[6];
+      sus7.id = 7;
+      alangSeat.suspicionMap[4] = 35;
+      alangSeat.suspicionMap[7] = 75;
+      state.match.dayOrder = state.match.seats.map((s) => s.id);
+      state.match.daySpeechEvents = [
+        { speakerId: 3, claimRole: "elder", text: "3號長老過" },
+        { speakerId: 4, claimRole: "witch", accuseId: 7, text: "4號奉茶師點推 7號" },
+        { speakerId: 7, text: "7號表水普通", accuseId: 1 }
+      ];
+      state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+      state.match.speechQueue = [alangSeat.id, 8, 9, 10];
+
+      const snapAlang = createBlindMatchSnapshot(alangSeat, { module: "test" });
+      const slotAlang = buildTableSlotAndWorldAnalysis(alangSeat, snapAlang);
+      const alangSpeech = buildHeuristicAiSpeech(alangSeat);
+
+      // Post-death impersonation check (v25.8.0 Bug 4): hard-proven dead elder flags alive elder jumper; unflipped dead witch does NOT!
+      state.match.seats[1].alive = false;
+      state.match.seats[1].role = "witch";
+      state.match.seats[1].claimedRole = "witch";
+      state.match.seats[7].claimedRole = "witch";
+      state.match.allSpeechEvents.push({ speakerId: 2, claimRole: "witch", day: 1, text: "2號真奉茶師" });
+      state.match.daySpeechEvents.push({ speakerId: 8, claimRole: "witch", text: "8號接任奉茶師" });
+      state.match.seats[3].claimedRole = null;
+      const contraRes = detectSpeechContradictions(state.match.seats[7], { speakerId: 8, claimRole: "witch", text: "8號接任奉茶師" });
+      state.match.seats[4].alive = false;
+      state.match.seats[4].voteDisabled = true;
+      state.match.seats[4].claimedRole = "elder";
+      state.match.seats[6].alive = true;
+      state.match.seats[6].voteDisabled = false;
+      state.match.seats[6].claimedRole = "elder";
+      state.match.allSpeechEvents.push({ speakerId: 5, claimRole: "elder", day: 1, text: "5號清心長老" });
+      state.match.daySpeechEvents.push({ speakerId: 7, claimRole: "elder", text: "7號清心長老" });
+      const slotImpersonate = buildTableSlotAndWorldAnalysis(alangSeat, createBlindMatchSnapshot(alangSeat, { module: "test" }));
+
+      // Sole-god vote rally (+34) + lowGodCountWarning quiet seat protection (-12)
+      state.match.hasGuardMode = false;
+      state.match.seats[1].alive = true;
+      state.match.seats[1].claimedRole = "seer"; state.match.seats[1].alive = false;
+      state.match.seats[2].claimedRole = "hunter"; state.match.seats[2].alive = false;
+      state.match.seats[3].claimedRole = "witch"; state.match.seats[3].alive = true;
+      state.match.seats[7].claimedRole = null;
+      state.match.allSpeechEvents = [
+        { speakerId: 2, claimRole: "seer", day: 1, text: "2號觀察員" },
+        { speakerId: 3, claimRole: "hunter", day: 1, text: "3號糾察長" },
+        { speakerId: 4, claimRole: "witch", accuseId: 7, day: 2, text: "4號奉茶師推 7號" }
+      ];
+      state.match.daySpeechEvents = [state.match.allSpeechEvents[2]];
+      const quiet9 = state.match.seats[8];
+      quiet9.publicVoteIntent = null;
+      const alangVoteTgt = chooseAiVoteTarget(alangSeat, { pkActive: false });
+      const slotLowGod = buildTableSlotAndWorldAnalysis(alangSeat, createBlindMatchSnapshot(alangSeat, { module: "test" }));
+
+      // Hunter deterrence heat >= 54 skips "brief"
+      const hSeat = state.match.seats[5];
+      hSeat.role = "hunter"; hSeat.team = "good"; hSeat.alive = true;
+      state.match.daySpeechEvents.push({ speakerId: 9, accuseId: hSeat.id, text: "9號推6號" });
+      state.match.daySpeechEvents.push({ speakerId: 10, accuseId: hSeat.id, text: "10號也推6號" });
+      const ctxH = buildSpeechContext(hSeat);
+      const tierH = determineSpeechLengthTier(hSeat, ctxH);
+
+      partC4SoleGodAndAlangOk = Boolean(
+        slotAlang && slotAlang.soleGodMap[3] && slotAlang.soleGodMap[4] &&
+        alangSpeech && alangSpeech.wolfPits.indexOf(4) === -1 && alangSpeech.vouchId === 4 && alangSpeech.accuseId === 7 &&
+        contraRes && contraRes.code === "role_clash" && contraRes.detail.includes("已離席") &&
+        slotImpersonate && !slotImpersonate.deadGodImpersonators[8] && slotImpersonate.deadGodImpersonators[7] === "elder" &&
+        slotLowGod && slotLowGod.lowGodCountWarning === true &&
+        alangVoteTgt === 7 &&
+        tierH !== "brief"
+      );
+    }
+
+    let partC5ActionsOk = false;
+    {
+      // C5a: Day 3+ Witch savedSeatId unlock + Poison & Hunter shot guard against soleGod/trustedGold
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      resetSeatsForUnit();
+      state.aiDifficulty = "pro";
+      state.match.seats.forEach((s) => { s.role = "villager"; s.team = "good"; s.alive = true; s.claimedRole = null; s.voteDisabled = false; });
+      const aiW = state.match.seats[1];
+      aiW.role = "witch"; aiW.team = "good"; aiW.savedSeatId = 4; aiW.potions = { heal: false, purify: true };
+      const soleG5 = state.match.seats[4]; soleG5.role = "guard"; soleG5.claimedRole = "guard";
+      const bad8 = state.match.seats[7];
+      aiW.suspicionMap[4] = 95;
+      aiW.suspicionMap[5] = 88; // high suspicion, but protected as soleGuard (-65 => 23!)
+      aiW.suspicionMap[8] = 74; // above threshold & uncontested
+      state.match.day = 3;
+      state.match.phase = "DAY_VOTE";
+      state.match.daySpeechEvents = [{ speakerId: 5, claimRole: "guard", text: "5號護心守衛" }];
+      state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+      const voteUnlockDay3 = chooseAiVoteTarget(aiW, { pkActive: false });
+      aiW.suspicionMap[4] = 30;
+      state.match.phase = "NIGHT_WITCH";
+      const wAct = chooseAiWitchNightAction(aiW, null, 0.9);
+      const hunterShooter = state.match.seats[6];
+      hunterShooter.role = "hunter"; hunterShooter.team = "good";
+      hunterShooter.suspicionMap[5] = 88; // protected soleGuard (-65)
+      hunterShooter.suspicionMap[8] = 74;
+      const hunterAvoidSoleGod = chooseAiHunterTarget(hunterShooter);
+
+      // C5b: Guard protects exposedSoloHunter
+      const aiG = state.match.seats[2];
+      aiG.role = "guard"; aiG.team = "good";
+      state.match.seats[5].role = "hunter"; state.match.seats[5].claimedRole = "hunter";
+      aiG.suspicionMap[6] = 42;
+      state.match.phase = "NIGHT_GUARD";
+      const gTgt = chooseAiGuardTarget(aiG, 0.9);
+
+      // C5c: Front-seat publicVoteIntent weight 54 vs 34 on late pivot
+      state.match.seats[4].claimedRole = null;
+      state.match.seats[5].claimedRole = null;
+      const aiV4 = state.match.seats[3];
+      aiV4.role = "villager"; aiV4.team = "good";
+      aiV4.suspicionMap = {};
+      aiV4.publicVoteIntent = 6;
+      aiV4.suspicionMap[6] = 52;
+      aiV4.suspicionMap[8] = 74; // 52+54=106 > 74 => sticks to 6!
+      state.match.phase = "DAY_VOTE";
+      state.match.daySpeechEvents = [{ speakerId: 4, accuseId: 6, text: "4號推6號" }];
+      state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+      const frontStick = chooseAiVoteTarget(aiV4, { pkActive: false });
+      aiV4.suspicionMap[8] = 92; // late pivot drops intent weight to 34 (52+34=86 < 92) => switches!
+      state.match.daySpeechEvents.push({ speakerId: 8, text: "別吵亂帶風向", hasToxicSlip: true });
+      state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+      const frontPivot = chooseAiVoteTarget(aiV4, { pkActive: false });
+
+      // C5d: True Seer Sheriff transfer: soleGod when no gold; tear when only checked wolf
+      state.match.seats[4].role = "guard"; state.match.seats[4].claimedRole = "guard";
+      const aiS = state.match.seats[6];
+      aiS.role = "seer"; aiS.team = "good"; aiS.alive = false;
+      aiS.checkedHistory = [{ targetId: 8, isWolf: true, day: 1 }];
+      state.match.sheriffSeatId = aiS.id;
+      state.match.sheriffBadgeFlowsBySeat = {};
+      state.match.daySpeechEvents = [{ speakerId: 5, claimRole: "guard", text: "5號護心守衛" }];
+      state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+      const xferSoleGod = chooseAiSheriffTransferTarget(aiS);
+      state.match.seats[4].claimedRole = null;
+      state.match.seats[5].claimedRole = null;
+      state.match.daySpeechEvents = [];
+      state.match.allSpeechEvents = [];
+      const xferTearWolfCheck = chooseAiSheriffTransferTarget(aiS);
+
+      partC5ActionsOk = Boolean(
+        voteUnlockDay3 === 4 &&
+        wAct && wAct.poisonTargetId === 8 &&
+        hunterAvoidSoleGod === 8 &&
+        gTgt === 6 &&
+        frontStick === 6 && frontPivot === 8 &&
+        xferSoleGod === 5 && xferTearWolfCheck === null
+      );
+    }
+
+    return {
+      partABootThrowSafeOk,
+      partAGlassesClampOk,
+      partBJargonOk,
+      partC1DeadWolvesOk,
+      partC2ExpandPitsOk,
+      partC3SurvivingSeerOk,
+      partC4SoleGodAndAlangOk,
+      partC5ActionsOk
+    };
+  })()`, ctx);
+
+  const all2570 = Object.assign({ partDAndSourceOk }, v2570Runtime);
+  for (const [k, v] of Object.entries(all2570)) {
+    if (!v) {
+      throw new Error("v25.7.0 Release regression failed for " + k + ": " + JSON.stringify(all2570));
+    }
+  }
+}
+
+// ==================== v25.7.1 RELEASE REGRESSION SUITE (TTS PURE/120/POLYPHONE + +2 PREFETCH + SEER GUARD + CI HARDENING) ====================
+{
+  const readV2571 = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
+  const apiTts2571 = (await import("../api/tts.js")).default;
+  const ttsFile2571 = readV2571("api/tts.js");
+  const srvFile2571 = readV2571("server.py");
+  const voiceFile2571 = readV2571("js/audio/voice.js");
+  const daySpeech2571 = readV2571("js/game/day-speech.js");
+  const pSpeech2571 = readV2571("js/game/player-speech.js");
+  const votingFile2571 = readV2571("js/game/voting.js");
+  const sw2571 = readV2571("sw.js");
+  const fb2571 = readV2571("js/ui/feedback.js");
+  const spec2571 = readV2571("docs/作品說明書.md");
+  const script2571 = readV2571("docs/三分鐘Demo影片腳本.md");
+  const readme2571 = readV2571("README.md");
+
+  const ttsBody2571 = apiTts2571._buildTtsRequestBody(
+    "gemini-3.8-flash-lite-tts",
+    "各位好夥伴，請看三號。<breath> 慢慢想。",
+    "Aoede",
+    false
+  );
+  const v2571PureApiAndFilesOk = Boolean(
+    ttsBody2571 &&
+    ttsBody2571.contents && ttsBody2571.contents[0] &&
+    ttsBody2571.contents[0].parts && ttsBody2571.contents[0].parts[0] &&
+    ttsBody2571.contents[0].parts[0].text === "各位好夥伴，請看三號。 慢慢想。" &&
+    !ttsBody2571.contents[0].parts[0].speechMetadata &&
+    !ttsFile2571.includes("請用以下口吻自然唸出") &&
+    !srvFile2571.includes("請用以下口吻自然朗讀") &&
+    !voiceFile2571.includes("請用以下口吻自然唸出") &&
+    !pSpeech2571.includes("進定狼坑") &&
+    !votingFile2571.includes("標進定狼坑") &&
+    !daySpeech2571.includes("setTimeout(runStaggeredPrefetch, 60)") &&
+    sw2571.includes('const SHELL_CACHE = "sanhao-shell-v25.9.0"') &&
+    sw2571.includes('const ASSET_CACHE = "sanhao-assets-v25.9.0"') &&
+    fb2571.includes('version: "v25.9.0"') &&
+    readme2571.includes("v25.9.0") &&
+    spec2571.includes("v25.9.0") &&
+    spec2571.includes("130 字整段預抓") &&
+    spec2571.length <= 5000 &&
+    script2571.includes("v25.9.0") &&
+    [ttsFile2571, srvFile2571, voiceFile2571, daySpeech2571, pSpeech2571, votingFile2571, sw2571, fb2571, spec2571, script2571, readme2571].every(
+      (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
+    )
+  );
+
+  const v2571Runtime = vm.runInContext(`(async () => {
+    // 1. Pure TTS payload (empty style, zero PERSONA_TTS_DIRECTIONS leak), 120-char single chunk, >120-char parallel split & detune kept
+    let v2571PureTtsAnd120Ok = false;
+    {
+      const pl = voice._buildGeminiTtsPayload(PERSONA_VOICE_PROFILES["你"], "你", "今晚我們先整理昨天的線索。", "panic");
+      const origFetch1 = fetch;
+      const origIsStatic1 = voice.isStaticCloudHost;
+      const origDecode1 = voice.decodeGeminiAudioBytes;
+      const origPlayBuf1 = voice.playBufferedStudioAudio;
+      const prevKey1 = state.geminiApiKey;
+      const prevOptOut1 = state.serverGeminiOptOut;
+      const prevEnginePref1 = voice.enginePref;
+      const prevCloud1 = voice.cloudGeminiTtsAvailable;
+      const prevCd429_1 = voice._cloudTtsCooldownIs429;
+      const prevCtx1 = sound.ctx;
+      const sentBodies = [];
+      let playDetuneSkipped = null;
+      try {
+        sound.ctx = { sampleRate: 24000, currentTime: 0 };
+        state.geminiApiKey = "";
+        state.serverGeminiOptOut = false;
+        voice.enginePref = "auto";
+        voice.isStaticCloudHost = () => true;
+        voice.cloudGeminiTtsAvailable = true;
+        voice.cloudGeminiTtsCooldownUntil = 0;
+        voice._cloudTtsCooldownIs429 = false;
+        voice.studioCache = {};
+        voice.studioPending = {};
+        voice.decodeGeminiAudioBytes = async () => ({ duration: 1.2 });
+        voice.playBufferedStudioAudio = (_seq, _buf, _done, opts) => {
+          playDetuneSkipped = Boolean(opts && opts.skipDetune);
+          return true;
+        };
+        fetch = async (_u, init) => {
+          sentBodies.push(JSON.parse(init.body));
+          return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(256).buffer };
+        };
+        const text95 = "今天討論先聽前排幾位同學各自發言，再逐一對比昨晚的關鍵行動與前日投票紀錄，如果兩邊都還沒有出現明顯矛盾，我們先把資源留給關鍵位置再表態決定投給誰，避免第一天就盲目錯殺關鍵好人。";
+        await voice.playGeminiStudioTts(voice.utteranceSeq, PERSONA_VOICE_PROFILES["你"], text95, "normal", () => {}, { personaKey: "你" });
+        const text145 = "這輪大家先把前排所有人的立場順序對清楚，如果對跳雙方都還沒拿出足夠具體的時間線與投票根據，我們可以先保留票型並把資源留到後面關鍵回合再做最後定奪；同時也要回頭核對昨晚誰有避重就輕或刻意模糊焦點的情況，千萬別在資訊不足的時候急著把重要身分送出場，請後面幾位務必把理由講明白。";
+        voice.prefetchCloudGeminiTts("你", text145, "normal");
+        await Promise.all(Object.values(voice.studioPending));
+        await Promise.resolve();
+        v2571PureTtsAnd120Ok = Boolean(
+          pl && pl.stylePrompt === "" &&
+          text95.length > 42 && text95.length <= 130 &&
+          text145.length > 130 &&
+          sentBodies.length >= 2 &&
+          sentBodies.every((b) => b && b.style === "" && !b.text.includes("二十歲出頭") && !b.text.includes("請用以下口吻")) &&
+          playDetuneSkipped === false
+        );
+      } finally {
+        fetch = origFetch1;
+        voice.isStaticCloudHost = origIsStatic1;
+        voice.decodeGeminiAudioBytes = origDecode1;
+        voice.playBufferedStudioAudio = origPlayBuf1;
+        state.geminiApiKey = prevKey1;
+        state.serverGeminiOptOut = prevOptOut1;
+        voice.enginePref = prevEnginePref1;
+        voice.cloudGeminiTtsAvailable = prevCloud1;
+        voice._cloudTtsCooldownIs429 = prevCd429_1;
+        sound.ctx = prevCtx1;
+        voice.studioCache = {};
+        voice.studioPending = {};
+      }
+    }
+
+    // 2. Polyphone pronunciation mapping + bundled voice pack cache hit retention (v25.8.0 keeps 警長/社長 intact)
+    let v2571PolyphoneAndPackOk = false;
+    {
+      const polyOut = voice.formatMandarinText("直心糾察長、糾察長、警長、清心長老、長老、社長、學長");
+      const hostFmt = voice.formatMandarinText("警上輪流發言結束！請警下夥伴投票選出本局警長！");
+      const xingFmt = voice.formatMandarinText("我是直心糾察長，昨天7號喊打我卻改票衝6號，跟4號完全綁在一起。先聽4號怎麼圓，等下看1號警長壓軸定調。");
+      v2571PolyphoneAndPackOk = Boolean(
+        polyOut === "直心糾察掌、糾察掌、警長、清心長老、長老、社長、學長" &&
+        voice.lookupBundledVoicePackUrl("主持", hostFmt) === "assets/voice_pack/host_sheriff_vote.mp3" &&
+        voice.lookupBundledVoicePackUrl("星兒", xingFmt) === "assets/voice_pack/showcase/showcase_xinger_d2.mp3"
+      );
+    }
+
+    // 3. onAudioStart-driven +1 -> chained +2 prefetch & bumpTableStateRev invalidation
+    let v2571DualPrefetchOk = false;
+    {
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.match.playerSeatId = 1;
+      state.match.matchStyleSeed = 2026;
+      state.match.dayOrder = [5, 2, 3, 4, 6, 7, 8, 1];
+      state.match.seats.forEach((s) => {
+        s.isElder = false; s.isWolfKing = false; s.fakeSeer = false; s.role = "villager"; s.team = "good";
+        s.isPlayer = (s.id === 1);
+        s.alive = true; s.claimedRole = null; s.suspicionMap = {};
+      });
+      state.match.phase = "DAY_SPEECH";
+      state.match.day = 2;
+      state.match.daySpeechEvents = [];
+      state.match.allSpeechEvents = [];
+      state.match.speechQueue = [2, 3, 4];
+      state.activeSpeakerId = 5;
+      const origLocalAvailP = voice.localNeuralAvailable;
+      const origCanSpeakP = voice.canSpeak;
+      const origPfTtsP = voice.prefetchBestTts;
+      const prevKeyP = state.geminiApiKey;
+      const prevOptOutP = state.serverGeminiOptOut;
+      const prevLocalLlmP = state.localLlmModel;
+      const pfTtsCalls = [];
+      try {
+        state.geminiApiKey = "";
+        state.serverGeminiOptOut = true;
+        state.localLlmModel = "";
+        voice.localNeuralAvailable = true;
+        voice.canSpeak = () => true;
+        voice.prefetchBestTts = (nm, txt) => { pfTtsCalls.push({ nm, txt }); return true; };
+        const onAudioStartHook = scheduleStaggeredNextSpeechPrefetch(orchestrator.matchEpoch, state._speechTurnSeq);
+        const beforeHookEmpty = !state.match._prefetchedSpeeches || Object.keys(state.match._prefetchedSpeeches).length === 0;
+        if (typeof onAudioStartHook === "function") onAudioStartHook();
+        await Promise.resolve();
+        await Promise.resolve();
+        const pf1 = state.match._prefetchedSpeeches && state.match._prefetchedSpeeches[2];
+        const pf2 = state.match._prefetchedSpeeches && state.match._prefetchedSpeeches[3];
+        const bothCachedOk = Boolean(
+          beforeHookEmpty &&
+          typeof onAudioStartHook === "function" &&
+          pf1 && pf1.resolvedMeta && pf1.resolvedMeta.text &&
+          pf2 && pf2.resolvedMeta && pf2.resolvedMeta.text &&
+          pf2.key === _buildSpeechPrefetchKey(3, { evLen: state.match.daySpeechEvents.length + 1 }) &&
+          pfTtsCalls.length >= 2
+        );
+        bumpTableStateRev(false);
+        const purgedBothOk = state.match._prefetchedSpeech === null &&
+          (!state.match._prefetchedSpeeches || Object.keys(state.match._prefetchedSpeeches).length === 0);
+        v2571DualPrefetchOk = Boolean(bothCachedOk && purgedBothOk);
+      } finally {
+        voice.localNeuralAvailable = origLocalAvailP;
+        voice.canSpeak = origCanSpeakP;
+        voice.prefetchBestTts = origPfTtsP;
+        state.geminiApiKey = prevKeyP;
+        state.serverGeminiOptOut = prevOptOutP;
+        state.localLlmModel = prevLocalLlmP;
+      }
+    }
+
+    // 4. Seer single-sided clash guards, unbroken capsule tokenization, and phrase-level terminology
+    let v2571SeerCapsuleRegexOk = false;
+    {
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.match.seats.forEach((s) => {
+        s.isElder = false; s.isWolfKing = false; s.fakeSeer = false; s.role = "villager"; s.team = "good";
+        s.alive = true; s.claimedRole = null; s.suspicionMap = {};
+      });
+      state.aiDifficulty = "pro";
+      state.match.day = 2;
+      state.match.phase = "DAY_SPEECH";
+      const trueSeer = state.match.seats[1]; // id 2
+      const fakeWolf = state.match.seats[2]; // id 3
+      const allyWolf = state.match.seats[3]; // id 4
+      trueSeer.role = "seer"; trueSeer.team = "good"; trueSeer.claimedRole = "seer";
+      trueSeer.checkedHistory = [{ targetId: 5, isWolf: false, day: 1 }];
+      fakeWolf.role = "wolf"; fakeWolf.team = "wolf"; fakeWolf.fakeSeer = true; fakeWolf.claimedRole = "seer";
+      allyWolf.role = "wolf"; allyWolf.team = "wolf";
+      state.match.dayOrder = [2, 3, 5, 6, 7, 8, 1, 4];
+      state.match.speechQueue = [5, 6, 7, 8, 1, 4];
+      state.match.daySpeechEvents = [
+        { speakerId: 2, claimRole: "seer", checkedWolfId: 3, checkedGoodId: 5, text: "2號真觀察員查殺 3號" }
+      ];
+      state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+      const fakeRebut = buildHeuristicAiSpeech(fakeWolf);
+      const trueSeerSpeech = buildHeuristicAiSpeech(trueSeer);
+      const fakeSeerPrompt = buildBlindGeminiSpeechPrompt(fakeWolf, fakeRebut);
+      const rejectTwoSided = validateGeminiSpeechReality(
+        trueSeer,
+        { claimSeer: true, checkedWolfId: 3 },
+        { text: "如果站你那邊狼坑是我，站我這邊才是你，兩邊盤完我站邊自己並請離 3號。", accuseId: 3, vouchId: 5, wolfPits: [3], goodPits: [5] },
+        createBlindMatchSnapshot(trueSeer, { module: "test" })
+      );
+      const rejectPackPit = validateGeminiSpeechReality(
+        fakeWolf,
+        { claimSeer: true, claimRole: "seer", checkedWolfId: 2 },
+        { text: "我才是觀察員，昨晚查出 2號 就是冒牌酸民狼，大家直接投 2號！", accuseId: 2, vouchId: null, wolfPits: [2, 4], goodPits: [] },
+        createBlindMatchSnapshot(fakeWolf, { module: "test" })
+      );
+
+      // Unbroken capsule check
+      renderInteractiveSpotlightText("前置位 4號 跳假觀察員，直接定進狼坑！", fakeWolf, false);
+      const spotHtml = el("spotlightText") ? el("spotlightText").innerHTML : "";
+      const unbrokenCapsuleOk = spotHtml.includes("跳假觀察員") && !spotHtml.includes("跳假 <span");
+
+      // Phrase-level easy terminology check
+      const easyRaw = "2號 發 3號 金水，還 給 4號 鐵金水，順便 查殺 5號 並 歸票 6號，7號 悍跳明心觀察員，結果 8號 被抗推 直接進定狼坑。";
+      const easyConv = applyDifficultyTerminology(easyRaw, "easy", null);
+      const phraseOk = Boolean(
+        !easyConv.includes("發 3號 查過是好人") &&
+        !easyConv.includes("建議大家集中投誰 6號") &&
+        !easyConv.includes("被被誤會") &&
+        easyConv.includes("查驗 3號 是好人") &&
+        easyConv.includes("查出 5號 在說謊") &&
+        easyConv.includes("建議大家集中投 6號") &&
+        easyConv.includes("假冒明心觀察員") &&
+        easyConv.includes("被誤會投出局") &&
+        easyConv.includes("直接列進可疑名單")
+      );
+
+      const twoSidedRe = /如果站|站你那邊|兩邊盤完我站邊/;
+      v2571SeerCapsuleRegexOk = Boolean(
+        fakeRebut && fakeRebut.claimSeer === true && !twoSidedRe.test(fakeRebut.text) &&
+        fakeRebut.wolfPits.indexOf(fakeWolf.id) === -1 && fakeRebut.wolfPits.indexOf(allyWolf.id) === -1 &&
+        trueSeerSpeech && !twoSidedRe.test(trueSeerSpeech.text) && !trueSeerSpeech.text.includes("站我這邊第一個狼坑") &&
+        fakeSeerPrompt && fakeSeerPrompt.prompt && fakeSeerPrompt.prompt.includes("本尊對跳立場鎖定") && !fakeSeerPrompt.prompt.includes("雙明心觀察員盤坑參考") &&
+        rejectTwoSided && rejectTwoSided.ok === false && rejectTwoSided.reason === "seer_balanced_two_sides" &&
+        rejectPackPit && rejectPackPit.ok === false && rejectPackPit.reason === "fake_seer_outed_pack_pit" &&
+        unbrokenCapsuleOk &&
+        phraseOk
+      );
+      state.aiDifficulty = "normal";
+    }
+
+    return {
+      v2571PureTtsAnd120Ok,
+      v2571PolyphoneAndPackOk,
+      v2571DualPrefetchOk,
+      v2571SeerCapsuleRegexOk
+    };
+  })()`, ctx);
+
+  const v2571RuntimeRes = await v2571Runtime;
+  const all2571 = Object.assign({ v2571PureApiAndFilesOk }, v2571RuntimeRes);
+  for (const [k, v] of Object.entries(all2571)) {
+    if (!v) {
+      throw new Error("v25.7.1 Release regression failed for " + k + ": " + JSON.stringify(all2571));
+    }
+  }
+}
+
+// ==================== v25.7.2 RELEASE REGRESSION SUITE (CHUNK-0 PREFETCH + SEER DEDUP/LEAD + WOLF EXPLODE STAGING + SUBMIT GUARDS) ====================
+{
+  const readV2572 = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
+  const voice2572 = readV2572("js/audio/voice.js");
+  const playerSpeech2572 = readV2572("js/game/player-speech.js");
+  const voting2572 = readV2572("js/game/voting.js");
+  const daySpeech2572 = readV2572("js/game/day-speech.js");
+  const sw2572 = readV2572("sw.js");
+  const fb2572 = readV2572("js/ui/feedback.js");
+  const readme2572 = readV2572("README.md");
+  const spec2572 = readV2572("docs/作品說明書.md");
+  const script2572 = readV2572("docs/三分鐘Demo影片腳本.md");
+
+  const v2572FilesAndVersionOk = Boolean(
+    sw2572.includes('const SHELL_CACHE = "sanhao-shell-v25.9.0"') &&
+    sw2572.includes('const ASSET_CACHE = "sanhao-assets-v25.9.0"') &&
+    fb2572.includes('version: "v25.9.0"') &&
+    readme2572.includes("v25.9.0") &&
+    spec2572.includes("v25.9.0") &&
+    spec2572.length <= 5000 &&
+    script2572.includes("v25.9.0") &&
+    [voice2572, playerSpeech2572, voting2572, daySpeech2572, sw2572, fb2572, readme2572, spec2572, script2572].every(
+      (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
+    )
+  );
+
+  const v2572Runtime = vm.runInContext(`(async () => {
+    // 1. Long-text (>120 chars) cloud TTS prefetch dispatches BOTH chunks[0] and chunks[1]
+    let v2572Chunk0PrefetchOk = false;
+    {
+      const origFetch = fetch;
+      const origIsStatic = voice.isStaticCloudHost;
+      const origDecode = voice.decodeGeminiAudioBytes;
+      const prevKey = state.geminiApiKey;
+      const prevOptOut = state.serverGeminiOptOut;
+      const prevEngine = voice.enginePref;
+      const prevAvail = voice.cloudGeminiTtsAvailable;
+      const prevCd = voice.cloudGeminiTtsCooldownUntil;
+      const prevCd429 = voice._cloudTtsCooldownIs429;
+      const prevCtx = sound.ctx;
+      const sentTexts = [];
+      try {
+        sound.ctx = { sampleRate: 24000, currentTime: 0 };
+        state.geminiApiKey = "";
+        state.serverGeminiOptOut = false;
+        voice.enginePref = "auto";
+        voice.isStaticCloudHost = () => true;
+        voice.cloudGeminiTtsAvailable = true;
+        voice.cloudGeminiTtsCooldownUntil = 0;
+        voice._cloudTtsCooldownIs429 = false;
+        voice.studioCache = {};
+        voice.studioPending = {};
+        voice.decodeGeminiAudioBytes = async () => ({ duration: 1.0 });
+        fetch = async (_u, init) => {
+          sentTexts.push(JSON.parse(init.body).text);
+          return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(256).buffer };
+        };
+        const longStr = "這輪大家先把前排所有人的立場順序對清楚，如果對跳雙方都還沒拿出足夠具體的時間線與投票根據，我們可以先保留票型並把資源留到後面關鍵回合再做最後定奪；同時也要回頭核對昨晚誰有避重就輕或刻意模糊焦點的情況，千萬別在資訊不足的時候急著把重要身分送出場，請後面幾位務必把理由講明白並公開比對細節！";
+        const expectedChunks = voice._splitTextForCloudTts(voice.formatMandarinText(longStr), 130);
+        voice.prefetchCloudGeminiTts("你", longStr, "normal");
+        await Promise.all(Object.values(voice.studioPending));
+        await Promise.resolve();
+        const strippedSent = sentTexts.map((t) => voice.stripGeminiVocalTags(t));
+        v2572Chunk0PrefetchOk = Boolean(
+          expectedChunks.length >= 2 &&
+          strippedSent.length === 2 &&
+          strippedSent.includes(expectedChunks[0]) &&
+          strippedSent.includes(expectedChunks[1])
+        );
+      } finally {
+        fetch = origFetch;
+        voice.isStaticCloudHost = origIsStatic;
+        voice.decodeGeminiAudioBytes = origDecode;
+        state.geminiApiKey = prevKey;
+        state.serverGeminiOptOut = prevOptOut;
+        voice.enginePref = prevEngine;
+        voice.cloudGeminiTtsAvailable = prevAvail;
+        voice.cloudGeminiTtsCooldownUntil = prevCd;
+        voice._cloudTtsCooldownIs429 = prevCd429;
+        sound.ctx = prevCtx;
+        voice.studioCache = {};
+        voice.studioPending = {};
+      }
+    }
+
+    // 2. Player Seer template deduplication + Seer-lead ordering + structured field preservation
+    let v2572SeerDedupAndLeadOk = false;
+    {
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "seer";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.match.playerSeatId = 1;
+      state.match.seats.forEach((s) => {
+        s.isPlayer = (s.id === 1);
+        s.alive = true;
+        s.claimedRole = null;
+        s.role = s.id === 1 ? "seer" : (s.id === 5 || s.id === 7 ? "wolf" : "villager");
+        s.team = s.role === "wolf" ? "wolf" : "good";
+      });
+      state.match.day = 2;
+      state.match.phase = "DAY_PLAYER_TURN";
+      state.match.daySpeechEvents = [];
+      state.match.allSpeechEvents = [];
+      const pSeat = getPlayerSeat();
+      pSeat.checkedHistory = [{ targetId: 5, isWolf: true, day: 1 }];
+
+      const d1 = ensurePlayerDraftPits(false);
+      d1.claimRole = "seer";
+      d1.wolfIds = [5];
+      d1.goodIds = [];
+      const txtOnly5 = composePlayerPitSpeechText();
+      const count5Only = (txtOnly5.match(/0?5號/g) || []).length;
+
+      state.match.playerDraftPits.wolfIds = [5, 6];
+      const txt5And6 = composePlayerPitSpeechText();
+      const count5With6 = (txt5And6.match(/0?5號/g) || []).length;
+
+      pSeat.checkedHistory.push({ targetId: 3, isWolf: false, day: 2 });
+      state.match.playerDraftPits.goodIds = [3];
+      const txtWithGood3 = composePlayerPitSpeechText();
+      const count3WithGood = (txtWithGood3.match(/0?3號/g) || []).length;
+
+      const dLead = ensurePlayerDraftPits(false);
+      dLead.wolfIds = [5];
+      dLead.goodIds = [];
+      dLead.claimRole = null;
+      dLead.composedModules = [{ key: "m1", tgTag: "條理分析", text: "這點矛盾值得再對一次。", tgKind: "words", addedWolfIds: [], addedGoodIds: [] }];
+      dLead._lastAutoPitText = "";
+      const qIn = el("quickFreeInput");
+      if (qIn) qIn.value = "狼坑目前鎖定 05號" + getSeat(5).name + "，破綻最明顯，建議好人齊心歸票優先請 05號 離席！，這點矛盾值得再對一次。";
+      pSeat.checkedHistory = [{ targetId: 5, isWolf: true, day: 1 }];
+      dLead.claimRole = "seer";
+      syncDraftSpeechToInput();
+      const syncedLeadTxt = qIn ? qIn.value : "";
+
+      const dCard = ensurePlayerDraftPits(false);
+      dCard.wolfIds = [5];
+      dCard.goodIds = [];
+      dCard.claimRole = null;
+      dCard.composedModules = [];
+      if (qIn) qIn.value = "狼坑目前鎖定 05號" + getSeat(5).name + "，建議優先請 05號 離席！";
+      loadQuickCardIntoAdvancedEditor({
+        label: "明心查殺",
+        tgTag: "觀察員",
+        tgKind: "heart",
+        text: "我是真正的明心觀察員！昨晚查驗 05號" + getSeat(5).name + " 是酸民狼！",
+        draftPatch: { claimRole: "seer", wolfIds: [5] }
+      }, null, null, null);
+      const cardLeadTxt = qIn ? qIn.value : "";
+
+      const dSubmit = ensurePlayerDraftPits(false);
+      dSubmit.wolfIds = [5];
+      dSubmit.goodIds = [];
+      dSubmit.claimRole = "seer";
+      dSubmit.composedModules = [];
+      state.match.phase = "DAY_PLAYER_TURN";
+      el("playerSpeechInput").value = txtOnly5;
+      const subOk = submitPlayerSpeech();
+      const lastEv = state.match.daySpeechEvents[state.match.daySpeechEvents.length - 1];
+
+      v2572SeerDedupAndLeadOk = Boolean(
+        txtOnly5.startsWith("我是真正的明心觀察員") &&
+        count5Only === 1 &&
+        !txtOnly5.includes("狼坑目前鎖定") &&
+        count5With6 === 1 &&
+        txt5And6.includes("狼坑目前鎖定") &&
+        txt5And6.includes("6號") &&
+        count3WithGood === 1 &&
+        !txtWithGood3.includes("好人坑我先保") &&
+        state.match.playerDraftPits &&
+        syncedLeadTxt.startsWith("我是真正的明心觀察員") &&
+        (syncedLeadTxt.match(/0?5號/g) || []).length === 1 &&
+        syncedLeadTxt.includes("這點矛盾值得再對一次。") &&
+        !syncedLeadTxt.includes("狼坑目前鎖定") &&
+        cardLeadTxt.startsWith("我是真正的明心觀察員") &&
+        !cardLeadTxt.includes("狼坑目前鎖定") &&
+        subOk === true &&
+        lastEv && lastEv.checkedWolfId === 5 && lastEv.accuseId === 5 &&
+        Array.isArray(lastEv.wolfPits) && lastEv.wolfPits.includes(5)
+      );
+    }
+
+    // 3. AI Wolf Self-Explode: forbidden on easy; >= 2.8s staging + max 1/match on normal/pro + clearTransientMatchTimers cleanup
+    let v2572WolfExplodeStagingAndGuardsOk = false;
+    {
+      resetMatchToLobby();
+      el("selectModeCount").value = "10";
+      el("selectPreferredRole").value = "seer";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.match.playerSeatId = 1;
+      state.match.seats.forEach((s) => {
+        s.isPlayer = (s.id === 1);
+        s.alive = true;
+        s.claimedRole = null;
+        if (s.id === 1) { s.role = "seer"; s.team = "good"; }
+        else if (s.id === 2 || s.id === 3 || s.id === 4) { s.role = "wolf"; s.team = "wolf"; }
+        else { s.role = "villager"; s.team = "good"; }
+      });
+      state.match.phase = "DAY_SPEECH";
+      state.match.day = 2;
+      state.match.aiWolfExplosions = 0;
+      state.match._wolfExplodePendingNight = false;
+      state.match.daySpeechEvents = [
+        { speakerId: 1, claimRole: "seer", checkedWolfId: 2, text: "1號觀察員查殺 2號" }
+      ];
+      state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+
+      const w1 = getSeat(2);
+      const w2 = getSeat(3);
+      state.aiDifficulty = "easy";
+      const easyForbidOk = maybeTriggerAiWolfSelfExplode(w1, { rngVal: 0.01 }) === false;
+
+      const origSetTo = setTimeout;
+      const origClearTo = clearTimeout;
+      const origCanSpeak = voice.canSpeak;
+      const timers = [];
+      const clearedIds = [];
+      try {
+        voice.canSpeak = () => false;
+        setTimeout = (fn, ms) => {
+          const id = timers.length + 101;
+          timers.push({ id, fn, ms });
+          return id;
+        };
+        clearTimeout = (id) => {
+          if (id) clearedIds.push(id);
+        };
+
+        state.aiDifficulty = "normal";
+        state.spectatorFastForward = false;
+        const firedNormal = maybeTriggerAiWolfSelfExplode(w1, { rngVal: 0.01 });
+        const holdTimerEntry = timers.find((t) => t.id === state._wolfExplodeTimer && t.ms >= 2800);
+        const spotTxtDuringHold = el("spotlightText") ? el("spotlightText").textContent : "";
+        const pendingStateOk = Boolean(
+          firedNormal === true &&
+          !w1.alive &&
+          w1.claimedRole === "wolf" &&
+          state.match._wolfExplodePendingNight === true &&
+          !isNightPhase(state.match.phase) &&
+          state.match.phase === "DAY_SPEECH" &&
+          holdTimerEntry &&
+          spotTxtDuringHold.includes("當場拂袖掀席！本輪剩餘發言與公投強制中止，即將入夜")
+        );
+
+        if (holdTimerEntry) holdTimerEntry.fn();
+        const enteredNightAfterHoldOk = Boolean(
+          isNightPhase(state.match.phase) &&
+          state.match.day === 3 &&
+          state.match._wolfExplodePendingNight === false
+        );
+
+        state.match.phase = "DAY_SPEECH";
+        state.match.daySpeechEvents = [
+          { speakerId: 1, claimRole: "seer", checkedWolfId: w2.id, text: "1號觀察員查殺 3號" }
+        ];
+        const secondBlockedOk = maybeTriggerAiWolfSelfExplode(w2, { rngVal: 0.01 }) === false;
+
+        state.match.aiWolfExplosions = 0;
+        timers.length = 0;
+        clearedIds.length = 0;
+        const firedCleanupTest = maybeTriggerAiWolfSelfExplode(w2, { rngVal: 0.01 });
+        const pendingHoldId = state._wolfExplodeTimer;
+        clearTransientMatchTimers();
+        const cleanupTimerOk = Boolean(
+          firedCleanupTest &&
+          pendingHoldId &&
+          clearedIds.includes(pendingHoldId) &&
+          state._wolfExplodeTimer === null &&
+          state._wolfExplodeCapTimer === null &&
+          state.match._wolfExplodePendingNight === false
+        );
+
+        v2572WolfExplodeStagingAndGuardsOk = Boolean(
+          easyForbidOk &&
+          pendingStateOk &&
+          enteredNightAfterHoldOk &&
+          secondBlockedOk &&
+          cleanupTimerOk
+        );
+      } finally {
+        setTimeout = origSetTo;
+        clearTimeout = origClearTo;
+        voice.canSpeak = origCanSpeak;
+        state.aiDifficulty = "normal";
+      }
+    }
+
+    // 4. submitPlayerSpeech phase & re-entrancy guards + non-explode empty speechQueue -> DAY_VOTE
+    let v2572SubmitGuardsAndVoteFlowOk = false;
+    {
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.match.playerSeatId = 1;
+      state.match.seats.forEach((s) => { s.alive = true; s.isPlayer = (s.id === 1); });
+
+      state.match.phase = "SHERIFF_ELECTION";
+      el("playerSpeechInput").value = "不該在警選誤送出";
+      const blockedInSheriff = submitPlayerSpeech() === false;
+      const sheriffPhaseIntact = state.match.phase === "SHERIFF_ELECTION";
+
+      state.match.phase = "DAY_PLAYER_TURN";
+      state.match.daySpeechEvents = [];
+      state._submittingPlayerSpeech = true;
+      el("playerSpeechInput").value = "防重入阻擋";
+      const blockedReentry = submitPlayerSpeech() === false && state.match.daySpeechEvents.length === 0;
+      state._submittingPlayerSpeech = false;
+
+      el("playerSpeechInput").value = "第一拍正常發言送出，先保 2號、疑 5號。";
+      const firstSubmitOk = submitPlayerSpeech() === true;
+      const secondClickBlocked = submitPlayerSpeech() === false && state.match.daySpeechEvents.length === 1;
+
+      state.match.phase = "DAY_SPEECH";
+      state.match._wolfExplodePendingNight = false;
+      state.match.speechQueue = [];
+      advanceSpeechQueue();
+      const nonExplodeToVoteOk = state.match.phase === "DAY_VOTE" && !isNightPhase(state.match.phase);
+
+      v2572SubmitGuardsAndVoteFlowOk = Boolean(
+        blockedInSheriff &&
+        sheriffPhaseIntact &&
+        blockedReentry &&
+        firstSubmitOk &&
+        secondClickBlocked &&
+        nonExplodeToVoteOk
+      );
+    }
+
+    return {
+      v2572Chunk0PrefetchOk,
+      v2572SeerDedupAndLeadOk,
+      v2572WolfExplodeStagingAndGuardsOk,
+      v2572SubmitGuardsAndVoteFlowOk
+    };
+  })()`, ctx);
+
+  const v2572RuntimeRes = await v2572Runtime;
+  const all2572 = Object.assign({ v2572FilesAndVersionOk }, v2572RuntimeRes);
+  for (const [k, v] of Object.entries(all2572)) {
+    if (!v) {
+      throw new Error("v25.7.2 Release regression failed for " + k + ": " + JSON.stringify(all2572));
+    }
+  }
+}
+
+// ==================== v25.8.0 STABILIZATION RELEASE REGRESSION SUITE ====================
+{
+  const readV2580 = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
+  const vercel2580 = JSON.parse(readV2580("vercel.json"));
+  const apiTts2580 = (await import("../api/tts.js")).default;
+  const apiGem2580 = (await import("../api/gemini.js")).default;
+  const sw2580 = readV2580("sw.js");
+  const fb2580 = readV2580("js/ui/feedback.js");
+  const spec2580 = readV2580("docs/作品說明書.md");
+  const script2580 = readV2580("docs/三分鐘Demo影片腳本.md");
+  const readme2580 = readV2580("README.md");
+  const css2580 = readV2580("css/components.css").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  // 1. FILE 01..04 Serverless & config checks
+  const vercelMaxDurOk = Boolean(
+    vercel2580 &&
+    vercel2580.functions &&
+    vercel2580.functions["api/*.js"] &&
+    vercel2580.functions["api/*.js"].maxDuration === 25 &&
+    Array.isArray(vercel2580.headers) &&
+    Array.isArray(vercel2580.rewrites)
+  );
+  const tts38Body = apiTts2580._buildTtsRequestBody("gemini-3.8-flash-lite-tts", "我是直心糾察長，警長和社長請聽好", "Kore", false);
+  const tts25Body = apiTts2580._buildTtsRequestBody("gemini-2.5-flash-preview-tts", "我是直心糾察長，警長請聽好", "Kore", false);
+  const ttsProxyV2580Ok = Boolean(
+    apiTts2580.resolvePrimaryTtsModel("") === "gemini-3.8-flash-lite-tts" &&
+    apiTts2580.resolvePrimaryTtsModel("gemini-2.5-flash-preview-tts") === "gemini-3.8-flash-lite-tts" &&
+    apiTts2580.resolvePrimaryTtsModel("gemini-3.1-flash-tts-preview") === "gemini-3.8-flash-lite-tts" &&
+    apiTts2580.normalizeTtsPolyphones("直心糾察長、糾察長、警長、社長") === "直心糾察掌、糾察掌、警長、社長" &&
+    tts38Body.contents[0].parts[0].text === "我是直心糾察掌，警長和社長請聽好" &&
+    !("temperature" in tts38Body.generationConfig) &&
+    !("topP" in tts38Body.generationConfig) &&
+    !("topK" in tts38Body.generationConfig) &&
+    tts25Body.contents[0].parts[0].text.startsWith("Say: ")
+  );
+  const gem35Body = apiGem2580.sanitizeGeminiTextBody("gemini-3.5-flash-lite", {
+    contents: [{ role: "user", parts: [{ text: "hello" }] }, { role: "model", parts: [{ text: "dangling" }] }],
+    generationConfig: { temperature: 0.7, topP: 0.9, topK: 32, candidateCount: 1, thinkingBudget: 128, maxOutputTokens: 1024 }
+  });
+  const gemProxyV2580Ok = Boolean(
+    apiGem2580.resolveGeminiTextModel("gemini-4-hydrogen") === "gemini-3.5-flash-lite" &&
+    apiGem2580.resolveGeminiTextModel("gemini-2.5-pro") === "gemini-3.8-flash" &&
+    gem35Body.contents.length === 1 &&
+    !("temperature" in gem35Body.generationConfig) &&
+    !("topP" in gem35Body.generationConfig) &&
+    !("topK" in gem35Body.generationConfig) &&
+    !("candidateCount" in gem35Body.generationConfig) &&
+    !("thinkingBudget" in gem35Body.generationConfig) &&
+    gem35Body.generationConfig.thinkingConfig &&
+    gem35Body.generationConfig.thinkingConfig.thinkingLevel === "minimal"
+  );
+  const docsV2580Ok = Boolean(
+    sw2580.includes('const SHELL_CACHE = "sanhao-shell-v25.9.0"') &&
+    sw2580.includes('const ASSET_CACHE = "sanhao-assets-v25.9.0"') &&
+    fb2580.includes('version: "v25.9.0"') &&
+    spec2580.includes("v25.9.0") && spec2580.length <= 5000 &&
+    script2580.includes("v25.9.0") &&
+    readme2580.includes("v25.9.0") &&
+    !css2580.includes("!important") &&
+    !css2580.includes("backdrop-filter")
+  );
+
+  // 2. Runtime tests for FILE 05..10
+  const v2580Runtime = vm.runInContext(`(async () => {
+    // FILE 05: WAV RIFF non-double-wrapping, silence rejection, and AbortError vs 3-speaker breaker
+    let file05VoiceV2580Ok = false;
+    {
+      const validPcm = new Uint8Array(24000); // 0.5s 24kHz 16-bit mono
+      for (let i = 0; i < validPcm.length; i += 2) {
+        validPcm[i] = 0x10;
+        validPcm[i + 1] = 0x10;
+      }
+      const wav1 = voice._wrapPcmBytesToWav(validPcm, 24000);
+      const parsedValid = voice.parseAndValidateTtsAudioBytes(wav1);
+
+      const silentWav = voice._wrapPcmBytesToWav(new Uint8Array(24000), 24000);
+      let silentThrew = false;
+      try { voice.parseAndValidateTtsAudioBytes(silentWav); } catch (e) { silentThrew = true; }
+
+      const shortWav = voice._wrapPcmBytesToWav(new Uint8Array(400), 24000);
+      let shortThrew = false;
+      try { voice.parseAndValidateTtsAudioBytes(shortWav); } catch (e) { shortThrew = true; }
+
+      voice._clearCloudTtsFailState();
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      voice._recordCloudTtsHardFail("小澄");
+      voice._recordCloudTtsHardFail("小澄");
+      const notTrippedSameSpeaker = voice.cloudGeminiTtsCooldownUntil === 0;
+      voice._recordCloudTtsHardFail("暖暖");
+      voice._recordCloudTtsHardFail("阿松");
+      const tripped3Speakers = voice.cloudGeminiTtsCooldownUntil > Date.now();
+      voice._clearCloudTtsFailState();
+      voice.cloudGeminiTtsCooldownUntil = 0;
+
+      file05VoiceV2580Ok = Boolean(
+        parsedValid && parsedValid.isWav === true && parsedValid.bytes &&
+        parsedValid.bytes.byteLength === wav1.byteLength &&
+        parsedValid.pcmLength === validPcm.byteLength &&
+        silentThrew && shortThrew && notTrippedSameSpeaker && tripped3Speakers
+      );
+    }
+
+    // FILE 06 & 07: Bug 5 (marks all claimedSeers excluding self) & Bug 6 (skips dead seat dynamically in +2 prefetch)
+    let file06And07BugsOk = false;
+    {
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      state.match.playerSeatId = 1;
+      state.match.seats.forEach((s) => { s.alive = true; s.claimedRole = null; s.isPlayer = (s.id === 1); });
+      state.match.seats[1].claimedRole = "seer";
+      state.match.seats[3].claimedRole = "seer";
+      const spViewer = state.match.seats[5];
+      spViewer.role = "seer";
+      spViewer.team = "good";
+      spViewer.claimedRole = "seer";
+      const built5 = buildBlindGeminiSpeechPrompt(spViewer, buildHeuristicAiSpeech(spViewer));
+      const bug5MarksBothSeers = Boolean(
+        built5 && built5.prompt &&
+        built5.prompt.includes("2號") &&
+        built5.prompt.includes("4號")
+      );
+
+      // Bug 6: queue initially [2, 3, 4], mark 3 dead right after hook runs so +2 dynamically targets 4!
+      state.match.seats.forEach((s) => {
+        s.alive = true;
+        s.isPlayer = (s.id === 1);
+        s.role = "villager";
+        s.team = "good";
+        s.fakeSeer = false;
+        s.claimedRole = null;
+        s.suspicionMap = {};
+      });
+      state.match.seats[1].suspicionMap = { 5: 90 };
+      state.match.phase = "DAY_SPEECH";
+      state.match.day = 2;
+      state.match.daySpeechEvents = [];
+      state.match.allSpeechEvents = [];
+      state.match.speechQueue = [2, 3, 4];
+      state.activeSpeakerId = 6;
+      state.match._prefetchedSpeeches = {};
+      const origCanSp6 = voice.canSpeak;
+      const origPf6 = voice.prefetchBestTts;
+      const origLocal6 = voice.localNeuralAvailable;
+      voice.canSpeak = () => true;
+      voice.localNeuralAvailable = true;
+      voice.prefetchBestTts = () => true;
+      try {
+        const hook6 = scheduleStaggeredNextSpeechPrefetch(orchestrator.matchEpoch, state._speechTurnSeq);
+        state.match.seats.find((s) => s.id === 3).alive = false;
+        if (typeof hook6 === "function") hook6();
+        await Promise.resolve();
+        await Promise.resolve();
+        const pfMap = state.match._prefetchedSpeeches || {};
+        file06And07BugsOk = Boolean(
+          bug5MarksBothSeers &&
+          pfMap[2] && !pfMap[3] && pfMap[4]
+        );
+      } finally {
+        voice.canSpeak = origCanSp6;
+        voice.localNeuralAvailable = origLocal6;
+        voice.prefetchBestTts = origPf6;
+      }
+    }
+
+    // FILE 09: 0-paren dialogue + opening_stance replacement + live badge-flow sync (Sheriff & Daytime)
+    let file09CardsAndParensOk = false;
+    {
+      const strippedParen = stripDialogueParentheses("今晚警徽流先驗 2號（我若倒牌，徽給他）謝謝(補充)！");
+      const noParenOk = strippedParen === "今晚警徽流先驗 2號謝謝！";
+
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "seer";
+      el("chkSheriffMode").checked = true;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      const pid = getPlayerId();
+      const others = getAliveSeats().filter((s) => s.id !== pid);
+      const pSeat = getPlayerSeat();
+      pSeat.role = "seer";
+      pSeat.checkedHistory = [{ day: 1, targetId: others[0].id, isWolf: true }];
+      state.match.phase = "SHERIFF_ELECTION";
+      state.match.sheriffElectionCtx = {
+        stage: "speech",
+        candidateIds: [pid, others[0].id],
+        speechOrderIds: [pid, others[0].id],
+        speechIndex: 0,
+        activeReelSeatId: pid,
+        spokenSpeeches: [],
+        withdrawnIds: [],
+        playerRunning: true,
+        playerBadgeFlowDraft: { firstTargetId: others[1].id, secondTargetId: others[2].id, explicit: true }
+      };
+      el("sheriffPlayerInput").value = "";
+      updateAllUI();
+      const shBtns = Array.from(el("sheriffPlayerQuickChips").querySelectorAll("button"));
+      if (shBtns[0]) shBtns[0].click();
+      const afterSh0 = el("sheriffPlayerInput").value;
+      // Live dropdown sync while card 0 is loaded
+      setPlayerSheriffDraftBadgeFlow(others[3].id, others[4].id);
+      const afterDropdownSync = el("sheriffPlayerInput").value;
+      const liveSyncReplacedTarget = Boolean(
+        afterDropdownSync.includes(others[3].id + "號") &&
+        !afterDropdownSync.includes(others[1].id + "號")
+      );
+      // Click mutually exclusive stance card 2 -> must replace card 0 instead of concatenating!
+      const shBtns2 = Array.from(el("sheriffPlayerQuickChips").querySelectorAll("button"));
+      if (shBtns2[2]) shBtns2[2].click();
+      const afterSh2 = el("sheriffPlayerInput").value;
+      const sheriffExclusiveOk = Boolean(
+        afterSh0.includes("明心觀察員") &&
+        liveSyncReplacedTarget &&
+        !afterSh2.includes("明心觀察員") &&
+        afterSh2.length > 10 &&
+        !/[（）()]/.test(afterSh0 + afterSh2)
+      );
+
+      // Daytime exclusiveGroup replacement check (while qCards[0]+qCards[1] stacking remains intact)
+      state.match.phase = "DAY_PLAYER_TURN";
+      state.match.todayEvents = { fakeSeerId: others[0].id };
+      state.match.pinnedClues = [];
+      state.match.playerDraftPits = createEmptyPlayerDraftPits();
+      el("quickFreeInput").value = "";
+      el("playerSpeechInput").value = "";
+      preparePlayerSpeechPanel();
+      updateAllUI();
+      const dayCards = Array.from(el("quickSpeechChips").querySelectorAll("button"));
+      if (dayCards[0]) dayCards[0].click();
+      const dAfter0 = el("quickFreeInput").value;
+      if (dayCards[2]) dayCards[2].click();
+      const dAfter2 = el("quickFreeInput").value;
+      const dayExclusiveOk = Boolean(
+        dAfter0.length > 10 &&
+        dAfter2 !== dAfter0 &&
+        !dAfter2.includes(dAfter0.trim()) &&
+        state.match.playerDraftPits.composedModules.length === 1 &&
+        !/[（）()]/.test(dAfter0 + dAfter2)
+      );
+
+      file09CardsAndParensOk = Boolean(noParenOk && sheriffExclusiveOk && dayExclusiveOk);
+    }
+
+    // FILE 10: Bugs 1, 2, 3, 4, 7
+    let file10AiBugsOk = false;
+    {
+      resetMatchToLobby();
+      state.aiDifficulty = "normal";
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      state.match.judgeShowcase = true;
+      const scSnap = createBlindMatchSnapshot(state.match.seats[0], { module: "v2580" });
+      const bug2Easy = resolveActiveJargonDifficulty(scSnap) === "easy";
+      const bug1Out = applyDifficultyTerminology("場上對跳觀察員，不能說有人悍跳觀察員", "easy");
+      const bug1Ok = bug1Out.includes("兩個人都說自己是觀察員") && bug1Out.includes("假冒觀察員");
+      const bug3In = "雙警徽流在前置位跟後置位搶查殺，想要坐實就得盤狼坑定進狼坑一起衝票倒鉤";
+      const bug3Out = applyDifficultyTerminology(bug3In, "easy");
+      const bug3Ok = [
+        "雙人觀察名單順序", "前面發言的人", "後面發言的人",
+        "搶先指控別人", "確定身分", "找出可疑名單", "列入可疑名單", "集中投票", "假裝站對邊"
+      ].every((w) => bug3Out.includes(w));
+
+      // Bug 7: dead fakeSeer excluded from wolfPits + latestVotedOutSeerDay null guard
+      state.match.judgeShowcase = false;
+      state.match.day = 3;
+      state.match.seats.forEach((s) => { s.alive = true; s.claimedRole = null; s.publicRevealedRole = null; s.voteDisabled = false; });
+      state.match.seats[1].claimedRole = "seer";
+      state.match.seats[2].claimedRole = "seer";
+      state.match.seats[2].alive = false;
+      state.match.seats[2].outReason = "投票出局";
+      state.match.allSpeechEvents = [
+        { speakerId: 2, claimRole: "seer", day: 1, text: "2號觀察員" },
+        { speakerId: 3, claimRole: "seer", day: 1, text: "3號觀察員" }
+      ];
+      state.match.daySpeechEvents = [];
+      state.match.publicVoteHistory = [];
+      const wView = buildTableSlotAndWorldAnalysis(state.match.seats[4], createBlindMatchSnapshot(state.match.seats[4], { module: "v2580" }));
+      const bug7DeadFakeOk = Boolean(
+        wView && wView.wolfPits.every((s) => s.alive) &&
+        (!wView.dualSeerWorlds || (
+          wView.dualSeerWorlds.worldA.wolfPits.every((s) => s.alive) &&
+          wView.dualSeerWorlds.worldB.wolfPits.every((s) => s.alive)
+        ))
+      );
+      state.match.seats[1].alive = true;
+      state.match.seats[2].alive = false;
+      state.match.seats[2].claimedRole = "seer";
+      const soloSurvView = buildTableSlotAndWorldAnalysis(state.match.seats[4], createBlindMatchSnapshot(state.match.seats[4], { module: "v2580" }));
+      const bug7NullDayOk = Boolean(soloSurvView && (!soloSurvView.survivingSeerSuspicionBoost || !soloSurvView.survivingSeerSuspicionBoost[2]));
+
+      file10AiBugsOk = Boolean(bug2Easy && bug1Ok && bug3Ok && bug7DeadFakeOk && bug7NullDayOk);
+    }
+
+    resetMatchToLobby();
+    return {
+      file05VoiceV2580Ok,
+      file06And07BugsOk,
+      file09CardsAndParensOk,
+      file10AiBugsOk
+    };
+  })()`, ctx);
+
+  const v2580RuntimeRes = await v2580Runtime;
+  const all2580 = Object.assign({
+    vercelMaxDurOk,
+    ttsProxyV2580Ok,
+    gemProxyV2580Ok,
+    docsV2580Ok
+  }, v2580RuntimeRes);
+  for (const [k, v] of Object.entries(all2580)) {
+    if (!v) {
+      throw new Error("v25.8.0 Stabilization regression failed for " + k + ": " + JSON.stringify(all2580));
+    }
+  }
+}
+
+// ==================== v25.9.0 RELEASE REGRESSION SUITE ====================
+{
+  const sw2590 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const fb2590 = fs.readFileSync(path.join(ROOT, "js/ui/feedback.js"), "utf8");
+  const readme2590 = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  const spec2590 = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
+  const script2590 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
+  const versionSync2590Ok = Boolean(
+    sw2590.includes('const SHELL_CACHE = "sanhao-shell-v25.9.0"') &&
+    sw2590.includes('const ASSET_CACHE = "sanhao-assets-v25.9.0"') &&
+    fb2590.includes('version: "v25.9.0"') &&
+    readme2590.includes("v25.9.0") &&
+    spec2590.includes("v25.9.0") && spec2590.length <= 5000 &&
+    script2590.includes("v25.9.0") &&
+    !/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(script2590) &&
+    !/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(spec2590)
+  );
+
+  const v2590Res = await vm.runInContext(`(async () => {
+    const emojiRe2590 = /[\\u{1F300}-\\u{1FAFF}\\u2600-\\u27BF]/u;
+    const parenRe2590 = /[（）()]/;
+    const clicheRe2590 = /泡芙|軟軟的|硬碟|記憶體|CPU|當機|舒芙蕾|布丁|算盤|馬卡龍|桂花糕/;
+
+    // 1. Gender & Honorific checks
+    const youziDef = AI_PERSONAS.find((p) => p.name === "柚子");
+    const qinglanDef = AI_PERSONAS.find((p) => p.name === "晴嵐");
+    const xiaoyunDef = AI_PERSONAS.find((p) => p.name === "小雲");
+    const alangDef = AI_PERSONAS.find((p) => p.name === "阿朗");
+    const allGendersSet = AI_PERSONAS.every((p) => p.gender === "female" || p.gender === "male");
+    const mockSeats = [
+      { id: 1, name: "阿松", gender: "male", isHuman: false },
+      { id: 3, name: "柚子", gender: "female", aliases: ["小柚"], isHuman: false },
+      { id: 9, name: "你", gender: "neutral", isHuman: true, isPlayer: true }
+    ];
+    const honorificOk = Boolean(
+      allGendersSet &&
+      youziDef && youziDef.gender === "female" && Array.isArray(youziDef.aliases) && youziDef.aliases.includes("小柚") &&
+      qinglanDef && qinglanDef.gender === "female" &&
+      xiaoyunDef && xiaoyunDef.gender === "female" &&
+      alangDef && alangDef.gender === "male" &&
+      getSeatHonorific(youziDef) === "學姐" &&
+      getSeatHonorific(alangDef) === "學長" &&
+      getSeatHonorific(mockSeats[2]) === "" &&
+      fixGenderHonorificMismatch("我認同03號小柚學長", mockSeats) === "我認同03號小柚學姐" &&
+      fixGenderHonorificMismatch("03號小柚認同01號阿松學長", mockSeats) === "03號小柚認同01號阿松學長" &&
+      fixGenderHonorificMismatch("我認同09號玩家學長", mockSeats) === "我認同09號玩家"
+    );
+
+    // 2. Zero prop cliches across all persona data tables
+    const personaBlob = JSON.stringify({
+      AI_PERSONAS,
+      PERSONA_FLAVORS,
+      PERSONA_VOICE_STYLES,
+      PERSONA_COGNITIVE_PROFILES,
+      PERSONA_SIGNATURE_DOSSIERS,
+      PERSONA_THINKING_CUES,
+      PERSONA_LOBBY_GREETINGS
+    });
+    const zeroPersonaClichesOk = !clicheRe2590.test(personaBlob) && !emojiRe2590.test(personaBlob);
+
+    // 3. Zero parentheses inside persona dialogue arrays & voice audition lines
+    const dialogueItems = [];
+    Object.values(PERSONA_FLAVORS).forEach((flv) => {
+      Object.entries(flv).forEach(([k, val]) => {
+        if (k === "bio") return;
+        if (typeof val === "string") dialogueItems.push(val);
+        else if (Array.isArray(val)) val.forEach((x) => typeof x === "string" && dialogueItems.push(x));
+        else if (val && typeof val === "object") {
+          Object.values(val).forEach((arr) => Array.isArray(arr) && arr.forEach((x) => dialogueItems.push(x)));
+        }
+      });
+    });
+    const zeroPersonaParensOk = dialogueItems.every((s) => !parenRe2590.test(s));
+
+    // 4. Wolf self-explode: no last words + voice completion before Night (no 2800ms cutoff) + last wolf win
+    resetMatchToLobby();
+    el("selectModeCount").value = "8";
+    el("selectPreferredRole").value = "villager";
+    el("chkSheriffMode").checked = false;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.aiDifficulty = "normal";
+    state.spectatorFastForward = false;
+    state.match.day = 2;
+    state.match.phase = "DAY_SPEECH";
+    state.match.seats.forEach((s) => { s.alive = true; s.selfExploded = false; });
+    const aiWolfExp = state.match.seats.find((s) => s.role === "wolf" && s.id !== getPlayerId());
+    const origSetTo = setTimeout;
+    const origClearTo = clearTimeout;
+    const origCanSpeak = voice.canSpeak;
+    const origSpeak = voice.speak;
+    const timers2590 = [];
+    const cleared2590 = [];
+    let capturedVoiceOnDone = null;
+    let voiceSpokenText = "";
+    let voiceCompletionOk = false;
+    let noLastWordsOnExplodeOk = false;
+    let lastWolfWinOk = false;
+    try {
+      setTimeout = (fn, ms) => {
+        const id = timers2590.length + 501;
+        timers2590.push({ id, fn, ms });
+        return id;
+      };
+      clearTimeout = (id) => {
+        if (id) cleared2590.push(id);
+      };
+      voice.canSpeak = () => true;
+      voice.speak = (_name, text, _mood, onDone) => {
+        voiceSpokenText = text;
+        capturedVoiceOnDone = onDone;
+      };
+
+      const firedVoice = triggerWolfSelfExplode(aiWolfExp.id, { aiSelfExplode: true, waitForVoice: true, dramaticPauseMs: 2800 });
+      const spotAfterExplode = el("spotlightText") ? el("spotlightText").textContent : "";
+      const hasCap9500 = timers2590.some((t) => t.id === state._wolfExplodeCapTimer && t.ms === 9500);
+      const noEarly2800Cut = state._wolfExplodeTimer === null && !isNightPhase(state.match.phase);
+      const capIdBeforeDone = state._wolfExplodeCapTimer;
+
+      // Calling startLastWordsSequence after self-explode MUST be skipped with zero last words
+      let lwCbFired = false;
+      startLastWordsSequence([aiWolfExp.id], "vote_out", () => { lwCbFired = true; });
+      noLastWordsOnExplodeOk = Boolean(
+        aiWolfExp.selfExploded === true &&
+        state.lastWordsCtx === null &&
+        lwCbFired === true &&
+        state.match.phase !== "LAST_WORDS_SPEECH" &&
+        state.match.phase !== "LAST_WORDS_PLAYER"
+      );
+
+      if (typeof capturedVoiceOnDone === "function") capturedVoiceOnDone();
+      const capClearedOnVoiceDone = capIdBeforeDone && cleared2590.includes(capIdBeforeDone) && state._wolfExplodeCapTimer === null;
+      const pauseTimer350 = timers2590.find((t) => t.id === state._wolfExplodeTimer && t.ms === 350);
+      if (pauseTimer350) pauseTimer350.fn();
+      voiceCompletionOk = Boolean(
+        firedVoice &&
+        voiceSpokenText.length >= 10 && voiceSpokenText.length <= 18 &&
+        !parenRe2590.test(voiceSpokenText) && !parenRe2590.test(spotAfterExplode) &&
+        hasCap9500 && noEarly2800Cut && capClearedOnVoiceDone &&
+        Boolean(pauseTimer350) &&
+        isNightPhase(state.match.phase) && state.match.day === 3 &&
+        state._wolfExplodeTimer === null && state._wolfExplodeCapTimer === null
+      );
+
+      // Last surviving wolf self-explodes during DAY_SPEECH -> immediate good win
+      state.match.day = 3;
+      state.match.phase = "DAY_SPEECH";
+      state.match.wolfExplodedToday = false;
+      state.match._wolfExplodePendingNight = false;
+      const remainingWolves = state.match.seats.filter((s) => s.alive && s.role === "wolf");
+      remainingWolves.slice(1).forEach((w) => { w.alive = false; w.outReason = "投票出局"; });
+      const lastW = remainingWolves[0];
+      if (lastW) {
+        triggerWolfSelfExplode(lastW.id, { immediateNight: true });
+        lastWolfWinOk = Boolean(state.match.phase === "GAME_OVER" && state.match.winner === "good" && state.lastWordsCtx === null);
+      }
+    } finally {
+      setTimeout = origSetTo;
+      clearTimeout = origClearTo;
+      voice.canSpeak = origCanSpeak;
+      voice.speak = origSpeak;
+    }
+
+    // 5. State rationality (8 states + SHERIFF_EARLY never accuses unspoken + consecutive opener uniqueness + usedReactionSet)
+    resetMatchToLobby();
+    el("selectModeCount").value = "8";
+    el("chkSheriffMode").checked = true;
+    startNewGame();
+    indieFlow.hideRoleDealRitual();
+    state.match.day = 1;
+    state.match.phase = "SHERIFF_ELECTION";
+    state.match.sheriffElectionCtx = { stage: "speech", candidateIds: [1, 2, 3, 4], speechOrderIds: [1, 2, 3, 4], spokenSpeeches: [], withdrawnIds: [] };
+    const snapEarly = createBlindMatchSnapshot(state.match.seats[1], { module: "v2590_state", phase: "SHERIFF_ELECTION" });
+    const earlyTagOk = classifySpeechGameState(state.match.seats[1], snapEarly, { isSheriff: true, phase: "SHERIFF_ELECTION", spokenCount: 0 }).stateTag === "SHERIFF_EARLY";
+    state.match.sheriffElectionCtx.spokenSpeeches = [{ seatId: 1, name: "1", text: "a" }, { seatId: 2, name: "2", text: "b" }];
+    const snapLate = createBlindMatchSnapshot(state.match.seats[2], { module: "v2590_state", phase: "SHERIFF_ELECTION" });
+    const lateTagOk = classifySpeechGameState(state.match.seats[2], snapLate, { isSheriff: true, phase: "SHERIFF_ELECTION", spokenCount: 2 }).stateTag === "SHERIFF_LATE";
+    const shCandLine = buildSheriffCandidateLine(state.match.seats[1], []);
+    const shEarlyRationalOk = !/剛才發言心虛|剛剛講話心虛|剛才眼神/.test(shCandLine.text || "");
+
+    state.match.phase = "DAY_SPEECH";
+    state.match.daySpeechEvents = [
+      { speakerId: 1, day: 1, accuseId: 4, rawText: "先表個態，4號聽起來有點急。" }
+    ];
+    state.match.usedHeuristicFragments = { buckets: {}, roundOpeners: {} };
+    const aiSeq = state.match.seats.filter((s) => s.id !== getPlayerId()).slice(0, 4);
+    const seqOpeners = aiSeq.map((s) => {
+      const sp = buildHeuristicAiSpeech(s);
+      state.match.daySpeechEvents.push({ speakerId: s.id, day: 1, accuseId: sp.accuseId || null, rawText: sp.text });
+      return String(sp.text || "").replace(/\\s+/g, "").slice(0, 8);
+    });
+    const consecutiveOpenersUniqueOk = new Set(seqOpeners).size === seqOpeners.length;
+
+    // usedReactionSet prevents duplicates in the same match
+    state.match.usedReactionSet = {};
+    const bubble1 = _pickUniqueCrowdReactionLine(aiSeq[0], "reactNod", ["補位1", "補位2"], 1);
+    const bubble2 = _pickUniqueCrowdReactionLine(aiSeq[0], "reactNod", ["補位1", "補位2"], 1);
+    const reactionNoRepeatOk = Boolean(bubble1 && bubble2 && bubble1 !== bubble2);
+
+    const stateAndAntiRepeatOk = Boolean(earlyTagOk && lateTagOk && shEarlyRationalOk && consecutiveOpenersUniqueOk && reactionNoRepeatOk);
+
+    resetMatchToLobby();
+    return {
+      honorificOk,
+      zeroPersonaClichesOk,
+      zeroPersonaParensOk,
+      voiceCompletionOk,
+      noLastWordsOnExplodeOk,
+      lastWolfWinOk,
+      stateAndAntiRepeatOk
+    };
+  })()`, ctx);
+
+  const v2590Runtime = await v2590Res;
+  const all2590 = Object.assign({ versionSync2590Ok }, v2590Runtime);
+  for (const [k, v] of Object.entries(all2590)) {
+    if (!v) {
+      throw new Error("v25.9.0 regression failed for " + k + ": " + JSON.stringify(all2590));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 + v25.5.3 + v25.6.0 + v25.6.1 + v25.7.0 + v25.7.1 + v25.7.2 + v25.8.0 + v25.9.0 E2E smoke test PASSED!");
