@@ -91,8 +91,30 @@ function applyDifficultyTerminology(rawText, diffArg, snapArg) {
   if (!rawText || typeof rawText !== "string") return rawText;
   const diff = diffArg || resolveActiveJargonDifficulty(snapArg);
   if (diff === "pro") return rawText;
-  const pairs = diff === "easy" ? EASY_JARGON_REPLACEMENTS : NORMAL_JARGON_REPLACEMENTS;
   let out = rawText;
+  if (diff === "easy") {
+    out = out
+      .replace(/給\s*(\d+\s*號)\s*(?:假)?(?:鐵)?金水/g, "向大家報 $1 是查過的好人")
+      .replace(/發\s*(\d+\s*號)\s*(?:假)?(?:鐵)?金水/g, "查驗 $1 是好人")
+      .replace(/(?:假)?發(?:過)?(?:好人)?\s*(?:鐵)?金水/g, "報出查驗過的好人")
+      .replace(/(?:報|發|給)?\s*查殺\s*(\d+\s*號)/g, "查出 $1 在說謊")
+      .replace(/(\d+\s*號)\s*(?:是|為)\s*(?:鐵)?金水/g, "$1 是確定查過的好人")
+      .replace(/(\d+\s*號)\s*(?:是|為)\s*查殺/g, "$1 被查出在說謊")
+      .replace(/(\d+\s*號)\s*(?:是|為)\s*銀水/g, "$1 是昨晚被救回來的人")
+      .replace(/歸票(?:請)?(?:出)?\s*(\d+\s*號)/g, "建議大家集中投 $1")
+      .replace(/直接(?:標|進)定進?狼坑/g, "直接列進可疑名單")
+      .replace(/(?:進|標進)定狼坑/g, "列進可疑名單")
+      .replace(/定進狼坑/g, "確定列進可疑名單")
+      .replace(/(?:悍跳|對跳|跳假)\s*(明心觀察員|觀察員)/g, "假冒$1")
+      .replace(/被\s*外置位抗推/g, "被其他還沒表態的人誤會投出局")
+      .replace(/被\s*抗推/g, "被誤會投出局")
+      .replace(/互相\s*抗推/g, "互相誤會投錯人")
+      .replace(/把\s*(\d+\s*號)\s*抗推/g, "誤把 $1 投出局")
+      .replace(/站邊\s*(\d+\s*號)/g, "支持 $1");
+  } else {
+    out = out.replace(/被\s*外置位抗推/g, "在旁邊被當成替罪羊投出局");
+  }
+  const pairs = diff === "easy" ? EASY_JARGON_REPLACEMENTS : NORMAL_JARGON_REPLACEMENTS;
   for (let i = 0; i < pairs.length; i++) {
     const term = pairs[i][0];
     const repl = pairs[i][1];
@@ -102,6 +124,10 @@ function applyDifficultyTerminology(rawText, diffArg, snapArg) {
   }
   if (diff === "easy") {
     out = out
+      .replace(/被\s*被誤會/g, "被誤會")
+      .replace(/建議大家集中投誰\s*(?:出|投)?\s*(\d+\s*號)/g, "建議大家集中投 $1")
+      .replace(/假冒\s*身分\s*(明心觀察員|觀察員)/g, "假冒$1")
+      .replace(/是\s*是/g, "是")
       .replace(/查過是好人\s*好人/g, "查過是好人")
       .replace(/名單\s*名單/g, "名單")
       .replace(/兩個人搶同一個身分了/g, "同時爭搶了");

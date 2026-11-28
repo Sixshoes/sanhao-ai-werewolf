@@ -467,6 +467,13 @@ const voice = {
       .replace(/[｜|·・—]/g, "，")
       .replace(/：(?=\S)/g, "，")
       .replace(/(?<![，。！？\s])(我是明心觀察員|我是滴水奉茶師|我是護心守衛|我是直心糾察長)/g, "，$1")
+      .replace(/直心糾察長/g, "直心糾察掌")
+      .replace(/糾察長/g, "糾察掌")
+      .replace(/警長/g, "警掌")
+      .replace(/清心長老/g, "清心掌老")
+      .replace(/長老/g, "掌老")
+      .replace(/社長/g, "社掌")
+      .replace(/學長/g, "學掌")
       .replace(/…+/g, "…")
       .replace(/，{2,}/g, "，")
       .replace(/^，+/, "")
@@ -1469,11 +1476,19 @@ const voice = {
 
   lookupBundledVoicePackUrl: function (effKey, cleanText) {
     if (!cleanText) return null;
-    if (effKey === "主持" && HOST_VOICE_PACK_MAP[cleanText]) {
-      return HOST_VOICE_PACK_MAP[cleanText];
+    const normalizedPackText = String(cleanText)
+      .replace(/直心糾察掌/g, "直心糾察長")
+      .replace(/糾察掌/g, "糾察長")
+      .replace(/警掌/g, "警長")
+      .replace(/清心掌老/g, "清心長老")
+      .replace(/掌老/g, "長老")
+      .replace(/社掌/g, "社長")
+      .replace(/學掌/g, "學長");
+    if (effKey === "主持" && HOST_VOICE_PACK_MAP[normalizedPackText]) {
+      return HOST_VOICE_PACK_MAP[normalizedPackText];
     }
     const zhSeatMap = { "十二": "12", "十一": "11", "十": "10", "九": "9", "八": "8", "七": "7", "六": "6", "五": "5", "四": "4", "三": "3", "二": "2", "一": "1" };
-    const compact = String(cleanText)
+    const compact = normalizedPackText
       .replace(/\s+/g, "")
       .replace(/^，+/, "")
       .replace(/(十二|十一|[一二三四五六七八九十])號/g, function (_m, g1) { return (zhSeatMap[g1] || g1) + "號"; });
@@ -1540,9 +1555,10 @@ const voice = {
     const effKey = this.resolvePersonaKey(personaName);
     const cleanText = this.formatMandarinText(rawText);
     if (!cleanText) return;
-    if (effKey === "主持" && HOST_VOICE_PACK_MAP[cleanText]) {
+    const hostPackUrl = this.lookupBundledVoicePackUrl(effKey, cleanText);
+    if (effKey === "主持" && hostPackUrl) {
       // Preload bundled host MP3 into RAM for 0ms playback!
-      const url = HOST_VOICE_PACK_MAP[cleanText];
+      const url = hostPackUrl;
       if (!this.hostPackCache[url] && typeof fetch === "function") {
         const self = this;
         fetch(url)
@@ -1661,22 +1677,9 @@ const voice = {
 
   _buildGeminiTtsPayload: function (profile, effKey, cleanText, mood) {
     const voiceName = (profile && profile.studioVoice) || "Kore";
-    const baseDir = PERSONA_TTS_DIRECTIONS[effKey] || "自然親切的台灣年輕人日常口語";
-    const moodDirMap = {
-      panic: "略帶緊張急促與真實換氣感，急著替自己澄清",
-      accuse: "語氣堅定有張力、重音落在關鍵疑點上，像真人圓桌推理對質",
-      claim_seer: "語氣鄭重篤定、亮出底牌號召全場信任",
-      rebut: "語氣果決反擊、直接點破對方矛盾",
-      trust: "語氣溫和真誠、像對夥伴點頭肯定",
-      happy: "語氣輕快自然、帶著淺淺笑意",
-      last_words: "語氣沉靜略帶感慨、像離席前的真心叮嚀",
-      host_night: "語氣低沉溫潤、營造靜謐山城夜色",
-      host_dawn: "語氣清朗明快、揭曉天亮結果"
-    };
-    const stylePrompt = baseDir + "；" + (moodDirMap[mood] || "自然流暢像圍坐木桌泡茶聊天，有真實抑揚頓挫與呼吸感");
     const taggedTranscript = this.injectGeminiVocalTags(cleanText, effKey, mood || "normal");
     const cacheKey = voiceName + ":" + effKey + ":" + (mood || "normal") + ":" + cleanText;
-    return { voiceName: voiceName, stylePrompt: stylePrompt, taggedTranscript: taggedTranscript, cacheKey: cacheKey };
+    return { voiceName: voiceName, stylePrompt: "", taggedTranscript: taggedTranscript, cacheKey: cacheKey };
   },
 
   _fetchGeminiStudioAudio: function (profile, effKey, cleanText, mood) {
@@ -1715,7 +1718,7 @@ const voice = {
               signal: reqCtrl ? reqCtrl.signal : undefined,
               body: JSON.stringify({
                 voice: payload.voiceName,
-                style: payload.stylePrompt,
+                style: "",
                 text: txtToSend
               })
             });
@@ -1793,7 +1796,7 @@ const voice = {
             signal: controller ? controller.signal : undefined,
             body: JSON.stringify({
               voice: payload.voiceName,
-              style: payload.stylePrompt,
+              style: "",
               text: payload.taggedTranscript
             })
           });
@@ -1805,29 +1808,17 @@ const voice = {
         // Track C: Direct browser Gemini TTS (2.5 Flash Preview -> 3.1 Flash TTS Preview with stripped tags)
         if (!audioBytes && hasPersonalKey) {
           const strippedForFallback = self.stripGeminiVocalTags(cleanText) || cleanText;
-          const ttsPrompt25 = payload.stylePrompt
-            ? ("請用以下口吻自然唸出（不要唸出指示）：" + payload.stylePrompt + "\n" + strippedForFallback)
-            : strippedForFallback;
           const fallbackVoiceMap = { Orus: "Puck", Enceladus: "Puck", Achird: "Charon", Iapetus: "Puck", Fenrir: "Puck", Leda: "Zephyr", Aoede: "Zephyr", Callirrhoe: "Zephyr", Autonoe: "Zephyr", Laomedeia: "Zephyr", Vindemiatrix: "Zephyr", Sulafat: "Zephyr" };
           const fbVoice = fallbackVoiceMap[payload.voiceName] || "";
-          const hasTagsDiff = strippedForFallback !== payload.taggedTranscript;
           const directModels = ["gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview"];
           for (let mi = 0; mi < directModels.length && !audioBytes; mi++) {
             const directModelId = directModels[mi];
-            const is38Direct = directModelId.indexOf("gemini-3.8-") === 0;
-            const attempts = is38Direct
-              ? ((fbVoice || hasTagsDiff)
-                ? [{ voice: payload.voiceName, stripped: false }, { voice: fbVoice || payload.voiceName, stripped: true }]
-                : [{ voice: payload.voiceName, stripped: false }])
-              : (fbVoice
-                ? [{ voice: payload.voiceName, stripped: true }, { voice: fbVoice, stripped: true }]
-                : [{ voice: payload.voiceName, stripped: true }]);
+            const attempts = fbVoice
+              ? [{ voice: payload.voiceName }, { voice: fbVoice }]
+              : [{ voice: payload.voiceName }];
             for (let vi = 0; vi < attempts.length && !audioBytes; vi++) {
               const att = attempts[vi];
-              const txt38 = att.stripped ? strippedForFallback : payload.taggedTranscript;
-              const partObj = is38Direct
-                ? (payload.stylePrompt ? { text: txt38, speechMetadata: { style: payload.stylePrompt } } : { text: txt38 })
-                : { text: ttsPrompt25 };
+              const partObj = { text: strippedForFallback };
               let res = null;
               try {
                 res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(directModelId) + ":generateContent", {
@@ -1935,11 +1926,11 @@ const voice = {
 
   _splitTextForCloudTts: function (cleanText, maxChunkLen) {
     const s = String(cleanText || "").trim();
-    const maxLen = (typeof maxChunkLen === "number" && maxChunkLen >= 24) ? maxChunkLen : 42;
-    if (!s || s.length <= maxLen + 8) return s ? [s] : [];
+    const maxLen = (typeof maxChunkLen === "number" && maxChunkLen >= 24) ? maxChunkLen : 120;
+    if (!s || s.length <= maxLen) return s ? [s] : [];
     const chunks = [];
     let rest = s;
-    while (rest.length > maxLen + 8) {
+    while (rest.length > maxLen) {
       let cut = -1;
       const hi = Math.min(maxLen, rest.length - 12);
       // Prefer terminal sentence punctuation within [16, hi]
@@ -1961,7 +1952,9 @@ const voice = {
           }
         }
       }
-      if (cut === -1 || rest.length - cut < 10) break;
+      if (cut === -1 || rest.length - cut < 10) {
+        cut = Math.min(maxLen, Math.ceil(rest.length / 2));
+      }
       chunks.push(rest.slice(0, cut).trim());
       rest = rest.slice(cut).trim();
     }
@@ -1980,10 +1973,10 @@ const voice = {
     const cleanText = this.formatMandarinText(rawText);
     if (!cleanText || this.lookupBundledVoicePackUrl(effKey, cleanText)) return;
     const profile = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["你"];
-    const chunks = this._splitTextForCloudTts(cleanText, 42);
+    const chunks = this._splitTextForCloudTts(cleanText, 120);
     if (chunks.length > 1) {
-      // Prefetch ONLY chunk 0 (<=42 chars -> fast synthesis) sequentially to avoid concurrent upstream bursts
       this._fetchGeminiStudioAudio(profile, effKey, chunks[0], mood || "normal");
+      this._fetchGeminiStudioAudio(profile, effKey, chunks[1], mood || "normal");
       return;
     }
     this._fetchGeminiStudioAudio(profile, effKey, cleanText, mood || "normal");
@@ -2022,7 +2015,7 @@ const voice = {
     const moodNow = mood || "normal";
     const fullPayload = this._buildGeminiTtsPayload(profile, effKey, cleanText, moodNow);
     const hasWarmFull = Boolean(this.studioCache[fullPayload.cacheKey] || this.studioPending[fullPayload.cacheKey]);
-    const chunks = !hasWarmFull ? this._splitTextForCloudTts(cleanText, 42) : [cleanText];
+    const chunks = !hasWarmFull ? this._splitTextForCloudTts(cleanText, 120) : [cleanText];
     if (chunks.length > 1) {
       const self = this;
       const chunkPromises = new Array(chunks.length);
@@ -2039,8 +2032,9 @@ const voice = {
         }
         return chunkPromises[idx];
       };
-      // Fetch ONLY chunk 0 sequentially; chunk 1 prefetches as soon as chunk 0 starts playing in playChunkAt
+      // Dispatch chunk 0 & chunk 1 in parallel for seamless playback across >120-char speeches
       const headP = ensureChunkFetch(0);
+      ensureChunkFetch(1);
       const headBuf = await headP;
       if (!headBuf || seq !== this.utteranceSeq) return false;
 
@@ -2142,7 +2136,6 @@ const voice = {
           skipPreBreath: true,
           skipPrepBeat: idx > 0,
           skipRateAdjust: true,
-          skipDetune: true,
           skipTypewriterSync: idx > 0,
           onAudioReady: idx === 0 ? (opts && opts.onAudioReady) : null,
           charRangeStart: startC,
@@ -2154,11 +2147,10 @@ const voice = {
     }
     const audioBuf = await this._fetchGeminiStudioAudio(profile, effKey, cleanText, moodNow);
     if (!audioBuf || seq !== this.utteranceSeq) return false;
-    // Gemini Studio TTS already renders natural <breath> and native human vocal timbre, so skip synthetic pre-breath & detune!
+    // Gemini Studio TTS renders native vocal timbre; skip synthetic pre-breath while retaining Web Audio subtle detune/rate
     return this.playBufferedStudioAudio(seq, audioBuf, onDone, Object.assign({}, opts, {
       skipPreBreath: true,
-      skipRateAdjust: true,
-      skipDetune: true
+      skipRateAdjust: true
     }));
   },
 

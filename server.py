@@ -405,12 +405,7 @@ def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=14):
             if fb_v and fb_v != v_name:
                 attempts.append((fb_v, True))
         for cand_voice, use_stripped in attempts:
-            if is_38:
-                t_38 = stripped_text if use_stripped else raw_text
-                part = {"text": t_38, "speechMetadata": {"style": style_prompt}} if style_prompt else {"text": t_38}
-            else:
-                prompt_line = f"請用以下口吻自然朗讀（不要唸出指示）：{style_prompt}\n{stripped_text}" if style_prompt else stripped_text
-                part = {"text": prompt_line}
+            part = {"text": stripped_text}
             payload = {
                 "contents": [{
                     "role": "user",

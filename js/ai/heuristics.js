@@ -262,8 +262,16 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     };
   }
 
-  // 2. Dual-Seer Clash: EXPLICITLY analyze World A vs World B (站 A 預言家的坑在哪 vs 站 B 預言家的坑在哪)!
-  if (dualSeerWorlds && dualSeerWorlds.chosenWorld && dualSeerWorlds.rivalWorld) {
+  // 2. Dual-Seer Clash: EXPLICITLY analyze World A vs World B (for bystander non-Seer observers ONLY!)
+  const isSelfSeerDual = Boolean(
+    speaker.role === "seer" ||
+    speaker.claimedRole === "seer" ||
+    (dualSeerWorlds && (
+      (dualSeerWorlds.seerA && dualSeerWorlds.seerA.id === speaker.id) ||
+      (dualSeerWorlds.seerB && dualSeerWorlds.seerB.id === speaker.id)
+    ))
+  );
+  if (dualSeerWorlds && dualSeerWorlds.chosenWorld && dualSeerWorlds.rivalWorld && !isSelfSeerDual) {
     const dw = dualSeerWorlds;
     const wA = dw.worldA;
     const wB = dw.worldB;
@@ -294,25 +302,25 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
 
     const dualText = typeof buildPersonaDualSeerText === "function"
       ? buildPersonaDualSeerText(speaker, {
-          day: day,
-          leadPrefix: leadPrefix,
-          sALbl: sALbl,
-          sBLbl: sBLbl,
-          aSecondStr: aSecondStr,
-          bSecondStr: bSecondStr,
-          aConflict: aConflict,
-          bConflict: bConflict,
-          trustedLbl: seatLabel(chosen.trustedSeer),
-          fakeLbl: seatLabel(chosen.fakeSeer),
-          goodSideText: goodSideText,
-          unspokenNote: unspokenNote,
-          signoffPhrase: signoffPhrase
-        })
+        day: day,
+        leadPrefix: leadPrefix,
+        sALbl: sALbl,
+        sBLbl: sBLbl,
+        aSecondStr: aSecondStr,
+        bSecondStr: bSecondStr,
+        aConflict: aConflict,
+        bConflict: bConflict,
+        trustedLbl: seatLabel(chosen.trustedSeer),
+        fakeLbl: seatLabel(chosen.fakeSeer),
+        goodSideText: goodSideText,
+        unspokenNote: unspokenNote,
+        signoffPhrase: signoffPhrase
+      })
       : (leadPrefix +
-          "如果站 " + sALbl + "，" + sBLbl + " 必佔一狼" + aSecondStr + aConflict + "；" +
-          "如果改站 " + sBLbl + "，" + sALbl + " 必一狼" + bSecondStr + bConflict + "。" +
-          "兩邊盤完我站邊 " + seatLabel(chosen.trustedSeer) + "，" + goodSideText +
-          "這輪先把 " + seatLabel(chosen.fakeSeer) + " 請離！" + unspokenNote + signoffPhrase);
+        "如果站 " + sALbl + "，" + sBLbl + " 必佔一狼" + aSecondStr + aConflict + "；" +
+        "如果改站 " + sBLbl + "，" + sALbl + " 必一狼" + bSecondStr + bConflict + "。" +
+        "兩邊盤完我站邊 " + seatLabel(chosen.trustedSeer) + "，" + goodSideText +
+        "這輪先把 " + seatLabel(chosen.fakeSeer) + " 請離！" + unspokenNote + signoffPhrase);
 
     return {
       targetId: chosen.fakeSeer.id,
@@ -845,6 +853,9 @@ function buildHeuristicAiSpeech(speaker) {
   const res = tryDefendOrCounterClaim(speaker, ctx)
     || tryRoleSpecificSpeech(speaker, ctx)
     || buildGoodTeamDeductionSpeech(speaker, ctx);
+  if (res && res.text && ctx && ctx.playerAnchorOnMe && res.text.indexOf(ctx.playerAnchorOnMe) === -1) {
+    res.text = "你剛才問「" + ctx.playerAnchorOnMe + "」，我正面回答你：" + res.text;
+  }
   if (res && !res.lengthTier) res.lengthTier = lengthTier;
   if (typeof antiCheatMonitor !== "undefined" && speaker) {
     antiCheatMonitor.recordDecision("day_speech", speaker.id, "盲視發言推理完成");

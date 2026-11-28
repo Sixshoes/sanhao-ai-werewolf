@@ -483,9 +483,12 @@ class ServerTestCase(unittest.TestCase):
         self.assertNotIn("speechMetadata", part_25)
         self.assertNotIn("<breath>", part_25["text"])
         self.assertNotIn("<short pause>", part_25["text"])
+        self.assertNotIn("請用以下口吻", part_25["text"])
+        self.assertNotIn("冷靜沉穩", part_25["text"])
         self.assertIn("gemini-3.1-flash-tts-preview", calls[-1][0])
         self.assertNotIn("speechMetadata", part_31)
         self.assertNotIn("<breath>", part_31["text"])
+        self.assertNotIn("請用以下口吻", part_31["text"])
 
     def test_v244_edge_male_voice_fallback_retry(self):
         import asyncio

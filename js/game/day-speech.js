@@ -251,7 +251,12 @@ function startDayDiscussion(dawnVoiceLine, opts) {
     ? state.match._prefetchedOrderSpeeches
     : null;
   state.match._prefetchedOrderSpeeches = null;
-  state.match._prefetchedSpeech = null;
+  if (typeof _clearAllPrefetchedSpeeches === "function") {
+    _clearAllPrefetchedSpeeches(state.match);
+  } else {
+    state.match._prefetchedSpeech = null;
+    state.match._prefetchedSpeeches = {};
+  }
   if (typeof orchestrator !== "undefined") {
     if (typeof isClassicSimpleMode === "function" && isClassicSimpleMode()) {
       state.match.activeDirectorEvent = null;
@@ -380,7 +385,12 @@ function bumpTableStateRev(rePrefetch) {
   if (typeof state === "undefined" || !state.match) return;
   if (typeof clearDeferredSpeechPrefetchTimer === "function") clearDeferredSpeechPrefetchTimer();
   state.match.tableStateRev = (state.match.tableStateRev || 0) + 1;
-  state.match._prefetchedSpeech = null;
+  if (typeof _clearAllPrefetchedSpeeches === "function") {
+    _clearAllPrefetchedSpeeches(state.match);
+  } else {
+    state.match._prefetchedSpeech = null;
+    state.match._prefetchedSpeeches = {};
+  }
   if (rePrefetch && state.match.phase === "DAY_SPEECH" && typeof prefetchNextAiSpeech === "function") {
     prefetchNextAiSpeech();
   }
@@ -652,23 +662,41 @@ function _computeSpeechVoiceMood(speaker, generated) {
         : "normal"));
 }
 
-function _buildSpeechPrefetchKey(seatId) {
+function _buildSpeechPrefetchKey(seatId, opts) {
   const m = state.match || {};
-  const evLen = Array.isArray(m.daySpeechEvents) ? m.daySpeechEvents.length : 0;
+  const evLen = (opts && typeof opts.evLen === "number")
+    ? opts.evLen
+    : (Array.isArray(m.daySpeechEvents) ? m.daySpeechEvents.length : 0);
   const pkTag = (typeof isPkVoteActive === "function" && isPkVoteActive()) ? "pk" : "reg";
   const rev = m.tableStateRev || 0;
   const llmTag = typeof getActiveLlmLabel === "function" ? getActiveLlmLabel() : "";
   return (m.day || 0) + ":" + seatId + ":" + evLen + ":" + pkTag + ":r" + rev + ":" + llmTag;
 }
 
+function _clearAllPrefetchedSpeeches(matchObj) {
+  const m = matchObj || (typeof state !== "undefined" ? state.match : null);
+  if (!m) return;
+  m._prefetchedSpeech = null;
+  m._prefetchedSpeeches = {};
+}
+
+function _getPrefetchEntryForSeat(seatId) {
+  const m = state.match;
+  if (!m) return null;
+  if (m._prefetchedSpeeches && m._prefetchedSpeeches[seatId]) return m._prefetchedSpeeches[seatId];
+  const single = m._prefetchedSpeech;
+  if (single && single.seatId === seatId) return single;
+  return null;
+}
+
 function isPrefetchedAiSpeechReady(seatId) {
-  const pf = state.match && state.match._prefetchedSpeech;
+  const pf = _getPrefetchEntryForSeat(seatId);
   const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
   return Boolean(pf && pf.epoch === ep && pf.seatId === seatId && pf.key === _buildSpeechPrefetchKey(seatId) && pf.resolvedMeta);
 }
 
 function isPrefetchedOrInFlightAiSpeech(seatId) {
-  const pf = state.match && state.match._prefetchedSpeech;
+  const pf = _getPrefetchEntryForSeat(seatId);
   const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
   return Boolean(pf && pf.epoch === ep && pf.seatId === seatId && pf.key === _buildSpeechPrefetchKey(seatId) && (pf.resolvedMeta || pf.promise));
 }
@@ -709,7 +737,7 @@ function scheduleStaggeredNextSpeechPrefetch(epGuard, turnSeqGuard) {
     prefetchNextAiSpeech();
     prefetchPredictableHostCue();
   };
-  state._deferredPrefetchTimer = setTimeout(runStaggeredPrefetch, 900);
+  state._deferredPrefetchTimer = setTimeout(runStaggeredPrefetch, 60);
   return runStaggeredPrefetch;
 }
 
@@ -721,7 +749,12 @@ function triggerImmediatePostPlayerPrefetch() {
     : 0;
   if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return false;
   state.match.tableStateRev = (state.match.tableStateRev || 0) + 1;
-  state.match._prefetchedSpeech = null;
+  if (typeof _clearAllPrefetchedSpeeches === "function") {
+    _clearAllPrefetchedSpeeches(state.match);
+  } else {
+    state.match._prefetchedSpeech = null;
+    state.match._prefetchedSpeeches = {};
+  }
   return prefetchNextAiSpeech({ highPriority: true });
 }
 
@@ -777,6 +810,115 @@ function _commitDeferredSeatPatch(speaker, generated) {
   }
 }
 
+function _prefetchSecondAiSpeech(firstSeat, firstMeta, opts) {
+  const m = state.match;
+  if (!m || !m.started || m.phase !== "DAY_SPEECH" || !firstSeat) return false;
+  if (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()) return false;
+  const extLlmOn = typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel);
+  const wantNetTts = Boolean(
+    typeof voice !== "undefined" &&
+    voice.canSpeak() &&
+    ((typeof voice.isGeminiTtsPreferred === "function" && voice.isGeminiTtsPreferred()) || voice.localNeuralAvailable)
+  );
+  if (!extLlmOn && !wantNetTts) return false;
+
+  const q = m.speechQueue || [];
+  const firstIdx = q.indexOf(firstSeat.id);
+  if (firstIdx === -1 || firstIdx + 1 >= q.length) return false;
+  const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
+  const secondId = q.slice(firstIdx + 1).find(function (id) {
+    const s = getSeat(id);
+    return Boolean(s && s.alive);
+  });
+  if (!secondId || secondId === pid) return false;
+  const secondSeat = getSeat(secondId);
+  if (!secondSeat || !secondSeat.alive) return false;
+
+  // Skip speculative +2 cache if +1 directly puts +2 under fire (so +2 builds a direct rebuttal on its turn)
+  if (firstMeta && (
+    firstMeta.accuseId === secondId ||
+    (Array.isArray(firstMeta.wolfPits) && firstMeta.wolfPits.indexOf(secondId) !== -1) ||
+    ((firstMeta.claimSeer || firstMeta.claimRole === "seer") && secondSeat.role === "seer")
+  )) {
+    return false;
+  }
+
+  const ep = (typeof orchestrator !== "undefined")
+    ? (typeof orchestrator.getEpoch === "function" ? orchestrator.getEpoch() : orchestrator.matchEpoch)
+    : 0;
+  if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return false;
+  const revAtStart = m.tableStateRev || 0;
+  const baseEvLen = Array.isArray(m.daySpeechEvents) ? m.daySpeechEvents.length : 0;
+  const key2 = _buildSpeechPrefetchKey(secondId, { evLen: baseEvLen + 1 });
+  if (!m._prefetchedSpeeches) m._prefetchedSpeeches = {};
+  const existing2 = m._prefetchedSpeeches[secondId];
+  if (existing2 && existing2.epoch === ep && existing2.key === key2) return true;
+
+  const fallbackMeta2 = _buildDryRunHeuristicSpeech(secondSeat);
+  const entry2 = {
+    key: key2,
+    epoch: ep,
+    seatId: secondId,
+    highPriority: Boolean(opts && opts.highPriority),
+    resolvedMeta: null,
+    promise: null
+  };
+  m._prefetchedSpeeches[secondId] = entry2;
+
+  const triggerVoice2 = function (meta2) {
+    if (!meta2 || !meta2.text) return;
+    if ((m.tableStateRev || 0) !== revAtStart) return;
+    if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return;
+    if (typeof voice !== "undefined" && voice.canSpeak()) {
+      const mood2 = _computeSpeechVoiceMood(secondSeat, meta2);
+      if (typeof voice.prefetchBestTts === "function") {
+        voice.prefetchBestTts(secondSeat.name, meta2.text, mood2);
+      } else if (voice.localNeuralAvailable && typeof voice.prefetchFreeLocalNeural === "function") {
+        voice.prefetchFreeLocalNeural(secondSeat.name, meta2.text, mood2);
+      } else if (typeof voice.prefetchCloudGeminiTts === "function") {
+        voice.prefetchCloudGeminiTts(secondSeat.name, meta2.text, mood2);
+      }
+    }
+  };
+
+  if (!extLlmOn) {
+    entry2.resolvedMeta = fallbackMeta2;
+    triggerVoice2(fallbackMeta2);
+    return true;
+  }
+
+  const runDispatch2 = (typeof orchestrator !== "undefined" && typeof orchestrator.dispatchAgent === "function")
+    ? orchestrator.dispatchAgent("PersonaAgent", { speaker: secondSeat, fallbackMeta: fallbackMeta2, deferSeatMutation: true }).then(function (dispatched) {
+      if (!dispatched || !dispatched.epochValid || !orchestrator.isEpochValid(ep)) return null;
+      return dispatched.generated || fallbackMeta2;
+    })
+    : tryGenerateGeminiAiSpeech(secondSeat, fallbackMeta2).then(function (liveRes) {
+      const liveTxt = typeof liveRes === "string" ? liveRes : (liveRes && liveRes.text);
+      if (liveTxt) {
+        if (typeof syncGeminiSpeechMeta === "function") syncGeminiSpeechMeta(secondSeat, fallbackMeta2, liveRes, { deferSeatMutation: true });
+        else fallbackMeta2.text = liveTxt;
+        fallbackMeta2.text = (typeof normalizeGeminiSpeechText === "function")
+          ? normalizeGeminiSpeechText(fallbackMeta2.text)
+          : String(fallbackMeta2.text || "").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, "").trim();
+      }
+      return fallbackMeta2;
+    });
+
+  entry2.promise = runDispatch2.then(function (resMeta2) {
+    if (resMeta2 && m._prefetchedSpeeches && m._prefetchedSpeeches[secondId] === entry2 && (m.tableStateRev || 0) === revAtStart) {
+      entry2.resolvedMeta = resMeta2;
+      triggerVoice2(resMeta2);
+    }
+    return resMeta2;
+  }).catch(function () {
+    if (m._prefetchedSpeeches && m._prefetchedSpeeches[secondId] === entry2) {
+      delete m._prefetchedSpeeches[secondId];
+    }
+    return null;
+  });
+  return true;
+}
+
 function prefetchNextAiSpeech(opts) {
   const highPriority = Boolean(opts && opts.highPriority);
   if (highPriority) clearDeferredSpeechPrefetchTimer();
@@ -811,8 +953,16 @@ function prefetchNextAiSpeech(opts) {
     ? (typeof orchestrator.getEpoch === "function" ? orchestrator.getEpoch() : orchestrator.matchEpoch)
     : 0;
   const key = _buildSpeechPrefetchKey(nextId);
-  const existing = m._prefetchedSpeech;
-  if (existing && existing.epoch === ep && existing.key === key && (!highPriority || existing.highPriority)) return true;
+  if (!m._prefetchedSpeeches) m._prefetchedSpeeches = {};
+  const existing = _getPrefetchEntryForSeat(nextId);
+  if (existing && existing.epoch === ep && existing.key === key && (!highPriority || existing.highPriority)) {
+    m._prefetchedSpeech = existing;
+    m._prefetchedSpeeches[nextId] = existing;
+    if (existing.resolvedMeta) {
+      _prefetchSecondAiSpeech(nextSeat, existing.resolvedMeta, opts);
+    }
+    return true;
+  }
 
   // Dry-run heuristic so nextSeat.claimedRole / announced flags / badge flow are NEVER leaked before their turn!
   const fallbackMeta = _buildDryRunHeuristicSpeech(nextSeat);
@@ -825,6 +975,7 @@ function prefetchNextAiSpeech(opts) {
     promise: null
   };
   m._prefetchedSpeech = entry;
+  m._prefetchedSpeeches[nextId] = entry;
 
   if (!extLlmOn) {
     entry.resolvedMeta = fallbackMeta;
@@ -834,6 +985,7 @@ function prefetchNextAiSpeech(opts) {
         voice.prefetchBestTts(nextSeat.name, fallbackMeta.text, nextMoodLocal);
       }
     }
+    _prefetchSecondAiSpeech(nextSeat, fallbackMeta, opts);
     return true;
   }
 
@@ -867,10 +1019,12 @@ function prefetchNextAiSpeech(opts) {
           voice.prefetchCloudGeminiTts(nextSeat.name, resMeta.text, nextMood);
         }
       }
+      _prefetchSecondAiSpeech(nextSeat, resMeta, opts);
     }
     return resMeta;
   }).catch(function () {
     if (m._prefetchedSpeech === entry) m._prefetchedSpeech = null;
+    if (m._prefetchedSpeeches && m._prefetchedSpeeches[nextId] === entry) delete m._prefetchedSpeeches[nextId];
     return null;
   });
   return true;
@@ -900,10 +1054,15 @@ async function executeAiTurnSpeech(speaker) {
   const ep = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
   const ffNow = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   const extLlmOn = !ffNow && (typeof isExternalLlmActive === "function" ? isExternalLlmActive() : Boolean(state.geminiApiKey || state.localLlmModel));
-  const pf = state.match && state.match._prefetchedSpeech;
+  const pf = typeof _getPrefetchEntryForSeat === "function"
+    ? _getPrefetchEntryForSeat(speaker.id)
+    : (state.match && state.match._prefetchedSpeech);
   const curKey = _buildSpeechPrefetchKey(speaker.id);
   const pfMatch = !ffNow && Boolean(pf && pf.epoch === ep && pf.seatId === speaker.id && pf.key === curKey);
-  if (pfMatch) state.match._prefetchedSpeech = null;
+  if (pfMatch) {
+    if (state.match._prefetchedSpeech === pf) state.match._prefetchedSpeech = null;
+    if (state.match._prefetchedSpeeches) delete state.match._prefetchedSpeeches[speaker.id];
+  }
 
   let cueTimer = null;
   const useShowcaseCuratedAsong = Boolean(

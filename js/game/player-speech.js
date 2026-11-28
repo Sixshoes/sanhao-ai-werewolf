@@ -2044,7 +2044,7 @@ function preparePlayerSpeechPanel() {
     const cSeat = getSeat(last.targetId);
     const cLabel = fmtSeatNum(last.targetId) + "號" + (cSeat ? cSeat.name : "");
     const rivalCut = smart.rivalSeerSeat
-      ? ("前置位 " + fmtSeatNum(smart.rivalSeerSeat.id) + "號" + smart.rivalSeerSeat.name + " 跳假觀察員直接進定狼坑！")
+      ? ("前置位 " + fmtSeatNum(smart.rivalSeerSeat.id) + "號" + smart.rivalSeerSeat.name + " 冒充觀察員，直接定進狼坑！")
       : "";
     const bfClause = smart.bfText ? (smart.bfText + "。") : "";
     const checkedGoodIds = player.checkedHistory.filter(function (c) { return !c.isWolf; }).map(function (c) { return c.targetId; });

@@ -267,17 +267,13 @@ function stripGeminiVocalTags(rawText) {
     .trim();
 }
 
-function buildTtsRequestBody(modelId, voiceName, style, text, useFallbackVoice) {
-  const is38 = modelId.startsWith("gemini-3.8-");
+function buildTtsRequestBody(modelId, voiceName, _style, text, useFallbackVoice) {
   const mappedVoice = (useFallbackVoice && CORE_FALLBACK_VOICE_MAP[voiceName])
     ? CORE_FALLBACK_VOICE_MAP[voiceName]
     : voiceName;
   const safeVoice = ALLOWED_VOICES.has(mappedVoice) ? mappedVoice : "Kore";
   const stripped = stripGeminiVocalTags(text) || text;
-  const textFor38 = useFallbackVoice ? stripped : text;
-  const part = is38
-    ? (style ? { text: textFor38, speechMetadata: { style: style } } : { text: textFor38 })
-    : { text: style ? ("請用以下口吻自然唸出（不要唸出指示）：" + style + "\n" + stripped) : stripped };
+  const part = { text: stripped };
   return {
     contents: [{ role: "user", parts: [part] }],
     generationConfig: {
@@ -383,7 +379,7 @@ async function handler(req, res) {
   const voiceName = ALLOWED_VOICES.has(reqVoice) ? reqVoice : "Kore";
 
   // Return cached audio directly without spending quota or rate-limit tokens
-  const cacheKey = voiceName + "|" + style + "|" + text;
+  const cacheKey = voiceName + "|" + (stripGeminiVocalTags(text) || text);
   const cached = _ttsCache.get(cacheKey);
   if (cached) {
     res.statusCode = 200;

@@ -430,7 +430,14 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
   const uniqueToxic = [];
   toxicWords.forEach(function (w) { if (w && uniqueToxic.indexOf(w) === -1) uniqueToxic.push(w); });
   uniqueToxic.sort(function (a, b) { return b.length - a.length; });
-  const roleWords = ["明心觀察員", "觀察員", "滴水奉茶師", "奉茶師", "直心糾察長", "糾察長", "護心守衛", "護心結界", "清心長老", "流言首領", "暖心回甘茶", "清心醒神茶", "預言家", "查殺", "金水", "銀水", "酸民狼", "平安夜"];
+  const roleWords = [
+    "對跳假觀察員", "跳假觀察員", "假明心觀察員", "真明心觀察員", "對跳觀察員", "假觀察員", "真觀察員",
+    "假滴水奉茶師", "真滴水奉茶師", "假奉茶師", "真奉茶師",
+    "假直心糾察長", "真直心糾察長", "假糾察長", "真糾察長",
+    "假護心守衛", "真護心守衛", "假守衛", "真守衛",
+    "假清心長老", "真清心長老", "假長老", "真長老",
+    "明心觀察員", "觀察員", "滴水奉茶師", "奉茶師", "直心糾察長", "糾察長", "護心守衛", "護心結界", "清心長老", "流言首領", "暖心回甘茶", "清心醒神茶", "預言家", "查殺", "金水", "銀水", "酸民狼", "平安夜"
+  ].sort(function (a, b) { return b.length - a.length; });
   const activeContraRec = (state.match && state.match.activeSpeechContra && speaker && state.match.activeSpeechContra.speakerId === speaker.id)
     ? state.match.activeSpeechContra.contra
     : null;
@@ -491,7 +498,9 @@ function renderInteractiveSpotlightText(rawText, speaker, isPartial) {
     } else if (isToxic && speaker && speaker.id !== getPlayerId()) {
       html += '<span class="clue-token clue-toxic' + (isCaught ? ' clue-caught' : '') + '" data-clue-type="toxic" data-clue-key="' + escapeHtml(clueKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="點擊抓包這句酸言破綻！">' + escapeHtml(tok) + (isCaught ? ' ·已記' : '') + '</span>';
     } else if (isRole) {
-      const jRole = (typeof lookupWerewolfJargon === "function") ? lookupWerewolfJargon(tok) : null;
+      const jRole = (typeof lookupWerewolfJargon === "function")
+        ? (lookupWerewolfJargon(tok) || lookupWerewolfJargon(tok.replace(/^(?:對跳假|跳假|對跳|假|真)/, "")))
+        : null;
       const jAttr = jRole ? (' data-jargon="' + escapeHtml(jRole.term) + '"') : "";
       html += '<span class="clue-token clue-role' + (isCaught ? ' clue-caught' : '') + '"' + jAttr + ' data-clue-type="role" data-clue-key="' + escapeHtml(clueKey) + '" data-clue-word="' + escapeHtml(tok) + '" data-speaker-id="' + spId + '" title="點擊記錄這項身分線索">' + escapeHtml(tok) + (isCaught ? ' ·已記' : '') + '</span>';
     } else {

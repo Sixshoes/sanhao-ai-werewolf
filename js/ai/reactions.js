@@ -322,6 +322,29 @@ function tryDefendOrCounterClaim(speaker, ctx) {
         text: rebutLead + "剛剛前置位 " + accName + " 突然跳觀察員硬把我查進狼坑，這完全是睜眼說瞎話！我只是個存好心的好夥伴，他連查驗都能編造，直接證明 " + accName + " 就是冒牌狼！這輪我堅決反投 " + accName + "！" + signoff
       };
     } else {
+      if (speaker.fakeSeer || speaker.claimedRole === "seer") {
+        speaker.claimedRole = "seer";
+        if (speaker.role === "wolf") speaker.fakeSeer = true;
+        const accomplicePool = aliveOthers.filter(function (s) {
+          return s.id !== seerWolfOnMe.speakerId && (speaker.role !== "wolf" || !s.isWolfMate);
+        });
+        const accompliceSeat = accomplicePool[0] || null;
+        return {
+          targetId: seerWolfOnMe.speakerId,
+          relationType: "suspect",
+          claimSeer: true,
+          claimRole: "seer",
+          accuseId: seerWolfOnMe.speakerId,
+          vouchId: null,
+          standWithSeerId: speaker.id,
+          wolfPits: accompliceSeat ? [seerWolfOnMe.speakerId, accompliceSeat.id] : [seerWolfOnMe.speakerId],
+          goodPits: [],
+          checkedWolfId: seerWolfOnMe.speakerId,
+          checkedGoodId: null,
+          hasToxicSlip: (wolfTactic === "deep_stealth" || wolfTactic === "deep_stealth_bus") ? false : shouldWolfEmitToxicSlip(speaker, day, 1, true),
+          text: rebutLead + "笑話！前置位 " + accName + " 才是冒充觀察員搶查殺的假貨！我才是昨晚親查出真相的真明心觀察員，敢反咬我直接坐實 " + accName + " 就是酸民狼" + (accompliceSeat ? ("，旁邊替他護航的 " + seatLabel(accompliceSeat) + " 也高度可疑") : "") + "！這輪全部跟票投 " + accName + "！"
+        };
+      }
       return {
         targetId: seerWolfOnMe.speakerId,
         relationType: "suspect",
@@ -337,7 +360,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
 
   // 0B. DIRECT REACTION WHEN PUT IN SOMEONE'S WOLF PIT TODAY (accuseId OR wolfPits)!
   const pitCallerEv = wolfPitOnMe || accuseOnMe;
-  if (pitCallerEv && speaker.role !== "seer") {
+  if (pitCallerEv && speaker.role !== "seer" && !speaker.fakeSeer && speaker.claimedRole !== "seer") {
     const accSeat = readSeat(pitCallerEv.speakerId);
     const accName = seatLabel(accSeat);
     const inPitOnly = pitCallerEv.accuseId !== speaker.id && Array.isArray(pitCallerEv.wolfPits) && pitCallerEv.wolfPits.indexOf(speaker.id) !== -1;
@@ -401,7 +424,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
       }
 
       // If Dual Seers active while being placed in a wolf pit, tie defense cleanly to World A vs B!
-      if (dualSeerWorlds && dualSeerWorlds.chosenWorld && dualSeerWorlds.rivalWorld) {
+      if (dualSeerWorlds && dualSeerWorlds.chosenWorld && dualSeerWorlds.rivalWorld && speaker.role !== "seer" && !speaker.fakeSeer && speaker.claimedRole !== "seer") {
         const dw = dualSeerWorlds;
         const cw = dw.chosenWorld;
         const rw = dw.rivalWorld;
@@ -713,7 +736,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
           (!latest.isWolf
             ? ("另外我查證過 " + tName + (latestAlive ? " 是金水好人坑，大家別投錯他；" : "（雖已離席）確定是好人；"))
             : ("先前查過的 " + tName + " 已離席；")) +
-          "站我這邊第一個狼坑就是冒充觀察員的 " + seatLabel(fakeSeerSeat) + (secondPit ? ("，第二狼坑先盯 " + seatLabel(readSeat(secondPit)) + "！") : "！") + planNote
+          "我才是真正的觀察員，冒充觀察員的 " + seatLabel(fakeSeerSeat) + " 必佔第一個狼坑" + (secondPit ? ("，第二狼坑先盯 " + seatLabel(readSeat(secondPit)) + "！") : "！") + planNote
       };
     } else {
       const watchSeat = nextPlan || unspokenOthers.find(function (s) { return s.id !== latest.targetId; }) || aliveOthers.find(function (s) { return s.id !== latest.targetId; });
@@ -872,6 +895,16 @@ function tryRoleSpecificSpeech(speaker, ctx) {
       const fakeSeerTellPrefix = speaker.name === "星兒"
         ? "照嚴格排除法加上三點推論交叉核對，"
         : (speaker.name === "墨白" ? "按序查核、條分縷析，昨夜依例檢視完畢：" : "");
+      const fakeWolfPits = [frameTarget.id];
+      if (rivalSeerSpoke && !rivalSeerSpoke.isWolfMate && rivalSeerSpoke.id !== speaker.id && fakeWolfPits.indexOf(rivalSeerSpoke.id) === -1) {
+        fakeWolfPits.push(rivalSeerSpoke.id);
+      }
+      if (secondFrame && !secondFrame.isWolfMate && secondFrame.id !== speaker.id && fakeWolfPits.indexOf(secondFrame.id) === -1) {
+        fakeWolfPits.push(secondFrame.id);
+      }
+      const rivalRebutLine = (rivalSeerSpoke && rivalSeerSpoke.id !== frameTarget.id)
+        ? ("前面 " + seatLabel(rivalSeerSpoke) + " 居然搶著冒充明心觀察員，他鐵定是假牌！")
+        : "";
       return {
         targetId: frameTarget.id,
         relationType: "suspect",
@@ -880,12 +913,12 @@ function tryRoleSpecificSpeech(speaker, ctx) {
         accuseId: frameTarget.id,
         vouchId: null,
         standWithSeerId: speaker.id,
-        wolfPits: secondFrame ? [frameTarget.id, secondFrame.id] : [frameTarget.id],
+        wolfPits: fakeWolfPits.slice(0, 2),
         goodPits: [],
         checkedWolfId: frameTarget.id,
         checkedGoodId: null,
         hasToxicSlip: shouldWolfEmitToxicSlip(speaker, day, 2),
-        text: fakeSeerTellPrefix + fill(flv.fakeSeer, { t: seatLabel(frameTarget) }) + fakeFlowTail
+        text: fakeSeerTellPrefix + rivalRebutLine + fill(flv.fakeSeer, { t: seatLabel(frameTarget) }) + fakeFlowTail
       };
     }
   }
@@ -1068,7 +1101,8 @@ function tryRoleSpecificSpeech(speaker, ctx) {
       const partnerWorld = dualSeerWorlds.chosenWorld.trustedSeer.id === wolfPartnerSeer.id ? dualSeerWorlds.chosenWorld : dualSeerWorlds.rivalWorld;
       const realWorld = dualSeerWorlds.chosenWorld.trustedSeer.id === rivalSeerExposed.id ? dualSeerWorlds.chosenWorld : dualSeerWorlds.rivalWorld;
       const p2 = partnerWorld.secondWolf ? ("＋" + seatLabel(partnerWorld.secondWolf)) : "";
-      const r2 = realWorld.secondWolf ? ("＋" + seatLabel(realWorld.secondWolf)) : "";
+      const safeR2Seat = (realWorld.secondWolf && !realWorld.secondWolf.isWolfMate && realWorld.secondWolf.id !== speaker.id) ? realWorld.secondWolf : null;
+      const r2 = safeR2Seat ? ("＋" + seatLabel(safeR2Seat)) : "";
       return {
         targetId: rivalSeerExposed.id,
         relationType: "suspect",

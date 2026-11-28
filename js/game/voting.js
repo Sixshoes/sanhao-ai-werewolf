@@ -2608,7 +2608,7 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
       ? ("昨晚查驗 " + fmtSeatNum(cs.id) + "號" + cs.name + " 是" + (chk.isWolf ? "酸民狼（查殺）" : "書院好夥伴（金水）"))
       : ("我手握昨晚查驗真相");
     const counterClause = priorSeerLbl
-      ? ("前置位 " + priorSeerLbl + " 剛才悍跳直接標進定狼坑，他警徽流全是虛的！")
+      ? ("前置位 " + priorSeerLbl + " 剛才悍跳直接定進狼坑，他警徽流全是虛的！")
       : "";
     return [
       {
