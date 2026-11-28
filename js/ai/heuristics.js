@@ -833,6 +833,9 @@ function sanitizeSpeechMeta(speaker, out, snapArg) {
   if (out.text && typeof applyDifficultyTerminology === "function") {
     out.text = applyDifficultyTerminology(out.text, null, snapArg || null);
   }
+  if (out.text && typeof stripDialogueParentheses === "function") {
+    out.text = stripDialogueParentheses(out.text);
+  }
 
   // v16.0 Match Point (<= 28 chars) & Blitz (<= 22 chars) speech length enforcement
   const capLimit = (snapArg && typeof snapArg.speechCharCap === "number" && snapArg.speechCharCap > 0)

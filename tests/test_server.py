@@ -356,7 +356,8 @@ class ServerTestCase(unittest.TestCase):
 
         probe_txt = "<breath> 觀此席間，破綻昭然。"
         probe_style = "低沉古風男聲"
-        gem_key = "gem_" + hashlib.sha256(f"Charon|{probe_style}|{probe_txt}".encode("utf-8")).hexdigest()[:24]
+        clean_probe = server.sanitize_transcript_for_tts(probe_txt)
+        gem_key = "gem_" + hashlib.sha256(f"Charon|{clean_probe}".encode("utf-8")).hexdigest()[:24]
         wav_path = server.CACHE_DIR / f"{gem_key}.wav"
         fake_wav = b"RIFF\x24\x00\x00\x00WAVEfmt " + (b"\x00" * 160)
         wav_path.write_bytes(fake_wav)
@@ -388,7 +389,7 @@ class ServerTestCase(unittest.TestCase):
 
         # With server key & mocked upstream call, POST /api/gemini succeeds cleanly & rejects empty/bad bodies
         with patch.object(server, "get_server_gemini_key", return_value="fake-test-key"), \
-             patch.object(server, "call_gemini_text_rest", return_value=("連線成功", "gemini-4-hydrogen")):
+             patch.object(server, "call_gemini_text_rest", return_value=("連線成功", "gemini-3.5-flash-lite")):
             st_empty, _, _ = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"  "}')
             self.assertEqual(st_empty, 400)
 
@@ -397,8 +398,8 @@ class ServerTestCase(unittest.TestCase):
             res = json.loads(raw_ok.decode("utf-8"))
             self.assertTrue(res.get("ok"))
             self.assertEqual(res.get("text"), "連線成功")
-            self.assertEqual(res.get("model"), "gemini-4-hydrogen")
-            self.assertIn("gemini-2.5-pro", server.ALLOWED_PROXY_GEMINI_MODELS)
+            self.assertEqual(res.get("model"), "gemini-3.5-flash-lite")
+            self.assertIn("gemini-3.8-flash", server.ALLOWED_PROXY_GEMINI_MODELS)
 
         # v20.0 tiered temperature clamping [0.45, 0.85] (default 0.65)
         self.assertEqual(server.clamp_gemini_temperature(0.58), 0.58)
@@ -407,7 +408,7 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual(server.clamp_gemini_temperature(1.9), 0.85)
         self.assertEqual(server.clamp_gemini_temperature(None), 0.65)
         with patch.object(server, "get_server_gemini_key", return_value="fake-test-key"), \
-             patch.object(server, "call_gemini_text_rest", return_value=("分階段溫度回應", "gemini-4-hydrogen")) as mock_call:
+             patch.object(server, "call_gemini_text_rest", return_value=("分階段溫度回應", "gemini-3.5-flash-lite")) as mock_call:
             st_t, _, _ = dispatch_handler("POST", "/api/gemini", body=b'{"prompt":"test","temperature":0.95}')
             self.assertEqual(st_t, 200)
             _, kwargs = mock_call.call_args
@@ -439,7 +440,7 @@ class ServerTestCase(unittest.TestCase):
         def fake_urlopen(req, timeout=None):
             body = json.loads(req.data.decode("utf-8"))
             calls.append((req.full_url, body))
-            if "gemini-2.5-flash-preview-tts" in req.full_url:
+            if "gemini-3.8-flash-lite-tts" in req.full_url:
                 raise urllib.error.HTTPError(
                     req.full_url,
                     400,
@@ -447,7 +448,7 @@ class ServerTestCase(unittest.TestCase):
                     hdrs=None,
                     fp=io.BytesIO(b'{"error":"bad voice"}'),
                 )
-            raw_pcm = b"\x00\x00" * 48
+            raw_pcm = b"\x10\x00" * 1600
             b64 = base64.b64encode(raw_pcm).decode("ascii")
             return _FakeResp(
                 json.dumps(
@@ -468,7 +469,7 @@ class ServerTestCase(unittest.TestCase):
         with patch("urllib.request.urlopen", side_effect=fake_urlopen):
             wav_bytes, mime_type = server.call_gemini_tts_wav(
                 api_key="test-key",
-                text="<breath> 第一句。<short pause> 第二句。",
+                text="<breath> 各位警長請看三號。<short pause> 慢慢說。",
                 voice_name="Charon",
                 style_prompt="冷靜沉穩",
                 timeout=5,
@@ -477,18 +478,24 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual(mime_type, "audio/wav")
         self.assertTrue(wav_bytes.startswith(b"RIFF"))
         self.assertGreaterEqual(len(calls), 2)
-        part_25 = calls[0][1]["contents"][0]["parts"][0]
-        part_31 = calls[-1][1]["contents"][0]["parts"][0]
-        self.assertIn("gemini-2.5-flash-preview-tts", calls[0][0])
-        self.assertNotIn("speechMetadata", part_25)
-        self.assertNotIn("<breath>", part_25["text"])
-        self.assertNotIn("<short pause>", part_25["text"])
-        self.assertNotIn("請用以下口吻", part_25["text"])
-        self.assertNotIn("冷靜沉穩", part_25["text"])
-        self.assertIn("gemini-3.1-flash-tts-preview", calls[-1][0])
-        self.assertNotIn("speechMetadata", part_31)
-        self.assertNotIn("<breath>", part_31["text"])
-        self.assertNotIn("請用以下口吻", part_31["text"])
+        part_38_lite = calls[0][1]["contents"][0]["parts"][0]
+        part_38_flash = calls[-1][1]["contents"][0]["parts"][0]
+        self.assertIn("gemini-3.8-flash-lite-tts", calls[0][0])
+        self.assertNotIn("speechMetadata", part_38_lite)
+        self.assertNotIn("<breath>", part_38_lite["text"])
+        self.assertNotIn("<short pause>", part_38_lite["text"])
+        self.assertNotIn("請用以下口吻", part_38_lite["text"])
+        self.assertNotIn("冷靜沉穩", part_38_lite["text"])
+        self.assertFalse(part_38_lite["text"].startswith("Say:"))
+        self.assertIn("gemini-3.8-flash-tts", calls[-1][0])
+        self.assertNotIn("speechMetadata", part_38_flash)
+        self.assertNotIn("<breath>", part_38_flash["text"])
+        self.assertIn("警長", part_38_flash["text"])
+        body_25_compat = server.build_tts_request_body("gemini-2.5-flash-preview-tts", "警長好，我是直心糾察長", "Kore", False)
+        self.assertTrue(body_25_compat["contents"][0]["parts"][0]["text"].startswith("Say: "))
+        self.assertIn("直心糾察掌", body_25_compat["contents"][0]["parts"][0]["text"])
+        self.assertEqual(server.resolve_primary_tts_model("gemini-2.5-flash-preview-tts"), "gemini-3.8-flash-lite-tts")
+        self.assertEqual(server.normalize_tts_polyphones("直心糾察長、糾察長、警長、社長"), "直心糾察掌、糾察掌、警長、社長")
 
     def test_v244_edge_male_voice_fallback_retry(self):
         import asyncio
@@ -541,9 +548,9 @@ class ServerTestCase(unittest.TestCase):
 
         def fake_urlopen_mid(req, timeout=None):
             calls_mid.append(req.full_url)
-            if "gemini-2.5-flash-preview-tts" in req.full_url:
+            if "gemini-3.8-flash-lite-tts" in req.full_url or "gemini-3.8-flash-tts" in req.full_url:
                 raise urllib.error.HTTPError(req.full_url, 503, "Busy", hdrs=None, fp=io.BytesIO(b"{}"))
-            raw_pcm = b"\x01\x00" * 48
+            raw_pcm = b"\x10\x00" * 1600
             b64 = base64.b64encode(raw_pcm).decode("ascii")
             return _FakeResp2(
                 json.dumps(
@@ -559,7 +566,7 @@ class ServerTestCase(unittest.TestCase):
             wav_b, mime_t = server.call_gemini_tts_wav("test-key", "這輪先投三號", "Fenrir", "沉穩", timeout=5)
         self.assertEqual(mime_t, "audio/wav")
         self.assertTrue(wav_b.startswith(b"RIFF"))
-        self.assertTrue(any("gemini-3.1-flash-tts-preview" in u for u in calls_mid))
+        self.assertTrue(any("gemini-2.5-flash-preview-tts" in u for u in calls_mid))
 
     def test_v2552_flash25_zero_thinking_budget(self):
         seen_bodies = []
@@ -584,10 +591,22 @@ class ServerTestCase(unittest.TestCase):
         with patch("urllib.request.urlopen", side_effect=fake_text_open):
             txt1, mdl1 = server.call_gemini_text_rest("test-key", "gemini-2.5-flash", "你好")
             txt2, mdl2 = server.call_gemini_text_rest("test-key", "gemini-2.5-flash-lite", "你好")
-        self.assertEqual((txt1, mdl1), ("測試回應", "gemini-2.5-flash"))
+        self.assertEqual((txt1, mdl1), ("測試回應", "gemini-3.5-flash-lite"))
         self.assertEqual((txt2, mdl2), ("測試回應", "gemini-2.5-flash-lite"))
-        for _, b in seen_bodies:
-            self.assertEqual(b["generationConfig"].get("thinkingConfig"), {"thinkingBudget": 0})
+        self.assertEqual(seen_bodies[0][1]["generationConfig"].get("thinkingConfig"), {"thinkingLevel": "minimal"})
+        self.assertNotIn("temperature", seen_bodies[0][1]["generationConfig"])
+        self.assertEqual(seen_bodies[1][1]["generationConfig"].get("thinkingConfig"), {"thinkingBudget": 0})
+        sanitized_38 = server.sanitize_gemini_text_body(
+            "gemini-3.8-flash",
+            {
+                "contents": [{"role": "user", "parts": [{"text": "hi"}]}, {"role": "model", "parts": [{"text": "trail"}]}],
+                "generationConfig": {"temperature": 0.7, "topP": 0.9, "topK": 40, "thinkingConfig": {"thinkingBudget": 256}},
+            },
+        )
+        self.assertEqual(len(sanitized_38["contents"]), 1)
+        self.assertEqual(sanitized_38["generationConfig"].get("thinkingConfig"), {"thinkingLevel": "low"})
+        for bad_k in ("temperature", "topP", "topK"):
+            self.assertNotIn(bad_k, sanitized_38["generationConfig"])
 
 
 if __name__ == "__main__":

@@ -134,6 +134,12 @@ const voice = {
   clauseTimer: null,
   studioCache: {},
   studioPending: {},
+  cloudTtsAudioCache: new Map(),
+  cloudTtsInflightMap: new Map(),
+  _studioCacheRef: null,
+  _studioPendingRef: null,
+  _activeLiveTtsController: null,
+  _cloudTtsHardFailSpeakers: [],
   hostPackCache: {},
   localNeuralCache: {},
   localNeuralPending: {},
@@ -439,6 +445,20 @@ const voice = {
     } catch (e) {}
   },
 
+  normalizeTtsPolyphones: function (text) {
+    return String(text || "")
+      .replace(/直心糾察長/g, "直心糾察掌")
+      .replace(/糾察長/g, "糾察掌");
+  },
+
+  toCanonicalTtsText: function (rawText) {
+    let s = this.stripGeminiVocalTags(rawText);
+    s = s.replace(/\[[^\]]*\]/g, " ");
+    s = s.replace(/（[^）]*）/g, " ").replace(/\([^)]*\)/g, " ");
+    s = this.normalizeTtsPolyphones(s);
+    return s.replace(/\s+/g, " ").trim();
+  },
+
   formatMandarinText: function (raw) {
     if (!raw) return "";
     let out = String(raw)
@@ -452,7 +472,7 @@ const voice = {
         .replace(/(?<!\d)0([1-9])\s*號/g, "$1號")
         .replace(/(?<!\d)0([1-9])(?=[\u4e00-\u9fff，。！？、；：,\.!?;:\s]|$)/g, "$1號");
     }
-    return out
+    out = out
       .replace(/\b4G\b/gi, "四給")
       .replace(/3好/g, "三好")
       .replace(/[×xX]\s*1\.5/g, "一點五倍")
@@ -466,14 +486,9 @@ const voice = {
       .replace(/[「」『』【】]/g, "")
       .replace(/[｜|·・—]/g, "，")
       .replace(/：(?=\S)/g, "，")
-      .replace(/(?<![，。！？\s])(我是明心觀察員|我是滴水奉茶師|我是護心守衛|我是直心糾察長)/g, "，$1")
-      .replace(/直心糾察長/g, "直心糾察掌")
-      .replace(/糾察長/g, "糾察掌")
-      .replace(/警長/g, "警掌")
-      .replace(/清心長老/g, "清心掌老")
-      .replace(/長老/g, "掌老")
-      .replace(/社長/g, "社掌")
-      .replace(/學長/g, "學掌")
+      .replace(/(?<![，。！？\s])(我是明心觀察員|我是滴水奉茶師|我是護心守衛|我是直心糾察長)/g, "，$1");
+    out = this.normalizeTtsPolyphones(out);
+    return out
       .replace(/…+/g, "…")
       .replace(/，{2,}/g, "，")
       .replace(/^，+/, "")
@@ -929,6 +944,10 @@ const voice = {
   stop: function () {
     this.utteranceSeq += 1;
     this.clearTimers();
+    if (this._activeLiveTtsController) {
+      try { this._activeLiveTtsController.abort(); } catch (e) {}
+      this._activeLiveTtsController = null;
+    }
     this.paused = false;
     this.pauseMeta = null;
     this._liveBufferState = null;
@@ -1296,6 +1315,36 @@ const voice = {
         } catch (e) {}
       }
 
+      let audioStartFired = false;
+      const fireAudioStartOnce = function () {
+        if (audioStartFired) return;
+        audioStartFired = true;
+        if (opts && typeof opts.onAudioStart === "function" && startOffset === 0 && !(opts && opts.skipAudioStartCallback)) {
+          try { opts.onAudioStart((opts.totalDurationHintMs || estPlayMs)); } catch (e) {}
+        }
+      };
+
+      const startBufferSourceNode = function () {
+        if (seq !== self.utteranceSeq || self.paused || !sound.ctx) return false;
+        try {
+          const src = sound.ctx.createBufferSource();
+          src.buffer = audioBuf;
+          src.playbackRate.value = pbRate;
+          if (src.detune && (baseDetune || detuneNudge)) {
+            try { src.detune.value = clamp(baseDetune + detuneNudge, -135, 135); } catch (e) {}
+          }
+          src.connect(vGain);
+          self.activeAudioNode = src;
+          src.onended = finishOnce;
+          src.start(0, startOffset);
+          fireAudioStartOnce();
+          return true;
+        } catch (errBuf) {
+          finishOnce();
+          return false;
+        }
+      };
+
       // v18.0 True Pitch-Preserving Speed Playback via HTMLAudioElement (preservesPitch = true) + MediaElementAudioSourceNode!
       // Always set defaultPlaybackRate + enforce on loadedmetadata/playing so browsers NEVER reset playbackRate back to 1.0 during Blob load!
       const wantPitchPreserveEl = Boolean(
@@ -1345,11 +1394,25 @@ const voice = {
             self.activeMediaElSrc = mediaSrc;
             self.activeAudioBlobUrl = blobUrl;
             aEl.onended = finishOnce;
-            aEl.onerror = finishOnce;
+            aEl.onerror = function () {
+              self._cleanupActiveAudioEl();
+              startBufferSourceNode();
+            };
             const playP = aEl.play();
             enforceRate();
-            if (playP && typeof playP.catch === "function") {
-              playP.catch(function () { finishOnce(); });
+            if (playP && typeof playP.then === "function") {
+              playP.then(function () {
+                fireAudioStartOnce();
+              }, function (playErr) {
+                // Safari/iOS NotAllowedError fallback: keep playing via unlocked WebAudio AudioContext instead of dropping to browser speech!
+                self._cleanupActiveAudioEl();
+                if (playErr && playErr.name === "AbortError" && seq !== self.utteranceSeq) {
+                  return;
+                }
+                startBufferSourceNode();
+              });
+            } else {
+              fireAudioStartOnce();
             }
             usedPitchEl = true;
           } catch (e) {
@@ -1360,20 +1423,7 @@ const voice = {
       }
 
       if (!usedPitchEl) {
-        try {
-          const src = sound.ctx.createBufferSource();
-          src.buffer = audioBuf;
-          src.playbackRate.value = pbRate;
-          if (src.detune && (baseDetune || detuneNudge)) {
-            try { src.detune.value = clamp(baseDetune + detuneNudge, -135, 135); } catch (e) {}
-          }
-          src.connect(vGain);
-          self.activeAudioNode = src;
-          src.onended = finishOnce;
-          src.start(0, startOffset);
-        } catch (errBuf) {
-          finishOnce();
-        }
+        startBufferSourceNode();
       }
     };
 
@@ -1537,6 +1587,7 @@ const voice = {
         seatId: (opts && typeof opts.seatId === "number") ? opts.seatId : (effKey === "主持" ? 0 : undefined),
         sitCfg: opts && opts.sitCfg,
         onAudioReady: opts && opts.onAudioReady,
+        onAudioStart: opts && opts.onAudioStart,
         skipPreBreath: effKey === "主持",
         totalDurationHintMs: Math.round(audioBuf.duration * 1000)
       };
@@ -1615,6 +1666,7 @@ const voice = {
       seatId: opts && opts.seatId,
       sitCfg: opts && opts.sitCfg,
       onAudioReady: opts && opts.onAudioReady,
+      onAudioStart: opts && opts.onAudioStart,
       charRangeStart: (opts && typeof opts.charRangeStart === "number") ? opts.charRangeStart : undefined,
       charRangeEnd: (opts && typeof opts.charRangeEnd === "number") ? opts.charRangeEnd : undefined,
       totalDurationHintMs: Math.round(audioBuf.duration * 1000)
@@ -1652,108 +1704,298 @@ const voice = {
     return s;
   },
 
+  _wrapPcmBytesToWav: function (pcmBytes, sampleRate, channels) {
+    const sr = Math.max(8000, parseInt(sampleRate || 24000, 10) || 24000);
+    const ch = Math.max(1, Math.min(2, parseInt(channels || 1, 10) || 1));
+    const dataSize = pcmBytes.byteLength;
+    const byteRate = sr * ch * 2;
+    const blockAlign = ch * 2;
+    const out = new Uint8Array(44 + dataSize);
+    const dv = new DataView(out.buffer);
+    const writeStr = function (off, str) {
+      for (let i = 0; i < str.length; i++) out[off + i] = str.charCodeAt(i);
+    };
+    writeStr(0, "RIFF");
+    dv.setUint32(4, 36 + dataSize, true);
+    writeStr(8, "WAVE");
+    writeStr(12, "fmt ");
+    dv.setUint32(16, 16, true);
+    dv.setUint16(20, 1, true);
+    dv.setUint16(22, ch, true);
+    dv.setUint32(24, sr, true);
+    dv.setUint32(28, byteRate, true);
+    dv.setUint16(32, blockAlign, true);
+    dv.setUint16(34, 16, true);
+    writeStr(36, "data");
+    dv.setUint32(40, dataSize, true);
+    out.set(pcmBytes, 44);
+    return out;
+  },
+
+  parseAndValidateTtsAudioBytes: function (input, defaultSampleRate) {
+    let bytes = null;
+    if (typeof input === "string") {
+      const bin = atob(input);
+      bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    } else if (input instanceof Uint8Array) {
+      bytes = input;
+    } else if (input && input.buffer && typeof input.byteLength === "number") {
+      bytes = new Uint8Array(input.buffer, input.byteOffset || 0, input.byteLength);
+    } else if (input instanceof ArrayBuffer) {
+      bytes = new Uint8Array(input);
+    }
+    if (!bytes || bytes.byteLength < 128) {
+      throw new Error("TTS audio payload too short");
+    }
+    const isRiffWav = bytes.byteLength >= 44 &&
+      bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45;
+
+    let sampleRate = Math.max(8000, parseInt(defaultSampleRate || 24000, 10) || 24000);
+    let numChannels = 1;
+    let pcmOffset = 0;
+    let pcmLength = bytes.byteLength;
+
+    if (isRiffWav) {
+      const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      let off = 12;
+      let foundData = false;
+      while (off + 8 <= bytes.byteLength) {
+        const cid = String.fromCharCode(bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]);
+        const cSize = dv.getUint32(off + 4, true);
+        if (cid === "fmt " && off + 8 + Math.min(cSize, 16) <= bytes.byteLength) {
+          const fmtChannels = dv.getUint16(off + 10, true);
+          const fmtSr = dv.getUint32(off + 12, true);
+          if (fmtChannels >= 1 && fmtChannels <= 2) numChannels = fmtChannels;
+          if (fmtSr >= 8000 && fmtSr <= 96000) sampleRate = fmtSr;
+        } else if (cid === "data") {
+          pcmOffset = off + 8;
+          pcmLength = Math.max(0, Math.min(cSize, bytes.byteLength - pcmOffset));
+          foundData = true;
+          break;
+        }
+        off += 8 + cSize + (cSize & 1);
+      }
+      if (!foundData || pcmLength < 64) {
+        throw new Error("TTS RIFF WAV missing data chunk");
+      }
+    }
+
+    const pcmView = new DataView(bytes.buffer, bytes.byteOffset + pcmOffset, pcmLength);
+    const totalSamples = Math.floor(pcmLength / 2);
+    const frameCount = Math.floor(totalSamples / numChannels);
+    const duration = frameCount / sampleRate;
+    let peakAbs = 0;
+    for (let i = 0; i < totalSamples; i++) {
+      const a = Math.abs(pcmView.getInt16(i * 2, true));
+      if (a > peakAbs) peakAbs = a;
+    }
+    if (duration < 0.12 || peakAbs < 96) {
+      throw new Error("TTS audio is silent or too short (dur=" + duration.toFixed(3) + "s, peak=" + peakAbs + ")");
+    }
+    const wavBytes = isRiffWav ? bytes : this._wrapPcmBytesToWav(bytes, sampleRate, numChannels);
+    return {
+      isWav: isRiffWav,
+      bytes: wavBytes,
+      sampleRate: sampleRate,
+      numChannels: numChannels,
+      pcmOffset: pcmOffset,
+      pcmLength: pcmLength,
+      duration: duration,
+      peakAbs: peakAbs
+    };
+  },
+
   decodeGeminiAudioBytes: async function (bytes) {
     if (!bytes || bytes.byteLength < 128 || !sound.ctx) return null;
-    const isRiffWav = bytes.byteLength > 44 &&
-      bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
-    if (isRiffWav && typeof sound.ctx.decodeAudioData === "function") {
+    let parsed = null;
+    try {
+      parsed = this.parseAndValidateTtsAudioBytes(bytes, 24000);
+    } catch (e) {
+      return null;
+    }
+    const wavBytes = parsed.bytes;
+    if (typeof sound.ctx.decodeAudioData === "function") {
       try {
-        const decoded = await sound.ctx.decodeAudioData(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+        const decoded = await sound.ctx.decodeAudioData(wavBytes.buffer.slice(wavBytes.byteOffset, wavBytes.byteOffset + wavBytes.byteLength));
         if (decoded) return this.trimAudioBufferSilence(decoded);
       } catch (e) {}
     }
-    // Fallback for headerless 24kHz 16-bit little-endian linear PCM (audio/l16)
-    const pcmOffset = isRiffWav ? 44 : 0;
-    const view = new DataView(bytes.buffer, bytes.byteOffset + pcmOffset, bytes.byteLength - pcmOffset);
-    const samples = Math.floor(view.byteLength / 2);
-    if (samples <= 0) return null;
-    const audioBuf = sound.ctx.createBuffer(1, samples, 24000);
-    const ch = audioBuf.getChannelData(0);
-    for (let i = 0; i < samples; i++) {
-      ch[i] = view.getInt16(i * 2, true) / 32768;
+    const view = new DataView(wavBytes.buffer, wavBytes.byteOffset + (parsed.isWav ? parsed.pcmOffset : 44), parsed.pcmLength);
+    const chCount = parsed.numChannels || 1;
+    const frames = Math.floor(view.byteLength / (2 * chCount));
+    if (frames <= 0) return null;
+    const audioBuf = sound.ctx.createBuffer(chCount, frames, parsed.sampleRate || 24000);
+    for (let c = 0; c < chCount; c++) {
+      const ch = audioBuf.getChannelData(c);
+      for (let i = 0; i < frames; i++) {
+        ch[i] = view.getInt16((i * chCount + c) * 2, true) / 32768;
+      }
     }
     return this.trimAudioBufferSilence(audioBuf);
   },
 
-  _buildGeminiTtsPayload: function (profile, effKey, cleanText, mood) {
-    const voiceName = (profile && profile.studioVoice) || "Kore";
-    const taggedTranscript = this.injectGeminiVocalTags(cleanText, effKey, mood || "normal");
-    const cacheKey = voiceName + ":" + effKey + ":" + (mood || "normal") + ":" + cleanText;
-    return { voiceName: voiceName, stylePrompt: "", taggedTranscript: taggedTranscript, cacheKey: cacheKey };
+  _syncCloudTtsStores: function () {
+    if (this._studioCacheRef !== this.studioCache) {
+      this.cloudTtsAudioCache.clear();
+      if (this.studioCache && typeof this.studioCache === "object") {
+        const ks = Object.keys(this.studioCache);
+        for (let i = 0; i < ks.length; i++) this.cloudTtsAudioCache.set(ks[i], this.studioCache[ks[i]]);
+      }
+      this._studioCacheRef = this.studioCache;
+    }
+    if (this._studioPendingRef !== this.studioPending) {
+      this.cloudTtsInflightMap.clear();
+      if (this.studioPending && typeof this.studioPending === "object") {
+        const pk = Object.keys(this.studioPending);
+        for (let i = 0; i < pk.length; i++) this.cloudTtsInflightMap.set(pk[i], this.studioPending[pk[i]]);
+      }
+      this._studioPendingRef = this.studioPending;
+    }
   },
 
-  _fetchGeminiStudioAudio: function (profile, effKey, cleanText, mood) {
+  _getCachedCloudAudio: function (cacheKey) {
+    this._syncCloudTtsStores();
+    return (this.studioCache && this.studioCache[cacheKey]) || this.cloudTtsAudioCache.get(cacheKey) || null;
+  },
+
+  _setCachedCloudAudio: function (cacheKey, audioBuf) {
+    this._syncCloudTtsStores();
+    if (!audioBuf) return;
+    if (this.cloudTtsAudioCache.has(cacheKey)) this.cloudTtsAudioCache.delete(cacheKey);
+    while (this.cloudTtsAudioCache.size >= 48) {
+      const oldest = this.cloudTtsAudioCache.keys().next().value;
+      if (!oldest) break;
+      this.cloudTtsAudioCache.delete(oldest);
+      if (this.studioCache) delete this.studioCache[oldest];
+    }
+    this.cloudTtsAudioCache.set(cacheKey, audioBuf);
+    if (this.studioCache) this.studioCache[cacheKey] = audioBuf;
+  },
+
+  _getInflightCloudAudio: function (cacheKey) {
+    this._syncCloudTtsStores();
+    return (this.studioPending && this.studioPending[cacheKey]) || this.cloudTtsInflightMap.get(cacheKey) || null;
+  },
+
+  _setInflightCloudAudio: function (cacheKey, promise) {
+    this._syncCloudTtsStores();
+    this.cloudTtsInflightMap.set(cacheKey, promise);
+    if (this.studioPending) {
+      const pKeys = Object.keys(this.studioPending);
+      if (pKeys.length > 24) delete this.studioPending[pKeys[0]];
+      this.studioPending[cacheKey] = promise;
+    }
+  },
+
+  _deleteInflightCloudAudio: function (cacheKey) {
+    this.cloudTtsInflightMap.delete(cacheKey);
+    if (this.studioPending) delete this.studioPending[cacheKey];
+  },
+
+  _recordCloudTtsHardFail: function (speakerKey) {
+    const sp = String(speakerKey || "default");
+    if (!Array.isArray(this._cloudTtsHardFailSpeakers)) this._cloudTtsHardFailSpeakers = [];
+    if (this._cloudTtsHardFailSpeakers.indexOf(sp) === -1) {
+      this._cloudTtsHardFailSpeakers.push(sp);
+    }
+    this._cloudTtsFailStreak = this._cloudTtsHardFailSpeakers.length;
+    if (this._cloudTtsHardFailSpeakers.length >= 3) {
+      this.cloudGeminiTtsCooldownUntil = Date.now() + 5000;
+      this._cloudTtsHardFailSpeakers = [];
+      this._cloudTtsFailStreak = 0;
+    }
+  },
+
+  _clearCloudTtsFailState: function () {
+    this._cloudTtsHardFailSpeakers = [];
+    this._cloudTtsFailStreak = 0;
+    this._cloudTtsCooldownIs429 = false;
+    this.cloudGeminiTtsCooldownUntil = 0;
+  },
+
+  _buildGeminiTtsPayload: function (profile, effKey, cleanText, mood) {
+    const voiceName = (profile && profile.studioVoice) || "Kore";
+    const canonicalText = this.toCanonicalTtsText(cleanText) || String(cleanText || "").trim();
+    const cacheKey = voiceName + "|" + canonicalText;
+    return {
+      voiceName: voiceName,
+      stylePrompt: "",
+      canonicalText: canonicalText,
+      taggedTranscript: canonicalText,
+      cacheKey: cacheKey
+    };
+  },
+
+  _fetchGeminiStudioAudio: function (profile, effKey, cleanText, mood, fetchOptsArg) {
     const hasPersonalKey = Boolean(typeof state !== "undefined" && state.geminiApiKey);
     const hasCloudProxy = this.isCloudGeminiTtsActive();
     if ((!hasPersonalKey && !hasCloudProxy) || !sound || !sound.ctx) return Promise.resolve(null);
     const payload = this._buildGeminiTtsPayload(profile, effKey, cleanText, mood || "normal");
     const cacheKey = payload.cacheKey;
-    if (this.studioCache[cacheKey]) return Promise.resolve(this.studioCache[cacheKey]);
-    if (this.studioPending[cacheKey]) return this.studioPending[cacheKey];
+    const cached = this._getCachedCloudAudio(cacheKey);
+    if (cached) return Promise.resolve(cached);
+    const inflight = this._getInflightCloudAudio(cacheKey);
+    if (inflight) return inflight;
+
+    const isPrefetch = Boolean(fetchOptsArg && fetchOptsArg.isPrefetch);
+    const speakerTag = (fetchOptsArg && fetchOptsArg.speakerKey) || effKey || payload.voiceName;
+    const liveCtrl = (!isPrefetch && typeof AbortController === "function") ? new AbortController() : null;
+    if (liveCtrl) this._activeLiveTtsController = liveCtrl;
 
     const self = this;
     const p = (async function () {
       const isMobileNet = self.isMobileTtsNetworkEnv();
-      const personalKeyTimeoutMs = isMobileNet ? 4400 : 5600;
-      const controller = (hasPersonalKey && typeof AbortController === "function") ? new AbortController() : null;
-      const timer = controller ? setTimeout(function () { controller.abort(); }, personalKeyTimeoutMs) : null;
+      const personalKeyTimeoutMs = isMobileNet ? 6200 : 8200;
+      const timer = (hasPersonalKey && liveCtrl) ? setTimeout(function () { liveCtrl.abort(); }, personalKeyTimeoutMs) : null;
       const callCloudTtsTrackA = async function () {
         const hdrs = { "Content-Type": "application/json" };
         if (typeof getOrCreateProxySessionId === "function") {
           hdrs["X-Tea-Session"] = getOrCreateProxySessionId();
         }
-        const strippedText = self.stripGeminiVocalTags(cleanText) || cleanText;
-        const trackAStartedAt = Date.now();
-        // Keep frontend single-attempt timeout above backend TOTAL_BUDGET_MS (9200ms) for RTT + fallback model headroom
-        const firstAttemptTimeoutMs = isMobileNet ? 8400 : 8600;
-        const trackATotalBudgetMs = 10500;
-        const minRetryBudgetMs = isMobileNet ? 1800 : 2200;
-        const postOnce = async function (txtToSend, attemptTimeoutMs) {
-          const reqCtrl = typeof AbortController === "function" ? new AbortController() : null;
-          const reqTimer = reqCtrl ? setTimeout(function () { reqCtrl.abort(); }, attemptTimeoutMs) : null;
-          try {
-            return await fetch("/api/tts", {
-              method: "POST",
-              headers: hdrs,
-              signal: reqCtrl ? reqCtrl.signal : undefined,
-              body: JSON.stringify({
-                voice: payload.voiceName,
-                style: "",
-                text: txtToSend
-              })
-            });
-          } finally {
-            if (reqTimer) clearTimeout(reqTimer);
+        const singleTimeoutMs = 10500;
+        const reqCtrl = typeof AbortController === "function" ? new AbortController() : null;
+        const reqTimer = reqCtrl ? setTimeout(function () { reqCtrl.abort(); }, singleTimeoutMs) : null;
+        const onLiveAbort = function () {
+          if (reqCtrl) {
+            try { reqCtrl.abort(); } catch (e) {}
           }
         };
+        if (liveCtrl && liveCtrl.signal && typeof liveCtrl.signal.addEventListener === "function") {
+          if (liveCtrl.signal.aborted) onLiveAbort();
+          else liveCtrl.signal.addEventListener("abort", onLiveAbort, { once: true });
+        }
         let cloudRes = null;
         let cloudErr = null;
         try {
-          cloudRes = await postOnce(payload.taggedTranscript, firstAttemptTimeoutMs);
+          cloudRes = await fetch("/api/tts", {
+            method: "POST",
+            headers: hdrs,
+            signal: reqCtrl ? reqCtrl.signal : undefined,
+            body: JSON.stringify({
+              voice: payload.voiceName,
+              style: "",
+              text: payload.canonicalText
+            })
+          });
         } catch (err1) {
           cloudErr = err1;
-        }
-        let retryCount = 0;
-        const shouldRetry = !cloudRes || cloudRes.status === 400 || cloudRes.status === 500 || cloudRes.status === 502 || cloudRes.status === 504;
-        const retryRemainMs = trackATotalBudgetMs - (Date.now() - trackAStartedAt) - 150;
-        const hasTagDiff = strippedText !== payload.taggedTranscript;
-        const canRetryErr = !(cloudErr && cloudErr.name === "AbortError") || hasTagDiff;
-        if (retryCount < 1 && shouldRetry && canRetryErr && retryRemainMs >= minRetryBudgetMs) {
-          retryCount += 1;
-          await new Promise(function (resolve) { setTimeout(resolve, 150); });
-          const attempt2TimeoutMs = Math.max(minRetryBudgetMs, trackATotalBudgetMs - (Date.now() - trackAStartedAt));
-          try {
-            cloudRes = await postOnce(strippedText, attempt2TimeoutMs);
-            cloudErr = null;
-          } catch (err2) {
-            cloudErr = err2;
+        } finally {
+          if (reqTimer) clearTimeout(reqTimer);
+          if (liveCtrl && liveCtrl.signal && typeof liveCtrl.signal.removeEventListener === "function") {
+            liveCtrl.signal.removeEventListener("abort", onLiveAbort);
           }
         }
         if (cloudRes && cloudRes.ok) {
-          self._cloudTtsFailStreak = 0;
-          self._cloudTtsCooldownIs429 = false;
+          self._clearCloudTtsFailState();
           const arrBuf = await cloudRes.arrayBuffer();
           if (arrBuf && arrBuf.byteLength >= 128) return new Uint8Array(arrBuf);
+          self._recordCloudTtsHardFail(speakerTag);
+          return null;
+        }
+        if (cloudErr && (cloudErr.name === "AbortError" || (liveCtrl && liveCtrl.signal && liveCtrl.signal.aborted))) {
+          // Aborted by turn switch / skip: NEVER increment failure streak or trigger cooldown!
           return null;
         }
         const st = cloudRes ? cloudRes.status : 0;
@@ -1764,18 +2006,11 @@ const voice = {
           self._cloudTtsCooldownIs429 = false;
           self.cloudGeminiTtsCooldownUntil = Date.now() + 6000;
         } else if (st === 429) {
-          const raRaw = (cloudRes.headers && typeof cloudRes.headers.get === "function") ? cloudRes.headers.get("Retry-After") : "";
-          const raSec = parseInt(String(raRaw || ""), 10);
-          const backoffMs = clamp((isFinite(raSec) && raSec > 0) ? raSec * 1000 : 8000, 6000, 15000);
           self._cloudTtsCooldownIs429 = true;
-          self.cloudGeminiTtsCooldownUntil = Date.now() + backoffMs;
-        } else if (cloudErr || st >= 500 || st === 0) {
+          self._recordCloudTtsHardFail(speakerTag);
+        } else if (cloudErr || st >= 500 || st === 0 || st >= 400) {
           self._cloudTtsCooldownIs429 = false;
-          self._cloudTtsFailStreak = (self._cloudTtsFailStreak || 0) + 1;
-          if (self._cloudTtsFailStreak >= 2) {
-            self.cloudGeminiTtsCooldownUntil = Date.now() + 10000;
-            self._cloudTtsFailStreak = 0;
-          }
+          self._recordCloudTtsHardFail(speakerTag);
         }
         return null;
       };
@@ -1793,11 +2028,11 @@ const voice = {
               "Content-Type": "application/json",
               "x-goog-api-key": state.geminiApiKey
             },
-            signal: controller ? controller.signal : undefined,
+            signal: liveCtrl ? liveCtrl.signal : undefined,
             body: JSON.stringify({
               voice: payload.voiceName,
               style: "",
-              text: payload.taggedTranscript
+              text: payload.canonicalText
             })
           });
           if (proxyRes && proxyRes.ok) {
@@ -1805,20 +2040,20 @@ const voice = {
             if (arrBuf && arrBuf.byteLength >= 128) audioBytes = new Uint8Array(arrBuf);
           }
         }
-        // Track C: Direct browser Gemini TTS (2.5 Flash Preview -> 3.1 Flash TTS Preview with stripped tags)
+        // Track C: Direct browser Gemini TTS (3.8 Flash-Lite -> 3.8 Flash -> 2.5 Flash Preview; NO temperature)
         if (!audioBytes && hasPersonalKey) {
-          const strippedForFallback = self.stripGeminiVocalTags(cleanText) || cleanText;
           const fallbackVoiceMap = { Orus: "Puck", Enceladus: "Puck", Achird: "Charon", Iapetus: "Puck", Fenrir: "Puck", Leda: "Zephyr", Aoede: "Zephyr", Callirrhoe: "Zephyr", Autonoe: "Zephyr", Laomedeia: "Zephyr", Vindemiatrix: "Zephyr", Sulafat: "Zephyr" };
           const fbVoice = fallbackVoiceMap[payload.voiceName] || "";
-          const directModels = ["gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview"];
+          const directModels = ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts"];
           for (let mi = 0; mi < directModels.length && !audioBytes; mi++) {
             const directModelId = directModels[mi];
+            const isLegacy25 = directModelId.indexOf("gemini-2.5-") === 0;
+            const spokenDirectText = isLegacy25 ? ("Say: " + payload.canonicalText) : payload.canonicalText;
             const attempts = fbVoice
               ? [{ voice: payload.voiceName }, { voice: fbVoice }]
               : [{ voice: payload.voiceName }];
             for (let vi = 0; vi < attempts.length && !audioBytes; vi++) {
               const att = attempts[vi];
-              const partObj = { text: strippedForFallback };
               let res = null;
               try {
                 res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(directModelId) + ":generateContent", {
@@ -1827,11 +2062,11 @@ const voice = {
                     "Content-Type": "application/json",
                     "x-goog-api-key": state.geminiApiKey
                   },
-                  signal: controller ? controller.signal : undefined,
+                  signal: liveCtrl ? liveCtrl.signal : undefined,
                   body: JSON.stringify({
                     contents: [{
                       role: "user",
-                      parts: [partObj]
+                      parts: [{ text: spokenDirectText }]
                     }],
                     generationConfig: {
                       responseModalities: ["AUDIO"],
@@ -1851,7 +2086,9 @@ const voice = {
                 const data = await res.json();
                 let b64 = null;
                 if (data && data.candidates && data.candidates[0] && data.candidates[0].content && Array.isArray(data.candidates[0].content.parts)) {
-                  const audioPart = data.candidates[0].content.parts.find(function (pt) { return pt && pt.inlineData && pt.inlineData.data; });
+                  const audioPart = data.candidates[0].content.parts.find(function (pt) {
+                    return pt && pt.inlineData && typeof pt.inlineData.data === "string" && pt.inlineData.data.length >= 1600;
+                  });
                   if (audioPart) b64 = audioPart.inlineData.data;
                 }
                 if (b64) {
@@ -1876,22 +2113,19 @@ const voice = {
         if (!audioBytes) return null;
         const audioBuf = await self.decodeGeminiAudioBytes(audioBytes);
         if (!audioBuf) return null;
-        if (cleanText.length <= 320) {
-          const keys = Object.keys(self.studioCache);
-          if (keys.length > 64) delete self.studioCache[keys[0]];
-          self.studioCache[cacheKey] = audioBuf;
+        if (payload.canonicalText.length <= 320) {
+          self._setCachedCloudAudio(cacheKey, audioBuf);
         }
         return audioBuf;
       } catch (e) {
         if (timer) clearTimeout(timer);
         return null;
       } finally {
-        delete self.studioPending[cacheKey];
+        if (self._activeLiveTtsController === liveCtrl) self._activeLiveTtsController = null;
+        self._deleteInflightCloudAudio(cacheKey);
       }
     })();
-    const pKeys = Object.keys(this.studioPending);
-    if (pKeys.length > 16) delete this.studioPending[pKeys[0]];
-    this.studioPending[cacheKey] = p;
+    this._setInflightCloudAudio(cacheKey, p);
     return p;
   },
 
@@ -1901,24 +2135,26 @@ const voice = {
 
   _splitFirstSentenceForFastStart: function (cleanText, minLen) {
     const s = String(cleanText || "").trim();
-    const threshold = (typeof minLen === "number" && minLen > 0) ? minLen : 46;
+    const threshold = (typeof minLen === "number" && minLen > 0) ? minLen : 39;
     if (s.length < threshold) return null;
-    for (let i = 14; i <= Math.min(58, s.length - 13); i++) {
+    const termMax = threshold >= 60 ? 58 : 36;
+    const commaMax = threshold >= 60 ? 52 : 28;
+    for (let i = 10; i <= Math.min(termMax, s.length - 4); i++) {
       const ch = s.charAt(i);
       if (ch === "。" || ch === "！" || ch === "？" || ch === "；") {
         let cut = i + 1;
         while (cut < s.length && (s.charAt(cut) === "」" || s.charAt(cut) === "』" || s.charAt(cut) === "）")) cut += 1;
         const head = s.slice(0, cut).trim();
         const tail = s.slice(cut).trim();
-        if (head.length >= 14 && tail.length >= 12) return [head, tail];
+        if (head.length >= 10 && tail.length >= 2) return [head, tail];
       }
     }
-    for (let i = 20; i <= Math.min(52, s.length - 19); i++) {
+    for (let i = 14; i <= Math.min(commaMax, s.length - 4); i++) {
       const ch = s.charAt(i);
       if (ch === "，" || ch === "、") {
         const head = s.slice(0, i + 1).trim();
         const tail = s.slice(i + 1).trim();
-        if (head.length >= 20 && tail.length >= 18) return [head, tail];
+        if (head.length >= 14 && tail.length >= 2) return [head, tail];
       }
     }
     return null;
@@ -1926,7 +2162,7 @@ const voice = {
 
   _splitTextForCloudTts: function (cleanText, maxChunkLen) {
     const s = String(cleanText || "").trim();
-    const maxLen = (typeof maxChunkLen === "number" && maxChunkLen >= 24) ? maxChunkLen : 120;
+    const maxLen = (typeof maxChunkLen === "number" && maxChunkLen >= 24) ? maxChunkLen : 130;
     if (!s || s.length <= maxLen) return s ? [s] : [];
     const chunks = [];
     let rest = s;
@@ -1963,26 +2199,30 @@ const voice = {
   },
 
   prefetchCloudGeminiTts: function (personaName, rawText, mood) {
-    if (!this.canSpeak() || this.enginePref === "local") return;
-    if (!(typeof state !== "undefined" && state.geminiApiKey) && !this.isCloudGeminiTtsActive()) return;
+    if (!this.canSpeak() || this.enginePref === "local") return Promise.resolve(null);
+    if (!(typeof state !== "undefined" && state.geminiApiKey) && !this.isCloudGeminiTtsActive()) return Promise.resolve(null);
     if (typeof sound !== "undefined" && sound && !sound.ctx && typeof sound.unlock === "function") {
       try { sound.unlock(); } catch (e) {}
     }
-    if (!sound || !sound.ctx) return;
+    if (!sound || !sound.ctx) return Promise.resolve(null);
     const effKey = this.resolvePersonaKey(personaName);
     const cleanText = this.formatMandarinText(rawText);
-    if (!cleanText || this.lookupBundledVoicePackUrl(effKey, cleanText)) return;
+    const canonicalText = this.toCanonicalTtsText(cleanText) || cleanText;
+    if (!canonicalText || this.lookupBundledVoicePackUrl(effKey, canonicalText)) return Promise.resolve(null);
     const profile = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["你"];
-    const chunks = this._splitTextForCloudTts(cleanText, 120);
+    // Background prefetch: never split <=130-char lines so prosody stays continuous and request count halves
+    const chunks = this._splitTextForCloudTts(canonicalText, 130);
     if (chunks.length > 1) {
-      this._fetchGeminiStudioAudio(profile, effKey, chunks[0], mood || "normal");
-      this._fetchGeminiStudioAudio(profile, effKey, chunks[1], mood || "normal");
-      return;
+      return Promise.all([
+        this._fetchGeminiStudioAudio(profile, effKey, chunks[0], mood || "normal", { isPrefetch: true, speakerKey: effKey }),
+        this._fetchGeminiStudioAudio(profile, effKey, chunks[1], mood || "normal", { isPrefetch: true, speakerKey: effKey })
+      ]);
     }
-    this._fetchGeminiStudioAudio(profile, effKey, cleanText, mood || "normal");
+    return this._fetchGeminiStudioAudio(profile, effKey, canonicalText, mood || "normal", { isPrefetch: true, speakerKey: effKey });
   },
 
   prefetchBestTts: function (personaName, rawText, mood) {
+    this._lastPrefetchPromise = null;
     if (!this.canSpeak()) return false;
     const effKey = this.resolvePersonaKey(personaName);
     const clean = this.formatMandarinText(rawText);
@@ -1997,7 +2237,8 @@ const voice = {
       return true;
     }
     if (this.isGeminiTtsPreferred()) {
-      this.prefetchCloudGeminiTts(effKey, clean, mood || "normal");
+      const pfPromise = this.prefetchCloudGeminiTts(effKey, clean, mood || "normal");
+      this._lastPrefetchPromise = (pfPromise && typeof pfPromise.then === "function") ? pfPromise : null;
       return true;
     }
     if (this.localNeuralAvailable) {
@@ -2014,8 +2255,19 @@ const voice = {
     const effKey = (opts && opts.personaKey) ? opts.personaKey : this.activePersonaName;
     const moodNow = mood || "normal";
     const fullPayload = this._buildGeminiTtsPayload(profile, effKey, cleanText, moodNow);
-    const hasWarmFull = Boolean(this.studioCache[fullPayload.cacheKey] || this.studioPending[fullPayload.cacheKey]);
-    const chunks = !hasWarmFull ? this._splitTextForCloudTts(cleanText, 120) : [cleanText];
+    const canonicalText = fullPayload.canonicalText;
+    const fullKey = fullPayload.cacheKey;
+    const hasWarmFull = Boolean(this._getCachedCloudAudio(fullKey) || this._getInflightCloudAudio(fullKey));
+    let chunks = [canonicalText];
+    if (!hasWarmFull && canonicalText.length > 38) {
+      const fastPair = this._splitFirstSentenceForFastStart(canonicalText, 39);
+      if (fastPair && fastPair.length === 2) {
+        const tailParts = this._splitTextForCloudTts(fastPair[1], 130);
+        chunks = [fastPair[0]].concat(tailParts.length ? tailParts : [fastPair[1]]);
+      } else {
+        chunks = this._splitTextForCloudTts(canonicalText, 130);
+      }
+    }
     if (chunks.length > 1) {
       const self = this;
       const chunkPromises = new Array(chunks.length);
@@ -2023,16 +2275,16 @@ const voice = {
       let cursor = 0;
       for (let ci = 0; ci < chunks.length; ci++) {
         chunkOffsets[ci] = cursor;
-        cursor = Math.min(cleanText.length, cursor + chunks[ci].length);
+        cursor = Math.min(canonicalText.length, cursor + chunks[ci].length);
       }
       const ensureChunkFetch = function (idx) {
         if (idx < 0 || idx >= chunks.length) return null;
         if (!chunkPromises[idx]) {
-          chunkPromises[idx] = self._fetchGeminiStudioAudio(profile, effKey, chunks[idx], moodNow);
+          chunkPromises[idx] = self._fetchGeminiStudioAudio(profile, effKey, chunks[idx], moodNow, { isPrefetch: false, speakerKey: effKey });
         }
         return chunkPromises[idx];
       };
-      // Dispatch chunk 0 & chunk 1 in parallel for seamless playback across >120-char speeches
+      // Cold-start parallel dispatch at t=0: head chunk starts fast while rest chunk prepares in parallel!
       const headP = ensureChunkFetch(0);
       ensureChunkFetch(1);
       const headBuf = await headP;
@@ -2056,8 +2308,9 @@ const voice = {
         const tailOpts = Object.assign({}, opts, {
           personaKey: effKey,
           onAudioReady: null,
+          onAudioStart: null,
           charRangeStart: chunkOffsets[fromIdx] || 0,
-          charRangeEnd: cleanText.length
+          charRangeEnd: canonicalText.length
         });
         const effProfile = (typeof PERSONA_VOICE_PROFILES !== "undefined" && PERSONA_VOICE_PROFILES[effKey]) || profile;
         if (self.localNeuralAvailable && typeof self.playFreeLocalNeuralTts === "function") {
@@ -2088,7 +2341,7 @@ const voice = {
         }
         const isLast = idx === chunks.length - 1;
         const startC = chunkOffsets[idx] || 0;
-        const endC = isLast ? cleanText.length : (chunkOffsets[idx + 1] || cleanText.length);
+        const endC = isLast ? canonicalText.length : (chunkOffsets[idx + 1] || canonicalText.length);
         // Rolling prefetch: kick off chunk idx+1 right as chunk idx begins playing
         if (!isLast) ensureChunkFetch(idx + 1);
         const onChunkDone = isLast ? onDone : async function () {
@@ -2096,14 +2349,13 @@ const voice = {
           const nextIdx = idx + 1;
           try {
             let nextBuf = await ensureChunkFetch(nextIdx);
-            // Anti-robotic-fallback retry: retry ONCE on transient non-429 blips without wiping rate-limit cooldowns!
             if (!nextBuf && seq === self.utteranceSeq && !self.paused) {
               const cdRemain = (self.cloudGeminiTtsCooldownUntil || 0) - Date.now();
               if (!self._cloudTtsCooldownIs429 && cdRemain < 25000) {
                 self.cloudGeminiTtsCooldownUntil = 0;
-                await new Promise(function (resolve) { setTimeout(resolve, 340); });
+                await new Promise(function (resolve) { setTimeout(resolve, 260); });
                 if (seq === self.utteranceSeq && !self.paused) {
-                  nextBuf = await self._fetchGeminiStudioAudio(profile, effKey, chunks[nextIdx], moodNow);
+                  nextBuf = await self._fetchGeminiStudioAudio(profile, effKey, chunks[nextIdx], moodNow, { isPrefetch: false, speakerKey: effKey });
                 }
               }
             }
@@ -2137,7 +2389,9 @@ const voice = {
           skipPrepBeat: idx > 0,
           skipRateAdjust: true,
           skipTypewriterSync: idx > 0,
+          skipAudioStartCallback: idx > 0,
           onAudioReady: idx === 0 ? (opts && opts.onAudioReady) : null,
+          onAudioStart: idx === 0 ? (opts && opts.onAudioStart) : null,
           charRangeStart: startC,
           charRangeEnd: endC,
           totalDurationHintMs: Math.round(buf.duration * 1000)
@@ -2145,7 +2399,7 @@ const voice = {
       };
       return playChunkAt(0, headBuf);
     }
-    const audioBuf = await this._fetchGeminiStudioAudio(profile, effKey, cleanText, moodNow);
+    const audioBuf = await this._fetchGeminiStudioAudio(profile, effKey, canonicalText, moodNow, { isPrefetch: false, speakerKey: effKey });
     if (!audioBuf || seq !== this.utteranceSeq) return false;
     // Gemini Studio TTS renders native vocal timbre; skip synthetic pre-breath while retaining Web Audio subtle detune/rate
     return this.playBufferedStudioAudio(seq, audioBuf, onDone, Object.assign({}, opts, {
@@ -2249,6 +2503,7 @@ const voice = {
       : null;
     if (!clean || !this.canSpeak()) {
       if (opts && typeof opts.onAudioReady === "function") opts.onAudioReady(0);
+      if (opts && typeof opts.onAudioStart === "function") opts.onAudioStart(0);
       if (typeof effectiveOnDone === "function") setTimeout(effectiveOnDone, 0);
       return;
     }
@@ -2286,12 +2541,14 @@ const voice = {
       mood: mood || "normal",
       sitCfg: sitCfg,
       speaker: speakerObj,
-      onAudioReady: opts && opts.onAudioReady
+      onAudioReady: opts && opts.onAudioReady,
+      onAudioStart: opts && opts.onAudioStart
     };
 
     const fallbackToBrowser = function () {
       if (seq !== self.utteranceSeq) return;
       if (forwardOpts.onAudioReady) forwardOpts.onAudioReady(0);
+      if (forwardOpts.onAudioStart) forwardOpts.onAudioStart(0);
       self.speakLocalBrowserTts(seq, profile, clean, mood, wasBusy, effectiveOnDone, forwardOpts);
     };
 

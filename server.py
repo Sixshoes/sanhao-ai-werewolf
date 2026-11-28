@@ -383,45 +383,81 @@ def strip_gemini_vocal_tags(raw_text):
     return re.sub(r"\s+", " ", _VOCAL_TAG_RE.sub(" ", str(raw_text or ""))).strip()
 
 
-def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=14):
-    """Call official Gemini TTS generateContent API (2.5 Flash Preview -> 3.1 Flash TTS Preview); return RIFF WAV bytes."""
+TTS_MODEL_CHAIN = (
+    "gemini-3.8-flash-lite-tts",
+    "gemini-3.8-flash-tts",
+    "gemini-2.5-flash-preview-tts",
+)
+LEGACY_UPGRADE_TTS_MODELS = {
+    "gemini-2.5-flash-preview-tts",
+    "gemini-2.5-pro-preview-tts",
+    "gemini-3.1-flash-tts-preview",
+}
+MIN_INLINE_AUDIO_B64_LEN = 1600
+
+
+def resolve_primary_tts_model(raw_model=""):
+    cand = str(raw_model or os.environ.get("GEMINI_TTS_MODEL") or "").strip()
+    if not cand or cand in LEGACY_UPGRADE_TTS_MODELS:
+        return "gemini-3.8-flash-lite-tts"
+    if cand in TTS_MODEL_CHAIN:
+        return cand
+    return "gemini-3.8-flash-lite-tts"
+
+
+def normalize_tts_polyphones(text):
+    return str(text or "").replace("直心糾察長", "直心糾察掌").replace("糾察長", "糾察掌")
+
+
+def sanitize_transcript_for_tts(raw_text):
+    s = strip_gemini_vocal_tags(raw_text)
+    s = re.sub(r"\[[^\]]*\]", " ", s)
+    s = re.sub(r"（[^）]*）", " ", s)
+    s = re.sub(r"\([^)]*\)", " ", s)
+    s = normalize_tts_polyphones(s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def build_tts_request_body(model_name, clean_transcript, voice_name="Kore", use_fallback_voice=False):
+    raw_v = str(voice_name or "").strip()
+    mapped_v = GEMINI_TTS_VOICE_FALLBACK.get(raw_v, raw_v) if use_fallback_voice else raw_v
+    safe_v = mapped_v if mapped_v in ALLOWED_GEMINI_VOICES else "Kore"
+    cleaned = sanitize_transcript_for_tts(clean_transcript) or str(clean_transcript or "").strip()
+    is_legacy_25 = str(model_name or "").startswith("gemini-2.5-")
+    spoken = ("Say: " + cleaned) if is_legacy_25 else cleaned
+    return {
+        "contents": [{
+            "role": "user",
+            "parts": [{"text": spoken}],
+        }],
+        "generationConfig": {
+            "responseModalities": ["AUDIO"],
+            "speechConfig": {
+                "voiceConfig": {
+                    "prebuiltVoiceConfig": {
+                        "voiceName": safe_v,
+                    }
+                }
+            },
+        },
+    }
+
+
+def call_gemini_tts_wav(api_key, text, voice_name="Kore", style_prompt="", timeout=14, raw_model=""):
+    """Call official Gemini TTS generateContent API (3.8 Flash-Lite -> 3.8 Flash -> 2.5 Flash Preview); return RIFF WAV bytes."""
     import base64
     v_name = voice_name if voice_name in ALLOWED_GEMINI_VOICES else "Kore"
     fb_v = GEMINI_TTS_VOICE_FALLBACK.get(v_name)
-    models_to_try = ("gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview")
+    primary = resolve_primary_tts_model(raw_model)
+    models_to_try = [primary] + [m for m in TTS_MODEL_CHAIN if m != primary]
+    clean_transcript = sanitize_transcript_for_tts(text) or str(text or "").strip()
     last_err = None
-    raw_text = str(text)
-    stripped_text = strip_gemini_vocal_tags(raw_text) or raw_text
-    has_vocal_tags = stripped_text != raw_text
     for model_id in models_to_try:
-        is_38 = model_id.startswith("gemini-3.8-")
-        attempts = []
-        if is_38:
-            attempts.append((v_name, False))
-            if (fb_v and fb_v != v_name) or has_vocal_tags:
-                attempts.append((fb_v or v_name, True))
-        else:
-            attempts.append((v_name, True))
-            if fb_v and fb_v != v_name:
-                attempts.append((fb_v, True))
-        for cand_voice, use_stripped in attempts:
-            part = {"text": stripped_text}
-            payload = {
-                "contents": [{
-                    "role": "user",
-                    "parts": [part]
-                }],
-                "generationConfig": {
-                    "responseModalities": ["AUDIO"],
-                    "speechConfig": {
-                        "voiceConfig": {
-                            "prebuiltVoiceConfig": {
-                                "voiceName": cand_voice
-                            }
-                        }
-                    }
-                }
-            }
+        attempts = [False]
+        if fb_v and fb_v != v_name:
+            attempts.append(True)
+        for use_fb_voice in attempts:
+            payload = build_tts_request_body(model_id, clean_transcript, v_name, use_fallback_voice=use_fb_voice)
             body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             req = urllib.request.Request(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent",
@@ -447,25 +483,28 @@ def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=14):
                         hexc.close()
                     except Exception:
                         pass
-                last_err = RuntimeError(f"Gemini TTS {model_id}/{cand_voice} HTTP {hexc.code}: {err_detail}")
+                last_err = RuntimeError(f"Gemini TTS {model_id}/{v_name} HTTP {hexc.code}: {err_detail}")
                 if hexc.code in (401, 403):
                     raise hexc
                 if hexc.code in (400, 404, 429, 500, 502, 503):
                     continue
                 raise hexc
             except (urllib.error.URLError, TimeoutError, OSError) as nexc:
-                last_err = RuntimeError(f"Gemini TTS {model_id}/{cand_voice} transient error: {redact_api_keys(nexc)}")
+                last_err = RuntimeError(f"Gemini TTS {model_id}/{v_name} transient error: {redact_api_keys(nexc)}")
                 continue
             for cand in (data.get("candidates") or []):
                 parts = ((cand.get("content") or {}).get("parts") or [])
                 for pt in parts:
                     inline = pt.get("inlineData") or pt.get("inline_data") or {}
-                    if inline.get("data"):
-                        raw_bytes = base64.b64decode(inline["data"])
+                    b64_data = inline.get("data")
+                    if isinstance(b64_data, str) and len(b64_data) >= MIN_INLINE_AUDIO_B64_LEN:
+                        raw_bytes = base64.b64decode(b64_data)
+                        if len(raw_bytes) < 1024:
+                            continue
                         mime = str(inline.get("mimeType") or inline.get("mime_type") or "audio/L16;rate=24000")
                         rate_m = re.search(r"rate=(\d+)", mime)
                         sr = int(rate_m.group(1)) if rate_m else 24000
-                        wav_bytes = wrap_pcm_to_wav(raw_bytes, sample_rate=sr)
+                        wav_bytes = raw_bytes if raw_bytes[:4] == b"RIFF" else wrap_pcm_to_wav(raw_bytes, sample_rate=sr)
                         return wav_bytes, "audio/wav"
     if last_err:
         raise last_err
@@ -473,16 +512,58 @@ def call_gemini_tts_wav(api_key, text, voice_name, style_prompt, timeout=14):
 
 
 ALLOWED_PROXY_GEMINI_MODELS = {
-    "gemini-2.5-pro",
-    "gemini-4-hydrogen",
+    "gemini-3.5-flash-lite",
     "gemini-3.8-flash",
-    "gemini-3.1-flash-lite",
-    "gemini-2.5-flash",
+    "gemini-3.6-flash",
     "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
 }
-DEFAULT_PROXY_GEMINI_MODEL = "gemini-4-hydrogen"
-LITE_PROXY_GEMINI_MODEL = "gemini-3.1-flash-lite"
-PROXY_GEMINI_FALLBACK_ORDER = ("gemini-4-hydrogen", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite")
+DEFAULT_PROXY_GEMINI_MODEL = "gemini-3.5-flash-lite"
+LITE_PROXY_GEMINI_MODEL = "gemini-3.5-flash-lite"
+PROXY_GEMINI_FALLBACK_ORDER = (
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.6-flash",
+    "gemini-2.5-flash",
+)
+
+
+def resolve_gemini_text_model(requested_model=""):
+    req = str(requested_model or "").strip()
+    if not req or req in ("gemini-2.5-flash", "gemini-4-hydrogen", "gemini-3.1-flash-lite"):
+        return "gemini-3.5-flash-lite"
+    if req == "gemini-2.5-pro":
+        return "gemini-3.8-flash"
+    if req in ALLOWED_PROXY_GEMINI_MODELS:
+        return req
+    return DEFAULT_PROXY_GEMINI_MODEL
+
+
+def sanitize_gemini_text_body(model_name, raw_body):
+    m_id = str(model_name or "").strip()
+    body = dict(raw_body) if isinstance(raw_body, dict) else {}
+    if isinstance(body.get("contents"), list):
+        contents = list(body["contents"])
+        while contents and isinstance(contents[-1], dict) and contents[-1].get("role") == "model":
+            contents.pop()
+        body["contents"] = contents
+    gen_cfg = dict(body["generationConfig"]) if isinstance(body.get("generationConfig"), dict) else {}
+    if m_id.startswith("gemini-3") or m_id.startswith("gemini-4"):
+        for k in ("temperature", "topP", "top_p", "topK", "top_k", "candidateCount", "candidate_count", "thinkingBudget", "thinking_budget"):
+            gen_cfg.pop(k, None)
+        if m_id == "gemini-3.5-flash-lite":
+            gen_cfg["thinkingConfig"] = {"thinkingLevel": "minimal"}
+        elif m_id in ("gemini-3.6-flash", "gemini-3.8-flash"):
+            gen_cfg["thinkingConfig"] = {"thinkingLevel": "low"}
+        else:
+            tc = dict(gen_cfg["thinkingConfig"]) if isinstance(gen_cfg.get("thinkingConfig"), dict) else {}
+            tc.pop("thinkingBudget", None)
+            tc.pop("thinking_budget", None)
+            tc.setdefault("thinkingLevel", "low")
+            gen_cfg["thinkingConfig"] = tc
+    body["generationConfig"] = gen_cfg
+    return body
 
 
 def get_server_gemini_key():
@@ -515,27 +596,23 @@ def clamp_gemini_temperature(raw_temp, default_val=0.65):
 
 
 def call_gemini_text_rest(api_key, model_id, prompt_text, json_mode=False, timeout=14, temperature=0.65):
-    safe_model = model_id if model_id in ALLOWED_PROXY_GEMINI_MODELS else DEFAULT_PROXY_GEMINI_MODEL
-    is_gemini4 = safe_model.startswith("gemini-4-")
-    is_pro25 = safe_model == "gemini-2.5-pro"
+    safe_model = resolve_gemini_text_model(model_id)
+    is_3_or_4 = safe_model.startswith("gemini-3") or safe_model.startswith("gemini-4")
+    is_deep_38 = safe_model in ("gemini-3.8-flash", "gemini-3.6-flash")
     gen_cfg = {
-        "maxOutputTokens": (3072 if json_mode else 2048) if (is_pro25 or is_gemini4) else (1536 if json_mode else 1024),
+        "maxOutputTokens": (3072 if json_mode else 2048) if (is_deep_38 or is_3_or_4) else (1536 if json_mode else 1024),
     }
-    if is_gemini4:
-        t_lvl = str(os.environ.get("GEMINI_THINKING_LEVEL") or "LOW").strip().upper()
-        gen_cfg["thinkingConfig"] = {"thinkingLevel": t_lvl if t_lvl in ("LOW", "MEDIUM", "HIGH") else "LOW"}
-    else:
+    if not is_3_or_4:
         gen_cfg["temperature"] = clamp_gemini_temperature(temperature)
-        if is_pro25:
-            gen_cfg["thinkingConfig"] = {"thinkingBudget": 512}
-        elif safe_model in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+        if safe_model in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
             gen_cfg["thinkingConfig"] = {"thinkingBudget": 0}
     if json_mode:
         gen_cfg["responseMimeType"] = "application/json"
-    body = json.dumps({
-        "contents": [{"parts": [{"text": prompt_text}]}],
+    req_payload = sanitize_gemini_text_body(safe_model, {
+        "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
         "generationConfig": gen_cfg,
-    }).encode("utf-8")
+    })
+    body = json.dumps(req_payload).encode("utf-8")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{urllib.parse.quote(safe_model, safe='')}:generateContent"
     req = urllib.request.Request(
         url,
@@ -723,7 +800,7 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {
                 "ok": True,
                 "available": bool(gem_key),
-                "model": "gemini-3.8-flash-lite-tts",
+                "model": resolve_primary_tts_model(""),
                 "mode": "vercel-gemini-tts",
             })
             return
@@ -731,12 +808,12 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         if route == "/api/gemini":
             gem_key = get_server_gemini_key()
             def_m = os.environ.get("GEMINI_DEFAULT_MODEL", DEFAULT_PROXY_GEMINI_MODEL).strip() or DEFAULT_PROXY_GEMINI_MODEL
-            safe_def = def_m if def_m in ALLOWED_PROXY_GEMINI_MODELS else DEFAULT_PROXY_GEMINI_MODEL
+            safe_def = resolve_gemini_text_model(def_m)
             self.send_json(200, {
                 "ok": True,
                 "available": bool(gem_key),
                 "model": safe_def,
-                "supportedModels": [DEFAULT_PROXY_GEMINI_MODEL, LITE_PROXY_GEMINI_MODEL, "gemini-2.5-flash"],
+                "supportedModels": list(PROXY_GEMINI_FALLBACK_ORDER),
                 "mode": "local-server-proxy",
             })
             return
@@ -849,7 +926,7 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             self.send_json(400, {"ok": False, "error": "Empty prompt"})
             return
         req_model = str(req.get("model") or os.environ.get("GEMINI_DEFAULT_MODEL", DEFAULT_PROXY_GEMINI_MODEL)).strip()
-        primary_model = req_model if req_model in ALLOWED_PROXY_GEMINI_MODELS else DEFAULT_PROXY_GEMINI_MODEL
+        primary_model = resolve_gemini_text_model(req_model)
         if str(req.get("tier") or "").strip() == "lite" and primary_model == DEFAULT_PROXY_GEMINI_MODEL:
             primary_model = LITE_PROXY_GEMINI_MODEL
         json_mode = bool(req.get("jsonMode"))
@@ -990,14 +1067,15 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
         raw_text = req.get("text")
         text = raw_text.strip() if isinstance(raw_text, str) else ""
         voice_name = str(req.get("voice") or "Kore").strip()
-        style_prompt = str(req.get("style") or "").strip()[:320]
+        req_model = str(req.get("model") or "").strip()
         if not text:
             self.send_json(400, {"ok": False, "error": "Empty text"})
             return
         if len(text) > 900:
             text = text[:900]
         v_safe = voice_name if voice_name in ALLOWED_GEMINI_VOICES else "Kore"
-        key = "gem_" + hashlib.sha256(f"{v_safe}|{style_prompt}|{text}".encode("utf-8")).hexdigest()[:24]
+        clean_t = sanitize_transcript_for_tts(text) or text
+        key = "gem_" + hashlib.sha256(f"{v_safe}|{clean_t}".encode("utf-8")).hexdigest()[:24]
         wav_path = CACHE_DIR / f"{key}.wav"
 
         # Serve directly from disk cache even without API call if already synthesized earlier!
@@ -1008,7 +1086,7 @@ class SanhaoHandler(SimpleHTTPRequestHandler):
             with get_tts_key_lock(key):
                 if not wav_path.exists() or wav_path.stat().st_size < 128:
                     try:
-                        audio_bytes, _mime = call_gemini_tts_wav(api_key, text, v_safe, style_prompt)
+                        audio_bytes, _mime = call_gemini_tts_wav(api_key, clean_t, v_safe, raw_model=req_model)
                     except urllib.error.HTTPError as hexc:
                         self.send_json(hexc.code if 400 <= hexc.code < 600 else 502, {"ok": False, "error": f"Gemini TTS HTTP {hexc.code}"})
                         return

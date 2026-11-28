@@ -59,27 +59,33 @@ function renderSpeakerTurnStrip() {
   const populateTurnStrip = function (container, onSeatClick) {
     if (!container) return;
     container.innerHTML = "";
+    const aliveOrder = order.filter(function (sid) {
+      const st = getSeat(sid);
+      return Boolean(st && st.alive);
+    });
+    const renderOrder = aliveOrder.length ? aliveOrder : order;
+    if (container.style) {
+      const cntVal = String(renderOrder.length || (state.match && state.match.totalSeats) || 12);
+      if (typeof container.style.setProperty === "function") {
+        container.style.setProperty("--seat-count", cntVal);
+      } else {
+        container.style["--seat-count"] = cntVal;
+      }
+    }
     const dirTag = document.createElement("span");
-    dirTag.className = "turn-chip opacity-80";
+    dirTag.className = "turn-chip turn-dir-chip opacity-80";
     dirTag.textContent = dirTagText;
     dirTag.title = state.match.speechOrderLabel || dirTagText;
     container.appendChild(dirTag);
-    let speakingChip = null;
-    order.forEach(function (sid, idx) {
+    renderOrder.forEach(function (sid) {
       const seat = getSeat(sid);
-      if (!seat || !seat.alive) return;
-      if (idx > 0) {
-        const sep = document.createElement("span");
-        sep.className = "turn-sep-dot select-none";
-        sep.textContent = "·";
-        container.appendChild(sep);
-      }
+      if (!seat) return;
       const btn = document.createElement("button");
       btn.type = "button";
       const isCurrent = (sid === activeId);
       const isPending = remaining.indexOf(sid) !== -1;
       const isDone = !isCurrent && !isPending;
-      btn.className = "turn-chip cursor-pointer hover:opacity-100" + (isCurrent ? " is-speaking" : (isDone ? " is-done" : ""));
+      btn.className = "turn-chip cursor-pointer hover:opacity-100" + (!seat.alive ? " is-dead" : (isCurrent ? " is-speaking" : (isDone ? " is-done" : "")));
       const shPrefix = (shIdNow === sid) ? "警 " : "";
       const shortName = shPrefix + (sid === pid ? (fmtSeatNum(sid) + " 你") : (fmtSeatNum(sid) + " " + seat.name));
       btn.textContent = isCurrent ? (shortName + " · 言") : shortName;
@@ -89,12 +95,7 @@ function renderSpeakerTurnStrip() {
         if (sid !== pid) onSeatClick(sid);
       });
       container.appendChild(btn);
-      if (isCurrent) speakingChip = btn;
     });
-    const focusChip = speakingChip || (typeof container.querySelector === "function" ? container.querySelector(".is-speaking") : null);
-    if (focusChip) {
-      scrollHorizontalStripToTarget(container, focusChip);
-    }
   };
   populateTurnStrip(strip, openSeatIntel);
   populateTurnStrip(el("playerTurnOrderStrip"), selectSeat);
@@ -772,9 +773,10 @@ function startSpotlightTypewriter(opts) {
       const tTxt = el("spotlightTraitTag") ? el("spotlightTraitTag").textContent : "";
       syncSpeakerBannerVisuals(curSp, bTxt, tTxt, false);
       maybeScheduleAutoAdvanceAfterSpeech();
-    }, { onAudioReady: opts.onAudioReady });
+    }, { onAudioReady: opts.onAudioReady, onAudioStart: opts.onAudioStart });
   } else {
     if (typeof opts.onAudioReady === "function") opts.onAudioReady(0);
+    if (typeof opts.onAudioStart === "function") opts.onAudioStart(0);
     commitPendingSpeechLog(speaker ? speaker.id : null);
     maybeScheduleAutoAdvanceAfterSpeech();
   }

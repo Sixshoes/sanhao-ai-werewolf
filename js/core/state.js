@@ -5,9 +5,9 @@
 
 const state = {
   geminiApiKey: "",
-  geminiModel: "gemini-4-hydrogen",
+  geminiModel: "gemini-3.5-flash-lite",
   serverGeminiAvailable: false,
-  serverGeminiModel: "gemini-4-hydrogen",
+  serverGeminiModel: "gemini-3.5-flash-lite",
   serverGeminiModelUserChosen: false,
   serverGeminiOptOut: false,
   serverGeminiCooldownUntil: 0,
@@ -210,8 +210,8 @@ function saveUserPrefs() {
       activeVariant: state.activeVariant || "standard",
       sheriffMode: Boolean(state.sheriffMode),
       guardMode: Boolean(state.guardMode),
-      geminiModel: state.geminiModel || "gemini-4-hydrogen",
-      serverGeminiModel: state.serverGeminiModel || "gemini-4-hydrogen",
+      geminiModel: state.geminiModel || "gemini-3.5-flash-lite",
+      serverGeminiModel: state.serverGeminiModel || "gemini-3.5-flash-lite",
       serverGeminiModelUserChosen: Boolean(state.serverGeminiModelUserChosen),
       localLlmModel: String(state.localLlmModel || "").trim(),
       serverGeminiOptOut: Boolean(state.serverGeminiOptOut),
@@ -282,20 +282,28 @@ function loadUserPrefs() {
     if (typeof p.guardMode === "boolean") state.guardMode = p.guardMode;
     if (typeof p.geminiModel === "string" && p.geminiModel) {
       const mNorm = p.geminiModel.trim();
-      if (mNorm === "gemini-4-hydrogen" || mNorm === "gemini-3.8-flash" || mNorm === "gemini-3.1-flash-lite" || mNorm === "gemini-2.5-pro" || mNorm === "gemini-2.5-flash" || mNorm === "gemini-2.5-flash-lite") {
+      if (mNorm === "gemini-2.5-pro") {
+        state.geminiModel = "gemini-3.8-flash";
+      } else if (!mNorm || mNorm === "gemini-2.5-flash" || mNorm === "gemini-4-hydrogen" || mNorm === "gemini-3.1-flash-lite") {
+        state.geminiModel = "gemini-3.5-flash-lite";
+      } else if (mNorm === "gemini-3.5-flash-lite" || mNorm === "gemini-3.8-flash" || mNorm === "gemini-3.6-flash" || mNorm === "gemini-2.5-flash-lite") {
         state.geminiModel = mNorm;
       } else if (mNorm.indexOf("lite") !== -1) {
-        state.geminiModel = "gemini-3.1-flash-lite";
+        state.geminiModel = "gemini-3.5-flash-lite";
       } else {
-        state.geminiModel = "gemini-4-hydrogen";
+        state.geminiModel = "gemini-3.5-flash-lite";
       }
     }
     if (typeof p.serverGeminiModel === "string" && p.serverGeminiModel) {
       const smNorm = p.serverGeminiModel.trim();
-      if (smNorm === "gemini-2.5-pro" || smNorm === "gemini-4-hydrogen" || smNorm === "gemini-3.8-flash" || smNorm === "gemini-3.1-flash-lite" || smNorm === "gemini-2.5-flash" || smNorm === "gemini-2.5-flash-lite") {
+      if (smNorm === "gemini-2.5-pro") {
+        state.serverGeminiModel = "gemini-3.8-flash";
+      } else if (!smNorm || smNorm === "gemini-2.5-flash" || smNorm === "gemini-4-hydrogen" || smNorm === "gemini-3.1-flash-lite") {
+        state.serverGeminiModel = "gemini-3.5-flash-lite";
+      } else if (smNorm === "gemini-3.5-flash-lite" || smNorm === "gemini-3.8-flash" || smNorm === "gemini-3.6-flash" || smNorm === "gemini-2.5-flash-lite") {
         state.serverGeminiModel = smNorm;
       } else {
-        state.serverGeminiModel = "gemini-4-hydrogen";
+        state.serverGeminiModel = "gemini-3.5-flash-lite";
       }
     }
     if (typeof p.serverGeminiModelUserChosen === "boolean") {
@@ -397,7 +405,8 @@ function syncPrefsToControls() {
   if (el("chkGuardMode")) el("chkGuardMode").checked = Boolean(state.guardMode);
   const selGm = el("selectGeminiModel");
   if (selGm) {
-    const desired = state.geminiModel || "gemini-4-hydrogen";
+    const rawDesired = state.geminiModel || "gemini-3.5-flash-lite";
+    const desired = typeof normalizePersonalGeminiModel === "function" ? normalizePersonalGeminiModel(rawDesired) : rawDesired;
     const hasOpt = Array.prototype.some.call(selGm.options || [], function (o) { return o.value === desired; });
     if (hasOpt) selGm.value = desired;
   }

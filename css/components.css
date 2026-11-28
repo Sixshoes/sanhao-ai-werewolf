@@ -1761,30 +1761,37 @@ body.screen-gameover #focalCenterCard {
 }
 
 .turn-strip-row {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  --seat-count: 12;
+  display: grid;
+  grid-template-columns: repeat(var(--seat-count, 12), minmax(0, 1fr));
+  gap: 4px;
   max-width: 100%;
+  overflow-x: visible;
+  white-space: normal;
   padding-bottom: 1px;
-}
-
-.turn-strip-row::-webkit-scrollbar {
-  display: none;
 }
 
 .turn-chip {
   font-size: 13px;
   font-weight: 600;
-  padding: 1px 4px;
-  border-radius: 2px;
+  padding: 2px 4px;
+  border-radius: 3px;
   border: none;
   border-bottom: 1.5px solid transparent;
   background: transparent;
   color: var(--text-muted);
   transition: color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
   white-space: nowrap;
-  flex-shrink: 0;
+  overflow: visible;
+  min-width: 0;
+  text-align: center;
+}
+
+.turn-dir-chip {
+  grid-column: 1 / -1;
+  justify-self: start;
+  text-align: left;
+  padding: 0 2px;
 }
 
 .turn-chip:hover {
@@ -3378,24 +3385,19 @@ body.fx-pacing-fast #dramaticCutIn.is-active.cutin-hold {
   }
 
   #seatButtonStrip:not(.hidden) {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 6px;
-    padding: 6px 8px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  #seatButtonStrip:not(.hidden)::-webkit-scrollbar {
-    display: none;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    overflow-x: visible;
+    white-space: normal;
+    padding: 5px 6px;
   }
 
   .seat-pill-btn {
-    flex: 0 0 auto;
-    min-height: 36px;
-    padding: 6px 10px;
-    font-size: 14px;
+    min-width: 0;
+    min-height: 34px;
+    padding: 4px 4px;
+    font-size: 13px;
     white-space: nowrap;
   }
 
@@ -4734,15 +4736,13 @@ body.fx-pacing-fast .play-card-btn.is-card-casting {
   }
 
   #seatButtonStrip:not(.hidden) {
-    scroll-snap-type: x proximity;
-    padding: 2px 2px 3px;
+    padding: 4px 4px;
   }
 
   .seat-pill-btn {
-    scroll-snap-align: start;
     min-height: 34px;
-    padding: 4px 9px;
-    font-size: 14px;
+    padding: 4px 4px;
+    font-size: 13px;
   }
 
   .cta-cinnabar,
@@ -20620,7 +20620,7 @@ body.craft-ui.theme-twilight #panelVote #voteNotesDeck .vote-note-chip {
 
 @media (min-width: 1024px) {
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
-    max-width: min(720px, calc(100vw - 488px));
+    max-width: min(1040px, calc(100vw - 260px));
   }
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #virtueQuickDeck:not(.hidden) {
@@ -20640,52 +20640,76 @@ body.craft-ui.theme-twilight #panelVote #voteNotesDeck .vote-note-chip {
 
 @media (min-width: 1024px) and (max-width: 1199px) {
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
-    max-width: min(620px, calc(100vw - 448px));
+    max-width: min(920px, calc(100vw - 220px));
   }
 }
 
-/* ==================== v25.6.1 HORIZONTAL SEAT & TURN STRIPS SAFE CENTERING ==================== */
+/* ==================== v25.8.0 FULL-WIDTH RESPONSIVE CSS GRID SEAT & TURN STRIPS (ZERO HORIZONTAL SCROLL) ==================== */
 body.craft-ui #seatButtonStrip:not(.hidden),
 body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden),
 body.craft-ui #speakerTurnStrip,
 body.craft-ui #playerTurnOrderStrip:not(.hidden),
 body.craft-ui .turn-strip-row {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: flex-start;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  padding-inline: 16px;
+  display: grid;
+  gap: 4px;
+  align-items: stretch;
+  overflow-x: visible;
+  white-space: normal;
+  width: 100%;
 }
 
-body.craft-ui #seatButtonStrip:not(.hidden)::-webkit-scrollbar,
-body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden)::-webkit-scrollbar,
-body.craft-ui #speakerTurnStrip::-webkit-scrollbar,
-body.craft-ui #playerTurnOrderStrip:not(.hidden)::-webkit-scrollbar,
-body.craft-ui .turn-strip-row::-webkit-scrollbar {
-  display: none;
+@media (min-width: 960px) {
+  body.craft-ui #seatButtonStrip:not(.hidden),
+  body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden),
+  body.craft-ui #speakerTurnStrip,
+  body.craft-ui #playerTurnOrderStrip:not(.hidden),
+  body.craft-ui .turn-strip-row {
+    grid-template-columns: repeat(var(--seat-count, 12), minmax(0, 1fr));
+    gap: 4px;
+  }
 }
 
-body.craft-ui #seatButtonStrip > :first-child,
-body.craft-ui #speakerTurnStrip > :first-child,
-body.craft-ui #playerTurnOrderStrip > :first-child,
-body.craft-ui .turn-strip-row > :first-child {
-  margin-left: auto;
+@media (max-width: 959px) {
+  body.craft-ui #seatButtonStrip:not(.hidden),
+  body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden),
+  body.craft-ui #speakerTurnStrip,
+  body.craft-ui #playerTurnOrderStrip:not(.hidden),
+  body.craft-ui .turn-strip-row {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+  }
 }
 
-body.craft-ui #seatButtonStrip > :last-child,
-body.craft-ui #speakerTurnStrip > :last-child,
-body.craft-ui #playerTurnOrderStrip > :last-child,
-body.craft-ui .turn-strip-row > :last-child {
-  margin-right: auto;
+@media (max-width: 380px) {
+  body.craft-ui #seatButtonStrip:not(.hidden),
+  body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden),
+  body.craft-ui #speakerTurnStrip,
+  body.craft-ui #playerTurnOrderStrip:not(.hidden),
+  body.craft-ui .turn-strip-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+}
+
+body.craft-ui #speakerTurnStrip .turn-dir-chip,
+body.craft-ui #playerTurnOrderStrip .turn-dir-chip,
+body.craft-ui .turn-strip-row .turn-dir-chip {
+  grid-column: 1 / -1;
+  justify-self: start;
 }
 
 body.craft-ui #seatButtonStrip > .seat-pill-btn,
-body.craft-ui #speakerTurnStrip > *,
-body.craft-ui #playerTurnOrderStrip > *,
-body.craft-ui .turn-strip-row > * {
-  flex-shrink: 0;
+body.craft-ui #speakerTurnStrip > .turn-chip,
+body.craft-ui #playerTurnOrderStrip > .turn-chip {
+  min-width: 0;
+  justify-content: center;
+  padding-inline: 4px;
   white-space: nowrap;
+  overflow: visible;
+}
+
+body.craft-ui #seatButtonStrip .seat-pill-name {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
 }

@@ -366,10 +366,14 @@ function renderSeatStrip() {
     return { id: n, name: n === 1 ? "你" : pInfo.name, alive: true, color: n === 1 ? "#d4a657" : pInfo.avatarColor };
   });
   const wasHidden = strip.classList.contains("hidden");
-  const gridCols = seats.length >= 10
-    ? "grid-cols-4 sm:grid-cols-6"
-    : (seats.length === 8 ? "grid-cols-4 sm:grid-cols-8" : "grid-cols-3 sm:grid-cols-6");
-  strip.className = (wasHidden ? "hidden " : "") + "grid gap-1.5 " + gridCols;
+  if (strip.style) {
+    if (typeof strip.style.setProperty === "function") {
+      strip.style.setProperty("--seat-count", String(seats.length || 12));
+    } else {
+      strip.style["--seat-count"] = String(seats.length || 12);
+    }
+  }
+  strip.className = (wasHidden ? "hidden " : "") + "seat-grid-strip";
   const pid = getPlayerId();
   const p = state.match.phase;
   const pSelf = state.match.started ? getPlayerSeat() : null;
@@ -387,9 +391,6 @@ function renderSeatStrip() {
   );
   const isSpecGodView = Boolean(typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive());
   const ROLE_SHORT_GOD = { seer: "觀", witch: "茶", hunter: "槍", guard: "守", villager: "民", elder: "長", wolf: "狼", wolf_king: "王" };
-
-  let selectedBtn = null;
-  let speakingBtn = null;
 
   seats.forEach(function (s) {
     const isSelected = state.selectedSeatId === s.id;
@@ -520,18 +521,7 @@ function renderSeatStrip() {
             : (s.outReason === "流言反撲請離" ? "（遭流言首領最後帶風向帶走・點擊查看）" : "（已離席・點擊查看）"))));
     btn.addEventListener("click", function () { selectSeat(s.id); });
     strip.appendChild(btn);
-    if (isSelected) selectedBtn = btn;
-    if (isSpeaking) speakingBtn = btn;
   });
-  const focusBtn = selectedBtn || speakingBtn || (typeof strip.querySelector === "function" ? (strip.querySelector(".seat-is-selected") || strip.querySelector(".is-speaking")) : null);
-  if (focusBtn && !strip.classList.contains("hidden")) {
-    if (typeof scrollHorizontalStripToTarget === "function") {
-      scrollHorizontalStripToTarget(strip, focusBtn);
-    } else if (typeof strip.scrollTo === "function") {
-      const targetLeft = Math.max(0, (Number(focusBtn.offsetLeft) || 0) - (Number(strip.clientWidth) || 0) / 2 + (Number(focusBtn.offsetWidth) || 0) / 2);
-      try { strip.scrollTo({ left: targetLeft, behavior: "smooth" }); } catch (e) {}
-    }
-  }
 }
 
 function getLiveRoleActionHint(p, effKey, phase) {

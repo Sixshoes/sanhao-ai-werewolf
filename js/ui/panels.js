@@ -1075,19 +1075,22 @@ function renderSheriffElectionPanel() {
         });
         return sel;
       };
-      const sel1 = mkSel("electionBadgeFlow1", "第一警徽流（不留）", draftBf.firstTargetId, null, function (v1) {
+      const sel1 = mkSel("electionBadgeFlow1", "第一警徽流・不留", draftBf.firstTargetId, null, function (v1) {
         const next2 = (draftBf.secondTargetId && draftBf.secondTargetId !== v1) ? draftBf.secondTargetId : null;
         if (typeof setPlayerSheriffDraftBadgeFlow === "function") setPlayerSheriffDraftBadgeFlow(v1, next2);
       });
       const arrow = document.createElement("span");
       arrow.textContent = "→";
       arrow.className = "opacity-75 font-bold";
-      const sel2 = mkSel("electionBadgeFlow2", "第二警徽流（選填）", draftBf.secondTargetId, draftBf.firstTargetId, function (v2) {
+      const sel2 = mkSel("electionBadgeFlow2", "第二警徽流・選填", draftBf.secondTargetId, draftBf.firstTargetId, function (v2) {
         if (typeof setPlayerSheriffDraftBadgeFlow === "function") setPlayerSheriffDraftBadgeFlow(draftBf.firstTargetId, v2);
       });
       const hintBf = document.createElement("span");
       hintBf.className = "text-[13px] opacity-80";
-      hintBf.textContent = "（倒牌：徽給先位＝金水｜跳飛／撕徽＝查殺）";
+      const isEasyShBf = typeof resolveActiveJargonDifficulty === "function" && resolveActiveJargonDifficulty() === "easy";
+      hintBf.textContent = isEasyShBf
+        ? "若出局：徽章傳第1位代表好人｜傳第2位或收起代表第1位可疑"
+        : "若倒牌：徽給先位代表好人｜飛第二位或撕徽代表第一位可疑";
       bfBar.appendChild(sel1);
       bfBar.appendChild(arrow);
       bfBar.appendChild(sel2);
@@ -1121,11 +1124,35 @@ function renderSheriffElectionPanel() {
           if (!shInp) return;
           const curTxt = String(shInp.value || "").trim();
           const alreadyIn = Boolean(optSnippet && curTxt.indexOf(optSnippet) !== -1);
+          if (!ctx._activeSheriffExclusiveText) ctx._activeSheriffExclusiveText = {};
+          const exclGroup = opt.exclusiveGroup || null;
           if (alreadyIn) {
             shInp.value = (typeof removeSpeechClause === "function")
               ? removeSpeechClause(shInp.value, optSnippet)
               : curTxt.replace(optSnippet, "").replace(/^[，、；：\s]+|[，、；：\s]+$/g, "");
+            if (exclGroup && ctx._activeSheriffExclusiveText[exclGroup] === optSnippet) {
+              ctx._activeSheriffExclusiveText[exclGroup] = "";
+            }
           } else {
+            let workingShText = shInp.value;
+            if (exclGroup) {
+              const prevActive = ctx._activeSheriffExclusiveText[exclGroup];
+              if (prevActive && workingShText.indexOf(prevActive) !== -1) {
+                workingShText = (typeof removeSpeechClause === "function")
+                  ? removeSpeechClause(workingShText, prevActive)
+                  : workingShText.split(prevActive).join("").trim();
+              }
+              qOpts.forEach(function (otherOpt) {
+                if (!otherOpt || otherOpt.exclusiveGroup !== exclGroup || !otherOpt.text) return;
+                const otherTxt = String(otherOpt.text).trim();
+                if (otherTxt && otherTxt !== optSnippet && workingShText.indexOf(otherTxt) !== -1) {
+                  workingShText = (typeof removeSpeechClause === "function")
+                    ? removeSpeechClause(workingShText, otherTxt)
+                    : workingShText.split(otherTxt).join("").trim();
+                }
+              });
+              ctx._activeSheriffExclusiveText[exclGroup] = optSnippet;
+            }
             ctx._draftCardMeta = {
               claimsSeer: typeof opt.claimsSeer === "boolean" ? opt.claimsSeer : null,
               withdrawAfter: Boolean(opt.withdrawAfter)
@@ -1141,13 +1168,25 @@ function renderSheriffElectionPanel() {
               }
             }
             shInp.value = (typeof joinSpeechClauses === "function")
-              ? joinSpeechClauses(shInp.value, optSnippet)
-              : (curTxt ? (curTxt + (/[。！？\n]$/.test(curTxt) ? " " : "，") + optSnippet) : optSnippet);
+              ? joinSpeechClauses(workingShText, optSnippet)
+              : (String(workingShText || "").trim() ? (String(workingShText || "").trim() + (/[。！？\n]$/.test(String(workingShText || "").trim()) ? " " : "，") + optSnippet) : optSnippet);
           }
           const preservedText = shInp.value;
           if (!alreadyIn && opt.badgeFlow && opt.badgeFlow.firstTargetId) {
             renderSheriffElectionPanel();
             if (el("sheriffPlayerInput")) el("sheriffPlayerInput").value = preservedText;
+            const refreshedChipsBox = el("sheriffPlayerQuickChips");
+            const refreshedOpts = Array.isArray(ctx.playerQuickOptions) ? ctx.playerQuickOptions : qOpts;
+            if (refreshedChipsBox) {
+              Array.from(refreshedChipsBox.children || []).forEach(function (cNode, cIdx) {
+                const refOpt = refreshedOpts[cIdx];
+                if (!cNode || !refOpt) return;
+                const refIn = Boolean(refOpt.text && preservedText.indexOf(refOpt.text) !== -1);
+                if (cNode.classList) cNode.classList.toggle("is-draft-loaded", refIn);
+                const badgeEl = typeof cNode.querySelector === "function" ? cNode.querySelector("[data-card-load]") : null;
+                if (badgeEl) badgeEl.textContent = refIn ? "已加入" : "加入";
+              });
+            }
           } else {
             Array.from(chipsBox.children || []).forEach(function (cNode, cIdx) {
               const refOpt = qOpts[cIdx];
@@ -1173,7 +1212,7 @@ function renderSheriffElectionPanel() {
             showToast(
               alreadyIn
                 ? "已從上警陳詞欄移除該段模組。"
-                : ("已加入上警宣言模組" + (opt.badgeFlow ? "（已同步警徽流）" : "") + "，可繼續疊加或按「送出陳詞」。"),
+                : ("已加入上警宣言模組" + (opt.badgeFlow ? "，已同步警徽流" : "") + "，可繼續疊加或按「送出陳詞」。"),
               "emerald"
             );
           }

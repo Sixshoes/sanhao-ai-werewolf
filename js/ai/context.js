@@ -8,7 +8,7 @@ function resolveActiveJargonDifficulty(snapArg) {
     (snapArg && snapArg.judgeShowcase) ||
     (typeof state !== "undefined" && state.match && state.match.judgeShowcase)
   );
-  if (isShowcase) return "normal";
+  if (isShowcase) return "easy";
   return (snapArg && snapArg.aiDifficulty) ||
     (typeof state !== "undefined" && state.aiDifficulty) ||
     (typeof state !== "undefined" && state.match && state.match.aiDifficulty) ||
@@ -20,9 +20,12 @@ const EASY_JARGON_REPLACEMENTS = Object.freeze([
   ["反水立警", "中途改口搶警長"],
   ["外置位抗推", "拿其他還沒表態的人當替罪羊"],
   ["抿刀口", "猜測夜晚目標"],
-  ["雙警徽流", "接下來兩晚預計先查誰"],
-  ["第一警徽流", "第一順位預計先查的人"],
-  ["警徽流", "下一晚預計先查誰"],
+  ["雙警徽流", "雙人觀察名單順序"],
+  ["第一警徽流", "第一位觀察名單"],
+  ["警徽流", "觀察名單順序"],
+  ["前置位", "前面發言的人"],
+  ["後置位", "後面發言的人"],
+  ["搶查殺", "搶先指控別人"],
   ["假金水", "假裝查過是好人"],
   ["鐵金水好人坑", "確定查過是好人的名單"],
   ["鐵金水好人", "確定查過是好人"],
@@ -36,22 +39,26 @@ const EASY_JARGON_REPLACEMENTS = Object.freeze([
   ["查殺", "查出是說謊的人"],
   ["銀水好人", "昨晚被救回來的人"],
   ["銀水", "昨晚被救回來的人"],
+  ["坐實", "確定身分"],
   ["悍跳狼", "假冒身分帶風向的人"],
   ["悍跳位", "假冒身分的人"],
   ["悍跳", "假冒身分"],
   ["對跳了", "同時爭搶"],
   ["開對跳", "出現兩個人搶同一個身分"],
-  ["對跳觀察員", "兩個人搶觀察員身分"],
+  ["對跳觀察員", "兩個人都說自己是觀察員"],
   ["對跳位", "搶同一個身分的人"],
   ["對跳", "兩個人搶同一個身分"],
-  ["倒鉤", "假裝站在好人這邊"],
+  ["倒鉤", "假裝站對邊"],
+  ["衝票", "集中投票"],
   ["墊飛", "故意送隊友當掩護"],
   ["衝鋒", "幫忙帶風向"],
   ["深水", "躲在暗處不表態"],
+  ["定進狼坑", "列入可疑名單"],
   ["打進狼坑", "列進可疑名單"],
   ["放進狼坑", "放進可疑名單"],
   ["畫進狼坑", "畫進可疑名單"],
   ["進狼坑", "列入可疑名單"],
+  ["盤狼坑", "找出可疑名單"],
   ["放進好人坑", "放進好人名單"],
   ["放好人坑", "放進好人名單"],
   ["好人坑", "好人名單"],
@@ -83,7 +90,7 @@ const NORMAL_JARGON_REPLACEMENTS = Object.freeze([
   ["反水立警", "中途改口搶警長"],
   ["外置位抗推", "拿旁邊還沒表態的人當替罪羊"],
   ["抿刀口", "猜測夜晚目標"],
-  ["倒鉤", "假裝站在好人這邊"],
+  ["倒鉤", "假裝站對邊"],
   ["墊飛", "故意送隊友當掩護"]
 ]);
 
@@ -104,8 +111,8 @@ function applyDifficultyTerminology(rawText, diffArg, snapArg) {
       .replace(/歸票(?:請)?(?:出)?\s*(\d+\s*號)/g, "建議大家集中投 $1")
       .replace(/直接(?:標|進)定進?狼坑/g, "直接列進可疑名單")
       .replace(/(?:進|標進)定狼坑/g, "列進可疑名單")
-      .replace(/定進狼坑/g, "確定列進可疑名單")
-      .replace(/(?:悍跳|對跳|跳假)\s*(明心觀察員|觀察員)/g, "假冒$1")
+      .replace(/定進狼坑/g, "列入可疑名單")
+      .replace(/(?:悍跳|跳假)\s*(明心觀察員|觀察員)/g, "假冒$1")
       .replace(/被\s*外置位抗推/g, "被其他還沒表態的人誤會投出局")
       .replace(/被\s*抗推/g, "被誤會投出局")
       .replace(/互相\s*抗推/g, "互相誤會投錯人")
@@ -133,6 +140,24 @@ function applyDifficultyTerminology(rawText, diffArg, snapArg) {
       .replace(/兩個人搶同一個身分了/g, "同時爭搶了");
   }
   return out;
+}
+
+function stripDialogueParentheses(rawText) {
+  if (!rawText || typeof rawText !== "string") return rawText;
+  let out = rawText;
+  let prev = "";
+  while (out !== prev) {
+    prev = out;
+    out = out
+      .replace(/（[^（）]*）/g, "")
+      .replace(/\([^()]*\)/g, "");
+  }
+  return out
+    .replace(/[（）()]/g, "")
+    .replace(/([，,、；;])\s*\1+/g, "$1")
+    .replace(/([。！？!?])\s*([，,、；;])+/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 function pickPersonaVoice(speaker, slotKey, salt) {
@@ -453,30 +478,26 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
         pushRoleHist("hunter", s);
         if (roleHardProvenDead.hunter.indexOf(s.id) === -1) roleHardProvenDead.hunter.push(s.id);
       }
+      if (s.publicRevealedRole && roleHardProvenDead[s.publicRevealedRole]) {
+        pushRoleHist(s.publicRevealedRole, s);
+        if (roleHardProvenDead[s.publicRevealedRole].indexOf(s.id) === -1) roleHardProvenDead[s.publicRevealedRole].push(s.id);
+      }
     }
     if (s.alive && s.voteDisabled) pushRoleHist("elder", s);
   });
 
-  // Detect post-death god-role impersonation (if a dead seat already claimed/proved a unique role before an alive jumper)
+  // Detect post-death god-role impersonation only against hard-proven dead god seats
   const deadGodImpersonators = {};
   UNIQUE_GOD_ROLES.forEach(function (rKey) {
     const hist = roleClaimHistoryMap[rKey] || [];
     const hardDead = roleHardProvenDead[rKey] || [];
-    let firstDeadIdx = -1;
-    for (let hi = 0; hi < hist.length; hi++) {
-      if (!hist[hi].alive) { firstDeadIdx = hi; break; }
-    }
-    if (firstDeadIdx === -1 && hardDead.length === 0) return;
-    hist.forEach(function (seatObj, idx) {
+    if (hardDead.length === 0) return;
+    hist.forEach(function (seatObj) {
       if (!seatObj || !seatObj.alive) return;
       if (rKey === "elder" && seatObj.voteDisabled) return;
-      const afterDeadClaim = firstDeadIdx !== -1 && idx > firstDeadIdx;
-      const againstHardDead = hardDead.length > 0;
-      if (afterDeadClaim || againstHardDead) {
-        deadGodImpersonators[seatObj.id] = rKey;
-        contraMap[seatObj.id] = true;
-        contraCountMap[seatObj.id] = Math.max(1, contraCountMap[seatObj.id] || 0);
-      }
+      deadGodImpersonators[seatObj.id] = rKey;
+      contraMap[seatObj.id] = true;
+      contraCountMap[seatObj.id] = Math.max(1, contraCountMap[seatObj.id] || 0);
     });
   });
 
@@ -664,13 +685,13 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
   }
   if (votedOutDeadSeers.length >= 1 && seerClaimants.length === 1) {
     const loneS = seerClaimants[0];
-    let latestVotedOutSeerDay = 1;
+    let latestVotedOutSeerDay = null;
     votedOutDeadSeers.forEach(function (ds) {
-      if (votedOutDayMap[ds.id] && votedOutDayMap[ds.id] > latestVotedOutSeerDay) {
+      if (votedOutDayMap[ds.id] && (latestVotedOutSeerDay === null || votedOutDayMap[ds.id] > latestVotedOutSeerDay)) {
         latestVotedOutSeerDay = votedOutDayMap[ds.id];
       }
     });
-    const nightsSurvivedAfterOut = (snap.day || 1) - latestVotedOutSeerDay;
+    const nightsSurvivedAfterOut = latestVotedOutSeerDay !== null ? ((snap.day || 1) - latestVotedOutSeerDay) : 0;
     if (nightsSurvivedAfterOut >= 2 && !publicProtectedSeerIds[loneS.id]) {
       survivingSeerAnomalies.push({ kind: "post_voteout_lone_survivor", seatIds: [loneS.id] });
       addSeerSurvBoost(loneS.id, diffSlot === "pro" ? 20 : (diffSlot === "easy" ? 6 : 14));
@@ -822,7 +843,7 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
         return { seat: c, score: pitScore, reason: reasons[0] || "立場曖昧待檢視" };
       }).sort(function (a, b) { return b.score - a.score; });
 
-      const wolfPits = [fake];
+      const wolfPits = (fake && fake.alive) ? [fake] : [];
       for (let wi = 0; wi < scoredCands.length && wolfPits.length < aliveWolfSlots; wi++) {
         const wCand = scoredCands[wi] && scoredCands[wi].seat;
         if (wCand && wolfPits.every(function (x) { return x.id !== wCand.id; })) {
@@ -1042,7 +1063,7 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
   const remainingPublicGods = Math.max(0, publicTotalGods - publicDeadGodCount);
   const lowGodCountWarning = Boolean(!isFogSeal && remainingPublicGods <= 1);
   const lowGodCountSummary = lowGodCountWarning
-    ? "場上已公開倒牌神職偏多（推算至多僅剩 1 名在場神職），未公開身分之暗神應低調藏身分，好人宜避免盲推零矛盾安靜位。"
+    ? "場上已公開倒牌神職偏多，推算至多僅剩 1 名在場神職，未公開身分之暗神應低調藏身分，好人宜避免盲推零矛盾安靜位。"
     : "";
 
   const trustedGoldIds = [];

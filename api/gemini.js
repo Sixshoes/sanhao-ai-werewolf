@@ -4,36 +4,33 @@
  *
  * 環境變數設定（於 Vercel Project → Settings → Environment Variables）：
  * - GEMINI_API_KEY            (必填) Google AI Studio API Key
- * - GEMINI_DEFAULT_MODEL      (選填，預設 gemini-4-hydrogen；可設為 gemini-2.5-pro / gemini-3.1-flash-lite)
- * - GEMINI_THINKING_LEVEL     (選填，Gemini 4 思考深度：LOW / MEDIUM / HIGH，預設 LOW)
- * - GEMINI_PRO_THINKING_BUDGET (選填，2.5 Pro 思考 token 上限 128~2048，預設 512)
- * - GEMINI_UPSTREAM_TIMEOUT_MS (選填，單次上游逾時毫秒，預設 Pro 14000 / Flash 8500)
+ * - GEMINI_DEFAULT_MODEL      (選填，預設 gemini-3.5-flash-lite；可設為 gemini-3.8-flash / gemini-3.6-flash / gemini-2.5-flash-lite)
+ * - GEMINI_UPSTREAM_TIMEOUT_MS (選填，單次上游逾時毫秒，預設 3.8-flash 12000 / 輕量 8500)
  * - GEMINI_ALLOWED_ORIGINS    (選填，逗號分隔自訂網域白名單，例如 https://game.example.com)
- * - GEMINI_SESSION_MAX_RPM    (選填，每瀏覽器會話每分鐘上限，預設 24)
- * - GEMINI_SESSION_MAX_RPD    (選填，每瀏覽器會話每日上限，預設 200)
- * - GEMINI_NAT_IP_MAX_RPM     (選填，帶會話標頭之同區網共用 IP 總上限，預設 96)
- * - GEMINI_NAT_IP_MAX_RPD     (選填，帶會話標頭之同區網共用 IP 每日總上限，預設 1200)
- * - GEMINI_MAX_RPM            (選填，無會話標頭舊版單 IP 每分鐘上限，預設 24)
- * - GEMINI_MAX_RPD            (選填，無會話標頭舊版單 IP 每日上限，預設 240)
+ * - GEMINI_SESSION_MAX_RPM    (選填，每瀏覽器會話每分鐘上限，預設 120)
+ * - GEMINI_SESSION_MAX_RPD    (選填，每瀏覽器會話每日上限，預設 2000)
+ * - GEMINI_NAT_IP_MAX_RPM     (選填，帶會話標頭之同區網共用 IP 總上限，預設 240)
+ * - GEMINI_NAT_IP_MAX_RPD     (選填，帶會話標頭之同區網共用 IP 每日總上限，預設 4000)
+ * - GEMINI_MAX_RPM            (選填，無會話標頭純 IP 每分鐘上限，預設 240)
+ * - GEMINI_MAX_RPD            (選填，無會話標頭純 IP 每日上限，預設 4000)
  */
 "use strict";
 
 const ALLOWED_PUBLIC_MODELS = new Set([
-  "gemini-2.5-pro",
-  "gemini-4-hydrogen",
+  "gemini-3.5-flash-lite",
   "gemini-3.8-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite"
+  "gemini-3.6-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash"
 ]);
-const PUBLIC_DEFAULT_MODEL = "gemini-4-hydrogen";
-const PUBLIC_LITE_MODEL = "gemini-3.1-flash-lite";
+const PUBLIC_DEFAULT_MODEL = "gemini-3.5-flash-lite";
+const PUBLIC_LITE_MODEL = "gemini-3.5-flash-lite";
 const PUBLIC_FALLBACK_ORDER = [
-  "gemini-4-hydrogen",
-  "gemini-2.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-2.5-flash-lite",
   "gemini-3.8-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-2.5-flash-lite"
+  "gemini-3.6-flash",
+  "gemini-2.5-flash"
 ];
 
 const MAX_PROMPT_CHARS = 14000;
@@ -164,10 +161,10 @@ function checkRateLimit(ip, nowMs, sessionId) {
   }
 
   if (hasSession) {
-    const sessRpm = Math.max(6, Math.min(120, parseInt(process.env.GEMINI_SESSION_MAX_RPM || "24", 10) || 24));
-    const sessRpd = Math.max(30, Math.min(2000, parseInt(process.env.GEMINI_SESSION_MAX_RPD || "200", 10) || 200));
-    const natIpRpm = Math.max(sessRpm, Math.min(300, parseInt(process.env.GEMINI_NAT_IP_MAX_RPM || "96", 10) || 96));
-    const natIpRpd = Math.max(sessRpd, Math.min(6000, parseInt(process.env.GEMINI_NAT_IP_MAX_RPD || "1200", 10) || 1200));
+    const sessRpm = Math.max(6, Math.min(600, parseInt(process.env.GEMINI_SESSION_MAX_RPM || "120", 10) || 120));
+    const sessRpd = Math.max(30, Math.min(10000, parseInt(process.env.GEMINI_SESSION_MAX_RPD || "2000", 10) || 2000));
+    const natIpRpm = Math.max(sessRpm, Math.min(1200, parseInt(process.env.GEMINI_NAT_IP_MAX_RPM || "240", 10) || 240));
+    const natIpRpd = Math.max(sessRpd, Math.min(20000, parseInt(process.env.GEMINI_NAT_IP_MAX_RPD || "4000", 10) || 4000));
 
     // Check IP bucket BEFORE allocating/checking session bucket to block random-sessionId floods
     const ipRes = _checkSingleBucket("natip:" + ip, natIpRpm, natIpRpd, now, "ip");
@@ -182,8 +179,8 @@ function checkRateLimit(ip, nowMs, sessionId) {
     return { allowed: true, reason: "", retryAfterSec: 0 };
   }
 
-  const maxRpm = Math.max(4, Math.min(120, parseInt(process.env.GEMINI_MAX_RPM || "24", 10) || 24));
-  const maxRpd = Math.max(20, Math.min(2000, parseInt(process.env.GEMINI_MAX_RPD || "240", 10) || 240));
+  const maxRpm = Math.max(4, Math.min(1200, parseInt(process.env.GEMINI_MAX_RPM || "240", 10) || 240));
+  const maxRpd = Math.max(20, Math.min(20000, parseInt(process.env.GEMINI_MAX_RPD || "4000", 10) || 4000));
   const legacyRes = _checkSingleBucket("ip:" + ip, maxRpm, maxRpd, now, "");
   if (!legacyRes.allowed) return { allowed: false, reason: legacyRes.reason, retryAfterSec: legacyRes.retryAfterSec };
   legacyRes.rec.minStamps.push(now);
@@ -202,12 +199,24 @@ function isModelCoolingDown(modelId, nowMs) {
   return true;
 }
 
-function resolveSafeModel(requestedModel, tierHint, nowMs) {
-  const defModel = String(process.env.GEMINI_DEFAULT_MODEL || PUBLIC_DEFAULT_MODEL).trim();
+function resolveGeminiTextModel(requestedModel) {
   const req = String(requestedModel || "").trim();
-  let chosen = PUBLIC_DEFAULT_MODEL;
-  if (req && ALLOWED_PUBLIC_MODELS.has(req)) chosen = req;
-  else if (defModel && ALLOWED_PUBLIC_MODELS.has(defModel)) chosen = defModel;
+  if (!req || req === "gemini-2.5-flash" || req === "gemini-4-hydrogen" || req === "gemini-3.1-flash-lite") {
+    return "gemini-3.5-flash-lite";
+  }
+  if (req === "gemini-2.5-pro") {
+    return "gemini-3.8-flash";
+  }
+  if (ALLOWED_PUBLIC_MODELS.has(req)) {
+    return req;
+  }
+  return PUBLIC_DEFAULT_MODEL;
+}
+
+function resolveSafeModel(requestedModel, tierHint, nowMs) {
+  const envDefaultRaw = String(process.env.GEMINI_DEFAULT_MODEL || "").trim();
+  const rawInput = (requestedModel && String(requestedModel).trim()) ? requestedModel : envDefaultRaw;
+  let chosen = resolveGeminiTextModel(rawInput);
   if (tierHint === "lite" && chosen === PUBLIC_DEFAULT_MODEL && !isModelCoolingDown(PUBLIC_LITE_MODEL, nowMs)) {
     chosen = PUBLIC_LITE_MODEL;
   }
@@ -220,6 +229,54 @@ function resolveSafeModel(requestedModel, tierHint, nowMs) {
     }
   }
   return chosen;
+}
+
+function sanitizeGeminiTextBody(modelName, rawBody) {
+  const mId = String(modelName || "").trim();
+  const body = (rawBody && typeof rawBody === "object") ? Object.assign({}, rawBody) : {};
+  if (Array.isArray(body.contents)) {
+    const cleanedContents = body.contents.slice();
+    while (cleanedContents.length > 0) {
+      const tail = cleanedContents[cleanedContents.length - 1];
+      if (tail && tail.role === "model") {
+        cleanedContents.pop();
+      } else {
+        break;
+      }
+    }
+    body.contents = cleanedContents;
+  }
+  const genCfg = (body.generationConfig && typeof body.generationConfig === "object")
+    ? Object.assign({}, body.generationConfig)
+    : {};
+  const is3or4 = mId.startsWith("gemini-3") || mId.startsWith("gemini-4");
+  if (is3or4) {
+    delete genCfg.temperature;
+    delete genCfg.topP;
+    delete genCfg.top_p;
+    delete genCfg.topK;
+    delete genCfg.top_k;
+    delete genCfg.candidateCount;
+    delete genCfg.candidate_count;
+    delete genCfg.thinkingBudget;
+    delete genCfg.thinking_budget;
+    if (genCfg.thinkingConfig && typeof genCfg.thinkingConfig === "object") {
+      const cleanTc = Object.assign({}, genCfg.thinkingConfig);
+      delete cleanTc.thinkingBudget;
+      delete cleanTc.thinking_budget;
+      genCfg.thinkingConfig = cleanTc;
+    }
+    if (mId === "gemini-3.5-flash-lite") {
+      genCfg.thinkingConfig = { thinkingLevel: "minimal" };
+    } else if (mId === "gemini-3.6-flash" || mId === "gemini-3.8-flash") {
+      // Note: gemini-3.8-flash rejects "minimal" with HTTP 400, so use "low"
+      genCfg.thinkingConfig = { thinkingLevel: "low" };
+    } else if (!genCfg.thinkingConfig || !genCfg.thinkingConfig.thinkingLevel) {
+      genCfg.thinkingConfig = { thinkingLevel: "low" };
+    }
+  }
+  body.generationConfig = genCfg;
+  return body;
 }
 
 function clampTemperature(reqTemp) {
@@ -236,33 +293,25 @@ function sanitizeUpstreamReason(rawMsg) {
     .slice(0, 140);
 }
 
-function resolveGemini4ThinkingLevel() {
-  const raw = String(process.env.GEMINI_THINKING_LEVEL || "LOW").trim().toUpperCase();
-  if (raw === "LOW" || raw === "MEDIUM" || raw === "HIGH") return raw;
-  return "LOW";
-}
-
-function resolveProThinkingBudget() {
-  const n = parseInt(process.env.GEMINI_PRO_THINKING_BUDGET || "512", 10);
-  if (!Number.isFinite(n) || n <= 0) return 512;
-  return Math.max(128, Math.min(2048, n));
-}
-
 function buildGenerationConfig(modelId, jsonMode, temperature) {
   const mId = String(modelId || "");
-  const isGemini4 = /^gemini-4-/.test(mId);
-  const isPro25 = mId === "gemini-2.5-pro";
+  const is3or4 = mId.startsWith("gemini-3") || mId.startsWith("gemini-4");
+  const isDeep38 = mId === "gemini-3.8-flash" || mId === "gemini-3.6-flash";
   const isFlash25ZeroThink = mId === "gemini-2.5-flash" || mId === "gemini-2.5-flash-lite";
   const genCfg = {
-    maxOutputTokens: (isPro25 || isGemini4) ? (jsonMode ? 3072 : 2048) : (jsonMode ? 1536 : 1024)
+    maxOutputTokens: (isDeep38 || is3or4) ? (jsonMode ? 3072 : 2048) : (jsonMode ? 1536 : 1024)
   };
-  if (isGemini4) {
-    genCfg.thinkingConfig = { thinkingLevel: resolveGemini4ThinkingLevel() };
+  if (is3or4) {
+    if (mId === "gemini-3.5-flash-lite") {
+      genCfg.thinkingConfig = { thinkingLevel: "minimal" };
+    } else if (mId === "gemini-3.6-flash" || mId === "gemini-3.8-flash") {
+      genCfg.thinkingConfig = { thinkingLevel: "low" };
+    } else {
+      genCfg.thinkingConfig = { thinkingLevel: "low" };
+    }
   } else {
     genCfg.temperature = clampTemperature(temperature);
-    if (isPro25) {
-      genCfg.thinkingConfig = { thinkingBudget: resolveProThinkingBudget() };
-    } else if (isFlash25ZeroThink) {
+    if (isFlash25ZeroThink) {
       genCfg.thinkingConfig = { thinkingBudget: 0 };
     }
   }
@@ -277,12 +326,16 @@ function resolvePrimaryTimeoutMs(modelId) {
   if (Number.isFinite(envMs) && envMs >= 3000) {
     return Math.min(20000, envMs);
   }
-  return modelId === "gemini-2.5-pro" ? 14000 : 8500;
+  return modelId === "gemini-3.8-flash" ? 12000 : 8500;
 }
 
 async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeoutMs, temperature) {
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
   const genCfg = buildGenerationConfig(modelId, jsonMode, temperature);
+  const reqBody = sanitizeGeminiTextBody(modelId, {
+    contents: [{ role: "user", parts: [{ text: promptText }] }],
+    generationConfig: genCfg
+  });
 
   const controller = typeof AbortController === "function" ? new AbortController() : null;
   const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 8500) : null;
@@ -293,10 +346,7 @@ async function callUpstreamGemini(apiKey, modelId, promptText, jsonMode, timeout
         "Content-Type": "application/json",
         "x-goog-api-key": apiKey
       },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }],
-        generationConfig: genCfg
-      })
+      body: JSON.stringify(reqBody)
     };
     if (controller) fetchOpts.signal = controller.signal;
     const resp = await fetch(endpoint, fetchOpts);
@@ -491,6 +541,8 @@ handler._isAllowedOrigin = isAllowedOrigin;
 handler._getHostname = getHostname;
 handler._checkRateLimit = checkRateLimit;
 handler._resolveSafeModel = resolveSafeModel;
+handler.resolveGeminiTextModel = resolveGeminiTextModel;
+handler.sanitizeGeminiTextBody = sanitizeGeminiTextBody;
 handler._extractSessionId = extractSessionId;
 handler._clampTemperature = clampTemperature;
 handler._buildGenerationConfig = buildGenerationConfig;

@@ -331,13 +331,13 @@ function bindModalEvents() {
     { id: "btnAiModeOffline", mode: "offline", pane: "aiPaneOffline" }
   ];
   const AI_CLOUD_MODEL_BTNS = [
-    { id: "btnCloudModelPro", model: "gemini-2.5-pro" },
-    { id: "btnCloudModelFlash", model: "gemini-4-hydrogen" },
-    { id: "btnCloudModelLite", model: "gemini-3.1-flash-lite" }
+    { id: "btnCloudModelPro", model: "gemini-3.8-flash" },
+    { id: "btnCloudModelFlash", model: "gemini-3.5-flash-lite" },
+    { id: "btnCloudModelLite", model: "gemini-2.5-flash-lite" }
   ];
 
   let selectedAiUiMode = "cloud";
-  let selectedCloudModelUi = "gemini-4-hydrogen";
+  let selectedCloudModelUi = "gemini-3.5-flash-lite";
   let aiTestInFlight = false;
 
   function playAiConfigClickSfx(freq) {
@@ -402,13 +402,12 @@ function bindModalEvents() {
   function syncCloudModelButtonsUi(modelId) {
     selectedCloudModelUi = (typeof normalizeCloudGeminiModel === "function")
       ? normalizeCloudGeminiModel(modelId)
-      : (modelId === "gemini-2.5-pro" ? "gemini-2.5-pro" : (modelId === "gemini-3.1-flash-lite" ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen"));
+      : (modelId === "gemini-3.8-flash" ? "gemini-3.8-flash" : (modelId === "gemini-2.5-flash-lite" ? "gemini-2.5-flash-lite" : "gemini-3.5-flash-lite"));
     AI_CLOUD_MODEL_BTNS.forEach(function (item) {
       const btn = el(item.id);
       if (!btn) return;
       const active = item.model === selectedCloudModelUi ||
-        (item.model === "gemini-4-hydrogen" && (selectedCloudModelUi === "gemini-2.5-flash" || selectedCloudModelUi === "gemini-3.8-flash")) ||
-        (item.model === "gemini-3.1-flash-lite" && selectedCloudModelUi === "gemini-2.5-flash-lite");
+        (item.model === "gemini-3.8-flash" && selectedCloudModelUi === "gemini-3.6-flash");
       btn.classList.toggle("is-active", active);
       btn.setAttribute("aria-pressed", active ? "true" : "false");
     });
@@ -529,10 +528,10 @@ function bindModalEvents() {
     if (sel) {
       const normKeyModel = typeof normalizePersonalGeminiModel === "function"
         ? normalizePersonalGeminiModel(state.geminiModel)
-        : (state.geminiModel || "gemini-4-hydrogen");
+        : (state.geminiModel || "gemini-3.5-flash-lite");
       sel.value = normKeyModel;
     }
-    syncCloudModelButtonsUi(state.serverGeminiModel || "gemini-4-hydrogen");
+    syncCloudModelButtonsUi(state.serverGeminiModel || "gemini-3.5-flash-lite");
     const initMode = detectCurrentActiveAiMode();
     switchAiModalMode(initMode, false);
 
@@ -579,7 +578,7 @@ function bindModalEvents() {
       if (selectedAiUiMode === "cloud") {
         const targetCloudModel = typeof normalizeCloudGeminiModel === "function"
           ? normalizeCloudGeminiModel(selectedCloudModelUi)
-          : "gemini-4-hydrogen";
+          : "gemini-3.5-flash-lite";
         renderAiTestResult("testing", "正在向 /api/gemini 探測 " + targetCloudModel + " 連線…", "實測雲端代理可用性與真實往返耗時");
         const tStart = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
         const proto = (typeof window !== "undefined" && window.location) ? window.location.protocol : "";
@@ -607,10 +606,10 @@ function bindModalEvents() {
           return;
         }
 
-        const probeTimeoutMs = targetCloudModel === "gemini-2.5-pro" ? 18000 : 12000;
+        const probeTimeoutMs = (targetCloudModel === "gemini-3.8-flash" || targetCloudModel === "gemini-3.6-flash") ? 14000 : 10000;
         const prox = await callServerGeminiProxyOnce("請只回覆「連線成功」四個字", probeTimeoutMs, {
           model: targetCloudModel,
-          lite: targetCloudModel === "gemini-3.1-flash-lite" || targetCloudModel === "gemini-2.5-flash-lite"
+          lite: targetCloudModel === "gemini-3.5-flash-lite" || targetCloudModel === "gemini-2.5-flash-lite"
         });
         const tEnd = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
         const elapsedMs = (prox && prox.latencyMs) ? prox.latencyMs : Math.max(1, Math.round(tEnd - tStart));
@@ -690,10 +689,10 @@ function bindModalEvents() {
 
       // Mode: "key" (Personal Gemini API Key)
       const key = el("inputGeminiKey") ? el("inputGeminiKey").value.trim() : "";
-      const rawModel = el("selectGeminiModel") ? el("selectGeminiModel").value : "gemini-4-hydrogen";
+      const rawModel = el("selectGeminiModel") ? el("selectGeminiModel").value : "gemini-3.5-flash-lite";
       const chosenModel = typeof normalizePersonalGeminiModel === "function"
         ? normalizePersonalGeminiModel(rawModel)
-        : "gemini-4-hydrogen";
+        : "gemini-3.5-flash-lite";
       if (!key) {
         if (el("inputGeminiKey") && typeof el("inputGeminiKey").focus === "function") el("inputGeminiKey").focus();
         renderAiTestResult("warn", "請先輸入 Gemini API Key", "若暫無金鑰，可點上方卡片切換「雲端免金鑰」或「純離線內建引擎」。");
@@ -702,7 +701,7 @@ function bindModalEvents() {
 
       renderAiTestResult("testing", "正在直連驗證 " + chosenModel + "…", "量測官方 API 往返耗時與金鑰權限");
       const tStart = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
-      const res = await callGeminiModelOnce(chosenModel, "請只回覆「連線成功」四個字", chosenModel === "gemini-2.5-pro" ? 18000 : 12000, { apiKey: key });
+      const res = await callGeminiModelOnce(chosenModel, "請只回覆「連線成功」四個字", chosenModel === "gemini-3.8-flash" ? 14000 : 10000, { apiKey: key });
       const tEnd = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
       const elapsedMs = (res && res.latencyMs) ? res.latencyMs : Math.max(1, Math.round(tEnd - tStart));
 
@@ -729,7 +728,7 @@ function bindModalEvents() {
         return;
       }
 
-      const keyFallbackOrder = ["gemini-4-hydrogen", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"].filter(function (m) { return m !== chosenModel; });
+      const keyFallbackOrder = ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash"].filter(function (m) { return m !== chosenModel; });
       for (let fi = 0; fi < keyFallbackOrder.length; fi++) {
         const fbModel = keyFallbackOrder[fi];
         const fbRes = await callGeminiModelOnce(fbModel, "請只回覆「連線成功」四個字", 10000, { apiKey: key });

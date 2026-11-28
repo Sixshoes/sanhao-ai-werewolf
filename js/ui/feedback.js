@@ -85,9 +85,9 @@ function collectFeedbackDiagnostics() {
   const aiEngine = (typeof state !== "undefined" && state.localLlmModel)
     ? ("Ollama:" + state.localLlmModel)
     : ((typeof state !== "undefined" && state.geminiApiKey)
-      ? ("Gemini:" + (state.geminiModel || "gemini-4-hydrogen"))
+      ? ("Gemini:" + (state.geminiModel || "gemini-3.5-flash-lite"))
       : ((typeof isServerGeminiProxyActive === "function" && isServerGeminiProxyActive())
-        ? ("CloudGemini:" + (state.serverGeminiModel || "gemini-4-hydrogen"))
+        ? ("CloudGemini:" + (state.serverGeminiModel || "gemini-3.5-flash-lite"))
         : "離線規則"));
   const w = typeof window !== "undefined" ? (window.innerWidth || 0) : 0;
   const h = typeof window !== "undefined" ? (window.innerHeight || 0) : 0;
@@ -101,7 +101,7 @@ function collectFeedbackDiagnostics() {
     : "未開局或已遮蔽";
 
   return {
-    version: "v25.7.2",
+    version: "v25.8.0",
     timestamp: new Date().toISOString(),
     started: Boolean(m.started),
     phase: String(m.phase || "LOBBY"),

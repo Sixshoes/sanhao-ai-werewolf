@@ -1,11 +1,8 @@
 {
   "cleanUrls": true,
   "functions": {
-    "api/gemini.js": {
+    "api/*.js": {
       "maxDuration": 25
-    },
-    "api/tts.js": {
-      "maxDuration": 20
     }
   },
   "rewrites": [

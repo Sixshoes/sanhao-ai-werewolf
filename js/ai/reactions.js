@@ -243,7 +243,7 @@ function tryDefendOrCounterClaim(speaker, ctx) {
           checkedWolfId: myBest.isWolf ? myBest.targetId : null,
           checkedGoodId: myBest.isWolf ? null : myBest.targetId,
           hasToxicSlip: false,
-          text: rebutLead + "前置位 " + accName + " 竟然冒充明心觀察員硬把我查進狼坑？！我才是真觀察員，查證過 " + myTarget + "（" + (myBest.isWolf ? "酸民狼" : "好人") + "）！他敢直接污衊我，百分百證明 " + accName + " 才是冒牌狼坑位，大家直接集中投他！" + signoff
+          text: rebutLead + "前置位 " + accName + " 竟然冒充明心觀察員硬把我查進狼坑？！我才是真觀察員，查證過 " + myTarget + " 是" + (myBest.isWolf ? "酸民狼" : "好人") + "！他敢直接污衊我，百分百證明 " + accName + " 才是冒牌狼坑位，大家直接集中投他！" + signoff
         };
       }
       if (speaker.role === "witch") {
@@ -689,8 +689,8 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     const planNote = nextPlan
       ? (isSpeakerSheriff
         ? (nextPlan2
-          ? ("今晚更新雙警徽流：先驗 " + seatLabel(nextPlan) + "、再驗 " + seatLabel(nextPlan2) + "（我若倒牌，徽給" + fmtSeatNum(nextPlan.id) + "號即金水、飛" + fmtSeatNum(nextPlan2.id) + "號或撕徽即查殺）！")
-          : ("今晚警徽流鎖定 " + seatLabel(nextPlan) + "（我若倒牌，徽給他即金水、撕徽即查殺）！"))
+          ? ("今晚更新雙警徽流：先驗 " + seatLabel(nextPlan) + "、再驗 " + seatLabel(nextPlan2) + "，我若倒牌，徽給" + fmtSeatNum(nextPlan.id) + "號代表好人，飛" + fmtSeatNum(nextPlan2.id) + "號或撕徽代表查殺！")
+          : ("今晚警徽流鎖定 " + seatLabel(nextPlan) + "，我若倒牌，徽給他代表好人，撕徽代表查殺！"))
         : ("今晚我計畫再去查驗 " + seatLabel(nextPlan) + " 幫大家把關！"))
       : "";
     const checkedGoods = aliveChecks.filter(function (c) { return !c.isWolf; }).map(function (c) { return c.targetId; });
@@ -734,7 +734,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
         hasToxicSlip: false,
         text: pitRebut + fakeCallout +
           (!latest.isWolf
-            ? ("另外我查證過 " + tName + (latestAlive ? " 是金水好人坑，大家別投錯他；" : "（雖已離席）確定是好人；"))
+            ? ("另外我查證過 " + tName + (latestAlive ? " 是金水好人坑，大家別投錯他；" : "雖然已經離席，依然確定是好人；"))
             : ("先前查過的 " + tName + " 已離席；")) +
           "我才是真正的觀察員，冒充觀察員的 " + seatLabel(fakeSeerSeat) + " 必佔第一個狼坑" + (secondPit ? ("，第二狼坑先盯 " + seatLabel(readSeat(secondPit)) + "！") : "！") + planNote
       };
@@ -992,7 +992,7 @@ function tryRoleSpecificSpeech(speaker, ctx) {
         goodPits: vouchTarget ? [vouchTarget.id] : baseGoodIds.slice(0, 2),
         hasToxicSlip: false,
         text: vouchTarget
-          ? ("我是護心守衛，交代守護資訊幫全場對齊：" + (hadRecentPeace ? "昨晚平安夜我正好看守了 " : "上一輪我守過 ") + seatLabel(vouchTarget) + "（避免與奉茶師同守破盾），接下來請大家留意 " + seatLabel(watchG || vouchTarget) + " 的漏洞！")
+          ? ("我是護心守衛，交代守護資訊幫全場對齊：" + (hadRecentPeace ? "昨晚平安夜我正好看守了 " : "上一輪我守過 ") + seatLabel(vouchTarget) + "，避免與奉茶師同守破盾，接下來請大家留意 " + seatLabel(watchG || vouchTarget) + " 的漏洞！")
           : ("我是護心守衛，目前都錯開可能救援位謹慎巡防！建議大家先重點檢視 " + seatLabel(watchG || aliveOthers[0]) + " 的站邊與邏輯！")
       };
     }

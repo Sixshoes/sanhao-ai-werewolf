@@ -2534,11 +2534,17 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
   const flowFirstLbl = flowFirst ? (fmtSeatNum(flowFirst.id) + "號" + flowFirst.name) : "前排未驗位";
   const flowSecondLbl = flowSecond ? (fmtSeatNum(flowSecond.id) + "號" + flowSecond.name) : "";
   const flowPhrase = flowSecond
-    ? ("雙警徽流先驗 " + flowFirstLbl + "、再驗 " + flowSecondLbl + "（我若倒牌，徽給" + fmtSeatNum(flowFirst.id) + "號即金水、飛" + fmtSeatNum(flowSecond.id) + "號或撕徽即查殺）")
-    : ("警徽流鎖定 " + flowFirstLbl + "（倒牌徽給他即金水、撕徽即查殺）");
+    ? ("雙警徽流先驗 " + flowFirstLbl + "、再驗 " + flowSecondLbl + "，我若倒牌，徽給" + fmtSeatNum(flowFirst.id) + "號代表好人，飛" + fmtSeatNum(flowSecond.id) + "號或撕徽代表查殺")
+    : ("警徽流鎖定 " + flowFirstLbl + "，我若倒牌，徽給他代表好人，撕徽代表查殺");
   const badgeFlowObj = (isSeerClaim && flowFirst)
     ? { firstTargetId: flowFirst.id, secondTargetId: flowSecond ? flowSecond.id : null }
     : null;
+  const polishSheriffSpeechText = function (rawSpeech) {
+    let out = String(rawSpeech || "");
+    if (out && typeof applyDifficultyTerminology === "function") out = applyDifficultyTerminology(out);
+    if (out && typeof stripDialogueParentheses === "function") out = stripDialogueParentheses(out);
+    return out;
+  };
 
   if (typeof antiCheatMonitor !== "undefined" && self) {
     antiCheatMonitor.recordDecision("sheriff_speech", self.id, isSeerClaim ? "警上報觀察員＋留警徽流" : "警上自由發言");
@@ -2553,7 +2559,7 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
         rivalId: priorSeerSpeech.id,
         checkTargetId: seerCheckTarget ? seerCheckTarget.id : null,
         badgeFlow: badgeFlowObj,
-        text: "「等等！" + rLbl + " 你居然敢跟我對跳明心？！全場聽好，我才是真明心！昨晚查了 " + checkLbl + "（" + checkVerdict + "），" + flowPhrase + "，敢跟我拍到底我就直接出你！」"
+        text: polishSheriffSpeechText("「等等！" + rLbl + " 你居然敢跟我對跳明心？！全場聽好，我才是真明心！昨晚查了 " + checkLbl + " 是" + checkVerdict + "，" + flowPhrase + "，敢跟我拍到底我就直接出你！」")
       };
     }
     return {
@@ -2562,7 +2568,7 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
       rivalId: null,
       checkTargetId: seerCheckTarget ? seerCheckTarget.id : null,
       badgeFlow: badgeFlowObj,
-      text: "「我先拍明心身分拿警徽！昨晚查了 " + checkLbl + "（" + checkVerdict + "），" + flowPhrase + "！等等誰敢對跳直接標記悍跳狼！」"
+      text: polishSheriffSpeechText("「我先拍明心身分拿警徽！昨晚查了 " + checkLbl + " 是" + checkVerdict + "，" + flowPhrase + "！等等誰敢對跳直接標記悍跳狼！」")
     };
   }
 
@@ -2681,22 +2687,34 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
   const f1Lbl = defaultFirst ? (fmtSeatNum(defaultFirst.id) + "號" + defaultFirst.name) : "前排席位";
   const f2Lbl = defaultSecond ? (fmtSeatNum(defaultSecond.id) + "號" + defaultSecond.name) : "";
   const flowDualText = defaultSecond
-    ? ("雙警徽流先驗 " + f1Lbl + "、再驗 " + f2Lbl + "（倒牌徽給" + fmtSeatNum(defaultFirst.id) + "號即金水、飛" + fmtSeatNum(defaultSecond.id) + "號或撕徽即查殺）")
-    : ("警徽流先看 " + f1Lbl + "（倒牌徽給他即金水、撕徽即查殺）");
+    ? ("雙警徽流先驗 " + f1Lbl + "、再驗 " + f2Lbl + "，我若倒牌，徽給" + fmtSeatNum(defaultFirst.id) + "號代表好人，飛" + fmtSeatNum(defaultSecond.id) + "號或撕徽代表查殺")
+    : ("警徽流先看 " + f1Lbl + "，我若倒牌，徽給他代表好人，撕徽代表查殺");
   const flowObj = defaultFirst ? { firstTargetId: defaultFirst.id, secondTargetId: defaultSecond ? defaultSecond.id : null } : null;
+  const finalizeSheriffOptions = function (arr) {
+    return arr.map(function (opt) {
+      let cleanTxt = String(opt.text || "");
+      if (cleanTxt && typeof applyDifficultyTerminology === "function") cleanTxt = applyDifficultyTerminology(cleanTxt);
+      if (cleanTxt && typeof stripDialogueParentheses === "function") cleanTxt = stripDialogueParentheses(cleanTxt);
+      return Object.assign({}, opt, {
+        exclusiveGroup: opt.exclusiveGroup || "opening_stance",
+        text: cleanTxt
+      });
+    });
+  };
 
   if (player && player.role === "seer") {
     const cs = chk ? getSeat(chk.targetId) : null;
     const chkStr = (chk && cs)
-      ? ("昨晚查驗 " + fmtSeatNum(cs.id) + "號" + cs.name + " 是" + (chk.isWolf ? "酸民狼（查殺）" : "書院好夥伴（金水）"))
+      ? ("昨晚查驗 " + fmtSeatNum(cs.id) + "號" + cs.name + " 是" + (chk.isWolf ? "酸民狼" : "書院好夥伴"))
       : ("我手握昨晚查驗真相");
     const counterClause = priorSeerLbl
       ? ("前置位 " + priorSeerLbl + " 剛才悍跳直接定進狼坑，他警徽流全是虛的！")
       : "";
-    return [
+    return finalizeSheriffOptions([
       {
         title: priorSeerLbl ? ("對跳打飛 " + priorSeerLbl + "＋雙警徽流") : "強拍明心＋雙警徽流",
         tag: priorSeerLbl ? "正面對跳" : "明心直拍",
+        exclusiveGroup: "opening_stance",
         claimsSeer: true,
         badgeFlow: flowObj,
         text: "我是真正的明心觀察員！" + counterClause + chkStr + "，今晚" + flowDualText + "，請警下好夥伴認清真視角把警徽投給我！"
@@ -2704,6 +2722,7 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
       {
         title: "穩健報警徽流＋驗警下票型",
         tag: "警徽流",
+        exclusiveGroup: "opening_stance",
         claimsSeer: true,
         badgeFlow: flowObj,
         text: "我起跳明心觀察員拿警徽，" + chkStr + "；警徽流鎖定 " + f1Lbl + (f2Lbl ? (" 接續 " + f2Lbl) : "") + "。" + (priorSeerLbl ? ("大家待會盯緊誰幫 " + priorSeerLbl + " 衝票就能直接排狼坑！") : "若後置位有人對跳，待會看警下衝票就能排坑！")
@@ -2711,21 +2730,23 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
       {
         title: "先裝亂聊藏身分看後置位",
         tag: "隨性聽局",
+        exclusiveGroup: "opening_stance",
         claimsSeer: false,
         badgeFlow: null,
         text: priorSeerLbl
           ? ("先聽完 " + priorSeerLbl + " 的表水我心裡有數了，這輪先不急著掀底牌，等回台下配合票型再揭真假！")
           : "我先上警輕鬆聊兩句、看看後置位誰會急著悍跳，暫時不急著掀底牌，大家先別急著站邊！"
       }
-    ];
+    ]);
   }
   if (player && player.role === "wolf") {
     const goodPick = others.find(function (s) { return s.role !== "wolf"; }) || others[0];
     const goodLbl = goodPick ? (fmtSeatNum(goodPick.id) + "號" + goodPick.name) : focus;
-    return [
+    return finalizeSheriffOptions([
       {
         title: priorSeerLbl ? ("對跳反拍 " + priorSeerLbl + "＋假警徽流") : "悍跳明心＋假警徽流",
         tag: "悍跳施壓",
+        exclusiveGroup: "opening_stance",
         claimsSeer: true,
         badgeFlow: flowObj,
         text: (priorSeerLbl ? ("前置位 " + priorSeerLbl + " 跳得漏洞百出，") : "全場聽好，") + "我才是這局真正的明心觀察員！昨晚查了 " + goodLbl + " 是金水，" + flowDualText + "，警下好人把票投給我帶隊出假牌！"
@@ -2733,6 +2754,7 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
       {
         title: priorSeerLbl ? ("點評 " + priorSeerLbl + "＋攪渾水") : "隨性亂聊攪渾水",
         tag: "隨性亂聊",
+        exclusiveGroup: "opening_stance",
         claimsSeer: false,
         badgeFlow: null,
         text: priorSeerLbl
@@ -2742,17 +2764,19 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
       {
         title: "詐身分亂炸後退水回警下",
         tag: "詐身分退水",
+        exclusiveGroup: "opening_stance",
         claimsSeer: false,
         withdrawAfter: true,
         badgeFlow: null,
         text: "先盲炸一下 " + goodLbl + " 看你慌不慌～哈哈好啦我其實沒視角，純粹上警試探反應，這就拱手退水回警下投票！"
       }
-    ];
+    ]);
   }
-  return [
+  return finalizeSheriffOptions([
     {
       title: priorSeerLbl ? ("點評 " + priorSeerLbl + "・理性爭警徽") : "理性帶隊爭警徽",
       tag: "邏輯控場",
+      exclusiveGroup: "opening_stance",
       claimsSeer: false,
       badgeFlow: null,
       text: priorSeerLbl
@@ -2760,23 +2784,25 @@ function buildPlayerSheriffQuickOptions(player, draftFlowArg) {
         : ("我是好人視角上警，警徽給我我會在末置位幫大家整理發言與票型；若不慎離席，警徽會優先託付給 " + f1Lbl + (f2Lbl ? (" 或 " + f2Lbl) : "") + "！")
     },
     {
-      title: priorSeerLbl ? ("幫好人試探 " + priorSeerLbl + " 後退水") : "詐身分炸人（講完退水）",
+      title: priorSeerLbl ? ("幫好人試探 " + priorSeerLbl + " 後退水") : "詐身分炸人・講完退水",
       tag: "詐身分退水",
+      exclusiveGroup: "opening_stance",
       claimsSeer: false,
       withdrawAfter: true,
       badgeFlow: null,
       text: priorSeerLbl
         ? ("我就是上警幫好人壓一下後置位、順便確認 " + priorSeerLbl + " 的警徽流穩不穩，現在把警上留給真預言家對決，我直接退水回警下把票投正！")
-        : ("咳咳，先假裝炸一下後置位——" + focus + " 你眼神怎麼有點飄？好啦開玩笑的，我只是上來詐身分試反應，這就拱手退水回警下把票投正！")
+        : ("咳咳，先假裝炸一下後置位，" + focus + " 你眼神怎麼有點飄？好啦開玩笑的，我只是上來詐身分試反應，這就拱手退水回警下把票投正！")
     },
     {
       title: "隨性搶麥暖場聽後置位",
       tag: "隨性亂聊",
+      exclusiveGroup: "opening_stance",
       claimsSeer: false,
       badgeFlow: null,
       text: "我上警純粹是手癢想早點拿麥克風暖個場！順便直覺點聽 " + focus + " 今天感覺很有戲，講完看大家表現再決定留不留警上～"
     }
-  ];
+  ]);
 }
 
 function triggerSheriffDoubleSeerClashDrama(sA, sB, ctx) {
@@ -3641,11 +3667,30 @@ function setPlayerSheriffDraftBadgeFlow(firstTargetId, secondTargetId) {
   let sId = parseInt(secondTargetId, 10) || null;
   if (fId === pid) return null;
   if (sId === pid || sId === fId) sId = null;
+  const prevOpts = Array.isArray(ctx.playerQuickOptions) ? ctx.playerQuickOptions.slice() : [];
+  const shInp = typeof el === "function" ? el("sheriffPlayerInput") : null;
+  let nextInputVal = shInp ? String(shInp.value || "") : "";
   ctx.playerBadgeFlowDraft = { firstTargetId: fId, secondTargetId: sId, explicit: true };
   if (pSeat) {
     ctx.playerQuickOptions = buildPlayerSheriffQuickOptions(pSeat, ctx.playerBadgeFlowDraft);
+    const newOpts = Array.isArray(ctx.playerQuickOptions) ? ctx.playerQuickOptions : [];
+    for (let oi = 0; oi < prevOpts.length && oi < newOpts.length; oi++) {
+      const oldTxt = prevOpts[oi] && prevOpts[oi].text ? String(prevOpts[oi].text).trim() : "";
+      const newTxt = newOpts[oi] && newOpts[oi].text ? String(newOpts[oi].text).trim() : "";
+      if (oldTxt && newTxt && nextInputVal.indexOf(oldTxt) !== -1) {
+        nextInputVal = nextInputVal.split(oldTxt).join(newTxt);
+        if (ctx._activeSheriffExclusiveText && newOpts[oi].exclusiveGroup) {
+          ctx._activeSheriffExclusiveText[newOpts[oi].exclusiveGroup] = newTxt;
+        }
+      }
+    }
   }
   updateAllUI();
+  const restoredInp = typeof el === "function" ? el("sheriffPlayerInput") : null;
+  if (restoredInp && nextInputVal) {
+    restoredInp.value = nextInputVal;
+    if (typeof autoResizeSpeechTextarea === "function") autoResizeSpeechTextarea(restoredInp);
+  }
   return ctx.playerBadgeFlowDraft;
 }
 
@@ -3664,6 +3709,12 @@ function submitPlayerSheriffSpeech(rawText, explicitFlowArg, optsArg) {
   let cleanText = String(rawText || "").trim();
   if (cleanText && typeof normalizeSeatRefsInText === "function") {
     cleanText = normalizeSeatRefsInText(cleanText);
+  }
+  if (cleanText && typeof applyDifficultyTerminology === "function") {
+    cleanText = applyDifficultyTerminology(cleanText);
+  }
+  if (cleanText && typeof stripDialogueParentheses === "function") {
+    cleanText = stripDialogueParentheses(cleanText);
   }
   let autoCardClaimsSeer = null;
   if (!cleanText) {

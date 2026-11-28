@@ -637,7 +637,7 @@ function composePlayerPitSpeechText() {
   const nightOut = Array.isArray(m.lastNightCasualties) ? m.lastNightCasualties : [];
   if (parts.length === 0 && m.day >= 2) {
     if (nightOut.length === 0) {
-      parts.push("昨晚是平安夜（大機率奉茶師護人或守衛守中），我幫大家對齊一下今天盤面：");
+      parts.push("昨晚是平安夜，可能是奉茶師護人或守衛守中，我幫大家對齊一下今天盤面：");
     } else {
       const deadLbl = nightOut.map(function (id) {
         const ds = getSeat(id);
@@ -676,12 +676,12 @@ function composePlayerPitSpeechText() {
     if (displayWolfIds.length > 0) {
       const w0 = displayWolfIds[0];
       const hasDiv = Boolean(pubMatrix && pubMatrix.divergenceBySeat && pubMatrix.divergenceBySeat[w0]);
-      const extraTag = hasDiv ? "（前後發言跟昨天落票明顯對不上）" : "";
+      const extraTag = hasDiv ? "，前後發言跟昨天落票明顯對不上" : "";
       parts.push("反觀 " + fmtList(displayWolfIds) + extraTag + " 的邏輯漏洞最多，我認為最值得懷疑，建議大家今天集中檢視並優先投票給 " + fmtSeatNum(w0) + "號！");
     }
   } else {
     if (displayGoodIds.length > 0) {
-      parts.push("好人坑我先保 " + fmtList(displayGoodIds) + (displayGoodIds.length >= 3 ? (" 等 " + displayGoodIds.length + " 位（視角乾淨、立場真誠）；") : "（視角乾淨、立場真誠）；"));
+      parts.push("好人坑我先保 " + fmtList(displayGoodIds) + (displayGoodIds.length >= 3 ? (" 等 " + displayGoodIds.length + " 位，視角乾淨、立場真誠；") : "，視角乾淨、立場真誠；"));
     }
     if (displayWolfIds.length > 0) {
       const reasons = [];
@@ -699,8 +699,8 @@ function composePlayerPitSpeechText() {
           reasons.push("警上突然退水動機可疑");
         }
       }
-      const shReason = reasons.length ? ("（" + reasons.join("，且") + "）") : "";
-      parts.push("狼坑目前鎖定 " + fmtList(displayWolfIds) + shReason + "，破綻最明顯，建議好人齊心歸票優先請 " + fmtSeatNum(w0) + "號 離席！");
+      const shReason = reasons.length ? ("，" + reasons.join("，且") + "，") : "，";
+      parts.push("狼坑目前鎖定 " + fmtList(displayWolfIds) + shReason + "破綻最明顯，建議好人齊心歸票優先請 " + fmtSeatNum(w0) + "號 離席！");
     }
   }
 
@@ -711,12 +711,19 @@ function composePlayerPitSpeechText() {
     const f2Str = (f2s && f2s.alive) ? (fmtSeatNum(f2s.id) + "號" + f2s.name) : "";
     parts.push(
       f2Str
-        ? (" 今晚警徽流改留先驗 " + f1Str + "、再驗 " + f2Str + "（我若倒牌，徽給" + fmtSeatNum(f1s.id) + "號即金水、飛" + fmtSeatNum(f2s.id) + "號或撕徽即查殺）！")
-        : (" 今晚警徽流鎖定 " + f1Str + "（我若倒牌，徽給他即金水、撕徽即查殺）！")
+        ? (" 今晚警徽流改留先驗 " + f1Str + "、再驗 " + f2Str + "，我若倒牌，徽給" + fmtSeatNum(f1s.id) + "號代表好人，飛" + fmtSeatNum(f2s.id) + "號或撕徽代表查殺！")
+        : (" 今晚警徽流鎖定 " + f1Str + "，我若倒牌，徽給他代表好人，撕徽代表查殺！")
     );
   }
 
-  return parts.join("").trim();
+  let composedOut = parts.join("").trim();
+  if (composedOut && typeof applyDifficultyTerminology === "function") {
+    composedOut = applyDifficultyTerminology(composedOut);
+  }
+  if (composedOut && typeof stripDialogueParentheses === "function") {
+    composedOut = stripDialogueParentheses(composedOut);
+  }
+  return composedOut;
 }
 
 function autoResizeSpeechTextarea(elNode) {
@@ -1032,146 +1039,164 @@ function loadQuickCardIntoAdvancedEditor(item, cardBtn, slotView, dualWorlds) {
   const clause = String(item.text || "").trim();
 
   let added = true;
-  if (existingIdx !== -1 && (!clause || curInputText.indexOf(clause) !== -1)) {
-    // Untoggle this module cleanly while keeping all other assembled modules intact!
-    added = false;
-    const removedMod = d.composedModules.splice(existingIdx, 1)[0];
-    const nextText = removeSpeechClause(curInputText, clause);
-    if (qIn) qIn.value = nextText;
-    if (el("playerSpeechInput")) el("playerSpeechInput").value = nextText;
-
-    const stillNeedWolf = {};
-    const stillNeedGood = {};
-    let stillClaimRole = null;
-    let stillStandSeer = null;
-    let stillEvMod = null;
-    d.composedModules.forEach(function (m) {
-      (m.addedWolfIds || []).forEach(function (id) { stillNeedWolf[id] = true; });
-      (m.addedGoodIds || []).forEach(function (id) { stillNeedGood[id] = true; });
-      if (m.setClaimRole) stillClaimRole = m.setClaimRole;
-      if (m.setStandSeerId) stillStandSeer = m.setStandSeerId;
-      if (m.evidenceClueId) stillEvMod = m;
-    });
-    if (removedMod) {
-      d.wolfIds = (d.wolfIds || []).filter(function (id) {
-        return (removedMod.addedWolfIds || []).indexOf(id) === -1 || stillNeedWolf[id];
+    const syncDraftNeedFlags = function (removedList) {
+      const stillNeedWolf = {};
+      const stillNeedGood = {};
+      let stillClaimRole = null;
+      let stillStandSeer = null;
+      let stillEvMod = null;
+      d.composedModules.forEach(function (m) {
+        (m.addedWolfIds || []).forEach(function (id) { stillNeedWolf[id] = true; });
+        (m.addedGoodIds || []).forEach(function (id) { stillNeedGood[id] = true; });
+        if (m.setClaimRole) stillClaimRole = m.setClaimRole;
+        if (m.setStandSeerId) stillStandSeer = m.setStandSeerId;
+        if (m.evidenceClueId) stillEvMod = m;
       });
-      d.goodIds = (d.goodIds || []).filter(function (id) {
-        return (removedMod.addedGoodIds || []).indexOf(id) === -1 || stillNeedGood[id];
-      });
-      if (removedMod.setClaimRole && d.claimRole === removedMod.setClaimRole && !stillClaimRole) {
-        d.claimRole = null;
-      }
-      if (removedMod.setStandSeerId && d.standSeerId === removedMod.setStandSeerId && !stillStandSeer) {
-        d.standSeerId = null;
-      }
-      if (removedMod.evidenceClueId && d.evidenceClueId === removedMod.evidenceClueId) {
-        d.evidenceClueId = stillEvMod ? stillEvMod.evidenceClueId : null;
-      }
-    }
-    state.match.pendingEvidenceTargetId = stillEvMod ? (stillEvMod.evidenceTargetId || null) : null;
-    state.match.pendingEvidenceClueId = stillEvMod ? (stillEvMod.evidenceClueId || null) : null;
-  } else {
-    // Compose & merge this module onto the existing draft (never wipe prior cards!)
-    if (existingIdx !== -1) d.composedModules.splice(existingIdx, 1);
-    const patch = item.draftPatch || {};
-    const addedWolfIds = [];
-    const addedGoodIds = [];
-
-    (Array.isArray(patch.wolfIds) ? patch.wolfIds : []).forEach(function (id) {
-      if (!isValidTarget(id)) return;
-      d.goodIds = (d.goodIds || []).filter(function (g) { return g !== id; });
-      if (d.wolfIds.indexOf(id) === -1 && d.wolfIds.length < wolfCap) {
-        d.wolfIds.push(id);
-      }
-      if (addedWolfIds.indexOf(id) === -1) addedWolfIds.push(id);
-    });
-    (Array.isArray(patch.goodIds) ? patch.goodIds : []).forEach(function (id) {
-      if (!isValidTarget(id) || d.wolfIds.indexOf(id) !== -1) return;
-      if (d.goodIds.indexOf(id) === -1) d.goodIds.push(id);
-      if (addedGoodIds.indexOf(id) === -1) addedGoodIds.push(id);
-    });
-
-    if (addedWolfIds.length === 0 && addedGoodIds.length === 0 && clause) {
-      const inferred = analyzeThreeGoodSpeech(clause);
-      (inferred.accuseTargets || []).forEach(function (id) {
-        if (isValidTarget(id) && d.wolfIds.indexOf(id) === -1 && d.wolfIds.length < wolfCap) {
-          d.goodIds = (d.goodIds || []).filter(function (g) { return g !== id; });
-          d.wolfIds.push(id);
-          addedWolfIds.push(id);
+      (removedList || []).forEach(function (rm) {
+        if (!rm) return;
+        d.wolfIds = (d.wolfIds || []).filter(function (id) {
+          return (rm.addedWolfIds || []).indexOf(id) === -1 || stillNeedWolf[id];
+        });
+        d.goodIds = (d.goodIds || []).filter(function (id) {
+          return (rm.addedGoodIds || []).indexOf(id) === -1 || stillNeedGood[id];
+        });
+        if (rm.setClaimRole && d.claimRole === rm.setClaimRole && !stillClaimRole) {
+          d.claimRole = null;
+        }
+        if (rm.setStandSeerId && d.standSeerId === rm.setStandSeerId && !stillStandSeer) {
+          d.standSeerId = null;
+        }
+        if (rm.evidenceClueId && d.evidenceClueId === rm.evidenceClueId) {
+          d.evidenceClueId = stillEvMod ? stillEvMod.evidenceClueId : null;
         }
       });
-      (inferred.vouchTargets || []).forEach(function (id) {
-        if (isValidTarget(id) && d.wolfIds.indexOf(id) === -1 && d.goodIds.indexOf(id) === -1) {
-          d.goodIds.push(id);
-          addedGoodIds.push(id);
-        }
-      });
-    }
+      state.match.pendingEvidenceTargetId = stillEvMod ? (stillEvMod.evidenceTargetId || null) : null;
+      state.match.pendingEvidenceClueId = stillEvMod ? (stillEvMod.evidenceClueId || null) : null;
+    };
 
-    let setClaimRole = null;
-    if (patch.claimRole) {
-      d.claimRole = patch.claimRole;
-      setClaimRole = patch.claimRole;
-    }
-    let setStandSeerId = null;
-    if (patch.standSeerId && getSeat(patch.standSeerId) && getSeat(patch.standSeerId).alive) {
-      d.standSeerId = patch.standSeerId;
-      setStandSeerId = patch.standSeerId;
-    }
-    const evId = patch.evidenceClueId || (item.isEvidenceCard ? item.evidenceClueId : null);
-    if (evId) d.evidenceClueId = evId;
-
-    const bf1Id = parseInt(patch.badgeFlowFirstId, 10) || null;
-    const bf2Id = parseInt(patch.badgeFlowSecondId, 10) || null;
-    if (bf1Id && bf1Id !== pid && getSeat(bf1Id) && getSeat(bf1Id).alive) {
-      d.badgeFlowFirstId = bf1Id;
-      if (bf2Id && bf2Id !== pid && bf2Id !== bf1Id && getSeat(bf2Id) && getSeat(bf2Id).alive) {
-        d.badgeFlowSecondId = bf2Id;
-      }
-    }
-
-    const evTgtId = item.isEvidenceCard ? item.evidenceTargetId : (evId ? (patch.evidenceTargetId || d.wolfIds[0] || null) : null);
-    d.composedModules.push({
-      key: modKey,
-      tgKind: item.tgKind || "words",
-      tgTag: item.tgTag || "模組",
-      text: clause,
-      isEvidenceCard: Boolean(item.isEvidenceCard),
-      evidenceClueId: evId || null,
-      evidenceTargetId: evTgtId,
-      addedWolfIds: addedWolfIds,
-      addedGoodIds: addedGoodIds,
-      setClaimRole: setClaimRole,
-      setStandSeerId: setStandSeerId
-    });
-    if (evId) {
-      state.match.pendingEvidenceTargetId = evTgtId;
-      state.match.pendingEvidenceClueId = evId;
-    }
-
-    // If user hasn't picked cards yet and textarea holds old raw auto-pit line, compose seamlessly
-    let baseForJoin = curInputText;
-    if (d._lastAutoPitText && baseForJoin.trim() === d._lastAutoPitText.trim() && d.composedModules.length === 1) {
-      d._lastAutoPitText = "";
-    }
-    let nextText = "";
-    if (setClaimRole === "seer") {
-      if (d._lastAutoPitText && baseForJoin.indexOf(d._lastAutoPitText) !== -1) {
-        baseForJoin = removeSpeechClause(baseForJoin, d._lastAutoPitText);
-      }
-      const cleanedBase = stripAutoPitClausesForSeerLead(baseForJoin);
-      nextText = cleanedBase ? joinSpeechClauses(clause, cleanedBase) : clause;
-      d._lastAutoPitText = "";
+    if (existingIdx !== -1 && (!clause || curInputText.indexOf(clause) !== -1)) {
+      // Untoggle this module cleanly while keeping all other assembled modules intact!
+      added = false;
+      const removedMod = d.composedModules.splice(existingIdx, 1)[0];
+      const nextText = removeSpeechClause(curInputText, clause);
+      if (qIn) qIn.value = nextText;
+      if (el("playerSpeechInput")) el("playerSpeechInput").value = nextText;
+      syncDraftNeedFlags([removedMod]);
     } else {
-      nextText = joinSpeechClauses(baseForJoin, clause);
-    }
-    if (qIn) qIn.value = nextText;
-    if (el("playerSpeechInput")) el("playerSpeechInput").value = nextText;
+      // Compose & merge this module onto the existing draft (replace exclusiveGroup siblings cleanly)
+      if (existingIdx !== -1) d.composedModules.splice(existingIdx, 1);
+      const exclGroup = item.exclusiveGroup || null;
+      let baseForJoin = curInputText;
+      if (exclGroup) {
+        const replacedMods = [];
+        d.composedModules = d.composedModules.filter(function (m) {
+          if (m && m.exclusiveGroup === exclGroup) {
+            replacedMods.push(m);
+            if (m.text) baseForJoin = removeSpeechClause(baseForJoin, m.text);
+            return false;
+          }
+          return true;
+        });
+        if (replacedMods.length > 0) syncDraftNeedFlags(replacedMods);
+      }
+      const patch = item.draftPatch || {};
+      const addedWolfIds = [];
+      const addedGoodIds = [];
 
-    const adv = el("speechAdvancedDrawer");
-    if (adv) adv.classList.remove("hidden");
-  }
+      (Array.isArray(patch.wolfIds) ? patch.wolfIds : []).forEach(function (id) {
+        if (!isValidTarget(id)) return;
+        d.goodIds = (d.goodIds || []).filter(function (g) { return g !== id; });
+        if (d.wolfIds.indexOf(id) === -1 && d.wolfIds.length < wolfCap) {
+          d.wolfIds.push(id);
+        }
+        if (addedWolfIds.indexOf(id) === -1) addedWolfIds.push(id);
+      });
+      (Array.isArray(patch.goodIds) ? patch.goodIds : []).forEach(function (id) {
+        if (!isValidTarget(id) || d.wolfIds.indexOf(id) !== -1) return;
+        if (d.goodIds.indexOf(id) === -1) d.goodIds.push(id);
+        if (addedGoodIds.indexOf(id) === -1) addedGoodIds.push(id);
+      });
+
+      if (addedWolfIds.length === 0 && addedGoodIds.length === 0 && clause) {
+        const inferred = analyzeThreeGoodSpeech(clause);
+        (inferred.accuseTargets || []).forEach(function (id) {
+          if (isValidTarget(id) && d.wolfIds.indexOf(id) === -1 && d.wolfIds.length < wolfCap) {
+            d.goodIds = (d.goodIds || []).filter(function (g) { return g !== id; });
+            d.wolfIds.push(id);
+            addedWolfIds.push(id);
+          }
+        });
+        (inferred.vouchTargets || []).forEach(function (id) {
+          if (isValidTarget(id) && d.wolfIds.indexOf(id) === -1 && d.goodIds.indexOf(id) === -1) {
+            d.goodIds.push(id);
+            addedGoodIds.push(id);
+          }
+        });
+      }
+
+      let setClaimRole = null;
+      if (patch.claimRole) {
+        d.claimRole = patch.claimRole;
+        setClaimRole = patch.claimRole;
+      }
+      let setStandSeerId = null;
+      if (patch.standSeerId && getSeat(patch.standSeerId) && getSeat(patch.standSeerId).alive) {
+        d.standSeerId = patch.standSeerId;
+        setStandSeerId = patch.standSeerId;
+      }
+      const evId = patch.evidenceClueId || (item.isEvidenceCard ? item.evidenceClueId : null);
+      if (evId) d.evidenceClueId = evId;
+
+      const bf1Id = parseInt(patch.badgeFlowFirstId, 10) || null;
+      const bf2Id = parseInt(patch.badgeFlowSecondId, 10) || null;
+      if (bf1Id && bf1Id !== pid && getSeat(bf1Id) && getSeat(bf1Id).alive) {
+        d.badgeFlowFirstId = bf1Id;
+        if (bf2Id && bf2Id !== pid && bf2Id !== bf1Id && getSeat(bf2Id) && getSeat(bf2Id).alive) {
+          d.badgeFlowSecondId = bf2Id;
+        }
+      }
+
+      const evTgtId = item.isEvidenceCard ? item.evidenceTargetId : (evId ? (patch.evidenceTargetId || d.wolfIds[0] || null) : null);
+      d.composedModules.push({
+        key: modKey,
+        exclusiveGroup: exclGroup,
+        tgKind: item.tgKind || "words",
+        tgTag: item.tgTag || "模組",
+        text: clause,
+        isEvidenceCard: Boolean(item.isEvidenceCard),
+        evidenceClueId: evId || null,
+        evidenceTargetId: evTgtId,
+        addedWolfIds: addedWolfIds,
+        addedGoodIds: addedGoodIds,
+        setClaimRole: setClaimRole,
+        setStandSeerId: setStandSeerId
+      });
+      if (evId) {
+        state.match.pendingEvidenceTargetId = evTgtId;
+        state.match.pendingEvidenceClueId = evId;
+      }
+
+      // If user hasn't picked cards yet and textarea holds old raw auto-pit line, compose seamlessly
+      if (d._lastAutoPitText && baseForJoin.trim() === d._lastAutoPitText.trim() && d.composedModules.length === 1) {
+        d._lastAutoPitText = "";
+      }
+      let nextText = "";
+      if (setClaimRole === "seer") {
+        if (d._lastAutoPitText && baseForJoin.indexOf(d._lastAutoPitText) !== -1) {
+          baseForJoin = removeSpeechClause(baseForJoin, d._lastAutoPitText);
+        }
+        const cleanedBase = stripAutoPitClausesForSeerLead(baseForJoin);
+        nextText = cleanedBase ? joinSpeechClauses(clause, cleanedBase) : clause;
+        d._lastAutoPitText = "";
+      } else {
+        nextText = joinSpeechClauses(baseForJoin, clause);
+      }
+      if (qIn) qIn.value = nextText;
+      if (el("playerSpeechInput")) el("playerSpeechInput").value = nextText;
+
+      const adv = el("speechAdvancedDrawer");
+      if (adv) adv.classList.remove("hidden");
+    }
 
   d.loadedTag = d.composedModules.map(function (m) { return m.tgTag; }).join("＋") || "";
   syncPlayerMarksFromDraftPits(d);
@@ -1483,23 +1508,64 @@ function renderPlayerPitBuilder(slotViewArg, dualWorldsArg) {
         });
         return sel;
       };
-      const s1 = mkDayBfSel("dayBadgeFlow1", "第一警徽流（不改）", d.badgeFlowFirstId, null, function (v1) {
-        d.badgeFlowFirstId = v1;
-        if (!v1 || d.badgeFlowSecondId === v1) d.badgeFlowSecondId = null;
+      const applyLiveDayBfSync = function () {
+        const formatDayBfClause = function () {
+          if (!d.badgeFlowFirstId) return "";
+          const f1s = getSeat(d.badgeFlowFirstId);
+          if (!f1s || !f1s.alive) return "";
+          const f2s = (d.badgeFlowSecondId && d.badgeFlowSecondId !== d.badgeFlowFirstId) ? getSeat(d.badgeFlowSecondId) : null;
+          const f1Str = fmtSeatNum(f1s.id) + "號" + f1s.name;
+          const f2Str = (f2s && f2s.alive) ? (fmtSeatNum(f2s.id) + "號" + f2s.name) : "";
+          let clause = f2Str
+            ? ("今晚警徽流改留先驗 " + f1Str + "、再驗 " + f2Str + "，我若倒牌，徽給" + fmtSeatNum(f1s.id) + "號代表好人，飛" + fmtSeatNum(f2s.id) + "號或撕徽代表查殺")
+            : ("今晚警徽流鎖定 " + f1Str + "，我若倒牌，徽給他代表好人，撕徽代表查殺");
+          if (typeof applyDifficultyTerminology === "function") clause = applyDifficultyTerminology(clause);
+          if (typeof stripDialogueParentheses === "function") clause = stripDialogueParentheses(clause);
+          return clause;
+        };
+        const nextBfClause = formatDayBfClause();
+        const qInNode = el("quickFreeInput");
+        const pInNode = el("playerSpeechInput");
+        if (qInNode && qInNode.value && Array.isArray(d.composedModules) && d.composedModules.length > 0 && nextBfClause) {
+          let curVal = String(qInNode.value || "");
+          const bfRx = /今晚(?:雙)?(?:警徽流|觀察名單順序|雙人觀察名單順序)[^。！？\n]*(?:[。！？]|(?=今天)|(?=$))/;
+          if (bfRx.test(curVal)) {
+            curVal = curVal.replace(bfRx, nextBfClause + "，");
+            if (typeof stripDialogueParentheses === "function") curVal = stripDialogueParentheses(curVal);
+            qInNode.value = curVal;
+            if (pInNode) pInNode.value = curVal;
+          }
+          d.composedModules.forEach(function (m) {
+            if (m && m.text && bfRx.test(m.text)) {
+              m.text = m.text.replace(bfRx, nextBfClause + "，");
+            }
+          });
+        }
         syncDraftSpeechToInput();
         renderPlayerPitBuilder();
+      };
+      const s1 = mkDayBfSel("dayBadgeFlow1", "第一警徽流・不改", d.badgeFlowFirstId, null, function (v1) {
+        d.badgeFlowFirstId = v1;
+        if (!v1 || d.badgeFlowSecondId === v1) d.badgeFlowSecondId = null;
+        applyLiveDayBfSync();
       });
       const arr = document.createElement("span");
       arr.textContent = "→";
       arr.className = "opacity-75 font-bold";
-      const s2 = mkDayBfSel("dayBadgeFlow2", "第二警徽流（選填）", d.badgeFlowSecondId, d.badgeFlowFirstId, function (v2) {
+      const s2 = mkDayBfSel("dayBadgeFlow2", "第二警徽流・選填", d.badgeFlowSecondId, d.badgeFlowFirstId, function (v2) {
         d.badgeFlowSecondId = v2;
-        syncDraftSpeechToInput();
-        renderPlayerPitBuilder();
+        applyLiveDayBfSync();
       });
+      const dayHintBf = document.createElement("span");
+      dayHintBf.className = "text-[13px] opacity-80";
+      const isEasyDayBf = typeof resolveActiveJargonDifficulty === "function" && resolveActiveJargonDifficulty() === "easy";
+      dayHintBf.textContent = isEasyDayBf
+        ? "若出局：徽章傳第1位代表好人｜傳第2位或收起代表第1位可疑"
+        : "若倒牌：徽給先位代表好人｜飛第二位或撕徽代表第一位可疑";
       bfBar.appendChild(s1);
       bfBar.appendChild(arr);
       bfBar.appendChild(s2);
+      bfBar.appendChild(dayHintBf);
     } else {
       bfBar.classList.add("hidden");
     }
@@ -1891,7 +1957,7 @@ function buildPlayerSmartBoardContext(player, sampleTarget, slotView, dualWorlds
   const nightDeaths = Array.isArray(m.lastNightCasualties) ? m.lastNightCasualties.filter(Boolean) : [];
   const nightNote = m.day >= 2
     ? (nightDeaths.length === 0
-      ? "昨晚平安夜（奉茶師救人或守衛守中）"
+      ? "昨晚平安夜，可能是奉茶師救人或守衛守中"
       : ("昨夜 " + nightDeaths.map(function (id) { const s = getSeat(id); return fmtSeatNum(id) + "號" + (s ? s.name : ""); }).join("、") + " 倒牌"))
     : (nightDeaths.length === 0
       ? "首夜平安夜"
@@ -1905,14 +1971,14 @@ function buildPlayerSmartBoardContext(player, sampleTarget, slotView, dualWorlds
   const bf2 = bfPool[1] || aliveOthers.find(function (s) { return bf1 && s.id !== bf1.id; }) || null;
   const bfText = bf1
     ? (bf2
-      ? ("今晚警徽流先驗 " + fmtSeatNum(bf1.id) + "號" + bf1.name + "、再驗 " + fmtSeatNum(bf2.id) + "號" + bf2.name + "（飛徽即金水、撕徽即查殺）")
-      : ("今晚警徽流鎖定 " + fmtSeatNum(bf1.id) + "號" + bf1.name))
+      ? ("今晚警徽流先驗 " + fmtSeatNum(bf1.id) + "號" + bf1.name + "、再驗 " + fmtSeatNum(bf2.id) + "號" + bf2.name + "，我若倒牌，徽給" + fmtSeatNum(bf1.id) + "號代表好人，飛" + fmtSeatNum(bf2.id) + "號或撕徽代表查殺")
+      : ("今晚警徽流鎖定 " + fmtSeatNum(bf1.id) + "號" + bf1.name + "，我若倒牌，徽給他代表好人，撕徽代表查殺"))
     : "";
 
   const totalWolves = typeof getInitialWolfCount === "function" ? getInitialWolfCount() : 2;
   const briefParts = [];
   if (dualWorlds && dualWorlds.seerA && dualWorlds.seerB) {
-    briefParts.push("雙觀察員對跳（" + fmtSeatNum(dualWorlds.seerA.id) + "號 vs " + fmtSeatNum(dualWorlds.seerB.id) + "號）");
+    briefParts.push("雙觀察員對跳：" + fmtSeatNum(dualWorlds.seerA.id) + "號 vs " + fmtSeatNum(dualWorlds.seerB.id) + "號");
   }
   if (accuserOfMe) {
     briefParts.push(fmtSeatNum(accuserOfMe.seat.id) + "號" + accuserOfMe.seat.name + " 剛把你點進狼坑");
@@ -2053,7 +2119,7 @@ function preparePlayerSpeechPanel() {
   const targetReasonBits = [];
   if (targetStanceDesc) targetReasonBits.push(targetStanceDesc);
   if (targetSheriffClue) targetReasonBits.push(targetSheriffClue);
-  const targetEvidenceNote = targetReasonBits.length ? ("（" + targetReasonBits.join("，又") + "）") : "";
+  const targetEvidenceNote = targetReasonBits.length ? ("，" + targetReasonBits.join("，又")) : "";
 
   // Card 1: Role Core Intel / PK Defense / Sharpest Board-Aware Opening
   if (inPk && pkRivalSeat && pkRivalSeat.alive) {
@@ -2075,6 +2141,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "heart",
       tgTag: "PK 拉票",
+      exclusiveGroup: "opening_stance",
       label: "PK 搶救自證・直指 " + fmtSeatNum(pkRivalSeat.id) + "號 破綻",
       draftPatch: {
         claimRole: pkDraftClaim,
@@ -2101,6 +2168,7 @@ function preparePlayerSpeechPanel() {
       cards.push({
         tgKind: "heart",
         tgTag: "真明心報查殺",
+        exclusiveGroup: "opening_stance",
         label: "報查殺 " + cLabel + (smart.rivalSeerSeat ? "・打假觀" : "・警徽流"),
         draftPatch: {
           claimRole: "seer",
@@ -2118,6 +2186,7 @@ function preparePlayerSpeechPanel() {
       cards.push({
         tgKind: "heart",
         tgTag: "真明心報金水",
+        exclusiveGroup: "opening_stance",
         label: "報金水 " + cLabel + "・歸 " + fmtSeatNum(pushId) + "號",
         draftPatch: {
           claimRole: "seer",
@@ -2138,6 +2207,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "deeds",
       tgTag: "奉茶師報銀水",
+      exclusiveGroup: "opening_stance",
       label: "亮奉茶師保 " + svLbl + "・歸票 " + fmtSeatNum(pushSeat.id) + "號",
       draftPatch: {
         claimRole: "witch",
@@ -2152,6 +2222,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "deeds",
       tgTag: "守衛控場",
+      exclusiveGroup: "opening_stance",
       label: guarded
         ? ("亮守衛報盾 " + fmtSeatNum(guarded.id) + "號・防同守同救")
         : ("藏守衛理性盤坑・點檢視 " + fmtSeatNum(pushSeat.id) + "號"),
@@ -2161,7 +2232,7 @@ function preparePlayerSpeechPanel() {
         wolfIds: [pushSeat.id]
       },
       text: guarded
-        ? ("我先報護心守衛路線防撞車：昨晚我的護心結界守的是 " + fmtSeatNum(guarded.id) + "號" + guarded.name + "（" + smart.nightNote + "），請奉茶師務必錯開別同守同救！今天狼坑我先點 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + targetEvidenceNote + "。")
+        ? ("我先報護心守衛路線防撞車：昨晚我的護心結界守的是 " + fmtSeatNum(guarded.id) + "號" + guarded.name + "，" + smart.nightNote + "，請奉茶師務必錯開別同守同救！今天狼坑我先點 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + targetEvidenceNote + "。")
         : ("我是認真盤邏輯的好人，目前場上資訊漸明，結合" + smart.nightNote + "，我先重點檢視 " + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + targetEvidenceNote + "，看他後面怎麼自證！")
     });
   } else if (player.role === "hunter") {
@@ -2169,6 +2240,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "heart",
       tgTag: "糾察威懾",
+      exclusiveGroup: "opening_stance",
       label: "直心糾察表態・鎖定 " + fmtSeatNum(pushSeat.id) + "號 狼坑",
       draftPatch: { claimRole: "hunter", wolfIds: [pushSeat.id] },
       text: "我先替好人陣營定調：我手握正氣共鳴絕對是鐵好人一張！結合" + smart.nightNote + "與發言對照，" + fmtSeatNum(pushSeat.id) + "號" + pushSeat.name + targetEvidenceNote + " 最像在帶風向，狼隊要是想推我上台，離席前我一定直接帶走頭號狼坑！"
@@ -2178,6 +2250,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "heart",
       tgTag: "長老歸票",
+      exclusiveGroup: "opening_stance",
       label: player.elderShieldUsed
         ? ("清心長老定調・齊心檢視 " + fmtSeatNum(pushSeat.id) + "號")
         : ("清心長老扛推・點破 " + fmtSeatNum(pushSeat.id) + "號 邏輯"),
@@ -2191,11 +2264,12 @@ function preparePlayerSpeechPanel() {
     const wolfGoodPicks = aliveOthers.filter(function (s) { return s.role !== "wolf"; });
     const wolfScapegoat = (sampleTarget.role !== "wolf" ? sampleTarget : wolfGoodPicks[0]) || sampleTarget;
     const scClue = smart.getSheriffClue(wolfScapegoat.id) || smart.getTodayStanceDesc(wolfScapegoat.id);
-    const scNote = scClue ? ("（" + scClue + "，節奏很可疑）") : "（前後態度閃躲、沒給真邏輯）";
+    const scNote = scClue ? ("，" + scClue + "，節奏很可疑") : "前後態度閃躲、沒給真邏輯，";
     if (wolfMateSeer) {
       cards.push({
         tgKind: "heart",
         tgTag: "狼隊配合",
+        exclusiveGroup: "opening_stance",
         label: "力挺隊友 " + fmtSeatNum(wolfMateSeer.id) + "號 觀察員・推 " + fmtSeatNum(wolfScapegoat.id) + "號",
         draftPatch: { standSeerId: wolfMateSeer.id, wolfIds: [wolfScapegoat.id] },
         text: "盤完正反視角，我覺得 " + fmtSeatNum(wolfMateSeer.id) + "號" + wolfMateSeer.name + " 的觀察員查驗線與警徽流清楚多了！反觀 " + fmtSeatNum(wolfScapegoat.id) + "號" + wolfScapegoat.name + scNote + " 一直在攪渾水，我堅定站邊 " + fmtSeatNum(wolfMateSeer.id) + "號，這輪把票集中出 " + wolfScapegoat.id + "號！"
@@ -2204,6 +2278,7 @@ function preparePlayerSpeechPanel() {
       cards.push({
         tgKind: "heart",
         tgTag: "悍跳查殺",
+        exclusiveGroup: "opening_stance",
         label: "悍跳觀察員查殺 " + fmtSeatNum(wolfScapegoat.id) + "號・佈假警徽流",
         draftPatch: { claimRole: "seer", wolfIds: [wolfScapegoat.id], badgeFlowFirstId: smart.bf1Id, badgeFlowSecondId: smart.bf2Id },
         text: "全場冷靜聽真預言線！我才是這局真正的明心觀察員！昨晚我查驗了 " + fmtSeatNum(wolfScapegoat.id) + "號" + wolfScapegoat.name + " 確定是酸民狼！" + (smart.bfText ? (smart.bfText + "，") : "") + "今天所有好人跟我集中出 " + wolfScapegoat.id + "號，別被後置位假牌帶偏！"
@@ -2225,6 +2300,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "heart",
       tgTag: "精準排坑",
+      exclusiveGroup: "opening_stance",
       label: "梳理" + smart.nightNote.slice(0, 6) + "・點檢視 " + focusLbl,
       draftPatch: {
         claimRole: player.role === "villager" ? "villager" : null,
@@ -2232,8 +2308,8 @@ function preparePlayerSpeechPanel() {
         wolfIds: [focusTarget.id]
       },
       text: focusSpoke
-        ? ("結合" + smart.nightNote + "我幫大家精算一下坑位：" + buddyNote + focusLbl + (fNote ? ("（" + fNote + "）") : "") + " 的邏輯前後扣不太上，先放進今天的第一檢視狼坑，後置位也請表態對齊票型！")
-        : ("結合" + smart.nightNote + "，" + buddyNote + "目前 " + focusLbl + (fSh ? ("（" + fSh + "）") : "") + " 今天還沒發言，我先點他起來重點聽表水，如果講不出正反狼坑這輪就優先檢視他！")
+        ? ("結合" + smart.nightNote + "我幫大家精算一下坑位：" + buddyNote + focusLbl + (fNote ? ("，" + fNote) : "") + " 的邏輯前後扣不太上，先放進今天的第一檢視狼坑，後置位也請表態對齊票型！")
+        : ("結合" + smart.nightNote + "，" + buddyNote + "目前 " + focusLbl + (fSh ? ("，" + fSh) : "") + " 今天還沒發言，我先點他起來重點聽表水，如果講不出正反狼坑這輪就優先檢視他！")
     });
   }
 
@@ -2273,7 +2349,7 @@ function preparePlayerSpeechPanel() {
       label: "力保 " + friendLbl + "・穩票型",
       draftPatch: { goodIds: [friendTarget.id] },
       text: friendSpoke
-        ? ("我先幫好人把 " + friendLbl + " 認下來！剛剛聽他的發言條理分明、立場前後對得上" + (friendClue ? ("（且" + friendClue + "）") : "") + "，好人陣營先互保 " + friendTarget.id + "號，把票集中去檢視真正閃躲的位置！")
+        ? ("我先幫好人把 " + friendLbl + " 認下來！剛剛聽他的發言條理分明、立場前後對得上" + (friendClue ? ("，而且" + friendClue) : "") + "，好人陣營先互保 " + friendTarget.id + "號，把票集中去檢視真正閃躲的位置！")
         : ("目前 " + friendLbl + " 還沒發言，但看他" + (friendClue ? (friendClue + "的票型脈絡") : ((state.match && state.match.day === 1) ? "開場至今的態度" : "前幾輪的配合度")) + "都偏乾淨，我先暫保 " + friendTarget.id + "號，等聽完後置位表水再一起鎖狼坑！")
     });
   }
@@ -2294,7 +2370,7 @@ function preparePlayerSpeechPanel() {
       isEvidenceCard: true,
       evidenceClueId: evClue.id,
       evidenceTargetId: evSeat.id,
-      label: "打證破防 " + fmtSeatNum(evSeat.id) + "號 " + evSeat.name + "（全場警覺 +24）",
+      label: "打證破防 " + fmtSeatNum(evSeat.id) + "號 " + evSeat.name + "・全場警覺 +24",
       draftPatch: { evidenceClueId: evClue.id, evidenceTargetId: evSeat.id, wolfIds: [evSeat.id] },
       text: evClue.summary
     });
@@ -2307,17 +2383,19 @@ function preparePlayerSpeechPanel() {
       cards.push({
         tgKind: "deeds",
         tgTag: "深水倒鉤",
+        exclusiveGroup: "opening_stance",
         label: "深水隱身理性盤坑・順勢推 " + pushLbl,
         draftPatch: { claimRole: "wolf_stealth", wolfIds: [pushSeat.id] },
-        text: "大家先深呼吸別被情緒帶走，我站純好人視角對一下票型：" + smart.nightNote + "，加上 " + pushLbl + (pushClue ? ("（" + pushClue + "）") : "") + " 的說詞最模糊，這輪我先記 " + pushSeat.id + "號 一格，聽完後置位再一起理性歸票！"
+        text: "大家先深呼吸別被情緒帶走，我站純好人視角對一下票型：" + smart.nightNote + "，加上 " + pushLbl + (pushClue ? ("，" + pushClue) : "") + " 的說詞最模糊，這輪我先記 " + pushSeat.id + "號 一格，聽完後置位再一起理性歸票！"
       });
     } else {
       cards.push({
         tgKind: "deeds",
         tgTag: "帶風推坑",
+        exclusiveGroup: "opening_stance",
         label: "強勢抗辯穿衣・鎖定推 " + pushLbl,
         draftPatch: { wolfIds: [pushSeat.id] },
-        text: "先把話講明，我一路替好人整理節奏、絕對不在狼坑裡！反觀 " + pushLbl + (pushClue ? ("（" + pushClue + "）") : "") + " 一直避重就輕不敢正面表態，我今天票就掛在 " + pushSeat.id + "號，好人跟我一起把這個破綻位出掉！"
+        text: "先把話講明，我一路替好人整理節奏、絕對不在狼坑裡！反觀 " + pushLbl + (pushClue ? ("，" + pushClue) : "") + " 一直避重就輕不敢正面表態，我今天票就掛在 " + pushSeat.id + "號，好人跟我一起把這個破綻位出掉！"
       });
     }
   } else if (evToday.fakeSeerId && getSeat(evToday.fakeSeerId) && getSeat(evToday.fakeSeerId).alive) {
@@ -2325,6 +2403,7 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "deeds",
       tgTag: "拆穿假牌",
+      exclusiveGroup: "opening_stance",
       label: "打飛假觀 " + fmtSeatNum(fs.id) + "號" + fs.name,
       draftPatch: { claimRole: "seer", wolfIds: [fs.id], badgeFlowFirstId: smart.bf1Id, badgeFlowSecondId: smart.bf2Id },
       text: "終於輪到我發言了！剛才前置位 " + fmtSeatNum(fs.id) + "號" + fs.name + " 竟然冒充明心觀察員誤導全場，我才是真正的明心觀察員，他鐵定佔一個定狼坑！" + (smart.bfText ? (smart.bfText + "，") : "") + "請好人今天務必先把 " + fs.id + "號 請離茶席！"
@@ -2376,9 +2455,9 @@ function preparePlayerSpeechPanel() {
     cards.push({
       tgKind: "deeds",
       tgTag: "全盤歸票",
-      label: "盤點剩餘狼坑（" + aliveCnt + "人局）・鎖定 " + wpNames,
+      label: "盤點剩餘狼坑 " + aliveCnt + "人局・鎖定 " + wpNames,
       draftPatch: { goodIds: friendTarget.id !== wpIds[0] ? [friendTarget.id] : [], wolfIds: wpIds },
-      text: "目前場上還有 " + aliveCnt + " 位在席（" + smart.nightNote + "），好人坑我先認 " + friendLbl + "；其餘還沒自證清白的席位裡，我優先點 " + wpNames + " 進檢視狼坑，請大家聽完末置位後集中歸票、千萬別分票！"
+      text: "目前場上還有 " + aliveCnt + " 位在席，" + smart.nightNote + "，好人坑我先認 " + friendLbl + "；其餘還沒自證清白的席位裡，我優先點 " + wpNames + " 進檢視狼坑，請大家聽完末置位後集中歸票、千萬別分票！"
     });
   }
 
@@ -2388,6 +2467,10 @@ function preparePlayerSpeechPanel() {
   const activeModKeys = {};
   curMods.forEach(function (m) { if (m && m.key) activeModKeys[m.key] = true; });
   cards.slice(0, 3).forEach(function (item, idx) {
+    if (item && item.text) {
+      if (typeof applyDifficultyTerminology === "function") item.text = applyDifficultyTerminology(item.text);
+      if (typeof stripDialogueParentheses === "function") item.text = stripDialogueParentheses(item.text);
+    }
     const btn = document.createElement("button");
     btn.type = "button";
     const cardKey = (item.tgTag || "") + "::" + (item.label || "");
@@ -2485,6 +2568,12 @@ function submitPlayerSpeech() {
   let text = el("playerSpeechInput").value.trim() || "大家冷靜聽線索，一起抓出酸民狼！";
   if (typeof normalizeSeatRefsInText === "function") {
     text = normalizeSeatRefsInText(text);
+  }
+  if (typeof applyDifficultyTerminology === "function") {
+    text = applyDifficultyTerminology(text);
+  }
+  if (typeof stripDialogueParentheses === "function") {
+    text = stripDialogueParentheses(text);
   }
   const speechCapNow = typeof getActiveSpeechCharLimit === "function" ? getActiveSpeechCharLimit() : 0;
   if (speechCapNow > 0 && text.length > speechCapNow) {

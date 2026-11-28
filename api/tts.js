@@ -5,11 +5,11 @@
  * 環境變數設定（於 Vercel Project → Settings → Environment Variables）：
  * - GEMINI_API_KEY               (必填) Google AI Studio API Key
  * - GEMINI_PUBLIC_TTS_ENABLED    (選填，預設開啟；設為 "false" 可一鍵關閉公版雲端語音)
- * - GEMINI_TTS_MODEL             (選填，預設 gemini-2.5-flash-preview-tts，失敗自動降級 gemini-3.1-flash-tts-preview)
- * - GEMINI_TTS_SESSION_MAX_RPM   (選填，每瀏覽器會話每分鐘上限，預設 36)
- * - GEMINI_TTS_SESSION_MAX_RPD   (選填，每瀏覽器會話每日上限，預設 180)
- * - GEMINI_TTS_NAT_IP_MAX_RPM    (選填，同區網共用 IP 總上限，預設 96)
- * - GEMINI_TTS_NAT_IP_MAX_RPD    (選填，同區網共用 IP 每日總上限，預設 1200)
+ * - GEMINI_TTS_MODEL             (選填，預設 gemini-3.8-flash-lite-tts；舊版 2.5 / 3.1 會自動升級為 3.8 Flash-Lite)
+ * - GEMINI_TTS_SESSION_MAX_RPM   (選填，每瀏覽器會話每分鐘上限，預設 180)
+ * - GEMINI_TTS_SESSION_MAX_RPD   (選填，每瀏覽器會話每日上限，預設 4000)
+ * - GEMINI_TTS_NAT_IP_MAX_RPM    (選填，純 IP 與區網共用 IP 每分鐘上限，預設 360)
+ * - GEMINI_TTS_NAT_IP_MAX_RPD    (選填，純 IP 與區網共用 IP 每日上限，預設 8000)
  */
 "use strict";
 
@@ -31,25 +31,30 @@ const CORE_FALLBACK_VOICE_MAP = {
   Achird: "Charon",
   Iapetus: "Puck"
 };
-const ALLOWED_TTS_MODELS = new Set([
+const TTS_MODEL_CHAIN = [
+  "gemini-3.8-flash-lite-tts",
+  "gemini-3.8-flash-tts",
+  "gemini-2.5-flash-preview-tts"
+];
+const ALLOWED_TTS_MODELS = new Set(TTS_MODEL_CHAIN);
+const DEFAULT_TTS_MODEL = "gemini-3.8-flash-lite-tts";
+const TTS_FALLBACK_ORDER = TTS_MODEL_CHAIN;
+const LEGACY_UPGRADE_TTS_MODELS = new Set([
   "gemini-2.5-flash-preview-tts",
+  "gemini-2.5-pro-preview-tts",
   "gemini-3.1-flash-tts-preview"
 ]);
-const DEFAULT_TTS_MODEL = "gemini-2.5-flash-preview-tts";
-const TTS_FALLBACK_ORDER = [
-  "gemini-2.5-flash-preview-tts",
-  "gemini-3.1-flash-tts-preview"
-];
 
 const MAX_TEXT_CHARS = 280;
-const MAX_STYLE_CHARS = 200;
 const RATE_WINDOW_MS = 60 * 1000;
 const DAY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const BAD_MODEL_COOLDOWN_MS = 10 * 60 * 1000;
 const RATE_LIMIT_COOLDOWN_MS = 3 * 60 * 1000;
 const SESSION_ID_RE = /^[a-zA-Z0-9_-]{8,48}$/;
 const MAX_TTS_CACHE = 48;
-const DEFAULT_UPSTREAM_TIMEOUT_MS = 6200;
+const TOTAL_BUDGET_MS = 9600;
+const MIN_INLINE_AUDIO_B64_LEN = 1600;
+const DEFAULT_UPSTREAM_TIMEOUT_MS = 4200;
 
 const _rateStore = new Map();
 const _badModelCooldown = new Map();
@@ -61,9 +66,14 @@ function isTtsEnabledByEnv() {
   return flag !== "false" && flag !== "0" && flag !== "off";
 }
 
-function resolvePrimaryTtsModel() {
-  const envModel = String(process.env.GEMINI_TTS_MODEL || "").trim();
-  if (envModel && ALLOWED_TTS_MODELS.has(envModel)) return envModel;
+function resolvePrimaryTtsModel(rawModel) {
+  const candidate = String(
+    (rawModel !== undefined && rawModel !== null) ? rawModel : (process.env.GEMINI_TTS_MODEL || "")
+  ).trim();
+  if (!candidate || LEGACY_UPGRADE_TTS_MODELS.has(candidate)) {
+    return "gemini-3.8-flash-lite-tts";
+  }
+  if (ALLOWED_TTS_MODELS.has(candidate)) return candidate;
   return DEFAULT_TTS_MODEL;
 }
 
@@ -186,10 +196,10 @@ function checkRateLimit(ip, nowMs, sessionId) {
   }
   const hasSession = Boolean(sessionId && SESSION_ID_RE.test(sessionId));
   if (hasSession) {
-    const sessRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "64", 10) || 64);
-    const sessRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPD || "600", 10) || 600);
-    const natRpm = Math.max(sessRpm, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPM || "96", 10) || 96);
-    const natRpd = Math.max(sessRpd, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPD || "1200", 10) || 1200);
+    const sessRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "180", 10) || 180);
+    const sessRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPD || "4000", 10) || 4000);
+    const natRpm = Math.max(sessRpm, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPM || "360", 10) || 360);
+    const natRpd = Math.max(sessRpd, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPD || "8000", 10) || 8000);
     // Check IP bucket BEFORE allocating/checking session bucket to block random-sessionId floods
     const ipRes = _checkSingleBucket("tts_nat:" + (ip || "unknown"), natRpm, natRpd, now, "ip");
     if (!ipRes.allowed) return { allowed: false, retryAfterSec: ipRes.retryAfterSec, reason: ipRes.reason };
@@ -201,8 +211,8 @@ function checkRateLimit(ip, nowMs, sessionId) {
     ipRes.rec.dayCount += 1;
     return { allowed: true, retryAfterSec: 0, reason: "" };
   }
-  const maxRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPM || "48", 10) || 48);
-  const maxRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_SESSION_MAX_RPD || "400", 10) || 400);
+  const maxRpm = Math.max(4, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPM || "360", 10) || 360);
+  const maxRpd = Math.max(20, parseInt(process.env.GEMINI_TTS_NAT_IP_MAX_RPD || "8000", 10) || 8000);
   const res = _checkSingleBucket("tts_ip:" + (ip || "unknown"), maxRpm, maxRpd, now, "ip");
   if (!res.allowed) return { allowed: false, retryAfterSec: res.retryAfterSec, reason: res.reason };
   res.rec.minStamps.push(now);
@@ -267,27 +277,50 @@ function stripGeminiVocalTags(rawText) {
     .trim();
 }
 
-function buildTtsRequestBody(modelId, voiceName, _style, text, useFallbackVoice) {
-  const mappedVoice = (useFallbackVoice && CORE_FALLBACK_VOICE_MAP[voiceName])
-    ? CORE_FALLBACK_VOICE_MAP[voiceName]
-    : voiceName;
+function normalizeTtsPolyphones(text) {
+  return String(text || "")
+    .replace(/直心糾察長/g, "直心糾察掌")
+    .replace(/糾察長/g, "糾察掌");
+}
+
+function sanitizeTranscriptForTts(rawText) {
+  let s = stripGeminiVocalTags(rawText);
+  s = s.replace(/\[[^\]]*\]/g, " ");
+  s = s.replace(/（[^）]*）/g, " ").replace(/\([^)]*\)/g, " ");
+  s = normalizeTtsPolyphones(s);
+  return s.replace(/\s+/g, " ").trim();
+}
+
+function buildTtsRequestBody(modelName, cleanTranscript, voiceName, useFallbackVoice) {
+  const rawVoice = String(voiceName || "").trim();
+  const mappedVoice = (useFallbackVoice && CORE_FALLBACK_VOICE_MAP[rawVoice])
+    ? CORE_FALLBACK_VOICE_MAP[rawVoice]
+    : rawVoice;
   const safeVoice = ALLOWED_VOICES.has(mappedVoice) ? mappedVoice : "Kore";
-  const stripped = stripGeminiVocalTags(text) || text;
-  const part = { text: stripped };
+  const cleaned = sanitizeTranscriptForTts(cleanTranscript) || String(cleanTranscript || "").trim();
+  const isLegacy25 = String(modelName || "").startsWith("gemini-2.5-");
+  const spokenText = isLegacy25 ? ("Say: " + cleaned) : cleaned;
   return {
-    contents: [{ role: "user", parts: [part] }],
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: spokenText }]
+      }
+    ],
     generationConfig: {
       responseModalities: ["AUDIO"],
       speechConfig: {
         voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: safeVoice }
+          prebuiltVoiceConfig: {
+            voiceName: safeVoice
+          }
         }
       }
     }
   };
 }
 
-async function callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, timeoutMs, useFallbackVoice) {
+async function callUpstreamGeminiTts(apiKey, modelId, cleanTranscript, voiceName, timeoutMs, useFallbackVoice) {
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelId) + ":generateContent";
   const controller = typeof AbortController === "function" ? new AbortController() : null;
   const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || DEFAULT_UPSTREAM_TIMEOUT_MS) : null;
@@ -299,7 +332,7 @@ async function callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, ti
         "x-goog-api-key": apiKey,
         "User-Agent": "aistudio-build"
       },
-      body: JSON.stringify(buildTtsRequestBody(modelId, voiceName, style, text, useFallbackVoice))
+      body: JSON.stringify(buildTtsRequestBody(modelId, cleanTranscript, voiceName, useFallbackVoice))
     };
     if (controller) fetchOpts.signal = controller.signal;
     const resp = await fetch(endpoint, fetchOpts);
@@ -309,13 +342,13 @@ async function callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, ti
     const data = await resp.json().catch(function () { return null; });
     const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
     const audioPart = Array.isArray(parts)
-      ? parts.find(function (pt) { return pt && pt.inlineData && pt.inlineData.data; })
+      ? parts.find(function (pt) { return pt && pt.inlineData && typeof pt.inlineData.data === "string" && pt.inlineData.data.length >= MIN_INLINE_AUDIO_B64_LEN; })
       : null;
     if (!audioPart) {
       return { ok: false, status: 502, bytes: null, mimeType: "" };
     }
     const bytes = Buffer.from(audioPart.inlineData.data, "base64");
-    if (!bytes || bytes.length < 128) {
+    if (!bytes || bytes.length < 1024) {
       return { ok: false, status: 502, bytes: null, mimeType: "" };
     }
     const isWav = bytes.length > 44 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
@@ -332,13 +365,13 @@ async function handler(req, res) {
   const method = String((req && req.method) || "GET").toUpperCase();
   const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
   const enabled = isTtsEnabledByEnv();
-  const primaryModel = resolvePrimaryTtsModel();
+  const defaultPrimaryModel = resolvePrimaryTtsModel();
 
   if (method === "GET") {
     return sendJson(res, 200, {
       ok: true,
       available: Boolean(apiKey && enabled),
-      model: primaryModel,
+      model: defaultPrimaryModel,
       mode: "vercel-gemini-tts"
     });
   }
@@ -374,12 +407,17 @@ async function handler(req, res) {
     return sendJson(res, 400, { ok: false, error: "Empty text" });
   }
   const text = rawText.slice(0, MAX_TEXT_CHARS);
-  const style = (typeof body.style === "string" ? body.style.trim() : "").slice(0, MAX_STYLE_CHARS);
   const reqVoice = typeof body.voice === "string" ? body.voice.trim() : "Kore";
   const voiceName = ALLOWED_VOICES.has(reqVoice) ? reqVoice : "Kore";
 
+  const primaryModel = resolvePrimaryTtsModel(body.model);
+  const cleanTranscript = sanitizeTranscriptForTts(text) || text;
+  if (!cleanTranscript) {
+    return sendJson(res, 400, { ok: false, error: "Empty transcript" });
+  }
+
   // Return cached audio directly without spending quota or rate-limit tokens
-  const cacheKey = voiceName + "|" + (stripGeminiVocalTags(text) || text);
+  const cacheKey = voiceName + "|" + cleanTranscript;
   const cached = _ttsCache.get(cacheKey);
   if (cached) {
     res.statusCode = 200;
@@ -400,7 +438,7 @@ async function handler(req, res) {
   }
 
   const now = Date.now();
-  const fullOrder = [primaryModel].concat(TTS_FALLBACK_ORDER.filter(function (m) { return m !== primaryModel; }));
+  const fullOrder = [primaryModel].concat(TTS_MODEL_CHAIN.filter(function (m) { return m !== primaryModel; }));
   const queue = fullOrder.filter(function (m) { return !isModelCoolingDown(m, now); });
   if (!queue.length) {
     // All models cooling down: probe the model whose cooldown expires earliest
@@ -412,25 +450,28 @@ async function handler(req, res) {
 
   let lastStatus = 502;
   const startedAt = Date.now();
-  const TOTAL_BUDGET_MS = 9200;
-  const PRIMARY_TIMEOUT_MS = 6200;
   const RETRY_400_TIMEOUT_MS = 2800;
-  const FALLBACK_MODEL_TIMEOUT_MS = 3000;
-  const strippedForRetry = stripGeminiVocalTags(text) || text;
   for (let i = 0; i < queue.length; i++) {
     const modelId = queue[i];
     const remaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
-    if (remaining < 2600) break;
-    const timeoutMs = Math.min(i === 0 ? PRIMARY_TIMEOUT_MS : FALLBACK_MODEL_TIMEOUT_MS, remaining - 400);
-    let out = await callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, timeoutMs, false);
+    let timeoutMs = 4200;
+    if (modelId === "gemini-3.8-flash-lite-tts") {
+      if (remaining < 1200) break;
+      timeoutMs = Math.min(4200, remaining - 200);
+    } else if (modelId === "gemini-3.8-flash-tts") {
+      if (remaining < 1200) break;
+      timeoutMs = Math.min(4500, remaining - 200);
+    } else {
+      if (remaining < 2800) continue;
+      timeoutMs = Math.min(5000, remaining - 200);
+    }
+    let out = await callUpstreamGeminiTts(apiKey, modelId, cleanTranscript, voiceName, timeoutMs, false);
     const voiceChangesOnRetry = Boolean(CORE_FALLBACK_VOICE_MAP[voiceName] && CORE_FALLBACK_VOICE_MAP[voiceName] !== voiceName);
-    const tagsChangeOnRetry = modelId.startsWith("gemini-3.8-") && strippedForRetry !== text;
-    if (!out.ok && out.status === 400 && (voiceChangesOnRetry || tagsChangeOnRetry)) {
+    if (!out.ok && out.status === 400 && voiceChangesOnRetry) {
       const retryRemaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
-      if (retryRemaining >= 2600) {
-        // Retry once with guaranteed core prebuilt voice & stripped inline tags while keeping >= 6s budget for fallback models
-        const retryTimeoutMs = Math.min(RETRY_400_TIMEOUT_MS, retryRemaining - 400);
-        out = await callUpstreamGeminiTts(apiKey, modelId, voiceName, style, text, retryTimeoutMs, true);
+      if (retryRemaining >= 2200) {
+        const retryTimeoutMs = Math.min(RETRY_400_TIMEOUT_MS, retryRemaining - 200);
+        out = await callUpstreamGeminiTts(apiKey, modelId, cleanTranscript, voiceName, retryTimeoutMs, true);
       }
     }
     if (out.ok && out.bytes) {
@@ -467,8 +508,13 @@ handler._isAllowedOrigin = isAllowedOrigin;
 handler._getHostname = getHostname;
 handler._checkRateLimit = checkRateLimit;
 handler._buildTtsRequestBody = buildTtsRequestBody;
+handler.buildTtsRequestBody = buildTtsRequestBody;
+handler.resolvePrimaryTtsModel = resolvePrimaryTtsModel;
+handler.sanitizeTranscriptForTts = sanitizeTranscriptForTts;
+handler.normalizeTtsPolyphones = normalizeTtsPolyphones;
 handler._stripGeminiVocalTags = stripGeminiVocalTags;
 handler._ALLOWED_VOICES = ALLOWED_VOICES;
+handler._TTS_MODEL_CHAIN = TTS_MODEL_CHAIN;
 handler._TTS_FALLBACK_ORDER = TTS_FALLBACK_ORDER;
 handler._isModelCoolingDown = isModelCoolingDown;
 handler._resetRateLimit = function () { _rateStore.clear(); _badModelCooldown.clear(); _ttsCache.clear(); };

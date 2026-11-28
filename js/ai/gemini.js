@@ -16,29 +16,74 @@ function isExternalLlmActive() {
   return typeof state !== "undefined" && Boolean(state.geminiApiKey || state.localLlmModel || isServerGeminiProxyActive());
 }
 
-const OFFICIAL_CLOUD_GEMINI_MODELS = Object.freeze(["gemini-2.5-pro", "gemini-4-hydrogen", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
-const OFFICIAL_PERSONAL_GEMINI_MODELS = Object.freeze(["gemini-4-hydrogen", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
+const OFFICIAL_CLOUD_GEMINI_MODELS = Object.freeze(["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"]);
+const OFFICIAL_PERSONAL_GEMINI_MODELS = Object.freeze(["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"]);
+
+function resolveGeminiTextModel(requestedModel) {
+  const m = String(requestedModel || "").trim();
+  if (!m || m === "gemini-2.5-flash" || m === "gemini-4-hydrogen" || m === "gemini-3.1-flash-lite") {
+    return "gemini-3.5-flash-lite";
+  }
+  if (m === "gemini-2.5-pro") {
+    return "gemini-3.8-flash";
+  }
+  if (OFFICIAL_CLOUD_GEMINI_MODELS.indexOf(m) !== -1) return m;
+  return "gemini-3.5-flash-lite";
+}
 
 function normalizeCloudGeminiModel(modelId) {
-  const m = String(modelId || "").trim();
-  if (OFFICIAL_CLOUD_GEMINI_MODELS.indexOf(m) !== -1) return m;
-  return "gemini-4-hydrogen";
+  return resolveGeminiTextModel(modelId);
 }
 
 function normalizePersonalGeminiModel(modelId) {
-  const m = String(modelId || "").trim();
-  if (OFFICIAL_PERSONAL_GEMINI_MODELS.indexOf(m) !== -1) return m;
-  return "gemini-4-hydrogen";
+  return resolveGeminiTextModel(modelId);
 }
 
 function getShortGeminiModelLabel(modelId) {
-  const m = String(modelId || "").trim();
-  if (m === "gemini-4-hydrogen") return "4 Flash";
+  const m = resolveGeminiTextModel(modelId);
+  if (m === "gemini-3.5-flash-lite") return "3.5 Lite";
   if (m === "gemini-3.8-flash") return "3.8 Flash";
-  if (m === "gemini-3.1-flash-lite") return "3.1 Lite";
-  if (m === "gemini-2.5-pro") return "2.5 Pro";
+  if (m === "gemini-3.6-flash") return "3.6 Flash";
   if (m === "gemini-2.5-flash-lite") return "2.5 Lite";
-  return "2.5 Flash";
+  return "3.5 Lite";
+}
+
+function sanitizeGeminiTextBody(modelName, rawBody) {
+  const mId = String(modelName || "").trim();
+  const body = (rawBody && typeof rawBody === "object") ? Object.assign({}, rawBody) : {};
+  if (Array.isArray(body.contents)) {
+    const cleanedContents = body.contents.slice();
+    while (cleanedContents.length > 0) {
+      const tail = cleanedContents[cleanedContents.length - 1];
+      if (tail && tail.role === "model") cleanedContents.pop();
+      else break;
+    }
+    body.contents = cleanedContents;
+  }
+  const genCfg = (body.generationConfig && typeof body.generationConfig === "object")
+    ? Object.assign({}, body.generationConfig)
+    : {};
+  const is3or4 = mId.indexOf("gemini-3") === 0 || mId.indexOf("gemini-4") === 0;
+  if (is3or4) {
+    delete genCfg.temperature;
+    delete genCfg.topP;
+    delete genCfg.top_p;
+    delete genCfg.topK;
+    delete genCfg.top_k;
+    delete genCfg.candidateCount;
+    delete genCfg.candidate_count;
+    delete genCfg.thinkingBudget;
+    delete genCfg.thinking_budget;
+    if (mId === "gemini-3.5-flash-lite") {
+      genCfg.thinkingConfig = { thinkingLevel: "minimal" };
+    } else if (mId === "gemini-3.6-flash" || mId === "gemini-3.8-flash") {
+      genCfg.thinkingConfig = { thinkingLevel: "low" };
+    } else {
+      genCfg.thinkingConfig = { thinkingLevel: "low" };
+    }
+  }
+  body.generationConfig = genCfg;
+  return body;
 }
 
 function getActiveLlmLabel() {
@@ -152,7 +197,7 @@ async function callServerGeminiProxyOnce(promptText, timeoutMs, opts) {
   const sid = getOrCreateProxySessionId();
   const safeTemp = clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard);
   const chosenModel = normalizeCloudGeminiModel((opts && opts.model) ? opts.model : state.serverGeminiModel);
-  const tierVal = (chosenModel === "gemini-3.1-flash-lite" || chosenModel === "gemini-2.5-flash-lite" || (chosenModel !== "gemini-2.5-pro" && Boolean(opts && opts.lite))) ? "lite" : "standard";
+  const tierVal = (chosenModel === "gemini-3.5-flash-lite" || chosenModel === "gemini-2.5-flash-lite" || (chosenModel !== "gemini-3.8-flash" && Boolean(opts && opts.lite))) ? "lite" : "standard";
   const tStart = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
   try {
     const fetchOpts = {
@@ -255,25 +300,25 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
   const controller = typeof AbortController === "function" ? new AbortController() : null;
   const timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 16000) : null;
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(safeModel) + ":generateContent";
-  const isPro = safeModel === "gemini-2.5-pro";
-  const isGemini4 = /^gemini-4-/.test(safeModel);
+  const is3or4 = safeModel.indexOf("gemini-3") === 0 || safeModel.indexOf("gemini-4") === 0;
+  const isDeep38 = safeModel === "gemini-3.8-flash" || safeModel === "gemini-3.6-flash";
   const isFlash25ZeroThink = safeModel === "gemini-2.5-flash" || safeModel === "gemini-2.5-flash-lite";
   const genCfg = {
-    maxOutputTokens: (isPro || isGemini4) ? ((opts && opts.jsonMode) ? 3072 : 2048) : ((opts && opts.jsonMode) ? 1536 : 1024)
+    maxOutputTokens: (isDeep38 || is3or4) ? ((opts && opts.jsonMode) ? 3072 : 2048) : ((opts && opts.jsonMode) ? 1536 : 1024)
   };
-  if (isGemini4) {
-    genCfg.thinkingConfig = { thinkingLevel: "LOW" };
-  } else {
+  if (!is3or4) {
     genCfg.temperature = clampGeminiTemperature(opts && opts.temperature, GEMINI_TEMP_TIERS.day_standard);
-    if (isPro) {
-      genCfg.thinkingConfig = { thinkingBudget: 512 };
-    } else if (isFlash25ZeroThink) {
+    if (isFlash25ZeroThink) {
       genCfg.thinkingConfig = { thinkingBudget: 0 };
     }
   }
   if (opts && opts.jsonMode) {
     genCfg.responseMimeType = "application/json";
   }
+  const reqBody = sanitizeGeminiTextBody(safeModel, {
+    contents: [{ role: "user", parts: [{ text: promptText }] }],
+    generationConfig: genCfg
+  });
   const tStart = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
   try {
     const fetchOpts = {
@@ -282,10 +327,7 @@ async function callGeminiModelOnce(modelId, promptText, timeoutMs, opts) {
         "Content-Type": "application/json",
         "x-goog-api-key": (opts && opts.apiKey) ? String(opts.apiKey) : state.geminiApiKey
       },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }],
-        generationConfig: genCfg
-      })
+      body: JSON.stringify(reqBody)
     };
     if (controller) fetchOpts.signal = controller.signal;
     const res = await fetch(endpoint, fetchOpts);
@@ -357,8 +399,8 @@ async function callGeminiText(promptText, opts) {
     return null;
   }
   const primary = normalizePersonalGeminiModel(state.geminiModel);
-  const isHeavy = primary === "gemini-2.5-pro";
-  const first = await callGeminiModelOnce(primary, promptText, isHeavy ? 20000 : 12000, opts);
+  const isHeavy = primary === "gemini-3.8-flash" || primary === "gemini-3.6-flash";
+  const first = await callGeminiModelOnce(primary, promptText, isHeavy ? 14000 : 10000, opts);
   if (first.ok && first.text) {
     state._lastGeminiWarnKey = null;
     state._personalFailStreak = 0;
@@ -377,7 +419,7 @@ async function callGeminiText(promptText, opts) {
     }
     return null;
   }
-  const fallbackList = ["gemini-4-hydrogen", "gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite"].filter(function (m) { return m !== primary; });
+  const fallbackList = ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash"].filter(function (m) { return m !== primary; });
   let lastStatus = first.status;
   for (let i = 0; i < fallbackList.length; i++) {
     const fbModel = fallbackList[i];
@@ -491,6 +533,15 @@ function normalizeGeminiSpeechText(txt) {
   return s;
 }
 
+function _stripAllDialogueParensSafe(str) {
+  if (typeof stripDialogueParentheses === "function") return stripDialogueParentheses(str);
+  return String(str || "")
+    .replace(/（[^（）]*）/g, "")
+    .replace(/\([^()]*\)/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function parseGeminiStructuredSpeech(rawText) {
   const raw = String(rawText || "").trim();
   if (!raw) return null;
@@ -529,7 +580,7 @@ function parseGeminiStructuredSpeech(rawText) {
         if (_looksTruncatedMidClause(rawObjText)) {
           rawObjText = _trimToCompleteSentenceOrNull(rawObjText, 16) || "";
         }
-        const cleanText = rawObjText ? normalizeGeminiSpeechText(rawObjText) : "";
+        const cleanText = rawObjText ? _stripAllDialogueParensSafe(normalizeGeminiSpeechText(rawObjText)) : "";
         if (!cleanText) return null;
         const cr = (obj.claimRole === "seer" || obj.claimRole === "witch" || obj.claimRole === "hunter" || obj.claimRole === "guard" || obj.claimRole === "elder") ? obj.claimRole : null;
         const emo = (typeof obj.emotion === "string" && emoAllow.indexOf(obj.emotion) !== -1) ? obj.emotion : null;
@@ -565,7 +616,7 @@ function parseGeminiStructuredSpeech(rawText) {
       if (wasTruncated || _looksTruncatedMidClause(salvaged)) {
         salvaged = _trimToCompleteSentenceOrNull(salvaged, 16) || "";
       }
-      salvaged = salvaged ? normalizeGeminiSpeechText(salvaged) : "";
+      salvaged = salvaged ? _stripAllDialogueParensSafe(normalizeGeminiSpeechText(salvaged)) : "";
       if (salvaged.length >= 6) {
         const accM = raw.match(/"accuseId"\s*:\s*"?(\d+)/);
         const vchM = raw.match(/"vouchId"\s*:\s*"?(\d+)/);
@@ -598,7 +649,7 @@ function parseGeminiStructuredSpeech(rawText) {
   if (_looksTruncatedMidClause(plainRaw)) {
     plainRaw = _trimToCompleteSentenceOrNull(plainRaw, 16) || "";
   }
-  const plainClean = plainRaw ? normalizeGeminiSpeechText(plainRaw) : "";
+  const plainClean = plainRaw ? _stripAllDialogueParensSafe(normalizeGeminiSpeechText(plainRaw)) : "";
   if (!plainClean) return null;
   return {
     parsedJson: false,
@@ -786,10 +837,10 @@ function syncGeminiSpeechMeta(speaker, generated, liveRes, opts) {
   if (!speaker || !generated || !liveRes) return generated;
   const deferSeatMutation = Boolean(opts && opts.deferSeatMutation);
   if (typeof liveRes === "string") {
-    generated.text = normalizeGeminiSpeechText(liveRes) || generated.text;
+    generated.text = _stripAllDialogueParensSafe(normalizeGeminiSpeechText(liveRes)) || generated.text;
     return generated;
   }
-  if (liveRes.text) generated.text = normalizeGeminiSpeechText(liveRes.text) || generated.text;
+  if (liveRes.text) generated.text = _stripAllDialogueParensSafe(normalizeGeminiSpeechText(liveRes.text)) || generated.text;
 
   const syncSnap = typeof createBlindMatchSnapshot === "function"
     ? createBlindMatchSnapshot(speaker, { module: "gemini_sync" })
@@ -952,8 +1003,13 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
         dw.seerB.id === self.id
       );
       if (isSelfSeerParticipantCtx) {
-        const rivalCtxId = dw.seerA.id === self.id ? dw.seerB.id : dw.seerA.id;
-        pitContextNote += "\n【本尊對跳立場鎖定】：你自己就是場上起跳明心觀察員之一，【嚴禁】分析「站你那邊／站對面那邊」的雙邊假設，更不可把己方或同夥放進狼坑；請堅定以唯一真觀察員口吻拆穿 " + rivalCtxId + "號 是假冒觀察員！";
+        const claimedSeers = (snap && Array.isArray(snap.aliveSeats) ? snap.aliveSeats : [])
+          .filter(function (s) { return s && s.claimedRole === "seer" && s.id !== self.id; })
+          .map(function (s) { return s.id; });
+        if (dw.seerA && dw.seerA.id !== self.id && claimedSeers.indexOf(dw.seerA.id) === -1) claimedSeers.push(dw.seerA.id);
+        if (dw.seerB && dw.seerB.id !== self.id && claimedSeers.indexOf(dw.seerB.id) === -1) claimedSeers.push(dw.seerB.id);
+        const rivalListStr = claimedSeers.map(function (id) { return id + "號"; }).join("、") || (dw.seerA.id + "號");
+        pitContextNote += "\n【本尊對跳立場鎖定】：你自己就是場上真正的明心觀察員，【嚴禁】分析「站你那邊／站對面那邊」的雙邊假設，更不可把己方或同夥放進狼坑；場上其他宣稱觀察員者（" + rivalListStr + "）皆為假冒對手，請堅定以唯一真觀察員口吻全部拆穿！";
       } else {
         const aPits = dw.worldA.wolfPits.map(function (s) { return s.id + "號"; }).join("+");
         const bPits = dw.worldB.wolfPits.map(function (s) { return s.id + "號"; }).join("+");
@@ -1277,21 +1333,16 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "3. 只能評論「今日已發言」的人說過的話，絕對禁止捏造「今日尚未發言」者的發言內容（未發言者僅能說「後置位還沒發言，待會聽表水」）。\n" +
     "4. 【生動有趣、像真實大學社團好友圍桌玩面殺・嚴禁機器腔】請展現強烈個人幽默感與真實情緒起伏：直接抓前幾位剛講的某句話俏皮吐槽、挑眉反問、善意調侃或拍桌附和，依角色性格自然融入生活比喻、微自嘲、苦笑或驚訝（例如笑對方轉彎太急、調侃茶還沒喝完就搶著甩鍋、誇隊友剛抓到神細節），讓每段發言都有畫面感與對話火花，絕不要冷冰冰條列分析！每輪開頭與收尾自由變化，禁止重複套用制式開場白或「先這樣，過！」。提到任何座位請一律寫「阿拉伯數字＋號」（如 1號、3號、6號、11號），嚴禁寫前導零（01、06）、嚴禁省略「號」字（站3、抓6），也嚴禁寫中文數字（三號、六號）！禁止出現「根據上述資料」「綜上所述」「總而言之」「值得注意的是」「邏輯閉環」「數據模型」「高置信度」「異常值」「行為向量」「算力」或生硬古文代詞（「吾、汝、諸君、妾身、小生、夫、蓋」）。全桌以自然台灣現代白話為基底（墨白、晴嵐、阿竹保留溫和書卷氣質與適度四字成語），整段發言最多使用 1 個驚嘆號（多用「，」「。」「？」「…」製造自然換氣感）。\n" +
     (day >= 2 ? ("5. 【第 " + day + " 輪對話連貫】：自然消化前 1 至 " + (day - 1) + " 輪的歷史發言與公投票型，抓出前後矛盾的人。\n") : "") +
-    "6. 【真人面殺自然長短變化與純口語格式】本輪句長檔位為「" + ((snap && snap.speechCharCap > 0)
-      ? ("閃電快棋短兵相接（嚴格 " + snap.speechCharCap + " 字以內，直指關鍵一針見血！）")
+    "6. 【精簡口語與語音首句秒播格式】\n" +
+    "   (a) 首句短破題：第一句話必須在 10 到 20 字內使用句號、問號或驚嘆號完整收尾破題，禁止一逗到底超過 35 字無句號。\n" +
+    "   (b) 精簡字數：本輪一般發言控制在 42 到 72 字（起跳身分或 PK 拉票最多 88 字；思考欄位 thought 若輸出嚴格限 20 字以內）；檔位補充：" + ((snap && snap.speechCharCap > 0)
+      ? ("閃電快棋嚴格 " + snap.speechCharCap + " 字以內")
       : ((snap && snap.isMatchPoint)
-        ? "聽牌決勝深度盤坑（75～130 字，回顧關鍵票型、離席刀口與剩餘狼坑並全力拉票歸票！）"
+        ? "決勝輪可放寬至 88 字內收斂"
         : ((fallbackMeta && fallbackMeta.lengthTier === "brief")
-          ? "簡短輕快表態／過水（16～34 字，一兩句直切重點或直接過麥，絕不冗長鋪陳）"
-          : ((fallbackMeta && (fallbackMeta.lengthTier === "concise" || (cadenceVal <= 0.90 && fallbackMeta.lengthTier !== "intense")))
-            ? "精簡犀利直出（26～54 字，挑最關鍵的一兩個對象直接點評或跟票，不必硬湊多段推演）"
-            : ((fallbackMeta && fallbackMeta.lengthTier === "intense")
-              ? "焦點交鋒反詰（55～100 字，正面拆解衝突與坑位）"
-              : (day >= 3
-                ? "中後期對焦盤坑（45～88 字，結合票型與發言矛盾靈活伸縮，切忌為湊字數而車軲轆重複）"
-                : (day >= 2
-                  ? "中局自然展開（38～76 字，結合前輪投票或昨夜線索講重點即可）"
-                  : (totalSeatsNow >= 10 ? "首日開局推演（30～64 字）" : "首日開局推演（34～68 字）")))))))) + "」（禁止空話水字、禁止千篇一律結尾喊『過！』、禁用換行、禁用 Markdown 符號、無表情符號與括號動作），並只輸出單一純 JSON 物件：\n" +
+          ? "簡短表態 24～42 字內"
+          : (lockedClaim ? "起跳／對質最多 88 字" : "標準發言 42～72 字")))) + "。\n" +
+    "   (c) 純口語零特殊符號：text 內嚴禁使用全半形圓括號 （） 或 ()、方括號 [...]、斜線 /（例如必須寫成 03號跟07號）或箭頭，禁止換行、Markdown、表情符號與千篇一律『過！』。只輸出單一純 JSON 物件：\n" +
     '{"text":"你的台詞內容","accuseId":懷疑並準備投票的座位整數或null,"vouchId":相信並站邊力挺的座位整數或null,"claimRole":' + (lockedClaim ? ('"' + lockedClaim + '"') : 'null') + ',"wolfPits":[狼坑座號陣列],"goodPits":[好人坑座號陣列],"standWithSeerId":雙觀察員且你本人非觀察員時站邊的座號或null,"emotion":"calm"|"sharp"|"warm"|"urgent"|"defensive"}';
 
   const audit = typeof auditLlmPromptLeak === "function"
@@ -1395,9 +1446,9 @@ function _validateMiniLiveText(raw, self, opts) {
   if (_looksTruncatedMidClause(rawTrimmed)) {
     rawTrimmed = _trimToCompleteSentenceOrNull(rawTrimmed, 14) || "";
   }
-  let clean = rawTrimmed ? normalizeGeminiSpeechText(rawTrimmed, o.snap) : "";
+  let clean = rawTrimmed ? _stripAllDialogueParensSafe(normalizeGeminiSpeechText(rawTrimmed, o.snap)) : "";
   if (clean && typeof applyDifficultyTerminology === "function") {
-    clean = applyDifficultyTerminology(clean, null, o.snap || null);
+    clean = _stripAllDialogueParensSafe(applyDifficultyTerminology(clean, null, o.snap || null));
   }
   if (!clean || _looksTruncatedMidClause(clean)) return null;
   if (typeof normalizeSeatRefsInText === "function") clean = normalizeSeatRefsInText(clean);
