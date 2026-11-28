@@ -641,9 +641,10 @@ const stage3dVrm = {
           const rawEz = (leftLocal.z + rightLocal.z) * 0.5;
           const rawIpd = Math.abs(leftLocal.x - rightLocal.x);
           if (isFinite(rawEy) && isFinite(rawEz) && isFinite(rawIpd) && rawIpd > 0.01) {
-            ey = rawEy;
+            ey = Math.max(0.040, Math.min(0.110, rawEy));
             ipd = Math.max(0.052, Math.min(0.068, rawIpd));
-            ez = rawEz + 0.024 * zSign;
+            const forwardDist = Math.max(0.068, Math.min(0.135, rawEz * zSign + 0.024));
+            ez = forwardDist * zSign;
             usedEyeBones = true;
           }
         }

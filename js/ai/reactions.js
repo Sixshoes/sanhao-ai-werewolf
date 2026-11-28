@@ -916,9 +916,14 @@ function tryRoleSpecificSpeech(speaker, ctx) {
     if (observableHeatH >= 54 || speaker.claimedRole === "hunter") {
       speaker.claimedRole = "hunter";
       speaker.hunterAnnounced = true;
-      const topThreat = (spokenOthers.length ? spokenOthers : aliveOthers).slice().sort(function (a, b) {
+      const hPool = spokenOthers.length ? spokenOthers : aliveOthers;
+      const nonGodPool = hPool.filter(function (s) {
+        return baseGoodIds.indexOf(s.id) === -1 && !(slotPlan && slotPlan.soleGodMap && slotPlan.soleGodMap[s.id]);
+      });
+      const rankedH = (nonGodPool.length > 0 ? nonGodPool : hPool).slice().sort(function (a, b) {
         return (speaker.suspicionMap[b.id] || 50) - (speaker.suspicionMap[a.id] || 50);
-      })[0];
+      });
+      const topThreat = rankedH[0];
       return {
         targetId: topThreat ? topThreat.id : null,
         relationType: topThreat ? "suspect" : null,

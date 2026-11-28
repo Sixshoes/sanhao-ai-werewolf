@@ -571,6 +571,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     phase: phaseNow,
     totalSeats: m.totalSeats || seats.length,
     playerSeatId: pid,
+    judgeShowcase: Boolean(m.judgeShowcase),
     aiDifficulty: (typeof state !== "undefined" && state.aiDifficulty) ? state.aiDifficulty : (m.aiDifficulty || "normal"),
     harmonyScore: typeof m.harmonyScore === "number" ? m.harmonyScore : 72,
     teaAtmosphere: teaAtmosphere,

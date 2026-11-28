@@ -3,6 +3,112 @@
  */
 "use strict";
 
+function resolveActiveJargonDifficulty(snapArg) {
+  const isShowcase = Boolean(
+    (snapArg && snapArg.judgeShowcase) ||
+    (typeof state !== "undefined" && state.match && state.match.judgeShowcase)
+  );
+  if (isShowcase) return "normal";
+  return (snapArg && snapArg.aiDifficulty) ||
+    (typeof state !== "undefined" && state.aiDifficulty) ||
+    (typeof state !== "undefined" && state.match && state.match.aiDifficulty) ||
+    "normal";
+}
+
+const EASY_JARGON_REPLACEMENTS = Object.freeze([
+  ["深水倒鉤", "躲在暗處假裝站好人邊"],
+  ["反水立警", "中途改口搶警長"],
+  ["外置位抗推", "拿其他還沒表態的人當替罪羊"],
+  ["抿刀口", "猜測夜晚目標"],
+  ["雙警徽流", "接下來兩晚預計先查誰"],
+  ["第一警徽流", "第一順位預計先查的人"],
+  ["警徽流", "下一晚預計先查誰"],
+  ["假金水", "假裝查過是好人"],
+  ["鐵金水好人坑", "確定查過是好人的名單"],
+  ["鐵金水好人", "確定查過是好人"],
+  ["金水好人坑", "查過是好人的名單"],
+  ["金水好人", "查過是好人"],
+  ["鐵金水", "確定查過是好人"],
+  ["金水", "查過是好人"],
+  ["查殺狼坑", "查出是說謊的人"],
+  ["查殺狼", "查出是說謊的人"],
+  ["報查殺", "指出是說謊的人"],
+  ["查殺", "查出是說謊的人"],
+  ["銀水好人", "昨晚被救回來的人"],
+  ["銀水", "昨晚被救回來的人"],
+  ["悍跳狼", "假冒身分帶風向的人"],
+  ["悍跳位", "假冒身分的人"],
+  ["悍跳", "假冒身分"],
+  ["對跳了", "同時爭搶"],
+  ["開對跳", "出現兩個人搶同一個身分"],
+  ["對跳觀察員", "兩個人搶觀察員身分"],
+  ["對跳位", "搶同一個身分的人"],
+  ["對跳", "兩個人搶同一個身分"],
+  ["倒鉤", "假裝站在好人這邊"],
+  ["墊飛", "故意送隊友當掩護"],
+  ["衝鋒", "幫忙帶風向"],
+  ["深水", "躲在暗處不表態"],
+  ["打進狼坑", "列進可疑名單"],
+  ["放進狼坑", "放進可疑名單"],
+  ["畫進狼坑", "畫進可疑名單"],
+  ["進狼坑", "列入可疑名單"],
+  ["放進好人坑", "放進好人名單"],
+  ["放好人坑", "放進好人名單"],
+  ["好人坑", "好人名單"],
+  ["狼坑位", "可疑名單"],
+  ["狼坑", "可疑名單"],
+  ["排坑", "排查可疑名單"],
+  ["盤坑", "梳理可疑名單"],
+  ["點坑", "點出可疑名單"],
+  ["外置位", "其他還沒表態的人"],
+  ["表水", "說明立場"],
+  ["過水", "簡單講兩句"],
+  ["過麥", "結束發言"],
+  ["抗推位", "被誤會投出局的人"],
+  ["抗推", "被誤會投出局"],
+  ["歸票權", "建議大家集中投誰的權力"],
+  ["歸票", "建議大家集中投誰"],
+  ["屠邊制", "把神職或平民全數淘汰的規則"],
+  ["屠邊", "把神職或平民全數淘汰"],
+  ["屠神", "把神職全數淘汰"],
+  ["站邊", "支持"],
+  ["退水", "退出競選"],
+  ["警上", "競選警長發言"],
+  ["警下", "台下投票"],
+  ["刀口線索", "昨晚線索"]
+]);
+
+const NORMAL_JARGON_REPLACEMENTS = Object.freeze([
+  ["深水倒鉤", "躲在暗處假裝站好人邊"],
+  ["反水立警", "中途改口搶警長"],
+  ["外置位抗推", "拿旁邊還沒表態的人當替罪羊"],
+  ["抿刀口", "猜測夜晚目標"],
+  ["倒鉤", "假裝站在好人這邊"],
+  ["墊飛", "故意送隊友當掩護"]
+]);
+
+function applyDifficultyTerminology(rawText, diffArg, snapArg) {
+  if (!rawText || typeof rawText !== "string") return rawText;
+  const diff = diffArg || resolveActiveJargonDifficulty(snapArg);
+  if (diff === "pro") return rawText;
+  const pairs = diff === "easy" ? EASY_JARGON_REPLACEMENTS : NORMAL_JARGON_REPLACEMENTS;
+  let out = rawText;
+  for (let i = 0; i < pairs.length; i++) {
+    const term = pairs[i][0];
+    const repl = pairs[i][1];
+    if (out.indexOf(term) !== -1) {
+      out = out.split(term).join(repl);
+    }
+  }
+  if (diff === "easy") {
+    out = out
+      .replace(/查過是好人\s*好人/g, "查過是好人")
+      .replace(/名單\s*名單/g, "名單")
+      .replace(/兩個人搶同一個身分了/g, "同時爭搶了");
+  }
+  return out;
+}
+
 function pickPersonaVoice(speaker, slotKey, salt) {
   const flv = (typeof PERSONA_FLAVORS !== "undefined" && speaker && PERSONA_FLAVORS[speaker.name])
     ? PERSONA_FLAVORS[speaker.name]
@@ -213,6 +319,7 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
 
   // Identify alive Seer claimants in strict chronological order of claiming
   const seerClaimants = [];
+  const seerFirstClaimDay = {};
   const pushSeer = function (seat) {
     if (seat && seat.alive && seerClaimants.every(function (x) { return x.id !== seat.id; })) {
       seerClaimants.push(seat);
@@ -220,16 +327,24 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
   };
   allEvs.forEach(function (ev) {
     if (ev && (ev.claimRole === "seer" || ev.checkedWolfId || ev.checkedGoodId)) {
+      if (ev.speakerId && !seerFirstClaimDay[ev.speakerId]) {
+        seerFirstClaimDay[ev.speakerId] = ev.day || 1;
+      }
       pushSeer(snap.getSeat(ev.speakerId));
     }
   });
   aliveSeats.forEach(function (s) {
-    if (s.claimedRole === "seer") pushSeer(s);
+    if (s.claimedRole === "seer") {
+      if (!seerFirstClaimDay[s.id]) seerFirstClaimDay[s.id] = 1;
+      pushSeer(s);
+    }
   });
 
   // Strictly public signals per seat (player-private contradictions already stripped for AI by Blind-View!)
   const toxicMap = {};
   const contraMap = {};
+  const contraCountMap = {};
+  const seenContraKeys = {};
   const wolfTeamMap = {};
   if (self && self.role === "wolf") {
     wolfTeamMap[self.id] = true;
@@ -237,40 +352,142 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
       wolfTeamMap[mt.id] = true;
     });
   }
-  allEvs.forEach(function (ev) {
+  allEvs.forEach(function (ev, idx) {
     if (!ev || !ev.speakerId) return;
     if (ev.hasToxicSlip) toxicMap[ev.speakerId] = true;
-    if (ev.contradiction) contraMap[ev.speakerId] = true;
+    if (ev.contradiction) {
+      contraMap[ev.speakerId] = true;
+      const ck = ev.speakerId + ":" + (ev.day || 1) + ":" + (ev.contradiction.code || idx);
+      if (!seenContraKeys[ck]) {
+        seenContraKeys[ck] = true;
+        contraCountMap[ev.speakerId] = (contraCountMap[ev.speakerId] || 0) + 1;
+      }
+    }
   });
-  (snap.detectedContradictions || []).forEach(function (c) {
-    if (c && c.speakerId) contraMap[c.speakerId] = true;
+  (snap.detectedContradictions || []).forEach(function (c, idx) {
+    if (!c || !c.speakerId) return;
+    contraMap[c.speakerId] = true;
+    const ck = c.speakerId + ":" + (c.day || 1) + ":" + (c.code || ("d" + idx));
+    if (!seenContraKeys[ck]) {
+      seenContraKeys[ck] = true;
+      contraCountMap[c.speakerId] = (contraCountMap[c.speakerId] || 0) + 1;
+    }
   });
 
   const diffSlot = (snap && snap.aiDifficulty) || "normal";
+  const isFogSeal = Boolean(snap.fogSealMode || snap.variantMode === "fog_seal");
+  const publicLogsSlot = snap.publicLogs || [];
   const votedOutIdSet = {};
+  const votedOutDayMap = {};
   voteHist.forEach(function (vh) {
     const outSeatId = vh && (vh.outId || vh.eliminatedId);
-    if (outSeatId) votedOutIdSet[outSeatId] = true;
+    if (outSeatId) {
+      votedOutIdSet[outSeatId] = true;
+      votedOutDayMap[outSeatId] = Math.max(votedOutDayMap[outSeatId] || 0, vh.day || 1);
+    }
   });
   (snap.seats || []).forEach(function (s) {
-    if (s && !s.alive && s.outReason === "投票出局") votedOutIdSet[s.id] = true;
+    if (s && !s.alive && !s.fogSealed && s.outReason === "投票出局") votedOutIdSet[s.id] = true;
   });
+
+  const UNIQUE_GOD_ROLES = ["seer", "witch", "hunter", "guard", "elder"];
+  const hasPublicHunterShotSlot = function (seatId) {
+    if (isFogSeal) return false;
+    const sObj = snap.getSeat(seatId);
+    if (sObj && !sObj.alive && !sObj.fogSealed && String(sObj.outReason || "").indexOf("正氣共鳴") !== -1) return true;
+    const reId = new RegExp("(?<!\\d)0?" + seatId + "號");
+    return publicLogsSlot.some(function (l) {
+      return l && /直心糾察長正氣共鳴|發動正氣共鳴/.test(l.title || "") && reId.test((l.title || "") + " " + (l.text || ""));
+    });
+  };
+  const roleClaimHistoryMap = { seer: [], witch: [], hunter: [], guard: [], elder: [] };
+  const roleHardProvenDead = { seer: [], witch: [], hunter: [], guard: [], elder: [] };
+  const pushRoleHist = function (rKey, seatObj) {
+    if (!rKey || !roleClaimHistoryMap[rKey] || !seatObj) return;
+    if (roleClaimHistoryMap[rKey].every(function (x) { return x.id !== seatObj.id; })) {
+      roleClaimHistoryMap[rKey].push(seatObj);
+    }
+  };
+  allEvs.forEach(function (ev) {
+    if (ev && ev.speakerId && ev.claimRole && roleClaimHistoryMap[ev.claimRole]) {
+      pushRoleHist(ev.claimRole, snap.getSeat(ev.speakerId));
+    }
+  });
+  (snap.seats || []).forEach(function (s) {
+    if (!s) return;
+    if (s.claimedRole && roleClaimHistoryMap[s.claimedRole]) {
+      pushRoleHist(s.claimedRole, s);
+    }
+    if (!isFogSeal && !s.alive && !s.fogSealed) {
+      if (s.voteDisabled) {
+        pushRoleHist("elder", s);
+        if (roleHardProvenDead.elder.indexOf(s.id) === -1) roleHardProvenDead.elder.push(s.id);
+      }
+      if (hasPublicHunterShotSlot(s.id)) {
+        pushRoleHist("hunter", s);
+        if (roleHardProvenDead.hunter.indexOf(s.id) === -1) roleHardProvenDead.hunter.push(s.id);
+      }
+    }
+    if (s.alive && s.voteDisabled) pushRoleHist("elder", s);
+  });
+
+  // Detect post-death god-role impersonation (if a dead seat already claimed/proved a unique role before an alive jumper)
+  const deadGodImpersonators = {};
+  UNIQUE_GOD_ROLES.forEach(function (rKey) {
+    const hist = roleClaimHistoryMap[rKey] || [];
+    const hardDead = roleHardProvenDead[rKey] || [];
+    let firstDeadIdx = -1;
+    for (let hi = 0; hi < hist.length; hi++) {
+      if (!hist[hi].alive) { firstDeadIdx = hi; break; }
+    }
+    if (firstDeadIdx === -1 && hardDead.length === 0) return;
+    hist.forEach(function (seatObj, idx) {
+      if (!seatObj || !seatObj.alive) return;
+      if (rKey === "elder" && seatObj.voteDisabled) return;
+      const afterDeadClaim = firstDeadIdx !== -1 && idx > firstDeadIdx;
+      const againstHardDead = hardDead.length > 0;
+      if (afterDeadClaim || againstHardDead) {
+        deadGodImpersonators[seatObj.id] = rKey;
+        contraMap[seatObj.id] = true;
+        contraCountMap[seatObj.id] = Math.max(1, contraCountMap[seatObj.id] || 0);
+      }
+    });
+  });
+
   const deadNightSeers = (snap.seats || []).filter(function (s) {
-    return Boolean(s && !s.alive && s.claimedRole === "seer" && !votedOutIdSet[s.id]);
+    const everSeer = s && (s.claimedRole === "seer" || allEvs.some(function (ev) { return ev && ev.speakerId === s.id && ev.claimRole === "seer"; }));
+    return Boolean(everSeer && !s.alive && !votedOutIdSet[s.id]);
   });
   const deadNightSeerIds = deadNightSeers.map(function (s) { return s.id; });
+  const votedOutDeadSeers = (snap.seats || []).filter(function (s) {
+    const everSeer = s && (s.claimedRole === "seer" || allEvs.some(function (ev) { return ev && ev.speakerId === s.id && ev.claimRole === "seer"; }));
+    return Boolean(everSeer && !s.alive && votedOutIdSet[s.id]);
+  });
 
-  const witchClaimants = aliveSeats.filter(function (s) { return s.claimedRole === "witch"; });
-  const hunterClaimants = aliveSeats.filter(function (s) { return s.claimedRole === "hunter"; });
-  const guardClaimants = aliveSeats.filter(function (s) { return s.claimedRole === "guard"; });
-  const soleWitch = (witchClaimants.length === 1 && !contraMap[witchClaimants[0].id]) ? witchClaimants[0] : null;
-  const soleHunter = (hunterClaimants.length === 1 && !contraMap[hunterClaimants[0].id]) ? hunterClaimants[0] : null;
-  const soleGuard = (guardClaimants.length === 1 && !contraMap[guardClaimants[0].id]) ? guardClaimants[0] : null;
+  const pickSoleAliveGod = function (rKey) {
+    const hist = roleClaimHistoryMap[rKey] || [];
+    const aliveList = hist.filter(function (s) { return s.alive; });
+    if (rKey === "elder") {
+      const provenElders = aliveList.filter(function (s) { return Boolean(s.voteDisabled); });
+      if (provenElders.length === 1 && !contraMap[provenElders[0].id]) return provenElders[0];
+    }
+    if (hist.length === 1 && aliveList.length === 1 && !contraMap[aliveList[0].id]) {
+      return aliveList[0];
+    }
+    return null;
+  };
+  const soleWitch = pickSoleAliveGod("witch");
+  const soleHunter = pickSoleAliveGod("hunter");
+  const soleGuard = pickSoleAliveGod("guard");
+  const soleElder = pickSoleAliveGod("elder");
   const soleGodMap = {};
   const soleGodIds = [];
-  if (soleWitch) { soleGodMap[soleWitch.id] = true; soleGodIds.push(soleWitch.id); }
-  if (soleHunter) { soleGodMap[soleHunter.id] = true; soleGodIds.push(soleHunter.id); }
-  if (soleGuard) { soleGodMap[soleGuard.id] = true; soleGodIds.push(soleGuard.id); }
+  [soleWitch, soleHunter, soleGuard, soleElder].forEach(function (gSeat) {
+    if (gSeat && !soleGodMap[gSeat.id]) {
+      soleGodMap[gSeat.id] = true;
+      soleGodIds.push(gSeat.id);
+    }
+  });
 
   const silverWaterIds = [];
   if (soleWitch) {
@@ -280,6 +497,40 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
       }
     });
   }
+
+  const publicProtectedSeerIds = {};
+  silverWaterIds.forEach(function (id) { publicProtectedSeerIds[id] = true; });
+  const guardHist = roleClaimHistoryMap.guard || [];
+  if (guardHist.length === 1 && !contraMap[guardHist[0].id]) {
+    allEvs.forEach(function (ev) {
+      if (ev && ev.speakerId === guardHist[0].id && ev.claimRole === "guard" && ev.vouchId) {
+        publicProtectedSeerIds[ev.vouchId] = true;
+      }
+    });
+  }
+
+  const seerWolfChecksOn = {};
+  allEvs.forEach(function (ev) {
+    if (ev && ev.speakerId && ev.checkedWolfId) {
+      if (!seerWolfChecksOn[ev.checkedWolfId]) seerWolfChecksOn[ev.checkedWolfId] = [];
+      if (seerWolfChecksOn[ev.checkedWolfId].indexOf(ev.speakerId) === -1) {
+        seerWolfChecksOn[ev.checkedWolfId].push(ev.speakerId);
+      }
+    }
+  });
+  const silverWaterCheckedWolfByTrusted = Boolean(
+    self && self.role === "witch" && self.savedSeatId && seerWolfChecksOn[self.savedSeatId] &&
+    seerWolfChecksOn[self.savedSeatId].some(function (sid) {
+      return !self.suspicionMap || (self.suspicionMap[sid] || 50) < 62;
+    })
+  );
+  const silverWaterUnlocked = Boolean(
+    diffSlot !== "easy" && self && self.role === "witch" && self.savedSeatId && (
+      snap.day >= 3 ||
+      (contraCountMap[self.savedSeatId] || 0) >= 2 ||
+      silverWaterCheckedWolfByTrusted
+    )
+  );
 
   // Legal personal knowledge (strictly from Blind-View!)
   const legalKnownGood = {};
@@ -292,7 +543,7 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
         else legalKnownGood[c.targetId] = true;
       });
     }
-    if (self.role === "witch" && self.savedSeatId) {
+    if (self.role === "witch" && self.savedSeatId && !silverWaterUnlocked) {
       legalKnownGood[self.savedSeatId] = true;
     }
     if (self.isPlayer) {
@@ -309,7 +560,7 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
   const divMap = (matrixView && matrixView.divergenceBySeat) || {};
   const coVoteMap = (matrixView && matrixView.coVoteOutBySeat) || {};
 
-  // Estimate remaining alive wolf slots fairly from public check losses & role clashes
+  // Estimate remaining alive wolf slots strictly from public verified outcomes & self-role proof (zero naive dead-clash inversion!)
   let confirmedDeadWolves = 0;
   const uncontestedSeer = (seerClaimants.length === 1 && deadNightSeerIds.length === 0) ? seerClaimants[0] : null;
   const deadNightSeerGoodIds = [];
@@ -331,19 +582,98 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
       });
     });
   }
+  const isPublicSelfExplodedSeat = function (s) {
+    if (!s || s.alive) return false;
+    if (s.claimedRole === "wolf") return true;
+    if (!isFogSeal && !s.fogSealed && /自爆|掀席/.test(String(s.outReason || ""))) return true;
+    const idPat = new RegExp("(?<!\\d)0?" + s.id + "號");
+    return publicLogsSlot.some(function (l) {
+      return l && /拂袖掀席|白天自爆/.test(l.title || "") && idPat.test((l.title || "") + " " + (l.text || ""));
+    });
+  };
+  const selfEffRoleSlot = self ? (self.effectiveRoleKey || self.role) : null;
   (snap.seats || []).forEach(function (s) {
     if (s.alive) return;
-    const lostClash = Boolean(s.claimedRole && aliveSeats.some(function (a) { return a.claimedRole === s.claimedRole; }));
+    const sClaim = s.claimedRole;
+    const selfIsTrueHolder = Boolean(
+      sClaim &&
+      UNIQUE_GOD_ROLES.indexOf(sClaim) !== -1 &&
+      self &&
+      selfEffRoleSlot === sClaim &&
+      s.id !== self.id
+    );
+    const aliveHasHardMechanicProof = Boolean(sClaim && aliveSeats.some(function (a) {
+      if (a.id === s.id || a.claimedRole !== sClaim) return false;
+      return Boolean(sClaim === "elder" && a.voteDisabled);
+    }));
+    const confirmedClashDeadWolf = Boolean(selfIsTrueHolder || aliveHasHardMechanicProof);
     const verifiedDeadWolf = Boolean(uncontestedSeer && allEvs.some(function (ev) {
       return ev.speakerId === uncontestedSeer.id && ev.checkedWolfId === s.id;
     }));
     const viewerKnownDeadWolf = Boolean(legalKnownWolf[s.id]);
-    if (lostClash || verifiedDeadWolf || viewerKnownDeadWolf) confirmedDeadWolves += 1;
+    const publicSelfExploded = isPublicSelfExplodedSeat(s);
+    if (confirmedClashDeadWolf || verifiedDeadWolf || viewerKnownDeadWolf || publicSelfExploded) {
+      confirmedDeadWolves += 1;
+    }
   });
   const baseWolfTotal = typeof getInitialWolfCount === "function"
     ? getInitialWolfCount(snap.totalSeats)
     : (snap.totalSeats >= 12 ? 4 : (snap.totalSeats >= 10 ? 3 : (snap.totalSeats >= 6 ? 2 : 1)));
   const aliveWolfSlots = Math.max(1, Math.min(baseWolfTotal, baseWolfTotal - confirmedDeadWolves));
+
+  // Public "Long-Surviving Seer" anomalies across all 3 public survival scenarios
+  const survivingSeerAnomalies = [];
+  const survivingSeerSuspicionBoost = {};
+  const survivingSeerNotes = [];
+  const addSeerSurvBoost = function (id, pts) {
+    if (!id || (self && self.id === id) || legalKnownGood[id]) return;
+    if (!survivingSeerSuspicionBoost[id] || survivingSeerSuspicionBoost[id] < pts) {
+      survivingSeerSuspicionBoost[id] = pts;
+    }
+  };
+  if (deadNightSeerIds.length >= 1 && seerClaimants.length === 1) {
+    survivingSeerAnomalies.push({ kind: "dead_night_seer_clash", seatIds: [seerClaimants[0].id] });
+    addSeerSurvBoost(seerClaimants[0].id, diffSlot === "pro" ? 22 : (diffSlot === "easy" ? 6 : 15));
+    survivingSeerNotes.push("已有一位觀察員在夜間倒牌，留場的 " + seerClaimants[0].id + "號須重新盤點真偽。");
+  }
+  if (votedOutDeadSeers.length >= 1 && seerClaimants.length === 1) {
+    const loneS = seerClaimants[0];
+    let latestVotedOutSeerDay = 1;
+    votedOutDeadSeers.forEach(function (ds) {
+      if (votedOutDayMap[ds.id] && votedOutDayMap[ds.id] > latestVotedOutSeerDay) {
+        latestVotedOutSeerDay = votedOutDayMap[ds.id];
+      }
+    });
+    const nightsSurvivedAfterOut = (snap.day || 1) - latestVotedOutSeerDay;
+    if (nightsSurvivedAfterOut >= 2 && !publicProtectedSeerIds[loneS.id]) {
+      survivingSeerAnomalies.push({ kind: "post_voteout_lone_survivor", seatIds: [loneS.id] });
+      addSeerSurvBoost(loneS.id, diffSlot === "pro" ? 20 : (diffSlot === "easy" ? 6 : 14));
+      survivingSeerNotes.push("對跳方公投離席後，" + loneS.id + "號連活兩晚仍未倒牌且無公開護航，必須高度懷疑其觀察員真實性。");
+    }
+  }
+  if (seerClaimants.length >= 2 && (snap.day || 1) >= 3 && deadNightSeerIds.length === 0) {
+    survivingSeerAnomalies.push({
+      kind: "dual_seer_long_coexist",
+      seatIds: seerClaimants.map(function (s) { return s.id; })
+    });
+    seerClaimants.forEach(function (sc) {
+      if (!publicProtectedSeerIds[sc.id]) {
+        addSeerSurvBoost(sc.id, diffSlot === "pro" ? 12 : (diffSlot === "easy" ? 4 : 8));
+      }
+    });
+    survivingSeerNotes.push("雙觀察員並存至第" + snap.day + "天皆未中刀，可能存在長期抗推或狼隊故意留盤誤導。");
+  }
+  if (seerClaimants.length === 1 && deadNightSeerIds.length === 0 && votedOutDeadSeers.length === 0) {
+    const soloS = seerClaimants[0];
+    const claimDay = seerFirstClaimDay[soloS.id] || 1;
+    const thresholdDay = snap.hasGuardMode ? 4 : 3;
+    if ((snap.day || 1) >= thresholdDay && claimDay < (snap.day || 1) && !publicProtectedSeerIds[soloS.id]) {
+      survivingSeerAnomalies.push({ kind: "uncontested_long_survivor", seatIds: [soloS.id] });
+      addSeerSurvBoost(soloS.id, diffSlot === "pro" ? 18 : (diffSlot === "easy" ? 5 : 12));
+      survivingSeerNotes.push("單邊觀察員 " + soloS.id + "號久活超過保護上限仍未倒牌且無公開銀水或守護紀錄，須防單邊自導自演。");
+    }
+  }
+  const survivingSeerSummary = survivingSeerNotes.join(" ");
 
   let dualSeerWorlds = null;
   if (seerClaimants.length >= 2) {
@@ -382,16 +712,22 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
       });
       if (soleWitch && checkedWolfIds.indexOf(soleWitch.id) === -1) pushGood(soleWitch);
       if (soleHunter && checkedWolfIds.indexOf(soleHunter.id) === -1) pushGood(soleHunter);
+      if (soleGuard && checkedWolfIds.indexOf(soleGuard.id) === -1) pushGood(soleGuard);
+      if (soleElder && checkedWolfIds.indexOf(soleElder.id) === -1) pushGood(soleElder);
       if (self && self.team === "good" && self.id !== trusted.id && self.id !== fake.id) {
         pushGood(self);
       }
 
-      const candPool = aliveSeats.filter(function (c) {
+      const worldGoodSet = {};
+      goodPits.forEach(function (gp) { if (gp) worldGoodSet[gp.id] = true; });
+      const basePool = aliveSeats.filter(function (c) {
         if (c.id === trusted.id || c.id === fake.id) return false;
         if (self && c.id === self.id) return false;
         if (checkedGoodIds.indexOf(c.id) !== -1) return false;
         return true;
       });
+      const nonGoodPool = basePool.filter(function (c) { return !worldGoodSet[c.id]; });
+      const candPool = nonGoodPool.length > 0 ? nonGoodPool : basePool;
 
       const scoredCands = candPool.map(function (c) {
         let pitScore = 0;
@@ -460,10 +796,15 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
         return { seat: c, score: pitScore, reason: reasons[0] || "立場曖昧待檢視" };
       }).sort(function (a, b) { return b.score - a.score; });
 
-      const secondWolf = (aliveWolfSlots >= 2 && scoredCands.length > 0) ? scoredCands[0].seat : null;
-      const secondReason = (aliveWolfSlots >= 2 && scoredCands.length > 0) ? scoredCands[0].reason : "";
       const wolfPits = [fake];
-      if (secondWolf) wolfPits.push(secondWolf);
+      for (let wi = 0; wi < scoredCands.length && wolfPits.length < aliveWolfSlots; wi++) {
+        const wCand = scoredCands[wi] && scoredCands[wi].seat;
+        if (wCand && wolfPits.every(function (x) { return x.id !== wCand.id; })) {
+          wolfPits.push(wCand);
+        }
+      }
+      const secondWolf = wolfPits.length > 1 ? wolfPits[1] : null;
+      const secondReason = (secondWolf && scoredCands.length > 0) ? scoredCands[0].reason : "";
 
       let conflictReason = "";
       let worldScore = 50;
@@ -503,8 +844,8 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
           worldScore -= 95;
           conflictReason = "他直接把我查進狼坑，邏輯爆掉";
         } else if (self.role === "witch" && self.savedSeatId && checkedWolfIds.indexOf(self.savedSeatId) !== -1) {
-          worldScore -= 75;
-          conflictReason = "他把護回的好人打進狼坑，直接撞牆";
+          worldScore -= 25;
+          conflictReason = "他把我救過的人打進狼坑，須交叉查證";
         } else if (checkedGoodIds.indexOf(self.id) !== -1) {
           worldScore += 20;
         }
@@ -519,7 +860,7 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
         fakeSeer: fake,
         checkedGoodIds: checkedGoodIds,
         checkedWolfIds: checkedWolfIds,
-        goodPits: goodPits.slice(0, 3),
+        goodPits: goodPits.slice(0, 5),
         secondWolf: secondWolf,
         secondReason: secondReason,
         wolfPits: wolfPits,
@@ -569,6 +910,8 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
     silverWaterIds.forEach(function (id) { pushGenGood(snap.getSeat(id)); });
     if (soleWitch) pushGenGood(soleWitch);
     if (soleHunter) pushGenGood(soleHunter);
+    if (soleGuard) pushGenGood(soleGuard);
+    if (soleElder) pushGenGood(soleElder);
     const lowestSus = aliveSeats.filter(function (s) {
       if (self && s.id === self.id) return false;
       if (legalKnownWolf[s.id]) return false;
@@ -601,7 +944,7 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
       const shTgtId = shVotedForMap[seatId];
       if (shTgtId) {
         const shTgtObj = snap.getSeat(shTgtId);
-        if (legalKnownWolf[shTgtId] || contraMap[shTgtId] || toxicMap[shTgtId] || (shTgtObj && !shTgtObj.alive && shTgtObj.outReason === "投票出局")) {
+        if (legalKnownWolf[shTgtId] || contraMap[shTgtId] || toxicMap[shTgtId] || (shTgtObj && !shTgtObj.alive && !shTgtObj.fogSealed && shTgtObj.outReason === "投票出局")) {
           delta += 18;
         } else if (shRec.winnerId && shTgtId !== shRec.winnerId && shSeerClaimIds.length >= 2 && shSeerClaimIds.indexOf(shTgtId) !== -1) {
           delta += 10;
@@ -614,18 +957,14 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
       else if (bfGoodMap[seatId]) delta -= 16;
       return delta;
     };
-    const survivingSeerId = (deadNightSeerIds.length >= 1 && seerClaimants.length === 1 && self && self.team === "good" && self.id !== seerClaimants[0].id)
-      ? seerClaimants[0].id
-      : null;
-    const nightSurvivalClashBoost = diffSlot === "pro" ? 22 : (diffSlot === "easy" ? 6 : 15);
     const susCands = aliveSeats.filter(function (s) {
       if (self && s.id === self.id) return false;
       if (self && self.role === "wolf" && wolfTeamMap[s.id]) return false;
       if (legalKnownGood[s.id]) return false;
       return true;
     }).sort(function (a, b) {
-      const aDeadSeerBoost = (deadNightSeerWolfBoost[a.id] || 0) + (survivingSeerId === a.id ? nightSurvivalClashBoost : 0);
-      const bDeadSeerBoost = (deadNightSeerWolfBoost[b.id] || 0) + (survivingSeerId === b.id ? nightSurvivalClashBoost : 0);
+      const aDeadSeerBoost = (deadNightSeerWolfBoost[a.id] || 0) + (survivingSeerSuspicionBoost[a.id] || 0);
+      const bDeadSeerBoost = (deadNightSeerWolfBoost[b.id] || 0) + (survivingSeerSuspicionBoost[b.id] || 0);
       const aBoost = (toxicMap[a.id] ? 14 : 0) + (contraMap[a.id] ? 18 : 0) + (spokenSet[a.id] ? 6 : 0) + sheriffPitDelta(a.id) + aDeadSeerBoost;
       const bBoost = (toxicMap[b.id] ? 14 : 0) + (contraMap[b.id] ? 18 : 0) + (spokenSet[b.id] ? 6 : 0) + sheriffPitDelta(b.id) + bDeadSeerBoost;
       const aVal = (self && self.suspicionMap ? (self.suspicionMap[a.id] || 50) : 50) + aBoost;
@@ -635,13 +974,89 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
     susCands.slice(0, aliveWolfSlots).forEach(pushGenWolf);
   }
 
+  // Sole-god rally lead when there is no settled trusted Seer on the table
+  let soleGodLead = null;
+  const hasTrustedUncontestedSeer = Boolean(uncontestedSeer && !(survivingSeerSuspicionBoost[uncontestedSeer.id] >= 12));
+  const hasClearDualSeerLead = Boolean(
+    dualSeerWorlds &&
+    Math.abs((dualSeerWorlds.worldA ? dualSeerWorlds.worldA.score : 0) - (dualSeerWorlds.worldB ? dualSeerWorlds.worldB.score : 0)) >= 18
+  );
+  if (!hasTrustedUncontestedSeer && !hasClearDualSeerLead && soleGodIds.length > 0) {
+    for (let ei = dayEvs.length - 1; ei >= 0; ei--) {
+      const evG = dayEvs[ei];
+      if (!evG || !evG.speakerId || !soleGodMap[evG.speakerId] || !evG.accuseId) continue;
+      const tLead = snap.getSeat(evG.accuseId);
+      if (tLead && tLead.alive && !soleGodMap[tLead.id] && !legalKnownGood[tLead.id]) {
+        const gObj = snap.getSeat(evG.speakerId);
+        soleGodLead = {
+          godSeatId: evG.speakerId,
+          godRole: (gObj && gObj.claimedRole) || evG.claimRole || "god",
+          targetId: tLead.id
+        };
+        break;
+      }
+    }
+  }
+
+  // Non-fog-seal low-god warning: public total god count minus publicly dead/revealed god count <= 1
+  const publicTotalGods = snap.variantMode === "lone_wolf_king"
+    ? 3
+    : (snap.totalSeats >= 12 ? 4 : (snap.totalSeats >= 8 ? (snap.hasGuardMode ? 4 : 3) : 2));
+  let publicDeadGodCount = 0;
+  if (!isFogSeal) {
+    UNIQUE_GOD_ROLES.forEach(function (rKey) {
+      const hist = roleClaimHistoryMap[rKey] || [];
+      const hasDeadClaim = hist.some(function (s) { return !s.alive; });
+      const hasHardAlive = hist.some(function (s) { return s.alive && rKey === "elder" && s.voteDisabled; });
+      if (hasDeadClaim && !hasHardAlive && !(self && selfEffRoleSlot === rKey && self.alive)) {
+        publicDeadGodCount += 1;
+      }
+    });
+  }
+  const remainingPublicGods = Math.max(0, publicTotalGods - publicDeadGodCount);
+  const lowGodCountWarning = Boolean(!isFogSeal && remainingPublicGods <= 1);
+  const lowGodCountSummary = lowGodCountWarning
+    ? "場上已公開倒牌神職偏多（推算至多僅剩 1 名在場神職），未公開身分之暗神應低調藏身分，好人宜避免盲推零矛盾安靜位。"
+    : "";
+
+  const trustedGoldIds = [];
+  const pushTrustedGold = function (gid) {
+    if (gid && trustedGoldIds.indexOf(gid) === -1) trustedGoldIds.push(gid);
+  };
+  if (dualSeerWorlds && dualSeerWorlds.chosenWorld && Array.isArray(dualSeerWorlds.chosenWorld.checkedGoodIds)) {
+    dualSeerWorlds.chosenWorld.checkedGoodIds.forEach(pushTrustedGold);
+  } else if (hasTrustedUncontestedSeer) {
+    allEvs.forEach(function (ev) {
+      if (ev && ev.speakerId === uncontestedSeer.id && ev.checkedGoodId && aliveIds.indexOf(ev.checkedGoodId) !== -1) {
+        pushTrustedGold(ev.checkedGoodId);
+      }
+    });
+  }
+  deadNightSeerGoodIds.forEach(pushTrustedGold);
+  if (self && self.role === "seer") {
+    (self.checkedHistory || []).forEach(function (c) {
+      if (c && !c.isWolf && aliveIds.indexOf(c.targetId) !== -1) pushTrustedGold(c.targetId);
+    });
+  }
+
   return {
     aliveWolfSlots: aliveWolfSlots,
-    goodPits: goodPits.slice(0, 3),
+    goodPits: goodPits.slice(0, 5),
     wolfPits: wolfPits.slice(0, aliveWolfSlots),
     dualSeerWorlds: dualSeerWorlds,
     deadNightSeers: deadNightSeerIds,
-    soleGodIds: soleGodIds
+    soleGodIds: soleGodIds,
+    soleGodMap: soleGodMap,
+    soleGodLead: soleGodLead,
+    deadGodImpersonators: deadGodImpersonators,
+    survivingSeerAnomalies: survivingSeerAnomalies,
+    survivingSeerSuspicionBoost: survivingSeerSuspicionBoost,
+    survivingSeerSummary: survivingSeerSummary,
+    lowGodCountWarning: lowGodCountWarning,
+    lowGodCountSummary: lowGodCountSummary,
+    contraCountMap: contraCountMap,
+    silverWaterUnlocked: silverWaterUnlocked,
+    trustedGoldIds: trustedGoldIds
   };
 }
 

@@ -210,10 +210,20 @@ function chooseAiVoteTarget(voter, opts) {
     const verifiedGoodIds = (self.role === "seer" && self.checkedHistory)
       ? self.checkedHistory.filter(function (c) { return !c.isWolf; }).map(function (c) { return c.targetId; })
       : [];
+    const dayEvsVote = snap ? snap.daySpeechEvents : (state.match.daySpeechEvents || []);
+    const slotViewVote = (snap && typeof buildTableSlotAndWorldAnalysis === "function") ? buildTableSlotAndWorldAnalysis(self, snap) : null;
+    const contraCountMapVote = (slotViewVote && slotViewVote.contraCountMap) ? slotViewVote.contraCountMap : {};
+    const silverWaterUnlockedVote = Boolean(
+      (slotViewVote && slotViewVote.silverWaterUnlocked) ||
+      (diff !== "easy" && self.role === "witch" && self.savedSeatId && (
+        ((snap ? snap.day : state.match.day) >= 3) ||
+        ((contraCountMapVote[self.savedSeatId] || 0) >= 2)
+      ))
+    );
     if (self.role === "seer") {
       const safePool = candidatePool.filter(function (t) { return verifiedGoodIds.indexOf(t.id) === -1; });
       if (safePool.length > 0) candidatePool = safePool;
-    } else if (self.role === "witch" && self.savedSeatId) {
+    } else if (self.role === "witch" && self.savedSeatId && !silverWaterUnlockedVote) {
       const safePool = candidatePool.filter(function (t) { return t.id !== self.savedSeatId; });
       if (safePool.length > 0) candidatePool = safePool;
     }
@@ -235,7 +245,35 @@ function chooseAiVoteTarget(voter, opts) {
     const validPlayerTgt = Boolean(playerTargetId && candidatePool.some(function (t) { return t.id === playerTargetId; }));
     const ironSafe = Boolean(self.ironFollowPlayer && validPlayerTgt && playerTargetId !== self.id
       && (self.role !== "seer" || verifiedGoodIds.indexOf(playerTargetId) === -1)
-      && (self.role !== "witch" || self.savedSeatId !== playerTargetId));
+      && (self.role !== "witch" || silverWaterUnlockedVote || self.savedSeatId !== playerTargetId));
+    let myLastIdxVote = -1;
+    for (let vi = dayEvsVote.length - 1; vi >= 0; vi--) {
+      if (dayEvsVote[vi] && dayEvsVote[vi].speakerId === self.id) { myLastIdxVote = vi; break; }
+    }
+    const afterMyEvents = myLastIdxVote >= 0 ? dayEvsVote.slice(myLastIdxVote + 1) : [];
+    const frontSeatHasLatePivot = Boolean(
+      myLastIdxVote >= 0 && afterMyEvents.length > 0 && (
+        afterMyEvents.some(function (ev) {
+          if (!ev) return false;
+          if (ev.hasToxicSlip || (ev.contradiction && ev.contradiction.level === "major")) return true;
+          if (ev.claimRole && ev.claimRole !== "villager" && ev.claimRole !== "wolf") {
+            const myClaim = self.claimedRole || null;
+            if (myClaim && ev.claimRole === myClaim) return true;
+            const earlierSameClaim = dayEvsVote.slice(0, myLastIdxVote + 1).some(function (pe) {
+              return pe && pe.speakerId !== ev.speakerId && pe.claimRole === ev.claimRole;
+            });
+            if (earlierSameClaim) return true;
+          }
+          return false;
+        }) ||
+        Boolean(
+          slotViewVote && slotViewVote.soleGodLead &&
+          afterMyEvents.some(function (ev) { return ev && ev.speakerId === slotViewVote.soleGodLead.godSeatId; }) &&
+          slotViewVote.soleGodLead.targetId !== self.publicVoteIntent
+        )
+      )
+    );
+    const intentWeight = frontSeatHasLatePivot ? 34 : 54;
     if (ironSafe) {
       chosen = playerTargetId;
     } else if (self.role === "seer") {
@@ -247,8 +285,8 @@ function chooseAiVoteTarget(voter, opts) {
         chosen = aliveFakeSeer.id;
       } else {
         candidatePool.sort(function (a, b) {
-          const pA = (self.publicVoteIntent === a.id ? 34 : 0) + (self.publicVouchId === a.id ? -22 : 0) + (rallyId === a.id ? 14 : 0) + computeFourGClueDelta(a) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
-          const pB = (self.publicVoteIntent === b.id ? 34 : 0) + (self.publicVouchId === b.id ? -22 : 0) + (rallyId === b.id ? 14 : 0) + computeFourGClueDelta(b) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
+          const pA = (self.publicVoteIntent === a.id ? intentWeight : 0) + (self.publicVouchId === a.id ? -22 : 0) + (rallyId === a.id ? 14 : 0) + computeFourGClueDelta(a) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50);
+          const pB = (self.publicVoteIntent === b.id ? intentWeight : 0) + (self.publicVouchId === b.id ? -22 : 0) + (rallyId === b.id ? 14 : 0) + computeFourGClueDelta(b) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50);
           return pB - pA;
         });
         if (candidatePool[0] && ((self.publicVoteIntent === candidatePool[0].id) || (rallyId === candidatePool[0].id) || ((self.suspicionMap && self.suspicionMap[candidatePool[0].id]) || 50) >= 48)) {
@@ -256,14 +294,17 @@ function chooseAiVoteTarget(voter, opts) {
         }
       }
     } else {
-      const dayEvsVote = snap ? snap.daySpeechEvents : (state.match.daySpeechEvents || []);
       const voteProf = typeof getPersonaProfile === "function" ? getPersonaProfile(self) : null;
       const rallyWeight = voteProf ? Math.round(20 * (1 + voteProf.bandwagonBias * 0.45)) : 20;
       const vmVote = (snap && typeof buildVoteSpeechMatrix === "function") ? buildVoteSpeechMatrix(self, snap) : null;
       const ledgerVote = (snap && typeof buildCrossDayMemoryLedger === "function") ? buildCrossDayMemoryLedger(self, snap) : null;
-      const slotViewVote = (snap && typeof buildTableSlotAndWorldAnalysis === "function") ? buildTableSlotAndWorldAnalysis(self, snap) : null;
       const chosenWorldVote = (slotViewVote && slotViewVote.dualSeerWorlds && slotViewVote.dualSeerWorlds.chosenWorld) ? slotViewVote.dualSeerWorlds.chosenWorld : null;
       const deadNightSeerCount = (slotViewVote && Array.isArray(slotViewVote.deadNightSeers)) ? slotViewVote.deadNightSeers.length : 0;
+      const survivingBoostMapVote = (slotViewVote && slotViewVote.survivingSeerSuspicionBoost) || {};
+      const hasToxicRecord = function (tid) {
+        const evs = (snap && Array.isArray(snap.allSpeechEvents) && snap.allSpeechEvents.length > 0) ? snap.allSpeechEvents : dayEvsVote;
+        return evs.some(function (ev) { return ev && ev.speakerId === tid && ev.hasToxicSlip; });
+      };
       const soleGodIdSet = {};
       if (slotViewVote && Array.isArray(slotViewVote.soleGodIds)) {
         slotViewVote.soleGodIds.forEach(function (gid) { soleGodIdSet[gid] = true; });
@@ -290,8 +331,23 @@ function chooseAiVoteTarget(voter, opts) {
           } else if (Array.isArray(chosenWorldVote.checkedWolfIds) && chosenWorldVote.checkedWolfIds.indexOf(t.id) !== -1) {
             wd += diff === "pro" ? 18 : (diff === "easy" ? 5 : 12);
           }
-        } else if (deadNightSeerCount >= 1 && seerClaimants.length === 1 && t.id === seerClaimants[0].id) {
+        } else if (deadNightSeerCount >= 1 && seerClaimants.length === 1 && t.id === seerClaimants[0].id && !(survivingBoostMapVote[t.id] > 0)) {
           wd += diff === "pro" ? 20 : (diff === "easy" ? 6 : 14);
+        }
+        if ((survivingBoostMapVote[t.id] || 0) > 0) {
+          wd += diff === "easy"
+            ? Math.round(survivingBoostMapVote[t.id] * 0.4)
+            : survivingBoostMapVote[t.id];
+        }
+        if (slotViewVote && slotViewVote.soleGodLead && slotViewVote.soleGodLead.targetId === t.id && !soleGodIdSet[t.id] && verifiedGoodIds.indexOf(t.id) === -1) {
+          wd += 34;
+        }
+        if (slotViewVote && slotViewVote.lowGodCountWarning && !t.claimedRole && (!chosenWorldVote || !chosenWorldVote.checkedWolfIds || chosenWorldVote.checkedWolfIds.indexOf(t.id) === -1)) {
+          const tContra = contraCountMapVote[t.id] || 0;
+          const tHeat = (snap && typeof snap.getObservableHeatOnSeat === "function") ? snap.getObservableHeatOnSeat(t.id) : 45;
+          if (!hasToxicRecord(t.id) && tContra === 0 && tHeat <= 46) {
+            wd -= 12;
+          }
         }
         if (soleGodIdSet[t.id] && t.claimedRole !== selfEffRoleVote && verifiedWolfIds.indexOf(t.id) === -1) {
           wd -= diff === "pro" ? 24 : (diff === "easy" ? 8 : 16);
@@ -304,8 +360,8 @@ function chooseAiVoteTarget(voter, opts) {
         const jB = hazeChaos ? Math.sin(self.id * 7 + b.id * 3) * hazeChaos : 0;
         const persA = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, a, votePersonaOpts) : 0;
         const persB = typeof getPersonaVotePersonalityDelta === "function" ? getPersonaVotePersonalityDelta(self, b, votePersonaOpts) : 0;
-        const pA = (self.publicVoteIntent === a.id ? 38 : 0) + (self.publicVouchId === a.id ? -26 : 0) + (rallyId === a.id ? rallyWeight : 0) + computeFourGClueDelta(a) + computeWorldAlignmentDelta(a) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50) + persA + jA;
-        const pB = (self.publicVoteIntent === b.id ? 38 : 0) + (self.publicVouchId === b.id ? -26 : 0) + (rallyId === b.id ? rallyWeight : 0) + computeFourGClueDelta(b) + computeWorldAlignmentDelta(b) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50) + persB + jB;
+        const pA = (self.publicVoteIntent === a.id ? intentWeight : 0) + (self.publicVouchId === a.id ? -26 : 0) + (rallyId === a.id ? rallyWeight : 0) + computeFourGClueDelta(a) + computeWorldAlignmentDelta(a) + ((self.suspicionMap && self.suspicionMap[a.id]) || 50) + persA + jA;
+        const pB = (self.publicVoteIntent === b.id ? intentWeight : 0) + (self.publicVouchId === b.id ? -26 : 0) + (rallyId === b.id ? rallyWeight : 0) + computeFourGClueDelta(b) + computeWorldAlignmentDelta(b) + ((self.suspicionMap && self.suspicionMap[b.id]) || 50) + persB + jB;
         return pB - pA;
       });
       if (candidatePool[0] && ((self.publicVoteIntent === candidatePool[0].id) || (rallyId === candidatePool[0].id) || ((self.suspicionMap && self.suspicionMap[candidatePool[0].id]) || 50) >= 48)) {
@@ -2102,6 +2158,28 @@ function chooseAiSheriffTransferTarget(deadSheriff) {
     } else if (aliveVerifiedGood) {
       pick = aliveVerifiedGood;
       decisionReason = "移交已驗金水 " + aliveVerifiedGood.id + "號";
+    }
+    if (!decisionReason) {
+      const hasCheckedWolf = chks.some(function (c) { return c && c.isWolf; });
+      const slotTransfer = (snap && typeof buildTableSlotAndWorldAnalysis === "function")
+        ? buildTableSlotAndWorldAnalysis(self, snap)
+        : null;
+      const soleGodAlive = (slotTransfer && Array.isArray(slotTransfer.soleGodIds))
+        ? slotTransfer.soleGodIds
+            .map(function (gid) { return findAlive(gid); })
+            .find(function (s) {
+              if (!s) return false;
+              const c = getChk(s.id);
+              return !(c && c.isWolf);
+            })
+        : null;
+      if (soleGodAlive) {
+        pick = soleGodAlive;
+        decisionReason = "無存活金水轉交零矛盾明神 " + soleGodAlive.id + "號";
+      } else if (hasCheckedWolf) {
+        pick = null;
+        decisionReason = "撕毀警徽（有查殺且無存活金水或明神可接手）";
+      }
     }
     if (decisionReason) {
       if (typeof antiCheatMonitor !== "undefined" && self) {

@@ -11,9 +11,16 @@ function determineSpeechLengthTier(speaker, ctx) {
     Array.isArray(ctx.publicInterjections) &&
     ctx.publicInterjections.some(function (it) { return it && it.targetId === speaker.id; })
   );
+  const hunterDeterrence = Boolean(
+    speaker.role === "hunter" &&
+    ctx.snap &&
+    typeof ctx.snap.getObservableHeatOnSeat === "function" &&
+    ctx.snap.getObservableHeatOnSeat(speaker.id) >= 54
+  );
   if (
     inPk ||
     isEndgameMatchPoint ||
+    hunterDeterrence ||
     ctx.seerWolfOnMe ||
     ctx.wolfPitOnMe ||
     ctx.accuseOnMe ||
@@ -175,6 +182,15 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
 
   const baseGoodIds = (slotPlan && Array.isArray(slotPlan.goodPits)) ? slotPlan.goodPits.map(function (s) { return s.id; }) : [];
   const baseWolfIds = (slotPlan && Array.isArray(slotPlan.wolfPits)) ? slotPlan.wolfPits.map(function (s) { return s.id; }) : [];
+  const aliveWolfCap = Math.max(2, Math.min(4, (slotPlan && slotPlan.aliveWolfSlots) || 2));
+  const seerBoostMap = (slotPlan && slotPlan.survivingSeerSuspicionBoost) || {};
+  const isSelfSeerAnomalyTarget = Boolean((seerBoostMap[speaker.id] || 0) >= 12);
+  const tableAnomalyNote = (speaker.team === "good" && !isSelfSeerAnomalyTarget && slotPlan && slotPlan.survivingSeerSummary)
+    ? (slotPlan.survivingSeerSummary + " ")
+    : "";
+  const lowGodNote = (speaker.team === "good" && slotPlan && slotPlan.lowGodCountSummary && (!dualSeerWorlds || !dualSeerWorlds.hasDualSeer))
+    ? (slotPlan.lowGodCountSummary + " ")
+    : "";
   const formatSeatList = function (ids) {
     return ids.map(function (id) { return seatLabel(readSeat(id)); }).filter(Boolean);
   };
@@ -197,7 +213,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
       const initialWolfPits = [];
       if (focusTarget) initialWolfPits.push(focusTarget.id);
       baseWolfIds.forEach(function (id) {
-        if (id !== (trustPick ? trustPick.id : -1) && initialWolfPits.indexOf(id) === -1 && initialWolfPits.length < 2) {
+        if (id !== (trustPick ? trustPick.id : -1) && initialWolfPits.indexOf(id) === -1 && initialWolfPits.length < aliveWolfCap) {
           initialWolfPits.push(id);
         }
       });
@@ -218,7 +234,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
         wolfPits: initialWolfPits,
         goodPits: trustPick ? [trustPick.id] : [],
         hasToxicSlip: false,
-        text: leadPhrase + leadIntro + trustIntro + prevVoteNote + tailPrompt
+        text: leadPhrase + leadIntro + tableAnomalyNote + trustIntro + prevVoteNote + lowGodNote + tailPrompt
       };
     }
     // v17.0 星兒招牌習慣：第一天無任何線索時也敢直接憑直覺點名試水溫！
@@ -304,10 +320,10 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
       accuseId: chosen.fakeSeer.id,
       vouchId: chosen.trustedSeer.id,
       standWithSeerId: chosen.trustedSeer.id,
-      wolfPits: chosen.wolfPits.map(function (s) { return s.id; }).slice(0, 2),
+      wolfPits: chosen.wolfPits.map(function (s) { return s.id; }).slice(0, aliveWolfCap),
       goodPits: goodSidePits.map(function (s) { return s.id; }),
       hasToxicSlip: false,
-      text: dualText
+      text: dualText + (tableAnomalyNote ? (" " + tableAnomalyNote.trim()) : "")
     };
   }
 
@@ -331,7 +347,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     const susPits = [];
     if (susCandidate) susPits.push(susCandidate.id);
     baseWolfIds.forEach(function (id) {
-      if (id !== vSeat.id && susPits.indexOf(id) === -1 && susPits.length < 2) susPits.push(id);
+      if (id !== vSeat.id && susPits.indexOf(id) === -1 && susPits.length < aliveWolfCap) susPits.push(id);
     });
     const spokenPits = susPits.filter(spokeToday);
     const unspokenPitHint = (!spokenPits.length && unspokenOthers.length > 0)
@@ -473,6 +489,53 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     };
   }
 
+  // Sole uncontested God rallying without a settled Seer line
+  const soleLead = (slotPlan && slotPlan.soleGodLead) ? slotPlan.soleGodLead : null;
+  if (
+    soleLead &&
+    speaker.team === "good" &&
+    !dualSeerWorlds &&
+    !priorSeerWolfEv &&
+    soleLead.targetId &&
+    soleLead.godSeatId &&
+    soleLead.targetId !== speaker.id &&
+    soleLead.godSeatId !== speaker.id
+  ) {
+    const gLeadSeat = readSeat(soleLead.godSeatId);
+    const tLeadSeat = readSeat(soleLead.targetId);
+    const isSelfProtectedTgt = Boolean(
+      (speaker.role === "seer" && (speaker.checkedHistory || []).some(function (c) { return c.targetId === soleLead.targetId && !c.isWolf; })) ||
+      (speaker.role === "witch" && speaker.savedSeatId === soleLead.targetId && !(slotPlan && slotPlan.silverWaterUnlocked))
+    );
+    if (gLeadSeat && gLeadSeat.alive && tLeadSeat && tLeadSeat.alive && !isSelfProtectedTgt) {
+      const godRoleTitle = (soleLead.godRole && typeof ROLE_DEFS !== "undefined" && ROLE_DEFS[soleLead.godRole])
+        ? ROLE_DEFS[soleLead.godRole].name
+        : "明確神職";
+      const rallyWolfPits = [tLeadSeat.id];
+      baseWolfIds.forEach(function (id) {
+        if (id !== gLeadSeat.id && rallyWolfPits.indexOf(id) === -1 && rallyWolfPits.length < aliveWolfCap) {
+          rallyWolfPits.push(id);
+        }
+      });
+      const rallyGoodPits = [gLeadSeat.id];
+      baseGoodIds.forEach(function (id) {
+        if (id !== tLeadSeat.id && rallyGoodPits.indexOf(id) === -1 && rallyGoodPits.length < 3) {
+          rallyGoodPits.push(id);
+        }
+      });
+      return {
+        targetId: tLeadSeat.id,
+        relationType: "suspect",
+        accuseId: tLeadSeat.id,
+        vouchId: gLeadSeat.id,
+        wolfPits: rallyWolfPits,
+        goodPits: rallyGoodPits,
+        hasToxicSlip: false,
+        text: leadPhrase + tableAnomalyNote + "目前場上還沒有定案的觀察員線，前置位站出來的唯一" + godRoleTitle + " " + seatLabel(gLeadSeat) + " 明確點推 " + seatLabel(tLeadSeat) + "，我先接手這面號令旗！這輪好人先把 " + seatLabel(gLeadSeat) + " 放好人坑、跟票檢視 " + seatLabel(tLeadSeat) + "。" + lowGodNote + unspokenNote + signoffPhrase
+      };
+    }
+  }
+
   // Acknowledge earlier God claim (when uncontested)
   const latestGodEv = priorGodClaims.length > 0 ? priorGodClaims[priorGodClaims.length - 1] : null;
   const latestGodSeat = latestGodEv ? readSeat(latestGodEv.speakerId) : null;
@@ -525,7 +588,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
     const spokenWolfCands = spokenSorted.filter(function (s) {
       return goodSlots.every(function (g) { return g.id !== s.id; });
     });
-    const wolfSlots = spokenWolfCands.slice(0, 2);
+    const wolfSlots = spokenWolfCands.slice(0, aliveWolfCap);
     const topSus = wolfSlots[0] || topSpokenSus;
     const secSus = wolfSlots[1] || null;
     const goodText = goodSlots.length > 0
@@ -618,7 +681,7 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
         wolfPits: wolfSlots.map(function (s) { return s.id; }),
         goodPits: goodSlots.map(function (s) { return s.id; }).slice(0, 2),
         hasToxicSlip: false,
-        text: openPrefix + goodText + (prevVoteNote ? prevVoteNote : "") + wolfText + focusTail + unspokenNote + signoffPhrase
+        text: openPrefix + goodText + (prevVoteNote ? prevVoteNote : "") + tableAnomalyNote + wolfText + focusTail + lowGodNote + unspokenNote + signoffPhrase
       };
     }
     if (goodSlots.length > 0) {
@@ -631,16 +694,19 @@ function buildGoodTeamDeductionSpeech(speaker, ctx) {
         wolfPits: secondWatch ? [secondWatch.id] : [],
         goodPits: [goodSlots[0].id],
         hasToxicSlip: false,
-        text: openPrefix + goodText +
+        text: openPrefix + goodText + tableAnomalyNote +
           (secondWatch ? (seatLabel(secondWatch) + " 的立場還不夠明朗我先保留一半疑點，") : "") +
-          unspokenNote + signoffPhrase
+          lowGodNote + unspokenNote + signoffPhrase
       };
     }
   }
 
-  // v17.0 阿朗招牌習慣：「逢跳必詰」——好人見前置位亮神職必先壓力測試挑毛病
+  // v17.0 阿朗招牌習慣：「逢跳必詰」——好人見前置位亮神職必先壓力測試挑毛病（但避開零矛盾唯一明神）
   if (speaker.name === "阿朗" && speaker.role !== "seer" && Array.isArray(priorGodClaims) && priorGodClaims.length > 0 && !dualSeerWorlds) {
-    const claimedEv = priorGodClaims[0];
+    const soleGodMapH = (slotPlan && slotPlan.soleGodMap) || {};
+    const claimedEv = priorGodClaims.find(function (ev) {
+      return ev && !(soleGodMapH[ev.speakerId] && !ev.hasToxicSlip && !ev.contradiction);
+    });
     const claimedSeat = claimedEv ? readSeat(claimedEv.speakerId) : null;
     if (claimedSeat && claimedSeat.alive && claimedSeat.id !== speaker.id) {
       const clubBanter = typeof buildPersonaClubAndHabitInsert === "function"
@@ -734,10 +800,14 @@ function sanitizeSpeechMeta(speaker, out, snapArg) {
     out.relationType = null;
   }
 
+  const seatTotalMeta = (snapArg && typeof snapArg.totalSeats === "number" && snapArg.totalSeats > 0)
+    ? snapArg.totalSeats
+    : ((typeof state !== "undefined" && state.match && Array.isArray(state.match.seats) && state.match.seats.length > 0) ? state.match.seats.length : 8);
+  const wolfTotalCap = Math.max(2, Math.min(4, typeof getInitialWolfCount === "function" ? getInitialWolfCount(seatTotalMeta) : 2));
   const cleanWolves = [];
   if (out.accuseId && isAliveOther(out.accuseId)) cleanWolves.push(out.accuseId);
   (Array.isArray(out.wolfPits) ? out.wolfPits : []).forEach(function (id) {
-    if (isAliveOther(id) && id !== out.vouchId && cleanWolves.indexOf(id) === -1 && cleanWolves.length < 2) {
+    if (isAliveOther(id) && id !== out.vouchId && cleanWolves.indexOf(id) === -1 && cleanWolves.length < wolfTotalCap) {
       cleanWolves.push(id);
     }
   });
@@ -751,6 +821,10 @@ function sanitizeSpeechMeta(speaker, out, snapArg) {
     }
   });
   out.goodPits = cleanGoods;
+
+  if (out.text && typeof applyDifficultyTerminology === "function") {
+    out.text = applyDifficultyTerminology(out.text, null, snapArg || null);
+  }
 
   // v16.0 Match Point (<= 28 chars) & Blitz (<= 22 chars) speech length enforcement
   const capLimit = (snapArg && typeof snapArg.speechCharCap === "number" && snapArg.speechCharCap > 0)

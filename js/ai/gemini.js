@@ -471,6 +471,9 @@ function normalizeGeminiSpeechText(txt) {
       .replace(/(?<!\d)0([1-9])\s*號/g, "$1號")
       .replace(/(?<!\d)0([1-9])(?=[\u4e00-\u9fff，。！？、；：,\.!?;:\s]|$)/g, "$1號");
   }
+  if (typeof applyDifficultyTerminology === "function") {
+    s = applyDifficultyTerminology(s, null, null);
+  }
   // Gracefully trim rambling > 185-char LLM paragraphs at a natural sentence boundary while giving late-game deductions room to breathe
   if (s.length > 185) {
     const windowStr = s.slice(0, 185);
@@ -932,6 +935,16 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
       pitContextNote += "\n【雙明心觀察員盤坑參考】：如果站 " + dw.seerA.id + "號，狼坑在 " + aPits + (dw.worldA.conflictReason ? ("(" + dw.worldA.conflictReason + ")") : "") +
         "；如果站 " + dw.seerB.id + "號，狼坑在 " + bPits + (dw.worldB.conflictReason ? ("(" + dw.worldB.conflictReason + ")") : "") + "。務必清楚比較站 A 與站 B 的狼坑後表態站邊！";
     }
+    if (slotCtx.slotPlan && slotCtx.slotPlan.survivingSeerSummary) {
+      pitContextNote += "\n【觀察員存活異常公開線索】：" + slotCtx.slotPlan.survivingSeerSummary;
+    }
+    if (slotCtx.slotPlan && slotCtx.slotPlan.soleGodLead && slotCtx.slotPlan.soleGodLead.targetId !== self.id) {
+      const sLead = slotCtx.slotPlan.soleGodLead;
+      pitContextNote += "\n【單邊明神帶隊焦點】：目前場上尚無坐實觀察員，單邊無矛盾神職（" + sLead.godSeatId + "號）本輪明確點名懷疑 " + sLead.targetId + "號，若非你親查確認其為好人，發言應正面呼應並考慮集火 " + sLead.targetId + "號。";
+    }
+    if (slotCtx.slotPlan && slotCtx.slotPlan.lowGodCountSummary) {
+      pitContextNote += "\n【低剩餘神職公開警戒】：" + slotCtx.slotPlan.lowGodCountSummary;
+    }
   }
 
   const transcript = todayLogs.length > 0
@@ -1195,12 +1208,14 @@ function buildBlindGeminiSpeechPrompt(speaker, fallbackMeta) {
     "- 今日尚未發言座位：" + (unspokenNums.length ? unspokenNums.join("、") : "無（你是最後一位）") + "（嚴禁評論未發言者「說過的話」，但可以提及公開的四給／笑僵／護盾線索）。\n" +
     (!hasVoteArchiveNow ? "- 目前全場尚未進行過任何投票，嚴禁提及「剛剛有人衝票、跟票、看票型」！\n" : "");
 
-  const diffPrompt = (snap && snap.aiDifficulty) || "normal";
+  const diffPrompt = typeof resolveActiveJargonDifficulty === "function"
+    ? resolveActiveJargonDifficulty(snap)
+    : ((snap && snap.aiDifficulty) || "normal");
   const difficultyDirective = diffPrompt === "easy"
-    ? "【本局難度：新手友善局】語氣親切直白、把關鍵線索講清楚方便新手跟上；酸民狼切勿使用高難度自刀騙藥或倒鉤賣隊友，自然保留可被抓包的語氣破綻。\n"
+    ? "【本局難度：新手友善局（純白話模式，全面禁止黑話術語）】語氣親切直白，全面禁止使用金水、查殺、銀水、悍跳、對跳、倒鉤、衝鋒、深水、狼坑、外置位、警徽流、表水、過水、抗推、歸票、屠邊等術語；一律改用「查過是好人／查出是說謊的人／昨晚被救回來的人／假冒身分／搶同一個身分／可疑名單／還沒表態的人／下一晚預計先查誰／說明立場／建議大家集中投誰」等日常白話；酸民狼切勿使用自刀騙藥或假裝站好人邊賣隊友，自然保留語氣破綻。\n"
     : (diffPrompt === "pro"
-      ? "【本局難度：凹嗚高手局】全桌高階博弈！好人靈活運用死推夜刀觀察員、警徽流反推、排坑守恆、防自刀騙藥與同守同救；酸民狼靈活運用假發金水拉票、順推抗推位、末局控票集火與危急時適度倒鉤做金身。\n"
-      : "【本局難度：標準推理局】展現紮實面殺邏輯：交叉比對警長票型、昨夜刀口、言票矛盾與剩餘狼坑數；雙觀察員對跳時清楚拆解雙邊世界線；酸民狼主動順推高熱度好人抗推位。\n");
+      ? "【本局難度：凹嗚高手局（進階競技模式，完整保留競技術語）】全桌高階博弈！自然使用金水、銀水、查殺、警徽流、悍跳、倒鉤、狼坑、外置位、抗推等精煉術語；好人靈活運用死推夜刀觀察員、警徽流反推、排坑守恆、防自刀騙藥與同守同救；酸民狼靈活運用假發金水拉票、順推抗推位、末局控票集火與危急時適度倒鉤做金身。\n"
+      : "【本局難度：標準推理局（輕術語好懂模式）】展現紮實推理：可保留好懂基礎詞（如查驗好人、查殺、救過的人、對跳、集中投票），【嚴禁】使用冷僻高階黑話（禁止出現：倒鉤、墊飛、反水立警、外置位抗推、抿刀口、深水倒鉤，改用白話描述行為）；交叉比對警長投票、昨夜去向、言票矛盾與剩餘可疑名單，酸民狼主動推動高懷疑好人出局。\n");
 
   const prompt =
     "你正在參與青嵐書院茶席推理遊戲《三好AI狼人殺》（融入存好心、說好話、做好事理念，以理性防制網路酸言與假訊息取代傳統陰暗衝突，所有「出局」改為請離席冷靜）。\n" +
@@ -1350,7 +1365,10 @@ function _validateMiniLiveText(raw, self, opts) {
   if (_looksTruncatedMidClause(rawTrimmed)) {
     rawTrimmed = _trimToCompleteSentenceOrNull(rawTrimmed, 14) || "";
   }
-  let clean = rawTrimmed ? normalizeGeminiSpeechText(rawTrimmed) : "";
+  let clean = rawTrimmed ? normalizeGeminiSpeechText(rawTrimmed, o.snap) : "";
+  if (clean && typeof applyDifficultyTerminology === "function") {
+    clean = applyDifficultyTerminology(clean, null, o.snap || null);
+  }
   if (!clean || _looksTruncatedMidClause(clean)) return null;
   if (typeof normalizeSeatRefsInText === "function") clean = normalizeSeatRefsInText(clean);
   clean = clean.replace(/^「|」$/g, "").trim();
@@ -1493,6 +1511,7 @@ async function tryGenerateGeminiSheriffSpeech(cand, priorSpeeches, built, opts) 
   if (!raw) return null;
   const isSeerStand = Boolean(built && (built.tone === "seer" || built.tone === "clash"));
   const clean = _validateMiniLiveText(raw, pack.snap ? pack.snap.self : cand, {
+    snap: pack.snap,
     minLen: o.isPkRound ? 16 : 22,
     maxLen: o.isPkRound ? 78 : 118,
     allowedClaim: isSeerStand ? "seer" : null,
@@ -1570,6 +1589,7 @@ async function tryGenerateGeminiLastWords(seat, mode, lwObj) {
     ? lwObj.targetId
     : null;
   const clean = _validateMiniLiveText(raw, pack.snap ? pack.snap.self : seat, {
+    snap: pack.snap,
     minLen: 18,
     maxLen: 115,
     allowedClaim: (lwObj && lwObj.claimRole) ? lwObj.claimRole : null,
@@ -1620,6 +1640,7 @@ async function tryGenerateGeminiInterjectionReply(targetSeat, questionText, fall
   const raw = await callGeminiText(pack.prompt, { jsonMode: false, lite: isEasyInterject, temperature: tempVal });
   if (!raw) return null;
   const clean = _validateMiniLiveText(raw, pack.snap ? pack.snap.self : targetSeat, {
+    snap: pack.snap,
     minLen: 10,
     maxLen: 54,
     allowedClaim: targetSeat.claimedRole || null
@@ -1670,6 +1691,7 @@ async function tryGenerateGeminiConfrontationLine(speaker, rival, baseLine) {
   const raw = await callGeminiText(pack.prompt, { jsonMode: false, temperature: tempVal });
   if (!raw) return null;
   const clean = _validateMiniLiveText(raw, pack.snap ? pack.snap.self : speaker, {
+    snap: pack.snap,
     minLen: 16,
     maxLen: 76,
     allowedClaim: speaker.claimedRole || null,

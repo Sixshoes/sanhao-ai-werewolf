@@ -220,24 +220,42 @@ function detectSpeechContradictions(speaker, speechEv) {
     return s ? (fmtSeatNum(s.id) + "號" + (s.id === pid ? "你" : s.name)) : (fmtSeatNum(id) + "號");
   };
 
-  // 1. Role counter-claim clash (against another alive claimant OR player's own real role)
+  // 1. Role counter-claim clash (against another alive OR previously dead claimant, public dead flip, OR player's own real role)
   if (speechEv.claimRole && ROLE_DEFS[speechEv.claimRole]) {
     const rName = ROLE_DEFS[speechEv.claimRole].name;
+    const isFogSealDed = m.variantMode === "fog_seal";
     const otherClaimant = (m.seats || []).find(function (s) {
-      return s.id !== speaker.id && s.alive && s.claimedRole === speechEv.claimRole;
+      if (!s || s.id === speaker.id) return false;
+      if (s.claimedRole === speechEv.claimRole) return true;
+      const claimedPriorEv = (m.allSpeechEvents || []).some(function (ev) {
+        return ev && ev.speakerId === s.id && ev.claimRole === speechEv.claimRole;
+      });
+      if (claimedPriorEv) return true;
+      if (!isFogSealDed && !s.alive) {
+        if (speechEv.claimRole === "elder" && s.voteDisabled) return true;
+        if (speechEv.claimRole === "hunter") {
+          if (String(s.outReason || "").indexOf("正氣共鳴") !== -1) return true;
+          const reIdDed = new RegExp("(?<!\\d)0?" + s.id + "號");
+          if ((m.logs || []).some(function (l) {
+            return l && /直心糾察長正氣共鳴|發動正氣共鳴/.test(l.title || "") && reIdDed.test((l.title || "") + " " + (l.text || ""));
+          })) return true;
+        }
+      }
+      return false;
     });
     const playerEffKey = player && typeof getSeatEffectiveRoleKey === "function" ? getSeatEffectiveRoleKey(player) : (player ? player.role : null);
     const stealsPlayerRealRole = Boolean(player && player.alive && playerEffKey === speechEv.claimRole);
     if (otherClaimant || stealsPlayerRealRole) {
       const clashWho = otherClaimant ? labelSeat(otherClaimant.id) : "已現身的同職角色";
+      const deadTag = (otherClaimant && !otherClaimant.alive) ? "已離席的 " : "";
       return {
         code: "role_clash",
         severity: 3,
         isPublic: Boolean(otherClaimant),
         targetId: speaker.id,
         label: "身分對跳衝突",
-        detail: spTag + " 搶跳「" + rName + "」，與 " + clashWho + " 直接衝突",
-        rebuttalText: "請全場注意邏輯衝突！剛才 " + spTag + " 竟然搶跳「" + rName + "」身分，但場上同一神職絕不可能同時出現兩位，建議大家優先檢視 " + spTag + " 的真實動機！"
+        detail: spTag + " 搶跳「" + rName + "」，與 " + deadTag + clashWho + " 直接衝突",
+        rebuttalText: "請全場注意邏輯衝突！剛才 " + spTag + " 竟然搶跳「" + rName + "」身分，但與 " + deadTag + clashWho + " 同一神職絕不可能並存兩位，建議大家優先檢視 " + spTag + " 的真實動機！"
       };
     }
   }

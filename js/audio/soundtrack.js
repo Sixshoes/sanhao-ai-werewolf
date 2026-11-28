@@ -232,34 +232,38 @@ const sound = {
         selfUnlock.updateEqIndicator();
       }
     };
-    if (this.ctx && this.ctx.state === "suspended") {
-      if (!this._unlockingPromise) {
-        let resumeRes = null;
-        try {
-          resumeRes = this.ctx.resume();
-        } catch (e) {}
-        if (resumeRes && typeof resumeRes.then === "function") {
-          this._unlockingPromise = resumeRes.then(function () {
-            selfUnlock._unlockingPromise = null;
+    try {
+      if (this.ctx && this.ctx.state === "suspended") {
+        if (!this._unlockingPromise) {
+          let resumeRes = null;
+          try {
+            resumeRes = this.ctx.resume();
+          } catch (_e) {}
+          if (resumeRes && typeof resumeRes.then === "function") {
+            this._unlockingPromise = resumeRes.then(function () {
+              selfUnlock._unlockingPromise = null;
+              startWhenReady();
+              return Boolean(selfUnlock.ctx && selfUnlock.ctx.state === "running");
+            }).catch(function () {
+              selfUnlock._unlockingPromise = null;
+              selfUnlock.updateEqIndicator();
+              return false;
+            });
+          } else {
             startWhenReady();
-            return Boolean(selfUnlock.ctx && selfUnlock.ctx.state === "running");
-          }).catch(function () {
-            selfUnlock._unlockingPromise = null;
-            selfUnlock.updateEqIndicator();
-            return false;
-          });
-        } else {
-          startWhenReady();
+          }
         }
+        this.updateEqIndicator();
+        if (typeof voice !== "undefined" && typeof voice.unlock === "function") voice.unlock();
+        return this._unlockingPromise || Promise.resolve(Boolean(this.ctx && this.ctx.state === "running"));
       }
+      startWhenReady();
       this.updateEqIndicator();
       if (typeof voice !== "undefined" && typeof voice.unlock === "function") voice.unlock();
-      return this._unlockingPromise || Promise.resolve(Boolean(this.ctx && this.ctx.state === "running"));
+      return Promise.resolve(Boolean(this.ctx && this.ctx.state === "running"));
+    } catch (_e) {
+      return Promise.resolve(false);
     }
-    startWhenReady();
-    this.updateEqIndicator();
-    if (typeof voice !== "undefined" && typeof voice.unlock === "function") voice.unlock();
-    return Promise.resolve(Boolean(this.ctx && this.ctx.state === "running"));
   },
 
   buildWoodenPavilionImpulse: function (seconds) {

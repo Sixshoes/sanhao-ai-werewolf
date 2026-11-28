@@ -45,6 +45,15 @@ const bootPreloader = {
     this._enterKeyHandler = null;
   },
 
+  safeUnlockAudio: function () {
+    try {
+      if (typeof sound !== "undefined" && sound && typeof sound.unlock === "function") {
+        return sound.unlock();
+      }
+    } catch (_e) {}
+    return null;
+  },
+
   resetBuckets: function () {
     this.buckets = {
       sky: { done: 0, total: 4, weight: 20 },
@@ -69,10 +78,12 @@ const bootPreloader = {
     if (skipBtn && !this._skipBound && typeof skipBtn.addEventListener === "function") {
       this._skipBound = true;
       skipBtn.addEventListener("click", function () {
-        if (typeof sound !== "undefined" && sound && typeof sound.unlock === "function") {
-          sound.unlock();
+        try {
+          self.safeUnlockAudio();
+        } catch (_e) {
+        } finally {
+          self.dismiss("skip");
         }
-        self.dismiss("skip");
       });
     }
     if (skipBtn) skipBtn.classList.add("hidden");
@@ -84,13 +95,15 @@ const bootPreloader = {
       this._overlayGestureBound = true;
       const handleOverlayEnter = function (ev) {
         if (!self.awaitingGesture || self.finished) return;
-        if (ev && ev.type === "touchend" && typeof ev.preventDefault === "function") {
-          ev.preventDefault();
+        try {
+          if (ev && ev.type === "touchend" && typeof ev.preventDefault === "function") {
+            ev.preventDefault();
+          }
+          self.safeUnlockAudio();
+        } catch (_e) {
+        } finally {
+          self.dismiss("complete");
         }
-        if (typeof sound !== "undefined" && sound && typeof sound.unlock === "function") {
-          sound.unlock();
-        }
-        self.dismiss("complete");
       };
       ov.addEventListener("click", handleOverlayEnter);
       ov.addEventListener("touchend", handleOverlayEnter);
@@ -146,10 +159,12 @@ const bootPreloader = {
         if (!self.awaitingGesture || self.finished) return;
         const key = ev && ev.key ? String(ev.key) : "";
         if (key === "Shift" || key === "Control" || key === "Alt" || key === "Meta") return;
-        if (typeof sound !== "undefined" && sound && typeof sound.unlock === "function") {
-          sound.unlock();
+        try {
+          self.safeUnlockAudio();
+        } catch (_e) {
+        } finally {
+          self.dismiss("complete");
         }
-        self.dismiss("complete");
       };
       window.addEventListener("keydown", this._enterKeyHandler, true);
     }
@@ -207,10 +222,14 @@ const bootPreloader = {
       if (this.hardTimer) { clearTimeout(this.hardTimer); this.hardTimer = null; }
       if (this.audioGateTimer) { clearTimeout(this.audioGateTimer); this.audioGateTimer = null; }
       const self = this;
-      const unlockRes = (typeof sound !== "undefined" && sound && typeof sound.unlock === "function")
-        ? sound.unlock()
-        : null;
-      if (this.isAudioRunning() || this.isAudioMuted()) {
+      const unlockRes = this.safeUnlockAudio();
+      let audioReadyOrMuted = false;
+      try {
+        audioReadyOrMuted = this.isAudioRunning() || this.isAudioMuted();
+      } catch (_e) {
+        audioReadyOrMuted = true;
+      }
+      if (audioReadyOrMuted) {
         this.audioGateTimer = setTimeout(function () {
           self.audioGateTimer = null;
           self.dismiss("complete");
@@ -218,8 +237,12 @@ const bootPreloader = {
       } else {
         if (unlockRes && typeof unlockRes.then === "function") {
           unlockRes.then(function () {
-            if (!self.finished && self.isAudioRunning()) {
-              if (self.audioGateTimer) { clearTimeout(self.audioGateTimer); self.audioGateTimer = null; }
+            try {
+              if (!self.finished && self.isAudioRunning()) {
+                if (self.audioGateTimer) { clearTimeout(self.audioGateTimer); self.audioGateTimer = null; }
+                self.dismiss("complete");
+              }
+            } catch (_e) {
               self.dismiss("complete");
             }
           }).catch(function () {});
@@ -227,10 +250,14 @@ const bootPreloader = {
         this.audioGateTimer = setTimeout(function () {
           self.audioGateTimer = null;
           if (self.finished) return;
-          if (self.isAudioRunning() || self.isAudioMuted()) {
+          try {
+            if (self.isAudioRunning() || self.isAudioMuted()) {
+              self.dismiss("complete");
+            } else {
+              self.enterGestureGate();
+            }
+          } catch (_e) {
             self.dismiss("complete");
-          } else {
-            self.enterGestureGate();
           }
         }, 240);
       }

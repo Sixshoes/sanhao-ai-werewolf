@@ -1701,9 +1701,9 @@ const voice = {
         }
         const strippedText = self.stripGeminiVocalTags(cleanText) || cleanText;
         const trackAStartedAt = Date.now();
-        // Keep frontend single-attempt timeout above relaxed backend PRIMARY_TIMEOUT_MS (6200ms)
-        const firstAttemptTimeoutMs = isMobileNet ? 6200 : 6800;
-        const trackATotalBudgetMs = 9500;
+        // Keep frontend single-attempt timeout above backend TOTAL_BUDGET_MS (9200ms) for RTT + fallback model headroom
+        const firstAttemptTimeoutMs = isMobileNet ? 8400 : 8600;
+        const trackATotalBudgetMs = 10500;
         const minRetryBudgetMs = isMobileNet ? 1800 : 2200;
         const postOnce = async function (txtToSend, attemptTimeoutMs) {
           const reqCtrl = typeof AbortController === "function" ? new AbortController() : null;

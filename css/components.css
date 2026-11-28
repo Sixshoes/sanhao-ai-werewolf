@@ -20670,19 +20670,22 @@ body.craft-ui .turn-strip-row::-webkit-scrollbar {
 
 body.craft-ui #seatButtonStrip > :first-child,
 body.craft-ui #speakerTurnStrip > :first-child,
-body.craft-ui #playerTurnOrderStrip > :first-child {
+body.craft-ui #playerTurnOrderStrip > :first-child,
+body.craft-ui .turn-strip-row > :first-child {
   margin-left: auto;
 }
 
 body.craft-ui #seatButtonStrip > :last-child,
 body.craft-ui #speakerTurnStrip > :last-child,
-body.craft-ui #playerTurnOrderStrip > :last-child {
+body.craft-ui #playerTurnOrderStrip > :last-child,
+body.craft-ui .turn-strip-row > :last-child {
   margin-right: auto;
 }
 
 body.craft-ui #seatButtonStrip > .seat-pill-btn,
 body.craft-ui #speakerTurnStrip > *,
-body.craft-ui #playerTurnOrderStrip > * {
+body.craft-ui #playerTurnOrderStrip > *,
+body.craft-ui .turn-strip-row > * {
   flex-shrink: 0;
   white-space: nowrap;
 }
