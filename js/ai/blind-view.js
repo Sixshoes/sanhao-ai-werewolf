@@ -163,6 +163,9 @@ function createBlindSeatView(viewerSeat, rawSeat, opts) {
   const view = {
     id: rawSeat.id,
     name: rawSeat.name,
+    isHuman: Boolean(rawSeat.isHuman || rawSeat.isPlayer || rawSeat.id === pid),
+    gender: rawSeat.gender || (typeof getSeatGender === "function" ? getSeatGender(rawSeat) : "neutral"),
+    aliases: Array.isArray(rawSeat.aliases) ? rawSeat.aliases.slice() : [],
     trait: rawSeat.trait,
     deductionStyle: rawSeat.deductionStyle || "balanced",
     color: rawSeat.color,
@@ -563,6 +566,30 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     ? getTeaAtmosphereState(typeof m.harmonyScore === "number" ? m.harmonyScore : 72).id
     : ((m.harmonyScore || 72) >= 80 ? "clear" : ((m.harmonyScore || 72) <= 45 ? "fog" : "calm"));
 
+  const pubShRaw = m.sheriffElectionCtx;
+  const publicSheriffCtx = pubShRaw
+    ? Object.freeze({
+        stage: pubShRaw.stage || "",
+        candidateIds: Array.isArray(pubShRaw.candidateIds) ? pubShRaw.candidateIds.slice() : [],
+        speechOrderIds: Array.isArray(pubShRaw.speechOrderIds) ? pubShRaw.speechOrderIds.slice() : [],
+        withdrawnIds: Array.isArray(pubShRaw.withdrawnIds) ? pubShRaw.withdrawnIds.slice() : [],
+        hasDoubleSeerClash: Boolean(pubShRaw.hasDoubleSeerClash),
+        spokenSpeeches: Array.isArray(pubShRaw.spokenSpeeches)
+          ? Object.freeze(pubShRaw.spokenSpeeches.map(function (sp) {
+              return Object.freeze({
+                seatId: sp.seatId || sp.id || null,
+                name: sp.name || "",
+                text: String(sp.text || ""),
+                claimedSeer: Boolean(sp.claimedSeer),
+                checkedTargetId: sp.checkedTargetId || null,
+                checkedIsWolf: Boolean(sp.checkedIsWolf),
+                withdrawn: Boolean(sp.withdrawn)
+              });
+            }))
+          : Object.freeze([])
+      })
+    : null;
+
   return Object.freeze({
     started: true,
     module: moduleTag,
@@ -577,6 +604,7 @@ function createBlindMatchSnapshot(viewerSeat, opts) {
     teaAtmosphere: teaAtmosphere,
     sheriffSeatId: m.sheriffSeatId || null,
     sheriffElectionPending: Boolean(m.sheriffElectionPending),
+    publicSheriffCtx: publicSheriffCtx,
     hasGuardMode: hasGuardMode,
     pkCandidates: Array.isArray(m.pkCandidates) ? m.pkCandidates.slice() : null,
     pkActive: Boolean(Array.isArray(m.pkCandidates) && m.pkCandidates.length >= 2),

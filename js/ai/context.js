@@ -1107,7 +1107,225 @@ function buildTableSlotAndWorldAnalysis(viewerSeat, snapArg) {
   };
 }
 
-function buildSpeechContext(speaker) {
+function classifySpeechGameState(speaker, snap, opts) {
+  const o = opts || {};
+  const s = snap || {};
+  const phase = String(o.phase || s.phase || "");
+  const day = Math.max(1, Number(o.day || s.day || 1));
+  const aliveCount = Array.isArray(s.aliveSeats) ? s.aliveSeats.length : 0;
+  const isLastWords = Boolean(
+    o.isLastWords ||
+    phase === "LAST_WORDS_SPEECH" ||
+    phase === "LAST_WORDS_PLAYER"
+  );
+  const isSheriff = Boolean(
+    !isLastWords && (
+      o.isSheriff ||
+      phase === "SHERIFF_ELECTION" ||
+      (s.publicSheriffCtx && phase === "SHERIFF_ELECTION")
+    )
+  );
+  const isPk = Boolean(
+    !isLastWords && !isSheriff && (
+      o.isPk ||
+      s.pkActive ||
+      (Array.isArray(s.pkCandidates) && s.pkCandidates.length >= 2)
+    )
+  );
+
+  const dayEvs = Array.isArray(s.daySpeechEvents) ? s.daySpeechEvents : [];
+  const pubLogsToday = Array.isArray(s.publicLogs)
+    ? s.publicLogs.filter(function (l) { return l && l.day === day && l.kind === "speech"; })
+    : [];
+  const shSpoken = (s.publicSheriffCtx && Array.isArray(s.publicSheriffCtx.spokenSpeeches))
+    ? s.publicSheriffCtx.spokenSpeeches
+    : [];
+  const shOrder = (s.publicSheriffCtx && Array.isArray(s.publicSheriffCtx.speechOrderIds))
+    ? s.publicSheriffCtx.speechOrderIds
+    : ((s.publicSheriffCtx && Array.isArray(s.publicSheriffCtx.candidateIds)) ? s.publicSheriffCtx.candidateIds : []);
+
+  let spokenCount = 0;
+  let remainingCount = 0;
+  if (isSheriff) {
+    spokenCount = (typeof o.spokenCount === "number")
+      ? o.spokenCount
+      : shSpoken.filter(function (sp) { return sp && sp.seatId !== (speaker && speaker.id); }).length;
+    remainingCount = Math.max(0, shOrder.length - spokenCount - 1);
+  } else {
+    const seen = {};
+    dayEvs.forEach(function (ev) {
+      if (ev && ev.speakerId && (!speaker || ev.speakerId !== speaker.id)) seen[ev.speakerId] = true;
+    });
+    pubLogsToday.forEach(function (l) {
+      if (l && l.speakerId && (!speaker || l.speakerId !== speaker.id)) seen[l.speakerId] = true;
+    });
+    spokenCount = Object.keys(seen).length;
+    remainingCount = Math.max(0, aliveCount - spokenCount - 1);
+  }
+
+  const seerClaimers = {};
+  (Array.isArray(s.allSpeechEvents) ? s.allSpeechEvents : []).forEach(function (ev) {
+    if (ev && ev.claimRole === "seer" && ev.speakerId) seerClaimers[ev.speakerId] = true;
+  });
+  shSpoken.forEach(function (sp) {
+    if (sp && sp.claimedSeer && sp.seatId) seerClaimers[sp.seatId] = true;
+  });
+  if (s.sheriffVoteRecord && Array.isArray(s.sheriffVoteRecord.seerClaimIds)) {
+    s.sheriffVoteRecord.seerClaimIds.forEach(function (cid) { if (cid) seerClaimers[cid] = true; });
+  }
+  (Array.isArray(s.seats) ? s.seats : []).forEach(function (st) {
+    if (st && st.claimedRole === "seer" && st.id) seerClaimers[st.id] = true;
+  });
+  const seerClaimCount = Object.keys(seerClaimers).length;
+
+  let stateTag = "DAY1_SINGLE";
+  let stateLabel = "第1天白天 單邊觀察員或無人起跳";
+  if (isLastWords) {
+    stateTag = "LAST_WORDS";
+    stateLabel = "出局遺言";
+  } else if (isPk) {
+    stateTag = "PK_DEFENSE";
+    stateLabel = "平票 PK 生死辯護";
+  } else if (isSheriff) {
+    if (spokenCount <= 1) {
+      stateTag = "SHERIFF_EARLY";
+      stateLabel = "警上競選 首置位";
+    } else {
+      stateTag = "SHERIFF_LATE";
+      stateLabel = "警上競選 中後置位";
+    }
+  } else if (aliveCount > 0 && ((day >= 2 && aliveCount <= 7) || aliveCount <= 6)) {
+    stateTag = "ENDGAME";
+    stateLabel = "殘局決勝階段";
+  } else if (day >= 2) {
+    stateTag = "DAY2_PLUS";
+    stateLabel = "第" + day + "天白天 票型複盤與生存驗證";
+  } else if (seerClaimCount >= 2) {
+    stateTag = "DAY1_CLASH";
+    stateLabel = "第1天白天 雙觀察員對跳局";
+  } else {
+    stateTag = "DAY1_SINGLE";
+    stateLabel = "第1天白天 單邊或無人起跳局";
+  }
+
+  let positionRole = "中間位";
+  if (spokenCount === 0 || (isSheriff && spokenCount <= 1) || (!isSheriff && spokenCount <= 1 && aliveCount >= 10)) {
+    positionRole = "首置位";
+  } else if (remainingCount <= 1 || (s.sheriffSeatId && speaker && s.sheriffSeatId === speaker.id && !isSheriff)) {
+    positionRole = "末置歸票位";
+  }
+
+  return Object.freeze({
+    stateTag: stateTag,
+    stateLabel: stateLabel,
+    positionRole: positionRole,
+    spokenCount: spokenCount,
+    remainingCount: remainingCount,
+    day: day,
+    aliveCount: aliveCount,
+    seerClaimCount: seerClaimCount,
+    isSheriff: isSheriff,
+    isPk: isPk,
+    isLastWords: isLastWords
+  });
+}
+
+function buildRecentSpeakersSummary(snap, speakerId, opts) {
+  const s = snap || {};
+  const o = opts || {};
+  const phase = String(o.phase || s.phase || "");
+  const getBlindSeat = typeof s.getSeat === "function" ? s.getSeat : function () { return null; };
+  const labelOf = function (id) {
+    const st = getBlindSeat(id);
+    if (!st) return id + "號";
+    return st.id + "號" + (st.isHuman || st.isPlayer ? "玩家" : st.name);
+  };
+  const compactOpener = function (txt) {
+    const cleaned = String(txt || "").replace(/\s+/g, "").replace(/[（()）]/g, "");
+    return cleaned.slice(0, 10);
+  };
+
+  if (phase === "SHERIFF_ELECTION" && s.publicSheriffCtx && Array.isArray(s.publicSheriffCtx.spokenSpeeches)) {
+    return s.publicSheriffCtx.spokenSpeeches
+      .filter(function (sp) { return sp && sp.seatId && sp.seatId !== speakerId; })
+      .slice(-3)
+      .map(function (sp) {
+        const st = getBlindSeat(sp.seatId);
+        let stance = sp.withdrawn ? "選擇退水" : "表態競選警長";
+        if (sp.claimedSeer && sp.checkedTargetId) {
+          stance = "起跳觀察員報驗 " + labelOf(sp.checkedTargetId) + (sp.checkedIsWolf ? " 為酸民狼" : " 為好人");
+        }
+        return {
+          seatId: sp.seatId,
+          name: st ? st.name : (sp.name || ""),
+          gender: st ? (st.gender || "neutral") : "neutral",
+          opener10: compactOpener(sp.text),
+          stanceSummary: stance
+        };
+      });
+  }
+
+  const dayEvs = Array.isArray(s.daySpeechEvents) ? s.daySpeechEvents : [];
+  return dayEvs
+    .filter(function (ev) { return ev && ev.speakerId && ev.speakerId !== speakerId && !ev.isLastWord; })
+    .slice(-3)
+    .map(function (ev) {
+      const st = getBlindSeat(ev.speakerId);
+      const parts = [];
+      if (ev.claimRole === "seer") parts.push("跳觀察員");
+      else if (ev.claimRole === "witch") parts.push("跳奉茶師");
+      else if (ev.claimRole === "guard") parts.push("跳守衛");
+      else if (ev.claimRole === "hunter") parts.push("跳糾察長");
+      if (ev.checkedWolfId) parts.push("查殺 " + labelOf(ev.checkedWolfId));
+      else if (ev.checkedGoodId) parts.push("驗出好人 " + labelOf(ev.checkedGoodId));
+      if (ev.standWithSeerId) parts.push("站邊 " + labelOf(ev.standWithSeerId));
+      if (ev.accuseId) parts.push("懷疑並預定投 " + labelOf(ev.accuseId));
+      if (ev.vouchId) parts.push("保護 " + labelOf(ev.vouchId));
+      return {
+        seatId: ev.speakerId,
+        name: st ? st.name : (ev.speakerName || ""),
+        gender: st ? (st.gender || "neutral") : "neutral",
+        opener10: compactOpener(ev.rawText),
+        stanceSummary: parts.length ? parts.join("，") : "正常表態理邏輯"
+      };
+    });
+}
+
+function buildPriorDayVotesSummary(snap) {
+  const s = snap || {};
+  const vhList = Array.isArray(s.voteHistory) ? s.voteHistory : [];
+  if (!vhList.length) return "";
+  const getBlindSeat = typeof s.getSeat === "function" ? s.getSeat : function () { return null; };
+  const labelOf = function (id) {
+    const st = getBlindSeat(id);
+    if (!st) return id + "號";
+    return st.id + "號" + (st.isHuman || st.isPlayer ? "玩家" : st.name);
+  };
+  const recentVh = vhList.slice(-2);
+  return recentVh.map(function (vh) {
+    const byTarget = {};
+    const abstainers = [];
+    (vh.ballots || []).forEach(function (b) {
+      if (!b || !b.voterId) return;
+      if (!b.targetId) {
+        abstainers.push(labelOf(b.voterId));
+      } else {
+        if (!byTarget[b.targetId]) byTarget[b.targetId] = [];
+        byTarget[b.targetId].push(labelOf(b.voterId));
+      }
+    });
+    const segments = Object.keys(byTarget)
+      .sort(function (a, b) { return byTarget[b].length - byTarget[a].length; })
+      .map(function (tid) {
+        return "投給 " + labelOf(Number(tid)) + "：" + byTarget[tid].join("、");
+      });
+    if (abstainers.length) segments.push("棄票：" + abstainers.join("、"));
+    const outStr = vh.outId ? ("結果 " + labelOf(vh.outId) + " 離席") : "平票未出人";
+    return "第" + (vh.day || 1) + "天公投 " + outStr + "，票型為 " + segments.join("；");
+  }).join(" | ");
+}
+
+function buildSpeechContext(speaker, opts) {
   const snap = typeof createBlindMatchSnapshot === "function"
     ? createBlindMatchSnapshot(speaker, { module: "speech_context" })
     : null;
@@ -1432,11 +1650,33 @@ function buildSpeechContext(speaker) {
     }
   }
 
+  const recentSpeakersSummary = snap ? buildRecentSpeakersSummary(snap, speaker.id, opts) : [];
+  const priorDayVotesSummary = snap ? buildPriorDayVotesSummary(snap) : "";
+  const speechStateInfo = snap ? classifySpeechGameState(speaker, snap, opts) : {
+    stateTag: (day >= 2 ? "DAY2_PLUS" : "DAY1_SINGLE"),
+    stateLabel: (day >= 2 ? "第" + day + "天白天" : "第1天白天"),
+    positionRole: isFirstToday ? "首置位" : (isLateSeat ? "末置歸票位" : "中間位"),
+    spokenCount: spokenIdsToday.length,
+    remainingCount: Math.max(0, unspokenOthers.length - 1),
+    day: day,
+    aliveCount: aliveOthers.length + (speaker.alive ? 1 : 0),
+    seerClaimCount: 0,
+    isSheriff: false,
+    isPk: false,
+    isLastWords: false
+  };
+
   return {
     snap: snap,
     getBlindSeat: getBlindSeat,
     aliveOthers: aliveOthers,
     day: day,
+    stateTag: speechStateInfo.stateTag,
+    stateLabel: speechStateInfo.stateLabel,
+    positionRole: speechStateInfo.positionRole,
+    speechStateInfo: speechStateInfo,
+    recentSpeakersSummary: recentSpeakersSummary,
+    priorDayVotesSummary: priorDayVotesSummary,
     todaySpeeches: todaySpeeches,
     spokenIdsToday: spokenIdsToday,
     spokenOthers: spokenOthers,

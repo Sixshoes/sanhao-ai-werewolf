@@ -357,16 +357,55 @@ function triggerScreenFlash(color, durationMs, intensity) {
   };
 }
 
+function _pickUniqueCrowdReactionLine(seat, key, extraFallbacks, salt) {
+  const m = (typeof state !== "undefined" && state.match) ? state.match : null;
+  const usedMap = m ? (m.usedReactionSet || (m.usedReactionSet = {})) : null;
+  const flv = (typeof PERSONA_FLAVORS !== "undefined" && seat && PERSONA_FLAVORS[seat.name])
+    ? PERSONA_FLAVORS[seat.name]
+    : null;
+  const vsPool = (flv && flv.voiceStyle && Array.isArray(flv.voiceStyle[key])) ? flv.voiceStyle[key] : [];
+  const pool = vsPool.concat(Array.isArray(extraFallbacks) ? extraFallbacks : []);
+  const sanitize = function (txt) {
+    let s = String(txt || "");
+    if (s && typeof fixGenderHonorificMismatch === "function") {
+      s = fixGenderHonorificMismatch(s, m && m.seats);
+    }
+    if (s && typeof stripDialogueParentheses === "function") {
+      s = stripDialogueParentheses(s);
+    }
+    return s;
+  };
+  const uniqueCands = [];
+  pool.forEach(function (item) {
+    const clean = sanitize(item);
+    if (clean && uniqueCands.indexOf(clean) === -1) uniqueCands.push(clean);
+  });
+  if (!uniqueCands.length) return sanitize((extraFallbacks && extraFallbacks[0]) || "");
+  const startIdx = Math.abs(((seat && seat.id) || 1) * 7 + (salt || 0) * 11 + ((m && m.day) || 1) * 3) % uniqueCands.length;
+  let picked = "";
+  for (let i = 0; i < uniqueCands.length; i++) {
+    const cand = uniqueCands[(startIdx + i) % uniqueCands.length];
+    if (!usedMap || !usedMap[cand]) {
+      picked = cand;
+      break;
+    }
+  }
+  if (!picked) {
+    picked = uniqueCands[startIdx];
+  }
+  if (usedMap && picked) {
+    usedMap[picked] = true;
+    if (m.usedReactionIndices) m.usedReactionIndices[picked] = true;
+  }
+  return picked;
+}
+
 // Turn-respecting silent micro-reactions (expressions, spring nudges, particles & ultra-short silent bubbles only!)
 function triggerAiCrowdReactions(mode, focusSeatId) {
   if (typeof state === "undefined" || !state.match || !state.match.started) return;
   const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
-  const pickShort = function (seat, key, fallback) {
-    if (typeof pickPersonaVoice === "function") {
-      const s = pickPersonaVoice(seat, key, seat.id);
-      if (s) return s;
-    }
-    return fallback;
+  const pickShort = function (seat, key, extraFallbacks) {
+    return _pickUniqueCrowdReactionLine(seat, key, extraFallbacks, focusSeatId || seat.id);
   };
   const aliveAis = getAliveSeats().filter(function (s) { return s.id !== pid; });
   if (!aliveAis.length) return;
@@ -383,7 +422,7 @@ function triggerAiCrowdReactions(mode, focusSeatId) {
       nudgeSeat(ai.id, { scale: 1.07, vy: -4 });
       spawnBurst(ai.id, ["#34d399", "#fde68a", "#ffffff"], mode === "crit" ? 10 : 6, "petal");
       if (mode === "crit") {
-        setSeatBubble(ai.id, pickShort(ai, "reactNod", "這段邏輯很順！"), "trust", 1900);
+        setSeatBubble(ai.id, pickShort(ai, "reactNod", ["這段邏輯很順！", "時間線對得起來", "這句說到點子上了", "同意這波視角分析"]), "trust", 1900);
       }
     });
     if (mode === "crit" && focusSeatId && focusSeatId !== pid) {
@@ -398,7 +437,7 @@ function triggerAiCrowdReactions(mode, focusSeatId) {
     doubters.forEach(function (ai) {
       setSeatEmotion(ai.id, "nervous", 2400);
       nudgeSeat(ai.id, { scale: 0.94, vTilt: -0.16 });
-      setSeatBubble(ai.id, pickShort(ai, "reactDoubt", "這語氣怪怪的…"), "suspect", 1900);
+      setSeatBubble(ai.id, pickShort(ai, "reactDoubt", ["這語氣不太自然…", "前後說法有落差", "總覺得哪裡沒講清", "先留著盯緊後續票型"]), "suspect", 1900);
     });
   }
 }
@@ -406,12 +445,8 @@ function triggerAiCrowdReactions(mode, focusSeatId) {
 function triggerSpeechAudienceReactions(speaker, generated) {
   if (!speaker || !generated || typeof state === "undefined" || !state.match || !state.match.started) return;
   const pid = typeof getPlayerId === "function" ? getPlayerId() : 1;
-  const pickShort = function (seat, key, fallback) {
-    if (typeof pickPersonaVoice === "function") {
-      const s = pickPersonaVoice(seat, key, speaker.id);
-      if (s) return s;
-    }
-    return fallback;
+  const pickShort = function (seat, key, extraFallbacks) {
+    return _pickUniqueCrowdReactionLine(seat, key, extraFallbacks, speaker.id);
   };
 
   const pitTargets = [];
@@ -427,7 +462,7 @@ function triggerSpeechAudienceReactions(speaker, generated) {
     setSeatEmotion(tid, idx === 0 ? "shock" : "nervous", 2600);
     nudgeSeat(tid, { scale: 0.91, vy: 4, vTilt: 0.2 });
     if (idx === 0) {
-      setSeatBubble(tid, pickShort(tSeat, "reactGasp", "這跟我無關吧！"), "suspect", 1900);
+      setSeatBubble(tid, pickShort(tSeat, "reactGasp", ["這推論跟我無關吧！", "沒憑沒據別亂點進狼坑", "待會輪到我再正面對質"]), "suspect", 1900);
       if (typeof voice !== "undefined" && typeof voice.triggerSeatBackchannel === "function") {
         voice.triggerSeatBackchannel(tid, "accuse", 740);
       }
@@ -440,7 +475,7 @@ function triggerSpeechAudienceReactions(speaker, generated) {
       setSeatEmotion(vSeat.id, "happy", 2400);
       nudgeSeat(vSeat.id, { scale: 1.07, vy: -3.5 });
       spawnBurst(vSeat.id, ["#34d399", "#fde68a"], 8, "petal");
-      setSeatBubble(vSeat.id, pickShort(vSeat, "reactVouch", "謝謝信任！"), "trust", 1800);
+      setSeatBubble(vSeat.id, pickShort(vSeat, "reactVouch", ["謝謝信任這張視角！", "感謝支持，我們接著看票型", "正派視角不用怕對照"]), "trust", 1800);
       if (pitTargets.length === 0 && typeof voice !== "undefined" && typeof voice.triggerSeatBackchannel === "function") {
         voice.triggerSeatBackchannel(vSeat.id, "vouch", 780);
       }

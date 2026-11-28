@@ -12,11 +12,11 @@
 const PERSONA_COGNITIVE_PROFILES = Object.freeze({
   "小澄": Object.freeze({
     register: "data",
-    shortTag: "數據",
+    shortTag: "條理",
     iconKey: "abacus",
     iconTone: "indigo",
-    registerBadge: "邏輯推演派",
-    logicTags: "極度審慎・獨立派・愛藏牌",
+    registerBadge: "條理時間線派",
+    logicTags: "極度審慎・時間線核對・愛藏牌",
     credulity: 0.48,
     grudgeMemory: 1.35,
     harmonySensitivity: 0.92,
@@ -24,16 +24,16 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.56,
     godHideBias: 0.72,
     talkCadence: 1.05,
-    sampleQuote: "欸等一下，我剛順了一遍大家講的時間點，這邊前後根本兜不攏耶…這聽起來像沒存檔就硬交報告吧，照刪去法看這輪我先投這張。",
-    llmStyleRule: "使用生動自然的台灣資工系男大生口吻（常帶『欸等一下、我剛順了一遍、前後兜不攏耶、照刪去法看』），帶一點冷面吐槽和日常理工比喻（像『這段聽起來像沒存檔硬交報告』『邏輯直接當機』），像熟識社友圍桌互相吐嘈推理；不重複喊制式『先這樣，過！』，嚴禁使用『邏輯閉環、高置信度、異常值、算力』或演講稿腔。"
+    sampleQuote: "剛順過大家發言的時間線，這段跟前面警下票型完全對不上，利益關係沒交代清楚前這票先往這邊看。",
+    llmStyleRule: "講話短促精準的條理時間線派，只認『發言先後時間線、警下票型流向、誰跟誰有利益關係』，不吃溫情牌；嚴禁使用電腦零件、系統故障比喻或演講稿腔。"
   }),
   "暖暖": Object.freeze({
     register: "warm",
-    shortTag: "泡茶",
+    shortTag: "護航",
     iconKey: "witch",
     iconTone: "jade",
-    registerBadge: "暖茶反差萌",
-    logicTags: "高輕信・極痛恨酸言・溫柔補刀",
+    registerBadge: "溫和護航反擊派",
+    logicTags: "高輕信・極痛恨酸言・有底線補刀",
     credulity: 1.45,
     grudgeMemory: 0.55,
     harmonySensitivity: 1.80,
@@ -41,16 +41,16 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.42,
     godHideBias: 0.28,
     talkCadence: 0.88,
-    sampleQuote: "欸大家先喝口熱茶別吵架嘛…可是老實說，你剛剛講到最後自己茶杯都端歪了吧，那暖暖只好笑著先把票投給你冷靜一下囉。",
-    llmStyleRule: "使用溫柔自然又帶反差萌的台灣女大生聊天語氣（常帶『欸大家先別急嘛、老實說心裡有點毛毛的、先喝口茶慢慢講』），擅長『笑咪咪地溫柔補刀』，語氣軟軟的卻一針見血；抽到酸民狼時用最體貼無辜的語氣悄悄把矛頭推給別人。"
+    sampleQuote: "大家先別急著上頭啦…可是老實說，你剛剛這輪換邊速度太刻意了，那我這票只好投給你冷靜一下。",
+    llmStyleRule: "使用溫和自然又帶反差鋒芒的聊天語氣（常帶『大家先別急嘛、老實說這裡不太對勁』），不輕易跟風亂踩緊張好人，但遇到惡意挑撥或偷換概念會微笑反擊；抽到酸民狼時用最體貼無辜的語氣悄悄把矛頭推給別人。"
   }),
   "阿松": Object.freeze({
     register: "mountain",
-    shortTag: "登山",
+    shortTag: "輪次",
     iconKey: "mountain",
     iconTone: "jade",
-    registerBadge: "山林江湖台味",
-    logicTags: "老練穩健・不易跟風・重義氣",
+    registerBadge: "穩健算輪次派",
+    logicTags: "老練穩健・計算容錯輪次・不易跟風",
     credulity: 0.60,
     grudgeMemory: 1.05,
     harmonySensitivity: 1.20,
@@ -58,8 +58,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.50,
     godHideBias: 0.55,
     talkCadence: 0.82,
-    sampleQuote: "欸老松講句實在話吼，你剛那段繞得比九彎十八拐山路還彎耶，聽完我都頭暈了，這輪大家別分票直接把心虛那位抓出來啦。",
-    llmStyleRule: "自稱『老松』，充滿台灣登山社老學長接地氣的幽默感與江湖味（常帶『欸老松講句實在話吼、別繞圈子啦、我看人很準的』），偶爾拿爬山看天氣、山路打滑來俏皮比喻場上誰在裝淡定，鬆弛風趣像真人學長聊天，不喊生硬口號。"
+    sampleQuote: "老松講句實在話，這輪再把票分出去容錯就少一輪了，別跟著後面空轉，直接對準最心虛那位表態。",
+    llmStyleRule: "自稱『老松』，充滿接地氣直覺與算輪次大局觀（常帶『老松講句實在話、別繞圈子、算一下輪次』），語氣沉穩老練、不吃空話套路，不喊生硬口號。"
   }),
   "星兒": Object.freeze({
     register: "astro",
@@ -93,15 +93,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     godHideBias: 0.62,
     talkCadence: 1.10,
     sampleQuote: "欸慢著，我筆記本才剛翻頁你就轉彎了喔？前面講的跟現在根本對不起來耶，這改口速度比趕截稿還快吧？",
-    llmStyleRule: "邊聽邊翻筆記抓包、帶點冷幽默的台灣新聞社學姊口吻（常帶『欸慢著、我剛記了一下喔、前後對不起來啊、你的根據在哪』），喜歡當場點破前後改口或甩鍋的反差感，犀利機智像真人口語，禁止『事實查核報告出爐、頭版快訊』等新聞播報腔。"
+    llmStyleRule: "邊聽邊翻筆記抓包、帶點冷幽默的冷靜複盤口吻（常帶『欸慢著、我剛記了一下喔、前後對不起來啊、你的根據在哪』），專幫好人梳理目前兩邊陣營的視角差、點破偷換概念的反差感，犀利機智像桌遊老手口語，禁止『事實查核報告出爐、頭版快訊』等新聞播報腔。"
   }),
   "阿竹": Object.freeze({
     register: "poetic",
-    shortTag: "茶藝",
+    shortTag: "留白",
     iconKey: "bamboo",
     iconTone: "jade",
-    registerBadge: "茶藝社詩茶從容",
-    logicTags: "風雅平衡・重三好氣度・從容藏鋒",
+    registerBadge: "冷眼留白抓潛伏",
+    logicTags: "風雅平衡・拆解跟風・從容藏鋒",
     credulity: 0.88,
     grudgeMemory: 0.72,
     harmonySensitivity: 1.55,
@@ -109,8 +109,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.35,
     godHideBias: 0.58,
     talkCadence: 0.85,
-    sampleQuote: "別急，這杯凍頂茶才泡第一沖呢，怎麼就有人自己先漏餡了？聽其言觀其行，這輪我先盯緊前後對不上的那位。",
-    llmStyleRule: "現代大學茶藝社學長從容又帶點俏皮損人的白話口吻，愛用泡茶濃淡、茶湯清濁當輕鬆比喻（偶爾點綴『一盞茶還沒涼、聽其言觀其行、清者自清』），幽默有書卷氣，嚴禁使用『吾、汝、諸君、妾身、小生、夫、蓋』等生硬古文代詞與虛詞。"
+    sampleQuote: "別急，剛才這輪有人急著表態卻沒把視角講清，聽其言觀其行，我先把目光留在這幾張順風票上。",
+    llmStyleRule: "大學茶藝社從容又帶點冷眼點評的白話口吻（偶爾點綴『聽其言觀其行、清者自清』），專盯低調跟風與假裝平和的潛伏席位，嚴禁使用『吾、汝、諸君、妾身、小生、夫、蓋』等生硬古文代詞與虛詞。"
   }),
   "晨晨": Object.freeze({
     register: "sport",
@@ -161,15 +161,15 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     godHideBias: 0.76,
     talkCadence: 0.76,
     sampleQuote: "剛剛那段聽起來像調音調過頭，弦都快繃斷了呢…晴嵐平常很願意信人，可這次連弦外之音都在替你喊緊張喔。",
-    llmStyleRule: "【溫和書卷化規範】現代大學國樂社古箏學姊溫柔又帶點俏皮機鋒的白話口吻，講話柔婉卻很會微笑點破別人的心虛（偶爾點綴『弦外之音、清濁分明、調音走板、聽話聽音』）；以『我、晴嵐、大家』自然稱呼，嚴禁使用『妾身、吾、汝、諸君、小生、夫、蓋』等古文代詞。"
+    llmStyleRule: "【溫和書卷化規範】現代大學國樂社晴嵐溫柔護航但有底線的白話口吻，不輕易第一天亂踩緊張好人，但遇到惡意帶風向抗推會微笑明確反擊（偶爾點綴『弦外之音、清濁分明、聽話聽音』）；以『我、晴嵐、大家』自然稱呼，嚴禁使用『妾身、吾、汝、諸君、小生、夫、蓋』等古文代詞。"
   }),
   "阿朗": Object.freeze({
     register: "debate",
-    shortTag: "辯論",
+    shortTag: "直球",
     iconKey: "scales",
     iconTone: "gold",
-    registerBadge: "法庭奧瑞岡辯論",
-    logicTags: "高審慎・最高記仇反打・強勢對跳",
+    registerBadge: "直球帶隊拆視角",
+    logicTags: "高審慎・討厭模糊棄票・正面拆視角",
     credulity: 0.50,
     grudgeMemory: 1.78,
     harmonySensitivity: 0.98,
@@ -177,16 +177,16 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.88,
     godHideBias: 0.48,
     talkCadence: 1.20,
-    sampleQuote: "欸等一下我先舉手問一句，你剛剛那段是證據還是許願啊？焦點轉得那麼順滑，我都差點想幫你拍手了，照證據看這輪先投你喔。",
-    llmStyleRule: "機智毒舌卻保持風度的台灣辯論社男大生口語（常帶『欸等一下、你這句是證據還是許願、邏輯說不通吧、別偷換概念』），擅長用俏皮反問把對方問到語塞，像真人好友鬥嘴辯論，禁止『正方一辯登場、立論甲立論乙』等生硬演講稿。"
+    sampleQuote: "別含糊混過這一輪，有對跳就正面拆清兩邊視角跟跟票陣型，直接把模糊棄票那幾位拉出來表態。",
+    llmStyleRule: "直球帶隊、機智犀利卻講理的桌遊主辯口語，討厭模糊棄票與兩邊討好，有對跳主張正面拆清視角跟跟票關係，禁止『正方一辯登場、立論甲立論乙』等生硬演講稿。"
   }),
   "柚子": Object.freeze({
     register: "pastry",
-    shortTag: "甜點",
+    shortTag: "直覺",
     iconKey: "pastry",
     iconTone: "jade",
-    registerBadge: "元氣烘焙甜點派",
-    logicTags: "高輕信・最強跟票共鳴・甜美活潑",
+    registerBadge: "直覺抓態度轉彎派",
+    logicTags: "高敏感・抓前後態度矛盾・直接點破",
     credulity: 1.40,
     grudgeMemory: 0.78,
     harmonySensitivity: 1.42,
@@ -194,8 +194,8 @@ const PERSONA_COGNITIVE_PROFILES = Object.freeze({
     bluffBoldness: 0.52,
     godHideBias: 0.20,
     talkCadence: 1.24,
-    sampleQuote: "咦…等一下喔，你剛剛那段聽起來像忘記放糖的布丁，表面平平的裡面怪怪的耶！別笑得那麼心虛啦，柚子這輪要先投你囉。",
-    llmStyleRule: "古靈精怪、活力滿滿的台灣點心社學妹口語（常帶『咦…等一下喔、怎麼聽起來空空的、別笑得那麼心虛啦』），擅長用烘焙甜點生動吐槽（像『塌掉的舒芙蕾』『沒放糖的布丁』『烤焦漏餡』），可愛有梗，禁止『叮咚烤箱計時器大響、雙重試吃開始』等卡通旁白。"
+    sampleQuote: "等一下喔，你剛剛前面講得超篤定，被追問又立刻縮回去，態度前後差這麼多太可疑了，這輪我先盯著你。",
+    llmStyleRule: "直覺敏銳、軟中帶剛的口語（常帶『等一下喔、前面講那樣現在又縮回去、態度差太多了吧』），專門抓別人發言前後態度不一致、心虛閃躲或突然縮回去的破綻，口吻輕快直接；嚴禁提及與推理無關的飲食或點心詞彙。"
   })
 });
 
@@ -235,7 +235,7 @@ const CLUB_ACQUAINTANCE_GROUPS = Object.freeze({
     key: "mountain_circle",
     title: "山城互挺組",
     members: Object.freeze(["阿松", "晨晨", "暖暖", "柚子"]),
-    desc: "登山社與球社練完常去茶社和點心社吃茶點；阿松與晨晨天生照應學妹，晨晨抽到狼被迫踩柚子時易露出語氣卡頓。"
+    desc: "平時常在同一桌一起復盤；阿松與晨晨習慣護著後輩，晨晨抽到狼被迫踩柚子時易露出語氣卡頓。"
   })
 });
 
@@ -462,8 +462,8 @@ function buildPersonaConciseTurnText(speaker, opts) {
         ally + " 論點站得住腳，這輪我先不踩這裡。"
       ],
       pastry: [
-        "嗯嗯！柚子也超相信 " + ally + " 的，換聽 " + next + " 分享囉～",
-        ally + " 講話像剛出爐的麵包一樣實在，這輪先站這邊！"
+        "嗯嗯！柚子也超相信 " + ally + " 的，換聽 " + next + " 分享囉。",
+        ally + " 講話前後態度超一致很實在，這輪先站這邊！"
       ]
     };
     return pick(bankCosign[reg] || bankCosign.data);
@@ -513,8 +513,8 @@ function buildPersonaConciseTurnText(speaker, opts) {
         other + " 證據站得住，反倒是 " + sus + " 在繞圈，這輪出 " + sus + "。"
       ],
       pastry: [
-        "比一比發現 " + other + " 安心好多喔，這輪我還是先投 " + sus + " 喔。",
-        other + " 講話暖暖的好信，" + sus + " 就甜甜怪怪的，我投 " + sus + " 啦。"
+        "比一比發現 " + other + " 坦蕩好多喔，這輪我還是先投 " + sus + "。",
+        other + " 講話前後一致，" + sus + " 就躲來躲去的，這輪先投 " + sus + "。"
       ]
     };
     return pick(bankContrast[reg] || bankContrast.data);
@@ -613,8 +613,8 @@ function buildPersonaConciseTurnText(speaker, opts) {
       "質詢不到實證就先請離，" + sus + " 這票跑不掉。"
     ],
     pastry: [
-      "唔…覺得 " + sus + " 講話像塌掉的舒芙蕾最可疑啦，我先投 " + sus + " 喔。",
-      "柚子左想右想還是覺得 " + sus + " 怪怪的，這票投 " + sus + "！"
+      "等一下喔，" + sus + " 前後態度轉得超明顯，這輪我先投 " + sus + "。",
+      "柚子左想右想還是覺得 " + sus + " 最會閃躲，這票投 " + sus + "！"
     ]
   };
   return pick(bankSnipe[reg] || bankSnipe.data);
@@ -812,7 +812,7 @@ const PERSONA_THINKING_CUES = Object.freeze({
   "墨白": "垂眸靜息凝神，心中暗擬一紙冷峻判詞…",
   "晴嵐": "指尖輕拂案沿似撥古箏，靜聆前席餘韻辨其清濁…",
   "阿朗": "整理手邊辯論提綱，準備展開凌厲的交叉質詢…",
-  "柚子": "歪頭托腮眨眨眼，回味誰的說法像沒烤熟的舒芙蕾…"
+  "柚子": "托腮看著茶桌，回想誰剛剛話講一半突然縮回去…"
 });
 
 const PERSONA_LOBBY_GREETINGS = Object.freeze({
@@ -857,8 +857,8 @@ const PERSONA_LOBBY_GREETINGS = Object.freeze({
     "正反雙方就位，開局後這場邏輯攻防肯定精彩。"
   ],
   "柚子": [
-    "學長姊好呀，柚子剛烤好小茶點端上桌囉，快開局一起抓狼吧。",
-    "好期待這局喔，等等大家溫柔說好話，可別被酸溜溜的壞狼騙走了。"
+    "大家好呀，柚子已經坐好準備聽各位拆邏輯囉，快開局一起抓狼吧。",
+    "好期待這局喔，等等看誰講話態度前後不一致，絕對躲不掉。"
   ]
 });
 
@@ -905,7 +905,7 @@ function formatUnspokenNoteByPersona(speaker, unspokenOthers, seatLabelFn) {
     return "後置位 " + firstLbl + (more ? " 他們" : "") + "氣場還沒解鎖耶，等聽完再掃描星盤！";
   }
   if (reg === "pastry") {
-    return "後置位 " + firstLbl + (more ? " 學長姊" : "") + "還沒出爐發言喔，先留著聽聽味道！";
+    return "後置位 " + firstLbl + (more ? " 幾位" : "") + "還沒輪到發言呢，先聽後面怎麼表態！";
   }
   if (reg === "sport") {
     return "後置位 " + firstLbl + (more ? " 他們" : "") + "還沒上場開打，先等他們表水接球！";
@@ -1123,8 +1123,8 @@ function buildPersonaPitRebutText(speaker, mode, d) {
       (allyLbl ? (allyLbl + " 絕對是可靠隊友放好人坑，") : "") + "真正該被抄截的狼坑是 " + pitNamesStr + "！" + unspokenTail + signoff;
   }
   if (reg === "pastry") {
-    return rebutLead + "咦？！" + accName + " 怎麼突然把柚子點進狼坑啦，我都快委屈得像塌掉的戚風蛋糕了！我真的是乖乖好夥伴耶，" +
-      (allyLbl ? (allyLbl + " 感覺好真誠先放好人坑，") : "") + "亂點火的 " + pitNamesStr + " 才是可疑狼坑啦！" + unspokenTail + signoff;
+    return rebutLead + "等一下喔，" + accName + " 前面都沒點我怎麼突然把我點進狼坑啦！我從頭到尾立場都沒縮過耶，" +
+      (allyLbl ? (allyLbl + " 講得比你好太多先放好人坑，") : "") + "態度轉最快又亂扣帽子的 " + pitNamesStr + " 才是可疑狼坑！" + unspokenTail + signoff;
   }
   return rebutLead + "前置位 " + accName + " 剛才把我點進狼坑，這裡我一定要講清楚：我全程理性找線索，根本不在狼坑裡！反而是 " + accName + " 沒實錘就急著把我劃進狼坑帶風向；若要我點坑，" +
     (allyLbl ? (allyLbl + " 先放好人坑，") : "") + "我懷疑的狼坑是 " + pitNamesStr + "！" + unspokenTail + signoff;
@@ -1195,7 +1195,7 @@ function buildPersonaLastWordsText(self, kind, d) {
       return "首夜什麼都還沒說就先離場，看來狼隊還挺怕我順邏輯的嘛！我是好人，大家今天務必把這 " + wolfTotal + " 隻酸民狼抓出來。";
     }
     if (kind === "wolf_voted") {
-      return "好啦算你們這桌邏輯太硬，我的小算盤直接被當場拆光！我先去旁邊喝茶看戲，但後面還有精彩戲碼等著你們喔。";
+      return "行吧，這桌把時間線跟票型對得太死，我沒空間繼續演了，先退場看你們後面怎麼收尾。";
     }
   }
 
@@ -1272,7 +1272,7 @@ function buildPersonaLastWordsText(self, kind, d) {
     if (kind === "witch") {
       return tLbl
         ? ("不是吧竟然把滴水奉茶師請出場喔？！我直接公布啦，前晚暖心回甘茶救回的是 " + tLbl + "，他是超鐵的好人，大家快把偷笑的狼抓出來啦！")
-        : "嗚星兒滴水奉茶師提早退場了啦，我先去旁邊啃點心看戲，記得抓剛才講話超虛的那位！";
+        : "唉星兒滴水奉茶師居然提早離席了，記得抓剛才講話超心虛、眼神亂飄的那位！";
     }
     if (kind === "guard") {
       return tLbl
@@ -1490,32 +1490,32 @@ function buildPersonaLastWordsText(self, kind, d) {
   if (reg === "pastry") {
     if (kind === "seer") {
       return isFirstNight
-        ? ("嗚哇餅乾都還沒出爐，柚子就首夜離席了啦！直接攤牌：我是真明心觀察員，昨晚查驗出爐，" + tLbl + " 是" + (isWolf ? ("烤焦的酸民狼，大家今天快把 " + tLbl + " 投出去替我報仇喔！") : "甜滋滋的鐵好人，千萬別誤會他喔！"))
-        : ("蛤你們真的把真明心觀察員投下桌了啦！柚子生氣氣留最後線索：昨晚查過 " + tLbl + " 是" + (isWolf ? ("酸民狼，明天不投 " + tLbl + " 我就不分大家吃布丁了喔！") : "超純良的好夥伴，拜託保護好他！"));
+        ? ("還沒輪到我開口就首夜離席喔？直接攤牌：我是真明心觀察員，昨晚查了 " + tLbl + " 是" + (isWolf ? ("酸民狼，今天快把 " + tLbl + " 投出去別讓他再帶風向！") : "鐵好人，千萬別誤投他！"))
+        : ("把真明心觀察員投下桌太虧了啦！離席前交代最後查驗：昨晚查過 " + tLbl + " 是" + (isWolf ? ("酸民狼，明天不投 " + tLbl + " 狼隊就要控票了！") : "清白好夥伴，請穩穩保住他！"));
     }
     if (kind === "witch") {
       return tLbl
-        ? ("咦竟然連滴水奉茶師都被請去罰站喔？好吧柚子招了，前晚暖心回甘茶是我端給 " + tLbl + " 的，他百分百好人啦，我先去旁邊吃蛋糕看你們抓狼！")
-        : "嗚哇滴水奉茶師先離席了啦，學長姊們千萬別再被酸溜溜的假話騙走喔！";
+        ? ("連滴水奉茶師都被投離席喔？好吧柚子交實底，前晚暖心回甘茶是我端給 " + tLbl + " 的，他百分百好人，剩下的去抓態度最反覆的那幾位！")
+        : "滴水奉茶師先離席了，大家千萬別再被故意製造混亂的假話騙走！";
     }
     if (kind === "guard") {
       return tLbl
-        ? ("人家其實是護心守衛啦！昨晚才剛守過 " + tLbl + " 就被請出場好可惜喔，奉茶師別撞同守，大家加油喔！")
-        : "柚子是護心守衛先去旁邊休息啦，記得看誰講話空空的像塌掉的舒芙蕾喔！";
+        ? ("我是護心守衛先退場啦，昨晚剛守過 " + tLbl + "，奉茶師注意別撞同守，明天看誰跟票最刻意。")
+        : "柚子是護心守衛先離席囉，記得看誰剛才問到重點就立刻縮回去！";
     }
     if (kind === "hunter") {
-      return "柚子亮直心糾察長留句提醒喔，" + (tLbl ? ("我覺得最怪、最像烤焦露餡的就是 " + tLbl + "，") : "") + "大家明天快點聯手抓住他！";
+      return "柚子亮直心糾察長留句提醒，" + (tLbl ? ("我聽下來態度轉彎最快、最心虛的就是 " + tLbl + "，") : "") + "大家明天快點盯緊他！";
     }
     if (kind === "good_voted" && callouts) {
       return seed === 0
-        ? ("嗚嗚柚子這麼乖還是被投出場了啦！剛才衝著我投票的 " + callouts + " 味道酸溜溜的超可疑，我端著小蛋糕去旁邊等你們明天後悔喔！")
-        : ("哼，把清白好人送出場，明天點心都不分你們吃了啦！快去查剛才投我的 " + callouts + "，大壞狼一定就在裡面！");
+        ? ("明明一直講實話還是被投出場了，剛才衝著我帶頭硬推的 " + callouts + " 態度超有問題，你們明天回頭翻票型就知道誰在帶節奏！")
+        : ("把清白好人投出場真的太虧了，快去查剛才聯手投我的 " + callouts + "，狼坑一定就在這幾票裡面！");
     }
     if (kind === "good_night1") {
-      return "哇麵糰都還沒發酵好，柚子就首夜領便當喔？我是無辜好夥伴，學長姊今天一定要把這 " + wolfTotal + " 隻酸民狼全揪出來！";
+      return "首夜連一句話都還沒說就被請離席喔？我是清白好人，今天大家務必盯緊投票流向把這 " + wolfTotal + " 隻酸民狼全揪出來！";
     }
     if (kind === "wolf_voted") {
-      return "哎呀烤過頭還是露餡被抓包了哈哈！大家眼睛也太尖了吧，那柚子先去旁邊切蛋糕看熱鬧，後面還有甜中帶辣的劇情等著你們喔！";
+      return "哎呀剛才語氣一縮還是被你們抓到破綻了，大家直覺真準！我認輸退場，後面剩下的隊友你們自己慢慢拆。";
     }
   }
   return null;

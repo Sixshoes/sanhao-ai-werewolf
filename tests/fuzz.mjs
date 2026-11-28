@@ -196,7 +196,13 @@ const gState = vm.runInContext("state", ctx);
 const roles = ["seer", "witch", "hunter", "guard", "villager", "wolf"];
 const diffs = ["easy", "normal", "pro"];
 const variantPool = ["standard", "standard", "fog_seal", "blitz_3m", "twin_tea", "lone_wolf_king"];
-const forbiddenSpeech = ["女巫", "毒藥", "解藥", "佛光大學", "fgu.edu.tw", "3goodai", "Sixshoes", "林美", "龜山島"];
+const forbiddenSpeech = [
+  "女巫", "毒藥", "解藥", "佛光大學", "fgu.edu.tw", "3goodai", "Sixshoes", "林美", "龜山島",
+  "小柚學長", "柚子學長", "晴嵐學長", "小雲學長", "暖暖學長", "星兒學長", "小澄學長",
+  "泡芙", "軟軟的", "硬碟", "記憶體", "CPU", "當機", "舒芙蕾", "布丁", "算盤", "馬卡龍", "桂花糕"
+];
+const forbiddenEmojiRe = /[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u;
+const forbiddenParenRe = /[（）()]/;
 
 let goodWins = 0;
 let wolfWins = 0;
@@ -234,6 +240,12 @@ function assertMatchInvariants(matchIdx) {
         throw new Error(`Match ${matchIdx}: forbidden term "${bad}" in speech: ${txt}`);
       }
     }
+    if (forbiddenEmojiRe.test(txt)) {
+      throw new Error(`Match ${matchIdx}: emoji found in speech: ${txt}`);
+    }
+    if (forbiddenParenRe.test(txt)) {
+      throw new Error(`Match ${matchIdx}: parentheses found in speech: ${txt}`);
+    }
     if (/01[0-2]號/.test(txt)) {
       throw new Error(`Match ${matchIdx}: malformed seat number (010/011/012) in speech: ${txt}`);
     }
@@ -243,11 +255,22 @@ function assertMatchInvariants(matchIdx) {
     if (/01[0-2]號/.test(txt)) {
       throw new Error(`Match ${matchIdx}: malformed seat number (010/011/012) in log: ${txt}`);
     }
+    if (lg.kind === "speech") {
+      const spTxt = String(lg.text || "");
+      for (const bad of forbiddenSpeech) {
+        if (spTxt.includes(bad)) {
+          throw new Error(`Match ${matchIdx}: forbidden term "${bad}" in speech log: ${spTxt}`);
+        }
+      }
+      if (forbiddenEmojiRe.test(spTxt) || forbiddenParenRe.test(spTxt)) {
+        throw new Error(`Match ${matchIdx}: emoji or parentheses in speech log: ${spTxt}`);
+      }
+    }
   }
 }
 
 const modeCounts = ["6", "8", "10", "12"];
-for (let i = 0; i < 60; i++) {
+for (let i = 0; i < 100; i++) {
   pendingTimers.clear();
   const variant = variantPool[i % variantPool.length];
   const count = variant === "lone_wolf_king" ? "6" : modeCounts[i % modeCounts.length];
@@ -452,4 +475,4 @@ for (let i = 0; i < 60; i++) {
   }
 }
 
-console.log(`[OK] 60-match deterministic multi-variant fuzz & invariant suite PASSED! (goodWins=${goodWins}, wolfWins=${wolfWins}, pkMatches=${pkTriggeredMatches}, maxDays=${maxDaysSeen}, variants=${JSON.stringify(variantCounts)})`);
+console.log(`[OK] 100-match deterministic multi-variant fuzz & invariant suite PASSED! (goodWins=${goodWins}, wolfWins=${wolfWins}, pkMatches=${pkTriggeredMatches}, maxDays=${maxDaysSeen}, variants=${JSON.stringify(variantCounts)})`);

@@ -819,6 +819,9 @@ function _buildDryRunHeuristicSpeech(seat) {
   const m = state.match || {};
   const prevBf = m.sheriffBadgeFlow;
   const prevBfBySeat = m.sheriffBadgeFlowsBySeat ? Object.assign({}, m.sheriffBadgeFlowsBySeat) : null;
+  const prevUsedFrags = m.usedHeuristicFragments
+    ? JSON.parse(JSON.stringify(m.usedHeuristicFragments))
+    : null;
   const drySeat = Object.assign({}, seat, {
     fakeCheckedIds: Array.isArray(seat.fakeCheckedIds) ? seat.fakeCheckedIds.slice() : [],
     suspicionMap: Object.assign({}, seat.suspicionMap || {})
@@ -826,9 +829,11 @@ function _buildDryRunHeuristicSpeech(seat) {
   const res = buildHeuristicAiSpeech(drySeat);
   const newBf = (m.sheriffBadgeFlowsBySeat && m.sheriffBadgeFlowsBySeat[seat.id]) || null;
   const oldBf = prevBfBySeat ? prevBfBySeat[seat.id] : null;
-  // Restore live match Badge Flow state so prefetch NEVER mutates table UI prematurely!
+  // Restore live match Badge Flow & anti-repeat state so prefetch NEVER mutates table UI prematurely!
   m.sheriffBadgeFlow = prevBf;
   if (prevBfBySeat) m.sheriffBadgeFlowsBySeat = prevBfBySeat;
+  if (prevUsedFrags) m.usedHeuristicFragments = prevUsedFrags;
+  else if (m.usedHeuristicFragments) delete m.usedHeuristicFragments;
   const patch = {
     claimedRole: drySeat.claimedRole !== seat.claimedRole ? drySeat.claimedRole : undefined,
     witchAnnouncedSave: drySeat.witchAnnouncedSave && !seat.witchAnnouncedSave,
@@ -1226,7 +1231,16 @@ async function executeAiTurnSpeech(speaker) {
     }
   }
   if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(ep)) return;
+  if (state.match && (state.match._wolfExplodePendingNight || state.match.wolfExplodedToday)) return;
   if (state._speechTurnSeq !== turnSeq || state.match.phase !== "DAY_SPEECH" || state.activeSpeakerId !== speaker.id || !speaker.alive) return;
+  if (generated && generated.text) {
+    if (typeof fixGenderHonorificMismatch === "function") {
+      generated.text = fixGenderHonorificMismatch(generated.text);
+    }
+    if (typeof stripDialogueParentheses === "function") {
+      generated.text = stripDialogueParentheses(generated.text);
+    }
+  }
 
   // Commit deferred seat flags & role claim right on this seat's actual speaking turn!
   const wasAlreadyClaimed = Boolean(speaker.claimedRole);

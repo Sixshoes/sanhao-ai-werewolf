@@ -1096,6 +1096,28 @@ function tryRoleSpecificSpeech(speaker, ctx) {
       };
     }
 
+    // Wolf Team Tactical Role Division (倒鉤潛伏位 vs 衝鋒助攻位 — strictly Blind-View zero-leak!)
+    const wolfTacRole = (typeof computeWolfTacticalRole === "function" && curWolfTactic === "auto" && !isDeepBusScript && !isPlayerPushScript)
+      ? computeWolfTacticalRole(speaker, snap, null)
+      : null;
+    if (wolfTacRole && wolfTacRole.key === "hook_stealth" && rivalSeerExposed && !wolfPartnerSeer) {
+      const outerGood = goodSpoken.find(function (s) { return s.id !== rivalSeerExposed.id && !s.voteDisabled; })
+        || goodAll.find(function (s) { return s.id !== rivalSeerExposed.id && !s.voteDisabled; });
+      if (outerGood) {
+        return {
+          targetId: outerGood.id,
+          relationType: "suspect",
+          accuseId: outerGood.id,
+          vouchId: rivalSeerExposed.id,
+          standWithSeerId: rivalSeerExposed.id,
+          wolfPits: [outerGood.id],
+          goodPits: [rivalSeerExposed.id],
+          hasToxicSlip: false,
+          text: wolfLead + "這輪我選擇暫信 " + seatLabel(rivalSeerExposed) + " 的視角，外置位的 " + seatLabel(outerGood) + " 一直避重就輕更可疑，先從 " + seatLabel(outerGood) + " 這條線查起。" + wolfSignoff
+        };
+      }
+    }
+
     // Dual-Seer Stealth Wolf: explicitly analyze BOTH worlds to make backing wolf partner sound credible!
     if (wolfPartnerSeer && rivalSeerExposed && dualSeerWorlds && dualSeerWorlds.chosenWorld && dualSeerWorlds.rivalWorld) {
       const partnerWorld = dualSeerWorlds.chosenWorld.trustedSeer.id === wolfPartnerSeer.id ? dualSeerWorlds.chosenWorld : dualSeerWorlds.rivalWorld;

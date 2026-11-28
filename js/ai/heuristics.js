@@ -3,6 +3,98 @@
  */
 "use strict";
 
+const DIVERSE_DAY_OPENER_PREFIXES = Object.freeze([
+  "我先講重點，",
+  "聽完前面幾位發言，",
+  "先把時間線順一遍，",
+  "就目前公開資訊來看，",
+  "這輪我想換個切入點，",
+  "剛才那段我有不同看法，",
+  "先把立場亮出來講，",
+  "順著剛剛的邏輯對一下，",
+  "我這邊補充一個觀察，",
+  "聽下來有件事我很在意，",
+  "回到剛才的核心爭點，",
+  "這輪票型非常關鍵，"
+]);
+
+function _getUsedFragmentsStore(ctx) {
+  const m = (typeof state !== "undefined" && state.match) ? state.match : null;
+  if (!m) return null;
+  if (!m.usedHeuristicFragments || typeof m.usedHeuristicFragments !== "object") {
+    m.usedHeuristicFragments = { buckets: {}, roundOpeners: {} };
+  }
+  if (!m.usedHeuristicFragments.buckets) m.usedHeuristicFragments.buckets = {};
+  if (!m.usedHeuristicFragments.roundOpeners) m.usedHeuristicFragments.roundOpeners = {};
+  return m.usedHeuristicFragments;
+}
+
+function pickUniqueFragment(pool, bucketKey, speaker, ctx, seedOffset) {
+  if (!Array.isArray(pool) || pool.length === 0) return "";
+  const dayNow = (ctx && ctx.day) || (ctx && ctx.snap && ctx.snap.day) || 1;
+  const mSeed = (ctx && ctx.snap && typeof ctx.snap.matchStyleSeed === "number") ? ctx.snap.matchStyleSeed : 0;
+  const spId = (speaker && speaker.id) || 1;
+  const baseIdx = Math.abs(spId * 11 + dayNow * 7 + (seedOffset || 0) * 5 + mSeed * 3) % pool.length;
+  const store = _getUsedFragmentsStore(ctx);
+  if (!store || (ctx && ctx.dryRun)) {
+    return pool[baseIdx];
+  }
+  const bMap = store.buckets[bucketKey] || (store.buckets[bucketKey] = {});
+  let chosenIdx = -1;
+  for (let step = 0; step < pool.length; step++) {
+    const idx = (baseIdx + step) % pool.length;
+    const owner = bMap[idx];
+    if (!owner || owner === spId) {
+      chosenIdx = idx;
+      break;
+    }
+  }
+  if (chosenIdx === -1) chosenIdx = baseIdx;
+  bMap[chosenIdx] = spId;
+  return pool[chosenIdx];
+}
+
+function enforceUniqueRoundOpener(text, speaker, ctx) {
+  if (!text || typeof text !== "string" || !speaker) return text;
+  const store = _getUsedFragmentsStore(ctx);
+  if (!store) return text;
+  const snap = ctx && ctx.snap;
+  const dayNow = (ctx && ctx.day) || (snap && snap.day) || 1;
+  const phaseNow = String((snap && snap.phase) || (ctx && ctx.stateTag) || "DAY");
+  const roundKey = dayNow + ":" + phaseNow;
+  const roMap = store.roundOpeners[roundKey] || (store.roundOpeners[roundKey] = {});
+  const usedFirst8 = new Set();
+  Object.keys(roMap).forEach(function (sidStr) {
+    if (Number(sidStr) !== speaker.id && roMap[sidStr]) {
+      usedFirst8.add(roMap[sidStr]);
+    }
+  });
+  if (ctx && Array.isArray(ctx.recentSpeakersSummary)) {
+    ctx.recentSpeakersSummary.forEach(function (rs) {
+      if (rs && rs.seatId !== speaker.id && rs.opener10) {
+        usedFirst8.add(String(rs.opener10).slice(0, 8));
+      }
+    });
+  }
+  const compactFirst8 = function (s) {
+    return String(s || "").replace(/\s+/g, "").slice(0, 8);
+  };
+  let out = text;
+  if (usedFirst8.has(compactFirst8(out))) {
+    const mSeed = (snap && typeof snap.matchStyleSeed === "number") ? snap.matchStyleSeed : 0;
+    const startIdx = Math.abs(speaker.id * 13 + dayNow * 7 + mSeed * 5) % DIVERSE_DAY_OPENER_PREFIXES.length;
+    for (let i = 0; i < DIVERSE_DAY_OPENER_PREFIXES.length; i++) {
+      const pfx = DIVERSE_DAY_OPENER_PREFIXES[(startIdx + i) % DIVERSE_DAY_OPENER_PREFIXES.length];
+      if (!usedFirst8.has(compactFirst8(pfx + out))) {
+        out = pfx + out;
+        break;
+      }
+    }
+  }
+  roMap[speaker.id] = compactFirst8(out);
+  return out;
+}
+
 function determineSpeechLengthTier(speaker, ctx) {
   if (!speaker || !ctx) return "standard";
   const inPk = Boolean(ctx.snap && ctx.snap.pkActive && Array.isArray(ctx.snap.pkCandidates) && ctx.snap.pkCandidates.indexOf(speaker.id) !== -1);
@@ -82,9 +174,42 @@ function buildBriefPassSpeech(speaker, ctx) {
   }
   const mSeed = (snap && typeof snap.matchStyleSeed === "number") ? snap.matchStyleSeed : 0;
   const bIdx = Math.abs(speaker.id * 11 + (day || 1) * 7 + (spokenOthers ? spokenOthers.length : 0) * 5 + mSeed * 3);
-  const pickB = function (arr) { return arr[bIdx % arr.length]; };
+  const pickB = function (arr, bucket) {
+    return pickUniqueFragment(arr, bucket || ("brief_" + reg), speaker, ctx, spokenOthers ? spokenOthers.length : 0);
+  };
   const allyLbl = ally ? seatLabel(ally) : "";
   let text = "";
+  if ((day || 1) >= 2) {
+    if (ctx.prevVoteNote) {
+      text = ctx.prevVoteNote;
+    } else if (allyLbl) {
+      text = pickB([
+        "對照昨天票型跟今天發言，" + allyLbl + " 還算一致，後面我再聽聽。",
+        "從上一輪結果延續下來看，" + allyLbl + " 目前立場比較連貫，我先聽後位。"
+      ], "brief_day2_ally");
+    } else if (nextOne) {
+      text = pickB([
+        "昨天這輪資訊很明確了，重點聽還沒表態的 " + nextOne + " 怎麼解釋。",
+        "接續昨天的票型脈絡，接下來看 " + nextOne + " 站哪一邊。"
+      ], "brief_day2_next");
+    } else {
+      text = pickB([
+        "結合昨天公投票型與今天發言，等會我直接照票型漏洞投票。",
+        "前兩輪脈絡已經很清楚了，這輪不跟風、看緊分票座位。"
+      ], "brief_day2_end");
+    }
+    return {
+      targetId: ally ? ally.id : null,
+      relationType: ally ? "trust" : null,
+      accuseId: null,
+      vouchId: ally ? ally.id : null,
+      wolfPits: [],
+      goodPits: ally ? [ally.id] : [],
+      hasToxicSlip: false,
+      lengthTier: "brief",
+      text: text
+    };
+  }
   if (reg === "classical") {
     text = nextOne
       ? pickB(["前面幾位言之成理，暫無破綻，先聽 " + nextOne + "。", "線索猶淺，點到為止，換 " + nextOne + " 續聊。"])
@@ -95,40 +220,40 @@ function buildBriefPassSpeech(speaker, ctx) {
       : pickB(["目前聽起來平和自然，我先記下再對。", "這段聽感還不錯，晴嵐先看後面票型。"]);
   } else if (reg === "poetic") {
     text = nextOne
-      ? pickB(["前面聊得頗順，我喝口茶先聽 " + nextOne + "。", "這幾杯茶尚稱清冽，看 " + nextOne + " 怎麼接。"])
-      : pickB(["這輪茶味清正，沒抓到明顯毛病，先留白。", "尚無顯著破綻，喝口茶看大家怎麼定。"]);
+      ? pickB(["前面聊得頗順，先看 " + nextOne + " 怎麼接。", "這幾段聽下來還算平穩，看 " + nextOne + " 怎麼講。"])
+      : pickB(["這輪沒抓到明顯毛病，先把疑問留給後位。", "尚無顯著破綻，先聽大家把立場表完。"]);
   } else if (reg === "data") {
     text = allyLbl
-      ? pickB(["目前時間點都對得上，" + allyLbl + " 還行，先聽後面。", "前面資訊太少，" + allyLbl + " 先放邊上，再看下位。"])
-      : (nextOne ? ("目前還沒顯著矛盾，先聽 " + nextOne + " 順看看。") : "資訊量還太少，我先記個底看投票。");
+      ? pickB(["目前時間線都對得上，" + allyLbl + " 先過，聽後面。", "順了一下這幾位的順序，" + allyLbl + " 還算穩，再看下位。"])
+      : (nextOne ? ("目前時間線還沒見到矛盾，先聽 " + nextOne + " 講。") : "先記下這輪發言順序，待會直接對票型。");
   } else if (reg === "warm") {
     text = allyLbl
-      ? pickB([allyLbl + " 聽起來好溫和喔，暖暖先聽大家聊。", "前面氣氛還不錯呀，先站 " + allyLbl + " 這邊看看。"])
-      : (nextOne ? ("先喝口茶不急喔，聽聽 " + nextOne + " 怎麼說～") : "大家都滿客氣的，我先跟著感受一下。");
+      ? pickB([allyLbl + " 聽起來誠懇多了，我先聽大家把話說完。", "前面氣氛還不錯呀，先站 " + allyLbl + " 這邊看看。"])
+      : (nextOne ? ("大家先別急著踩人，先聽 " + nextOne + " 怎麼說。") : "目前沒看出明顯惡意，我先跟著聽完整輪。");
   } else if (reg === "mountain") {
     text = allyLbl
-      ? pickB(["老松看 " + allyLbl + " 講得挺實在，其餘後位再聽。", "前面風還算靜，這輪先記 " + allyLbl + " 一個順眼。"])
-      : (nextOne ? ("目前還沒摸出鬼，先聽 " + nextOne + " 亮句話。") : "路況還看不清，老松先保留觀望。");
+      ? pickB(["老松看 " + allyLbl + " 講得挺實在，其餘後位再聽。", "前面立場都還算清楚，這輪先記 " + allyLbl + " 偏像好人。"])
+      : (nextOne ? ("前面還沒人露明顯破綻，先聽 " + nextOne + " 亮態度。") : "首輪先聽完整圈，算好輪次再動手。");
   } else if (reg === "astro") {
     text = allyLbl
-      ? pickB(["直覺 " + allyLbl + " 滿自然的，我先聽後面怎麼說喔！", "目前警鈴還沒響，" + allyLbl + " 先過關，換下一位。"])
-      : (nextOne ? ("還沒抓到怪感覺耶，快換 " + nextOne + " 講兩句。") : "暫時還感應不出狼氣，等投票看細節囉。");
+      ? pickB(["直覺 " + allyLbl + " 滿自然的，我先聽後面怎麼說喔！", "目前沒聽出心虛感，" + allyLbl + " 先過關，換下一位。"])
+      : (nextOne ? ("還沒抓到怪感覺耶，快換 " + nextOne + " 講兩句。") : "暫時還感應不出破綻，等投票看細節囉。");
   } else if (reg === "press") {
     text = allyLbl
-      ? pickB(["前面紀錄暫無矛盾，" + allyLbl + " 先排好，繼續聽。", "筆記還沒畫紅字，暫信 " + allyLbl + " 看後排。"])
-      : (nextOne ? ("前位細節還夠實在，先聽 " + nextOne + " 補資料。") : "這輪還沒抓到顯著漏拍，再對後續。");
+      ? pickB(["前面筆記暫無矛盾，" + allyLbl + " 先排好，繼續聽。", "目前沒出現改口落差，暫信 " + allyLbl + " 看後排。"])
+      : (nextOne ? ("前位說法還對得上，先聽 " + nextOne + " 補資料。") : "這輪還沒抓到顯著漏拍，再對後續。");
   } else if (reg === "sport") {
     text = allyLbl
-      ? pickB([allyLbl + " 講話乾脆！我先站這側，後面繼續接。", "前面防守都算穩，" + allyLbl + " 先放好人位。"])
-      : (nextOne ? ("前排都沒失誤，快把球交給 " + nextOne + "！") : "這拍節奏還挺順，先等這輪全盤完。");
+      ? pickB([allyLbl + " 講話乾脆！我先站這側，後面繼續接。", "前面節奏算穩，" + allyLbl + " 先放好人位。"])
+      : (nextOne ? ("前排都沒亂跳，換 " + nextOne + " 直接表態！") : "這輪先把態度表完，等下看誰縮票。");
   } else if (reg === "debate") {
     text = allyLbl
-      ? pickB(["目前還沒有硬傷，" + allyLbl + " 立論可信，聽下位。", "前段暫未見明顯漏洞，" + allyLbl + " 先列安全區。"])
-      : (nextOne ? ("爭點還沒浮出來，先聽 " + nextOne + " 怎麼立論。") : "證據尚不足以定論，我先觀望票型。");
+      ? pickB(["目前還沒有邏輯硬傷，" + allyLbl + " 立論可信，聽下位。", "前段暫未見偷換概念，" + allyLbl + " 先列安全區。"])
+      : (nextOne ? ("核心爭點還沒浮出來，先聽 " + nextOne + " 怎麼立論。") : "證據尚不足以定論，先聽後面交鋒。");
   } else if (reg === "pastry") {
     text = allyLbl
-      ? pickB(["覺得 " + allyLbl + " 好安心喔～柚子先記一筆聽後面。", "大家都講得好認真，" + allyLbl + " 聽起來最軟萌啦～"])
-      : (nextOne ? ("柚子還在等線索發酵中，換 " + nextOne + " 分享！") : "目前還沒聞到烤焦味耶，先乖乖聽大家說。");
+      ? pickB([allyLbl + " 前後態度滿一致的，柚子先記一筆聽後面。", "目前聽起來 " + allyLbl + " 最沒心虛感，先信他聽後位。"])
+      : (nextOne ? ("柚子還在聽大家的態度變化，換 " + nextOne + " 分享！") : "目前還沒聽出誰在閃躲縮回去，先乖乖聽完整輪。");
   } else if (ally) {
     text = "前面聊得滿乾淨的，" + allyLbl + " 聽著還行，我這輪先聽後位。";
   } else {
@@ -833,6 +958,10 @@ function sanitizeSpeechMeta(speaker, out, snapArg) {
   if (out.text && typeof applyDifficultyTerminology === "function") {
     out.text = applyDifficultyTerminology(out.text, null, snapArg || null);
   }
+  if (out.text && typeof fixGenderHonorificMismatch === "function") {
+    const seatsRef = (snapArg && Array.isArray(snapArg.seats)) ? snapArg.seats : null;
+    out.text = fixGenderHonorificMismatch(out.text, seatsRef);
+  }
   if (out.text && typeof stripDialogueParentheses === "function") {
     out.text = stripDialogueParentheses(out.text);
   }
@@ -858,6 +987,16 @@ function buildHeuristicAiSpeech(speaker) {
     || buildGoodTeamDeductionSpeech(speaker, ctx);
   if (res && res.text && ctx && ctx.playerAnchorOnMe && res.text.indexOf(ctx.playerAnchorOnMe) === -1) {
     res.text = "你剛才問「" + ctx.playerAnchorOnMe + "」，我正面回答你：" + res.text;
+  }
+  if (res && res.text && ctx && ctx.stateTag === "ENDGAME" && lengthTier !== "brief") {
+    const aliveCnt = (ctx.speechStateInfo && ctx.speechStateInfo.aliveCount) || 6;
+    const remWolves = Math.max(1, (ctx.slotPlan && ctx.slotPlan.aliveWolfSlots) || 1);
+    if (res.text.length <= 95 && res.text.indexOf("輪次") === -1 && res.text.indexOf("殘局") === -1) {
+      res.text = "殘局只剩" + aliveCnt + "人約" + remWolves + "狼，容錯輪次很緊，" + res.text;
+    }
+  }
+  if (res && res.text) {
+    res.text = enforceUniqueRoundOpener(res.text, speaker, ctx);
   }
   if (res && !res.lengthTier) res.lengthTier = lengthTier;
   if (typeof antiCheatMonitor !== "undefined" && speaker) {

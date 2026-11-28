@@ -972,7 +972,7 @@ const FOURG_JOY_JOKES = [
   "喝茶配冬瓜青，酸言瞬間消火氣——請問誰剛剛微笑突然凝固了？",
   "山城茶席吹過一陣笑聲清風，全場嘴角同時上揚，唯有心虛者在數心跳！",
   "茶席暖場笑話：酸民狼最怕兩種水，一是查證冷水，二是大家笑看他的茶水！",
-  "笑一笑十年少！我們端起三好歡喜茶敬全場，看看誰笑得比桂花糕還僵硬！"
+  "笑一笑十年少！我們端起三好歡喜茶敬全場，看看誰笑得最僵硬露破綻！"
 ];
 
 const PERSONA_CONFIDENCE_LINES = {
@@ -1564,11 +1564,25 @@ function useFourGHope(seatAId, seatBId) {
 }
 
 // ==================== v16.0 WOLF SELF-EXPLODE (拂袖掀席・白天自爆) ====================
+const WOLF_SELF_EXPLODE_LINES = [
+  "不演了，我直接自爆，全體進天黑！",
+  "這輪別聊了，我自爆直接入夜！",
+  "省點時間，我直接自爆進天黑！",
+  "不用盤了，我自爆，直接入夜！"
+];
+
 function canWolfSelfExplodeNow(seat) {
   const m = state.match;
   if (!m || !m.started || !seat || !seat.alive || seat.role !== "wolf") return false;
-  if (m._wolfExplodePendingNight) return false;
-  return m.phase === "SHERIFF_ELECTION" || m.phase === "DAY_SPEECH" || m.phase === "DAY_PLAYER_TURN" || m.phase === "DAY_VOTE";
+  if (m._wolfExplodePendingNight || m.phase === "GAME_OVER") return false;
+  return (
+    m.phase === "SHERIFF_ELECTION" ||
+    m.phase === "DAY_SPEECH" ||
+    m.phase === "DAY_PLAYER_TURN" ||
+    m.phase === "DAY_VOTE" ||
+    m.phase === "LAST_WORDS_SPEECH" ||
+    m.phase === "LAST_WORDS_PLAYER"
+  );
 }
 
 function triggerWolfSelfExplode(seatId, opts) {
@@ -1604,6 +1618,12 @@ function triggerWolfSelfExplode(seatId, opts) {
   // 1. Cleanly abort every active timer, TTS stream, typewriter, prefetch, and in-flight LLM callback!
   clearStepTimer();
   clearBlitzVoteTimer();
+  if (state._lwCueTimer) {
+    clearTimeout(state._lwCueTimer);
+    state._lwCueTimer = null;
+  }
+  state._dawnLwFlush = null;
+  state.lastWordsCtx = null;
   if (typeof clearSkyCurtainTimer === "function") clearSkyCurtainTimer(false);
   if (typeof clearDeferredSpeechPrefetchTimer === "function") clearDeferredSpeechPrefetchTimer();
   closeHopeConfrontationModal();
@@ -1699,6 +1719,7 @@ function triggerWolfSelfExplode(seatId, opts) {
   const hadPendingN1Dawn = Boolean(wasElection && m.pendingDawnAfterSheriff);
   const hadSheriffBadge = Boolean(m.sheriffSeatId === wolf.id);
   wolf.alive = false;
+  wolf.selfExploded = true;
   wolf.outReason = "拂袖掀席自爆";
   wolf.claimedRole = "wolf";
   m.wolfExplodedToday = true;
@@ -1706,6 +1727,11 @@ function triggerWolfSelfExplode(seatId, opts) {
   m.speechQueue = [];
   m.pkCandidates = null;
   m.sheriffOrderCtx = null;
+  if (!wasElection && Array.isArray(m.pendingNight1LastWords)) {
+    m.pendingNight1LastWords = [];
+  } else if (Array.isArray(m.pendingNight1LastWords)) {
+    m.pendingNight1LastWords = m.pendingNight1LastWords.filter(function (id) { return id !== wolf.id; });
+  }
   if (wasElection) {
     m.sheriffElectionCtx = null;
     m.sheriffElectionPending = false;
@@ -1725,9 +1751,10 @@ function triggerWolfSelfExplode(seatId, opts) {
   const pid = getPlayerId();
   const wLbl = fmtSeatNum(wolf.id) + "號 " + (wolf.id === pid ? "你" : wolf.name);
   const explodeAlert = fmtSeatNum(wolf.id) + "號 當場拂袖掀席！本輪剩餘發言與公投強制中止，即將入夜";
-  const wolfLine = "不必多談了，我就是酸民狼，這盞茶掀了，直接入夜！";
+  const lineSeed = ((wolf.id || 1) + (m.day || 1) + ((m.stats && m.stats.wolfExplosions) || 0)) % WOLF_SELF_EXPLODE_LINES.length;
+  const wolfLine = WOLF_SELF_EXPLODE_LINES[lineSeed];
   const cutSub = wasElection
-    ? (wLbl + " 亮牌自爆！沒收今日警長競選、警徽流與全體發言公投（" + explodeAlert + "）")
+    ? (wLbl + " 亮牌自爆，沒收今日警長競選、警徽流與全體發言公投，" + explodeAlert)
     : explodeAlert;
 
   if (typeof sound !== "undefined" && typeof sound.playHunterShot === "function") sound.playHunterShot();
@@ -1740,7 +1767,7 @@ function triggerWolfSelfExplode(seatId, opts) {
   triggerCutIn("拂袖掀席・酸民狼自爆", cutSub, "crimson", 2800);
   addLog({
     kind: "dawn",
-    title: "拂袖掀席（白天自爆）：" + explodeAlert,
+    title: "拂袖掀席，白天自爆：" + explodeAlert,
     text: wolfLine
   });
   showToast(explodeAlert, "warn");
@@ -1751,7 +1778,10 @@ function triggerWolfSelfExplode(seatId, opts) {
   }
 
   const explodeEp = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  let explodeSettled = false;
   const finishExplodeToNight = function () {
+    if (explodeSettled) return;
+    explodeSettled = true;
     if (state._wolfExplodeTimer) {
       clearTimeout(state._wolfExplodeTimer);
       state._wolfExplodeTimer = null;
@@ -1765,6 +1795,9 @@ function triggerWolfSelfExplode(seatId, opts) {
     state.match._wolfExplodePendingNight = false;
     state.activeSpeakerId = null;
 
+    const anyAliveWolfLeft = getAliveSeats().some(function (s) { return s.role === "wolf"; });
+    if (!anyAliveWolfLeft && checkAndHandleGameOver()) return;
+
     // 3. If self-explode aborted Day-1 pre-dawn Sheriff Election, settle & announce pending Night-1 casualties first!
     if (hadPendingN1Dawn && typeof settleNightCasualtiesOnElectionExplode === "function") {
       if (settleNightCasualtiesOnElectionExplode()) return;
@@ -1777,10 +1810,19 @@ function triggerWolfSelfExplode(seatId, opts) {
     }
   };
 
-  const dramaticPauseMs = (typeof o.dramaticPauseMs === "number" && o.dramaticPauseMs > 0)
+  const ffNow = Boolean(o.immediateNight || (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()));
+  const canSpeakNow = Boolean(
+    !ffNow &&
+    typeof voice !== "undefined" &&
+    typeof voice.canSpeak === "function" &&
+    voice.canSpeak() &&
+    typeof voice.speak === "function"
+  );
+  const dramaticPauseMs = (!ffNow && typeof o.dramaticPauseMs === "number" && o.dramaticPauseMs > 0)
     ? Math.max(2800, o.dramaticPauseMs)
     : 0;
-  if (dramaticPauseMs > 0) {
+  const shouldStage = Boolean(!ffNow && (canSpeakNow && (dramaticPauseMs > 0 || o.waitForVoice || o.aiSelfExplode || o.playerSelfExplode) || dramaticPauseMs > 0));
+  if (shouldStage) {
     m._wolfExplodePendingNight = true;
     m.phase = wasElection ? "SHERIFF_ELECTION" : "DAY_SPEECH";
     state.activeSpeakerId = wolf.id;
@@ -1788,40 +1830,40 @@ function triggerWolfSelfExplode(seatId, opts) {
       syncSpeakerBannerVisuals(wolf, wLbl + " · 亮牌自爆", "拂袖掀席", true);
     }
     if (typeof updateSpotlightBox === "function") {
-      updateSpotlightBox(wLbl + " · 酸民狼自爆", explodeAlert, wolfLine + "（" + explodeAlert + "）");
+      updateSpotlightBox(wLbl + " · 酸民狼自爆", explodeAlert, wolfLine + " " + explodeAlert);
     }
     updateAllUI();
 
-    let settled = false;
-    let minHoldDone = false;
-    const canSpeakNow = Boolean(typeof voice !== "undefined" && typeof voice.canSpeak === "function" && voice.canSpeak() && typeof voice.speak === "function");
-    let voiceDone = !canSpeakNow;
-    const tryCompleteExplode = function () {
-      if (settled || !minHoldDone || !voiceDone) return;
-      settled = true;
-      finishExplodeToNight();
-    };
-    state._wolfExplodeTimer = setTimeout(function () {
-      state._wolfExplodeTimer = null;
-      minHoldDone = true;
-      tryCompleteExplode();
-    }, dramaticPauseMs);
     state._wolfExplodeCapTimer = setTimeout(function () {
       state._wolfExplodeCapTimer = null;
-      if (!settled) {
-        settled = true;
-        finishExplodeToNight();
-      }
-    }, Math.max(dramaticPauseMs + 2800, 5800));
+      finishExplodeToNight();
+    }, 9500);
+
     if (canSpeakNow) {
+      let voiceCallbackFired = false;
+      const onExplodeVoiceDone = function () {
+        if (voiceCallbackFired || explodeSettled) return;
+        voiceCallbackFired = true;
+        if (state._wolfExplodeCapTimer) {
+          clearTimeout(state._wolfExplodeCapTimer);
+          state._wolfExplodeCapTimer = null;
+        }
+        if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(explodeEp)) return;
+        state._wolfExplodeTimer = setTimeout(function () {
+          state._wolfExplodeTimer = null;
+          finishExplodeToNight();
+        }, 350);
+      };
       try {
-        voice.speak(wolf.name, wolfLine, "rebut", function () {
-          voiceDone = true;
-          tryCompleteExplode();
-        }, { seatId: wolf.id });
+        voice.speak(wolf.name, wolfLine, "rebut", onExplodeVoiceDone, { seatId: wolf.id });
       } catch (e) {
-        voiceDone = true;
+        onExplodeVoiceDone();
       }
+    } else {
+      state._wolfExplodeTimer = setTimeout(function () {
+        state._wolfExplodeTimer = null;
+        finishExplodeToNight();
+      }, dramaticPauseMs);
     }
     return true;
   }
@@ -1862,7 +1904,7 @@ function maybeTriggerAiWolfSelfExplode(speaker, opts) {
       antiCheatMonitor.recordDecision("wolf_explode_check", speaker.id, "觸發拂袖掀席自爆");
     }
     const ffNow = Boolean((opts && opts.immediateNight) || (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()));
-    return triggerWolfSelfExplode(speaker.id, { aiSelfExplode: true, dramaticPauseMs: ffNow ? 0 : 3000 });
+    return triggerWolfSelfExplode(speaker.id, { aiSelfExplode: true, waitForVoice: true, dramaticPauseMs: ffNow ? 0 : 2800 });
   }
   return false;
 }
@@ -2542,6 +2584,7 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
   const polishSheriffSpeechText = function (rawSpeech) {
     let out = String(rawSpeech || "");
     if (out && typeof applyDifficultyTerminology === "function") out = applyDifficultyTerminology(out);
+    if (out && typeof fixGenderHonorificMismatch === "function") out = fixGenderHonorificMismatch(out);
     if (out && typeof stripDialogueParentheses === "function") out = stripDialogueParentheses(out);
     return out;
   };
@@ -2576,37 +2619,44 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
   const styleRoll = _hashSheriffRoll(seed, self.id, 97);
   const linePick = Math.floor(_hashSheriffRoll(seed, self.id, 131) * 4);
 
-  // Archetype A: Playful Bluff / 詐身分炸後置位 (~32%)
+  // Archetype A: Playful Bluff / 詐身分試水溫 (~32%)
   if (styleRoll < 0.32) {
-    const bluffPool = [
-      "「咳咳，我先上來當個臨時偵探炸一下氣氛——我盲猜 " + wildLbl + " 剛才眼神有點飄喔！哈哈別緊張，純粹詐身分看看你反應，真明心出來我就讓位！」",
-      "「先說好我可不是真明心，但我要胡亂發一張直覺查殺給 " + wildLbl + " 試試水溫！等等看你臉色變不變，詐完我就打算看情況退水啦！」",
-      "「上警不炸一下後置位多無聊！我直接點名 " + wildLbl + " 看起來特別有故事，待會記得好好表水，我先聽完真神職發言再決定留不留！」",
-      "「大家別被嚇到，我舉手上警就是想假裝帶個風向、測試 " + wildLbl + " 會不會心虛跳出來！要是沒人搶警徽我就順手拿囉～」"
-    ];
+    const isEarlyNoPrior = (priorList.length === 0);
+    const bluffPool = isEarlyNoPrior
+      ? [
+          "「我是好人上警先幫忙搶個麥克風，防壞人白拿警徽！待會後面有真觀察員起跳我就退水，大家多聽後位表態。」",
+          "「首置位上警不藏了，純粹上來防狼人拿警徽控票！暫點 " + wildLbl + " 等會兒先表態，真觀察員跳出來我就讓位。」",
+          "「先說我沒有觀察員視角喔，舉手上警就是防止有人白白撿走警徽，聽完後置位真正起跳我就退水！」",
+          "「上警佔個位置幫好人壓陣，待會看後面有沒有真觀察員起跳，我聽完表水再決定退水還留著！」"
+        ]
+      : [
+          "「先說好我可不是真明心，但我要點一下 " + wildLbl + " 試試水溫！等會看你怎麼接，試探完我就準備看情況退水！」",
+          "「上警不點一下後置位多無聊！我就點名 " + wildLbl + " 等會好好表水，我先聽完後面真神職發言再決定留不留！」",
+          "「大家別被嚇到，我舉手上警就是為了測試後面反應，看 " + wildLbl + " 待會敢不敢正面對接，後面沒人搶就歸我囉。」"
+        ];
     return {
       tag: "詐身分試探",
       tone: "bluff",
       rivalId: wildSeat ? wildSeat.id : null,
       badgeFlow: null,
-      text: bluffPool[linePick % bluffPool.length]
+      text: polishSheriffSpeechText(bluffPool[linePick % bluffPool.length])
     };
   }
 
-  // Archetype B: Freeform / Playful Mic-Grab Banter / 起來亂發言 (~32%)
+  // Archetype B: Freeform / Playful Mic-Grab Banter (~32%)
   if (styleRoll < 0.64) {
     const playfulPool = [
-      "「其實我沒什麼宏圖大志，就是手癢想早點搶個麥克風跟大家聊兩句！順便直覺亂點 " + wildLbl + " 今天感覺很關鍵，純屬瞎猜別太認真～」",
-      "「茶都泡好了，場子這麼安靜我先上來暖個場！我一張沒什麼視角的牌，單純上警湊熱鬧聽大家發言，要是後面沒人跟我搶我就笑納警徽啦！」",
-      "「大家放輕鬆點嘛！我上警純粹是怕自己在警下無聊，先上來亂聊一通看誰笑不出來——特別是 " + wildLbl + "，你剛才表情很有戲喔！」",
-      "「別問我為什麼上警，問就是直覺讓我舉手的！我先佔個發言位刷存在感，後面哪位邏輯最順耳，我回警下就把票投給誰！」"
+      "「我就單純上警防壞人白拿警徽，順便直覺點 " + wildLbl + " 待會兒記得講清楚立場，聽完真觀察員起跳我就退水！」",
+      "「席間前面都還沒表態呢，我上警幫忙拉起討論節奏，要是有真觀察員出來對跳我再退回警下投票。」",
+      "「我上警純粹是幫好人多爭取一個視角發言位，點名 " + wildLbl + " 待會多聊幾句，後面真跳出來我就讓票。」",
+      "「先上警佔個位置看風向！我先聽完整輪誰邏輯最順，沒有真預言家需要我退的話我再留著拿徽。」"
     ];
     return {
       tag: "隨性亂聊",
       tone: "playful",
       rivalId: null,
       badgeFlow: null,
-      text: playfulPool[linePick % playfulPool.length]
+      text: polishSheriffSpeechText(playfulPool[linePick % playfulPool.length])
     };
   }
 
@@ -2619,7 +2669,7 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
         tone: "bold",
         rivalId: priorSeerSpeech.id,
         badgeFlow: null,
-        text: "「原本想上警碰碰運氣，結果前面 " + psLbl + " 已經直接拍明心了！我先聽聽後面還會不會有人對跳，我是好人幫大家盯著節奏！」"
+        text: polishSheriffSpeechText("「原本想上警碰碰運氣，結果前面 " + psLbl + " 已經直接拍明心了！我先聽聽後面還會不會有人對跳，我是好人幫大家盯著節奏！」")
       };
     }
     const ppLbl = fmtSeatNum(priorPlayfulSpeech.id) + "號" + priorPlayfulSpeech.name;
@@ -2628,13 +2678,13 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
       tone: "bold",
       rivalId: priorPlayfulSpeech.id,
       badgeFlow: null,
-      text: "「剛才 " + ppLbl + " 上來亂聊一通差點把我逗笑！那我也順手發言兩句，至少警上不能全在開玩笑，警徽給我我會認真記票型的！」"
+      text: polishSheriffSpeechText("「剛才 " + ppLbl + " 上來亂聊一通差點把我逗笑！那我也順手發言兩句，至少警上不能全在開玩笑，警徽給我我會認真記票型的！」")
     };
   }
 
   // Archetype D: Classic Persona Serious Leader (~18%+)
   const personaLines = {
-    "小澄": "「警徽不是喊大聲就拿得到！給我 1.5 票，我把每個人的發言漏洞跟票型全算出來，誰在演戲一目了然！」",
+    "小澄": "「警徽不是喊大聲就拿得到！給我 1.5 票，我把每個人的發言順序跟票型流向對齊，誰在演戲一目了然！」",
     "暖暖": "「大家別一上來就吵架嘛～警徽交給我，我會幫真明心穩住節奏、不讓狼人帶歪風向！」",
     "阿松": "「這局水很深，警徽落到狼手就完了！交給我坐鎮末置位，我盯死每個退水跟跟票的人！」",
     "星兒": "「我的直覺告訴我警上一定藏著狼！警徽給我，我要在末置位把心虛的那個人直接揪出來！」",
@@ -2642,9 +2692,9 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
     "阿竹": "「上警如棋局，先手必爭。若願託付警徽於我，我必在末置位拆穿所有偽裝！」",
     "晨晨": "「衝啦！第一天就要打出氣勢！給我警徽，誰敢悍跳我就帶全場一起衝他！」",
     "墨白": "「多說無益，看人看骨。警徽給我，末置位一筆定江山，絕不手軟。」",
-    "晴嵐": "「茶未涼、局已動。若諸位信我，願執警徽居中調度，不讓混淆視聽之徒得逞。」",
+    "晴嵐": "「大家先別急，若信任晴嵐，我願執警徽居中調度、不讓惡意帶風向得逞。」",
     "阿朗": "「辯論看邏輯、投票看證據！警徽給我，我保證把對跳兩邊的破綻攤在陽光下！」",
-    "柚子": "「哇～警上氣氛好緊張！可是我也想當警長保護大家呀，選我選我，我會很認真聽大家發言的！」"
+    "柚子": "「警上氣氛好緊繃喔！可是我超會抓前後態度不一致的破綻，選我當警長一定幫大家把好票型！」"
   };
 
   if (self.role === "guard") {
@@ -2653,7 +2703,7 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
       tone: "bold",
       rivalId: null,
       badgeFlow: null,
-      text: personaLines[self.name] || "「我是理性帶隊派，警徽交給我能幫忙鎖定焦點與節奏、末置位穩穩歸票！」"
+      text: polishSheriffSpeechText(personaLines[self.name] || "「我是理性帶隊派，警徽交給我能幫忙鎖定焦點與節奏、末置位穩穩歸票！」")
     };
   }
   return {
@@ -2661,7 +2711,7 @@ function buildSheriffCandidateLine(cand, priorSpeechesArg) {
     tone: "bold",
     rivalId: priorSeerSpeech ? priorSeerSpeech.id : null,
     badgeFlow: null,
-    text: personaLines[self.name] || "「我說話講邏輯不情緒化，給我警徽我會在末置位整理正反兩邊坑位，公平歸票！」"
+    text: polishSheriffSpeechText(personaLines[self.name] || "「我說話講邏輯不情緒化，給我警徽我會在末置位整理正反兩邊坑位，公平歸票！」")
   };
 }
 

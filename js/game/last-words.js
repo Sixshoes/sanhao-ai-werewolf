@@ -319,15 +319,23 @@ function prefetchAiLastWords(seatIds, mode) {
 }
 
 function startLastWordsSequence(seatIds, mode, onDone) {
+  const m = (typeof state !== "undefined") ? state.match : null;
+  if (!m || !m.started || m.phase === "GAME_OVER" || m._wolfExplodePendingNight || m.wolfExplodedToday) {
+    if (typeof onDone === "function") onDone("");
+    return;
+  }
   const normMode = mode || "first_night";
-  const curDay = (typeof state !== "undefined" && state.match) ? (state.match.day || 1) : 1;
+  const curDay = m.day || 1;
   // v16.0 High-Intensity Rule: ONLY Day-1 night casualties & daytime voted-out seats get Last Words!
-  // Night 2+ wolf-kills or purify-kills are strictly silent (cover cup, zero last words).
+  // Night 2+ wolf-kills or purify-kills are strictly silent (cover cup, zero last words). Wolf self-explode has ZERO last words!
   if ((normMode === "first_night" || normMode === "night") && curDay >= 2) {
     if (typeof onDone === "function") onDone("");
     return;
   }
-  const list = (seatIds || []).filter(function (id) { return Boolean(getSeat(id)); });
+  const list = (seatIds || []).filter(function (id) {
+    const s = getSeat(id);
+    return Boolean(s && !s.selfExploded && !/自爆|掀席/.test(s.outReason || ""));
+  });
   if (!list.length) {
     if (typeof onDone === "function") onDone("");
     return;
@@ -351,6 +359,10 @@ function advanceLastWordsQueue() {
   voice.stop();
   state.speakingInFlight = false;
   state._lastWordsTurnSeq = (state._lastWordsTurnSeq || 0) + 1;
+  if (state.match && (state.match._wolfExplodePendingNight || state.match.wolfExplodedToday || state.match.phase === "GAME_OVER")) {
+    state.lastWordsCtx = null;
+    return;
+  }
   const ctx = state.lastWordsCtx;
   if (!ctx) return;
   if (!ctx.queue || ctx.queue.length === 0) {
@@ -362,7 +374,7 @@ function advanceLastWordsQueue() {
   }
   const sid = ctx.queue.shift();
   const seat = getSeat(sid);
-  if (!seat) {
+  if (!seat || seat.selfExploded || /自爆|掀席/.test(seat.outReason || "")) {
     advanceLastWordsQueue();
     return;
   }
@@ -393,7 +405,17 @@ function advanceLastWordsQueue() {
   if (pfLwMap && pfLw) delete pfLwMap[pfLwKey];
   const lwObj = (pfLw && pfLw.lwObj) ? pfLw.lwObj : buildAiLastWords(seat, ctx.mode);
   const commitAiLastWords = function (liveTextOverride) {
+    if (state.match && (state.match._wolfExplodePendingNight || state.match.wolfExplodedToday)) {
+      state.lastWordsCtx = null;
+      return;
+    }
     if (liveTextOverride) lwObj.text = liveTextOverride;
+    if (typeof fixGenderHonorificMismatch === "function") {
+      lwObj.text = fixGenderHonorificMismatch(lwObj.text);
+    }
+    if (typeof stripDialogueParentheses === "function") {
+      lwObj.text = stripDialogueParentheses(lwObj.text);
+    }
     applyLastWordsInfluence(seat, lwObj.text, lwObj);
     ctx.lastRecordedText = "「" + lwObj.text + "」";
     state.match.phase = "LAST_WORDS_SPEECH";
@@ -405,14 +427,14 @@ function advanceLastWordsQueue() {
       kind: "speech",
       useTypewriter: true,
       speakerId: seat.id,
-      title: fmtSeatNum(seat.id) + "號 · " + seat.name + "（" + lwLabel + "）",
+      title: fmtSeatNum(seat.id) + "號 · " + seat.name + " · " + lwLabel,
       subBadge: lwLabel,
       text: lwObj.text
     });
     updateAllUI();
     startSpotlightTypewriter({
       speaker: seat,
-      badge: fmtSeatNum(seat.id) + "號 " + seat.name + "（遺言）",
+      badge: fmtSeatNum(seat.id) + "號 " + seat.name + " · 遺言",
       trait: lwLabel,
       rawText: lwObj.text,
       voiceMood: "last_words",
@@ -467,10 +489,10 @@ function advanceLastWordsQueue() {
     if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(epLw)) return;
     if (state._lastWordsTurnSeq === lwSeq && state.lastWordsCtx === ctx && state.activeSpeakerId === seat.id && state.speakingInFlight) {
       if (typeof syncSpeakerBannerVisuals === "function") {
-        syncSpeakerBannerVisuals(seat, fmtSeatNum(seat.id) + "號 " + seat.name + "（遺言）", lwLabel, false);
+        syncSpeakerBannerVisuals(seat, fmtSeatNum(seat.id) + "號 " + seat.name + " · 遺言", lwLabel, false);
       }
       if (typeof updateSpotlightBox === "function") {
-        updateSpotlightBox(fmtSeatNum(seat.id) + "號 " + seat.name + "（遺言）", lwLabel, "整理離席前的最後線索…");
+        updateSpotlightBox(fmtSeatNum(seat.id) + "號 " + seat.name + " · 遺言", lwLabel, "整理離席前的最後線索…");
       }
     }
   }, 350);

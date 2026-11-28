@@ -1219,7 +1219,8 @@ function bindNightVoteAndFourGEvents() {
     el("btnWolfSelfExplode").addEventListener("click", function () {
       sound.unlock();
       if (typeof triggerWolfSelfExplode === "function") {
-        triggerWolfSelfExplode(getPlayerId());
+        const ffExp = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
+        triggerWolfSelfExplode(getPlayerId(), { playerSelfExplode: true, waitForVoice: true, dramaticPauseMs: ffExp ? 0 : 2800 });
       }
     });
   }
