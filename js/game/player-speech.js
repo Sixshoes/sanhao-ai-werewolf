@@ -593,15 +593,18 @@ function composePlayerPitSpeechText() {
     parts.push("平票 PK 我再表水一次：");
   }
 
+  const seerReportedIds = [];
   if (d.claimRole && player) {
     if (d.claimRole === "seer") {
       if (player.role === "seer" && player.checkedHistory && player.checkedHistory.length > 0) {
         const histSummary = player.checkedHistory.map(function (c) {
+          if (seerReportedIds.indexOf(c.targetId) === -1) seerReportedIds.push(c.targetId);
           const cs = getSeat(c.targetId);
           return fmtSeatNum(c.targetId) + "號" + (cs ? cs.name : "") + "是" + (c.isWolf ? "酸民狼" : "好夥伴");
         }).join("、");
         parts.push("我是真正的明心觀察員！查驗紀錄：" + histSummary + "。");
       } else if (d.wolfIds.length > 0) {
+        seerReportedIds.push(d.wolfIds[0]);
         const w0 = getSeat(d.wolfIds[0]);
         parts.push("我才是這局真正的明心觀察員！昨晚查驗 " + fmtSeatNum(d.wolfIds[0]) + "號" + (w0 ? w0.name : "") + " 確定是酸民狼！");
       } else {
@@ -658,24 +661,31 @@ function composePlayerPitSpeechText() {
     }
   }
 
+  const displayWolfIds = d.claimRole === "seer"
+    ? (d.wolfIds || []).filter(function (id) { return seerReportedIds.indexOf(id) === -1; })
+    : (d.wolfIds || []).slice();
+  const displayGoodIds = d.claimRole === "seer"
+    ? (d.goodIds || []).filter(function (id) { return seerReportedIds.indexOf(id) === -1; })
+    : (d.goodIds || []).slice();
+
   const pubMatrix = (m.day >= 2 && typeof buildVoteSpeechMatrix === "function") ? buildVoteSpeechMatrix(null) : null;
   if (isWolfPlayer) {
-    if (d.goodIds.length > 0) {
-      parts.push("聽下來我覺得 " + fmtList(d.goodIds) + " 發言挺誠懇、立場也乾淨，這輪我先放進好人視角力挺；");
+    if (displayGoodIds.length > 0) {
+      parts.push("聽下來我覺得 " + fmtList(displayGoodIds) + " 發言挺誠懇、立場也乾淨，這輪我先放進好人視角力挺；");
     }
-    if (d.wolfIds.length > 0) {
-      const w0 = d.wolfIds[0];
+    if (displayWolfIds.length > 0) {
+      const w0 = displayWolfIds[0];
       const hasDiv = Boolean(pubMatrix && pubMatrix.divergenceBySeat && pubMatrix.divergenceBySeat[w0]);
       const extraTag = hasDiv ? "（前後發言跟昨天落票明顯對不上）" : "";
-      parts.push("反觀 " + fmtList(d.wolfIds) + extraTag + " 的邏輯漏洞最多，我認為最值得懷疑，建議大家今天集中檢視並優先投票給 " + fmtSeatNum(w0) + "號！");
+      parts.push("反觀 " + fmtList(displayWolfIds) + extraTag + " 的邏輯漏洞最多，我認為最值得懷疑，建議大家今天集中檢視並優先投票給 " + fmtSeatNum(w0) + "號！");
     }
   } else {
-    if (d.goodIds.length > 0) {
-      parts.push("好人坑我先保 " + fmtList(d.goodIds) + (d.goodIds.length >= 3 ? (" 等 " + d.goodIds.length + " 位（視角乾淨、立場真誠）；") : "（視角乾淨、立場真誠）；"));
+    if (displayGoodIds.length > 0) {
+      parts.push("好人坑我先保 " + fmtList(displayGoodIds) + (displayGoodIds.length >= 3 ? (" 等 " + displayGoodIds.length + " 位（視角乾淨、立場真誠）；") : "（視角乾淨、立場真誠）；"));
     }
-    if (d.wolfIds.length > 0) {
+    if (displayWolfIds.length > 0) {
       const reasons = [];
-      const w0 = d.wolfIds[0];
+      const w0 = displayWolfIds[0];
       if (pubMatrix && pubMatrix.divergenceBySeat && pubMatrix.divergenceBySeat[w0]) {
         reasons.push("昨天言票嚴重分裂");
       }
@@ -690,7 +700,7 @@ function composePlayerPitSpeechText() {
         }
       }
       const shReason = reasons.length ? ("（" + reasons.join("，且") + "）") : "";
-      parts.push("狼坑目前鎖定 " + fmtList(d.wolfIds) + shReason + "，破綻最明顯，建議好人齊心歸票優先請 " + fmtSeatNum(w0) + "號 離席！");
+      parts.push("狼坑目前鎖定 " + fmtList(displayWolfIds) + shReason + "，破綻最明顯，建議好人齊心歸票優先請 " + fmtSeatNum(w0) + "號 離席！");
     }
   }
 
@@ -744,6 +754,21 @@ function updateQuickFreeSendLabel(dArg, playerArg) {
   }
 }
 
+function stripAutoPitClausesForSeerLead(rawText) {
+  let s = String(rawText || "").trim();
+  if (!s) return "";
+  s = s
+    .replace(/(?:我是真正的明心觀察員|我才是這局真正的明心觀察員)[^。！？\n]*[。！？]?/g, " ")
+    .replace(/狼坑目前鎖定[^。！？\n]*[。！？]?/g, " ")
+    .replace(/反觀[^。！？\n]*邏輯漏洞最多[^。！？\n]*[。！？]?/g, " ")
+    .replace(/好人坑我先保[^。！？；\n]*[。！？；]?/g, " ")
+    .replace(/聽下來我覺得[^。！？；\n]*放進好人視角力挺[。！？；]?/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[，、；：\s]+|[，、；：\s]+$/g, "")
+    .trim();
+  return s;
+}
+
 function syncDraftSpeechToInput() {
   const d = (state.match && state.match.playerDraftPits) || createEmptyPlayerDraftPits();
   const composed = composePlayerPitSpeechText();
@@ -752,7 +777,20 @@ function syncDraftSpeechToInput() {
   const hasComposedMods = Boolean(Array.isArray(d.composedModules) && d.composedModules.length > 0);
   const curVal = qIn ? String(qIn.value || "").trim() : "";
   let nextText = composed;
-  if (hasComposedMods && curVal) {
+  if (d.claimRole === "seer") {
+    if (hasComposedMods && curVal) {
+      let base = curVal;
+      if (d._lastAutoPitText && base.indexOf(d._lastAutoPitText) !== -1) {
+        base = removeSpeechClause(base, d._lastAutoPitText);
+      }
+      base = stripAutoPitClausesForSeerLead(base);
+      nextText = base ? joinSpeechClauses(composed, base) : composed;
+      d._lastAutoPitText = composed;
+    } else {
+      nextText = composed;
+      d._lastAutoPitText = composed;
+    }
+  } else if (hasComposedMods && curVal) {
     let base = curVal;
     if (d._lastAutoPitText && base.indexOf(d._lastAutoPitText) !== -1) {
       base = removeSpeechClause(base, d._lastAutoPitText);
@@ -1117,7 +1155,17 @@ function loadQuickCardIntoAdvancedEditor(item, cardBtn, slotView, dualWorlds) {
     if (d._lastAutoPitText && baseForJoin.trim() === d._lastAutoPitText.trim() && d.composedModules.length === 1) {
       d._lastAutoPitText = "";
     }
-    const nextText = joinSpeechClauses(baseForJoin, clause);
+    let nextText = "";
+    if (setClaimRole === "seer") {
+      if (d._lastAutoPitText && baseForJoin.indexOf(d._lastAutoPitText) !== -1) {
+        baseForJoin = removeSpeechClause(baseForJoin, d._lastAutoPitText);
+      }
+      const cleanedBase = stripAutoPitClausesForSeerLead(baseForJoin);
+      nextText = cleanedBase ? joinSpeechClauses(clause, cleanedBase) : clause;
+      d._lastAutoPitText = "";
+    } else {
+      nextText = joinSpeechClauses(baseForJoin, clause);
+    }
     if (qIn) qIn.value = nextText;
     if (el("playerSpeechInput")) el("playerSpeechInput").value = nextText;
 
@@ -2426,8 +2474,13 @@ function refreshLiveNlpUI() {
 
 function submitPlayerSpeech() {
   sound.unlock();
-  if (state.match.phase !== "DAY_PLAYER_TURN") return;
+  if (!state.match || !state.match.started) return false;
+  if (state.match._wolfExplodePendingNight) return false;
+  if (state.match.phase !== "DAY_PLAYER_TURN") return false;
+  if (state._submittingPlayerSpeech) return false;
+  state._submittingPlayerSpeech = true;
   state.currentTurnSpoken = true;
+  try {
 
   let text = el("playerSpeechInput").value.trim() || "大家冷靜聽線索，一起抓出酸民狼！";
   if (typeof normalizeSeatRefsInText === "function") {
@@ -2842,7 +2895,9 @@ function submitPlayerSpeech() {
   refreshQuickFreeInputHint();
   if (typeof closeSeatIntel === "function") closeSeatIntel();
   if (typeof stage3d !== "undefined" && typeof stage3d.clearCloseUp === "function") stage3d.clearCloseUp();
-  state.match.phase = "DAY_SPEECH";
+  if (state.match.phase === "DAY_PLAYER_TURN") {
+    state.match.phase = "DAY_SPEECH";
+  }
   state.activeSpeakerId = pid;
   if (typeof triggerImmediatePostPlayerPrefetch === "function") {
     triggerImmediatePostPlayerPrefetch();
@@ -2856,4 +2911,8 @@ function submitPlayerSpeech() {
     charDelay: 30,
     holdMs: 1850
   });
+  return true;
+  } finally {
+    state._submittingPlayerSpeech = false;
+  }
 }

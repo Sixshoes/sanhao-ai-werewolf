@@ -6703,7 +6703,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       el("showcaseProfileCard").innerHTML.includes("好人癖好");
     const showcaseCardOk = Boolean(cardHiddenHero && cardShownMobai);
     const diag17 = collectFeedbackDiagnostics();
-    const version17Ok = Boolean(diag17 && diag17.version === "v25.7.1");
+    const version17Ok = Boolean(diag17 && diag17.version === "v25.7.2");
 
     // 6. Standard Day-1 Werewolf Order: Sheriff Election FIRST, THEN Night-1 Death Reveal (+ Dead-Sheriff Transfer + Election Explode Settlement)
     el("selectModeCount").value = "8";
@@ -7182,7 +7182,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.7.1") && swSrcPerf.includes("sanhao-assets-v25.7.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.7.2") && swSrcPerf.includes("sanhao-assets-v25.7.2") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7585,8 +7585,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.7.1"') &&
-    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v25.7.1"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.7.2"') &&
+    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v25.7.2"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
 
@@ -8326,8 +8326,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     doubleVoteBlockedOk: v242Res.doubleVoteBlockedOk,
     sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
       && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
-    docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("sanhao-assets-v25.7.1") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
-    scriptV242Ok: docScript241.includes("v25.7.1") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
+    docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("sanhao-assets-v25.7.2") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
+    scriptV242Ok: docScript241.includes("v25.7.2") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
     voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
     apiTimeout8400AndLruOk: apiGem242.includes("resolvePrimaryTimeoutMs(primaryModel)") && apiGem242.includes("21500 - elapsed") && apiGem242.includes("if (++evicted >= 200) break;") && apiGem242.includes("if (timer) clearTimeout(timer);"),
     webglContextLostOk: eng242.includes('canvas3d.addEventListener("webglcontextlost"'),
@@ -8879,10 +8879,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     specSyncedModelsAndCacheOk:
       docSpec2414.includes("gemini-4-hydrogen") &&
       docSpec2414.includes("api/tts.js") &&
-      docSpec2414.includes("sanhao-shell-v25.7.1") &&
+      docSpec2414.includes("sanhao-shell-v25.7.2") &&
       docSpec2414.length <= 5000,
     readmeSyncedOk:
-      readme2414.includes("sanhao-shell-v25.7.1") &&
+      readme2414.includes("sanhao-shell-v25.7.2") &&
       readme2414.includes("api/tts.js"),
     ...v24214Runtime
   };
@@ -9334,7 +9334,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   })()`, ctx);
   const docScriptV2431 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
   const demoScriptVirtueSyncOk = [
-    "v25.7.1",
+    "v25.7.2",
     "啟席預載遮罩",
     "三好四給主動茶禮列",
     "茶席風氣",
@@ -11287,7 +11287,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   })()`, ctx);
 
   const docScriptV2552 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
-  const scriptHeaderSyncOk = docScriptV2552.split(/\r?\n/)[0].includes("v25.7.1") && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(docScriptV2552);
+  const scriptHeaderSyncOk = docScriptV2552.split(/\r?\n/)[0].includes("v25.7.2") && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(docScriptV2552);
 
   const v2552AudioRes = await vm.runInContext(`(async () => {
     const classicMovementsRestoredOk = Boolean(
@@ -11886,11 +11886,11 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     compCss2553.includes("body.craft-ui.theme-night #heroShowcaseOverlay #heroShowcaseSub") &&
     !compCssNoComments2553.includes("!important") &&
     !compCssNoComments2553.includes("backdrop-filter") &&
-    sw2553.includes('const SHELL_CACHE = "sanhao-shell-v25.7.1"') &&
-    fb2553.includes('version: "v25.7.1"') &&
-    spec2553.includes("v25.7.1") && spec2553.length <= 5000 &&
-    script2553.includes("v25.7.1") &&
-    readme2553.includes("v25.7.1") &&
+    sw2553.includes('const SHELL_CACHE = "sanhao-shell-v25.7.2"') &&
+    fb2553.includes('version: "v25.7.2"') &&
+    spec2553.includes("v25.7.2") && spec2553.length <= 5000 &&
+    script2553.includes("v25.7.2") &&
+    readme2553.includes("v25.7.2") &&
     lwSrc2553.includes("state._lwCueTimer") &&
     lwSrc2553.includes("orchestrator.isEpochValid(epLw)") &&
     zeroEmoji2553Ok
@@ -11963,15 +11963,15 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   );
 
   const file10SwCacheAndZeroEmojiOk = Boolean(
-    sw256.includes('const SHELL_CACHE = "sanhao-shell-v25.7.1"') &&
-    sw256.includes('const ASSET_CACHE = "sanhao-assets-v25.7.1"') &&
-    fb256.includes('version: "v25.7.1"') &&
-    readme256.includes("v25.7.1") &&
-    readme256.includes("sanhao-assets-v25.7.1") &&
-    spec256.includes("v25.7.1") &&
-    spec256.includes("sanhao-shell-v25.7.1") &&
+    sw256.includes('const SHELL_CACHE = "sanhao-shell-v25.7.2"') &&
+    sw256.includes('const ASSET_CACHE = "sanhao-assets-v25.7.2"') &&
+    fb256.includes('version: "v25.7.2"') &&
+    readme256.includes("v25.7.2") &&
+    readme256.includes("sanhao-assets-v25.7.2") &&
+    spec256.includes("v25.7.2") &&
+    spec256.includes("sanhao-shell-v25.7.2") &&
     spec256.length <= 5000 &&
-    script256.includes("v25.7.1") &&
+    script256.includes("v25.7.2") &&
     [css256, hud256, panels256, canvasEv256, voting256, night256, voice256, tts256, soundtrack256, spotlight256, flow256, main256, sw256, fb256, spec256, script256, readme256].every(
       (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
     )
@@ -12384,8 +12384,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     voice2561.includes("else if (st === 503)") &&
     voice2561.includes("Date.now() + 6000") &&
     voice2561.includes("this._splitTextForCloudTts(cleanText, 120)") &&
-    sw2561.includes('const SHELL_CACHE = "sanhao-shell-v25.7.1"') &&
-    sw2561.includes('const ASSET_CACHE = "sanhao-assets-v25.7.1"') &&
+    sw2561.includes('const SHELL_CACHE = "sanhao-shell-v25.7.2"') &&
+    sw2561.includes('const ASSET_CACHE = "sanhao-assets-v25.7.2"') &&
     spec2561.length <= 5000 &&
     [audioEv2561, main2561, html2561, vrm2561, css2561, spot2561, hud2561, tts2561, voice2561, sw2561, spec2561].every(
       (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
@@ -12715,17 +12715,17 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     css2570NoCom.includes("body.craft-ui .turn-strip-row > :first-child") &&
     css2570NoCom.includes("body.craft-ui .turn-strip-row > :last-child") &&
     css2570NoCom.includes("flex-shrink: 0") &&
-    sw2570.includes('const SHELL_CACHE = "sanhao-shell-v25.7.1"') &&
-    sw2570.includes('const ASSET_CACHE = "sanhao-assets-v25.7.1"') &&
-    fb2570.includes('version: "v25.7.1"') &&
-    spec2570.includes("v25.7.1") &&
+    sw2570.includes('const SHELL_CACHE = "sanhao-shell-v25.7.2"') &&
+    sw2570.includes('const ASSET_CACHE = "sanhao-assets-v25.7.2"') &&
+    fb2570.includes('version: "v25.7.2"') &&
+    spec2570.includes("v25.7.2") &&
     spec2570.includes("10.5 秒") &&
     spec2570.includes("120 字整段預抓") &&
-    spec2570.includes("sanhao-shell-v25.7.1") &&
-    spec2570.includes("sanhao-assets-v25.7.1") &&
+    spec2570.includes("sanhao-shell-v25.7.2") &&
+    spec2570.includes("sanhao-assets-v25.7.2") &&
     spec2570.length <= 5000 &&
-    script2570.includes("v25.7.1") &&
-    readme2570.includes("v25.7.1") &&
+    script2570.includes("v25.7.2") &&
+    readme2570.includes("v25.7.2") &&
     [main2570, soundtrack2570, voice2570, vrm2570, css2570, sw2570, fb2570, spec2570, script2570, readme2570].concat(aiFiles2570).every(
       (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
     )
@@ -13239,14 +13239,14 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     !pSpeech2571.includes("進定狼坑") &&
     !votingFile2571.includes("標進定狼坑") &&
     daySpeech2571.includes("setTimeout(runStaggeredPrefetch, 60)") &&
-    sw2571.includes('const SHELL_CACHE = "sanhao-shell-v25.7.1"') &&
-    sw2571.includes('const ASSET_CACHE = "sanhao-assets-v25.7.1"') &&
-    fb2571.includes('version: "v25.7.1"') &&
-    readme2571.includes("v25.7.1") &&
-    spec2571.includes("v25.7.1") &&
+    sw2571.includes('const SHELL_CACHE = "sanhao-shell-v25.7.2"') &&
+    sw2571.includes('const ASSET_CACHE = "sanhao-assets-v25.7.2"') &&
+    fb2571.includes('version: "v25.7.2"') &&
+    readme2571.includes("v25.7.2") &&
+    spec2571.includes("v25.7.2") &&
     spec2571.includes("120 字整段預抓") &&
     spec2571.length <= 5000 &&
-    script2571.includes("v25.7.1") &&
+    script2571.includes("v25.7.2") &&
     [ttsFile2571, srvFile2571, voiceFile2571, daySpeech2571, pSpeech2571, votingFile2571, sw2571, fb2571, spec2571, script2571, readme2571].every(
       (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
     )
@@ -13497,4 +13497,356 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 + v25.5.3 + v25.6.0 + v25.6.1 + v25.7.0 + v25.7.1 E2E smoke test PASSED!");
+// ==================== v25.7.2 RELEASE REGRESSION SUITE (CHUNK-0 PREFETCH + SEER DEDUP/LEAD + WOLF EXPLODE STAGING + SUBMIT GUARDS) ====================
+{
+  const readV2572 = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
+  const voice2572 = readV2572("js/audio/voice.js");
+  const playerSpeech2572 = readV2572("js/game/player-speech.js");
+  const voting2572 = readV2572("js/game/voting.js");
+  const daySpeech2572 = readV2572("js/game/day-speech.js");
+  const sw2572 = readV2572("sw.js");
+  const fb2572 = readV2572("js/ui/feedback.js");
+  const readme2572 = readV2572("README.md");
+  const spec2572 = readV2572("docs/作品說明書.md");
+  const script2572 = readV2572("docs/三分鐘Demo影片腳本.md");
+
+  const v2572FilesAndVersionOk = Boolean(
+    sw2572.includes('const SHELL_CACHE = "sanhao-shell-v25.7.2"') &&
+    sw2572.includes('const ASSET_CACHE = "sanhao-assets-v25.7.2"') &&
+    fb2572.includes('version: "v25.7.2"') &&
+    readme2572.includes("v25.7.2") &&
+    spec2572.includes("v25.7.2") &&
+    spec2572.length <= 5000 &&
+    script2572.includes("v25.7.2") &&
+    [voice2572, playerSpeech2572, voting2572, daySpeech2572, sw2572, fb2572, readme2572, spec2572, script2572].every(
+      (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
+    )
+  );
+
+  const v2572Runtime = vm.runInContext(`(async () => {
+    // 1. Long-text (>120 chars) cloud TTS prefetch dispatches BOTH chunks[0] and chunks[1]
+    let v2572Chunk0PrefetchOk = false;
+    {
+      const origFetch = fetch;
+      const origIsStatic = voice.isStaticCloudHost;
+      const origDecode = voice.decodeGeminiAudioBytes;
+      const prevKey = state.geminiApiKey;
+      const prevOptOut = state.serverGeminiOptOut;
+      const prevEngine = voice.enginePref;
+      const prevAvail = voice.cloudGeminiTtsAvailable;
+      const prevCd = voice.cloudGeminiTtsCooldownUntil;
+      const prevCd429 = voice._cloudTtsCooldownIs429;
+      const prevCtx = sound.ctx;
+      const sentTexts = [];
+      try {
+        sound.ctx = { sampleRate: 24000, currentTime: 0 };
+        state.geminiApiKey = "";
+        state.serverGeminiOptOut = false;
+        voice.enginePref = "auto";
+        voice.isStaticCloudHost = () => true;
+        voice.cloudGeminiTtsAvailable = true;
+        voice.cloudGeminiTtsCooldownUntil = 0;
+        voice._cloudTtsCooldownIs429 = false;
+        voice.studioCache = {};
+        voice.studioPending = {};
+        voice.decodeGeminiAudioBytes = async () => ({ duration: 1.0 });
+        fetch = async (_u, init) => {
+          sentTexts.push(JSON.parse(init.body).text);
+          return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(256).buffer };
+        };
+        const longStr = "這輪大家先把前排所有人的立場順序對清楚，如果對跳雙方都還沒拿出足夠具體的時間線與投票根據，我們可以先保留票型並把資源留到後面關鍵回合再做最後定奪；同時也要回頭核對昨晚誰有避重就輕或刻意模糊焦點的情況，千萬別在資訊不足的時候急著把重要身分送出場。";
+        const expectedChunks = voice._splitTextForCloudTts(voice.formatMandarinText(longStr), 120);
+        voice.prefetchCloudGeminiTts("你", longStr, "normal");
+        await Promise.all(Object.values(voice.studioPending));
+        await Promise.resolve();
+        const strippedSent = sentTexts.map((t) => voice.stripGeminiVocalTags(t));
+        v2572Chunk0PrefetchOk = Boolean(
+          expectedChunks.length >= 2 &&
+          strippedSent.length === 2 &&
+          strippedSent.includes(expectedChunks[0]) &&
+          strippedSent.includes(expectedChunks[1])
+        );
+      } finally {
+        fetch = origFetch;
+        voice.isStaticCloudHost = origIsStatic;
+        voice.decodeGeminiAudioBytes = origDecode;
+        state.geminiApiKey = prevKey;
+        state.serverGeminiOptOut = prevOptOut;
+        voice.enginePref = prevEngine;
+        voice.cloudGeminiTtsAvailable = prevAvail;
+        voice.cloudGeminiTtsCooldownUntil = prevCd;
+        voice._cloudTtsCooldownIs429 = prevCd429;
+        sound.ctx = prevCtx;
+        voice.studioCache = {};
+        voice.studioPending = {};
+      }
+    }
+
+    // 2. Player Seer template deduplication + Seer-lead ordering + structured field preservation
+    let v2572SeerDedupAndLeadOk = false;
+    {
+      resetMatchToLobby();
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "seer";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.match.playerSeatId = 1;
+      state.match.seats.forEach((s) => {
+        s.isPlayer = (s.id === 1);
+        s.alive = true;
+        s.claimedRole = null;
+        s.role = s.id === 1 ? "seer" : (s.id === 5 || s.id === 7 ? "wolf" : "villager");
+        s.team = s.role === "wolf" ? "wolf" : "good";
+      });
+      state.match.day = 2;
+      state.match.phase = "DAY_PLAYER_TURN";
+      state.match.daySpeechEvents = [];
+      state.match.allSpeechEvents = [];
+      const pSeat = getPlayerSeat();
+      pSeat.checkedHistory = [{ targetId: 5, isWolf: true, day: 1 }];
+
+      const d1 = ensurePlayerDraftPits(false);
+      d1.claimRole = "seer";
+      d1.wolfIds = [5];
+      d1.goodIds = [];
+      const txtOnly5 = composePlayerPitSpeechText();
+      const count5Only = (txtOnly5.match(/0?5號/g) || []).length;
+
+      state.match.playerDraftPits.wolfIds = [5, 6];
+      const txt5And6 = composePlayerPitSpeechText();
+      const count5With6 = (txt5And6.match(/0?5號/g) || []).length;
+
+      pSeat.checkedHistory.push({ targetId: 3, isWolf: false, day: 2 });
+      state.match.playerDraftPits.goodIds = [3];
+      const txtWithGood3 = composePlayerPitSpeechText();
+      const count3WithGood = (txtWithGood3.match(/0?3號/g) || []).length;
+
+      const dLead = ensurePlayerDraftPits(false);
+      dLead.wolfIds = [5];
+      dLead.goodIds = [];
+      dLead.claimRole = null;
+      dLead.composedModules = [{ key: "m1", tgTag: "條理分析", text: "這點矛盾值得再對一次。", tgKind: "words", addedWolfIds: [], addedGoodIds: [] }];
+      dLead._lastAutoPitText = "";
+      const qIn = el("quickFreeInput");
+      if (qIn) qIn.value = "狼坑目前鎖定 05號" + getSeat(5).name + "，破綻最明顯，建議好人齊心歸票優先請 05號 離席！，這點矛盾值得再對一次。";
+      pSeat.checkedHistory = [{ targetId: 5, isWolf: true, day: 1 }];
+      dLead.claimRole = "seer";
+      syncDraftSpeechToInput();
+      const syncedLeadTxt = qIn ? qIn.value : "";
+
+      const dCard = ensurePlayerDraftPits(false);
+      dCard.wolfIds = [5];
+      dCard.goodIds = [];
+      dCard.claimRole = null;
+      dCard.composedModules = [];
+      if (qIn) qIn.value = "狼坑目前鎖定 05號" + getSeat(5).name + "，建議優先請 05號 離席！";
+      loadQuickCardIntoAdvancedEditor({
+        label: "明心查殺",
+        tgTag: "觀察員",
+        tgKind: "heart",
+        text: "我是真正的明心觀察員！昨晚查驗 05號" + getSeat(5).name + " 是酸民狼！",
+        draftPatch: { claimRole: "seer", wolfIds: [5] }
+      }, null, null, null);
+      const cardLeadTxt = qIn ? qIn.value : "";
+
+      const dSubmit = ensurePlayerDraftPits(false);
+      dSubmit.wolfIds = [5];
+      dSubmit.goodIds = [];
+      dSubmit.claimRole = "seer";
+      dSubmit.composedModules = [];
+      state.match.phase = "DAY_PLAYER_TURN";
+      el("playerSpeechInput").value = txtOnly5;
+      const subOk = submitPlayerSpeech();
+      const lastEv = state.match.daySpeechEvents[state.match.daySpeechEvents.length - 1];
+
+      v2572SeerDedupAndLeadOk = Boolean(
+        txtOnly5.startsWith("我是真正的明心觀察員") &&
+        count5Only === 1 &&
+        !txtOnly5.includes("狼坑目前鎖定") &&
+        count5With6 === 1 &&
+        txt5And6.includes("狼坑目前鎖定") &&
+        txt5And6.includes("6號") &&
+        count3WithGood === 1 &&
+        !txtWithGood3.includes("好人坑我先保") &&
+        state.match.playerDraftPits &&
+        syncedLeadTxt.startsWith("我是真正的明心觀察員") &&
+        (syncedLeadTxt.match(/0?5號/g) || []).length === 1 &&
+        syncedLeadTxt.includes("這點矛盾值得再對一次。") &&
+        !syncedLeadTxt.includes("狼坑目前鎖定") &&
+        cardLeadTxt.startsWith("我是真正的明心觀察員") &&
+        !cardLeadTxt.includes("狼坑目前鎖定") &&
+        subOk === true &&
+        lastEv && lastEv.checkedWolfId === 5 && lastEv.accuseId === 5 &&
+        Array.isArray(lastEv.wolfPits) && lastEv.wolfPits.includes(5)
+      );
+    }
+
+    // 3. AI Wolf Self-Explode: forbidden on easy; >= 2.8s staging + max 1/match on normal/pro + clearTransientMatchTimers cleanup
+    let v2572WolfExplodeStagingAndGuardsOk = false;
+    {
+      resetMatchToLobby();
+      el("selectModeCount").value = "10";
+      el("selectPreferredRole").value = "seer";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.match.playerSeatId = 1;
+      state.match.seats.forEach((s) => {
+        s.isPlayer = (s.id === 1);
+        s.alive = true;
+        s.claimedRole = null;
+        if (s.id === 1) { s.role = "seer"; s.team = "good"; }
+        else if (s.id === 2 || s.id === 3 || s.id === 4) { s.role = "wolf"; s.team = "wolf"; }
+        else { s.role = "villager"; s.team = "good"; }
+      });
+      state.match.phase = "DAY_SPEECH";
+      state.match.day = 2;
+      state.match.aiWolfExplosions = 0;
+      state.match._wolfExplodePendingNight = false;
+      state.match.daySpeechEvents = [
+        { speakerId: 1, claimRole: "seer", checkedWolfId: 2, text: "1號觀察員查殺 2號" }
+      ];
+      state.match.allSpeechEvents = state.match.daySpeechEvents.slice();
+
+      const w1 = getSeat(2);
+      const w2 = getSeat(3);
+      state.aiDifficulty = "easy";
+      const easyForbidOk = maybeTriggerAiWolfSelfExplode(w1, { rngVal: 0.01 }) === false;
+
+      const origSetTo = setTimeout;
+      const origClearTo = clearTimeout;
+      const origCanSpeak = voice.canSpeak;
+      const timers = [];
+      const clearedIds = [];
+      try {
+        voice.canSpeak = () => false;
+        setTimeout = (fn, ms) => {
+          const id = timers.length + 101;
+          timers.push({ id, fn, ms });
+          return id;
+        };
+        clearTimeout = (id) => {
+          if (id) clearedIds.push(id);
+        };
+
+        state.aiDifficulty = "normal";
+        state.spectatorFastForward = false;
+        const firedNormal = maybeTriggerAiWolfSelfExplode(w1, { rngVal: 0.01 });
+        const holdTimerEntry = timers.find((t) => t.id === state._wolfExplodeTimer && t.ms >= 2800);
+        const spotTxtDuringHold = el("spotlightText") ? el("spotlightText").textContent : "";
+        const pendingStateOk = Boolean(
+          firedNormal === true &&
+          !w1.alive &&
+          w1.claimedRole === "wolf" &&
+          state.match._wolfExplodePendingNight === true &&
+          !isNightPhase(state.match.phase) &&
+          state.match.phase === "DAY_SPEECH" &&
+          holdTimerEntry &&
+          spotTxtDuringHold.includes("當場拂袖掀席！本輪剩餘發言與公投強制中止，即將入夜")
+        );
+
+        if (holdTimerEntry) holdTimerEntry.fn();
+        const enteredNightAfterHoldOk = Boolean(
+          isNightPhase(state.match.phase) &&
+          state.match.day === 3 &&
+          state.match._wolfExplodePendingNight === false
+        );
+
+        state.match.phase = "DAY_SPEECH";
+        state.match.daySpeechEvents = [
+          { speakerId: 1, claimRole: "seer", checkedWolfId: w2.id, text: "1號觀察員查殺 3號" }
+        ];
+        const secondBlockedOk = maybeTriggerAiWolfSelfExplode(w2, { rngVal: 0.01 }) === false;
+
+        state.match.aiWolfExplosions = 0;
+        timers.length = 0;
+        clearedIds.length = 0;
+        const firedCleanupTest = maybeTriggerAiWolfSelfExplode(w2, { rngVal: 0.01 });
+        const pendingHoldId = state._wolfExplodeTimer;
+        clearTransientMatchTimers();
+        const cleanupTimerOk = Boolean(
+          firedCleanupTest &&
+          pendingHoldId &&
+          clearedIds.includes(pendingHoldId) &&
+          state._wolfExplodeTimer === null &&
+          state._wolfExplodeCapTimer === null &&
+          state.match._wolfExplodePendingNight === false
+        );
+
+        v2572WolfExplodeStagingAndGuardsOk = Boolean(
+          easyForbidOk &&
+          pendingStateOk &&
+          enteredNightAfterHoldOk &&
+          secondBlockedOk &&
+          cleanupTimerOk
+        );
+      } finally {
+        setTimeout = origSetTo;
+        clearTimeout = origClearTo;
+        voice.canSpeak = origCanSpeak;
+        state.aiDifficulty = "normal";
+      }
+    }
+
+    // 4. submitPlayerSpeech phase & re-entrancy guards + non-explode empty speechQueue -> DAY_VOTE
+    let v2572SubmitGuardsAndVoteFlowOk = false;
+    {
+      resetMatchToLobby();
+      el("selectModeCount").value = "8";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+      state.match.playerSeatId = 1;
+      state.match.seats.forEach((s) => { s.alive = true; s.isPlayer = (s.id === 1); });
+
+      state.match.phase = "SHERIFF_ELECTION";
+      el("playerSpeechInput").value = "不該在警選誤送出";
+      const blockedInSheriff = submitPlayerSpeech() === false;
+      const sheriffPhaseIntact = state.match.phase === "SHERIFF_ELECTION";
+
+      state.match.phase = "DAY_PLAYER_TURN";
+      state.match.daySpeechEvents = [];
+      state._submittingPlayerSpeech = true;
+      el("playerSpeechInput").value = "防重入阻擋";
+      const blockedReentry = submitPlayerSpeech() === false && state.match.daySpeechEvents.length === 0;
+      state._submittingPlayerSpeech = false;
+
+      el("playerSpeechInput").value = "第一拍正常發言送出，先保 2號、疑 5號。";
+      const firstSubmitOk = submitPlayerSpeech() === true;
+      const secondClickBlocked = submitPlayerSpeech() === false && state.match.daySpeechEvents.length === 1;
+
+      state.match.phase = "DAY_SPEECH";
+      state.match._wolfExplodePendingNight = false;
+      state.match.speechQueue = [];
+      advanceSpeechQueue();
+      const nonExplodeToVoteOk = state.match.phase === "DAY_VOTE" && !isNightPhase(state.match.phase);
+
+      v2572SubmitGuardsAndVoteFlowOk = Boolean(
+        blockedInSheriff &&
+        sheriffPhaseIntact &&
+        blockedReentry &&
+        firstSubmitOk &&
+        secondClickBlocked &&
+        nonExplodeToVoteOk
+      );
+    }
+
+    return {
+      v2572Chunk0PrefetchOk,
+      v2572SeerDedupAndLeadOk,
+      v2572WolfExplodeStagingAndGuardsOk,
+      v2572SubmitGuardsAndVoteFlowOk
+    };
+  })()`, ctx);
+
+  const v2572RuntimeRes = await v2572Runtime;
+  const all2572 = Object.assign({ v2572FilesAndVersionOk }, v2572RuntimeRes);
+  for (const [k, v] of Object.entries(all2572)) {
+    if (!v) {
+      throw new Error("v25.7.2 Release regression failed for " + k + ": " + JSON.stringify(all2572));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 + v25.5.3 + v25.6.0 + v25.6.1 + v25.7.0 + v25.7.1 + v25.7.2 E2E smoke test PASSED!");

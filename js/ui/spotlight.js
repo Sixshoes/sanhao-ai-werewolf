@@ -147,6 +147,7 @@ function commitPendingSpeechLog(speakerId) {
 function maybeScheduleAutoAdvanceAfterSpeech() {
   const ff = typeof isSpectatorFastForward === "function" && isSpectatorFastForward();
   if (!state.autoPlay && !ff) return;
+  if (state.match && state.match._wolfExplodePendingNight) return;
   if (voice && voice.paused) return;
   if (state.interjectOpen) return;
   const pNow = state.match.phase;

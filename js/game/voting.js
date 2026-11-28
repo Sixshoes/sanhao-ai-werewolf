@@ -1567,13 +1567,24 @@ function useFourGHope(seatAId, seatBId) {
 function canWolfSelfExplodeNow(seat) {
   const m = state.match;
   if (!m || !m.started || !seat || !seat.alive || seat.role !== "wolf") return false;
+  if (m._wolfExplodePendingNight) return false;
   return m.phase === "SHERIFF_ELECTION" || m.phase === "DAY_SPEECH" || m.phase === "DAY_PLAYER_TURN" || m.phase === "DAY_VOTE";
 }
 
 function triggerWolfSelfExplode(seatId, opts) {
   const m = state.match;
+  const o = opts || {};
   const wolf = getSeat(seatId);
   if (!m || !m.started || !wolf || !canWolfSelfExplodeNow(wolf)) return false;
+
+  if (state._wolfExplodeTimer) {
+    clearTimeout(state._wolfExplodeTimer);
+    state._wolfExplodeTimer = null;
+  }
+  if (state._wolfExplodeCapTimer) {
+    clearTimeout(state._wolfExplodeCapTimer);
+    state._wolfExplodeCapTimer = null;
+  }
 
   // 0. Snapshot interrupted speech state BEFORE voice.stop() clears prep beat & activeSpeakerId!
   const nowExplodeMs = typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -1709,43 +1720,113 @@ function triggerWolfSelfExplode(seatId, opts) {
     m.sheriffBadgeFlowsBySeat = {};
   }
   if (m.stats) m.stats.wolfExplosions = (m.stats.wolfExplosions || 0) + 1;
+  if (o.aiSelfExplode) m.aiWolfExplosions = (m.aiWolfExplosions || 0) + 1;
 
   const pid = getPlayerId();
   const wLbl = fmtSeatNum(wolf.id) + "號 " + (wolf.id === pid ? "你" : wolf.name);
+  const explodeAlert = fmtSeatNum(wolf.id) + "號 當場拂袖掀席！本輪剩餘發言與公投強制中止，即將入夜";
+  const wolfLine = "不必多談了，我就是酸民狼，這盞茶掀了，直接入夜！";
   const cutSub = wasElection
-    ? (wLbl + " 亮牌自爆！沒收今日警長競選、警徽流與全體發言公投，茶席即刻黑燈入夜")
-    : (wLbl + " 亮牌自爆！強制截斷當日剩餘發言與公投，茶席即刻黑燈入夜");
+    ? (wLbl + " 亮牌自爆！沒收今日警長競選、警徽流與全體發言公投（" + explodeAlert + "）")
+    : explodeAlert;
 
   if (typeof sound !== "undefined" && typeof sound.playHunterShot === "function") sound.playHunterShot();
   if (typeof triggerLanternOutSilhouette === "function") triggerLanternOutSilhouette(wolf.id);
   triggerShake(520);
   spawnBurst(wolf.id, ["#e11d48", "#fbbf24", "#ffffff"], 36, "slash");
   if (typeof triggerScreenFlash === "function") triggerScreenFlash("#be123c", 480, 0.36);
-  spawnFx(wolf.id, "拂袖掀席", "#e11d48", { scale: 1.3, durationMs: 2000 });
-  setSeatBubble(wolf.id, "不必多談了，這盞茶掀了，直接入夜！", "wolf", 3200);
-  triggerCutIn("拂袖掀席・酸民狼自爆", cutSub, "crimson", 2000);
+  spawnFx(wolf.id, "拂袖掀席", "#e11d48", { scale: 1.3, durationMs: 2400 });
+  setSeatBubble(wolf.id, wolfLine, "wolf", 3600);
+  triggerCutIn("拂袖掀席・酸民狼自爆", cutSub, "crimson", 2800);
   addLog({
     kind: "dawn",
-    title: "拂袖掀席（白天自爆）：" + cutSub,
-    text: ""
+    title: "拂袖掀席（白天自爆）：" + explodeAlert,
+    text: wolfLine
   });
-  showToast("拂袖掀席：" + wLbl + " 自爆離席，直接黑燈進入夜晚。", "warn");
+  showToast(explodeAlert, "warn");
   if (typeof evaluateMatchPointState === "function") evaluateMatchPointState();
 
   if (wolf.id === pid && typeof autoEnableSpectatorCompactPace === "function") {
     autoEnableSpectatorCompactPace();
   }
 
-  // 3. If self-explode aborted Day-1 pre-dawn Sheriff Election, settle & announce pending Night-1 casualties first!
-  if (hadPendingN1Dawn && typeof settleNightCasualtiesOnElectionExplode === "function") {
-    if (settleNightCasualtiesOnElectionExplode()) return true;
+  const explodeEp = (typeof orchestrator !== "undefined") ? orchestrator.matchEpoch : 0;
+  const finishExplodeToNight = function () {
+    if (state._wolfExplodeTimer) {
+      clearTimeout(state._wolfExplodeTimer);
+      state._wolfExplodeTimer = null;
+    }
+    if (state._wolfExplodeCapTimer) {
+      clearTimeout(state._wolfExplodeCapTimer);
+      state._wolfExplodeCapTimer = null;
+    }
+    if (!state.match || !state.match.started || state.match.phase === "GAME_OVER") return;
+    if (typeof orchestrator !== "undefined" && !orchestrator.isEpochValid(explodeEp)) return;
+    state.match._wolfExplodePendingNight = false;
+    state.activeSpeakerId = null;
+
+    // 3. If self-explode aborted Day-1 pre-dawn Sheriff Election, settle & announce pending Night-1 casualties first!
+    if (hadPendingN1Dawn && typeof settleNightCasualtiesOnElectionExplode === "function") {
+      if (settleNightCasualtiesOnElectionExplode()) return;
+    }
+
+    // 4. Check win condition; if match continues, plunge straight into Night!
+    if (checkAndHandleGameOver()) return;
+    if (typeof beginNightPhase === "function") {
+      beginNightPhase();
+    }
+  };
+
+  const dramaticPauseMs = (typeof o.dramaticPauseMs === "number" && o.dramaticPauseMs > 0)
+    ? Math.max(2800, o.dramaticPauseMs)
+    : 0;
+  if (dramaticPauseMs > 0) {
+    m._wolfExplodePendingNight = true;
+    m.phase = wasElection ? "SHERIFF_ELECTION" : "DAY_SPEECH";
+    state.activeSpeakerId = wolf.id;
+    if (typeof syncSpeakerBannerVisuals === "function") {
+      syncSpeakerBannerVisuals(wolf, wLbl + " · 亮牌自爆", "拂袖掀席", true);
+    }
+    if (typeof updateSpotlightBox === "function") {
+      updateSpotlightBox(wLbl + " · 酸民狼自爆", explodeAlert, wolfLine + "（" + explodeAlert + "）");
+    }
+    updateAllUI();
+
+    let settled = false;
+    let minHoldDone = false;
+    const canSpeakNow = Boolean(typeof voice !== "undefined" && typeof voice.canSpeak === "function" && voice.canSpeak() && typeof voice.speak === "function");
+    let voiceDone = !canSpeakNow;
+    const tryCompleteExplode = function () {
+      if (settled || !minHoldDone || !voiceDone) return;
+      settled = true;
+      finishExplodeToNight();
+    };
+    state._wolfExplodeTimer = setTimeout(function () {
+      state._wolfExplodeTimer = null;
+      minHoldDone = true;
+      tryCompleteExplode();
+    }, dramaticPauseMs);
+    state._wolfExplodeCapTimer = setTimeout(function () {
+      state._wolfExplodeCapTimer = null;
+      if (!settled) {
+        settled = true;
+        finishExplodeToNight();
+      }
+    }, Math.max(dramaticPauseMs + 2800, 5800));
+    if (canSpeakNow) {
+      try {
+        voice.speak(wolf.name, wolfLine, "rebut", function () {
+          voiceDone = true;
+          tryCompleteExplode();
+        }, { seatId: wolf.id });
+      } catch (e) {
+        voiceDone = true;
+      }
+    }
+    return true;
   }
 
-  // 4. Check win condition; if match continues, plunge straight into Night!
-  if (checkAndHandleGameOver()) return true;
-  if (typeof beginNightPhase === "function") {
-    beginNightPhase();
-  }
+  finishExplodeToNight();
   return true;
 }
 
@@ -1759,6 +1840,7 @@ function maybeTriggerAiWolfSelfExplode(speaker, opts) {
     : null;
   const diff = (snap && snap.aiDifficulty) || state.aiDifficulty || "normal";
   if (diff === "easy") return false;
+  if ((m.aiWolfExplosions || 0) >= 1) return false;
   const aliveMates = snap
     ? (snap.knownWolfMates || []).filter(function (mt) { return mt && mt.alive; })
     : getAliveSeats().filter(function (s) { return s.role === "wolf" && s.id !== speaker.id; });
@@ -1779,7 +1861,8 @@ function maybeTriggerAiWolfSelfExplode(speaker, opts) {
     if (typeof antiCheatMonitor !== "undefined") {
       antiCheatMonitor.recordDecision("wolf_explode_check", speaker.id, "觸發拂袖掀席自爆");
     }
-    return triggerWolfSelfExplode(speaker.id);
+    const ffNow = Boolean((opts && opts.immediateNight) || (typeof isSpectatorFastForward === "function" && isSpectatorFastForward()));
+    return triggerWolfSelfExplode(speaker.id, { aiSelfExplode: true, dramaticPauseMs: ffNow ? 0 : 3000 });
   }
   return false;
 }
@@ -3575,6 +3658,9 @@ function submitPlayerSheriffSpeech(rawText, explicitFlowArg, optsArg) {
   if (!m || !ctx || m.phase !== "SHERIFF_ELECTION" || ctx.stage !== "speech" || ctx.activeReelSeatId !== pid || !pSeat) {
     return false;
   }
+  if (state._submittingSheriffSpeech) return false;
+  state._submittingSheriffSpeech = true;
+  try {
   let cleanText = String(rawText || "").trim();
   if (cleanText && typeof normalizeSeatRefsInText === "function") {
     cleanText = normalizeSeatRefsInText(cleanText);
@@ -3670,6 +3756,9 @@ function submitPlayerSheriffSpeech(rawText, explicitFlowArg, optsArg) {
   if (typeof spawnBurst === "function") spawnBurst(pid, ["#fbbf24", "#ffffff"], 12, "star");
   sound.tone(660, 0.08, "triangle", 0.05, 0);
   return advanceSheriffSpeechTurn();
+  } finally {
+    state._submittingSheriffSpeech = false;
+  }
 }
 
 function chooseAiSheriffElectionVote(voter, candidateIds, speeches, isAutoPass) {

@@ -114,6 +114,8 @@ const state = {
     hopeConfrontation: null,
     wolfExplodedToday: false,
     wolfExplodedDay: 0,
+    aiWolfExplosions: 0,
+    _wolfExplodePendingNight: false,
     interjectBonusCharges: 0,
     guardAwakenBonusWeightDay: 0,
     guardBlockedLastNight: false,

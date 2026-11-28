@@ -39,7 +39,18 @@ function clearTransientMatchTimers() {
       reset3DSeatGazeState(stage3d.seats);
     }
   }
-  if (state.match) state.match.isMatchPoint = false;
+  if (state._wolfExplodeTimer) {
+    clearTimeout(state._wolfExplodeTimer);
+    state._wolfExplodeTimer = null;
+  }
+  if (state._wolfExplodeCapTimer) {
+    clearTimeout(state._wolfExplodeCapTimer);
+    state._wolfExplodeCapTimer = null;
+  }
+  if (state.match) {
+    state.match.isMatchPoint = false;
+    state.match._wolfExplodePendingNight = false;
+  }
 }
 
 function startGuidedBeginnerMatch() {
@@ -307,6 +318,8 @@ function startJudgeShowcaseMatch() {
     hopeConfrontation: null,
     wolfExplodedToday: false,
     wolfExplodedDay: 0,
+    aiWolfExplosions: 0,
+    _wolfExplodePendingNight: false,
     interjectBonusCharges: 0,
     guardAwakenBonusWeightDay: 0,
     guardBlockedLastNight: false,
@@ -737,6 +750,8 @@ function startNewGame() {
     hopeConfrontation: null,
     wolfExplodedToday: false,
     wolfExplodedDay: 0,
+    aiWolfExplosions: 0,
+    _wolfExplodePendingNight: false,
     interjectBonusCharges: 0,
     guardAwakenBonusWeightDay: 0,
     guardBlockedLastNight: false,

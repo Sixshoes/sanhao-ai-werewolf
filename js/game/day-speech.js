@@ -314,9 +314,10 @@ function advanceSpeechQueue() {
   clearStepTimer();
   if (typeof commitPendingSpeechLog === "function") commitPendingSpeechLog();
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
+  if (!state.match || !state.match.started || state.match._wolfExplodePendingNight) return;
   if (state.match.phase !== "DAY_SPEECH" && state.match.phase !== "DAY_PLAYER_TURN") return;
 
-  if (state.match.speechQueue.length === 0) {
+  if (!Array.isArray(state.match.speechQueue) || state.match.speechQueue.length === 0) {
     startVotingPhase();
     return;
   }
@@ -1039,6 +1040,7 @@ const THINKING_MICROCUES = [
 
 async function executeAiTurnSpeech(speaker) {
   if (state.speakingInFlight) return;
+  if (state.match && state.match._wolfExplodePendingNight) return;
   if (typeof maybeTriggerAiWolfSelfExplode === "function" && maybeTriggerAiWolfSelfExplode(speaker)) {
     return;
   }

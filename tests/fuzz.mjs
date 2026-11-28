@@ -405,7 +405,7 @@ for (let i = 0; i < 60; i++) {
       if (vr && typeof vr.onContinue === "function") vr.onContinue();
       else ctx.beginNightPhase();
     } else if (ph === "DAY_SPEECH" || ph === "LAST_WORDS_SPEECH") {
-      const stId = gState.stepTimer;
+      const stId = gState._wolfExplodeTimer || gState.stepTimer;
       if (stId && pendingTimers.has(stId)) {
         const entry = pendingTimers.get(stId);
         pendingTimers.delete(stId);

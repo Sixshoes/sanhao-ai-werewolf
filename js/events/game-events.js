@@ -85,6 +85,8 @@ function resetMatchToLobby() {
   state.match.hopeConfrontation = null;
   state.match.wolfExplodedToday = false;
   state.match.wolfExplodedDay = 0;
+  state.match.aiWolfExplosions = 0;
+  state.match._wolfExplodePendingNight = false;
   state.match.interjectBonusCharges = 0;
   state.match.guardAwakenBonusWeightDay = 0;
   state.match.guardAwakenBonusUsed = false;
@@ -299,6 +301,7 @@ function bindMatchFlowEvents() {
       indieFlow.syncBodyScreenState();
     }
     const voiceBusyNow = Boolean(typeof voice !== "undefined" && (voice.speaking || voice.paused));
+    if (state.match && state.match._wolfExplodePendingNight) return;
     if (state.autoPlay && !state.stepTimer && !state.speakingInFlight && !voiceBusyNow) {
       if (state.match.phase === "DAY_SPEECH" && !state.typewriter.active) {
         advanceSpeechQueue();
@@ -834,6 +837,7 @@ function bindSpeechInputEvents() {
 
   el("btnStepNext").addEventListener("click", function (ev) {
     sound.unlock();
+    if (state.match && state.match._wolfExplodePendingNight) return;
     if (state.match && state.match.candlelitReview && state.match.candlelitReview.active) {
       if (typeof finishCandlelitNightReview === "function") finishCandlelitNightReview();
       return;
@@ -987,6 +991,8 @@ function bindSpeechInputEvents() {
   el("btnSubmitSpeech").addEventListener("click", submitPlayerSpeech);
 
   function sendQuickFreeSpeech() {
+    if (!state.match || !state.match.started || state.match.phase !== "DAY_PLAYER_TURN") return;
+    if (state._submittingPlayerSpeech || state.match._wolfExplodePendingNight) return;
     const qIn = el("quickFreeInput");
     if (!qIn) return;
     let val = qIn.value.trim();

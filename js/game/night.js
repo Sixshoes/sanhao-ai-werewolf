@@ -297,6 +297,14 @@ function formatDayOrdinalZh(n) {
 // ==================== NIGHT ENGINE ====================
 function beginNightPhase() {
   clearStepTimer();
+  if (state._wolfExplodeTimer) {
+    clearTimeout(state._wolfExplodeTimer);
+    state._wolfExplodeTimer = null;
+  }
+  if (state._wolfExplodeCapTimer) {
+    clearTimeout(state._wolfExplodeCapTimer);
+    state._wolfExplodeCapTimer = null;
+  }
   if (typeof voice !== "undefined" && typeof voice.stop === "function") voice.stop();
   closeSeatIntel();
   closeRadialMenu();
@@ -305,6 +313,7 @@ function beginNightPhase() {
   state.voteResultPayload = null;
   state.match.day += 1;
   state.match.wolfExplodedToday = false;
+  state.match._wolfExplodePendingNight = false;
   state.match.activeDirectorEvent = null;
   state.match.directorEventClearedDay = 0;
   state.match.rewriteCritReady = false;
