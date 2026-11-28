@@ -6,11 +6,16 @@
 const bootPreloader = {
   active: false,
   finished: false,
+  awaitingGesture: false,
+  _completionPending: false,
   maxPct: 6,
   readyCallbacks: [],
   skipTimer: null,
   hardTimer: null,
+  audioGateTimer: null,
   _skipBound: false,
+  _overlayGestureBound: false,
+  _enterKeyHandler: null,
   buckets: {
     sky: { done: 0, total: 4, weight: 20 },
     portraits: { done: 0, total: 1, weight: 20 },
@@ -23,6 +28,21 @@ const bootPreloader = {
     const proto = window.location.protocol;
     if (proto !== "http:" && proto !== "https:") return false;
     return typeof window.matchMedia === "function";
+  },
+
+  isAudioRunning: function () {
+    return Boolean(typeof sound !== "undefined" && sound && sound.ctx && sound.ctx.state === "running");
+  },
+
+  isAudioMuted: function () {
+    return Boolean(typeof sound !== "undefined" && sound && sound.muted);
+  },
+
+  clearEnterKeyHandler: function () {
+    if (this._enterKeyHandler && typeof window !== "undefined" && typeof window.removeEventListener === "function") {
+      window.removeEventListener("keydown", this._enterKeyHandler, true);
+    }
+    this._enterKeyHandler = null;
   },
 
   resetBuckets: function () {
@@ -38,17 +58,43 @@ const bootPreloader = {
   start: function () {
     const self = this;
     this.finished = false;
+    this.awaitingGesture = false;
+    this._completionPending = false;
     this.resetBuckets();
     if (this.skipTimer) { clearTimeout(this.skipTimer); this.skipTimer = null; }
     if (this.hardTimer) { clearTimeout(this.hardTimer); this.hardTimer = null; }
+    if (this.audioGateTimer) { clearTimeout(this.audioGateTimer); this.audioGateTimer = null; }
+    this.clearEnterKeyHandler();
     const skipBtn = typeof el === "function" ? el("btnSkipBootPreload") : null;
     if (skipBtn && !this._skipBound && typeof skipBtn.addEventListener === "function") {
       this._skipBound = true;
       skipBtn.addEventListener("click", function () {
+        if (typeof sound !== "undefined" && sound && typeof sound.unlock === "function") {
+          sound.unlock();
+        }
         self.dismiss("skip");
       });
     }
     if (skipBtn) skipBtn.classList.add("hidden");
+    const cueEl = typeof el === "function" ? el("bootPreloadEnterCue") : null;
+    if (cueEl && cueEl.classList) cueEl.classList.add("hidden");
+
+    const ov = typeof el === "function" ? el("bootPreloadOverlay") : null;
+    if (ov && !this._overlayGestureBound && typeof ov.addEventListener === "function") {
+      this._overlayGestureBound = true;
+      const handleOverlayEnter = function (ev) {
+        if (!self.awaitingGesture || self.finished) return;
+        if (ev && ev.type === "touchend" && typeof ev.preventDefault === "function") {
+          ev.preventDefault();
+        }
+        if (typeof sound !== "undefined" && sound && typeof sound.unlock === "function") {
+          sound.unlock();
+        }
+        self.dismiss("complete");
+      };
+      ov.addEventListener("click", handleOverlayEnter);
+      ov.addEventListener("touchend", handleOverlayEnter);
+    }
 
     if (!this.isBrowserHttp()) {
       this.reportBucket("sky", 4, 4);
@@ -60,19 +106,53 @@ const bootPreloader = {
     }
 
     this.active = true;
-    const ov = typeof el === "function" ? el("bootPreloadOverlay") : null;
     if (ov) {
       ov.classList.remove("hidden");
       ov.classList.remove("is-fading");
+      ov.classList.remove("is-awaiting-gesture");
     }
     this.render();
     this.skipTimer = setTimeout(function () {
       const sb = typeof el === "function" ? el("btnSkipBootPreload") : null;
-      if (!self.finished && sb) sb.classList.remove("hidden");
+      if (!self.finished && !self.awaitingGesture && sb) sb.classList.remove("hidden");
     }, 4500);
     this.hardTimer = setTimeout(function () {
+      if (self.awaitingGesture || self.finished) return;
       self.dismiss("timeout");
     }, 14000);
+  },
+
+  enterGestureGate: function () {
+    if (this.finished || this.awaitingGesture) return;
+    this.awaitingGesture = true;
+    if (this.skipTimer) { clearTimeout(this.skipTimer); this.skipTimer = null; }
+    if (this.hardTimer) { clearTimeout(this.hardTimer); this.hardTimer = null; }
+    if (this.audioGateTimer) { clearTimeout(this.audioGateTimer); this.audioGateTimer = null; }
+    const ov = typeof el === "function" ? el("bootPreloadOverlay") : null;
+    const skipBtn = typeof el === "function" ? el("btnSkipBootPreload") : null;
+    const cueEl = typeof el === "function" ? el("bootPreloadEnterCue") : null;
+    const stEl = typeof el === "function" ? el("bootPreloadStatus") : null;
+    if (ov && ov.classList) ov.classList.add("is-awaiting-gesture");
+    if (skipBtn && skipBtn.classList) skipBtn.classList.add("hidden");
+    if (cueEl) {
+      if (cueEl.classList) cueEl.classList.remove("hidden");
+      cueEl.textContent = "點擊入席";
+    }
+    if (stEl) stEl.textContent = "點擊任意處或按任意鍵入席";
+    const self = this;
+    this.clearEnterKeyHandler();
+    if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+      this._enterKeyHandler = function (ev) {
+        if (!self.awaitingGesture || self.finished) return;
+        const key = ev && ev.key ? String(ev.key) : "";
+        if (key === "Shift" || key === "Control" || key === "Alt" || key === "Meta") return;
+        if (typeof sound !== "undefined" && sound && typeof sound.unlock === "function") {
+          sound.unlock();
+        }
+        self.dismiss("complete");
+      };
+      window.addEventListener("keydown", this._enterKeyHandler, true);
+    }
   },
 
   render: function () {
@@ -91,7 +171,7 @@ const bootPreloader = {
     const stEl = typeof el === "function" ? el("bootPreloadStatus") : null;
     if (fillEl && fillEl.style) fillEl.style.width = pct + "%";
     if (pctEl) pctEl.textContent = pct + "%";
-    if (stEl) {
+    if (stEl && !this.awaitingGesture) {
       if (b.sky.done < b.sky.total) {
         stEl.textContent = "正在點亮書院天穹與古亭光影…";
       } else if (b.portraits.done < b.portraits.total) {
@@ -116,14 +196,44 @@ const bootPreloader = {
     const allDone = ["sky", "portraits", "hero", "avatars"].every(function (k) {
       return this.buckets[k].done >= this.buckets[k].total;
     }, this);
-    if (allDone && this.active && !this.finished) {
+    if (allDone && this.active && !this.finished && !this.awaitingGesture && !this._completionPending) {
+      this._completionPending = true;
       const fillEl = typeof el === "function" ? el("bootPreloadBarFill") : null;
       const pctEl = typeof el === "function" ? el("bootPreloadPct") : null;
       if (fillEl && fillEl.style) fillEl.style.width = "100%";
       if (pctEl) pctEl.textContent = "100%";
       this.maxPct = 100;
+      if (this.skipTimer) { clearTimeout(this.skipTimer); this.skipTimer = null; }
+      if (this.hardTimer) { clearTimeout(this.hardTimer); this.hardTimer = null; }
+      if (this.audioGateTimer) { clearTimeout(this.audioGateTimer); this.audioGateTimer = null; }
       const self = this;
-      setTimeout(function () { self.dismiss("complete"); }, 260);
+      const unlockRes = (typeof sound !== "undefined" && sound && typeof sound.unlock === "function")
+        ? sound.unlock()
+        : null;
+      if (this.isAudioRunning() || this.isAudioMuted()) {
+        this.audioGateTimer = setTimeout(function () {
+          self.audioGateTimer = null;
+          self.dismiss("complete");
+        }, 220);
+      } else {
+        if (unlockRes && typeof unlockRes.then === "function") {
+          unlockRes.then(function () {
+            if (!self.finished && self.isAudioRunning()) {
+              if (self.audioGateTimer) { clearTimeout(self.audioGateTimer); self.audioGateTimer = null; }
+              self.dismiss("complete");
+            }
+          }).catch(function () {});
+        }
+        this.audioGateTimer = setTimeout(function () {
+          self.audioGateTimer = null;
+          if (self.finished) return;
+          if (self.isAudioRunning() || self.isAudioMuted()) {
+            self.dismiss("complete");
+          } else {
+            self.enterGestureGate();
+          }
+        }, 240);
+      }
     }
   },
 
@@ -131,16 +241,23 @@ const bootPreloader = {
     if (this.finished) return;
     this.finished = true;
     this.active = false;
+    this.awaitingGesture = false;
+    this._completionPending = false;
     if (this.skipTimer) { clearTimeout(this.skipTimer); this.skipTimer = null; }
     if (this.hardTimer) { clearTimeout(this.hardTimer); this.hardTimer = null; }
+    if (this.audioGateTimer) { clearTimeout(this.audioGateTimer); this.audioGateTimer = null; }
+    this.clearEnterKeyHandler();
     const fillEl = typeof el === "function" ? el("bootPreloadBarFill") : null;
     const pctEl = typeof el === "function" ? el("bootPreloadPct") : null;
     const skipBtn = typeof el === "function" ? el("btnSkipBootPreload") : null;
+    const cueEl = typeof el === "function" ? el("bootPreloadEnterCue") : null;
     const ov = typeof el === "function" ? el("bootPreloadOverlay") : null;
     if (fillEl && fillEl.style) fillEl.style.width = "100%";
     if (pctEl) pctEl.textContent = "100%";
     if (skipBtn) skipBtn.classList.add("hidden");
+    if (cueEl && cueEl.classList) cueEl.classList.add("hidden");
     if (ov) {
+      ov.classList.remove("is-awaiting-gesture");
       if (reason === "complete" && this.isBrowserHttp()) {
         ov.classList.add("is-fading");
         setTimeout(function () {

@@ -26,6 +26,19 @@ function clearStepTimer() {
   }
 }
 
+function scrollHorizontalStripToTarget(strip, chip) {
+  if (!strip || !chip || typeof strip.scrollTo !== "function") return;
+  const stripW = Number(strip.clientWidth) || 0;
+  const chipW = Number(chip.offsetWidth) || 0;
+  const chipLeft = Number(chip.offsetLeft) || 0;
+  const targetLeft = Math.max(0, chipLeft - stripW / 2 + chipW / 2);
+  try {
+    strip.scrollTo({ left: targetLeft, behavior: "smooth" });
+  } catch (e) {
+    try { strip.scrollLeft = targetLeft; } catch (e2) {}
+  }
+}
+
 function renderSpeakerTurnStrip() {
   const strip = el("speakerTurnStrip");
   if (!strip) return;
@@ -51,6 +64,7 @@ function renderSpeakerTurnStrip() {
     dirTag.textContent = dirTagText;
     dirTag.title = state.match.speechOrderLabel || dirTagText;
     container.appendChild(dirTag);
+    let speakingChip = null;
     order.forEach(function (sid, idx) {
       const seat = getSeat(sid);
       if (!seat || !seat.alive) return;
@@ -75,7 +89,12 @@ function renderSpeakerTurnStrip() {
         if (sid !== pid) onSeatClick(sid);
       });
       container.appendChild(btn);
+      if (isCurrent) speakingChip = btn;
     });
+    const focusChip = speakingChip || (typeof container.querySelector === "function" ? container.querySelector(".is-speaking") : null);
+    if (focusChip) {
+      scrollHorizontalStripToTarget(container, focusChip);
+    }
   };
   populateTurnStrip(strip, openSeatIntel);
   populateTurnStrip(el("playerTurnOrderStrip"), selectSeat);

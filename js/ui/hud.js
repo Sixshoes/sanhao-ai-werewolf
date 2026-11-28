@@ -388,6 +388,9 @@ function renderSeatStrip() {
   const isSpecGodView = Boolean(typeof isSpectatorGodViewActive === "function" && isSpectatorGodViewActive());
   const ROLE_SHORT_GOD = { seer: "觀", witch: "茶", hunter: "槍", guard: "守", villager: "民", elder: "長", wolf: "狼", wolf_king: "王" };
 
+  let selectedBtn = null;
+  let speakingBtn = null;
+
   seats.forEach(function (s) {
     const isSelected = state.selectedSeatId === s.id;
     const shSpeechActive = Boolean(p === "SHERIFF_ELECTION" && state.match.sheriffElectionCtx && state.match.sheriffElectionCtx.stage === "speech" && state.match.sheriffElectionCtx.activeReelSeatId === s.id);
@@ -517,7 +520,18 @@ function renderSeatStrip() {
             : (s.outReason === "流言反撲請離" ? "（遭流言首領最後帶風向帶走・點擊查看）" : "（已離席・點擊查看）"))));
     btn.addEventListener("click", function () { selectSeat(s.id); });
     strip.appendChild(btn);
+    if (isSelected) selectedBtn = btn;
+    if (isSpeaking) speakingBtn = btn;
   });
+  const focusBtn = selectedBtn || speakingBtn || (typeof strip.querySelector === "function" ? (strip.querySelector(".seat-is-selected") || strip.querySelector(".is-speaking")) : null);
+  if (focusBtn && !strip.classList.contains("hidden")) {
+    if (typeof scrollHorizontalStripToTarget === "function") {
+      scrollHorizontalStripToTarget(strip, focusBtn);
+    } else if (typeof strip.scrollTo === "function") {
+      const targetLeft = Math.max(0, (Number(focusBtn.offsetLeft) || 0) - (Number(strip.clientWidth) || 0) / 2 + (Number(focusBtn.offsetWidth) || 0) / 2);
+      try { strip.scrollTo({ left: targetLeft, behavior: "smooth" }); } catch (e) {}
+    }
+  }
 }
 
 function getLiveRoleActionHint(p, effKey, phase) {

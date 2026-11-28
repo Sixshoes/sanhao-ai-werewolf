@@ -7217,6 +7217,44 @@ body.craft-ui.theme-daylight .tea-atmosphere-badge.is-fog {
   line-height: 1.45;
 }
 
+.boot-preload-overlay.is-awaiting-gesture {
+  cursor: pointer;
+}
+
+@keyframes bootEnterCuePulse {
+  0%, 100% {
+    opacity: 0.88;
+    border-color: rgba(245, 212, 135, 0.58);
+  }
+  50% {
+    opacity: 1;
+    border-color: rgba(253, 230, 138, 0.96);
+  }
+}
+
+.boot-preload-enter-cue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin-top: 6px;
+  padding: 9px 28px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #fef3c7;
+  background: linear-gradient(180deg, rgba(212, 166, 87, 0.24) 0%, rgba(157, 47, 36, 0.30) 100%);
+  border: 1px solid rgba(245, 212, 135, 0.72);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 240, 200, 0.18);
+  animation: bootEnterCuePulse 2.2s ease-in-out infinite;
+  user-select: none;
+}
+
+.boot-preload-enter-cue.hidden {
+  display: none;
+}
+
 /* v24.3.1 Prominent In-Flow Three-Good & Four-Givings Deck */
 .virtue-quick-deck {
   pointer-events: auto;
@@ -14431,6 +14469,13 @@ body.craft-ui.theme-daylight .boot-preload-creed {
   color: #4a3d2f;
 }
 
+body.craft-ui.theme-daylight .boot-preload-enter-cue {
+  color: #3f280e;
+  background: linear-gradient(180deg, rgba(217, 179, 108, 0.34) 0%, rgba(176, 118, 48, 0.26) 100%);
+  border-color: rgba(154, 107, 39, 0.78);
+  box-shadow: 0 4px 14px rgba(102, 76, 38, 0.16);
+}
+
 body.craft-ui.theme-daylight .virtue-quick-deck {
   background: rgba(250, 245, 234, 0.96);
   border-color: rgba(44, 103, 83, 0.42);
@@ -19377,14 +19422,15 @@ body.craft-ui.theme-twilight #inGameTopHud #roundTitle {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 3px;
     width: 100%;
     max-width: min(880px, 100%);
     min-height: 30px;
     height: auto;
     margin: 0 auto 2px;
-    padding: 3px 8px;
+    padding: 3px 16px;
+    padding-inline: 16px;
     overflow-x: auto;
     scrollbar-width: none;
     border-radius: 0;
@@ -19776,7 +19822,7 @@ body.craft-ui.theme-twilight .cta-cinnabar:disabled {
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
     min-height: 28px;
-    padding: 2px 6px;
+    padding: 2px 16px;
   }
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
@@ -20018,7 +20064,7 @@ body.craft-ui.theme-daylight.screen-title .tea-creed-sep {
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
     min-height: 28px;
-    padding: 2px 8px;
+    padding: 2px 16px;
   }
 
   /* Dock Judge/Beginner guide cleanly on TOP-LEFT directly below #inGameTopHud */
@@ -20276,7 +20322,7 @@ body.craft-ui #panelPlayerSpeech > div:first-child {
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
     min-height: 26px;
-    padding: 2px 6px;
+    padding: 2px 16px;
   }
 
   body.craft-ui.screen-ingame:not(.screen-gameover) #judgeShowcaseGuideBanner:not(.hidden),
@@ -20596,4 +20642,47 @@ body.craft-ui.theme-twilight #panelVote #voteNotesDeck .vote-note-chip {
   body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden) {
     max-width: min(620px, calc(100vw - 448px));
   }
+}
+
+/* ==================== v25.6.1 HORIZONTAL SEAT & TURN STRIPS SAFE CENTERING ==================== */
+body.craft-ui #seatButtonStrip:not(.hidden),
+body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden),
+body.craft-ui #speakerTurnStrip,
+body.craft-ui #playerTurnOrderStrip:not(.hidden),
+body.craft-ui .turn-strip-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-inline: 16px;
+}
+
+body.craft-ui #seatButtonStrip:not(.hidden)::-webkit-scrollbar,
+body.craft-ui.screen-ingame:not(.screen-gameover) #seatButtonStrip:not(.hidden)::-webkit-scrollbar,
+body.craft-ui #speakerTurnStrip::-webkit-scrollbar,
+body.craft-ui #playerTurnOrderStrip:not(.hidden)::-webkit-scrollbar,
+body.craft-ui .turn-strip-row::-webkit-scrollbar {
+  display: none;
+}
+
+body.craft-ui #seatButtonStrip > :first-child,
+body.craft-ui #speakerTurnStrip > :first-child,
+body.craft-ui #playerTurnOrderStrip > :first-child {
+  margin-left: auto;
+}
+
+body.craft-ui #seatButtonStrip > :last-child,
+body.craft-ui #speakerTurnStrip > :last-child,
+body.craft-ui #playerTurnOrderStrip > :last-child {
+  margin-right: auto;
+}
+
+body.craft-ui #seatButtonStrip > .seat-pill-btn,
+body.craft-ui #speakerTurnStrip > *,
+body.craft-ui #playerTurnOrderStrip > * {
+  flex-shrink: 0;
+  white-space: nowrap;
 }

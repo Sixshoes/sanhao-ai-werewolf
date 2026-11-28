@@ -1701,9 +1701,9 @@ const voice = {
         }
         const strippedText = self.stripGeminiVocalTags(cleanText) || cleanText;
         const trackAStartedAt = Date.now();
-        // Keep frontend single-attempt timeout >= backend PRIMARY_TIMEOUT_MS (3600ms) + 800ms buffer
-        const firstAttemptTimeoutMs = isMobileNet ? 4400 : 4800;
-        const trackATotalBudgetMs = isMobileNet ? 6600 : 7600;
+        // Keep frontend single-attempt timeout above relaxed backend PRIMARY_TIMEOUT_MS (6200ms)
+        const firstAttemptTimeoutMs = isMobileNet ? 6200 : 6800;
+        const trackATotalBudgetMs = 9500;
         const minRetryBudgetMs = isMobileNet ? 1800 : 2200;
         const postOnce = async function (txtToSend, attemptTimeoutMs) {
           const reqCtrl = typeof AbortController === "function" ? new AbortController() : null;
@@ -1754,9 +1754,12 @@ const voice = {
           return null;
         }
         const st = cloudRes ? cloudRes.status : 0;
-        if (st === 401 || st === 403 || st === 503) {
+        if (st === 401 || st === 403) {
           self._cloudTtsCooldownIs429 = false;
           self.cloudGeminiTtsCooldownUntil = Date.now() + 180000;
+        } else if (st === 503) {
+          self._cloudTtsCooldownIs429 = false;
+          self.cloudGeminiTtsCooldownUntil = Date.now() + 6000;
         } else if (st === 429) {
           const raRaw = (cloudRes.headers && typeof cloudRes.headers.get === "function") ? cloudRes.headers.get("Retry-After") : "";
           const raSec = parseInt(String(raRaw || ""), 10);
@@ -1932,7 +1935,7 @@ const voice = {
 
   _splitTextForCloudTts: function (cleanText, maxChunkLen) {
     const s = String(cleanText || "").trim();
-    const maxLen = (typeof maxChunkLen === "number" && maxChunkLen >= 28) ? maxChunkLen : 64;
+    const maxLen = (typeof maxChunkLen === "number" && maxChunkLen >= 24) ? maxChunkLen : 42;
     if (!s || s.length <= maxLen + 8) return s ? [s] : [];
     const chunks = [];
     let rest = s;
@@ -1977,11 +1980,10 @@ const voice = {
     const cleanText = this.formatMandarinText(rawText);
     if (!cleanText || this.lookupBundledVoicePackUrl(effKey, cleanText)) return;
     const profile = PERSONA_VOICE_PROFILES[effKey] || PERSONA_VOICE_PROFILES["你"];
-    const chunks = this._splitTextForCloudTts(cleanText, 64);
+    const chunks = this._splitTextForCloudTts(cleanText, 42);
     if (chunks.length > 1) {
-      // Prefetch first 2 compact chunks (<=64 chars each -> 1.5–3s synthesis, never times out at 7.5s!)
+      // Prefetch ONLY chunk 0 (<=42 chars -> fast synthesis) sequentially to avoid concurrent upstream bursts
       this._fetchGeminiStudioAudio(profile, effKey, chunks[0], mood || "normal");
-      this._fetchGeminiStudioAudio(profile, effKey, chunks[1], mood || "normal");
       return;
     }
     this._fetchGeminiStudioAudio(profile, effKey, cleanText, mood || "normal");
@@ -2020,7 +2022,7 @@ const voice = {
     const moodNow = mood || "normal";
     const fullPayload = this._buildGeminiTtsPayload(profile, effKey, cleanText, moodNow);
     const hasWarmFull = Boolean(this.studioCache[fullPayload.cacheKey] || this.studioPending[fullPayload.cacheKey]);
-    const chunks = !hasWarmFull ? this._splitTextForCloudTts(cleanText, 64) : [cleanText];
+    const chunks = !hasWarmFull ? this._splitTextForCloudTts(cleanText, 42) : [cleanText];
     if (chunks.length > 1) {
       const self = this;
       const chunkPromises = new Array(chunks.length);
@@ -2037,9 +2039,8 @@ const voice = {
         }
         return chunkPromises[idx];
       };
-      // Fetch chunk 0 & chunk 1 in parallel; subsequent chunks prefetch rolling-window style so /api/tts never bursts or times out!
+      // Fetch ONLY chunk 0 sequentially; chunk 1 prefetches as soon as chunk 0 starts playing in playChunkAt
       const headP = ensureChunkFetch(0);
-      ensureChunkFetch(1);
       const headBuf = await headP;
       if (!headBuf || seq !== this.utteranceSeq) return false;
 

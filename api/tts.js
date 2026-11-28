@@ -49,7 +49,7 @@ const BAD_MODEL_COOLDOWN_MS = 10 * 60 * 1000;
 const RATE_LIMIT_COOLDOWN_MS = 3 * 60 * 1000;
 const SESSION_ID_RE = /^[a-zA-Z0-9_-]{8,48}$/;
 const MAX_TTS_CACHE = 48;
-const DEFAULT_UPSTREAM_TIMEOUT_MS = 3600;
+const DEFAULT_UPSTREAM_TIMEOUT_MS = 6200;
 
 const _rateStore = new Map();
 const _badModelCooldown = new Map();
@@ -416,8 +416,8 @@ async function handler(req, res) {
 
   let lastStatus = 502;
   const startedAt = Date.now();
-  const TOTAL_BUDGET_MS = 7800;
-  const PRIMARY_TIMEOUT_MS = 3600;
+  const TOTAL_BUDGET_MS = 9200;
+  const PRIMARY_TIMEOUT_MS = 6200;
   const RETRY_400_TIMEOUT_MS = 2800;
   const FALLBACK_MODEL_TIMEOUT_MS = 3000;
   const strippedForRetry = stripGeminiVocalTags(text) || text;

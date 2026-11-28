@@ -4,14 +4,36 @@
 "use strict";
 
 function bindAudioVoiceEvents() {
-  // Auto-start warm BGM on user's very first gesture anywhere!
-  function onFirstGesture() {
-    sound.unlock();
-    window.removeEventListener("pointerdown", onFirstGesture, true);
-    window.removeEventListener("keydown", onFirstGesture, true);
+  // Auto-start warm BGM on user's first gesture; keep capture listeners armed until AudioContext is truly running!
+  const firstGestureEvents = ["pointerdown", "pointerup", "click", "touchend", "keydown"];
+  let firstGestureUnlocked = false;
+  function removeFirstGestureListeners() {
+    if (firstGestureUnlocked) return;
+    firstGestureUnlocked = true;
+    firstGestureEvents.forEach(function (evName) {
+      window.removeEventListener(evName, onFirstGesture, true);
+    });
   }
-  window.addEventListener("pointerdown", onFirstGesture, true);
-  window.addEventListener("keydown", onFirstGesture, true);
+  function finalizeGestureIfRunning() {
+    if (typeof sound !== "undefined" && sound && sound.ctx && sound.ctx.state === "running") {
+      removeFirstGestureListeners();
+      return true;
+    }
+    return false;
+  }
+  function onFirstGesture() {
+    if (firstGestureUnlocked) return;
+    const unlockRes = (typeof sound !== "undefined" && typeof sound.unlock === "function") ? sound.unlock() : null;
+    if (finalizeGestureIfRunning()) return;
+    if (unlockRes && typeof unlockRes.then === "function") {
+      unlockRes.then(function () {
+        finalizeGestureIfRunning();
+      }).catch(function () {});
+    }
+  }
+  firstGestureEvents.forEach(function (evName) {
+    window.addEventListener(evName, onFirstGesture, true);
+  });
 
   function drawMusicSpectrum() {
     const modal = el("modalMusic");

@@ -849,10 +849,10 @@ const THREE = {
   LatheGeometry: function () { return makeGeo(); },
   BufferAttribute: function () { return { setXYZ() { }, needsUpdate: false }; },
   QuadraticBezierCurve3: function (p0, p1, p2) { return { getPoints: () => [p0, p1, p2], getPoint: () => makeVec3(0, 2, 0) }; },
-  MeshBasicMaterial: function (o = {}) { return { color: makeColor(o.color), map: o.map || null, opacity: o.opacity ?? 1, needsUpdate: false, dispose() { } }; },
+  MeshBasicMaterial: function (o = {}) { return { color: makeColor(o.color), map: o.map || null, transparent: Boolean(o.transparent), opacity: o.opacity ?? 1, depthWrite: o.depthWrite !== undefined ? Boolean(o.depthWrite) : true, needsUpdate: false, dispose() { } }; },
   MeshStandardMaterial: function (o = {}) { return { color: makeColor(o.color), emissive: makeColor(o.emissive), emissiveIntensity: o.emissiveIntensity ?? 0, opacity: 1, dispose() { } }; },
   MeshPhysicalMaterial: function (o = {}) { return { color: makeColor(o.color), emissive: makeColor(o.emissive), emissiveIntensity: o.emissiveIntensity ?? 0, clearcoat: o.clearcoat ?? 0, opacity: 1, dispose() { } }; },
-  MeshToonMaterial: function (o = {}) { return { color: makeColor(o.color), emissive: makeColor(o.emissive), emissiveIntensity: o.emissiveIntensity ?? 0, opacity: 1, userData: {}, dispose() { } }; },
+  MeshToonMaterial: function (o = {}) { return { color: makeColor(o.color), emissive: makeColor(o.emissive), emissiveIntensity: o.emissiveIntensity ?? 0, transparent: Boolean(o.transparent), opacity: o.opacity ?? 1, depthWrite: o.depthWrite !== undefined ? Boolean(o.depthWrite) : true, userData: {}, dispose() { } }; },
   ShaderMaterial: function () { return { uniforms: {}, dispose() { } }; },
   PointsMaterial: function (o = {}) { return { color: makeColor(o.color), opacity: o.opacity ?? 1, dispose() { } }; },
   LineBasicMaterial: function (o = {}) { return { color: makeColor(o.color), opacity: o.opacity ?? 1, dispose() { } }; },
@@ -6702,7 +6702,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       el("showcaseProfileCard").innerHTML.includes("好人癖好");
     const showcaseCardOk = Boolean(cardHiddenHero && cardShownMobai);
     const diag17 = collectFeedbackDiagnostics();
-    const version17Ok = Boolean(diag17 && diag17.version === "v25.6.0");
+    const version17Ok = Boolean(diag17 && diag17.version === "v25.6.1");
 
     // 6. Standard Day-1 Werewolf Order: Sheriff Election FIRST, THEN Night-1 Death Reveal (+ Dead-Sheriff Transfer + Election Explode Settlement)
     el("selectModeCount").value = "8";
@@ -7181,7 +7181,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   const faceSigCacheOk = animSrc.includes("_lastFaceSig") && animSrc.includes("faceSig");
 
   const swSrcPerf = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.6.0") && swSrcPerf.includes("sanhao-assets-v25.6.0") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
+  const swPerfOk = swSrcPerf.includes("sanhao-shell-v25.6.1") && swSrcPerf.includes("sanhao-assets-v25.6.1") && swSrcPerf.includes("MAX_ASSET_ENTRIES") && swSrcPerf.includes("CORE_SHELL_URLS") && swSrcPerf.includes("trimCacheIfNeeded");
 
   const vercelCfg = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"));
   const vercelTimeoutOk = Boolean(vercelCfg && vercelCfg.functions && vercelCfg.functions["api/gemini.js"] && vercelCfg.functions["api/gemini.js"].maxDuration >= 20);
@@ -7584,8 +7584,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   // P0-3: Dual-pool sw.js check
   const swSrc20 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
   const p03DualPoolSwOk =
-    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.6.0"') &&
-    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v25.6.0"') &&
+    swSrc20.includes('const SHELL_CACHE = "sanhao-shell-v25.6.1"') &&
+    swSrc20.includes('const ASSET_CACHE = "sanhao-assets-v25.6.1"') &&
     swSrc20.includes("const MAX_ASSET_ENTRIES = 200") &&
     swSrc20.includes("ACTIVE_CACHES.indexOf(k) === -1");
 
@@ -8325,8 +8325,8 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     doubleVoteBlockedOk: v242Res.doubleVoteBlockedOk,
     sameSeatFlushUnconditionalOk: dsSrc241.includes('if (state.match._deferredSpeechLog && typeof commitPendingSpeechLog === "function")')
       && !dsSrc241.includes("state.match._deferredSpeechLog.speakerId !== speaker.id"),
-    docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("sanhao-assets-v25.6.0") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
-    scriptV242Ok: docScript241.includes("v25.6.0") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
+    docCleanNoBannerOk: !fs.existsSync(path.join(ROOT, "docs/作品說明書_初稿.md")) && !docSpec241.includes("轉 PDF 前請刪除本區塊") && docSpec241.includes("sanhao-assets-v25.6.1") && docSpec241.includes("茶席術語箋") && docSpec241.includes("神經語音包") && docSpec241.includes("50 支前端 JS") && docSpec241.length <= 5000,
+    scriptV242Ok: docScript241.includes("v25.6.1") && docScript241.includes("茶席術語箋") && docScript241.includes("預錄台灣神經語音包") && !docScript241.includes("林美"),
     voiceNoDupKeyLiteralOk: (voiceSrc241.match(/showcase_asong_day2\.mp3/g) || []).length === 1 && (voiceSrc241.match(/showcase_asong_lw\.mp3/g) || []).length === 1,
     apiTimeout8400AndLruOk: apiGem242.includes("resolvePrimaryTimeoutMs(primaryModel)") && apiGem242.includes("21500 - elapsed") && apiGem242.includes("if (++evicted >= 200) break;") && apiGem242.includes("if (timer) clearTimeout(timer);"),
     webglContextLostOk: eng242.includes('canvas3d.addEventListener("webglcontextlost"'),
@@ -8866,7 +8866,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       ttsBodyLedaFb.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === "Zephyr" &&
       !ttsApiSrc2412.includes("? voiceName\n    : voiceName"),
     ttsTimeoutBudgetHeadroomOk:
-      ttsApiSrc2412.includes("PRIMARY_TIMEOUT_MS = 3600") &&
+      ttsApiSrc2412.includes("PRIMARY_TIMEOUT_MS = 6200") &&
       ttsApiSrc2412.includes("RETRY_400_TIMEOUT_MS = 2800") &&
       ttsApiSrc2412.includes("FALLBACK_MODEL_TIMEOUT_MS = 3000"),
     ttsHandlerSecurityOk:
@@ -8878,10 +8878,10 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     specSyncedModelsAndCacheOk:
       docSpec2414.includes("gemini-4-hydrogen") &&
       docSpec2414.includes("api/tts.js") &&
-      docSpec2414.includes("sanhao-shell-v25.6.0") &&
+      docSpec2414.includes("sanhao-shell-v25.6.1") &&
       docSpec2414.length <= 5000,
     readmeSyncedOk:
-      readme2414.includes("sanhao-shell-v25.6.0") &&
+      readme2414.includes("sanhao-shell-v25.6.1") &&
       readme2414.includes("api/tts.js"),
     ...v24214Runtime
   };
@@ -9333,7 +9333,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   })()`, ctx);
   const docScriptV2431 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
   const demoScriptVirtueSyncOk = [
-    "v25.6.0",
+    "v25.6.1",
     "啟席預載遮罩",
     "三好四給主動茶禮列",
     "茶席風氣",
@@ -11271,7 +11271,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   })()`, ctx);
 
   const docScriptV2552 = fs.readFileSync(path.join(ROOT, "docs/三分鐘Demo影片腳本.md"), "utf8");
-  const scriptHeaderSyncOk = docScriptV2552.split(/\r?\n/)[0].includes("v25.6.0") && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(docScriptV2552);
+  const scriptHeaderSyncOk = docScriptV2552.split(/\r?\n/)[0].includes("v25.6.1") && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(docScriptV2552);
 
   const v2552AudioRes = await vm.runInContext(`(async () => {
     const classicMovementsRestoredOk = Boolean(
@@ -11654,9 +11654,9 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       voice._cloudTtsCooldownIs429 = false;
       state._forceMobileTtsBudget = true;
       const mobRes = await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["暖暖"], "暖暖", "這句話這輪測試第一次逾時與第二次去標籤重試。", "panic");
-      const mobOk = Boolean(mobRes) && timeoutArgs[0] === 4400 && sentTexts.length === 2 &&
+      const mobOk = Boolean(mobRes) && timeoutArgs[0] === 6200 && sentTexts.length === 2 &&
         sentTexts[0].includes("<breath>") && !sentTexts[1].includes("<breath>") &&
-        timeoutArgs[1] >= 1800 && timeoutArgs[1] <= 6600;
+        timeoutArgs[1] >= 1800 && timeoutArgs[1] <= 9500;
 
       timeoutArgs.length = 0;
       sentTexts.length = 0;
@@ -11671,7 +11671,7 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
       };
       state._forceMobileTtsBudget = false;
       await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["暖暖"], "暖暖", "桌機模式這輪也只在總預算內重試一次。", "panic");
-      const deskOk = timeoutArgs[0] === 4800 && sentTexts.length === 2 && timeoutArgs[1] >= 2200 && timeoutArgs[1] <= 7600;
+      const deskOk = timeoutArgs[0] === 6800 && sentTexts.length === 2 && timeoutArgs[1] >= 2200 && timeoutArgs[1] <= 9500;
       trackATimeoutAndRetryOk = Boolean(mobOk && deskOk);
     } finally {
       setTimeout = origSetTo;
@@ -11870,11 +11870,11 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
     compCss2553.includes("body.craft-ui.theme-night #heroShowcaseOverlay #heroShowcaseSub") &&
     !compCssNoComments2553.includes("!important") &&
     !compCssNoComments2553.includes("backdrop-filter") &&
-    sw2553.includes('const SHELL_CACHE = "sanhao-shell-v25.6.0"') &&
-    fb2553.includes('version: "v25.6.0"') &&
-    spec2553.includes("v25.6.0") && spec2553.length <= 5000 &&
-    script2553.includes("v25.6.0") &&
-    readme2553.includes("v25.6.0") &&
+    sw2553.includes('const SHELL_CACHE = "sanhao-shell-v25.6.1"') &&
+    fb2553.includes('version: "v25.6.1"') &&
+    spec2553.includes("v25.6.1") && spec2553.length <= 5000 &&
+    script2553.includes("v25.6.1") &&
+    readme2553.includes("v25.6.1") &&
     lwSrc2553.includes("state._lwCueTimer") &&
     lwSrc2553.includes("orchestrator.isEpochValid(epLw)") &&
     zeroEmoji2553Ok
@@ -11947,15 +11947,15 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   );
 
   const file10SwCacheAndZeroEmojiOk = Boolean(
-    sw256.includes('const SHELL_CACHE = "sanhao-shell-v25.6.0"') &&
-    sw256.includes('const ASSET_CACHE = "sanhao-assets-v25.6.0"') &&
-    fb256.includes('version: "v25.6.0"') &&
-    readme256.includes("v25.6.0") &&
-    readme256.includes("sanhao-assets-v25.6.0") &&
-    spec256.includes("v25.6.0") &&
-    spec256.includes("sanhao-shell-v25.6.0") &&
+    sw256.includes('const SHELL_CACHE = "sanhao-shell-v25.6.1"') &&
+    sw256.includes('const ASSET_CACHE = "sanhao-assets-v25.6.1"') &&
+    fb256.includes('version: "v25.6.1"') &&
+    readme256.includes("v25.6.1") &&
+    readme256.includes("sanhao-assets-v25.6.1") &&
+    spec256.includes("v25.6.1") &&
+    spec256.includes("sanhao-shell-v25.6.1") &&
     spec256.length <= 5000 &&
-    script256.includes("v25.6.0") &&
+    script256.includes("v25.6.1") &&
     [css256, hud256, panels256, canvasEv256, voting256, night256, voice256, tts256, soundtrack256, spotlight256, flow256, main256, sw256, fb256, spec256, script256, readme256].every(
       (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
     )
@@ -12315,4 +12315,345 @@ if (!html.includes("書院對弈核心規則（標準屠邊制）") || html.incl
   }
 }
 
-console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 + v25.5.3 + v25.6.0 Release-Freeze E2E smoke test PASSED!");
+// ==================== v25.6.1 REAL-DEVICE 4-FIX REGRESSION SUITE ====================
+{
+  const audioEv2561 = fs.readFileSync(path.join(ROOT, "js/events/audio-events.js"), "utf8");
+  const main2561 = fs.readFileSync(path.join(ROOT, "js/main.js"), "utf8");
+  const html2561 = fs.readFileSync(path.join(ROOT, "ai.html"), "utf8");
+  const vrm2561 = fs.readFileSync(path.join(ROOT, "js/stage3d/vrm-loader.js"), "utf8");
+  const css2561 = fs.readFileSync(path.join(ROOT, "css/components.css"), "utf8");
+  const css2561NoCom = css2561.replace(/\/\*[\s\S]*?\*\//g, "");
+  const spot2561 = fs.readFileSync(path.join(ROOT, "js/ui/spotlight.js"), "utf8");
+  const hud2561 = fs.readFileSync(path.join(ROOT, "js/ui/hud.js"), "utf8");
+  const tts2561 = fs.readFileSync(path.join(ROOT, "api/tts.js"), "utf8");
+  const voice2561 = fs.readFileSync(path.join(ROOT, "js/audio/voice.js"), "utf8");
+  const sw2561 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const spec2561 = fs.readFileSync(path.join(ROOT, "docs/作品說明書.md"), "utf8");
+
+  const stripBlockMatches = Array.from(css2561NoCom.matchAll(/([^{}@;]*(?:#seatButtonStrip|#speakerTurnStrip|#playerTurnOrderStrip|\.turn-strip-row)[^{}]*)\{([^{}]*)\}/g));
+  const noStripCenterJustifyOk = stripBlockMatches.every((m) => {
+    const sel = m[1];
+    if (/\.seat-pill-btn|\.turn-chip/.test(sel)) return true;
+    return !/justify-content\s*:\s*center/i.test(m[2]);
+  });
+
+  const fix1SourceOk = Boolean(
+    audioEv2561.includes('["pointerdown", "pointerup", "click", "touchend", "keydown"]') &&
+    audioEv2561.includes('sound.ctx.state === "running"') &&
+    html2561.includes('id="bootPreloadEnterCue"') &&
+    html2561.includes("點擊入席") &&
+    main2561.includes("enterGestureGate") &&
+    main2561.includes("sound.unlock()")
+  );
+
+  const fix3CssAndSourceOk = Boolean(
+    noStripCenterJustifyOk &&
+    css2561NoCom.includes("padding-inline: 16px") &&
+    css2561NoCom.includes("margin-left: auto") &&
+    css2561NoCom.includes("margin-right: auto") &&
+    !css2561NoCom.includes("!important") &&
+    !css2561NoCom.includes("backdrop-filter") &&
+    !spot2561.includes("scrollIntoView") &&
+    !hud2561.includes("scrollIntoView") &&
+    spot2561.includes("scrollHorizontalStripToTarget") &&
+    spot2561.includes('behavior: "smooth"')
+  );
+
+  const fix4SourceOk = Boolean(
+    tts2561.includes("const DEFAULT_UPSTREAM_TIMEOUT_MS = 6200;") &&
+    tts2561.includes("const TOTAL_BUDGET_MS = 9200;") &&
+    tts2561.includes("const PRIMARY_TIMEOUT_MS = 6200;") &&
+    voice2561.includes("const firstAttemptTimeoutMs = isMobileNet ? 6200 : 6800;") &&
+    voice2561.includes("const trackATotalBudgetMs = 9500;") &&
+    voice2561.includes("else if (st === 503)") &&
+    voice2561.includes("Date.now() + 6000") &&
+    voice2561.includes("this._splitTextForCloudTts(cleanText, 42)") &&
+    sw2561.includes('const SHELL_CACHE = "sanhao-shell-v25.6.1"') &&
+    sw2561.includes('const ASSET_CACHE = "sanhao-assets-v25.6.1"') &&
+    spec2561.length <= 5000 &&
+    [audioEv2561, main2561, html2561, vrm2561, css2561, spot2561, hud2561, tts2561, voice2561, sw2561, spec2561].every(
+      (txt) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt)
+    )
+  );
+
+  const v2561Runtime = await vm.runInContext(`(async () => {
+    // 1. Fix 1: bootPreloader auto-dismisses when AudioContext is running, else switches to tap-to-enter gate
+    let fix1BootAudioGateOk = false;
+    const prevIsHttp1 = bootPreloader.isBrowserHttp;
+    const prevUnlock1 = sound.unlock;
+    const prevCtx1 = sound.ctx;
+    const prevMuted1 = sound.muted;
+    const origSetTo1 = setTimeout;
+    const origClearTo1 = clearTimeout;
+    try {
+      const timers1 = new Map();
+      let seq1 = 1;
+      setTimeout = function (fn, ms) {
+        const id = seq1++;
+        timers1.set(id, { fn, ms });
+        return id;
+      };
+      clearTimeout = function (id) { timers1.delete(id); };
+
+      bootPreloader.isBrowserHttp = () => true;
+      sound.muted = false;
+
+      // Case A: AudioContext already running -> auto-dismisses after 220ms
+      let unlockCallsA = 0;
+      sound.ctx = { state: "running" };
+      sound.unlock = () => { unlockCallsA += 1; return Promise.resolve(true); };
+      bootPreloader.start();
+      bootPreloader.reportBucket("sky", 4, 4);
+      bootPreloader.reportBucket("portraits", 1, 1);
+      bootPreloader.reportBucket("hero", 1, 1);
+      bootPreloader.reportBucket("avatars", 1, 1);
+      const t220 = Array.from(timers1.values()).find((x) => x.ms === 220);
+      if (t220) t220.fn();
+      const autoDismissRunningOk = Boolean(
+        unlockCallsA === 1 &&
+        bootPreloader.finished === true &&
+        bootPreloader.awaitingGesture === false &&
+        el("bootPreloadOverlay").classList.contains("is-fading")
+      );
+
+      // Case B: AudioContext suspended (cold-start blocked) -> enters clickable gesture gate
+      timers1.clear();
+      let unlockCallsB = 0;
+      sound.ctx = { state: "suspended" };
+      sound.unlock = () => { unlockCallsB += 1; return new Promise(() => {}); };
+      bootPreloader.start();
+      bootPreloader.reportBucket("sky", 4, 4);
+      bootPreloader.reportBucket("portraits", 1, 1);
+      bootPreloader.reportBucket("hero", 1, 1);
+      bootPreloader.reportBucket("avatars", 1, 1);
+      const t240 = Array.from(timers1.values()).find((x) => x.ms === 240);
+      if (t240) t240.fn();
+      const gateEnteredOk = Boolean(
+        unlockCallsB === 1 &&
+        bootPreloader.finished === false &&
+        bootPreloader.awaitingGesture === true &&
+        el("bootPreloadOverlay").classList.contains("is-awaiting-gesture") &&
+        !el("bootPreloadEnterCue").classList.contains("hidden") &&
+        el("bootPreloadEnterCue").textContent === "點擊入席"
+      );
+      el("bootPreloadOverlay").click();
+      const gateDismissOnClickOk = Boolean(
+        unlockCallsB === 2 &&
+        bootPreloader.finished === true &&
+        bootPreloader.awaitingGesture === false &&
+        el("bootPreloadEnterCue").classList.contains("hidden") &&
+        el("bootPreloadOverlay").classList.contains("is-fading")
+      );
+      fix1BootAudioGateOk = Boolean(autoDismissRunningOk && gateEnteredOk && gateDismissOnClickOk);
+    } finally {
+      setTimeout = origSetTo1;
+      clearTimeout = origClearTo1;
+      sound.unlock = prevUnlock1;
+      sound.ctx = prevCtx1;
+      sound.muted = prevMuted1;
+      bootPreloader.isBrowserHttp = prevIsHttp1;
+      bootPreloader.finished = false;
+      bootPreloader.start();
+      if (el("bootPreloadOverlay")) {
+        el("bootPreloadOverlay").classList.add("hidden");
+        el("bootPreloadOverlay").classList.remove("is-fading");
+        el("bootPreloadOverlay").classList.remove("is-awaiting-gesture");
+      }
+      if (el("bootPreloadEnterCue")) el("bootPreloadEnterCue").classList.add("hidden");
+    }
+
+    // 2. Fix 2: Xiaocheng 3D glasses align to leftEye/rightEye bones & fallback 0.064
+    let fix2GlassesOk = false;
+    {
+      const head = new THREE.Group();
+      const leftEye = new THREE.Group();
+      const rightEye = new THREE.Group();
+      let headUpdated = false;
+      head.updateWorldMatrix = () => { headUpdated = true; };
+      head.worldToLocal = (v) => v;
+      leftEye.updateWorldMatrix = () => {};
+      rightEye.updateWorldMatrix = () => {};
+      leftEye.position.set(0.031, 0.066, -0.078);
+      rightEye.position.set(-0.031, 0.066, -0.078);
+      head.add(leftEye, rightEye);
+      const resEye = stage3dVrm.attachVrmPersonaAccessories({ head, leftEye, rightEye }, "小澄", true);
+      const ud = resEye && resEye.group && resEye.group.userData ? resEye.group.userData : null;
+      const eyeAlignOk = Boolean(
+        headUpdated && ud && ud.usedEyeBones === true &&
+        Math.abs(ud.ey - 0.066) < 0.0001 &&
+        Math.abs(ud.ipd - 0.062) < 0.0001 &&
+        Math.abs(ud.cx - 0.031) < 0.0001 &&
+        Math.abs(ud.ez - (-0.078 - 0.024)) < 0.0001 &&
+        resEye.accMats.frameMat.color.c === 0x1c222b &&
+        Math.abs(resEye.accMats.lensMat.opacity - 0.10) < 0.0001 &&
+        resEye.accMats.lensMat.depthWrite === false &&
+        Math.abs(ud.rh - 0.022) < 0.0001 &&
+        Math.abs(ud.t - 0.0028) < 0.0001 &&
+        Math.abs(ud.tTop - 0.0032) < 0.0001 &&
+        Math.abs(ud.tBot - 0.0018) < 0.0001
+      );
+
+      // IPD clamp test + no-eye fallback test
+      const headWide = new THREE.Group();
+      headWide.updateWorldMatrix = () => {};
+      headWide.worldToLocal = (v) => v;
+      const leW = new THREE.Group();
+      const reW = new THREE.Group();
+      leW.position.set(0.05, 0.068, -0.076);
+      reW.position.set(-0.05, 0.068, -0.076);
+      headWide.add(leW, reW);
+      const resWide = stage3dVrm.attachVrmPersonaAccessories({ head: headWide, leftEye: leW, rightEye: reW }, "小澄", true);
+      const headFallback = new THREE.Group();
+      const resFb = stage3dVrm.attachVrmPersonaAccessories({ head: headFallback }, "小澄", true);
+      fix2GlassesOk = Boolean(
+        eyeAlignOk &&
+        resWide && Math.abs(resWide.group.userData.ipd - 0.068) < 0.0001 &&
+        resFb && resFb.group.userData.usedEyeBones === false && Math.abs(resFb.group.userData.ey - 0.064) < 0.0001
+      );
+    }
+
+    // 3. Fix 3: Smooth horizontal scroll centering for turn strip & seat strip
+    let fix3ScrollCenterOk = false;
+    try {
+      let mathScrollCall = null;
+      scrollHorizontalStripToTarget(
+        { clientWidth: 300, scrollTo: (opts) => { mathScrollCall = opts; } },
+        { offsetLeft: 420, offsetWidth: 80 }
+      );
+      const mathOk = Boolean(mathScrollCall && mathScrollCall.left === 310 && mathScrollCall.behavior === "smooth");
+
+      el("selectModeCount").value = "8";
+      el("selectPreferredRole").value = "villager";
+      el("chkSheriffMode").checked = false;
+      startNewGame();
+      indieFlow.hideRoleDealRitual();
+
+      state.match.phase = "DAY_SPEECH";
+      state.match.dayOrder = [1, 2, 3, 4, 5, 6, 7, 8];
+      state.match.speechQueue = [7, 8];
+      state.activeSpeakerId = 6;
+      const spStrip = el("speakerTurnStrip");
+      const seatStrip = el("seatButtonStrip");
+      let turnScrolled = null;
+      let seatScrolled = null;
+      const prevSpScroll = spStrip.scrollTo;
+      const prevSeatScroll = seatStrip.scrollTo;
+      spStrip.clientWidth = 320;
+      spStrip.scrollTo = (opts) => { turnScrolled = opts; };
+      seatStrip.clientWidth = 320;
+      seatStrip.scrollTo = (opts) => { seatScrolled = opts; };
+      seatStrip.classList.remove("hidden");
+      state.selectedSeatId = 5;
+      try {
+        renderSpeakerTurnStrip();
+        renderSeatStrip();
+      } finally {
+        spStrip.scrollTo = prevSpScroll;
+        seatStrip.scrollTo = prevSeatScroll;
+      }
+      fix3ScrollCenterOk = Boolean(
+        mathOk &&
+        turnScrolled && turnScrolled.behavior === "smooth" &&
+        seatScrolled && seatScrolled.behavior === "smooth"
+      );
+    } finally {
+      clearStepTimer();
+      resetMatchToLobby();
+    }
+
+    // 4. Fix 4: HTTP 503 uses 6s short cooldown (403 keeps 180s) & 42-char sequential prefetch (only chunks[0])
+    let fix4TtsRuntimeOk = false;
+    const origFetch4 = fetch;
+    const origFetchStudio4 = voice._fetchGeminiStudioAudio;
+    const origIsStatic4 = voice.isStaticCloudHost;
+    const origCanSpeak4 = voice.canSpeak;
+    const origLookupBundled4 = voice.lookupBundledVoicePackUrl;
+    const prevState4 = {
+      ctx: sound.ctx,
+      key: state.geminiApiKey,
+      optOut: state.serverGeminiOptOut,
+      cloudAvail: voice.cloudGeminiTtsAvailable,
+      cooldown: voice.cloudGeminiTtsCooldownUntil,
+      enginePref: voice.enginePref
+    };
+    try {
+      sound.ctx = { sampleRate: 24000, currentTime: 0, state: "running" };
+      state.geminiApiKey = "";
+      state.serverGeminiOptOut = false;
+      voice.enginePref = "auto";
+      voice.cloudGeminiTtsAvailable = true;
+      voice.isStaticCloudHost = () => true;
+      voice.canSpeak = () => true;
+      voice.lookupBundledVoicePackUrl = () => null;
+      voice.studioCache = {};
+      voice.studioPending = {};
+      voice.cloudGeminiTtsCooldownUntil = 0;
+
+      fetch = async () => ({ ok: false, status: 503, arrayBuffer: async () => new ArrayBuffer(0) });
+      const before503 = Date.now();
+      await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["小澄"], "小澄", "測試五零三短冷卻恢復。", "normal");
+      const cd503Ms = voice.cloudGeminiTtsCooldownUntil - before503;
+      const cooldown503ShortOk = cd503Ms >= 4500 && cd503Ms <= 8500;
+
+      voice.studioCache = {};
+      voice.studioPending = {};
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      fetch = async () => ({ ok: false, status: 403, arrayBuffer: async () => new ArrayBuffer(0) });
+      const before403 = Date.now();
+      await voice._fetchGeminiStudioAudio(PERSONA_VOICE_PROFILES["小澄"], "小澄", "測試四零三長冷卻保護。", "normal");
+      const cd403Ms = voice.cloudGeminiTtsCooldownUntil - before403;
+      const cooldown403LongOk = cd403Ms >= 170000;
+
+      voice.cloudGeminiTtsCooldownUntil = 0;
+      const splitTestStr = "今天這輪討論先把警徽流和首夜查驗資訊攤開來比對，請還沒報身分的夥伴依序補充細節，不要遺漏任何公投票型矛盾。";
+      const chunks42 = voice._splitTextForCloudTts(splitTestStr);
+      const prefetchedTexts = [];
+      voice._fetchGeminiStudioAudio = (_prof, _k, txt) => {
+        prefetchedTexts.push(txt);
+        return Promise.resolve(null);
+      };
+      voice.prefetchCloudGeminiTts("小澄", splitTestStr, "normal");
+      const seqPrefetchOk = Boolean(
+        chunks42.length >= 2 &&
+        chunks42[0].length <= 42 &&
+        prefetchedTexts.length === 1 &&
+        prefetchedTexts[0] === chunks42[0]
+      );
+      fix4TtsRuntimeOk = Boolean(cooldown503ShortOk && cooldown403LongOk && seqPrefetchOk);
+    } finally {
+      fetch = origFetch4;
+      voice._fetchGeminiStudioAudio = origFetchStudio4;
+      voice.isStaticCloudHost = origIsStatic4;
+      voice.canSpeak = origCanSpeak4;
+      voice.lookupBundledVoicePackUrl = origLookupBundled4;
+      sound.ctx = prevState4.ctx;
+      state.geminiApiKey = prevState4.key;
+      state.serverGeminiOptOut = prevState4.optOut;
+      voice.cloudGeminiTtsAvailable = prevState4.cloudAvail;
+      voice.cloudGeminiTtsCooldownUntil = prevState4.cooldown;
+      voice.enginePref = prevState4.enginePref;
+      voice.studioCache = {};
+      voice.studioPending = {};
+    }
+
+    return {
+      fix1BootAudioGateOk,
+      fix2GlassesOk,
+      fix3ScrollCenterOk,
+      fix4TtsRuntimeOk
+    };
+  })()`, ctx);
+
+  const all2561 = Object.assign({
+    fix1SourceOk,
+    fix3CssAndSourceOk,
+    fix4SourceOk
+  }, v2561Runtime);
+  for (const [k, v] of Object.entries(all2561)) {
+    if (!v) {
+      throw new Error("v25.6.1 Real-Device regression failed for " + k + ": " + JSON.stringify(all2561));
+    }
+  }
+}
+
+console.log("[OK] Full v20.0 + v21.3 + v22.0 + v22.1 + v23.1 + v23.2 + v23.3 + v24.0 + v24.1 + v24.2 + v24.2.9 + v24.2.11 + v24.2.12 + v24.2.13 + v24.2.14 + v24.2.15 + v24.3.0 + v24.3.1 + v24.3.2 + v24.4.0 + v24.4.1 + v25.0 + v25.2 + v25.3 + v25.5.3 + v25.6.0 + v25.6.1 E2E smoke test PASSED!");

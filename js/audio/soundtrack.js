@@ -70,7 +70,7 @@ const sound = {
   unlock: function () {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
+      if (!AudioCtx) return Promise.resolve(false);
       try {
         this.ctx = new AudioCtx();
         this.comp = this.ctx.createDynamicsCompressor();
@@ -216,7 +216,7 @@ const sound = {
         }, 120);
       } catch (e) {
         this.ctx = null;
-        return;
+        return Promise.resolve(false);
       }
     }
     const selfUnlock = this;
@@ -242,19 +242,24 @@ const sound = {
           this._unlockingPromise = resumeRes.then(function () {
             selfUnlock._unlockingPromise = null;
             startWhenReady();
+            return Boolean(selfUnlock.ctx && selfUnlock.ctx.state === "running");
           }).catch(function () {
             selfUnlock._unlockingPromise = null;
             selfUnlock.updateEqIndicator();
+            return false;
           });
         } else {
           startWhenReady();
         }
       }
-    } else {
-      startWhenReady();
+      this.updateEqIndicator();
+      if (typeof voice !== "undefined" && typeof voice.unlock === "function") voice.unlock();
+      return this._unlockingPromise || Promise.resolve(Boolean(this.ctx && this.ctx.state === "running"));
     }
+    startWhenReady();
     this.updateEqIndicator();
-    voice.unlock();
+    if (typeof voice !== "undefined" && typeof voice.unlock === "function") voice.unlock();
+    return Promise.resolve(Boolean(this.ctx && this.ctx.state === "running"));
   },
 
   buildWoodenPavilionImpulse: function (seconds) {

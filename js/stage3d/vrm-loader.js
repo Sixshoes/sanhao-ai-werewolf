@@ -590,59 +590,112 @@ const stage3dVrm = {
       : null;
     const makeToon = function (hex, opts) {
       const o = opts || {};
+      const depthWriteVal = o.depthWrite !== undefined ? Boolean(o.depthWrite) : true;
       if (typeof THREE.MeshToonMaterial === "function") {
         const m = new THREE.MeshToonMaterial({
           color: hex,
           gradientMap: gradMap,
           transparent: Boolean(o.transparent),
           opacity: o.opacity !== undefined ? o.opacity : 1.0,
-          side: o.doubleSide ? THREE.DoubleSide : THREE.FrontSide
+          side: o.doubleSide ? THREE.DoubleSide : THREE.FrontSide,
+          depthWrite: depthWriteVal
         });
         return m;
       }
       return new THREE.MeshBasicMaterial({
         color: hex,
         transparent: Boolean(o.transparent),
-        opacity: o.opacity !== undefined ? o.opacity : 1.0
+        opacity: o.opacity !== undefined ? o.opacity : 1.0,
+        depthWrite: depthWriteVal
       });
     };
 
     if (style.vrmAcc === "glasses") {
+      if (typeof bones.head.updateWorldMatrix === "function") {
+        bones.head.updateWorldMatrix(true, true);
+      } else if (typeof bones.head.updateMatrixWorld === "function") {
+        bones.head.updateMatrixWorld(true);
+      }
       const g = new THREE.Group();
       g.name = "vrm_acc_glasses";
-      const frameMat = makeToon(0x475569);
-      const lensMat = makeToon(0xdcebf7, { transparent: true, opacity: 0.18, doubleSide: true });
-      const ey = 0.092;
-      const ez = 0.118 * zSign;
-      const t = 0.0042;
-      const rw = 0.044;
-      const rh = 0.024;
-      const makeRectRim = function (cx) {
+      const frameMat = makeToon(0x1c222b);
+      const lensMat = makeToon(0xdcebf7, { transparent: true, opacity: 0.10, doubleSide: true, depthWrite: false });
+      let ey = 0.064;
+      let ez = 0.098 * zSign;
+      let ipd = 0.060;
+      let usedEyeBones = false;
+      if (
+        bones.leftEye &&
+        bones.rightEye &&
+        typeof bones.leftEye.getWorldPosition === "function" &&
+        typeof bones.rightEye.getWorldPosition === "function" &&
+        typeof bones.head.worldToLocal === "function" &&
+        typeof THREE.Vector3 === "function"
+      ) {
+        if (typeof bones.leftEye.updateWorldMatrix === "function") bones.leftEye.updateWorldMatrix(true, false);
+        if (typeof bones.rightEye.updateWorldMatrix === "function") bones.rightEye.updateWorldMatrix(true, false);
+        const leftLocal = bones.head.worldToLocal(bones.leftEye.getWorldPosition(new THREE.Vector3()));
+        const rightLocal = bones.head.worldToLocal(bones.rightEye.getWorldPosition(new THREE.Vector3()));
+        if (leftLocal && rightLocal) {
+          const rawEy = (leftLocal.y + rightLocal.y) * 0.5;
+          const rawEz = (leftLocal.z + rightLocal.z) * 0.5;
+          const rawIpd = Math.abs(leftLocal.x - rightLocal.x);
+          if (isFinite(rawEy) && isFinite(rawEz) && isFinite(rawIpd) && rawIpd > 0.01) {
+            ey = rawEy;
+            ipd = Math.max(0.052, Math.min(0.068, rawIpd));
+            ez = rawEz + 0.024 * zSign;
+            usedEyeBones = true;
+          }
+        }
+      }
+      const cx = ipd * 0.5;
+      const t = 0.0028;
+      const tTop = 0.0032;
+      const tBot = 0.0018;
+      const rh = 0.022;
+      const bridgeGap = Math.max(0.014, Math.min(0.020, ipd * 0.30));
+      const rw = Math.max(0.034, Math.min(0.044, ipd - bridgeGap));
+      const makeRectRim = function (centerX) {
         const rim = new THREE.Group();
-        const top = new THREE.Mesh(new THREE.BoxGeometry(rw, t, t), frameMat);
-        top.position.set(cx, ey + rh * 0.5, ez);
-        const bot = new THREE.Mesh(new THREE.BoxGeometry(rw, t, t), frameMat);
-        bot.position.set(cx, ey - rh * 0.5, ez);
-        const inn = new THREE.Mesh(new THREE.BoxGeometry(t, rh + t, t), frameMat);
-        inn.position.set(cx - (cx > 0 ? rw * 0.5 : -rw * 0.5), ey, ez);
-        const out = new THREE.Mesh(new THREE.BoxGeometry(t, rh + t, t), frameMat);
-        out.position.set(cx + (cx > 0 ? rw * 0.5 : -rw * 0.5), ey, ez);
-        const lens = new THREE.Mesh(new THREE.PlaneGeometry(rw - t, rh - t), lensMat);
-        lens.position.set(cx, ey, ez);
+        const top = new THREE.Mesh(new THREE.BoxGeometry(rw, tTop, t), frameMat);
+        top.position.set(centerX, ey + rh * 0.5, ez);
+        const bot = new THREE.Mesh(new THREE.BoxGeometry(rw, tBot, t), frameMat);
+        bot.position.set(centerX, ey - rh * 0.5, ez);
+        const inn = new THREE.Mesh(new THREE.BoxGeometry(t, rh + tTop * 0.5, t), frameMat);
+        inn.position.set(centerX - (centerX > 0 ? rw * 0.5 : -rw * 0.5), ey, ez);
+        const out = new THREE.Mesh(new THREE.BoxGeometry(t, rh + tTop * 0.5, t), frameMat);
+        out.position.set(centerX + (centerX > 0 ? rw * 0.5 : -rw * 0.5), ey, ez);
+        const lens = new THREE.Mesh(new THREE.PlaneGeometry(rw - t, rh - tTop * 0.6), lensMat);
+        lens.position.set(centerX, ey, ez);
         if (isVrm0) lens.rotation.y = Math.PI;
         rim.add(top, bot, inn, out, lens);
         return rim;
       };
-      g.add(makeRectRim(-0.032), makeRectRim(0.032));
-      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.022, t, t), frameMat);
-      bridge.position.set(0, ey + 0.004, ez);
+      g.add(makeRectRim(-cx), makeRectRim(cx));
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(bridgeGap + t * 0.8, t * 0.9, t), frameMat);
+      bridge.position.set(0, ey + rh * 0.16, ez);
       g.add(bridge);
-      // Slim temple arms tucking cleanly to the sides of the head
+      // Slim temple arms extending naturally over the ears
+      const armLen = 0.098;
+      const armOuterX = cx + rw * 0.5 + 0.002;
+      const armY = ey + rh * 0.18;
       [-1, 1].forEach(function (side) {
-        const arm = new THREE.Mesh(new THREE.BoxGeometry(t, t, 0.105), frameMat);
-        arm.position.set(side * 0.056, ey + 0.004, ez - 0.052 * zSign);
-        arm.rotation.y = side * 0.08 * zSign;
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(t * 0.85, t * 0.9, armLen), frameMat);
+        arm.position.set(side * armOuterX, armY, ez - armLen * 0.5 * zSign);
+        arm.rotation.y = side * 0.07 * zSign;
         g.add(arm);
+      });
+      g.userData = Object.assign({}, g.userData, {
+        ey: ey,
+        ez: ez,
+        ipd: ipd,
+        cx: cx,
+        rw: rw,
+        rh: rh,
+        t: t,
+        tTop: tTop,
+        tBot: tBot,
+        usedEyeBones: usedEyeBones
       });
       bones.head.add(g);
       return { group: g, accMats: { frameMat: frameMat, lensMat: lensMat } };
